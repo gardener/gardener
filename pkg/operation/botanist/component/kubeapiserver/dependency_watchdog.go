@@ -59,7 +59,7 @@ func NewDependencyWatchdogProberConfiguration() ([]proberapi.DependentResourceIn
 			Ref: &autoscalingv1.CrossVersionObjectReference{
 				Kind:       "Deployment",
 				Name:       v1beta1constants.DeploymentNameKubeControllerManager,
-				APIVersion: "apps/v1",
+				APIVersion: appsv1.SchemeGroupVersion.String(),
 			},
 			Optional: false,
 			ScaleUpInfo: &proberapi.ScaleInfo{
@@ -73,7 +73,7 @@ func NewDependencyWatchdogProberConfiguration() ([]proberapi.DependentResourceIn
 			Ref: &autoscalingv1.CrossVersionObjectReference{
 				Kind:       "Deployment",
 				Name:       v1beta1constants.DeploymentNameMachineControllerManager,
-				APIVersion: "apps/v1",
+				APIVersion: appsv1.SchemeGroupVersion.String(),
 			},
 			Optional: false,
 			ScaleUpInfo: &proberapi.ScaleInfo{

@@ -499,7 +499,7 @@ status:
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 			})
 
-			// TODO(himanshu-kun): Remove these tests after complete migration to DWD v1
+			// TODO(himanshu-kun): Remove these below tests after complete migration to DWD v1
 			It("should successfully clean-up old unsupported DWD managed resource and create managed resource and secret for role "+string(values.Role), func() {
 				oldManagedResourceName := ManagedResourceDependencyWatchdogProbe
 				if values.Role == RoleWeeder {
@@ -532,6 +532,37 @@ status:
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+			})
+
+			It("should successfully clean-up old unsupported DWD managed resource also while destroying all resources for role "+string(values.Role), func() {
+				oldManagedResourceName := ManagedResourceDependencyWatchdogProbe
+				if values.Role == RoleWeeder {
+					oldManagedResourceName = ManagedResourceDependencyWatchdogEndpoint
+				}
+				var (
+					oldDWDManagedResource = &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      oldManagedResourceName,
+							Namespace: namespace,
+						},
+					}
+					oldDWDManagedResourceSecret = &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "managedresource-" + oldManagedResourceName,
+							Namespace: namespace,
+						},
+					}
+				)
+				Expect(c.Create(ctx, oldDWDManagedResource)).To(Succeed())
+				Expect(c.Create(ctx, oldDWDManagedResourceSecret)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(oldDWDManagedResource), oldDWDManagedResource)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(oldDWDManagedResourceSecret), oldDWDManagedResourceSecret)).To(Succeed())
+
+				Expect(dwd.Destroy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(oldDWDManagedResource), oldDWDManagedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, oldDWDManagedResource.Name)))
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(oldDWDManagedResourceSecret), oldDWDManagedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, oldDWDManagedResourceSecret.Name)))
 			})
 		}
 

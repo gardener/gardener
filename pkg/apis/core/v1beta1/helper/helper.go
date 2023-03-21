@@ -500,12 +500,12 @@ func SeedSettingOwnerChecksEnabled(settings *gardencorev1beta1.SeedSettings) boo
 
 // SeedSettingDependencyWatchdogWeederEnabled returns true if the dependency-watchdog-weeder is enabled.
 func SeedSettingDependencyWatchdogWeederEnabled(settings *gardencorev1beta1.SeedSettings) bool {
-	return settings.DependencyWatchdog.Weeder.Enabled
+	return settings == nil || settings.DependencyWatchdog == nil || settings.DependencyWatchdog.Weeder == nil || settings.DependencyWatchdog.Weeder.Enabled
 }
 
 // SeedSettingDependencyWatchdogProberEnabled returns true if the dependency-watchdog-prober is enabled.
 func SeedSettingDependencyWatchdogProberEnabled(settings *gardencorev1beta1.SeedSettings) bool {
-	return settings.DependencyWatchdog.Prober.Enabled
+	return settings == nil || settings.DependencyWatchdog == nil || settings.DependencyWatchdog.Prober == nil || settings.DependencyWatchdog.Prober.Enabled
 }
 
 // SeedSettingTopologyAwareRoutingEnabled returns true if the topology-aware routing is enabled.

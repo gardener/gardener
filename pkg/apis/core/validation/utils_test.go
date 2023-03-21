@@ -20,7 +20,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
@@ -138,58 +137,6 @@ var _ = Describe("Utils tests", func() {
 
 			errorList := ValidateIPFamilies([]core.IPFamily{core.IPFamilyIPv6}, fldPath)
 			Expect(errorList).To(BeEmpty())
-		})
-	})
-
-	Describe("#Validate", func() {
-		var seed *core.Seed
-
-		BeforeEach(func() {
-			seed = &core.Seed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-seed",
-				},
-				Spec: core.SeedSpec{
-					Provider: core.SeedProvider{
-						Type:   "test-provider",
-						Region: "test-region",
-					},
-					Ingress: &core.Ingress{
-						Domain: "someingress.example.com",
-						Controller: core.IngressController{
-							Kind: "nginx",
-						},
-					},
-					DNS: core.SeedDNS{
-						Provider: &core.SeedDNSProvider{
-							Type: "provider",
-							SecretRef: corev1.SecretReference{
-								Name:      "secret",
-								Namespace: "garden",
-							},
-						},
-					},
-					Networks: core.SeedNetworks{
-						Pods:     "10.123.211.10/18",
-						Services: "193.168.211.0/16",
-					},
-					Settings: &core.SeedSettings{
-						DependencyWatchdog: &core.SeedSettingDependencyWatchdog{},
-					},
-				},
-			}
-		})
-
-		It("should allow if deprecated fields are not set", func() {
-			seed.Spec.Settings.DependencyWatchdog.Weeder = &core.SeedSettingDependencyWatchdogWeeder{
-				Enabled: true,
-			}
-			seed.Spec.Settings.DependencyWatchdog.Prober = &core.SeedSettingDependencyWatchdogProber{
-				Enabled: true,
-			}
-			allErrs := ValidateSeed(seed)
-
-			Expect(allErrs).To(BeEmpty())
 		})
 	})
 })

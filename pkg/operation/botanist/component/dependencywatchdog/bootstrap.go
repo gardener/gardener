@@ -179,6 +179,11 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 }
 
 func (b *bootstrapper) Destroy(ctx context.Context) error {
+	// TODO(himanshu-kun): remove after few releases
+	// First clean-up unsupported DWD managedResource and all the objects managed by it which includes old version of DWD weeder and prober as well.
+	if err := b.deleteOldDWDManagedResource(ctx); err != nil {
+		return err
+	}
 	return managedresources.DeleteForSeed(ctx, b.client, b.namespace, b.name())
 }
 

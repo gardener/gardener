@@ -859,34 +859,6 @@ var _ = Describe("Seed Validation Tests", func() {
 				})
 			})
 
-			Context("dependency watchdog", func() {
-				It("should allow both weeder and endpoint settings to be set, if equal", func() {
-					seed.Spec.Settings = &core.SeedSettings{
-						DependencyWatchdog: &core.SeedSettingDependencyWatchdog{
-							Weeder:   &core.SeedSettingDependencyWatchdogWeeder{Enabled: true},
-							Endpoint: &core.SeedSettingDependencyWatchdogEndpoint{Enabled: true},
-						},
-					}
-
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(BeEmpty())
-				})
-
-				It("should allow both prober and probe settings to be set, if equal", func() {
-					seed.Spec.Settings = &core.SeedSettings{
-						DependencyWatchdog: &core.SeedSettingDependencyWatchdog{
-							Prober: &core.SeedSettingDependencyWatchdogProber{Enabled: true},
-							Probe:  &core.SeedSettingDependencyWatchdogProbe{Enabled: true},
-						},
-					}
-
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(BeEmpty())
-				})
-			})
-
 			It("should prevent enabling topology-aware routing on single-zone Seed cluster", func() {
 				seed.Spec.Provider.Zones = []string{"a"}
 				seed.Spec.Settings = &core.SeedSettings{
