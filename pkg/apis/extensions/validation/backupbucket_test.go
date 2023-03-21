@@ -84,8 +84,9 @@ var _ = Describe("BackupBucket validation tests", func() {
 			errorList := ValidateBackupBucketUpdate(newBackupBucket, bb)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec"),
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("spec"),
+				"Detail": Equal("SecretRef.Name: changed-secretref-name != test"),
 			}))))
 		})
 

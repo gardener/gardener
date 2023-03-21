@@ -200,8 +200,9 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 			errorList := ValidateOperatingSystemConfigUpdate(newOperatingSystemConfig, osc)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec"),
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("spec"),
+				"Detail": Equal("DefaultSpec.Type: changed-type != provider"),
 			}))))
 		})
 

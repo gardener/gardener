@@ -91,8 +91,9 @@ var _ = Describe("Infrastructure validation tests", func() {
 			errorList := ValidateInfrastructureUpdate(newInfrastructure, infra)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec"),
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("spec"),
+				"Detail": Equal("SecretRef.Name: changed-secretref-name != test"),
 			}))))
 		})
 
