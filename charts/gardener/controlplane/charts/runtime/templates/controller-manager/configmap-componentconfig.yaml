@@ -167,11 +167,15 @@ data:
     logLevel: {{ required ".Values.global.controller.config.logLevel is required" .Values.global.controller.config.logLevel }}
     server:
       healthProbes:
-        bindAddress: {{ required ".Values.global.controller.config.server.healthProbes.bindAddress is required" .Values.global.controller.config.server.healthProbes.bindAddress }}
+        {{- if .Values.global.controller.config.server.healthProbes.bindAddress }}
+        bindAddress: {{ .Values.global.controller.config.server.healthProbes.bindAddress }}
+        {{- end }}
         port: {{ required ".Values.global.controller.config.server.healthProbes.port is required" .Values.global.controller.config.server.healthProbes.port }}
       {{- if .Values.global.controller.config.server.metrics }}
       metrics:
-        bindAddress: {{ required ".Values.global.controller.config.server.metrics.bindAddress is required" .Values.global.controller.config.server.metrics.bindAddress }}
+        {{- if .Values.global.controller.config.server.metrics.bindAddress }}
+        bindAddress: {{ .Values.global.controller.config.server.metrics.bindAddress }}
+        {{- end }}
         port: {{ required ".Values.global.controller.config.server.metrics.port is required" .Values.global.controller.config.server.metrics.port }}
       {{- end }}
     {{- if .Values.global.controller.config.debugging }}

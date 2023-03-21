@@ -34,15 +34,21 @@ data:
     logFormat: {{ .Values.global.admission.config.logFormat | default "json" }}
     server:
       webhooks:
-        bindAddress: {{ required ".Values.global.admission.config.server.webhooks.bindAddress is required" .Values.global.admission.config.server.webhooks.bindAddress }}
+        {{- if .Values.global.admission.config.server.webhooks.bindAddress }}
+        bindAddress: {{ .Values.global.admission.config.server.webhooks.bindAddress }}
+        {{- end }}
         port: {{ required ".Values.global.admission.config.server.webhooks.port is required" .Values.global.admission.config.server.webhooks.port }}
         tls:
           serverCertDir: /etc/gardener-admission-controller/srv
       healthProbes:
-        bindAddress: {{ required ".Values.global.admission.config.server.healthProbes.bindAddress is required" .Values.global.admission.config.server.healthProbes.bindAddress }}
+        {{- if .Values.global.admission.config.server.healthProbes.bindAddress }}
+        bindAddress: {{ .Values.global.admission.config.server.healthProbes.bindAddress }}
+        {{- end }}
         port: {{ required ".Values.global.admission.config.server.healthProbes.port is required" .Values.global.admission.config.server.healthProbes.port }}
       metrics:
-        bindAddress: {{ required ".Values.global.admission.config.server.metrics.bindAddress is required" .Values.global.admission.config.server.metrics.bindAddress }}
+        {{- if .Values.global.admission.config.server.metrics.bindAddress }}
+        bindAddress: {{ .Values.global.admission.config.server.metrics.bindAddress }}
+        {{- end }}
         port: {{ required ".Values.global.admission.config.server.metrics.port is required" .Values.global.admission.config.server.metrics.port }}
       {{- if .Values.global.admission.config.server.resourceAdmissionConfiguration }}
       resourceAdmissionConfiguration:

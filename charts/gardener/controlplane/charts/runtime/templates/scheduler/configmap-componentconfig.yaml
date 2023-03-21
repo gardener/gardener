@@ -45,10 +45,14 @@ data:
     logLevel: {{ required ".Values.global.scheduler.config.logLevel is required" .Values.global.scheduler.config.logLevel }}
     server:
       healthProbes:
-        bindAddress: {{ required ".Values.global.scheduler.config.server.healthProbes.bindAddress is required" .Values.global.scheduler.config.server.healthProbes.bindAddress }}
+        {{- if .Values.global.scheduler.config.server.healthProbes.bindAddress }}
+        bindAddress: {{ .Values.global.scheduler.config.server.healthProbes.bindAddress }}
+        {{- end }}
         port: {{ required ".Values.global.scheduler.config.server.healthProbes.port is required" .Values.global.scheduler.config.server.healthProbes.port }}
       metrics:
-        bindAddress: {{ required ".Values.global.scheduler.config.server.metrics.bindAddress is required" .Values.global.scheduler.config.server.metrics.bindAddress }}
+        {{- if .Values.global.scheduler.config.server.metrics.bindAddress }}
+        bindAddress: {{ .Values.global.scheduler.config.server.metrics.bindAddress }}
+        {{- end }}
         port: {{ required ".Values.global.scheduler.config.server.metrics.port is required" .Values.global.scheduler.config.server.metrics.port }}
     {{- if .Values.global.scheduler.config.debugging }}
     debugging:
