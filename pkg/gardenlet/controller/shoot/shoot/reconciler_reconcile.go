@@ -31,6 +31,7 @@ import (
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	"github.com/gardener/gardener/pkg/operation/common/secrets"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -392,20 +393,26 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		rewriteSecretsAddLabel = g.Add(flow.Task{
 			Name: "Labeling secrets to encrypt them with new ETCD encryption key",
-			Fn: flow.TaskFn(botanist.RewriteSecretsAddLabel).
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return secrets.RewriteSecretsAddLabel(ctx, o.Logger, o.ShootClientSet, o.SecretsManager)
+			}).
 				RetryUntilTimeout(30*time.Second, 10*time.Minute).
 				DoIf(v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Snapshotting ETCD after secrets were re-encrypted with new ETCD encryption key",
-			Fn: flow.TaskFn(botanist.SnapshotETCDAfterRewritingSecrets).
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return secrets.SnapshotETCDAfterRewritingSecrets(ctx, o.SeedClientSet, botanist.SnapshotEtcd, o.Shoot.SeedNamespace)
+			}).
 				DoIf(allowBackup && v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing),
 			Dependencies: flow.NewTaskIDs(rewriteSecretsAddLabel),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Removing label from secrets after rotation of ETCD encryption key",
-			Fn: flow.TaskFn(botanist.RewriteSecretsRemoveLabel).
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return secrets.RewriteSecretsRemoveLabel(ctx, o.Logger, o.SeedClientSet, o.ShootClientSet, o.Shoot.SeedNamespace)
+			}).
 				RetryUntilTimeout(30*time.Second, 10*time.Minute).
 				DoIf(v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationCompleting),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
@@ -439,14 +446,18 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		createNewServiceAccountSecrets = g.Add(flow.Task{
 			Name: "Creating new ServiceAccount secrets after creation of new signing key",
-			Fn: flow.TaskFn(botanist.CreateNewServiceAccountSecrets).
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return secrets.CreateNewServiceAccountSecrets(ctx, o.Logger, o.ShootClientSet, o.SecretsManager)
+			}).
 				RetryUntilTimeout(30*time.Second, 10*time.Minute).
 				DoIf(v1beta1helper.GetShootServiceAccountKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilKubeControllerManagerReady),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deleting old ServiceAccount secrets after rotation of signing key",
-			Fn: flow.TaskFn(botanist.DeleteOldServiceAccountSecrets).
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return secrets.DeleteOldServiceAccountSecrets(ctx, o.Logger, o.ShootClientSet, o.Shoot.GetInfo().Status.Credentials.Rotation.ServiceAccountKey.LastInitiationFinishedTime.Time)
+			}).
 				RetryUntilTimeout(30*time.Second, 10*time.Minute).
 				DoIf(v1beta1helper.GetShootServiceAccountKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationCompleting),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilKubeControllerManagerReady),

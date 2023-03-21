@@ -33,7 +33,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
-	"github.com/gardener/gardener/pkg/operation/common/secrets"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -409,38 +408,3 @@ const (
 	labelKeyRotationKeyName = "credentials.gardener.cloud/key-name"
 	rotationQPS             = 100
 )
-
-// CreateNewServiceAccountSecrets creates new secrets for all service accounts in the shoot cluster. This should only
-// be executed in the 'Preparing' phase of the service account signing key rotation operation.
-func (b *Botanist) CreateNewServiceAccountSecrets(ctx context.Context) error {
-	return secrets.CreateNewServiceAccountSecrets(ctx, b.Logger, b.ShootClientSet, b.SecretsManager)
-}
-
-// DeleteOldServiceAccountSecrets deletes old secrets for all service accounts in the shoot cluster. This should only
-// be executed in the 'Completing' phase of the service account signing key rotation operation.
-func (b *Botanist) DeleteOldServiceAccountSecrets(ctx context.Context) error {
-	return secrets.DeleteOldServiceAccountSecrets(ctx, b.Logger, b.ShootClientSet, b.Shoot.GetInfo().Status.Credentials.Rotation.ServiceAccountKey.LastInitiationFinishedTime.Time)
-}
-
-// RewriteSecretsAddLabel patches all secrets in all namespaces in the shoot clusters and adds a label whose value is
-// the name of the current ETCD encryption key secret. This function is useful for the ETCD encryption key secret
-// rotation which requires all secrets to be rewritten to ETCD so that they become encrypted with the new key.
-// After it's done, it snapshots ETCD so that we can restore backups in case we lose the cluster before the next
-// incremental snapshot is taken.
-func (b *Botanist) RewriteSecretsAddLabel(ctx context.Context) error {
-	return secrets.RewriteSecretsAddLabel(ctx, b.Logger, b.ShootClientSet, b.SecretsManager)
-}
-
-// SnapshotETCDAfterRewritingSecrets performs a full snapshot on ETCD after the secrets got rewritten as part of the
-// ETCD encryption secret rotation. It adds an annotation to the kube-apiserver deployment after it's done so that it
-// does not take another snapshot again after it succeeded once.
-func (b *Botanist) SnapshotETCDAfterRewritingSecrets(ctx context.Context) error {
-	return secrets.SnapshotETCDAfterRewritingSecrets(ctx, b.SeedClientSet, b.SnapshotEtcd, b.Shoot.SeedNamespace)
-}
-
-// RewriteSecretsRemoveLabel patches all secrets in all namespaces in the shoot clusters and removes the label whose
-// value is the name of the current ETCD encryption key secret. This function is useful for the ETCD encryption key
-// secret rotation which requires all secrets to be rewritten to ETCD so that they become encrypted with the new key.
-func (b *Botanist) RewriteSecretsRemoveLabel(ctx context.Context) error {
-	return secrets.RewriteSecretsRemoveLabel(ctx, b.Logger, b.SeedClientSet, b.ShootClientSet, b.Shoot.SeedNamespace)
-}
