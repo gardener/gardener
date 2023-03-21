@@ -353,6 +353,7 @@ func (r *Reconciler) reconcileNetworkPoliciesInSeed(ctx context.Context, namespa
 		peers = []networkingv1.NetworkPolicyPeer{
 			{PodSelector: &metav1.LabelSelector{}, NamespaceSelector: &metav1.LabelSelector{}},
 			{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
+			{IPBlock: &networkingv1.IPBlock{CIDR: "::/0"}},
 		}
 
 		allowAllTrafficNetworkPolicy = &networkingv1.NetworkPolicy{

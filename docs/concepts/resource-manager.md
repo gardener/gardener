@@ -721,6 +721,8 @@ spec:
       podSelector: {}
     - ipBlock:
         cidr: 0.0.0.0/0
+    - ipBlock:
+        cidr: ::/0
     ports:
     - port: 10250
       protocol: TCP

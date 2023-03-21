@@ -346,6 +346,7 @@ func (r *Reconciler) reconcileIngressFromWorldPolicy(ctx context.Context, servic
 			From: []networkingv1.NetworkPolicyPeer{
 				{PodSelector: &metav1.LabelSelector{}, NamespaceSelector: &metav1.LabelSelector{}},
 				{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
+				{IPBlock: &networkingv1.IPBlock{CIDR: "::/0"}},
 			},
 			Ports: ports,
 		}}
