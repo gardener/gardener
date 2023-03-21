@@ -44,9 +44,9 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -498,7 +498,7 @@ func (b *Botanist) computeKubeAPIServerETCDEncryptionConfig(ctx context.Context)
 		// If the new encryption key was not yet populated to all replicas then we should still use the old key for
 		// encryption of data. Only if all replicas know the new key we can switch and start encrypting with the new/
 		// current key, see https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#rotating-a-decryption-key.
-		if !metav1.HasAnnotation(deployment.ObjectMeta, common.AnnotationKeyNewEncryptionKeyPopulated) {
+		if !metav1.HasAnnotation(deployment.ObjectMeta, secretsrotation.AnnotationKeyNewEncryptionKeyPopulated) {
 			config.EncryptWithCurrentKey = false
 		}
 	}
@@ -626,8 +626,8 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			// still use the old key for the encryption of ETCD data. Now we can mark this step as "completed" (via an
 			// annotation) and redeploy it with the option to use the current/new key for encryption, see
 			// https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#rotating-a-decryption-key for details.
-			if err := common.PatchKubeAPIServerDeploymentMeta(ctx, b.SeedClientSet, b.Shoot.SeedNamespace, func(meta *metav1.PartialObjectMetadata) {
-				metav1.SetMetaDataAnnotation(&meta.ObjectMeta, common.AnnotationKeyNewEncryptionKeyPopulated, "true")
+			if err := secretsrotation.PatchKubeAPIServerDeploymentMeta(ctx, b.SeedClientSet, b.Shoot.SeedNamespace, func(meta *metav1.PartialObjectMetadata) {
+				metav1.SetMetaDataAnnotation(&meta.ObjectMeta, secretsrotation.AnnotationKeyNewEncryptionKeyPopulated, "true")
 			}); err != nil {
 				return err
 			}
@@ -641,8 +641,8 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		}
 
 	case gardencorev1beta1.RotationCompleting:
-		if err := common.PatchKubeAPIServerDeploymentMeta(ctx, b.SeedClientSet, b.Shoot.SeedNamespace, func(meta *metav1.PartialObjectMetadata) {
-			delete(meta.Annotations, common.AnnotationKeyNewEncryptionKeyPopulated)
+		if err := secretsrotation.PatchKubeAPIServerDeploymentMeta(ctx, b.SeedClientSet, b.Shoot.SeedNamespace, func(meta *metav1.PartialObjectMetadata) {
+			delete(meta.Annotations, secretsrotation.AnnotationKeyNewEncryptionKeyPopulated)
 		}); err != nil {
 			return err
 		}

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package secrets_test
+package secretsrotation_test
 
 import (
 	"testing"
@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestSecrets(t *testing.T) {
+func TestSecretsRotation(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Operation Common Secrets Suite")
+	RunSpecs(t, "Utils Gardener Secretsrotation Suite")
 }

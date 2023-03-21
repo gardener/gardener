@@ -892,7 +892,6 @@ build:
         - pkg/operation/botanist/matchers
         - pkg/operation/care
         - pkg/operation/common
-        - pkg/operation/common/secrets
         - pkg/operation/garden
         - pkg/operation/seed
         - pkg/operation/shoot
@@ -915,6 +914,7 @@ build:
         - pkg/utils/errors
         - pkg/utils/flow
         - pkg/utils/gardener
+        - pkg/utils/gardener/secretsrotation
         - pkg/utils/images
         - pkg/utils/imagevector
         - pkg/utils/kubernetes
