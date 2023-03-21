@@ -79,8 +79,9 @@ var _ = Describe("Extension validation tests", func() {
 			errorList := ValidateExtensionUpdate(newExtension, ext)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec"),
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("spec"),
+				"Detail": Equal("DefaultSpec.ProviderConfig: <nil pointer> != runtime.RawExtension"),
 			}))))
 		})
 

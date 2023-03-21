@@ -92,8 +92,9 @@ var _ = Describe("Bastion validation tests", func() {
 			errorList := ValidateBastionUpdate(newBastion, bastion)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec"),
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("spec"),
+				"Detail": Equal("Ingress.slice[0].IPBlock.CIDR: 8.8.8.8/8 != 1.2.3.4/8"),
 			}))))
 		})
 

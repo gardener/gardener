@@ -15,6 +15,9 @@
 package validation
 
 import (
+	"strings"
+
+	"github.com/go-test/deep"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -142,8 +145,10 @@ func ValidateOperatingSystemConfigSpecUpdate(new, old *extensionsv1alpha1.Operat
 	allErrs := field.ErrorList{}
 
 	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(new, old) {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new, old, fldPath)...)
-		return allErrs
+		if diff := deep.Equal(new, old); diff != nil {
+			return field.ErrorList{field.Forbidden(fldPath, strings.Join(diff, ","))}
+		}
+		return apivalidation.ValidateImmutableField(new, old, fldPath)
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Type, old.Type, fldPath.Child("type"))...)

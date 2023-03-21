@@ -376,8 +376,9 @@ var _ = Describe("validation", func() {
 			errorList := ValidateControllerRegistrationUpdate(newControllerRegistration, controllerRegistration)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec"),
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("spec"),
+				"Detail": Equal("Resources.slice[0].Type: another-os != my-os"),
 			}))))
 		})
 

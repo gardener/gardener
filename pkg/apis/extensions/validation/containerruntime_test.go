@@ -85,8 +85,9 @@ var _ = Describe("ContainerRuntime validation tests", func() {
 			errorList := ValidateContainerRuntimeUpdate(newContainerRuntime, cr)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec"),
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("spec"),
+				"Detail": Equal("BinaryPath: changed-binaryPath != /test/path"),
 			}))))
 		})
 

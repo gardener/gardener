@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
+	"github.com/go-test/deep"
 	"github.com/robfig/cron"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -265,8 +266,10 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	allErrs := field.ErrorList{}
 
 	if newObjectMeta.DeletionTimestamp != nil && !apiequality.Semantic.DeepEqual(newSpec, oldSpec) {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec, oldSpec, fldPath)...)
-		return allErrs
+		if diff := deep.Equal(newSpec, oldSpec); diff != nil {
+			return field.ErrorList{field.Forbidden(fldPath, strings.Join(diff, ","))}
+		}
+		return apivalidation.ValidateImmutableField(newSpec, oldSpec, fldPath)
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Region, oldSpec.Region, fldPath.Child("region"))...)

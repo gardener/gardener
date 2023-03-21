@@ -224,8 +224,9 @@ var _ = Describe("DNSRecord validation tests", func() {
 			errorList := ValidateDNSRecordUpdate(newDNSRecord, dns)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec"),
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("spec"),
+				"Detail": Equal("SecretRef.Name: changed-secretref-name != test"),
 			}))))
 		})
 
