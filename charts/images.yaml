@@ -81,7 +81,7 @@ images:
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
-      network_exposure: 'public'
+      network_exposure: 'private'
       authentication_enforced: false
       user_interaction: 'end-user'
       confidentiality_requirement: 'none'
