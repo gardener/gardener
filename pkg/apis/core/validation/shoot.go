@@ -266,11 +266,10 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	allErrs := field.ErrorList{}
 
 	if newObjectMeta.DeletionTimestamp != nil && !apiequality.Semantic.DeepEqual(newSpec, oldSpec) {
-		errorList := apivalidation.ValidateImmutableField(newSpec, oldSpec, fldPath)
 		if diff := deep.Equal(newSpec, oldSpec); diff != nil {
-			errorList = field.ErrorList{field.Forbidden(fldPath, strings.Join(diff, ","))}
+			return field.ErrorList{field.Forbidden(fldPath, strings.Join(diff, ","))}
 		}
-		return errorList
+		return apivalidation.ValidateImmutableField(newSpec, oldSpec, fldPath)
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Region, oldSpec.Region, fldPath.Child("region"))...)

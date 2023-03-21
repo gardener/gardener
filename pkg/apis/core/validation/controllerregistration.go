@@ -171,11 +171,10 @@ func ValidateControllerRegistrationSpecUpdate(new, old *core.ControllerRegistrat
 	allErrs := field.ErrorList{}
 
 	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(new, old) {
-		errorList := apivalidation.ValidateImmutableField(new, old, fldPath)
 		if diff := deep.Equal(new, old); diff != nil {
-			errorList = field.ErrorList{field.Forbidden(fldPath, strings.Join(diff, ","))}
+			return field.ErrorList{field.Forbidden(fldPath, strings.Join(diff, ","))}
 		}
-		return errorList
+		return apivalidation.ValidateImmutableField(new, old, fldPath)
 	}
 
 	kindTypeToPrimary := make(map[string]*bool, len(old.Resources))

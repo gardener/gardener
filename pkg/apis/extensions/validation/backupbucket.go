@@ -69,11 +69,10 @@ func ValidateBackupBucketSpecUpdate(new, old *extensionsv1alpha1.BackupBucketSpe
 	allErrs := field.ErrorList{}
 
 	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(new, old) {
-		errorList := apivalidation.ValidateImmutableField(new, old, fldPath)
 		if diff := deep.Equal(new, old); diff != nil {
-			errorList = field.ErrorList{field.Forbidden(fldPath, strings.Join(diff, ","))}
+			return field.ErrorList{field.Forbidden(fldPath, strings.Join(diff, ","))}
 		}
-		return errorList
+		return apivalidation.ValidateImmutableField(new, old, fldPath)
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Type, old.Type, fldPath.Child("type"))...)

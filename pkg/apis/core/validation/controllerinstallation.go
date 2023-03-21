@@ -68,11 +68,10 @@ func ValidateControllerInstallationSpecUpdate(new, old *core.ControllerInstallat
 	allErrs := field.ErrorList{}
 
 	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(new, old) {
-		errorList := apivalidation.ValidateImmutableField(new, old, fldPath)
 		if diff := deep.Equal(new, old); diff != nil {
-			errorList = field.ErrorList{field.Forbidden(fldPath, strings.Join(diff, ","))}
+			return field.ErrorList{field.Forbidden(fldPath, strings.Join(diff, ","))}
 		}
-		return errorList
+		return apivalidation.ValidateImmutableField(new, old, fldPath)
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.RegistrationRef.Name, old.RegistrationRef.Name, fldPath.Child("registrationRef", "name"))...)
