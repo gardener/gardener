@@ -121,8 +121,6 @@ kubectl wait --for=condition=available apiservice v1beta1.core.gardener.cloud # 
 make start-admission-controller                                               # starting gardener-admission-controller
 ```
 
-> For IPv6 use `make start-admission-controller IPFAMILY=ipv6` instead.
-
 In a new terminal pane, run:
 
 ```bash
@@ -130,7 +128,7 @@ make dev-setup DEV_SETUP_WITH_WEBHOOKS=true                                   # 
 make start-controller-manager                                                 # starting gardener-controller-manager
 ```
 
-> For IPv6 append `IPFAMILY=ipv6` to both commands.
+> For IPv6 use `make dev-setup IPFAMILY=ipv6` instead.
 
 (Optional): In a new terminal pane, run:
 
@@ -145,7 +143,7 @@ make register-local-env                                                       # 
 make start-gardenlet SEED_NAME=local                                          # starting gardenlet
 ```
 
-> For IPv6 append `IPFAMILY=ipv6` to both commands.
+> For IPv6 use `make register-local-env IPFAMILY=ipv6` instead.
 
 In a new terminal pane, run:
 

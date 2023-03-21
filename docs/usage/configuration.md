@@ -31,7 +31,7 @@ Please take a look at this [example configuration](../../example/20-componentcon
 ### Configuration File for Gardener Controller Manager
 
 The Gardener controller manager only supports one command line flag, which should be a path to a valid controller-manager configuration file.
-Please take a look at this [example configuration](../../example/20-componentconfig-gardener-controller-manager-ipv4.yaml).
+Please take a look at this [example configuration](../../example/20-componentconfig-gardener-controller-manager.yaml).
 
 ### Configuration File for Gardener Scheduler
 

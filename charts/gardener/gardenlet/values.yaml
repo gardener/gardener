@@ -138,10 +138,8 @@ config:
   logFormat: json
   server:
     healthProbes:
-      bindAddress: 0.0.0.0
       port: 2728
     metrics:
-      bindAddress: 0.0.0.0
       port: 2729
   debugging:
     enableProfiling: false

@@ -121,11 +121,6 @@ fi
 # update gardenlet config
 yq eval-all --inplace 'select(fileIndex==0).seedConfig = select(fileIndex==1) | select(fileIndex==0)' "$configFile" "$tmpFile"
 
-# set IPv6 featuregate
-if [[ "$IPFAMILY" == "ipv6" ]]; then
-  yq eval --inplace 'select(fileIndex==1).featureGates.IPv6SingleStack = true' "$configFile"
-fi
-
 # fetch seed kubeconfig
 if [ -z "${SEED_KUBECONFIG:-}" ]; then
   seedKubeconfigName="$(yq eval '.spec.secretRef.name' "$tmpFile")"

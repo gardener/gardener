@@ -59,7 +59,6 @@ $SUDO go run \
   --kubeconfig="${KUBECONFIG:-$kubeconfig}" \
   --leader-election=false \
   --webhook-config-mode=url \
-  --webhook-config-server-host=0.0.0.0 \
   --webhook-config-server-port="${WEBHOOK_SERVER_PORT}" \
   --webhook-config-url=$(get_host_address):${WEBHOOK_SERVER_PORT} \
   --webhook-config-cert-dir="${WEBHOOK_CERT_DIR}" \

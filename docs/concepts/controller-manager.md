@@ -16,7 +16,7 @@ The `Bastion` controller is responsible for deleting expired or rotten `Bastion`
 - "expired" means a `Bastion` has exceeded its `status.expirationTimestamp`.
 - "rotten" means a `Bastion` is older than the configured `maxLifetime`.
 
-The `maxLifetime` defaults to 24 hours and is an option in the `BastionControllerConfiguration` which is part of `gardener-controller-manager`s `ControllerManagerControllerConfiguration`, see [the example config file](../../example/20-componentconfig-gardener-controller-manager-ipv4.yaml) for details.
+The `maxLifetime` defaults to 24 hours and is an option in the `BastionControllerConfiguration` which is part of `gardener-controller-manager`s `ControllerManagerControllerConfiguration`, see [the example config file](../../example/20-componentconfig-gardener-controller-manager.yaml) for details.
 
 The controller also deletes `Bastion`s in case the referenced `Shoot`:
 
@@ -254,7 +254,7 @@ The "main" reconciler takes care about this replication:
 Every time a `BackupBucket` object is created or updated, the referenced `Seed` object is enqueued for reconciliation.
 It's the reconciler's task to check the `status` subresource of all existing `BackupBucket`s that reference this `Seed`.
 If at least one `BackupBucket` has `.status.lastError != nil`, the `BackupBucketsReady` condition on the `Seed` will be set to `False`, and consequently the `Seed` is considered as `NotReady`.
-If the `SeedBackupBucketsCheckControllerConfiguration` (which is part of `gardener-controller-manager`s component configuration) contains a `conditionThreshold` for the `BackupBucketsReady`, the condition will instead first be set to `Progressing` and eventually to `False` once the `conditionThreshold` expires. See [the example config file](../../example/20-componentconfig-gardener-controller-manager-ipv4.yaml) for details.
+If the `SeedBackupBucketsCheckControllerConfiguration` (which is part of `gardener-controller-manager`s component configuration) contains a `conditionThreshold` for the `BackupBucketsReady`, the condition will instead first be set to `Progressing` and eventually to `False` once the `conditionThreshold` expires. See [the example config file](../../example/20-componentconfig-gardener-controller-manager.yaml) for details.
 Once the `BackupBucket` is healthy again, the seed will be re-queued and the condition will turn `true`.
 
 #### "Extensions Check" Reconciler

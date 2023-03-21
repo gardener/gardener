@@ -94,9 +94,6 @@ func SetDefaults_LeaderElectionConfiguration(obj *componentbaseconfigv1alpha1.Le
 
 // SetDefaults_ServerConfiguration sets defaults for the server configuration.
 func SetDefaults_ServerConfiguration(obj *ServerConfiguration) {
-	if len(obj.Webhooks.BindAddress) == 0 {
-		obj.Webhooks.BindAddress = "0.0.0.0"
-	}
 	if obj.Webhooks.Port == 0 {
 		obj.Webhooks.Port = 9449
 	}

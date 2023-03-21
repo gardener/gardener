@@ -8,15 +8,12 @@ logLevel: info
 logFormat: json
 server:
   webhooks:
-    bindAddress: "::"
     port: 2721
     tls:
       serverCertDir: dev/tls/gardener-admission-controller
   healthProbes:
-    bindAddress: "::"
     port: 2722
   metrics:
-    bindAddress: "::"
     port: 2723
   resourceAdmissionConfiguration:
     limits:

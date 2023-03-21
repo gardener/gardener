@@ -72,7 +72,7 @@ GOMEGACHECK_DIR := $(TOOLS_DIR)/gomegacheck
 # Rules for local development scenarios #
 #########################################
 
-dev-setup start-admission-controller start-controller-manager start-gardenlet register-local-env: export IPFAMILY := $(IPFAMILY)
+dev-setup register-local-env: export IPFAMILY := $(IPFAMILY)
 
 .PHONY: dev-setup
 dev-setup:
