@@ -39,6 +39,7 @@ import (
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
+	seedmanagementhelper "github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
@@ -50,6 +51,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	"github.com/gardener/gardener/plugin/pkg/utils"
+	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 const (
@@ -201,7 +203,6 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, o admis
 		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Required(shootNamePath, "shoot name is required")))
 	}
 
-	// Get shoot
 	shoot, err := v.getShoot(ctx, managedSeed.Namespace, managedSeed.Spec.Shoot.Name)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -210,7 +211,7 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, o admis
 		return apierrors.NewInternalError(fmt.Errorf("could not get shoot %s/%s: %v", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err))
 	}
 
-	// Ensure shoot can be registered as seed (specifies a domain)
+	// Ensure shoot can be registered as seed
 	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil || *shoot.Spec.DNS.Domain == "" {
 		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s does not specify a domain", kubernetesutils.ObjectName(shoot)))))
 	}
@@ -239,11 +240,81 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, o admis
 		allErrs = append(allErrs, errs...)
 	}
 
+	switch a.GetOperation() {
+	case admission.Create:
+		errs, err := v.validateManagedSeedCreate(managedSeed, shoot)
+		if err != nil {
+			return err
+		}
+		allErrs = append(allErrs, errs...)
+	case admission.Update:
+		oldManagedSeed, ok := a.GetOldObject().(*seedmanagement.ManagedSeed)
+		if !ok {
+			return apierrors.NewInternalError(errors.New("could not covert old resource into ManagedSeed object"))
+		}
+		errs, err := v.validateManagedSeedUpdate(oldManagedSeed, managedSeed, shoot)
+		if err != nil {
+			return err
+		}
+		allErrs = append(allErrs, errs...)
+	}
+
 	if len(allErrs) > 0 {
 		return apierrors.NewInvalid(gk, managedSeed.Name, allErrs)
 	}
 
 	return nil
+}
+
+func (v *ManagedSeed) validateManagedSeedCreate(managedSeed *seedmanagement.ManagedSeed, shoot *gardencore.Shoot) (field.ErrorList, error) {
+	allErrs := field.ErrorList{}
+
+	seedSpec, err := seedmanagementhelper.ExtractSeedSpec(managedSeed)
+	if err != nil {
+		return nil, err
+	}
+
+	shootZones := helper.GetAllZonesFromShoot(shoot)
+
+	if len(seedSpec.Provider.Zones) > 0 && !sets.New[string](seedSpec.Provider.Zones...).Equal(shootZones) {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec", "provider", "zones"), seedSpec.Provider.Zones, fmt.Sprintf("seed provider zones must be equal to shoot zones (%v)", sets.List(shootZones))))
+	}
+
+	return allErrs, nil
+}
+
+func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *seedmanagement.ManagedSeed, shoot *gardencore.Shoot) (field.ErrorList, error) {
+	allErrs := field.ErrorList{}
+	zonesFieldPath := field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec", "provider", "zones")
+
+	oldSeedSpec, err := seedmanagementhelper.ExtractSeedSpec(oldManagedSeed)
+	if err != nil {
+		return nil, err
+	}
+	newSeedSpec, err := seedmanagementhelper.ExtractSeedSpec(newManagedSeed)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := admissionutils.ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec, newManagedSeed.Name, v.shootLister, "ManagedSeed"); err != nil {
+		allErrs = append(allErrs, field.Forbidden(zonesFieldPath, "zones must not be removed while shoots are still scheduled onto seed"))
+	}
+
+	shootZones := helper.GetAllZonesFromShoot(shoot)
+	newZones := sets.New[string](newSeedSpec.Provider.Zones...).Difference(sets.New[string](oldSeedSpec.Provider.Zones...))
+
+	// Newly added zones should match the ones found in the shoot cluster.
+	// Zone names were allowed to deviate from the zones configured for shoot clusters, see https://github.com/gardener/gardener/commit/8d28452e7f718d0041fbe82eb83543e3a87ea8ad.
+	// Thus, we can only check added zones here.
+	if !shootZones.HasAll(newZones.UnsortedList()...) {
+		allErrs = append(allErrs, field.Invalid(zonesFieldPath, newZones.UnsortedList(), "added zones must match the zones configured in the ManagedSeed's shoot cluster"))
+	}
+
+	if len(newSeedSpec.Provider.Zones) > 0 && shootZones.Len() != len(newSeedSpec.Provider.Zones) {
+		allErrs = append(allErrs, field.Invalid(zonesFieldPath, newSeedSpec.Provider.Zones, "seed provider zones size must be equal to shoot zones"))
+	}
+
+	return allErrs, nil
 }
 
 func (v *ManagedSeed) admitGardenlet(gardenlet *seedmanagement.Gardenlet, shoot *gardencore.Shoot, fldPath *field.Path) (field.ErrorList, error) {
