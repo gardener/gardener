@@ -8,6 +8,7 @@ require (
 	github.com/ahmetb/gen-crd-api-reference-docs v0.3.0
 	github.com/bronze1man/yaml2json v0.0.0-20211227013850-8972abeaea25
 	github.com/coreos/go-systemd/v22 v22.3.2
+	github.com/fluent/fluent-operator v1.7.0
 	github.com/gardener/dependency-watchdog v0.7.0
 	github.com/gardener/etcd-druid v0.15.3
 	github.com/gardener/hvpa-controller/api v0.5.0
@@ -52,7 +53,6 @@ require (
 	k8s.io/component-base v0.26.2
 	k8s.io/component-helpers v0.26.2
 	k8s.io/helm v2.16.1+incompatible
-	k8s.io/klog v1.0.0 // indirect
 	k8s.io/klog/v2 v2.80.1
 	k8s.io/kube-aggregator v0.26.2
 	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280
@@ -85,7 +85,6 @@ require (
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
-	github.com/fluent/fluent-operator v1.7.0
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -172,6 +171,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/gengo v0.0.0-20220902162205-c0856e24416d // indirect
+	k8s.io/klog v1.0.0 // indirect
 	k8s.io/kms v0.26.2 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.35 // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
