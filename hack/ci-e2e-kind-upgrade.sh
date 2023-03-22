@@ -205,6 +205,9 @@ kubectl wait seed $SEED_NAME --timeout=5m --for=jsonpath="{.status.gardener.vers
 # In a multi-zone setup, 6 istio-ingressgateway pods will be running, and it will take 18 minutes to complete the rollout.
 TIMEOUT=1200 ./hack/usage/wait-for.sh seed "$SEED_NAME" GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
 
+# Sleep for 60 seconds to allow for potential downtime detection during post-upgrade stabilization.
+sleep 60
+
 echo "Running gardener post-upgrade tests"
 make test-post-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
 
