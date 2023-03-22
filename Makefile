@@ -226,8 +226,8 @@ check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(
 	@cd $(GOMEGACHECK_DIR); $(abspath $(GOIMPORTS)) -l .
 
 	@hack/check-charts.sh ./charts
+	@hack/check-license-header.sh
 	@hack/check-skaffold-deps.sh
-	$(MAKE) check-license
 
 .PHONY: generate
 generate: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GOIMPORTS) $(GO_TO_PROTOBUF) $(HELM) $(MOCKGEN) $(OPENAPI_GEN) $(PROTOC_GEN_GOGO) $(YAML2JSON)
@@ -276,10 +276,6 @@ test-cov-clean:
 .PHONY: check-apidiff
 check-apidiff: $(GO_APIDIFF)
 	@./hack/check-apidiff.sh
-
-.PHONY: check-license
-check-license: $(GO_ADD_LICENSE)
-	@./hack/check-license-header.sh
 
 .PHONY: check-vulnerabilities
 check-vulnerabilities: $(GO_VULN_CHECK)

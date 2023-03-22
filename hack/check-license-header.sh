@@ -16,9 +16,9 @@
 
 set -e
 
-echo "> Checking if license header is present in all requried files."
+echo "> Checking if license header is present in all required files."
 
-missing_license_header_files="$(addlicense -check -ignore "vendor/**" -ignore "**/*.md" -ignore "**/*.yaml" -ignore "**/Dockerfile" --ignore "hack/tools/gomegacheck/**" .)" || true
+missing_license_header_files="$(addlicense -check -ignore "vendor/**" -ignore "**/*.md" -ignore "**/*.html" -ignore "**/*.yaml" -ignore "**/Dockerfile" --ignore "hack/tools/gomegacheck/**" .)" || true
 
 if [[ "$missing_license_header_files" ]]; then
   echo "Files with no license header detected:"
@@ -26,4 +26,4 @@ if [[ "$missing_license_header_files" ]]; then
   exit 1
 fi
 
-echo "All files have license headers."
+echo "All files have license headers, nothing to be done."
