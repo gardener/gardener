@@ -36,6 +36,15 @@ garden_kubeconfig=$1
 seed_kubeconfig=$2
 seed_name=$3
 
+seed_base_dir="$SCRIPT_DIR/../ssh-reverse-tunnel/seeds/$seed_name"
+
+gardenlet_values="gardenlet/values.yaml"
+registry_domain_file="registrydomain"
+if [[ "$seed_name" != "provider-extensions" ]]; then
+  gardenlet_values="gardenlet/values-$seed_name.yaml"
+  registry_domain_file="registrydomain-$seed_name"
+fi
+
 use_shoot_info="false"
 temp_shoot_info=$(mktemp)
 cleanup-shoot-info() {
@@ -45,9 +54,13 @@ trap cleanup-shoot-info EXIT
 
 ensure-config-file() {
   local file=$1
+  local tmpl="$file".tmpl
+  if [[ -n "$2" ]]; then
+    tmpl=$2
+  fi
   if [[ ! -f "$file" ]]; then
     echo "Creating \"$file\" from template."
-    cp "$file".tmpl "$file"
+    cp "$tmpl" "$file"
   fi
 }
 
@@ -90,7 +103,7 @@ echo "Ensuring config files"
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/values.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/secretbindings.yaml
-ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml
+ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml.tmpl
 
 echo "Check if essential config options are initialized"
 check-not-initial "$SCRIPT_DIR"/kubeconfig ""
@@ -123,7 +136,7 @@ if kubectl get configmaps -n kube-system shoot-info --kubeconfig "$seed_kubeconf
     .config.seedConfig.spec.dns.provider.type = \"$dns_provider_type\" |
     .config.seedConfig.spec.provider.region = \"$region\" |
     .config.seedConfig.spec.provider.type = \"$type\"
-  " "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml
+  " "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values"
 else
   echo "######################################################################################"
   echo "Please enter domain names for registry and relay domains on the seed"
@@ -138,26 +151,26 @@ else
     .config.seedConfig.metadata.name = \"$seed_name\" |
     .config.seedConfig.spec.dns.provider.secretRef.name = \"$internal_dns_secret\" |
     .config.seedConfig.spec.dns.provider.type = \"$dns_provider_type\"
-  " "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml
+  " "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values"
 fi
 
 if [[ $registry_domain == "$relay_domain" ]]; then
   echo "registry and relay domains must not be equal"
   exit 1
 fi
-echo "$registry_domain" > "$SCRIPT_DIR"/registrydomain
+echo "$registry_domain" > "$SCRIPT_DIR/$registry_domain_file"
 
 echo "Check if gardenlet values.yaml is complete"
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml ".config.seedConfig.metadata.name"
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml ".config.seedConfig.spec.ingress.domain"
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml ".config.seedConfig.spec.networks.pods"
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml ".config.seedConfig.spec.networks.nodes"
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml ".config.seedConfig.spec.networks.services"
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml ".config.seedConfig.spec.dns.provider.secretRef.name"
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml ".config.seedConfig.spec.dns.provider.type"
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml ".config.seedConfig.spec.provider.region"
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml ".config.seedConfig.spec.provider.type"
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml ".config.seedConfig.spec.provider.zones"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.metadata.name"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.ingress.domain"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.networks.pods"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.networks.nodes"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.networks.services"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.dns.provider.secretRef.name"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.dns.provider.type"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.provider.region"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.provider.type"
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" ".config.seedConfig.spec.provider.zones"
 
 echo "Deploying load-balancer services"
 kubectl --server-side=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../registry-seed/load-balancer/base
@@ -181,13 +194,14 @@ else
 fi
 
 echo "Create host and client keys for SSH reverse tunnel"
-"$SCRIPT_DIR"/../ssh-reverse-tunnel/create-host-keys.sh "$relay_domain" 6222
-"$SCRIPT_DIR"/../ssh-reverse-tunnel/create-client-keys.sh "$relay_domain" provider-extensions
+"$SCRIPT_DIR"/../ssh-reverse-tunnel/prepare-seed-dir.sh "$seed_name"
+"$SCRIPT_DIR"/../ssh-reverse-tunnel/create-host-keys.sh "$seed_name" "$relay_domain" 6222
+"$SCRIPT_DIR"/../ssh-reverse-tunnel/create-client-keys.sh "$seed_name" "$relay_domain"
 
 echo "Deploying kyverno, SSH reverse tunnel and container registry"
 kubectl --server-side=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../kyverno
 until kubectl --kubeconfig "$seed_kubeconfig" get clusterpolicies.kyverno.io ; do date; sleep 1; echo ""; done
 kubectl --server-side=true --force-conflicts=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../kyverno-policies
-kubectl --server-side=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../ssh-reverse-tunnel/sshd
-kubectl --server-side=true --kubeconfig "$garden_kubeconfig" apply -k "$SCRIPT_DIR"/../ssh-reverse-tunnel/ssh
+kubectl --server-side=true --kubeconfig "$seed_kubeconfig" apply -k "$seed_base_dir"/sshd
+kubectl --server-side=true --kubeconfig "$garden_kubeconfig" apply -k "$seed_base_dir"/ssh
 "$SCRIPT_DIR"/../registry-seed/deploy-registry.sh "$seed_kubeconfig" "$registry_domain"

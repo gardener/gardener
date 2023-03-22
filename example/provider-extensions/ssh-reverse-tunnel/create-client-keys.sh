@@ -20,7 +20,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 usage() {
   echo "Usage:"
-  echo "> create-client-keys.sh [ -h | <host> <name> ]"
+  echo "> create-client-keys.sh [ -h | <seed-name> <host> ]"
   echo
   echo ">> For example: create-client-keys.sh localhost provider-extensions"
 
@@ -31,16 +31,23 @@ if [ "$1" == "-h" ] || [ "$#" -ne 2 ]; then
   usage
 fi
 
-host=$1
-name=$2
+name=$1
+host=$2
 
-ssh-keygen -q -N "" -C "root@$host" -f "$SCRIPT_DIR"/ssh/client-keys/"$name"_id_rsa <<< y >/dev/null
+base_dir="$SCRIPT_DIR/seeds/$name"
+if [ ! -d "$base_dir" ]; then
+  echo "missing seed directory: $base_dir"
+  exit 1
+fi
 
-rm -rf "$SCRIPT_DIR"/sshd/host-keys/authorized_keys
+ssh-keygen -q -N "" -C "root@$host" -f "$base_dir"/ssh/client-keys/seed_id_rsa <<< y >/dev/null
 
-for f in "$SCRIPT_DIR"/ssh/client-keys/*_id_rsa.pub
+rm -rf "$base_dir"/sshd/host-keys/authorized_keys
+
+for f in "$base_dir"/ssh/client-keys/*_id_rsa.pub
 do
     [ -e "$f" ] || continue
-    cat "$f" >> "$SCRIPT_DIR"/sshd/host-keys/authorized_keys
+    cat "$f" >> "$base_dir"/sshd/host-keys/authorized_keys
 done
+
 
