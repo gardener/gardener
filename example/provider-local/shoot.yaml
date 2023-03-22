@@ -12,7 +12,11 @@ spec:
   secretBindingName: local # dummy, doesn't contain any credentials
   region: local
   networking:
-    type: cilium
+    type: calico
+    # TODO(scheererj): Drop this once v1.32 has been released and https://github.com/gardener/gardener-extension-networking-calico/pull/250 is available as release
+    providerConfig:
+      apiVersion: calico.networking.extensions.gardener.cloud/v1alpha1
+      kind: NetworkConfig
   provider:
     type: local
     workers:
