@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: logger
-        image: registry.k8s.io/e2e-test-images/agnhost:2.40
+        image: eu.gcr.io/gardener-project/3rd/agnhost:2.40 # Original image registry.k8s.io/e2e-test-images/agnhost:2.40
         command: ["/bin/sh"]
         args:
           - -c
