@@ -123,6 +123,7 @@ var _ = Describe("Logging", func() {
 					{Name: "loki-curator"},
 					{Name: "kube-rbac-proxy"},
 					{Name: "telegraf"},
+					{Name: "tune2fs"},
 				},
 			},
 		}
@@ -340,6 +341,7 @@ var _ = Describe("Logging", func() {
 					{Name: "loki-curator"},
 					{Name: "kube-rbac-proxy"},
 					{Name: "telegraf"},
+					{Name: "tune2fs"},
 				}
 
 				Expect(botanist.DeploySeedLogging(ctx)).ToNot(Succeed())

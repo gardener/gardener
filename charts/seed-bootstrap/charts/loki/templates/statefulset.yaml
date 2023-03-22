@@ -42,6 +42,21 @@ spec:
         fsGroup: 10001
         fsGroupChangePolicy: "OnRootMismatch"
       priorityClassName: {{ .Values.priorityClassName }}
+      initContainers:
+      - command:
+        - bash
+        - -c
+        - tune2fs -O large_dir $(mount | gawk '{if($3=="/data") {print $1}}')
+        image: {{ index .Values.global.images "tune2fs" }}
+        name: init-large-dir
+        securityContext:
+          privileged: true
+          runAsUser: 0
+          runAsNonRoot: false
+          runAsGroup: 0
+        volumeMounts:
+        - mountPath: /data
+          name: loki
       containers:
 {{- if .Values.rbacSidecarEnabled }}
         - name: kube-rbac-proxy

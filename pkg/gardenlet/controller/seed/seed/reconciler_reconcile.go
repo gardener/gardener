@@ -354,6 +354,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			images.ImageNameConfigmapReloader,
 			images.ImageNameLoki,
 			images.ImageNameLokiCurator,
+			images.ImageNameTune2fs,
 			images.ImageNameFluentBit,
 			images.ImageNameFluentBitPluginInstaller,
 			images.ImageNameGrafana,
