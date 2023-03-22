@@ -403,8 +403,3 @@ func (b *Botanist) RenewShootAccessSecrets(ctx context.Context) error {
 
 	return flow.Parallel(fns...)(ctx)
 }
-
-const (
-	labelKeyRotationKeyName = "credentials.gardener.cloud/key-name"
-	rotationQPS             = 100
-)
