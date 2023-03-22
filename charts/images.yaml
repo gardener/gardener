@@ -210,7 +210,7 @@ images:
       comment: the node-exporter is also deployed to the shoot cluster
 - name: grafana
   sourceRepository: github.com/grafana/grafana
-  repository: grafana/grafana
+  repository: eu.gcr.io/gardener-project/3rd/grafana/grafana
   tag: "7.5.17"
   labels:
   - name: gardener.cloud/cve-categorisation
@@ -256,7 +256,7 @@ images:
   tag: "0.15.0"
 - name: coredns
   sourceRepository: github.com/coredns/coredns
-  repository: coredns/coredns
+  repository: eu.gcr.io/gardener-project/3rd/coredns/coredns
   tag: "1.10.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -296,7 +296,7 @@ images:
 # Shoot optional addons
 - name: kubernetes-dashboard
   sourceRepository: github.com/kubernetes/dashboard
-  repository: kubernetesui/dashboard
+  repository: eu.gcr.io/gardener-project/3rd/kubernetesui/dashboard
   tag: v2.2.0
   targetVersion: "< 1.21"
   labels: &optionalAddonLabels
@@ -308,19 +308,19 @@ images:
         purposes only, accompanied w/ warning that no support be provided.
 - name: kubernetes-dashboard
   sourceRepository: github.com/kubernetes/dashboard
-  repository: kubernetesui/dashboard
+  repository: eu.gcr.io/gardener-project/3rd/kubernetesui/dashboard
   tag: v2.4.0
   targetVersion: ">= 1.21, < 1.22"
   labels: *optionalAddonLabels
 - name: kubernetes-dashboard
   sourceRepository: github.com/kubernetes/dashboard
-  repository: kubernetesui/dashboard
+  repository: eu.gcr.io/gardener-project/3rd/kubernetesui/dashboard
   tag: v2.5.1
   targetVersion: ">= 1.22"
   labels: *optionalAddonLabels
 - name: kubernetes-dashboard-metrics-scraper
   sourceRepository: github.com/kubernetes/dashboard
-  repository: kubernetesui/metrics-scraper
+  repository: eu.gcr.io/gardener-project/3rd/kubernetesui/metrics-scraper
   tag: v1.0.7
   labels: *optionalAddonLabels
 - name: nginx-ingress-controller
@@ -338,13 +338,13 @@ images:
 
 # Miscellaenous
 - name: alpine
-  repository: alpine
+  repository: eu.gcr.io/gardener-project/3rd/alpine
   tag: "3.15.4"
 
 # Logging
 - name: fluent-bit
   sourceRepository: github.com/fluent/fluent-bit
-  repository: fluent/fluent-bit
+  repository: eu.gcr.io/gardener-project/3rd/fluent/fluent-bit
   tag: "1.9.7"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -371,7 +371,7 @@ images:
       comment: no data is stored or processed by the installer
 - name: loki
   sourceRepository: github.com/grafana/loki
-  repository: grafana/loki
+  repository: eu.gcr.io/gardener-project/3rd/grafana/loki
   tag: "2.2.1"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -411,7 +411,7 @@ images:
       comment: kube-rbac-proxy is an authentication proxy working with credentials
 - name: promtail
   sourceRepository: github.com/grafana/loki
-  repository: "docker.io/grafana/promtail"
+  repository: eu.gcr.io/gardener-project/3rd/grafana/promtail
   tag: "2.2.1"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -618,7 +618,7 @@ images:
 # API Server SNI
 - name: apiserver-proxy
   sourceRepository: github.com/envoyproxy/envoy
-  repository: envoyproxy/envoy-distroless
+  repository: eu.gcr.io/gardener-project/3rd/envoyproxy/envoy-distroless
   tag: "v1.24.1"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
