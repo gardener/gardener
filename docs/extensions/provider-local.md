@@ -18,19 +18,15 @@ The motivation for maintaining such extension is the following:
 The following enlists the current limitations of the implementation.
 Please note that all of them are not technical limitations/blockers, but simply advanced scenarios that we haven't had invested yet into.
 
-1. Shoot clusters can have multiple nodes, but inter-pod communication for pods on different nodes only works with cilium as CNI plugin in the shoot cluster.
-
-   _We are using the [`networking-cilium`](https://github.com/gardener/gardener-extension-networking-cilium/) extension for the CNI plugin in shoot clusters per default. If the [`networking-calico`](https://github.com/gardener/gardener-extension-networking-calico/) extension should be used instead, however, cross-node pod-to-pod communication will not work out of the box. If required, setting `.spec.allowIPIPPacketsFromWorkloads` to `true` in the `FelixConfiguration` of the seed cluster can mitigate this issue._
-
-2. No owner TXT `DNSRecord`s (hence, no ["bad-case" control plane migration](../proposals/17-shoot-control-plane-migration-bad-case.md)).
+1. No owner TXT `DNSRecord`s (hence, no ["bad-case" control plane migration](../proposals/17-shoot-control-plane-migration-bad-case.md)).
 
    _In order to realize DNS (see the [Implementation Details](#implementation-details) section below), the `/etc/hosts` file is manipulated. This does not work for TXT records. In the future, we could look into using [CoreDNS](https://coredns.io/) instead._
 
-3. No load balancers for Shoot clusters.
+2. No load balancers for Shoot clusters.
 
    _We have not yet developed a `cloud-controller-manager` which could reconcile load balancer `Service`s in the shoot cluster.
 
-5. In case a seed cluster with multiple availability zones, i.e. multiple entries in `.spec.provider.zones`, is used in conjunction with a single-zone shoot control plane, i.e. a shoot cluster without `.spec.controlPlane.highAvailability` or with `.spec.controlPlane.highAvailability.failureTolerance.type` set to `node`, the local address of the API server endpoint needs to be determined manually or via the in-cluster `coredns`.
+3. In case a seed cluster with multiple availability zones, i.e. multiple entries in `.spec.provider.zones`, is used in conjunction with a single-zone shoot control plane, i.e. a shoot cluster without `.spec.controlPlane.highAvailability` or with `.spec.controlPlane.highAvailability.failureTolerance.type` set to `node`, the local address of the API server endpoint needs to be determined manually or via the in-cluster `coredns`.
 
    _As the different istio ingress gateway loadbalancers have individual external IP addresses, single-zone shoot control planes can end up in a random availability zone. Having the local host use the `coredns` in the cluster as name resolver would form a name resolution cycle. The tests mitigate the issue by adapting the DNS configuration inside the affected test._
 
