@@ -8,9 +8,8 @@ require (
 	github.com/ahmetb/gen-crd-api-reference-docs v0.3.0
 	github.com/bronze1man/yaml2json v0.0.0-20211227013850-8972abeaea25
 	github.com/coreos/go-systemd/v22 v22.3.2
-	github.com/gardener/dependency-watchdog v1.0.0
 	github.com/fluent/fluent-operator v1.7.0
-	github.com/gardener/dependency-watchdog v0.7.0
+	github.com/gardener/dependency-watchdog v1.0.0
 	github.com/gardener/etcd-druid v0.15.3
 	github.com/gardener/hvpa-controller/api v0.5.0
 	github.com/gardener/machine-controller-manager v0.48.1
@@ -87,6 +86,7 @@ require (
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
+	github.com/frankban/quicktest v1.14.4 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
