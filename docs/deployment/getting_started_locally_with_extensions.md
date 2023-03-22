@@ -95,20 +95,20 @@ Finally, the images for the Seed cluster are built, pushed to a container regist
 Additional seed(s) can be added by running
 
 ```bash
-SEED_NAME=<seed-name> make gardener-extensions-up
+make gardener-extensions-up SEED_NAME=<seed-name>
 ```
 
 The seed cluster preparations are similar to the first seed:
 
 The `kubeconfig` of your Kubernetes cluster you would like to use as seed should be placed at `./example/provider-extensions/seed/kubeconfig-<seed-name>`.
-Additionally, please maintain the configuration of your seed in `./example/provider-extensions/gardenlet/values-<seed-name>.yaml`. It is automatically copied from `values.yaml.tmpl` in the same directory when you run `SEED_NAME=<seed-name> make gardener-extensions-up` for the first time. It also includes explanations of the properties you should set.
+Additionally, please maintain the configuration of your seed in `./example/provider-extensions/gardenlet/values-<seed-name>.yaml`. It is automatically copied from `values.yaml.tmpl` in the same directory when you run `make gardener-extensions-up SEED_NAME=<seed-name>` for the first time. It also includes explanations of the properties you should set.
 
 ### Removing a Seed
 
 If you have multiple seeds and want to remove one, just use
 
 ```bash
-SEED_NAME=<seed-name> make gardener-extensions-down
+make gardener-extensions-down SEED_NAME=<seed-name>
 ```
 
 If it is not the last seed, this command will only remove the seed, but leave the local Gardener cluster and the other seeds untouched.
