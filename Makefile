@@ -202,12 +202,16 @@ revendor:
 clean:
 	@hack/clean.sh ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
 
+.PHONY: add-license-headers
+add-license-headers: $(GO_ADD_LICENSE)
+	@./hack/add-license-header.sh
+
 .PHONY: check-generate
 check-generate:
 	@hack/check-generate.sh $(REPO_ROOT)
 
 .PHONY: check
-check: $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(LOGCHECK) $(GOMEGACHECK) $(YQ)
+check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(LOGCHECK) $(GOMEGACHECK) $(YQ)
 	@hack/check.sh --golangci-lint-config=./.golangci.yaml ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
 	@hack/check-imports.sh ./charts/... ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/... ./third_party/...
 
@@ -222,6 +226,7 @@ check: $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(LOGCHECK) $(GOMEGA
 	@cd $(GOMEGACHECK_DIR); $(abspath $(GOIMPORTS)) -l .
 
 	@hack/check-charts.sh ./charts
+	@hack/check-license-header.sh
 	@hack/check-skaffold-deps.sh
 
 .PHONY: generate
