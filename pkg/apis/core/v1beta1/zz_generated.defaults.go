@@ -142,6 +142,9 @@ func SetObjectDefaults_Shoot(in *Shoot) {
 	if in.Spec.Kubernetes.ClusterAutoscaler != nil {
 		SetDefaults_ClusterAutoscaler(in.Spec.Kubernetes.ClusterAutoscaler)
 	}
+	if in.Spec.Kubernetes.KubeAPIServer != nil {
+		SetDefaults_KubeAPIServerConfig(in.Spec.Kubernetes.KubeAPIServer)
+	}
 	if in.Spec.Kubernetes.VerticalPodAutoscaler != nil {
 		SetDefaults_VerticalPodAutoscaler(in.Spec.Kubernetes.VerticalPodAutoscaler)
 	}

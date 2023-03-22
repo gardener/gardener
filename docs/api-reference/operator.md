@@ -10,6 +10,252 @@
 </p>
 Resource Types:
 <ul></ul>
+<h3 id="operator.gardener.cloud/v1alpha1.AuditWebhook">AuditWebhook
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+</p>
+<p>
+<p>AuditWebhook contains settings related to an audit webhook configuration.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>batchMaxSize</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>BatchMaxSize is the maximum size of a batch.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubeconfigSecretName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this webhook.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>version</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Version is the API version to send and expect from the webhook.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.Authentication">Authentication
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+</p>
+<p>
+<p>Authentication contains settings related to authentication.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>webhook</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.AuthenticationWebhook">
+AuthenticationWebhook
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Webhook contains settings related to an authentication webhook configuration.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.AuthenticationWebhook">AuthenticationWebhook
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Authentication">Authentication</a>)
+</p>
+<p>
+<p>AuthenticationWebhook contains settings related to an authentication webhook configuration.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>cacheTTL</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CacheTTL is the duration to cache responses from the webhook authenticator.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubeconfigSecretName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this webhook.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>version</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Version is the API version to send and expect from the webhook.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.Authorization">Authorization
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+</p>
+<p>
+<p>Authorization contains settings related to authorization.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>webhook</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.AuthorizationWebhook">
+AuthorizationWebhook
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Webhook contains settings related to an authorization webhook configuration.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.AuthorizationWebhook">AuthorizationWebhook
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Authorization">Authorization</a>)
+</p>
+<p>
+<p>AuthorizationWebhook contains settings related to an authorization webhook configuration.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>cacheAuthorizedTTL</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CacheAuthorizedTTL is the duration to cache &lsquo;authorized&rsquo; responses from the webhook authorizer.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>cacheUnauthorizedTTL</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CacheUnauthorizedTTL is the duration to cache &lsquo;unauthorized&rsquo; responses from the webhook authorizer.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubeconfigSecretName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this webhook.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>version</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Version is the API version to send and expect from the webhook.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.Backup">Backup
 </h3>
 <p>
@@ -511,6 +757,47 @@ Credentials
 </tr>
 </tbody>
 </table>
+<h3 id="operator.gardener.cloud/v1alpha1.GroupResource">GroupResource
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+</p>
+<p>
+<p>GroupResource contains a list of resources which should be stored in etcd-events instead of etcd-main.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>group</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Group is the API group name.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resource</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Resource is the resource name.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.HighAvailability">HighAvailability
 </h3>
 <p>
@@ -520,6 +807,157 @@ Credentials
 <p>
 <p>HighAvailability specifies the configuration settings for high availability for a resource.</p>
 </p>
+<h3 id="operator.gardener.cloud/v1alpha1.KubeAPIServerConfig">KubeAPIServerConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Kubernetes">Kubernetes</a>)
+</p>
+<p>
+<p>KubeAPIServerConfig contains configuration settings for the kube-apiserver.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>KubeAPIServerConfig</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerConfig
+</em>
+</td>
+<td>
+<p>
+(Members of <code>KubeAPIServerConfig</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>KubeAPIServerConfig contains all configuration values not specific to the virtual garden cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>auditWebhook</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.AuditWebhook">
+AuditWebhook
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AuditWebhook contains settings related to an audit webhook configuration.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>authentication</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.Authentication">
+Authentication
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Authentication contains settings related to authentication.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>authorization</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.Authorization">
+Authorization
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Authorization contains settings related to authorization.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resourcesToStoreInETCDEvents</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.GroupResource">
+[]GroupResource
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ResourcesToStoreInETCDEvents contains a list of resources which should be stored in etcd-events instead of
+etcd-main. The &lsquo;events&rsquo; resource is always stored in etcd-events. Note that adding or removing resources from
+this list will not migrate them automatically from the etcd-main to etcd-events or vice versa.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>sni</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.SNI">
+SNI
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SNI contains configuration options for the TLS SNI settings.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.Kubernetes">Kubernetes
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.VirtualCluster">VirtualCluster</a>)
+</p>
+<p>
+<p>Kubernetes contains the version and configuration options for the Kubernetes components of the virtual garden
+cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>kubeAPIServer</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.KubeAPIServerConfig">
+KubeAPIServerConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeAPIServer contains configuration settings for the kube-apiserver.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>version</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Version is the semantic Kubernetes version to use for the virtual garden cluster.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.Maintenance">Maintenance
 </h3>
 <p>
@@ -623,6 +1061,51 @@ Settings
 <td>
 <em>(Optional)</em>
 <p>Settings contains certain settings for this cluster.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.SNI">SNI
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+</p>
+<p>
+<p>SNI contains configuration options for the TLS SNI settings.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>secretName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>SecretName is the name of a secret containing the TLS certificate and private key.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>domainPatterns</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DomainPatterns is a list of fully qualified domain names, possibly with prefixed wildcard segments. The domain
+patterns also allow IP addresses, but IPs should only be used if the apiserver has visibility to the IP address
+requested by a client. If no domain patterns are provided, the names of the certificate are extracted.
+Non-wildcard matches trump over wildcard matches, explicit domain patterns trump over extracted names.</p>
 </td>
 </tr>
 </tbody>
@@ -830,6 +1313,20 @@ ETCD
 <td>
 <em>(Optional)</em>
 <p>ETCD contains configuration for the etcds of the virtual garden cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubernetes</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.Kubernetes">
+Kubernetes
+</a>
+</em>
+</td>
+<td>
+<p>Kubernetes contains the version and configuration options for the Kubernetes components of the virtual garden
+cluster.</p>
 </td>
 </tr>
 <tr>

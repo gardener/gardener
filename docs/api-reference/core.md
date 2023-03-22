@@ -1985,6 +1985,18 @@ bool
 <p>Disabled specifies whether this plugin should be disabled.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>kubeconfigSecretName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this admission plugin.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.Alerting">Alerting

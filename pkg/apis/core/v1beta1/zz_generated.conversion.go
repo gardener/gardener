@@ -1761,6 +1761,7 @@ func autoConvert_v1beta1_AdmissionPlugin_To_core_AdmissionPlugin(in *AdmissionPl
 	out.Name = in.Name
 	out.Config = (*runtime.RawExtension)(unsafe.Pointer(in.Config))
 	out.Disabled = (*bool)(unsafe.Pointer(in.Disabled))
+	out.KubeconfigSecretName = (*string)(unsafe.Pointer(in.KubeconfigSecretName))
 	return nil
 }
 
@@ -1773,6 +1774,7 @@ func autoConvert_core_AdmissionPlugin_To_v1beta1_AdmissionPlugin(in *core.Admiss
 	out.Name = in.Name
 	out.Disabled = (*bool)(unsafe.Pointer(in.Disabled))
 	out.Config = (*runtime.RawExtension)(unsafe.Pointer(in.Config))
+	out.KubeconfigSecretName = (*string)(unsafe.Pointer(in.KubeconfigSecretName))
 	return nil
 }
 

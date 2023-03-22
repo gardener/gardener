@@ -196,6 +196,520 @@ spec:
                             type: object
                         type: object
                     type: object
+                  kubernetes:
+                    description: Kubernetes contains the version and configuration
+                      options for the Kubernetes components of the virtual garden
+                      cluster.
+                    properties:
+                      kubeAPIServer:
+                        description: KubeAPIServer contains configuration settings
+                          for the kube-apiserver.
+                        properties:
+                          admissionPlugins:
+                            description: AdmissionPlugins contains the list of user-defined
+                              admission plugins (additional to those managed by Gardener),
+                              and, if desired, the corresponding configuration.
+                            items:
+                              description: AdmissionPlugin contains information about
+                                a specific admission plugin and its corresponding
+                                configuration.
+                              properties:
+                                config:
+                                  description: Config is the configuration of the
+                                    plugin.
+                                  type: object
+                                  x-kubernetes-preserve-unknown-fields: true
+                                disabled:
+                                  description: Disabled specifies whether this plugin
+                                    should be disabled.
+                                  type: boolean
+                                kubeconfigSecretName:
+                                  description: KubeconfigSecretName specifies the
+                                    name of a secret containing the kubeconfig for
+                                    this admission plugin.
+                                  type: string
+                                name:
+                                  description: Name is the name of the plugin.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
+                          apiAudiences:
+                            description: APIAudiences are the identifiers of the API.
+                              The service account token authenticator will validate
+                              that tokens used against the API are bound to at least
+                              one of these audiences. Defaults to ["kubernetes"].
+                            items:
+                              type: string
+                            type: array
+                          auditConfig:
+                            description: AuditConfig contains configuration settings
+                              for the audit of the kube-apiserver.
+                            properties:
+                              auditPolicy:
+                                description: AuditPolicy contains configuration settings
+                                  for audit policy of the kube-apiserver.
+                                properties:
+                                  configMapRef:
+                                    description: ConfigMapRef is a reference to a
+                                      ConfigMap object in the same namespace, which
+                                      contains the audit policy for the kube-apiserver.
+                                    properties:
+                                      apiVersion:
+                                        description: API version of the referent.
+                                        type: string
+                                      fieldPath:
+                                        description: 'If referring to a piece of an
+                                          object instead of an entire object, this
+                                          string should contain a valid JSON/Go field
+                                          access statement, such as desiredState.manifest.containers[2].
+                                          For example, if the object reference is
+                                          to a container within a pod, this would
+                                          take on a value like: "spec.containers{name}"
+                                          (where "name" refers to the name of the
+                                          container that triggered the event) or if
+                                          no container name is specified "spec.containers[2]"
+                                          (container with index 2 in this pod). This
+                                          syntax is chosen only to have some well-defined
+                                          way of referencing a part of an object.
+                                          TODO: this design is not final and this
+                                          field is subject to change in the future.'
+                                        type: string
+                                      kind:
+                                        description: 'Kind of the referent. More info:
+                                          https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                                        type: string
+                                      name:
+                                        description: 'Name of the referent. More info:
+                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                        type: string
+                                      namespace:
+                                        description: 'Namespace of the referent. More
+                                          info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                                        type: string
+                                      resourceVersion:
+                                        description: 'Specific resourceVersion to
+                                          which this reference is made, if any. More
+                                          info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                                        type: string
+                                      uid:
+                                        description: 'UID of the referent. More info:
+                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                                        type: string
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
+                            type: object
+                          auditWebhook:
+                            description: AuditWebhook contains settings related to
+                              an audit webhook configuration.
+                            properties:
+                              batchMaxSize:
+                                default: 30
+                                description: BatchMaxSize is the maximum size of a
+                                  batch.
+                                format: int32
+                                minimum: 1
+                                type: integer
+                              kubeconfigSecretName:
+                                description: KubeconfigSecretName specifies the name
+                                  of a secret containing the kubeconfig for this webhook.
+                                minLength: 1
+                                type: string
+                              version:
+                                default: audit.k8s.io/v1
+                                description: Version is the API version to send and
+                                  expect from the webhook.
+                                enum:
+                                - audit.k8s.io/v1
+                                type: string
+                            required:
+                            - kubeconfigSecretName
+                            type: object
+                          authentication:
+                            description: Authentication contains settings related
+                              to authentication.
+                            properties:
+                              webhook:
+                                description: Webhook contains settings related to
+                                  an authentication webhook configuration.
+                                properties:
+                                  cacheTTL:
+                                    description: CacheTTL is the duration to cache
+                                      responses from the webhook authenticator.
+                                    pattern: ^([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$
+                                    type: string
+                                  kubeconfigSecretName:
+                                    description: KubeconfigSecretName specifies the
+                                      name of a secret containing the kubeconfig for
+                                      this webhook.
+                                    minLength: 1
+                                    type: string
+                                  version:
+                                    default: v1beta1
+                                    description: Version is the API version to send
+                                      and expect from the webhook.
+                                    enum:
+                                    - v1alpha1
+                                    - v1beta1
+                                    - v1
+                                    type: string
+                                required:
+                                - kubeconfigSecretName
+                                type: object
+                            type: object
+                          authorization:
+                            description: Authorization contains settings related to
+                              authorization.
+                            properties:
+                              webhook:
+                                description: Webhook contains settings related to
+                                  an authorization webhook configuration.
+                                properties:
+                                  cacheAuthorizedTTL:
+                                    description: CacheAuthorizedTTL is the duration
+                                      to cache 'authorized' responses from the webhook
+                                      authorizer.
+                                    pattern: ^([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$
+                                    type: string
+                                  cacheUnauthorizedTTL:
+                                    description: CacheUnauthorizedTTL is the duration
+                                      to cache 'unauthorized' responses from the webhook
+                                      authorizer.
+                                    pattern: ^([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$
+                                    type: string
+                                  kubeconfigSecretName:
+                                    description: KubeconfigSecretName specifies the
+                                      name of a secret containing the kubeconfig for
+                                      this webhook.
+                                    minLength: 1
+                                    type: string
+                                  version:
+                                    default: v1beta1
+                                    description: Version is the API version to send
+                                      and expect from the webhook.
+                                    enum:
+                                    - v1beta1
+                                    - v1
+                                    type: string
+                                required:
+                                - kubeconfigSecretName
+                                type: object
+                            type: object
+                          defaultNotReadyTolerationSeconds:
+                            description: DefaultNotReadyTolerationSeconds indicates
+                              the tolerationSeconds of the toleration for notReady:NoExecute
+                              that is added by default to every pod that does not
+                              already have such a toleration (flag `--default-not-ready-toleration-seconds`).
+                              The field has effect only when the `DefaultTolerationSeconds`
+                              admission plugin is enabled. Defaults to 300.
+                            format: int64
+                            type: integer
+                          defaultUnreachableTolerationSeconds:
+                            description: DefaultUnreachableTolerationSeconds indicates
+                              the tolerationSeconds of the toleration for unreachable:NoExecute
+                              that is added by default to every pod that does not
+                              already have such a toleration (flag `--default-unreachable-toleration-seconds`).
+                              The field has effect only when the `DefaultTolerationSeconds`
+                              admission plugin is enabled. Defaults to 300.
+                            format: int64
+                            type: integer
+                          enableAnonymousAuthentication:
+                            description: 'EnableAnonymousAuthentication defines whether
+                              anonymous requests to the secure port of the API server
+                              should be allowed (flag `--anonymous-auth`). See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/'
+                            type: boolean
+                          enableBasicAuthentication:
+                            description: "EnableBasicAuthentication defines whether
+                              basic authentication should be enabled for this cluster
+                              or not. \n Deprecated: basic authentication has been
+                              removed in Kubernetes v1.19+. The field is no-op and
+                              will be removed in a future version."
+                            type: boolean
+                          eventTTL:
+                            description: EventTTL controls the amount of time to retain
+                              events. Defaults to 1h.
+                            type: string
+                          featureGates:
+                            additionalProperties:
+                              type: boolean
+                            description: FeatureGates contains information about enabled
+                              feature gates.
+                            type: object
+                          logging:
+                            description: Logging contains configuration for the log
+                              level and HTTP access logs.
+                            properties:
+                              httpAccessVerbosity:
+                                description: HTTPAccessVerbosity is the kube-apiserver
+                                  access logs level
+                                format: int32
+                                type: integer
+                              verbosity:
+                                description: Verbosity is the kube-apiserver log verbosity
+                                  level Defaults to 2.
+                                format: int32
+                                type: integer
+                            type: object
+                          oidcConfig:
+                            description: OIDCConfig contains configuration settings
+                              for the OIDC provider.
+                            properties:
+                              caBundle:
+                                description: If set, the OpenID server's certificate
+                                  will be verified by one of the authorities in the
+                                  oidc-ca-file, otherwise the host's root CA set will
+                                  be used.
+                                type: string
+                              clientAuthentication:
+                                description: ClientAuthentication can optionally contain
+                                  client configuration used for kubeconfig generation.
+                                properties:
+                                  extraConfig:
+                                    additionalProperties:
+                                      type: string
+                                    description: Extra configuration added to kubeconfig's
+                                      auth-provider. Must not be any of idp-issuer-url,
+                                      client-id, client-secret, idp-certificate-authority,
+                                      idp-certificate-authority-data, id-token or
+                                      refresh-token
+                                    type: object
+                                  secret:
+                                    description: The client Secret for the OpenID
+                                      Connect client.
+                                    type: string
+                                type: object
+                              clientID:
+                                description: The client ID for the OpenID Connect
+                                  client, must be set if oidc-issuer-url is set.
+                                type: string
+                              groupsClaim:
+                                description: If provided, the name of a custom OpenID
+                                  Connect claim for specifying user groups. The claim
+                                  value is expected to be a string or array of strings.
+                                  This flag is experimental, please see the authentication
+                                  documentation for further details.
+                                type: string
+                              groupsPrefix:
+                                description: If provided, all groups will be prefixed
+                                  with this value to prevent conflicts with other
+                                  authentication strategies.
+                                type: string
+                              issuerURL:
+                                description: The URL of the OpenID issuer, only HTTPS
+                                  scheme will be accepted. If set, it will be used
+                                  to verify the OIDC JSON Web Token (JWT).
+                                type: string
+                              requiredClaims:
+                                additionalProperties:
+                                  type: string
+                                description: key=value pairs that describes a required
+                                  claim in the ID Token. If set, the claim is verified
+                                  to be present in the ID Token with a matching value.
+                                type: object
+                              signingAlgs:
+                                description: List of allowed JOSE asymmetric signing
+                                  algorithms. JWTs with a 'alg' header value not in
+                                  this list will be rejected. Values are defined by
+                                  RFC 7518 https://tools.ietf.org/html/rfc7518#section-3.1
+                                items:
+                                  type: string
+                                type: array
+                              usernameClaim:
+                                description: The OpenID claim to use as the user name.
+                                  Note that claims other than the default ('sub')
+                                  is not guaranteed to be unique and immutable. This
+                                  flag is experimental, please see the authentication
+                                  documentation for further details. (default "sub")
+                                type: string
+                              usernamePrefix:
+                                description: If provided, all usernames will be prefixed
+                                  with this value. If not provided, username claims
+                                  other than 'email' are prefixed by the issuer URL
+                                  to avoid clashes. To skip any prefixing, provide
+                                  the value '-'.
+                                type: string
+                            type: object
+                          requests:
+                            description: Requests contains configuration for request-specific
+                              settings for the kube-apiserver.
+                            properties:
+                              maxMutatingInflight:
+                                description: MaxMutatingInflight is the maximum number
+                                  of mutating requests in flight at a given time.
+                                  When the server exceeds this, it rejects requests.
+                                format: int32
+                                type: integer
+                              maxNonMutatingInflight:
+                                description: MaxNonMutatingInflight is the maximum
+                                  number of non-mutating requests in flight at a given
+                                  time. When the server exceeds this, it rejects requests.
+                                format: int32
+                                type: integer
+                            type: object
+                          resourcesToStoreInETCDEvents:
+                            description: ResourcesToStoreInETCDEvents contains a list
+                              of resources which should be stored in etcd-events instead
+                              of etcd-main. The 'events' resource is always stored
+                              in etcd-events. Note that adding or removing resources
+                              from this list will not migrate them automatically from
+                              the etcd-main to etcd-events or vice versa.
+                            items:
+                              description: GroupResource contains a list of resources
+                                which should be stored in etcd-events instead of etcd-main.
+                              properties:
+                                group:
+                                  description: Group is the API group name.
+                                  minLength: 1
+                                  type: string
+                                resource:
+                                  description: Resource is the resource name.
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - group
+                              - resource
+                              type: object
+                            type: array
+                          runtimeConfig:
+                            additionalProperties:
+                              type: boolean
+                            description: RuntimeConfig contains information about
+                              enabled or disabled APIs.
+                            type: object
+                          serviceAccountConfig:
+                            description: ServiceAccountConfig contains configuration
+                              settings for the service account handling of the kube-apiserver.
+                            properties:
+                              acceptedIssuers:
+                                description: AcceptedIssuers is an additional set
+                                  of issuers that are used to determine which service
+                                  account tokens are accepted. These values are not
+                                  used to generate new service account tokens. Only
+                                  useful when service account tokens are also issued
+                                  by another external system or a change of the current
+                                  issuer that is used for generating tokens is being
+                                  performed. This field is only available for Kubernetes
+                                  v1.22 or later.
+                                items:
+                                  type: string
+                                type: array
+                              extendTokenExpiration:
+                                description: ExtendTokenExpiration turns on projected
+                                  service account expiration extension during token
+                                  generation, which helps safe transition from legacy
+                                  token to bound service account token feature. If
+                                  this flag is enabled, admission injected tokens
+                                  would be extended up to 1 year to prevent unexpected
+                                  failure during transition, ignoring value of service-account-max-token-expiration.
+                                type: boolean
+                              issuer:
+                                description: Issuer is the identifier of the service
+                                  account token issuer. The issuer will assert this
+                                  identifier in "iss" claim of issued tokens. This
+                                  value is used to generate new service account tokens.
+                                  This value is a string or URI. Defaults to URI of
+                                  the API server.
+                                type: string
+                              maxTokenExpiration:
+                                description: MaxTokenExpiration is the maximum validity
+                                  duration of a token created by the service account
+                                  token issuer. If an otherwise valid TokenRequest
+                                  with a validity duration larger than this value
+                                  is requested, a token will be issued with a validity
+                                  duration of this value. This field must be within
+                                  [30d,90d].
+                                type: string
+                            type: object
+                          sni:
+                            description: SNI contains configuration options for the
+                              TLS SNI settings.
+                            properties:
+                              domainPatterns:
+                                description: DomainPatterns is a list of fully qualified
+                                  domain names, possibly with prefixed wildcard segments.
+                                  The domain patterns also allow IP addresses, but
+                                  IPs should only be used if the apiserver has visibility
+                                  to the IP address requested by a client. If no domain
+                                  patterns are provided, the names of the certificate
+                                  are extracted. Non-wildcard matches trump over wildcard
+                                  matches, explicit domain patterns trump over extracted
+                                  names.
+                                items:
+                                  type: string
+                                type: array
+                              secretName:
+                                description: SecretName is the name of a secret containing
+                                  the TLS certificate and private key.
+                                minLength: 1
+                                type: string
+                            required:
+                            - secretName
+                            type: object
+                          watchCacheSizes:
+                            description: WatchCacheSizes contains configuration of
+                              the API server's watch cache sizes. Configuring these
+                              flags might be useful for large-scale Shoot clusters
+                              with a lot of parallel update requests and a lot of
+                              watching controllers (e.g. large ManagedSeed clusters).
+                              When the API server's watch cache's capacity is too
+                              small to cope with the amount of update requests and
+                              watchers for a particular resource, it might happen
+                              that controller watches are permanently stopped with
+                              `too old resource version` errors. Starting from kubernetes
+                              v1.19, the API server's watch cache size is adapted
+                              dynamically and setting the watch cache size flags will
+                              have no effect, except when setting it to 0 (which disables
+                              the watch cache).
+                            properties:
+                              default:
+                                description: 'Default configures the default watch
+                                  cache size of the kube-apiserver (flag `--default-watch-cache-size`,
+                                  defaults to 100). See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/'
+                                format: int32
+                                type: integer
+                              resources:
+                                description: 'Resources configures the watch cache
+                                  size of the kube-apiserver per resource (flag `--watch-cache-sizes`).
+                                  See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/'
+                                items:
+                                  description: ResourceWatchCacheSize contains configuration
+                                    of the API server's watch cache size for one specific
+                                    resource.
+                                  properties:
+                                    apiGroup:
+                                      description: APIGroup is the API group of the
+                                        resource for which the watch cache size should
+                                        be configured. An unset value is used to specify
+                                        the legacy core API (e.g. for `secrets`).
+                                      type: string
+                                    resource:
+                                      description: Resource is the name of the resource
+                                        for which the watch cache size should be configured
+                                        (in lowercase plural form, e.g. `secrets`).
+                                      type: string
+                                    size:
+                                      description: CacheSize specifies the watch cache
+                                        size that should be configured for the specified
+                                        resource.
+                                      format: int32
+                                      type: integer
+                                  required:
+                                  - resource
+                                  - size
+                                  type: object
+                                type: array
+                            type: object
+                        type: object
+                      version:
+                        description: Version is the semantic Kubernetes version to
+                          use for the virtual garden cluster.
+                        minLength: 1
+                        type: string
+                    required:
+                    - version
+                    type: object
                   maintenance:
                     description: Maintenance contains information about the time window
                       for maintenance operations.
@@ -224,6 +738,7 @@ spec:
                     - timeWindow
                     type: object
                 required:
+                - kubernetes
                 - maintenance
                 type: object
             required:

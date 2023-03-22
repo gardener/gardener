@@ -84,6 +84,11 @@ func (in *AdmissionPlugin) DeepCopyInto(out *AdmissionPlugin) {
 		*out = new(runtime.RawExtension)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.KubeconfigSecretName != nil {
+		in, out := &in.KubeconfigSecretName, &out.KubeconfigSecretName
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

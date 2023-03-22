@@ -908,6 +908,13 @@ func schema_pkg_apis_core_v1alpha1_AdmissionPlugin(ref common.ReferenceCallback)
 							Format:      "",
 						},
 					},
+					"kubeconfigSecretName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this admission plugin.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"name"},
 			},
@@ -8641,6 +8648,13 @@ func schema_pkg_apis_core_v1beta1_AdmissionPlugin(ref common.ReferenceCallback) 
 						SchemaProps: spec.SchemaProps{
 							Description: "Disabled specifies whether this plugin should be disabled.",
 							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"kubeconfigSecretName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this admission plugin.",
+							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
