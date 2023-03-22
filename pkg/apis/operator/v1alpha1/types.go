@@ -198,6 +198,7 @@ type Kubernetes struct {
 	// +optional
 	KubeAPIServer *KubeAPIServerConfig `json:"kubeAPIServer,omitempty"`
 	// Version is the semantic Kubernetes version to use for the virtual garden cluster.
+	// +kubebuilder:validation:MinLength=1
 	Version string `json:"version"`
 }
 
@@ -228,11 +229,14 @@ type KubeAPIServerConfig struct {
 // AuditWebhook contains settings related to an audit webhook configuration.
 type AuditWebhook struct {
 	// BatchMaxSize is the maximum size of a batch.
+	// +kubebuilder:validation:Minimum=1
 	// +optional
 	BatchMaxSize *int32 `json:"batchMaxSize,omitempty"`
 	// KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this webhook.
+	// +kubebuilder:validation:MinLength=1
 	KubeconfigSecretName string `json:"kubeconfigSecretName"`
 	// Version is the API version to send and expect from the webhook.
+	// +kubebuilder:validation:Enum=audit.k8s.io/v1
 	// +optional
 	Version *string `json:"version,omitempty"`
 }
@@ -247,11 +251,15 @@ type Authentication struct {
 // AuthenticationWebhook contains settings related to an authentication webhook configuration.
 type AuthenticationWebhook struct {
 	// CacheTTL is the duration to cache responses from the webhook authenticator.
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$"
 	// +optional
 	CacheTTL *metav1.Duration `json:"cacheTTL,omitempty"`
 	// KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this webhook.
+	// +kubebuilder:validation:MinLength=1
 	KubeconfigSecretName string `json:"kubeconfigSecretName"`
 	// Version is the API version to send and expect from the webhook.
+	// +kubebuilder:validation:Enum=v1alpha1;v1beta1;v1
 	// +optional
 	Version *string `json:"version,omitempty"`
 }
@@ -266,27 +274,38 @@ type Authorization struct {
 // AuthorizationWebhook contains settings related to an authorization webhook configuration.
 type AuthorizationWebhook struct {
 	// CacheAuthorizedTTL is the duration to cache 'authorized' responses from the webhook authorizer.
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$"
 	// +optional
 	CacheAuthorizedTTL *metav1.Duration `json:"cacheAuthorizedTTL,omitempty"`
 	// CacheUnauthorizedTTL is the duration to cache 'unauthorized' responses from the webhook authorizer.
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$"
 	// +optional
 	CacheUnauthorizedTTL *metav1.Duration `json:"cacheUnauthorizedTTL,omitempty"`
 	// KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this webhook.
+	// +kubebuilder:validation:MinLength=1
 	KubeconfigSecretName string `json:"kubeconfigSecretName"`
 	// Version is the API version to send and expect from the webhook.
+	// +kubebuilder:validation:Enum=v1beta1;v1
 	// +optional
 	Version *string `json:"version,omitempty"`
 }
 
 // GroupResource contains a list of resources which should be stored in etcd-events instead of etcd-main.
 type GroupResource struct {
-	Group    string `json:"group"`
+	// Group is the API group name.
+	// +kubebuilder:validation:MinLength=1
+	Group string `json:"group"`
+	// Resource is the resource name.
+	// +kubebuilder:validation:MinLength=1
 	Resource string `json:"resource"`
 }
 
 // SNI contains configuration options for the TLS SNI settings.
 type SNI struct {
 	// SecretName is the name of a secret containing the TLS certificate and private key.
+	// +kubebuilder:validation:MinLength=1
 	SecretName string `json:"secretName"`
 	// DomainPatterns is a list of fully qualified domain names, possibly with prefixed wildcard segments. The domain
 	// patterns also allow IP addresses, but IPs should only be used if the apiserver has visibility to the IP address

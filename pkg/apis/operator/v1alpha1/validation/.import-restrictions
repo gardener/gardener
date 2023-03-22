@@ -1,0 +1,9 @@
+# Override import restrictions for API packages. validation package is allowed to import everything, as it is not
+# supposed to be imported outside of this repository.
+rules:
+- selectorRegexp: k8s[.]io
+  allowedPrefixes:
+  - ''
+- selectorRegexp: github[.]com/gardener
+  allowedPrefixes:
+  - ''

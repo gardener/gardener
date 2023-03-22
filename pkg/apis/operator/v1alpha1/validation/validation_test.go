@@ -683,7 +683,7 @@ var _ = Describe("Validation Tests", func() {
 		})
 	})
 
-	Describe("#ValidateGarden", func() {
+	Describe("#ValidateGardenUpdate", func() {
 		var oldGarden, newGarden *operatorv1alpha1.Garden
 
 		BeforeEach(func() {

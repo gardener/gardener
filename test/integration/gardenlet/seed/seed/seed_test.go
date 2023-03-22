@@ -581,6 +581,9 @@ var _ = Describe("Seed controller tests", func() {
 							},
 							Spec: operatorv1alpha1.GardenSpec{
 								VirtualCluster: operatorv1alpha1.VirtualCluster{
+									Kubernetes: operatorv1alpha1.Kubernetes{
+										Version: "1.2.3",
+									},
 									Maintenance: operatorv1alpha1.Maintenance{
 										TimeWindow: gardencorev1beta1.MaintenanceTimeWindow{
 											Begin: "220000+0100",
