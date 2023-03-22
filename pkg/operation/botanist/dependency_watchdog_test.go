@@ -76,6 +76,9 @@ var _ = Describe("DependencyWatchdogAccess", func() {
 								Probe: &gardencorev1beta1.SeedSettingDependencyWatchdogProbe{
 									Enabled: true,
 								},
+								Prober: &gardencorev1beta1.SeedSettingDependencyWatchdogProber{
+									Enabled: true,
+								},
 							},
 						},
 					},
@@ -102,6 +105,9 @@ var _ = Describe("DependencyWatchdogAccess", func() {
 								Probe: &gardencorev1beta1.SeedSettingDependencyWatchdogProbe{
 									Enabled: false,
 								},
+								Prober: &gardencorev1beta1.SeedSettingDependencyWatchdogProber{
+									Enabled: false,
+								},
 							},
 						},
 					},
@@ -113,7 +119,7 @@ var _ = Describe("DependencyWatchdogAccess", func() {
 				Expect(botanist.DeployDependencyWatchdogAccess(ctx)).To(Succeed())
 			})
 
-			It("should fail when the desttroy function fails", func() {
+			It("should fail when the destroy function fails", func() {
 				dwdAccess.EXPECT().Destroy(ctx).Return(fakeErr)
 				Expect(botanist.DeployDependencyWatchdogAccess(ctx)).To(MatchError(fakeErr))
 			})

@@ -69,8 +69,8 @@ var _ = Describe("Defaults", func() {
 
 		It("should not default the seed settings because they were provided", func() {
 			var (
-				dwdEndpointEnabled        = false
-				dwdProbeEnabled           = false
+				dwdWeederEnabled          = false
+				dwdProberEnabled          = false
 				topologyAwareRouting      = true
 				excessCapacityReservation = false
 				scheduling                = true
@@ -80,8 +80,8 @@ var _ = Describe("Defaults", func() {
 
 			obj.Spec.Settings = &SeedSettings{
 				DependencyWatchdog: &SeedSettingDependencyWatchdog{
-					Endpoint: &SeedSettingDependencyWatchdogEndpoint{Enabled: dwdEndpointEnabled},
-					Probe:    &SeedSettingDependencyWatchdogProbe{Enabled: dwdProbeEnabled},
+					Weeder: &SeedSettingDependencyWatchdogWeeder{Enabled: dwdWeederEnabled},
+					Prober: &SeedSettingDependencyWatchdogProber{Enabled: dwdProberEnabled},
 				},
 				TopologyAwareRouting: &SeedSettingTopologyAwareRouting{
 					Enabled: topologyAwareRouting,
@@ -94,8 +94,8 @@ var _ = Describe("Defaults", func() {
 
 			SetObjectDefaults_Seed(obj)
 
-			Expect(obj.Spec.Settings.DependencyWatchdog.Endpoint.Enabled).To(Equal(dwdEndpointEnabled))
-			Expect(obj.Spec.Settings.DependencyWatchdog.Probe.Enabled).To(Equal(dwdProbeEnabled))
+			Expect(obj.Spec.Settings.DependencyWatchdog.Weeder.Enabled).To(Equal(dwdWeederEnabled))
+			Expect(obj.Spec.Settings.DependencyWatchdog.Prober.Enabled).To(Equal(dwdProberEnabled))
 			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(Equal(excessCapacityReservation))
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(Equal(scheduling))
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(Equal(vpaEnabled))
@@ -107,38 +107,6 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_Seed(obj)
 
 			Expect(obj.Spec.Networks.IPFamilies).To(ConsistOf(IPFamilyIPv4))
-		})
-	})
-
-	Describe("#SetDefaults_SeedSettingDependencyWatchdog", func() {
-		var obj *SeedSettingDependencyWatchdog
-
-		BeforeEach(func() {
-			obj = &SeedSettingDependencyWatchdog{}
-		})
-
-		It("should default the settings", func() {
-			SetDefaults_SeedSettingDependencyWatchdog(obj)
-
-			Expect(obj.Endpoint.Enabled).To(BeTrue())
-			Expect(obj.Probe.Enabled).To(BeTrue())
-		})
-
-		It("should not default the seed settings because they were provided", func() {
-			var (
-				dwdEndpointEnabled = false
-				dwdProbeEnabled    = false
-			)
-
-			obj = &SeedSettingDependencyWatchdog{
-				Endpoint: &SeedSettingDependencyWatchdogEndpoint{Enabled: dwdEndpointEnabled},
-				Probe:    &SeedSettingDependencyWatchdogProbe{Enabled: dwdProbeEnabled},
-			}
-
-			SetDefaults_SeedSettingDependencyWatchdog(obj)
-
-			Expect(obj.Endpoint.Enabled).To(Equal(dwdEndpointEnabled))
-			Expect(obj.Probe.Enabled).To(Equal(dwdProbeEnabled))
 		})
 	})
 

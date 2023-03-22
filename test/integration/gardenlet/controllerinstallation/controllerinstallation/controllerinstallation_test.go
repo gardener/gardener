@@ -244,6 +244,10 @@ var _ = Describe("ControllerInstallation controller tests", func() {
             enabled: true
           probe:
             enabled: true
+          prober:
+            enabled: true
+          weeder:
+            enabled: true
         excessCapacityReservation:
           enabled: true
         ownerChecks:

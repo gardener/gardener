@@ -29,7 +29,7 @@ const (
 `
 	loggingFilter = `[FILTER]
     Name                parser
-    Match               kubernetes.*` + name + `*` + name + `*
+    Match               kubernetes.*` + prefixDependencyWatchdog + `*` + prefixDependencyWatchdog + `*
     Key_Name            log
     Parser              ` + loggingParserName + `
     Reserve_Data        True

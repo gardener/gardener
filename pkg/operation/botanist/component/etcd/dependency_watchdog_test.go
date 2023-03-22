@@ -15,35 +15,33 @@
 package etcd_test
 
 import (
-	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
+	weederapi "github.com/gardener/dependency-watchdog/api/weeder"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 )
 
 var _ = Describe("DependencyWatchdog", func() {
-	Describe("#DependencyWatchdogEndpointConfiguration", func() {
+	Describe("#NewDependencyWatchdogWeederConfiguration", func() {
 		It("should compute the correct configuration", func() {
-			config, err := etcd.DependencyWatchdogEndpointConfiguration(testRole)
-			Expect(config).To(Equal(map[string]restarterapi.Service{
+			config, err := etcd.NewDependencyWatchdogWeederConfiguration(testRole)
+			Expect(config).To(Equal(map[string]weederapi.DependantSelectors{
 				"etcd-" + testRole + "-client": {
-					Dependants: []restarterapi.DependantPods{
+					PodSelectors: []*metav1.LabelSelector{
 						{
-							Name: "controlplane",
-							Selector: &metav1.LabelSelector{
-								MatchExpressions: []metav1.LabelSelectorRequirement{
-									{
-										Key:      "gardener.cloud/role",
-										Operator: "In",
-										Values:   []string{"controlplane"},
-									},
-									{
-										Key:      "role",
-										Operator: "In",
-										Values:   []string{"apiserver"},
-									},
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      v1beta1constants.GardenRole,
+									Operator: "In",
+									Values:   []string{v1beta1constants.GardenRoleControlPlane},
+								},
+								{
+									Key:      v1beta1constants.LabelRole,
+									Operator: "In",
+									Values:   []string{v1beta1constants.LabelAPIServer},
 								},
 							},
 						},

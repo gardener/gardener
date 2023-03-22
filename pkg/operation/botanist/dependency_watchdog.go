@@ -38,7 +38,7 @@ func (b *Botanist) DefaultDependencyWatchdogAccess() component.Deployer {
 
 // DeployDependencyWatchdogAccess deploys the DependencyWatchdogAccess resources.
 func (b *Botanist) DeployDependencyWatchdogAccess(ctx context.Context) error {
-	if !v1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(b.Seed.GetInfo().Spec.Settings) {
+	if !v1beta1helper.SeedSettingDependencyWatchdogProberEnabled(b.Seed.GetInfo().Spec.Settings) {
 		return b.Shoot.Components.DependencyWatchdogAccess.Destroy(ctx)
 	}
 

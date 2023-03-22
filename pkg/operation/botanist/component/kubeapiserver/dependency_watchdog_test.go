@@ -15,38 +15,37 @@
 package kubeapiserver_test
 
 import (
-	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
-	scalerapi "github.com/gardener/dependency-watchdog/pkg/scaler/api"
+	"time"
+
+	proberapi "github.com/gardener/dependency-watchdog/api/prober"
+	weederapi "github.com/gardener/dependency-watchdog/api/weeder"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 )
 
 var _ = Describe("DependencyWatchdog", func() {
-	Describe("#DependencyWatchdogEndpointConfiguration", func() {
+	Describe("#NewDependencyWatchdogWeederConfiguration", func() {
 		It("should compute the correct configuration", func() {
-			config, err := DependencyWatchdogEndpointConfiguration()
-			Expect(config).To(Equal(map[string]restarterapi.Service{
+			config, err := NewDependencyWatchdogWeederConfiguration()
+			Expect(config).To(Equal(map[string]weederapi.DependantSelectors{
 				"kube-apiserver": {
-					Dependants: []restarterapi.DependantPods{
+					PodSelectors: []*metav1.LabelSelector{
 						{
-							Name: "controlplane",
-							Selector: &metav1.LabelSelector{
-								MatchExpressions: []metav1.LabelSelectorRequirement{
-									{
-										Key:      "gardener.cloud/role",
-										Operator: "In",
-										Values:   []string{"controlplane"},
-									},
-									{
-										Key:      "role",
-										Operator: "NotIn",
-										Values:   []string{"main", "apiserver"},
-									},
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      v1beta1constants.GardenRole,
+									Operator: "In",
+									Values:   []string{v1beta1constants.GardenRoleControlPlane},
+								},
+								{
+									Key:      v1beta1constants.LabelRole,
+									Operator: metav1.LabelSelectorOpNotIn,
+									Values:   []string{v1beta1constants.ETCDRoleMain, v1beta1constants.LabelAPIServer},
 								},
 							},
 						},
@@ -57,56 +56,53 @@ var _ = Describe("DependencyWatchdog", func() {
 		})
 	})
 
-	Describe("#DependencyWatchdogProbeConfiguration", func() {
+	Describe("#NewDependencyWatchdogProberConfiguration", func() {
 		It("should compute the correct configuration", func() {
-			config, err := DependencyWatchdogProbeConfiguration()
-			Expect(config).To(ConsistOf(scalerapi.ProbeDependants{
-				Name: "shoot-kube-apiserver",
-				Probe: &scalerapi.ProbeConfig{
-					External:      &scalerapi.ProbeDetails{KubeconfigSecretName: "shoot-access-dependency-watchdog-external-probe"},
-					Internal:      &scalerapi.ProbeDetails{KubeconfigSecretName: "shoot-access-dependency-watchdog-internal-probe"},
-					PeriodSeconds: pointer.Int32(30),
-				},
-				DependantScales: []*scalerapi.DependantScaleDetails{
-					{
-						ScaleRef: autoscalingv1.CrossVersionObjectReference{
-							APIVersion: "apps/v1",
-							Kind:       "Deployment",
-							Name:       "kube-controller-manager",
-						},
-						ScaleUpDelaySeconds: pointer.Int32(120),
+			config, err := NewDependencyWatchdogProberConfiguration()
+			Expect(config).To(ConsistOf([]proberapi.DependentResourceInfo{
+				{
+					Ref: &autoscalingv1.CrossVersionObjectReference{
+						Kind:       "Deployment",
+						Name:       v1beta1constants.DeploymentNameKubeControllerManager,
+						APIVersion: "apps/v1",
 					},
-					{
-						ScaleRef: autoscalingv1.CrossVersionObjectReference{
-							APIVersion: "apps/v1",
-							Kind:       "Deployment",
-							Name:       "machine-controller-manager",
-						},
-						ScaleUpDelaySeconds: pointer.Int32(60),
-						ScaleRefDependsOn: []autoscalingv1.CrossVersionObjectReference{
-							{
-								APIVersion: "apps/v1",
-								Kind:       "Deployment",
-								Name:       "kube-controller-manager",
-							},
-						},
+					Optional: false,
+					ScaleUpInfo: &proberapi.ScaleInfo{
+						Level: 0,
 					},
-					{
-						ScaleRef: autoscalingv1.CrossVersionObjectReference{
-							APIVersion: "apps/v1",
-							Kind:       "Deployment",
-							Name:       "cluster-autoscaler",
-						},
-						ScaleRefDependsOn: []autoscalingv1.CrossVersionObjectReference{
-							{
-								APIVersion: "apps/v1",
-								Kind:       "Deployment",
-								Name:       "machine-controller-manager",
-							},
-						},
+					ScaleDownInfo: &proberapi.ScaleInfo{
+						Level: 1,
 					},
 				},
-			}))
+				{
+					Ref: &autoscalingv1.CrossVersionObjectReference{
+						Kind:       "Deployment",
+						Name:       v1beta1constants.DeploymentNameMachineControllerManager,
+						APIVersion: "apps/v1",
+					},
+					Optional: false,
+					ScaleUpInfo: &proberapi.ScaleInfo{
+						Level:        1,
+						InitialDelay: &metav1.Duration{Duration: 30 * time.Second},
+					},
+					ScaleDownInfo: &proberapi.ScaleInfo{
+						Level: 0,
+					},
+				},
+				{
+					Ref: &autoscalingv1.CrossVersionObjectReference{
+						Kind:       "Deployment",
+						Name:       "cluster-autoscaler",
+						APIVersion: "apps/v1",
+					},
+					Optional: true,
+					ScaleUpInfo: &proberapi.ScaleInfo{
+						Level: 2,
+					},
+					ScaleDownInfo: &proberapi.ScaleInfo{
+						Level: 0,
+					},
+				}}))
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})

@@ -1,6 +1,7 @@
-# github.com/BurntSushi/toml v0.3.1
-## explicit
+# github.com/BurntSushi/toml v1.0.0
+## explicit; go 1.16
 github.com/BurntSushi/toml
+github.com/BurntSushi/toml/internal
 # github.com/Masterminds/goutils v1.1.1
 ## explicit
 github.com/Masterminds/goutils
@@ -57,6 +58,8 @@ github.com/dsnet/compress/bzip2/internal/sais
 github.com/dsnet/compress/internal
 github.com/dsnet/compress/internal/errors
 github.com/dsnet/compress/internal/prefix
+# github.com/elazarl/goproxy v0.0.0-20191011121108-aa519ddbe484
+## explicit
 # github.com/emicklei/go-restful/v3 v3.9.0
 ## explicit; go 1.13
 github.com/emicklei/go-restful/v3
@@ -84,13 +87,15 @@ github.com/fluent/fluent-operator/apis/fluentbit/v1alpha2/plugins/output
 github.com/fluent/fluent-operator/apis/fluentbit/v1alpha2/plugins/params
 github.com/fluent/fluent-operator/apis/fluentbit/v1alpha2/plugins/parser
 github.com/fluent/fluent-operator/pkg/utils
+# github.com/frankban/quicktest v1.14.4
+## explicit; go 1.13
 # github.com/fsnotify/fsnotify v1.6.0
 ## explicit; go 1.16
 github.com/fsnotify/fsnotify
-# github.com/gardener/dependency-watchdog v0.7.0
-## explicit; go 1.13
-github.com/gardener/dependency-watchdog/pkg/restarter/api
-github.com/gardener/dependency-watchdog/pkg/scaler/api
+# github.com/gardener/dependency-watchdog v1.0.0
+## explicit; go 1.19
+github.com/gardener/dependency-watchdog/api/prober
+github.com/gardener/dependency-watchdog/api/weeder
 # github.com/gardener/etcd-druid v0.15.3
 ## explicit; go 1.19
 github.com/gardener/etcd-druid/api/v1alpha1

@@ -114,11 +114,11 @@ func (h *SeedHealth) checkSeedSystemComponents(
 	if gardenletfeatures.FeatureGate.Enabled(features.HVPA) {
 		managedResources = append(managedResources, hvpa.ManagedResourceName)
 	}
-	if v1beta1helper.SeedSettingDependencyWatchdogEndpointEnabled(h.seed.Spec.Settings) {
-		managedResources = append(managedResources, dependencywatchdog.ManagedResourceDependencyWatchdogEndpoint)
+	if v1beta1helper.SeedSettingDependencyWatchdogWeederEnabled(h.seed.Spec.Settings) {
+		managedResources = append(managedResources, dependencywatchdog.ManagedResourceDependencyWatchdogWeeder)
 	}
-	if v1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(h.seed.Spec.Settings) {
-		managedResources = append(managedResources, dependencywatchdog.ManagedResourceDependencyWatchdogProbe)
+	if v1beta1helper.SeedSettingDependencyWatchdogProberEnabled(h.seed.Spec.Settings) {
+		managedResources = append(managedResources, dependencywatchdog.ManagedResourceDependencyWatchdogProber)
 	}
 	if v1beta1helper.SeedUsesNginxIngressController(h.seed) {
 		managedResources = append(managedResources, nginxingress.ManagedResourceName)

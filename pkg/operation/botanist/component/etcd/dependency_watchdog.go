@@ -15,33 +15,30 @@
 package etcd
 
 import (
-	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
+	weederapi "github.com/gardener/dependency-watchdog/api/weeder"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	etcdconstants "github.com/gardener/gardener/pkg/operation/botanist/component/etcd/constants"
 )
 
-// DependencyWatchdogEndpointConfiguration returns the configuration for the dependency watchdog ensuring that its dependant
+// NewDependencyWatchdogWeederConfiguration returns the configuration for the dependency watchdog ensuring that its dependant
 // pods are restarted as soon as it recovers from a crash loop.
-func DependencyWatchdogEndpointConfiguration(role string) (map[string]restarterapi.Service, error) {
-	return map[string]restarterapi.Service{
+func NewDependencyWatchdogWeederConfiguration(role string) (map[string]weederapi.DependantSelectors, error) {
+	return map[string]weederapi.DependantSelectors{
 		etcdconstants.ServiceName(role): {
-			Dependants: []restarterapi.DependantPods{
+			PodSelectors: []*metav1.LabelSelector{
 				{
-					Name: v1beta1constants.GardenRoleControlPlane,
-					Selector: &metav1.LabelSelector{
-						MatchExpressions: []metav1.LabelSelectorRequirement{
-							{
-								Key:      v1beta1constants.GardenRole,
-								Operator: metav1.LabelSelectorOpIn,
-								Values:   []string{v1beta1constants.GardenRoleControlPlane},
-							},
-							{
-								Key:      v1beta1constants.LabelRole,
-								Operator: metav1.LabelSelectorOpIn,
-								Values:   []string{v1beta1constants.LabelAPIServer},
-							},
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{
+							Key:      v1beta1constants.GardenRole,
+							Operator: metav1.LabelSelectorOpIn,
+							Values:   []string{v1beta1constants.GardenRoleControlPlane},
+						},
+						{
+							Key:      v1beta1constants.LabelRole,
+							Operator: metav1.LabelSelectorOpIn,
+							Values:   []string{v1beta1constants.LabelAPIServer},
 						},
 					},
 				},

@@ -50,5 +50,78 @@ var _ = Describe("Strategy", func() {
 			strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
 			Expect(newSeed.Generation).To(Equal(oldSeed.Generation + 1))
 		})
+
+		Context("syncDependencyWatchdogSettings", func() {
+			BeforeEach(func() {
+				oldSeed.Spec = core.SeedSpec{
+					Settings: &core.SeedSettings{
+						DependencyWatchdog: &core.SeedSettingDependencyWatchdog{},
+					},
+				}
+				newSeed.Spec = core.SeedSpec{
+					Settings: &core.SeedSettings{
+						DependencyWatchdog: &core.SeedSettingDependencyWatchdog{},
+					},
+				}
+			})
+
+			It("should default new and deprecated fields for prober and weeder when both aren't specified", func() {
+				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+				Expect(newSeed.Spec.Settings.DependencyWatchdog.Weeder.Enabled).To(BeTrue())
+				Expect(newSeed.Spec.Settings.DependencyWatchdog.Endpoint.Enabled).To(BeTrue())
+				Expect(newSeed.Spec.Settings.DependencyWatchdog.Prober.Enabled).To(BeTrue())
+				Expect(newSeed.Spec.Settings.DependencyWatchdog.Probe.Enabled).To(BeTrue())
+			})
+
+			It("should set new field equal to deprecated field , if new field is not set", func() {
+				newSeed.Spec.Settings.DependencyWatchdog.Endpoint = &core.SeedSettingDependencyWatchdogEndpoint{Enabled: false}
+				newSeed.Spec.Settings.DependencyWatchdog.Probe = &core.SeedSettingDependencyWatchdogProbe{Enabled: false}
+				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+				Expect(newSeed.Spec.Settings.DependencyWatchdog.Weeder.Enabled).To(BeFalse())
+				Expect(newSeed.Spec.Settings.DependencyWatchdog.Endpoint.Enabled).To(BeFalse())
+				Expect(newSeed.Spec.Settings.DependencyWatchdog.Prober.Enabled).To(BeFalse())
+				Expect(newSeed.Spec.Settings.DependencyWatchdog.Probe.Enabled).To(BeFalse())
+			})
+
+			It("should set deprecated field equal to new field, even if just new field is set", func() {
+				newSeed.Spec.Settings.DependencyWatchdog.Weeder = &core.SeedSettingDependencyWatchdogWeeder{Enabled: false}
+				newSeed.Spec.Settings.DependencyWatchdog.Prober = &core.SeedSettingDependencyWatchdogProber{Enabled: false}
+				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+				Expect(newSeed.Spec.Settings.DependencyWatchdog.Weeder.Enabled).To(BeFalse())
+				Expect(newSeed.Spec.Settings.DependencyWatchdog.Endpoint.Enabled).To(BeFalse())
+				Expect(newSeed.Spec.Settings.DependencyWatchdog.Prober.Enabled).To(BeFalse())
+				Expect(newSeed.Spec.Settings.DependencyWatchdog.Probe.Enabled).To(BeFalse())
+			})
+
+			It("should overwrite deprecated field with value of new field, if new field is set", func() {
+				newSeed.Spec.Settings.DependencyWatchdog.Endpoint = &core.SeedSettingDependencyWatchdogEndpoint{Enabled: true}
+				newSeed.Spec.Settings.DependencyWatchdog.Probe = &core.SeedSettingDependencyWatchdogProbe{Enabled: true}
+				newSeed.Spec.Settings.DependencyWatchdog.Weeder = &core.SeedSettingDependencyWatchdogWeeder{Enabled: false}
+				newSeed.Spec.Settings.DependencyWatchdog.Prober = &core.SeedSettingDependencyWatchdogProber{Enabled: false}
+				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+				Expect(newSeed.Spec.Settings.DependencyWatchdog.Weeder.Enabled).To(BeFalse())
+				Expect(newSeed.Spec.Settings.DependencyWatchdog.Endpoint.Enabled).To(BeFalse())
+				Expect(newSeed.Spec.Settings.DependencyWatchdog.Prober.Enabled).To(BeFalse())
+				Expect(newSeed.Spec.Settings.DependencyWatchdog.Probe.Enabled).To(BeFalse())
+			})
+
+			It("should update deprecated fields with updated value of new field", func() {
+				oldSeed.Spec.Settings.DependencyWatchdog.Endpoint = &core.SeedSettingDependencyWatchdogEndpoint{Enabled: false}
+				oldSeed.Spec.Settings.DependencyWatchdog.Probe = &core.SeedSettingDependencyWatchdogProbe{Enabled: false}
+				oldSeed.Spec.Settings.DependencyWatchdog.Weeder = &core.SeedSettingDependencyWatchdogWeeder{Enabled: false}
+				oldSeed.Spec.Settings.DependencyWatchdog.Prober = &core.SeedSettingDependencyWatchdogProber{Enabled: false}
+
+				newSeed.Spec.Settings.DependencyWatchdog.Endpoint = &core.SeedSettingDependencyWatchdogEndpoint{Enabled: false}
+				newSeed.Spec.Settings.DependencyWatchdog.Probe = &core.SeedSettingDependencyWatchdogProbe{Enabled: false}
+				newSeed.Spec.Settings.DependencyWatchdog.Weeder = &core.SeedSettingDependencyWatchdogWeeder{Enabled: true}
+				newSeed.Spec.Settings.DependencyWatchdog.Prober = &core.SeedSettingDependencyWatchdogProber{Enabled: true}
+
+				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+				Expect(newSeed.Spec.Settings.DependencyWatchdog.Weeder.Enabled).To(BeTrue())
+				Expect(newSeed.Spec.Settings.DependencyWatchdog.Endpoint.Enabled).To(BeTrue())
+				Expect(newSeed.Spec.Settings.DependencyWatchdog.Prober.Enabled).To(BeTrue())
+				Expect(newSeed.Spec.Settings.DependencyWatchdog.Probe.Enabled).To(BeTrue())
+			})
+		})
 	})
 })

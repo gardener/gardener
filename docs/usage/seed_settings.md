@@ -5,24 +5,29 @@ This document provides an overview over the available settings:
 
 ## Dependency Watchdog
 
-gardenlet can deploy two instances of the [dependency-watchdog](https://github.com/gardener/dependency-watchdog) into the `garden` namespace of the seed cluster.
-One instance only activates the `endpoint` controller, while the second instance only activates the `probe` controller.
+Gardenlet can deploy two instances of the [dependency-watchdog](https://github.com/gardener/dependency-watchdog) into the `garden` namespace of the seed cluster.
+One instance only activates the weeder while the second instance only activates the prober.
 
-### Endpoint Controller
+### Weeder
 
-The `endpoint` controller helps to alleviate the delay where control plane components remain unavailable by finding the respective pods in CrashLoopBackoff status and restarting them once their dependants become ready and available again.
-For example, if `etcd` goes down, then also `kube-apiserver` goes down (and into a `CrashLoopBackoff` state). If `etcd` comes up again, then (without the `endpoint` controller) it might take some time until `kube-apiserver` gets restarted as well.
+The weeder helps to alleviate the delay where control plane components remain unavailable by finding the respective pods in `CrashLoopBackoff` status and restarting them once their dependants become ready and available again.
+For example, if `etcd` goes down then also `kube-apiserver` goes down (and into a `CrashLoopBackoff` state). If `etcd` comes up again then (without the `endpoint` controller) it might take some time until `kube-apiserver` gets restarted as well.
 
+:warning: `.spec.settings.dependencyWatchdog.endpoint.enabled` is deprecated and will be removed in a future version of Gardener. Use `.spec.settings.dependencyWatchdog.weeder.enabled` instead.
+  
 It can be enabled/disabled via the `.spec.settings.dependencyWatchdog.endpoint.enabled` field.
 It defaults to `true`.
 
-### Probe Controller
+### Prober 
 
 The `probe` controller scales down the `kube-controller-manager` of shoot clusters in case their respective `kube-apiserver` is not reachable via its external ingress.
 This is in order to avoid melt-down situations, since the `kube-controller-manager` uses in-cluster communication when talking to the `kube-apiserver`, i.e., it wouldn't be affected if the external access to the `kube-apiserver` is interrupted for whatever reason.
 The `kubelet`s on the shoot worker nodes, however, would indeed be affected since they typically run in different networks and use the external ingress when talking to the `kube-apiserver`.
 Hence, without scaling down `kube-controller-manager`, the nodes might be marked as `NotReady` and eventually replaced (since the `kubelet`s cannot report their status anymore).
-To prevent such unnecessary turbulences, `kube-controller-manager` is being scaled down until the external ingress becomes available again.
+To prevent such unnecessary turbulences, `kube-controller-manager` is being scaled down until the external ingress becomes available again. In addition, as a precautionary measure, `machine-controller-manager` is also scaled down, along with `cluster-autoscaler` which depends on 
+`machine-controller-manager`.
+
+:warning: `.spec.settings.dependencyWatchdog.probe.enabled` is deprecated and will be removed in a future version of Gardener. Use `.spec.settings.dependencyWatchdog.prober.enabled` instead.
 
 It can be enabled/disabled via the `.spec.settings.dependencyWatchdog.probe.enabled` field.
 It defaults to `true`.

@@ -200,8 +200,8 @@ func (r *Reconciler) runDeleteSeedFlow(
 		kubeStateMetrics = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
 		nginxIngress     = nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{})
 		networkPolicies  = networkpolicies.NewBootstrapper(seedClient, r.GardenNamespace)
-		dwdEndpoint      = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint})
-		dwdProbe         = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe})
+		dwdWeeder        = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleWeeder})
+		dwdProber        = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProber})
 		systemResources  = seedsystem.New(seedClient, r.GardenNamespace, seedsystem.Values{})
 		vpnAuthzServer   = vpnauthzserver.New(seedClient, r.GardenNamespace, "", kubernetesVersion)
 		istioCRDs        = istio.NewCRD(r.SeedClientSet.ChartApplier(), seedClient)
@@ -248,13 +248,13 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Name: "Destroy network policies",
 			Fn:   component.OpDestroyAndWait(networkPolicies).Destroy,
 		})
-		destroyDWDEndpoint = g.Add(flow.Task{
-			Name: "Destroy dependency-watchdog-endpoint",
-			Fn:   component.OpDestroyAndWait(dwdEndpoint).Destroy,
+		destroyDWDWeeder = g.Add(flow.Task{
+			Name: "Destroy dependency-watchdog-weeder",
+			Fn:   component.OpDestroyAndWait(dwdWeeder).Destroy,
 		})
-		destroyDWDProbe = g.Add(flow.Task{
-			Name: "Destroy dependency-watchdog-probe",
-			Fn:   component.OpDestroyAndWait(dwdProbe).Destroy,
+		destroyDWDProber = g.Add(flow.Task{
+			Name: "Destroy dependency-watchdog-prober",
+			Fn:   component.OpDestroyAndWait(dwdProber).Destroy,
 		})
 		destroyKubeStateMetrics = g.Add(flow.Task{
 			Name: "Destroy kube-state-metrics",
@@ -285,8 +285,8 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyNginxIngress,
 			destroyClusterAutoscaler,
 			destroyNetworkPolicies,
-			destroyDWDEndpoint,
-			destroyDWDProbe,
+			destroyDWDWeeder,
+			destroyDWDProber,
 			destroyKubeStateMetrics,
 			destroyVPNAuthzServer,
 			destroyIstio,
