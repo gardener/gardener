@@ -13,12 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 set -e
 
-echo "> Adding Apache License header to all go files where it is not present."
+echo "> Adding Apache License header to all go files where it is not present"
 
-YEAR=`date +"%Y"`
-
-addlicense -c "SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file." \
- -y "${YEAR}" -l apache -ignore "vendor/**" -ignore "**/*.md" -ignore "**/*.html" -ignore "**/*.yaml" -ignore "**/Dockerfile" --ignore "hack/tools/gomegacheck/**" --ignore "pkg/operation/botanist/**/*.sh" .
+addlicense \
+  -c "SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file." \
+  -y "$(date +"%Y")" \
+  -l apache \
+  -ignore ".idea/**" \
+  -ignore ".vscode/**" \
+  -ignore "dev/**" \
+  -ignore "vendor/**" \
+  -ignore "**/*.md" \
+  -ignore "**/*.html" \
+  -ignore "**/*.yaml" \
+  -ignore "**/Dockerfile" \
+  -ignore "hack/tools/gomegacheck/**" \
+  -ignore "pkg/operation/botanist/**/*.sh" \
+  .

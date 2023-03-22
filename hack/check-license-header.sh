@@ -13,13 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 set -e
 
-echo "> Checking if license header is present in all required files."
+echo "> Checking if license header is present in all required files"
 
-missing_license_header_files="$(addlicense -check \
+missing_license_header_files="$(addlicense \
+  -check \
   -ignore ".idea/**" \
+  -ignore ".vscode/**" \
   -ignore "dev/**" \
   -ignore "vendor/**" \
   -ignore "**/*.md" \
@@ -27,7 +28,8 @@ missing_license_header_files="$(addlicense -check \
   -ignore "**/*.yaml" \
   -ignore "**/Dockerfile" \
   -ignore "hack/tools/gomegacheck/**" \
-  -ignore "pkg/operation/botanist/**/*.sh" .)" || true
+  -ignore "pkg/operation/botanist/**/*.sh" \
+  .)" || true
 
 if [[ "$missing_license_header_files" ]]; then
   echo "Files with no license header detected:"
