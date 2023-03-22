@@ -25,6 +25,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
@@ -228,6 +229,12 @@ func reconcileWebhookConfigurations(
 
 		valWebhook := &admissionregistrationv1.ValidatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: validatingWebhookConfiguration.Name}}
 		if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, mgr.GetClient(), valWebhook, func() error {
+			// The CA bundle is updated asynchronously by a separate certificates reconciler. Hence, when we update the
+			// webhook configuration here, let's make sure to not overwrite existing CA bundles in the webhooks.
+			if err := extensionswebhook.InjectCABundleIntoWebhookConfig(validatingWebhookConfiguration, getCurrentCABundle(valWebhook)); err != nil {
+				return err
+			}
+
 			valWebhook.Webhooks = validatingWebhookConfiguration.Webhooks
 			return nil
 		}); err != nil {
@@ -236,6 +243,12 @@ func reconcileWebhookConfigurations(
 
 		mutWebhook := &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: mutatingWebhookConfiguration.Name}}
 		if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, mgr.GetClient(), mutWebhook, func() error {
+			// The CA bundle is updated asynchronously by a separate certificates reconciler. Hence, when we update the
+			// webhook configuration here, let's make sure to not overwrite existing CA bundles in the webhooks.
+			if err := extensionswebhook.InjectCABundleIntoWebhookConfig(mutatingWebhookConfiguration, getCurrentCABundle(mutWebhook)); err != nil {
+				return err
+			}
+
 			mutWebhook.Webhooks = mutatingWebhookConfiguration.Webhooks
 			return nil
 		}); err != nil {
@@ -246,4 +259,38 @@ func reconcileWebhookConfigurations(
 		mutatingWebhookConfiguration = mutWebhook
 		return nil
 	}
+}
+
+func getCurrentCABundle(webhookConfig client.Object) []byte {
+	// All webhooks in this configuration are served by the same endpoint, hence they all have to use the same CA
+	// bundle. We simply take the first bundle we find and consider it the current bundle for all webhooks.
+
+	switch config := webhookConfig.(type) {
+	case *admissionregistrationv1.MutatingWebhookConfiguration:
+		for _, w := range config.Webhooks {
+			if len(w.ClientConfig.CABundle) > 0 {
+				return w.ClientConfig.CABundle
+			}
+		}
+	case *admissionregistrationv1.ValidatingWebhookConfiguration:
+		for _, w := range config.Webhooks {
+			if len(w.ClientConfig.CABundle) > 0 {
+				return w.ClientConfig.CABundle
+			}
+		}
+	case *admissionregistrationv1beta1.MutatingWebhookConfiguration:
+		for _, w := range config.Webhooks {
+			if len(w.ClientConfig.CABundle) > 0 {
+				return w.ClientConfig.CABundle
+			}
+		}
+	case *admissionregistrationv1beta1.ValidatingWebhookConfiguration:
+		for _, w := range config.Webhooks {
+			if len(w.ClientConfig.CABundle) > 0 {
+				return w.ClientConfig.CABundle
+			}
+		}
+	}
+
+	return nil
 }
