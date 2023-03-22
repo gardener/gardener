@@ -23,6 +23,7 @@ missing_license_header_files="$(addlicense -check -ignore "vendor/**" -ignore "*
 if [[ "$missing_license_header_files" ]]; then
   echo "Files with no license header detected:"
   echo "$missing_license_header_files"
+  echo "Consider running \`make add-license-headers\` to automatically add all missing headers."
   exit 1
 fi
 
