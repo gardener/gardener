@@ -18,6 +18,7 @@ import (
 	"os"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -83,7 +84,9 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 				KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
 			},
 			Networking: gardencorev1beta1.Networking{
-				Type: "cilium",
+				Type: "calico",
+				// TODO(scheererj): Drop this once v1.32 has been released and https://github.com/gardener/gardener-extension-networking-calico/pull/250 is available as release
+				ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"apiVersion":"calico.networking.extensions.gardener.cloud/v1alpha1","kind":"NetworkConfig"}`)},
 			},
 			Provider: gardencorev1beta1.Provider{
 				Type: "local",
