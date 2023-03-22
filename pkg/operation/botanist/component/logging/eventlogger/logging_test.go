@@ -39,7 +39,6 @@ var _ = Describe("Logging", func() {
     Match               kubernetes.*event-logger*event-logger*
     Record              job event-logging
 `))
-			Expect(loggingConfig.UserExposed).To(BeFalse())
 		})
 	})
 })

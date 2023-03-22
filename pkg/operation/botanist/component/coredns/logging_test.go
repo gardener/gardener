@@ -50,8 +50,6 @@ var _ = Describe("Logging", func() {
     Parser              coreDNSParser2
     Reserve_Data        True
 `))
-			Expect(loggingConfig.PodPrefixes).To(BeEmpty())
-			Expect(loggingConfig.UserExposed).To(BeFalse())
 		})
 	})
 })

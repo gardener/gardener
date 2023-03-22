@@ -42,8 +42,6 @@ var _ = Describe("Logging", func() {
     Parser              kubeControllerManagerParser
     Reserve_Data        True
 `))
-			Expect(loggingConfig.UserExposed).To(BeTrue())
-			Expect(loggingConfig.PodPrefixes).To(ConsistOf("kube-controller-manager"))
 		})
 	})
 })

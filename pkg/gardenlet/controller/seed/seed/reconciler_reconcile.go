@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
@@ -489,9 +488,8 @@ func (r *Reconciler) runReconcileSeedFlow(
 		fluentBitConfigurationsOverwrites = map[string]interface{}{}
 		lokiValues                        = map[string]interface{}{}
 
-		filters               = strings.Builder{}
-		parsers               = strings.Builder{}
-		userAllowedComponents []string
+		filters = strings.Builder{}
+		parsers = strings.Builder{}
 	)
 	lokiValues["enabled"] = loggingEnabled
 
@@ -593,19 +591,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 			filters.WriteString(fmt.Sprintln(loggingConfig.Filters))
 			parsers.WriteString(fmt.Sprintln(loggingConfig.Parsers))
-
-			if loggingConfig.UserExposed {
-				userAllowedComponents = append(userAllowedComponents, loggingConfig.PodPrefixes...)
-			}
 		}
-
-		loggingRewriteTagFilter := `[FILTER]
-    Name          modify
-    Match         kubernetes.*
-    Condition     Key_value_matches tag ^kubernetes\.var\.log\.containers\.(` + strings.Join(userAllowedComponents, "|") + `)-.+?_
-    Add           __gardener_multitenant_id__ operator;user
-`
-		filters.WriteString(fmt.Sprintln(loggingRewriteTagFilter))
 
 		// Read extension provider specific logging configuration
 		existingConfigMaps := &corev1.ConfigMapList{}
@@ -617,34 +603,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 		// Need stable order before passing the dashboards to Grafana config to avoid unnecessary changes
 		kubernetesutils.ByName().Sort(existingConfigMaps)
-		modifyFilter := `
-    Name          modify
-    Match         kubernetes.*
-    Condition     Key_value_matches tag __PLACE_HOLDER__
-    Add           __gardener_multitenant_id__ operator;user
-`
+
 		// Read all filters and parsers coming from the extension provider configurations
 		for _, cm := range existingConfigMaps.Items {
-			// Remove the extensions rewrite_tag filters.
-			// TODO (vlvasilev): When all custom rewrite_tag filters are removed from the extensions this code snipped must be removed
-			flbFilters := cm.Data[v1beta1constants.FluentBitConfigMapKubernetesFilter]
-			tokens := strings.Split(flbFilters, "[FILTER]")
-			var sb strings.Builder
-			for _, token := range tokens {
-				if strings.Contains(token, "rewrite_tag") {
-					result := regexp.MustCompile(`\$tag\s+(.+?)\s+user-exposed\.\$TAG\s+true`).FindAllStringSubmatch(token, 1)
-					if len(result) < 1 || len(result[0]) < 2 {
-						continue
-					}
-					token = strings.Replace(modifyFilter, "__PLACE_HOLDER__", result[0][1], 1)
-				}
-				// In case we are processing the first token
-				if strings.TrimSpace(token) != "" {
-					sb.WriteString("[FILTER]")
-				}
-				sb.WriteString(token)
-			}
-			filters.WriteString(fmt.Sprintln(strings.TrimRight(sb.String(), " ")))
+			filters.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.FluentBitConfigMapKubernetesFilter]))
 			parsers.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.FluentBitConfigMapParser]))
 		}
 

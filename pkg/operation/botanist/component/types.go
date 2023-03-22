@@ -44,8 +44,4 @@ type CentralLoggingConfig struct {
 	Filters string
 	// Parser contains the parsers for specific component.
 	Parsers string
-	// UserExposed defines if the component is exposed to the end-user.
-	UserExposed bool
-	// PodPrefixes is the list of prefixes of the pod names when logging config is user-exposed.
-	PodPrefixes []string
 }
