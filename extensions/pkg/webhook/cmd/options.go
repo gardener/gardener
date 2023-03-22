@@ -314,11 +314,16 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 		return nil, err
 	}
 
+	var sourceWebhookConfigs []client.Object
+	if seedWebhookConfig != nil {
+		sourceWebhookConfigs = append(sourceWebhookConfigs, seedWebhookConfig)
+	}
+
 	if err := certificates.AddCertificateManagementToManager(
 		ctx,
 		mgr,
 		c.Clock,
-		seedWebhookConfig,
+		sourceWebhookConfigs,
 		shootWebhookConfig,
 		atomicShootWebhookConfig,
 		c.shootNamespaceSelector,

@@ -173,13 +173,17 @@ func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration
 	if v := os.Getenv("WEBHOOK_MODE"); v != "" {
 		mode = v
 	}
-	validatingWebhookConfiguration := webhook.GetValidatingWebhookConfiguration(mode, url)
+
+	var (
+		validatingWebhookConfiguration = webhook.GetValidatingWebhookConfiguration(mode, url)
+		mutatingWebhookConfiguration   = webhook.GetMutatingWebhookConfiguration(mode, url)
+	)
 
 	if err := certificates.AddCertificateManagementToManager(
 		ctx,
 		mgr,
 		clock.RealClock{},
-		validatingWebhookConfiguration,
+		[]client.Object{validatingWebhookConfiguration, mutatingWebhookConfiguration},
 		nil,
 		nil,
 		nil,
@@ -196,7 +200,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration
 	if err := mgr.Add(&controllerutils.ControlledRunner{
 		Manager: mgr,
 		BootstrapRunnables: []manager.Runnable{
-			reconcileValidatingWebhookConfiguration(ctx, mgr, validatingWebhookConfiguration),
+			reconcileWebhookConfigurations(ctx, mgr, validatingWebhookConfiguration, mutatingWebhookConfiguration),
 		},
 		ActualRunnables: []manager.Runnable{
 			manager.RunnableFunc(func(context.Context) error { return webhook.AddToManager(mgr) }),
@@ -210,16 +214,36 @@ func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration
 	return mgr.Start(ctx)
 }
 
-func reconcileValidatingWebhookConfiguration(ctx context.Context, mgr manager.Manager, validatingWebhookConfiguration *admissionregistrationv1.ValidatingWebhookConfiguration) manager.RunnableFunc {
+func reconcileWebhookConfigurations(
+	ctx context.Context,
+	mgr manager.Manager,
+	validatingWebhookConfiguration *admissionregistrationv1.ValidatingWebhookConfiguration,
+	mutatingWebhookConfiguration *admissionregistrationv1.MutatingWebhookConfiguration,
+) manager.RunnableFunc {
 	return func(context.Context) error {
-		mgr.GetLogger().Info("Reconciling webhook configuration", "validatingWebhookConfiguration", client.ObjectKeyFromObject(validatingWebhookConfiguration))
+		mgr.GetLogger().Info("Reconciling webhook configurations",
+			"validatingWebhookConfiguration", client.ObjectKeyFromObject(validatingWebhookConfiguration),
+			"mutatingWebhookConfiguration", client.ObjectKeyFromObject(mutatingWebhookConfiguration),
+		)
 
-		obj := &admissionregistrationv1.ValidatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: validatingWebhookConfiguration.Name}}
-		_, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, mgr.GetClient(), obj, func() error {
-			obj.Webhooks = validatingWebhookConfiguration.Webhooks
+		valWebhook := &admissionregistrationv1.ValidatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: validatingWebhookConfiguration.Name}}
+		if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, mgr.GetClient(), valWebhook, func() error {
+			valWebhook.Webhooks = validatingWebhookConfiguration.Webhooks
 			return nil
-		})
-		validatingWebhookConfiguration = obj
-		return err
+		}); err != nil {
+			return err
+		}
+
+		mutWebhook := &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: mutatingWebhookConfiguration.Name}}
+		if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, mgr.GetClient(), mutWebhook, func() error {
+			mutWebhook.Webhooks = mutatingWebhookConfiguration.Webhooks
+			return nil
+		}); err != nil {
+			return err
+		}
+
+		validatingWebhookConfiguration = valWebhook
+		mutatingWebhookConfiguration = mutWebhook
+		return nil
 	}
 }

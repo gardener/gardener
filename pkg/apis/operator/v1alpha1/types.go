@@ -229,6 +229,7 @@ type KubeAPIServerConfig struct {
 // AuditWebhook contains settings related to an audit webhook configuration.
 type AuditWebhook struct {
 	// BatchMaxSize is the maximum size of a batch.
+	// +kubebuilder:default=30
 	// +kubebuilder:validation:Minimum=1
 	// +optional
 	BatchMaxSize *int32 `json:"batchMaxSize,omitempty"`
@@ -236,6 +237,7 @@ type AuditWebhook struct {
 	// +kubebuilder:validation:MinLength=1
 	KubeconfigSecretName string `json:"kubeconfigSecretName"`
 	// Version is the API version to send and expect from the webhook.
+	// +kubebuilder:default=audit.k8s.io/v1
 	// +kubebuilder:validation:Enum=audit.k8s.io/v1
 	// +optional
 	Version *string `json:"version,omitempty"`
@@ -259,6 +261,7 @@ type AuthenticationWebhook struct {
 	// +kubebuilder:validation:MinLength=1
 	KubeconfigSecretName string `json:"kubeconfigSecretName"`
 	// Version is the API version to send and expect from the webhook.
+	// +kubebuilder:default=v1beta1
 	// +kubebuilder:validation:Enum=v1alpha1;v1beta1;v1
 	// +optional
 	Version *string `json:"version,omitempty"`
@@ -287,6 +290,7 @@ type AuthorizationWebhook struct {
 	// +kubebuilder:validation:MinLength=1
 	KubeconfigSecretName string `json:"kubeconfigSecretName"`
 	// Version is the API version to send and expect from the webhook.
+	// +kubebuilder:default=v1beta1
 	// +kubebuilder:validation:Enum=v1beta1;v1
 	// +optional
 	Version *string `json:"version,omitempty"`
