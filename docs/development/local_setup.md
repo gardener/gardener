@@ -93,7 +93,7 @@ brew install parallel
 When running on macOS, install the GNU core utilities and friends:
 
 ```bash
-brew install coreutils gnu-sed gnu-tar grep
+brew install coreutils gnu-sed gnu-tar grep gzip
 ```
 
 This will create symbolic links for the GNU utilities with `g` prefix on your `PATH`, e.g., `gsed` or `gbase64`.
@@ -104,6 +104,7 @@ export PATH=$(brew --prefix)/opt/coreutils/libexec/gnubin:$PATH
 export PATH=$(brew --prefix)/opt/gnu-sed/libexec/gnubin:$PATH
 export PATH=$(brew --prefix)/opt/gnu-tar/libexec/gnubin:$PATH
 export PATH=$(brew --prefix)/opt/grep/libexec/gnubin:$PATH
+export PATH=$(brew --prefix)/opt/gzip/bin:$PATH
 ```
 
 ## [Windows Only] WSL2
