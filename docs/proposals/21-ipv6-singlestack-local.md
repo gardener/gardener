@@ -261,7 +261,8 @@ Hence, the gardenlet explicitly enables the corresponding kernel setting for sho
 
 The `docker.io` registry doesn't support pulling images over IPv6 (see [Beta IPv6 Support on Docker Hub Registry](https://www.docker.com/blog/beta-ipv6-support-on-docker-hub-registry/)).
 
-Container images from `docker.io` used on shoots and seeds are rewritten to `registry.ipv6.docker.com` if the corresponding `ipFamilies` field specifies IPv6 singe-stack.
+Container images from `docker.io` used on shoots and seeds are copied to the gardener GCR by a new prow job (see [gardener/ci-infra#619](https://github.com/gardener/ci-infra/issues/619)) under the prefix `eu.gcr.io/gardener-project/3rd/`.
+The image vectors of all relevant components are adapted to switch from the `docker.io` images to our copies in the gardener GCR.
 
 #### E2E Tests
 
