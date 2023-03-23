@@ -17,12 +17,14 @@ package managedresources
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
@@ -43,14 +45,26 @@ type object struct {
 // NewRegistry returns a new registry for resources. The given scheme, codec, and serializer must know all the resource
 // types that will later be added to the registry.
 func NewRegistry(scheme *runtime.Scheme, codec serializer.CodecFactory, serializer *json.Serializer) *Registry {
-	var groupVersions []schema.GroupVersion
+	var groupVersions schema.GroupVersions
 	for k := range scheme.AllKnownTypes() {
 		groupVersions = append(groupVersions, k.GroupVersion())
 	}
 
+	// Use set to remove duplicates
+	groupVersions = sets.New(groupVersions...).UnsortedList()
+
+	// Sort groupVersions to ensure groupVersions.Identifier() is stable key
+	// for the map in https://github.com/kubernetes/apimachinery/blob/v0.26.1/pkg/runtime/serializer/versioning/versioning.go#L94
+	sort.Slice(groupVersions, func(i, j int) bool {
+		if groupVersions[i].Group == groupVersions[j].Group {
+			return groupVersions[i].Version < groupVersions[j].Version
+		}
+		return groupVersions[i].Group < groupVersions[j].Group
+	})
+
 	return &Registry{
 		scheme:       scheme,
-		codec:        codec.CodecForVersions(serializer, serializer, schema.GroupVersions(groupVersions), schema.GroupVersions(groupVersions)),
+		codec:        codec.CodecForVersions(serializer, serializer, groupVersions, groupVersions),
 		nameToObject: make(map[string]*object),
 	}
 }
