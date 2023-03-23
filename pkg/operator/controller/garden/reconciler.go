@@ -36,6 +36,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
@@ -49,7 +50,7 @@ const finalizerName = "gardener.cloud/operator"
 
 // Reconciler reconciles Gardens.
 type Reconciler struct {
-	RuntimeClient         client.Client
+	RuntimeClientSet      kubernetes.Interface
 	RuntimeVersion        *semver.Version
 	Config                config.OperatorConfiguration
 	Clock                 clock.Clock
@@ -65,7 +66,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	log := logf.FromContext(ctx)
 
 	garden := &operatorv1alpha1.Garden{}
-	if err := r.RuntimeClient.Get(ctx, request.NamespacedName, garden); err != nil {
+	if err := r.RuntimeClientSet.Client().Get(ctx, request.NamespacedName, garden); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -83,11 +84,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, r.patchConditionToFalse(ctx, log, garden, conditionReconciled, err)
 	}
 
+	targetVersion, err := semver.NewVersion(garden.Spec.VirtualCluster.Kubernetes.Version)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed parsing version %q for virtual cluster: %w", garden.Spec.VirtualCluster.Kubernetes.Version, err)
+	}
+
 	secretsManager, err := secretsmanager.New(
 		ctx,
 		log.WithName("secretsmanager"),
 		r.Clock,
-		r.RuntimeClient,
+		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		operatorv1alpha1.SecretManagerIdentityOperator,
 		secretsmanager.Config{
@@ -100,13 +106,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if garden.DeletionTimestamp != nil {
-		if result, err := r.delete(ctx, log, garden, secretsManager); err != nil {
+		if result, err := r.delete(ctx, log, garden, secretsManager, targetVersion); err != nil {
 			return result, r.patchConditionToFalse(ctx, log, garden, conditionReconciled, err)
 		}
 		return reconcile.Result{}, nil
 	}
 
-	if result, err := r.reconcile(ctx, log, garden, secretsManager); err != nil {
+	if result, err := r.reconcile(ctx, log, garden, secretsManager, targetVersion); err != nil {
 		return result, r.patchConditionToFalse(ctx, log, garden, conditionReconciled, err)
 	}
 
@@ -116,7 +122,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 func (r *Reconciler) ensureAtMostOneGardenExists(ctx context.Context) error {
 	gardenList := &metav1.PartialObjectMetadataList{}
 	gardenList.SetGroupVersionKind(operatorv1alpha1.SchemeGroupVersion.WithKind("GardenList"))
-	if err := r.RuntimeClient.List(ctx, gardenList, client.Limit(2)); err != nil {
+	if err := r.RuntimeClientSet.Client().List(ctx, gardenList, client.Limit(2)); err != nil {
 		return err
 	}
 
@@ -130,7 +136,7 @@ func (r *Reconciler) ensureAtMostOneGardenExists(ctx context.Context) error {
 func (r *Reconciler) patchConditions(ctx context.Context, garden *operatorv1alpha1.Garden, condition gardencorev1beta1.Condition) error {
 	patch := client.MergeFromWithOptions(garden.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	garden.Status.Conditions = v1beta1helper.MergeConditions(garden.Status.Conditions, condition)
-	return r.RuntimeClient.Status().Patch(ctx, garden, patch)
+	return r.RuntimeClientSet.Client().Status().Patch(ctx, garden, patch)
 }
 
 func (r *Reconciler) patchConditionToFalse(ctx context.Context, log logr.Logger, garden *operatorv1alpha1.Garden, condition gardencorev1beta1.Condition, err error) error {
@@ -145,7 +151,7 @@ func (r *Reconciler) reportProgress(log logr.Logger, garden *operatorv1alpha1.Ga
 		patch := client.MergeFrom(garden.DeepCopy())
 		conditionReconciled := v1beta1helper.GetOrInitConditionWithClock(r.Clock, garden.Status.Conditions, operatorv1alpha1.GardenReconciled)
 		garden.Status.Conditions = v1beta1helper.MergeConditions(garden.Status.Conditions, v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionReconciled, gardencorev1beta1.ConditionProgressing, conditionReasonPrefix(garden)+"Progressing", fmt.Sprintf("Garden operation is currently being processed (%s (%d%%)).", strings.Join(stats.Running.StringList(), ", "), stats.ProgressPercent())))
-		if err := r.RuntimeClient.Status().Patch(ctx, garden, patch); err != nil {
+		if err := r.RuntimeClientSet.Client().Status().Patch(ctx, garden, patch); err != nil {
 			log.Error(err, "Could not report reconciliation progress")
 		}
 	})
@@ -198,14 +204,14 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 		completeRotationETCDEncryptionKey(garden, &now)
 	}
 
-	if err := r.RuntimeClient.Status().Update(ctx, garden); err != nil {
+	if err := r.RuntimeClientSet.Client().Status().Update(ctx, garden); err != nil {
 		return err
 	}
 
 	if mustRemoveOperationAnnotation {
 		patch := client.MergeFrom(garden.DeepCopy())
 		delete(garden.Annotations, v1beta1constants.GardenerOperation)
-		return r.RuntimeClient.Patch(ctx, garden, patch)
+		return r.RuntimeClientSet.Client().Patch(ctx, garden, patch)
 	}
 
 	return nil
@@ -264,7 +270,7 @@ func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *o
 		})
 	}
 
-	return r.RuntimeClient.Status().Update(ctx, garden)
+	return r.RuntimeClientSet.Client().Status().Update(ctx, garden)
 }
 
 func startRotationCA(garden *operatorv1alpha1.Garden, now *metav1.Time) {
@@ -325,6 +331,9 @@ func nonAutoRotatedCACertConfigurations() []secretsutils.ConfigInterface {
 	return []secretsutils.ConfigInterface{
 		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCD, CommonName: "etcd", CertType: secretsutils.CACert},
 		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCDPeer, CommonName: "etcd-peer", CertType: secretsutils.CACert},
+		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCACluster, CommonName: "kubernetes", CertType: secretsutils.CACert},
+		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAClient, CommonName: "kubernetes-client", CertType: secretsutils.CACert},
+		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAFrontProxy, CommonName: "front-proxy", CertType: secretsutils.CACert},
 	}
 }
 

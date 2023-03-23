@@ -161,8 +161,12 @@ type Values struct {
 	IsNodeless bool
 	// Logging contains configuration settings for the log and access logging verbosity
 	Logging *gardencorev1beta1.KubeAPIServerLogging
+	// NamePrefix is the prefix for the resource names.
+	NamePrefix string
 	// OIDC contains information for configuring OIDC settings for the kube-apiserver.
 	OIDC *gardencorev1beta1.OIDCConfig
+	// PriorityClassName is the name of the priority class.
+	PriorityClassName string
 	// Requests contains configuration for the kube-apiserver requests.
 	Requests *gardencorev1beta1.KubeAPIServerRequests
 	// ResourcesToStoreInETCDEvents is a list of resources which should be stored in the etcd-events instead of the
@@ -211,7 +215,7 @@ type AuditWebhook struct {
 	// Kubeconfig contains the kubeconfig formatted file that defines the audit webhook configuration.
 	Kubeconfig []byte
 	// BatchMaxSize is the maximum size of a batch.
-	BatchMaxSize *int
+	BatchMaxSize *int32
 	// Version is the API group and version used for serializing audit events written to webhook.
 	Version *string
 }
@@ -506,23 +510,24 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	var serviceAccount *corev1.ServiceAccount
 	if k.values.VPN.Enabled && k.values.VPN.HighAvailabilityEnabled {
-		if err := k.reconcileServiceAccount(ctx); err != nil {
+		serviceAccount = k.emptyServiceAccount()
+		if err := k.reconcileServiceAccount(ctx, serviceAccount); err != nil {
 			return err
 		}
 		if err := k.reconcileRoleHAVPN(ctx); err != nil {
 			return err
 		}
-		if err := k.reconcileRoleBindingHAVPN(ctx); err != nil {
+		if err := k.reconcileRoleBindingHAVPN(ctx, serviceAccount); err != nil {
 			return err
 		}
 	} else {
-		err = kubernetesutils.DeleteObjects(ctx, k.client.Client(),
+		if err := kubernetesutils.DeleteObjects(ctx, k.client.Client(),
 			k.emptyServiceAccount(),
 			k.emptyRoleHAVPN(),
 			k.emptyRoleBindingHAVPN(),
-		)
-		if err != nil {
+		); err != nil {
 			return err
 		}
 	}
@@ -536,6 +541,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	if err := k.reconcileDeployment(
 		ctx,
 		deployment,
+		serviceAccount,
 		configMapAuditPolicy,
 		configMapAdmissionConfigs,
 		secretAdmissionKubeconfigs,
@@ -565,12 +571,16 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		}
 	}
 
-	data, err := k.computeShootResourcesData()
-	if err != nil {
-		return err
+	if !k.values.IsNodeless {
+		data, err := k.computeShootResourcesData()
+		if err != nil {
+			return err
+		}
+
+		return managedresources.CreateForShoot(ctx, k.client.Client(), k.namespace, ManagedResourceName, managedresources.LabelValueGardener, false, data)
 	}
 
-	return managedresources.CreateForShoot(ctx, k.client.Client(), k.namespace, ManagedResourceName, managedresources.LabelValueGardener, false, data)
+	return nil
 }
 
 func (k *kubeAPIServer) Destroy(ctx context.Context) error {

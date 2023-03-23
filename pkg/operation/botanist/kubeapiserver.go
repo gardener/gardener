@@ -55,6 +55,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		b.Shoot.KubernetesVersion,
 		b.ImageVector,
 		b.SecretsManager,
+		"",
 		b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer,
 		b.computeKubeAPIServerAutoscalingConfig(),
 		b.Shoot.Networks.Services.String(),
@@ -66,7 +67,13 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 			HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
 			HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
 		},
+		v1beta1constants.PriorityClassNameShootControlPlane500,
+		false,
 		b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig,
+		nil,
+		nil,
+		nil,
+		nil,
 	)
 }
 

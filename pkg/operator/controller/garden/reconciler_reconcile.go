@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -49,15 +50,16 @@ func (r *Reconciler) reconcile(
 	log logr.Logger,
 	garden *operatorv1alpha1.Garden,
 	secretsManager secretsmanager.Interface,
+	targetVersion *semver.Version,
 ) (
 	reconcile.Result,
 	error,
 ) {
-	applier := kubernetes.NewApplier(r.RuntimeClient, r.RuntimeClient.RESTMapper())
+	applier := kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper())
 
 	if !controllerutil.ContainsFinalizer(garden, finalizerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(ctx, r.RuntimeClient, garden, finalizerName); err != nil {
+		if err := controllerutils.AddFinalizers(ctx, r.RuntimeClientSet.Client(), garden, finalizerName); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
@@ -65,7 +67,7 @@ func (r *Reconciler) reconcile(
 	// VPA is a prerequisite. If it's enabled then we deploy the CRD (and later also the related components) as part of
 	// the flow. However, when it's disabled then we check whether it is indeed available (and fail, otherwise).
 	if !vpaEnabled(garden.Spec.RuntimeCluster.Settings) {
-		if _, err := r.RuntimeClient.RESTMapper().RESTMapping(schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}); err != nil {
+		if _, err := r.RuntimeClientSet.Client().RESTMapper().RESTMapping(schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}); err != nil {
 			return reconcile.Result{}, fmt.Errorf("VPA is required for runtime cluster but CRD is not installed: %s", err)
 		}
 	}
@@ -73,7 +75,7 @@ func (r *Reconciler) reconcile(
 	// create + label namespace
 	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: r.GardenNamespace}}
 	log.Info("Labeling and annotating namespace", "namespaceName", namespace.Name)
-	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, r.RuntimeClient, namespace, func() error {
+	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, r.RuntimeClientSet.Client(), namespace, func() error {
 		metav1.SetMetaDataLabel(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
 		metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(garden.Spec.RuntimeCluster.Provider.Zones, ","))
 		return nil
@@ -123,6 +125,10 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 	kubeAPIServerService := r.newKubeAPIServerService(log, garden)
+	kubeAPIServer, err := r.newKubeAPIServer(ctx, garden, secretsManager, targetVersion)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
 	var (
 		g            = flow.NewGraph("Garden reconciliation")
@@ -244,7 +250,7 @@ func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, 
 		// Deploy NetworkPolicy allowing ETCD to talk to the runtime cluster's API server.
 		// TODO(rfranzke): Remove this in the future when the network policy deployment has been refactored.
 		networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "etcd-to-world", Namespace: r.GardenNamespace}}
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.RuntimeClient, networkPolicy, func() error {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.RuntimeClientSet.Client(), networkPolicy, func() error {
 			networkPolicy.Spec.Egress = []networkingv1.NetworkPolicyEgressRule{{
 				To: []networkingv1.NetworkPolicyPeer{{
 					IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"},

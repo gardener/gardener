@@ -15,11 +15,22 @@
 package garden
 
 import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/Masterminds/semver"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
@@ -27,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardensystem"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
 	sharedcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
@@ -38,7 +50,7 @@ const namePrefix = "virtual-garden-"
 
 func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
 	return sharedcomponent.NewGardenerResourceManager(
-		r.RuntimeClient,
+		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		r.RuntimeVersion,
 		r.ImageVector,
@@ -57,7 +69,7 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 
 func (r *Reconciler) newVerticalPodAutoscaler(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
 	return sharedcomponent.NewVerticalPodAutoscaler(
-		r.RuntimeClient,
+		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		r.RuntimeVersion,
 		r.ImageVector,
@@ -72,7 +84,7 @@ func (r *Reconciler) newVerticalPodAutoscaler(garden *operatorv1alpha1.Garden, s
 
 func (r *Reconciler) newHVPA() (component.DeployWaiter, error) {
 	return sharedcomponent.NewHVPA(
-		r.RuntimeClient,
+		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		r.RuntimeVersion,
 		r.ImageVector,
@@ -83,7 +95,7 @@ func (r *Reconciler) newHVPA() (component.DeployWaiter, error) {
 
 func (r *Reconciler) newEtcdDruid() (component.DeployWaiter, error) {
 	return sharedcomponent.NewEtcdDruid(
-		r.RuntimeClient,
+		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		r.RuntimeVersion,
 		r.ImageVector,
@@ -94,7 +106,7 @@ func (r *Reconciler) newEtcdDruid() (component.DeployWaiter, error) {
 }
 
 func (r *Reconciler) newSystem() component.DeployWaiter {
-	return gardensystem.New(r.RuntimeClient, r.GardenNamespace)
+	return gardensystem.New(r.RuntimeClientSet.Client(), r.GardenNamespace)
 }
 
 func (r *Reconciler) newEtcd(
@@ -159,7 +171,7 @@ func (r *Reconciler) newEtcd(
 
 	return etcd.New(
 		log,
-		r.RuntimeClient,
+		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		secretsManager,
 		etcd.Values{
@@ -190,7 +202,7 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 
 	return kubeapiserverexposure.NewService(
 		log,
-		r.RuntimeClient,
+		r.RuntimeClientSet.Client(),
 		&kubeapiserverexposure.ServiceValues{
 			AnnotationsFunc: func() map[string]string { return annotations },
 			SNIPhase:        component.PhaseDisabled,
@@ -204,4 +216,164 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 		nil,
 		false,
 	)
+}
+
+func (r *Reconciler) newKubeAPIServer(
+	ctx context.Context,
+	garden *operatorv1alpha1.Garden,
+	secretsManager secretsmanager.Interface,
+	targetVersion *semver.Version,
+) (
+	kubeapiserver.Interface,
+	error,
+) {
+	var (
+		err                          error
+		apiServerConfig              *gardencorev1beta1.KubeAPIServerConfig
+		auditWebhookConfig           *kubeapiserver.AuditWebhook
+		authenticationWebhookConfig  *kubeapiserver.AuthenticationWebhook
+		authorizationWebhookConfig   *kubeapiserver.AuthorizationWebhook
+		resourcesToStoreInETCDEvents []schema.GroupResource
+	)
+
+	if apiServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; apiServer != nil {
+		apiServerConfig = apiServer.KubeAPIServerConfig
+
+		auditWebhookConfig, err = r.computeKubeAPIServerAuditWebhookConfig(ctx, apiServer.AuditWebhook)
+		if err != nil {
+			return nil, err
+		}
+
+		authenticationWebhookConfig, err = r.computeKubeAPIServerAuthenticationWebhookConfig(ctx, apiServer.Authentication)
+		if err != nil {
+			return nil, err
+		}
+
+		authorizationWebhookConfig, err = r.computeKubeAPIServerAuthorizationWebhookConfig(ctx, apiServer.Authorization)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, gr := range apiServer.ResourcesToStoreInETCDEvents {
+			resourcesToStoreInETCDEvents = append(resourcesToStoreInETCDEvents, schema.GroupResource{Group: gr.Group, Resource: gr.Resource})
+		}
+	}
+
+	return sharedcomponent.NewKubeAPIServer(
+		ctx,
+		r.RuntimeClientSet,
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		metav1.ObjectMeta{Namespace: r.GardenNamespace, Name: garden.Name},
+		r.RuntimeVersion,
+		targetVersion,
+		r.ImageVector,
+		secretsManager,
+		namePrefix,
+		apiServerConfig,
+		kubeapiserver.AutoscalingConfig{
+			APIServerResources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("600m"),
+					corev1.ResourceMemory: resource.MustParse("512Mi"),
+				},
+			},
+			HVPAEnabled:               hvpaEnabled(),
+			MinReplicas:               1,
+			MaxReplicas:               6,
+			UseMemoryMetricForHvpaHPA: true,
+			ScaleDownDisabledForHvpa:  false,
+		},
+		garden.Spec.VirtualCluster.Networking.Services,
+		kubeapiserver.VPNConfig{Enabled: false},
+		v1beta1constants.PriorityClassNameGardenSystem500,
+		true,
+		pointer.Bool(false),
+		auditWebhookConfig,
+		authenticationWebhookConfig,
+		authorizationWebhookConfig,
+		resourcesToStoreInETCDEvents,
+	)
+}
+
+func (r *Reconciler) computeKubeAPIServerAuditWebhookConfig(ctx context.Context, config *operatorv1alpha1.AuditWebhook) (*kubeapiserver.AuditWebhook, error) {
+	if config == nil {
+		return nil, nil
+	}
+
+	key := client.ObjectKey{Namespace: r.GardenNamespace, Name: config.KubeconfigSecretName}
+	kubeconfig, err := fetchKubeconfigFromSecret(ctx, r.RuntimeClientSet.Client(), key)
+	if err != nil {
+		return nil, fmt.Errorf("failed reading kubeconfig for audit webhook from referenced secret %s: %w", key, err)
+	}
+
+	return &kubeapiserver.AuditWebhook{
+		Kubeconfig:   kubeconfig,
+		BatchMaxSize: config.BatchMaxSize,
+		Version:      config.Version,
+	}, nil
+}
+
+func (r *Reconciler) computeKubeAPIServerAuthenticationWebhookConfig(ctx context.Context, config *operatorv1alpha1.Authentication) (*kubeapiserver.AuthenticationWebhook, error) {
+	if config == nil || config.Webhook == nil {
+		return nil, nil
+	}
+
+	key := client.ObjectKey{Namespace: r.GardenNamespace, Name: config.Webhook.KubeconfigSecretName}
+	kubeconfig, err := fetchKubeconfigFromSecret(ctx, r.RuntimeClientSet.Client(), key)
+	if err != nil {
+		return nil, fmt.Errorf("failed reading kubeconfig for audit webhook from referenced secret %s: %w", key, err)
+	}
+
+	var cacheTTL *time.Duration
+	if config.Webhook.CacheTTL != nil {
+		cacheTTL = &config.Webhook.CacheTTL.Duration
+	}
+
+	return &kubeapiserver.AuthenticationWebhook{
+		Kubeconfig: kubeconfig,
+		CacheTTL:   cacheTTL,
+		Version:    config.Webhook.Version,
+	}, nil
+}
+
+func (r *Reconciler) computeKubeAPIServerAuthorizationWebhookConfig(ctx context.Context, config *operatorv1alpha1.Authorization) (*kubeapiserver.AuthorizationWebhook, error) {
+	if config == nil || config.Webhook == nil {
+		return nil, nil
+	}
+
+	key := client.ObjectKey{Namespace: r.GardenNamespace, Name: config.Webhook.KubeconfigSecretName}
+	kubeconfig, err := fetchKubeconfigFromSecret(ctx, r.RuntimeClientSet.Client(), key)
+	if err != nil {
+		return nil, fmt.Errorf("failed reading kubeconfig for audit webhook from referenced secret %s: %w", key, err)
+	}
+
+	var cacheAuthorizedTTL, cacheUnauthorizedTTL *time.Duration
+	if config.Webhook.CacheAuthorizedTTL != nil {
+		cacheAuthorizedTTL = &config.Webhook.CacheAuthorizedTTL.Duration
+	}
+	if config.Webhook.CacheUnauthorizedTTL != nil {
+		cacheUnauthorizedTTL = &config.Webhook.CacheUnauthorizedTTL.Duration
+	}
+
+	return &kubeapiserver.AuthorizationWebhook{
+		Kubeconfig:           kubeconfig,
+		CacheAuthorizedTTL:   cacheAuthorizedTTL,
+		CacheUnauthorizedTTL: cacheUnauthorizedTTL,
+		Version:              config.Webhook.Version,
+	}, nil
+}
+
+func fetchKubeconfigFromSecret(ctx context.Context, c client.Client, key client.ObjectKey) ([]byte, error) {
+	secret := &corev1.Secret{}
+	if err := c.Get(ctx, key, secret); err != nil {
+		return nil, err
+	}
+
+	kubeconfig, ok := secret.Data["kubeconfig"]
+	if !ok || len(kubeconfig) == 0 {
+		return nil, errors.New("the secret's field 'kubeconfig' is empty")
+	}
+
+	return kubeconfig, nil
 }

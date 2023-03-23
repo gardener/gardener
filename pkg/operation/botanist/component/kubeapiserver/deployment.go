@@ -130,12 +130,13 @@ const (
 )
 
 func (k *kubeAPIServer) emptyDeployment() *appsv1.Deployment {
-	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: k.namespace}}
+	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: k.values.NamePrefix + v1beta1constants.DeploymentNameKubeAPIServer, Namespace: k.namespace}}
 }
 
 func (k *kubeAPIServer) reconcileDeployment(
 	ctx context.Context,
 	deployment *appsv1.Deployment,
+	serviceAccount *corev1.ServiceAccount,
 	configMapAuditPolicy *corev1.ConfigMap,
 	configMapAdmissionConfigs *corev1.ConfigMap,
 	secretAdmissionKubeconfigs *corev1.Secret,
@@ -236,7 +237,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 				},
 				Spec: corev1.PodSpec{
 					AutomountServiceAccountToken:  pointer.Bool(false),
-					PriorityClassName:             v1beta1constants.PriorityClassNameShootControlPlane500,
+					PriorityClassName:             k.values.PriorityClassName,
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 corev1.DefaultSchedulerName,
@@ -468,7 +469,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handleAuditSettings(deployment, configMapAuditPolicy, secretAuditWebhookKubeconfig)
 		k.handleAuthenticationSettings(deployment, secretAuthenticationWebhookKubeconfig)
 		k.handleAuthorizationSettings(deployment, secretAuthorizationWebhookKubeconfig)
-		if err := k.handleVPNSettings(deployment, configMapEgressSelector, secretHTTPProxy, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth); err != nil {
+		if err := k.handleVPNSettings(deployment, serviceAccount, configMapEgressSelector, secretHTTPProxy, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth); err != nil {
 			return err
 		}
 		if err := k.handleKubeletSettings(deployment, secretKubeletClient); err != nil {
@@ -509,7 +510,7 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, fmt.Sprintf("--etcd-cafile=%s/%s", volumeMountPathCAEtcd, secrets.DataKeyCertificateBundle))
 	out = append(out, fmt.Sprintf("--etcd-certfile=%s/%s", volumeMountPathEtcdClient, secrets.DataKeyCertificate))
 	out = append(out, fmt.Sprintf("--etcd-keyfile=%s/%s", volumeMountPathEtcdClient, secrets.DataKeyPrivateKey))
-	out = append(out, fmt.Sprintf("--etcd-servers=https://%s:%d", etcdconstants.ServiceName(v1beta1constants.ETCDRoleMain), etcdconstants.PortEtcdClient))
+	out = append(out, fmt.Sprintf("--etcd-servers=https://%s%s:%d", k.values.NamePrefix, etcdconstants.ServiceName(v1beta1constants.ETCDRoleMain), etcdconstants.PortEtcdClient))
 	out = append(out, "--etcd-servers-overrides="+k.etcdServersOverrides())
 	out = append(out, fmt.Sprintf("--encryption-provider-config=%s/%s", volumeMountPathEtcdEncryptionConfig, secretETCDEncryptionConfigurationDataKey))
 	out = append(out, "--external-hostname="+k.values.ExternalHostname)
@@ -619,7 +620,7 @@ func (k *kubeAPIServer) etcdServersOverrides() string {
 
 	var overrides []string
 	for _, resource := range addGroupResourceIfNotPresent(k.values.ResourcesToStoreInETCDEvents, schema.GroupResource{Resource: "events"}) {
-		overrides = append(overrides, fmt.Sprintf("%s/%s#https://%s:%d", resource.Group, resource.Resource, etcdconstants.ServiceName(v1beta1constants.ETCDRoleEvents), etcdconstants.PortEtcdClient))
+		overrides = append(overrides, fmt.Sprintf("%s/%s#https://%s%s:%d", resource.Group, resource.Resource, k.values.NamePrefix, etcdconstants.ServiceName(v1beta1constants.ETCDRoleEvents), etcdconstants.PortEtcdClient))
 	}
 	return strings.Join(overrides, ",")
 }
@@ -767,6 +768,7 @@ func (k *kubeAPIServer) handleLifecycleSettings(deployment *appsv1.Deployment) {
 
 func (k *kubeAPIServer) handleVPNSettings(
 	deployment *appsv1.Deployment,
+	serviceAccount *corev1.ServiceAccount,
 	configMapEgressSelector *corev1.ConfigMap,
 	secretHTTPProxy *corev1.Secret,
 	secretHAVPNSeedClient *corev1.Secret,
@@ -782,7 +784,7 @@ func (k *kubeAPIServer) handleVPNSettings(
 	}
 
 	if k.values.VPN.HighAvailabilityEnabled {
-		k.handleVPNSettingsHA(deployment, secretCAVPN, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth)
+		k.handleVPNSettingsHA(deployment, serviceAccount, secretCAVPN, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth)
 	} else {
 		k.handleVPNSettingsNonHA(deployment, secretCAVPN, secretHTTPProxy, configMapEgressSelector)
 	}
@@ -846,6 +848,7 @@ func (k *kubeAPIServer) handleVPNSettingsNonHA(
 
 func (k *kubeAPIServer) handleVPNSettingsHA(
 	deployment *appsv1.Deployment,
+	serviceAccount *corev1.ServiceAccount,
 	secretCAVPN *corev1.Secret,
 	secretHAVPNSeedClient *corev1.Secret,
 	secretHAVPNSeedClientSeedTLSAuth *corev1.Secret,
@@ -858,7 +861,7 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 		})
 	}
 
-	deployment.Spec.Template.Spec.ServiceAccountName = serviceAccountName
+	deployment.Spec.Template.Spec.ServiceAccountName = serviceAccount.Name
 	deployment.Spec.Template.Labels[v1beta1constants.LabelNetworkPolicyToShootNetworks] = v1beta1constants.LabelNetworkPolicyAllowed
 	deployment.Spec.Template.Labels[v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer] = v1beta1constants.LabelNetworkPolicyAllowed
 	for i := 0; i < k.values.VPN.HighAvailabilityNumberOfSeedServers; i++ {

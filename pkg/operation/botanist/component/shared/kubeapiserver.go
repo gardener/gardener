@@ -85,11 +85,18 @@ func NewKubeAPIServer(
 	targetVersion *semver.Version,
 	imageVector imagevector.ImageVector,
 	secretsManager secretsmanager.Interface,
+	namePrefix string,
 	apiServerConfig *gardencorev1beta1.KubeAPIServerConfig,
 	autoscalingConfig kubeapiserver.AutoscalingConfig,
 	serviceNetworkCIDR string,
 	vpnConfig kubeapiserver.VPNConfig,
+	priorityClassName string,
+	isNodeless bool,
 	staticTokenKubeconfigEnabled *bool,
+	auditWebhookConfig *kubeapiserver.AuditWebhook,
+	authenticationWebhookConfig *kubeapiserver.AuthenticationWebhook,
+	authorizationWebhookConfig *kubeapiserver.AuthorizationWebhook,
+	resourcesToStoreInETCDEvents []schema.GroupResource,
 ) (
 	kubeapiserver.Interface,
 	error,
@@ -131,7 +138,7 @@ func NewKubeAPIServer(
 			}
 		}
 
-		auditConfig, err = computeKubeAPIServerAuditConfig(ctx, auditConfigClient, objectMeta, apiServerConfig.AuditConfig)
+		auditConfig, err = computeKubeAPIServerAuditConfig(ctx, auditConfigClient, objectMeta, apiServerConfig.AuditConfig, auditWebhookConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -140,12 +147,11 @@ func NewKubeAPIServer(
 		defaultUnreachableTolerationSeconds = apiServerConfig.DefaultUnreachableTolerationSeconds
 		eventTTL = apiServerConfig.EventTTL
 		featureGates = apiServerConfig.FeatureGates
+		logging = apiServerConfig.Logging
 		oidcConfig = apiServerConfig.OIDCConfig
 		requests = apiServerConfig.Requests
 		runtimeConfig = apiServerConfig.RuntimeConfig
-
 		watchCacheSizes = apiServerConfig.WatchCacheSizes
-		logging = apiServerConfig.Logging
 	}
 
 	enabledAdmissionPluginConfigs, err := convertToAdmissionPluginConfigs(enabledAdmissionPlugins)
@@ -163,16 +169,21 @@ func NewKubeAPIServer(
 			AnonymousAuthenticationEnabled:      v1beta1helper.AnonymousAuthenticationEnabled(apiServerConfig),
 			APIAudiences:                        apiAudiences,
 			Audit:                               auditConfig,
+			AuthenticationWebhook:               authenticationWebhookConfig,
+			AuthorizationWebhook:                authorizationWebhookConfig,
 			Autoscaling:                         autoscalingConfig,
 			DefaultNotReadyTolerationSeconds:    defaultNotReadyTolerationSeconds,
 			DefaultUnreachableTolerationSeconds: defaultUnreachableTolerationSeconds,
 			EventTTL:                            eventTTL,
 			FeatureGates:                        featureGates,
 			Images:                              images,
-			IsNodeless:                          false,
+			IsNodeless:                          isNodeless,
 			Logging:                             logging,
+			NamePrefix:                          namePrefix,
 			OIDC:                                oidcConfig,
+			PriorityClassName:                   priorityClassName,
 			Requests:                            requests,
+			ResourcesToStoreInETCDEvents:        resourcesToStoreInETCDEvents,
 			RuntimeConfig:                       runtimeConfig,
 			RuntimeVersion:                      runtimeVersion,
 			ServiceNetworkCIDR:                  serviceNetworkCIDR,
@@ -338,6 +349,7 @@ func computeKubeAPIServerAuditConfig(
 	cl client.Client,
 	objectMeta metav1.ObjectMeta,
 	config *gardencorev1beta1.AuditConfig,
+	webhookConfig *kubeapiserver.AuditWebhook,
 ) (
 	*kubeapiserver.AuditConfig,
 	error,
@@ -346,20 +358,25 @@ func computeKubeAPIServerAuditConfig(
 		return nil, nil
 	}
 
-	out := &kubeapiserver.AuditConfig{}
+	var (
+		out = &kubeapiserver.AuditConfig{
+			Webhook: webhookConfig,
+		}
+		key = kubernetesutils.Key(objectMeta.Namespace, config.AuditPolicy.ConfigMapRef.Name)
+	)
 
 	configMap := &corev1.ConfigMap{}
-	if err := cl.Get(ctx, kubernetesutils.Key(objectMeta.Namespace, config.AuditPolicy.ConfigMapRef.Name), configMap); err != nil {
+	if err := cl.Get(ctx, key, configMap); err != nil {
 		// Ignore missing audit configuration on shoot deletion to prevent failing redeployments of the
 		// kube-apiserver in case the end-user deleted the configmap before/simultaneously to the shoot
 		// deletion.
 		if !apierrors.IsNotFound(err) || objectMeta.DeletionTimestamp == nil {
-			return nil, fmt.Errorf("retrieving audit policy from the ConfigMap '%v' failed with reason '%w'", config.AuditPolicy.ConfigMapRef.Name, err)
+			return nil, fmt.Errorf("retrieving audit policy from the ConfigMap %s failed: %w", key, err)
 		}
 	} else {
 		policy, ok := configMap.Data["policy"]
 		if !ok {
-			return nil, fmt.Errorf("missing '.data.policy' in audit policy configmap %v/%v", objectMeta.Namespace, config.AuditPolicy.ConfigMapRef.Name)
+			return nil, fmt.Errorf("missing '.data.policy' in audit policy ConfigMap %s", key)
 		}
 		out.Policy = &policy
 	}

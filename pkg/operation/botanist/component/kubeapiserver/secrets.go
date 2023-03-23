@@ -374,7 +374,6 @@ func (k *kubeAPIServer) reconcileTLSSNISecrets(ctx context.Context) ([]tlsSNISec
 		default:
 			return nil, fmt.Errorf("either the name of an existing secret or both certificate and private key must be provided for TLS SNI config")
 		}
-
 	}
 
 	return out, nil

@@ -18,7 +18,6 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver"
-	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -29,6 +28,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 // ControllerName is the name of this controller.
@@ -36,8 +36,28 @@ const ControllerName = "garden"
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(mgr manager.Manager) error {
-	if r.RuntimeClient == nil {
-		r.RuntimeClient = mgr.GetClient()
+	var err error
+
+	if r.RuntimeClientSet == nil {
+		r.RuntimeClientSet, err = kubernetes.NewWithConfig(
+			kubernetes.WithRESTConfig(mgr.GetConfig()),
+			kubernetes.WithRuntimeAPIReader(mgr.GetAPIReader()),
+			kubernetes.WithRuntimeClient(mgr.GetClient()),
+			kubernetes.WithRuntimeCache(mgr.GetCache()),
+		)
+		if err != nil {
+			return fmt.Errorf("failed creating seed clientset: %w", err)
+		}
+	}
+	if r.RuntimeVersion == nil {
+		serverVersion, err := r.RuntimeClientSet.DiscoverVersion()
+		if err != nil {
+			return fmt.Errorf("failed getting server version for runtime cluster: %w", err)
+		}
+		r.RuntimeVersion, err = semver.NewVersion(serverVersion.GitVersion)
+		if err != nil {
+			return fmt.Errorf("failed parsing version %q for runtime cluster: %w", serverVersion.GitVersion, err)
+		}
 	}
 	if r.Clock == nil {
 		r.Clock = clock.RealClock{}
@@ -47,23 +67,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	}
 	if r.GardenNamespace == "" {
 		r.GardenNamespace = v1beta1constants.GardenNamespace
-	}
-
-	if r.RuntimeVersion == nil {
-		kubernetesClient, err := kubernetesclientset.NewForConfig(mgr.GetConfig())
-		if err != nil {
-			return fmt.Errorf("failed creating Kubernetes client: %w", err)
-		}
-
-		serverVersion, err := kubernetesClient.DiscoveryClient.ServerVersion()
-		if err != nil {
-			return fmt.Errorf("failed getting server version for runtime cluster: %w", err)
-		}
-
-		r.RuntimeVersion, err = semver.NewVersion(serverVersion.GitVersion)
-		if err != nil {
-			return fmt.Errorf("failed parsing version %q for runtime cluster: %w", serverVersion.GitVersion, err)
-		}
 	}
 
 	return builder.
