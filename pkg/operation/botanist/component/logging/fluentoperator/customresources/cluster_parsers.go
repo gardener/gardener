@@ -33,7 +33,7 @@ func GetClusterParsers(labels map[string]string) []*fluentbitv1alpha2.ClusterPar
 				JSON: &fluentbitv1alpha2parser.JSON{
 					TimeKey:    "time",
 					TimeFormat: "%Y-%m-%dT%H:%M:%S.%L%z",
-					TimeKeep:   pointer.BoolPtr(true),
+					TimeKeep:   pointer.Bool(true),
 				},
 				Decoders: []fluentbitv1alpha2.Decorder{
 					{
@@ -52,7 +52,7 @@ func GetClusterParsers(labels map[string]string) []*fluentbitv1alpha2.ClusterPar
 					Regex:      "^(?<time>[^ ]+) (stdout|stderr) ([^ ]*) (?<log>.*)$",
 					TimeKey:    "time",
 					TimeFormat: "%Y-%m-%dT%H:%M:%S.%L%z",
-					TimeKeep:   pointer.BoolPtr(true),
+					TimeKeep:   pointer.Bool(true),
 				},
 				Decoders: []fluentbitv1alpha2.Decorder{
 					{

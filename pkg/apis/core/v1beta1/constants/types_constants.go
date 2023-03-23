@@ -130,7 +130,7 @@ const (
 	// the event-logger pod.
 	DeploymentNameEventLogger = "event-logger"
 	// DeploymentNameFluentOperator is a constant for the name of a Kubernetes deployment object that contains
-	// the fluent-operatorxw pod.
+	// the fluent-operator pod.
 	DeploymentNameFluentOperator = "fluent-operator"
 	// DaemonsetNameFluentBit is a constant for the name of a Kubernetes Daemonset object that contains
 	// the fluent-bit pod.

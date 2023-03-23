@@ -38,7 +38,7 @@ func GetClusterFilters(configName string, labels map[string]string) []*fluentbit
 						Parser: &fluentbitv1alpha2filter.Parser{
 							KeyName:     "log",
 							Parser:      "docker-parser",
-							ReserveData: pointer.BoolPtr(true),
+							ReserveData: pointer.Bool(true),
 						},
 					},
 				},
@@ -57,7 +57,7 @@ func GetClusterFilters(configName string, labels map[string]string) []*fluentbit
 						Parser: &fluentbitv1alpha2filter.Parser{
 							KeyName:     "log",
 							Parser:      "containerd-parser",
-							ReserveData: pointer.BoolPtr(true),
+							ReserveData: pointer.Bool(true),
 						},
 					},
 				},

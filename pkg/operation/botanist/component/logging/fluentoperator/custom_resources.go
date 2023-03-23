@@ -38,11 +38,11 @@ const (
 
 // CustomResourcesValues are the values for the custom resources.
 type CustomResourcesValues struct {
-	// FluentBitImage is the Fluent-bit image
+	// FluentBitImage is the fluent-bit image.
 	FluentBitImage string
-	// FluentBitInitImage is the Fluent-bit init container image
+	// FluentBitInitImage is the fluent-bit init container image.
 	FluentBitInitImage string
-	// FluentBitPriorityClass is the name of the priority class of the Fluent-bit.
+	// FluentBitPriorityClass is the name of the priority class of the fluent-bit.
 	FluentBitPriorityClass string
 }
 
@@ -55,7 +55,7 @@ type customResources struct {
 	additionalParsers []*fluentbitv1alpha2.ClusterParser
 }
 
-// NewCustomResources creates a new instance of fluent operator custom resources.
+// NewCustomResources creates a new instance of fluent-operator custom resources.
 func NewCustomResources(
 	client client.Client,
 	namespace string,

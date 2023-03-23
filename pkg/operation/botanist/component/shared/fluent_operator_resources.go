@@ -40,12 +40,12 @@ func NewFluentOperatorResources(
 	deployer component.DeployWaiter,
 	err error,
 ) {
-	fbImage, err := imageVector.FindImage(images.ImageNameFluentBit)
+	fluentBitImage, err := imageVector.FindImage(images.ImageNameFluentBit)
 	if err != nil {
 		return nil, err
 	}
 
-	fbInitImage, err := imageVector.FindImage(images.ImageNameFluentBitPluginInstaller)
+	fluentBitInitImage, err := imageVector.FindImage(images.ImageNameFluentBitPluginInstaller)
 	if err != nil {
 		return nil, err
 	}
@@ -54,8 +54,8 @@ func NewFluentOperatorResources(
 		c,
 		gardenNamespaceName,
 		fluentoperator.CustomResourcesValues{
-			FluentBitImage:         fbImage.String(),
-			FluentBitInitImage:     fbInitImage.String(),
+			FluentBitImage:         fluentBitImage.String(),
+			FluentBitInitImage:     fluentBitInitImage.String(),
 			FluentBitPriorityClass: priorityClassName,
 		},
 		additionalInputs,

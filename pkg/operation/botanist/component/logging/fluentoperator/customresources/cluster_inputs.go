@@ -21,7 +21,7 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-// GetClusterInputs Returns the ClusterInputs used by the Fluent Operator.
+// GetClusterInputs Returns the ClusterInputs used by the fluent-operator.
 func GetClusterInputs(labels map[string]string) []*fluentbitv1alpha2.ClusterInput {
 	return []*fluentbitv1alpha2.ClusterInput{
 		{
@@ -34,7 +34,7 @@ func GetClusterInputs(labels map[string]string) []*fluentbitv1alpha2.ClusterInpu
 					Tag:                    "kubernetes.*",
 					Path:                   "/var/log/containers/*.log",
 					ExcludePath:            "*_garden_fluent-bit-*.log,*_garden_loki-*.log",
-					RefreshIntervalSeconds: pointer.Int64Ptr(10),
+					RefreshIntervalSeconds: pointer.Int64(10),
 					MemBufLimit:            "30MB",
 					SkipLongLines:          pointer.Bool(true),
 					DB:                     "/opt/fluentbit/flb_kube.db",
