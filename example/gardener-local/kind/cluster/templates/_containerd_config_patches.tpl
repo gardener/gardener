@@ -4,8 +4,6 @@
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5001"]
     endpoint = ["http://{{ .Values.registry.hostname }}:5001"]
   {{- end }}
-  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
-    endpoint = ["http://{{ .Values.registry.hostname }}:5002"]
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."gcr.io"]
     endpoint = ["http://{{ .Values.registry.hostname }}:5003"]
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."eu.gcr.io"]
