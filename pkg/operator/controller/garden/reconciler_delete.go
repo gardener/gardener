@@ -99,6 +99,10 @@ func (r *Reconciler) delete(
 			Name: "Destroying Kubernetes API Server service",
 			Fn:   component.OpDestroyAndWait(kubeAPIServerService).Destroy,
 		})
+		destroyKubeAPIServer = g.Add(flow.Task{
+			Name: "Destroying Kubernetes API Server",
+			Fn:   component.OpDestroyAndWait(kubeAPIServer).Destroy,
+		})
 		destroyEtcd = g.Add(flow.Task{
 			Name: "Destroying main and events ETCDs of virtual garden",
 			Fn: flow.Parallel(
@@ -109,6 +113,7 @@ func (r *Reconciler) delete(
 					return kubernetesutils.DeleteObject(ctx, r.RuntimeClientSet.Client(), &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "etcd-to-world", Namespace: r.GardenNamespace}})
 				},
 			),
+			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer),
 		})
 		syncPointVirtualGardenControlPlaneDestroyed = flow.NewTaskIDs(
 			destroyKubeAPIServerService,

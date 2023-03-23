@@ -39,8 +39,11 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
@@ -177,7 +180,7 @@ func (r *Reconciler) reconcile(
 			Fn:           r.deployEtcdsFunc(garden, etcdMain, etcdEvents),
 			Dependencies: flow.NewTaskIDs(syncPointSystemComponents),
 		})
-		_ = g.Add(flow.Task{
+		waitUntilEtcdsReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event ETCDs report readiness",
 			Fn:           flow.Parallel(etcdMain.Wait, etcdEvents.Wait),
 			Dependencies: flow.NewTaskIDs(deployEtcds),
@@ -186,6 +189,16 @@ func (r *Reconciler) reconcile(
 			Name:         "Deploying and waiting for kube-apiserver service in the runtime cluster",
 			Fn:           component.OpWait(kubeAPIServerService).Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointSystemComponents),
+		})
+		deployKubeAPIServer = g.Add(flow.Task{
+			Name:         "Deploying Kubernetes API Server",
+			Fn:           r.deployKubeAPIServerFunc(ctx, garden, kubeAPIServer),
+			Dependencies: flow.NewTaskIDs(waitUntilEtcdsReady),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until Kubernetes API server rolled out",
+			Fn:           kubeAPIServer.Wait,
+			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
 	)
 
@@ -264,5 +277,47 @@ func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, 
 		}
 
 		return flow.Parallel(etcdMain.Deploy, etcdEvents.Deploy)(ctx)
+	}
+}
+
+func (r *Reconciler) deployKubeAPIServerFunc(ctx context.Context, garden *operatorv1alpha1.Garden, kubeAPIServer kubeapiserver.Interface) func(context.Context) error {
+	return func(context.Context) error {
+		var (
+			address                 = gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domain)
+			serverCertificateConfig = kubeapiserver.ServerCertificateConfig{
+				ExtraDNSNames: []string{
+					address,
+					"gardener." + garden.Spec.VirtualCluster.DNS.Domain,
+				},
+			}
+			apiServerConfig *gardencorev1beta1.KubeAPIServerConfig
+			sniConfig       = kubeapiserver.SNIConfig{Enabled: false, PodMutatorEnabled: false}
+		)
+
+		if apiServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; apiServer != nil {
+			apiServerConfig = apiServer.KubeAPIServerConfig
+
+			if apiServer.SNI != nil {
+				sniConfig.TLS = append(sniConfig.TLS, kubeapiserver.TLSSNIConfig{
+					SecretName:     &apiServer.SNI.SecretName,
+					DomainPatterns: apiServer.SNI.DomainPatterns,
+				})
+			}
+		}
+
+		return shared.DeployKubeAPIServer(
+			ctx,
+			r.RuntimeClientSet.Client(),
+			r.GardenNamespace,
+			kubeAPIServer,
+			apiServerConfig,
+			serverCertificateConfig,
+			sniConfig,
+			address,
+			address,
+			helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials),
+			helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials),
+			false,
+		)
 	}
 }

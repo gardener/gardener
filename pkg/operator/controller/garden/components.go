@@ -234,7 +234,12 @@ func (r *Reconciler) newKubeAPIServer(
 		authenticationWebhookConfig  *kubeapiserver.AuthenticationWebhook
 		authorizationWebhookConfig   *kubeapiserver.AuthorizationWebhook
 		resourcesToStoreInETCDEvents []schema.GroupResource
+		minReplicas                  int32 = 2
 	)
+
+	if garden.Spec.VirtualCluster.ControlPlane != nil && garden.Spec.VirtualCluster.ControlPlane.HighAvailability != nil {
+		minReplicas = 3
+	}
 
 	if apiServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; apiServer != nil {
 		apiServerConfig = apiServer.KubeAPIServerConfig
@@ -279,7 +284,7 @@ func (r *Reconciler) newKubeAPIServer(
 				},
 			},
 			HVPAEnabled:               hvpaEnabled(),
-			MinReplicas:               1,
+			MinReplicas:               minReplicas,
 			MaxReplicas:               6,
 			UseMemoryMetricForHvpaHPA: true,
 			ScaleDownDisabledForHvpa:  false,
@@ -288,7 +293,7 @@ func (r *Reconciler) newKubeAPIServer(
 		kubeapiserver.VPNConfig{Enabled: false},
 		v1beta1constants.PriorityClassNameGardenSystem500,
 		true,
-		pointer.Bool(false),
+		pointer.Bool(true),
 		auditWebhookConfig,
 		authenticationWebhookConfig,
 		authorizationWebhookConfig,
