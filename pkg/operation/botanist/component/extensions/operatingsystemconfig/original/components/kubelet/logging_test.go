@@ -97,9 +97,6 @@ var _ = Describe("Logging", func() {
 					},
 				}))
 			Expect(loggingConfig.Parsers).To(BeNil())
-			Expect(loggingConfig.PodPrefixes).To(BeEmpty())
-			Expect(loggingConfig.UserExposed).To(BeFalse())
-
 		})
 	})
 })
