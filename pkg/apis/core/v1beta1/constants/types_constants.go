@@ -132,6 +132,9 @@ const (
 	// DeploymentNameFluentOperator is a constant for the name of a Kubernetes deployment object that contains
 	// the fluent-operatorxw pod.
 	DeploymentNameFluentOperator = "fluent-operator"
+	// DaemonsetNameFluentBit is a constant for the name of a Kubernetes Daemonset object that contains
+	// the fluent-bit pod.
+	DaemonsetNameFluentBit = "fluent-bit"
 	// DeploymentNameKubeStateMetrics is a constant for the name of a Kubernetes deployment object that contains
 	// the kube-state-metrics pod.
 	DeploymentNameKubeStateMetrics = "kube-state-metrics"
@@ -591,7 +594,12 @@ const (
 	AnnotationSeccompAllowedProfiles = "seccomp.security.alpha.kubernetes.io/allowedProfileNames"
 	// AnnotationSeccompAllowedProfilesRuntimeDefaultValue is the value for the default container runtime profile.
 	AnnotationSeccompAllowedProfilesRuntimeDefaultValue = "runtime/default"
-
+	// AnnotationNetworkPolicyFromPolicyPodLabelSelector allows Prometheus to scrape services labeled with 'networking.resources.gardener.cloud/from-policy-pod-label-selector=all-scrape-targets'
+	AnnotationNetworkPolicyFromPolicyPodLabelSelector = "networking.resources.gardener.cloud/from-policy-pod-label-selector"
+	// AnnotationNetworkPolicyFromPolicyAllowedPorts allows Prometheus to scape mentioned ports.
+	AnnotationNetworkPolicyFromPolicyAllowedPorts = "networking.resources.gardener.cloud/from-policy-allowed-ports"
+	// NetworkPolicyAllScrapeTargets is a constant which allows Prometheus to scape all the targets.
+	NetworkPolicyAllScrapeTargets = "all-scrape-targets"
 	// OperatingSystemConfigUnitNameKubeletService is a constant for a unit in the operating system config that contains the kubelet service.
 	OperatingSystemConfigUnitNameKubeletService = "kubelet.service"
 	// OperatingSystemConfigUnitNameDockerService is a constant for a unit in the operating system config that contains the docker service.

@@ -354,8 +354,9 @@ func (r *Reconciler) runDeleteSeedFlow(
 				Fn:   component.OpDestroyAndWait(fluentOperatorResources).Destroy,
 			})
 			destroyFluentOperator = g.Add(flow.Task{
-				Name: "Destroy Fluent Operator",
-				Fn:   component.OpDestroyAndWait(fluentOperator).Destroy,
+				Name:         "Destroy Fluent Operator",
+				Fn:           component.OpDestroyAndWait(fluentOperator).Destroy,
+				Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources),
 			})
 		)
 

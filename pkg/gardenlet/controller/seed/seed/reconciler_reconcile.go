@@ -1056,6 +1056,21 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return flow.Errors(err)
 	}
 
+	// Patching fluent-bit service with the network policy annotations
+	fluentBitService := &corev1.Service{}
+	if err := seedClient.Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, v1beta1constants.DaemonsetNameFluentBit), fluentBitService); err != nil {
+		return err
+	}
+
+	fluentBitServicePatch := client.MergeFrom(fluentBitService.DeepCopy())
+	fluentBitService.ObjectMeta.Annotations[v1beta1constants.AnnotationNetworkPolicyFromPolicyPodLabelSelector] = v1beta1constants.NetworkPolicyAllScrapeTargets
+	fluentBitService.ObjectMeta.Annotations[v1beta1constants.AnnotationNetworkPolicyFromPolicyAllowedPorts] = "[{\"port\":\"2020\",\"protocol\":\"TCP\"},{\"port\":\"2021\",\"protocol\":\"TCP\"}]"
+
+	log.Info("Pathing network policy annotation of the FluentBit Service")
+	if err := seedClient.Patch(ctx, fluentBitService, fluentBitServicePatch); err != nil {
+		return err
+	}
+
 	return secretsManager.Cleanup(ctx)
 }
 

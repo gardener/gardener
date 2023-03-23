@@ -40,7 +40,6 @@ const (
 	// OperatorManagedResourceName is the name of the fluent-operator managed resource.
 	OperatorManagedResourceName = "fluent-operator"
 	name                        = "fluent-operator"
-	fbName                      = "fluent-bit"
 	roleName                    = "gardener.cloud:logging:fluent-operator"
 	vpaName                     = "fluent-operator-vpa"
 )
@@ -305,9 +304,11 @@ func (f *fluentOperator) computeEnv() []corev1.EnvVar {
 
 func (f *fluentOperator) getLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelApp:   name,
-		v1beta1constants.LabelRole:  v1beta1constants.LabelLogging,
-		v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging,
+		v1beta1constants.LabelApp:                             name,
+		v1beta1constants.LabelRole:                            v1beta1constants.LabelLogging,
+		v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleLogging,
+		v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 	}
 }
 
