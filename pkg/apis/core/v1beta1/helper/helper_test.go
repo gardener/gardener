@@ -2017,9 +2017,9 @@ var _ = Describe("helper", func() {
 		Entry("equality", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, BeTrue()),
 	)
 
-	DescribeTable("#ShootWantsAnonymousAuthentication",
+	DescribeTable("#AnonymousAuthenticationEnabled",
 		func(kubeAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig, wantsAnonymousAuth bool) {
-			actualWantsAnonymousAuth := ShootWantsAnonymousAuthentication(kubeAPIServerConfig)
+			actualWantsAnonymousAuth := AnonymousAuthenticationEnabled(kubeAPIServerConfig)
 			Expect(actualWantsAnonymousAuth).To(Equal(wantsAnonymousAuth))
 		},
 

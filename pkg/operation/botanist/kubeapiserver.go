@@ -24,17 +24,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	admissionapiv1 "k8s.io/pod-security-admission/admission/api/v1"
-	admissionapiv1alpha1 "k8s.io/pod-security-admission/admission/api/v1alpha1"
-	admissionapiv1beta1 "k8s.io/pod-security-admission/admission/api/v1beta1"
 	"k8s.io/utils/pointer"
-	"k8s.io/utils/strings/slices"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -44,273 +35,39 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
-var (
-	runtimeScheme *runtime.Scheme
-	codec         runtime.Codec
-)
-
-func init() {
-	runtimeScheme = runtime.NewScheme()
-	utilruntime.Must(admissionapiv1alpha1.AddToScheme(runtimeScheme))
-	utilruntime.Must(admissionapiv1beta1.AddToScheme(runtimeScheme))
-	utilruntime.Must(admissionapiv1.AddToScheme(runtimeScheme))
-
-	var (
-		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, runtimeScheme, runtimeScheme, json.SerializerOptions{
-			Yaml:   true,
-			Pretty: false,
-			Strict: false,
-		})
-		versions = schema.GroupVersions([]schema.GroupVersion{
-			admissionapiv1alpha1.SchemeGroupVersion,
-			admissionapiv1beta1.SchemeGroupVersion,
-			admissionapiv1.SchemeGroupVersion,
-		})
-	)
-
-	codec = serializer.NewCodecFactory(runtimeScheme).CodecForVersions(ser, ser, versions, versions)
-}
-
 // DefaultKubeAPIServer returns a deployer for the kube-apiserver.
 func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Interface, error) {
-	images, err := b.computeKubeAPIServerImages()
-	if err != nil {
-		return nil, err
-	}
-
-	var (
-		apiServerConfig = b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer
-
-		enabledAdmissionPlugins             = kubernetesutils.GetAdmissionPluginsForVersion(b.Shoot.GetInfo().Spec.Kubernetes.Version)
-		disabledAdmissionPlugins            []gardencorev1beta1.AdmissionPlugin
-		apiAudiences                        = []string{"kubernetes", "gardener"}
-		auditConfig                         *kubeapiserver.AuditConfig
-		defaultNotReadyTolerationSeconds    *int64
-		defaultUnreachableTolerationSeconds *int64
-		eventTTL                            *metav1.Duration
-		featureGates                        map[string]bool
-		oidcConfig                          *gardencorev1beta1.OIDCConfig
-		requests                            *gardencorev1beta1.KubeAPIServerRequests
-		runtimeConfig                       map[string]bool
-		watchCacheSizes                     *gardencorev1beta1.WatchCacheSizes
-		logging                             *gardencorev1beta1.KubeAPIServerLogging
-	)
-
-	if apiServerConfig != nil {
-		enabledAdmissionPlugins = b.computeEnabledKubeAPIServerAdmissionPlugins(enabledAdmissionPlugins, apiServerConfig.AdmissionPlugins)
-		disabledAdmissionPlugins = b.computeDisabledKubeAPIServerAdmissionPlugins(apiServerConfig.AdmissionPlugins)
-
-		enabledAdmissionPlugins, err = b.ensureAdmissionPluginConfig(enabledAdmissionPlugins)
-		if err != nil {
-			return nil, err
-		}
-
-		if apiServerConfig.APIAudiences != nil {
-			apiAudiences = apiServerConfig.APIAudiences
-			if !utils.ValueExists(v1beta1constants.GardenerAudience, apiAudiences) {
-				apiAudiences = append(apiAudiences, v1beta1constants.GardenerAudience)
-			}
-		}
-
-		auditConfig, err = b.computeKubeAPIServerAuditConfig(ctx, apiServerConfig.AuditConfig)
-		if err != nil {
-			return nil, err
-		}
-
-		defaultNotReadyTolerationSeconds = apiServerConfig.DefaultNotReadyTolerationSeconds
-		defaultUnreachableTolerationSeconds = apiServerConfig.DefaultUnreachableTolerationSeconds
-		eventTTL = apiServerConfig.EventTTL
-		featureGates = apiServerConfig.FeatureGates
-		oidcConfig = apiServerConfig.OIDCConfig
-		requests = apiServerConfig.Requests
-		runtimeConfig = apiServerConfig.RuntimeConfig
-
-		watchCacheSizes = apiServerConfig.WatchCacheSizes
-		logging = apiServerConfig.Logging
-	}
-
-	enabledAdmissionPluginConfigs, err := b.convertToAdmissionPluginConfigs(enabledAdmissionPlugins)
-	if err != nil {
-		return nil, err
-	}
-
-	return kubeapiserver.New(
+	return shared.NewKubeAPIServer(
+		ctx,
 		b.SeedClientSet,
+		b.GardenClient,
 		b.Shoot.SeedNamespace,
+		b.Shoot.GetInfo().ObjectMeta,
+		b.Seed.KubernetesVersion,
+		b.Shoot.KubernetesVersion,
+		b.ImageVector,
 		b.SecretsManager,
-		kubeapiserver.Values{
-			EnabledAdmissionPlugins:             enabledAdmissionPluginConfigs,
-			DisabledAdmissionPlugins:            disabledAdmissionPlugins,
-			AnonymousAuthenticationEnabled:      v1beta1helper.ShootWantsAnonymousAuthentication(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer),
-			APIAudiences:                        apiAudiences,
-			Audit:                               auditConfig,
-			Autoscaling:                         b.computeKubeAPIServerAutoscalingConfig(),
-			DefaultNotReadyTolerationSeconds:    defaultNotReadyTolerationSeconds,
-			DefaultUnreachableTolerationSeconds: defaultUnreachableTolerationSeconds,
-			EventTTL:                            eventTTL,
-			FeatureGates:                        featureGates,
-			Images:                              images,
-			IsNodeless:                          false,
-			OIDC:                                oidcConfig,
-			Requests:                            requests,
-			RuntimeConfig:                       runtimeConfig,
-			RuntimeVersion:                      b.Seed.KubernetesVersion,
-			ServiceNetworkCIDR:                  b.Shoot.Networks.Services.String(),
-			StaticTokenKubeconfigEnabled:        b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig,
-			Version:                             b.Shoot.KubernetesVersion,
-			VPN: kubeapiserver.VPNConfig{
-				Enabled:                              true,
-				PodNetworkCIDR:                       b.Shoot.Networks.Pods.String(),
-				NodeNetworkCIDR:                      b.Shoot.GetInfo().Spec.Networking.Nodes,
-				HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
-				HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
-				HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
-			},
-			WatchCacheSizes: watchCacheSizes,
-			Logging:         logging,
+		b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer,
+		b.computeKubeAPIServerAutoscalingConfig(),
+		b.Shoot.Networks.Services.String(),
+		kubeapiserver.VPNConfig{
+			Enabled:                              true,
+			PodNetworkCIDR:                       b.Shoot.Networks.Pods.String(),
+			NodeNetworkCIDR:                      b.Shoot.GetInfo().Spec.Networking.Nodes,
+			HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
+			HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
+			HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
 		},
-	), nil
-}
-
-func (b *Botanist) computeEnabledKubeAPIServerAdmissionPlugins(defaultPlugins, configuredPlugins []gardencorev1beta1.AdmissionPlugin) []gardencorev1beta1.AdmissionPlugin {
-	for _, plugin := range configuredPlugins {
-		pluginOverwritesDefault := false
-
-		for i, defaultPlugin := range defaultPlugins {
-			if defaultPlugin.Name == plugin.Name {
-				pluginOverwritesDefault = true
-				defaultPlugins[i] = plugin
-				break
-			}
-		}
-
-		if !pluginOverwritesDefault {
-			defaultPlugins = append(defaultPlugins, plugin)
-		}
-	}
-
-	var admissionPlugins []gardencorev1beta1.AdmissionPlugin
-	for _, defaultPlugin := range defaultPlugins {
-		if !pointer.BoolDeref(defaultPlugin.Disabled, false) {
-			admissionPlugins = append(admissionPlugins, defaultPlugin)
-		}
-	}
-	return admissionPlugins
-}
-
-func (b *Botanist) ensureAdmissionPluginConfig(plugins []gardencorev1beta1.AdmissionPlugin) ([]gardencorev1beta1.AdmissionPlugin, error) {
-	var index = -1
-
-	for i, plugin := range plugins {
-		if plugin.Name == "PodSecurity" {
-			index = i
-			break
-		}
-	}
-
-	if index == -1 {
-		return plugins, nil
-	}
-
-	// If user has set a config in the shoot spec, retrieve it
-	if plugins[index].Config != nil {
-		var (
-			admissionConfigData []byte
-			err                 error
-		)
-
-		config, err := runtime.Decode(codec, plugins[index].Config.Raw)
-		if err != nil {
-			return nil, err
-		}
-
-		// Add kube-system to exempted namespaces
-		switch admissionConfig := config.(type) {
-		case *admissionapiv1alpha1.PodSecurityConfiguration:
-			if !slices.Contains(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem) {
-				admissionConfig.Exemptions.Namespaces = append(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem)
-			}
-			admissionConfigData, err = runtime.Encode(codec, admissionConfig)
-		case *admissionapiv1beta1.PodSecurityConfiguration:
-			if !slices.Contains(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem) {
-				admissionConfig.Exemptions.Namespaces = append(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem)
-			}
-			admissionConfigData, err = runtime.Encode(codec, admissionConfig)
-		case *admissionapiv1.PodSecurityConfiguration:
-			if !slices.Contains(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem) {
-				admissionConfig.Exemptions.Namespaces = append(admissionConfig.Exemptions.Namespaces, metav1.NamespaceSystem)
-			}
-			admissionConfigData, err = runtime.Encode(codec, admissionConfig)
-		default:
-			err = fmt.Errorf("expected admissionapiv1alpha1.PodSecurityConfiguration, admissionapiv1beta1.PodSecurityConfiguration or admissionapiv1.PodSecurityConfiguration in PodSecurity plugin configuration but got %T", config)
-		}
-
-		if err != nil {
-			return nil, err
-		}
-
-		plugins[index].Config = &runtime.RawExtension{Raw: admissionConfigData}
-	}
-
-	return plugins, nil
-}
-
-func (b *Botanist) convertToAdmissionPluginConfigs(plugins []gardencorev1beta1.AdmissionPlugin) ([]kubeapiserver.AdmissionPluginConfig, error) {
-	var out []kubeapiserver.AdmissionPluginConfig
-
-	for _, plugin := range plugins {
-		out = append(out, kubeapiserver.AdmissionPluginConfig{
-			AdmissionPlugin: plugin,
-		})
-	}
-
-	return out, nil
-}
-
-func (b *Botanist) computeDisabledKubeAPIServerAdmissionPlugins(configuredPlugins []gardencorev1beta1.AdmissionPlugin) []gardencorev1beta1.AdmissionPlugin {
-	var disabledAdmissionPlugins []gardencorev1beta1.AdmissionPlugin
-	for _, plugin := range configuredPlugins {
-		if pointer.BoolDeref(plugin.Disabled, false) {
-			disabledAdmissionPlugins = append(disabledAdmissionPlugins, plugin)
-		}
-	}
-
-	return disabledAdmissionPlugins
-}
-
-func (b *Botanist) computeKubeAPIServerAuditConfig(ctx context.Context, config *gardencorev1beta1.AuditConfig) (*kubeapiserver.AuditConfig, error) {
-	if config == nil || config.AuditPolicy == nil || config.AuditPolicy.ConfigMapRef == nil {
-		return nil, nil
-	}
-
-	out := &kubeapiserver.AuditConfig{}
-
-	configMap := &corev1.ConfigMap{}
-	if err := b.GardenClient.Get(ctx, kubernetesutils.Key(b.Shoot.GetInfo().Namespace, config.AuditPolicy.ConfigMapRef.Name), configMap); err != nil {
-		// Ignore missing audit configuration on shoot deletion to prevent failing redeployments of the
-		// kube-apiserver in case the end-user deleted the configmap before/simultaneously to the shoot
-		// deletion.
-		if !apierrors.IsNotFound(err) || b.Shoot.GetInfo().DeletionTimestamp == nil {
-			return nil, fmt.Errorf("retrieving audit policy from the ConfigMap '%v' failed with reason '%w'", config.AuditPolicy.ConfigMapRef.Name, err)
-		}
-	} else {
-		policy, ok := configMap.Data["policy"]
-		if !ok {
-			return nil, fmt.Errorf("missing '.data.policy' in audit policy configmap %v/%v", b.Shoot.GetInfo().Namespace, config.AuditPolicy.ConfigMapRef.Name)
-		}
-		out.Policy = &policy
-	}
-
-	return out, nil
+		b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig,
+	)
 }
 
 func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.AutoscalingConfig {
@@ -424,39 +181,6 @@ func resourcesRequirementsForKubeAPIServer(nodeCount int32, scalingClass string)
 			corev1.ResourceMemory: resource.MustParse(memoryRequest),
 		},
 	}
-}
-
-func (b *Botanist) computeKubeAPIServerImages() (kubeapiserver.Images, error) {
-	imageApiserverProxyPodWebhook, err := b.ImageVector.FindImage(images.ImageNameApiserverProxyPodWebhook, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
-	if err != nil {
-		return kubeapiserver.Images{}, err
-	}
-
-	imageKubeAPIServer, err := b.ImageVector.FindImage(images.ImageNameKubeApiserver, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
-	if err != nil {
-		return kubeapiserver.Images{}, err
-	}
-
-	vpnClient := ""
-	if b.Shoot.VPNHighAvailabilityEnabled {
-		imageVPNClient, err := b.ImageVector.FindImage(images.ImageNameVpnShootClient, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
-		if err != nil {
-			return kubeapiserver.Images{}, err
-		}
-		vpnClient = imageVPNClient.String()
-	}
-
-	imageWatchdog, err := b.ImageVector.FindImage(images.ImageNameAlpine, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
-	if err != nil {
-		return kubeapiserver.Images{}, err
-	}
-
-	return kubeapiserver.Images{
-		APIServerProxyPodWebhook: imageApiserverProxyPodWebhook.String(),
-		KubeAPIServer:            imageKubeAPIServer.String(),
-		VPNClient:                vpnClient,
-		Watchdog:                 imageWatchdog.String(),
-	}, nil
 }
 
 func (b *Botanist) computeKubeAPIServerServerCertificateConfig() kubeapiserver.ServerCertificateConfig {
