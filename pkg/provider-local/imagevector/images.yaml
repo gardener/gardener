@@ -9,9 +9,9 @@ images:
   tag: sha-1c148ce
 - name: local-path-provisioner
   sourceRepository: github.com/kubernetes-sigs/kind/tree/main/images/local-path-provisioner
-  repository: docker.io/kindest/local-path-provisioner
+  repository: eu.gcr.io/gardener-project/3rd/kindest/local-path-provisioner
   tag: v0.0.22-kind.0
 - name: local-path-helper
   sourceRepository: github.com/kubernetes-sigs/kind/tree/main/images/local-path-helper
-  repository: docker.io/kindest/local-path-helper
+  repository: eu.gcr.io/gardener-project/3rd/kindest/local-path-helper
   tag: v20220512-507ff70b

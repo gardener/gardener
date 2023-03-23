@@ -8,7 +8,6 @@ commonLabels:
 
 resources:
 - namespace.yaml
-- docker
 - gcr
 - gcr-eu
 - ghcr
