@@ -367,8 +367,6 @@ gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-down.sh
 
 gardener-extensions-%: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-extensions
-gardener-extensions-%: export SEED_NAME = $(GARDENER_EXTENSIONS_SEED_NAME)
-gardener-extensions-%: export SEED_KUBECONFIG = $(GARDENER_EXTENSIONS_SEED_KUBECONFIG)
 
 gardener-extensions-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
 	./hack/gardener-extensions-up.sh --path-garden-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig --path-seed-kubeconfig $(SEED_KUBECONFIG) --seed-name $(SEED_NAME)
