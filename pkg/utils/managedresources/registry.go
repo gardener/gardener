@@ -57,7 +57,7 @@ func NewRegistry(scheme *runtime.Scheme, codec serializer.CodecFactory, serializ
 	// for the map in https://github.com/kubernetes/apimachinery/blob/v0.26.1/pkg/runtime/serializer/versioning/versioning.go#L94
 	sort.Slice(groupVersions, func(i, j int) bool {
 		if groupVersions[i].Group == groupVersions[j].Group {
-			return groupVersions[i].Version == groupVersions[j].Version
+			return groupVersions[i].Version < groupVersions[j].Version
 		}
 		return groupVersions[i].Group < groupVersions[j].Group
 	})
