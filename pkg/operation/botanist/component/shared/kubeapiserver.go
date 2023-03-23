@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,6 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -195,6 +197,98 @@ func NewKubeAPIServer(
 	), nil
 }
 
+// DeployKubeAPIServer deploys the Kubernetes API server.
+func DeployKubeAPIServer(
+	ctx context.Context,
+	runtimeClient client.Client,
+	runtimeNamespace string,
+	kubeAPIServer kubeapiserver.Interface,
+	apiServerConfig *gardencorev1beta1.KubeAPIServerConfig,
+	serverCertificateConfig kubeapiserver.ServerCertificateConfig,
+	sniConfig kubeapiserver.SNIConfig,
+	externalHostname string,
+	externalServer string,
+	etcdEncryptionKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
+	serviceAccountKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
+	wantScaleDown bool,
+) error {
+	var (
+		values         = kubeAPIServer.GetValues()
+		deploymentName = values.NamePrefix + v1beta1constants.DeploymentNameKubeAPIServer
+	)
+
+	deployment := &appsv1.Deployment{}
+	if err := runtimeClient.Get(ctx, kubernetesutils.Key(runtimeNamespace, deploymentName), deployment); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+		deployment = nil
+	}
+
+	kubeAPIServer.SetAutoscalingReplicas(computeKubeAPIServerReplicas(values.Autoscaling, deployment, wantScaleDown))
+
+	if deployment != nil && values.Autoscaling.HVPAEnabled {
+		for _, container := range deployment.Spec.Template.Spec.Containers {
+			if container.Name == kubeapiserver.ContainerNameKubeAPIServer {
+				// Only set requests to allow limits to be removed
+				kubeAPIServer.SetAutoscalingAPIServerResources(corev1.ResourceRequirements{Requests: container.Resources.Requests})
+				break
+			}
+		}
+	}
+
+	kubeAPIServer.SetServerCertificateConfig(serverCertificateConfig)
+	kubeAPIServer.SetServiceAccountConfig(computeKubeAPIServerServiceAccountConfig(apiServerConfig, externalHostname, serviceAccountKeyRotationPhase))
+	kubeAPIServer.SetSNIConfig(sniConfig)
+	kubeAPIServer.SetExternalHostname(externalHostname)
+	kubeAPIServer.SetExternalServer(externalServer)
+
+	etcdEncryptionConfig, err := computeKubeAPIServerETCDEncryptionConfig(ctx, runtimeClient, runtimeNamespace, deploymentName, etcdEncryptionKeyRotationPhase)
+	if err != nil {
+		return err
+	}
+	kubeAPIServer.SetETCDEncryptionConfig(etcdEncryptionConfig)
+
+	if err := kubeAPIServer.Deploy(ctx); err != nil {
+		return err
+	}
+
+	switch etcdEncryptionKeyRotationPhase {
+	case gardencorev1beta1.RotationPreparing:
+		if !etcdEncryptionConfig.EncryptWithCurrentKey {
+			if err := kubeAPIServer.Wait(ctx); err != nil {
+				return err
+			}
+
+			// If we have hit this point then we have deployed kube-apiserver successfully with the configuration option to
+			// still use the old key for the encryption of ETCD data. Now we can mark this step as "completed" (via an
+			// annotation) and redeploy it with the option to use the current/new key for encryption, see
+			// https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#rotating-a-decryption-key for details.
+			if err := secretsrotation.PatchKubeAPIServerDeploymentMeta(ctx, runtimeClient, runtimeNamespace, func(meta *metav1.PartialObjectMetadata) {
+				metav1.SetMetaDataAnnotation(&meta.ObjectMeta, secretsrotation.AnnotationKeyNewEncryptionKeyPopulated, "true")
+			}); err != nil {
+				return err
+			}
+
+			etcdEncryptionConfig.EncryptWithCurrentKey = true
+			kubeAPIServer.SetETCDEncryptionConfig(etcdEncryptionConfig)
+
+			if err := kubeAPIServer.Deploy(ctx); err != nil {
+				return err
+			}
+		}
+
+	case gardencorev1beta1.RotationCompleting:
+		if err := secretsrotation.PatchKubeAPIServerDeploymentMeta(ctx, runtimeClient, runtimeNamespace, func(meta *metav1.PartialObjectMetadata) {
+			delete(meta.Annotations, secretsrotation.AnnotationKeyNewEncryptionKeyPopulated)
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func computeKubeAPIServerImages(
 	imageVector imagevector.ImageVector,
 	runtimeVersion *semver.Version,
@@ -344,6 +438,28 @@ func computeDisabledKubeAPIServerAdmissionPlugins(configuredPlugins []gardencore
 	return disabledAdmissionPlugins
 }
 
+func computeKubeAPIServerReplicas(autoscalingConfig kubeapiserver.AutoscalingConfig, deployment *appsv1.Deployment, wantScaleDown bool) *int32 {
+	switch {
+	case autoscalingConfig.Replicas != nil:
+		// If the replicas were already set then don't change them.
+		return autoscalingConfig.Replicas
+	case deployment == nil && !wantScaleDown:
+		// If the Deployment does not yet exist then set the desired replicas to the minimum replicas.
+		return &autoscalingConfig.MinReplicas
+	case deployment != nil && deployment.Spec.Replicas != nil && *deployment.Spec.Replicas > 0:
+		// If the Deployment exists then don't interfere with the replicas because they are controlled via HVPA or HPA.
+		return deployment.Spec.Replicas
+	case wantScaleDown && (deployment == nil || deployment.Spec.Replicas == nil || *deployment.Spec.Replicas == 0):
+		// If the scale down is desired and the deployment has already been scaled down then we want to keep it scaled
+		// down. If it has not yet been scaled down then above case applies (replicas are kept) - the scale-down will
+		// happen at a later point in the flow.
+		return pointer.Int32(0)
+	default:
+		// If none of the above cases applies then a default value has to be returned.
+		return pointer.Int32(1)
+	}
+}
+
 func computeKubeAPIServerAuditConfig(
 	ctx context.Context,
 	cl client.Client,
@@ -382,4 +498,71 @@ func computeKubeAPIServerAuditConfig(
 	}
 
 	return out, nil
+}
+
+func computeKubeAPIServerETCDEncryptionConfig(
+	ctx context.Context,
+	runtimeClient client.Client,
+	runtimeNamespace string,
+	deploymentName string,
+	etcdEncryptionKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
+
+) (
+	kubeapiserver.ETCDEncryptionConfig,
+	error,
+) {
+	config := kubeapiserver.ETCDEncryptionConfig{
+		RotationPhase:         etcdEncryptionKeyRotationPhase,
+		EncryptWithCurrentKey: true,
+	}
+
+	if etcdEncryptionKeyRotationPhase == gardencorev1beta1.RotationPreparing {
+		deployment := &metav1.PartialObjectMetadata{}
+		deployment.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
+		if err := runtimeClient.Get(ctx, kubernetesutils.Key(runtimeNamespace, deploymentName), deployment); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return kubeapiserver.ETCDEncryptionConfig{}, err
+			}
+		}
+
+		// If the new encryption key was not yet populated to all replicas then we should still use the old key for
+		// encryption of data. Only if all replicas know the new key we can switch and start encrypting with the new/
+		// current key, see https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#rotating-a-decryption-key.
+		if !metav1.HasAnnotation(deployment.ObjectMeta, secretsrotation.AnnotationKeyNewEncryptionKeyPopulated) {
+			config.EncryptWithCurrentKey = false
+		}
+	}
+
+	return config, nil
+}
+
+func computeKubeAPIServerServiceAccountConfig(
+	config *gardencorev1beta1.KubeAPIServerConfig,
+	externalHostname string,
+	serviceAccountKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
+) kubeapiserver.ServiceAccountConfig {
+	var (
+		defaultIssuer = "https://" + externalHostname
+		out           = kubeapiserver.ServiceAccountConfig{
+			Issuer:        defaultIssuer,
+			RotationPhase: serviceAccountKeyRotationPhase,
+		}
+	)
+
+	if config == nil || config.ServiceAccountConfig == nil {
+		return out
+	}
+
+	out.ExtendTokenExpiration = config.ServiceAccountConfig.ExtendTokenExpiration
+	out.MaxTokenExpiration = config.ServiceAccountConfig.MaxTokenExpiration
+
+	if config.ServiceAccountConfig.Issuer != nil {
+		out.Issuer = *config.ServiceAccountConfig.Issuer
+	}
+	out.AcceptedIssuers = config.ServiceAccountConfig.AcceptedIssuers
+	if out.Issuer != defaultIssuer && !utils.ValueExists(defaultIssuer, out.AcceptedIssuers) {
+		out.AcceptedIssuers = append(out.AcceptedIssuers, defaultIssuer)
+	}
+
+	return out
 }

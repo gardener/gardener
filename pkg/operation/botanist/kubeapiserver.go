@@ -19,13 +19,10 @@ import (
 	"fmt"
 	"net"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -36,9 +33,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/shared"
-	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
@@ -211,59 +206,6 @@ func (b *Botanist) computeKubeAPIServerServerCertificateConfig() kubeapiserver.S
 	}
 }
 
-func (b *Botanist) computeKubeAPIServerETCDEncryptionConfig(ctx context.Context) (kubeapiserver.ETCDEncryptionConfig, error) {
-	config := kubeapiserver.ETCDEncryptionConfig{
-		RotationPhase:         v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),
-		EncryptWithCurrentKey: true,
-	}
-
-	if v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing {
-		deployment := &metav1.PartialObjectMetadata{}
-		deployment.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-		if err := b.SeedClientSet.Client().Get(ctx, kubernetesutils.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return kubeapiserver.ETCDEncryptionConfig{}, err
-			}
-		}
-
-		// If the new encryption key was not yet populated to all replicas then we should still use the old key for
-		// encryption of data. Only if all replicas know the new key we can switch and start encrypting with the new/
-		// current key, see https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#rotating-a-decryption-key.
-		if !metav1.HasAnnotation(deployment.ObjectMeta, secretsrotation.AnnotationKeyNewEncryptionKeyPopulated) {
-			config.EncryptWithCurrentKey = false
-		}
-	}
-
-	return config, nil
-}
-
-func (b *Botanist) computeKubeAPIServerServiceAccountConfig(config *gardencorev1beta1.KubeAPIServerConfig, externalHostname string) kubeapiserver.ServiceAccountConfig {
-	var (
-		defaultIssuer = "https://" + externalHostname
-		out           = kubeapiserver.ServiceAccountConfig{
-			Issuer:        defaultIssuer,
-			RotationPhase: v1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),
-		}
-	)
-
-	if config == nil || config.ServiceAccountConfig == nil {
-		return out
-	}
-
-	out.ExtendTokenExpiration = config.ServiceAccountConfig.ExtendTokenExpiration
-	out.MaxTokenExpiration = config.ServiceAccountConfig.MaxTokenExpiration
-
-	if config.ServiceAccountConfig.Issuer != nil {
-		out.Issuer = *config.ServiceAccountConfig.Issuer
-	}
-	out.AcceptedIssuers = config.ServiceAccountConfig.AcceptedIssuers
-	if out.Issuer != defaultIssuer && !utils.ValueExists(defaultIssuer, out.AcceptedIssuers) {
-		out.AcceptedIssuers = append(out.AcceptedIssuers, defaultIssuer)
-	}
-
-	return out
-}
-
 func (b *Botanist) computeKubeAPIServerSNIConfig() kubeapiserver.SNIConfig {
 	var config kubeapiserver.SNIConfig
 
@@ -280,103 +222,25 @@ func (b *Botanist) computeKubeAPIServerSNIConfig() kubeapiserver.SNIConfig {
 	return config
 }
 
-func (b *Botanist) computeKubeAPIServerReplicas(autoscalingConfig kubeapiserver.AutoscalingConfig, deployment *appsv1.Deployment) *int32 {
-	switch {
-	case autoscalingConfig.Replicas != nil:
-		// If the replicas were already set then don't change them.
-		return autoscalingConfig.Replicas
-	case deployment == nil && !b.Shoot.HibernationEnabled:
-		// If the Deployment does not yet exist then set the desired replicas to the minimum replicas.
-		return &autoscalingConfig.MinReplicas
-	case deployment != nil && deployment.Spec.Replicas != nil && *deployment.Spec.Replicas > 0:
-		// If the Deployment exists then don't interfere with the replicas because they are controlled via HVPA or HPA.
-		return deployment.Spec.Replicas
-	case b.Shoot.HibernationEnabled && (deployment == nil || deployment.Spec.Replicas == nil || *deployment.Spec.Replicas == 0):
-		// If the Shoot is hibernated and the deployment has already been scaled down then we want to keep it scaled
-		// down. If it has not yet been scaled down then above case applies (replicas are kept) - the scale-down will
-		// happen at a later point in the flow.
-		return pointer.Int32(0)
-	default:
-		// If none of the above cases applies then a default value has to be returned.
-		return pointer.Int32(1)
-	}
-}
-
 // DeployKubeAPIServer deploys the Kubernetes API server.
 func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
-	values := b.Shoot.Components.ControlPlane.KubeAPIServer.GetValues()
-
-	deployment := &appsv1.Deployment{}
-	if err := b.SeedClientSet.Client().Get(ctx, kubernetesutils.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return err
-		}
-		deployment = nil
-	}
-
-	b.Shoot.Components.ControlPlane.KubeAPIServer.SetAutoscalingReplicas(b.computeKubeAPIServerReplicas(values.Autoscaling, deployment))
-
-	if deployment != nil && values.Autoscaling.HVPAEnabled {
-		for _, container := range deployment.Spec.Template.Spec.Containers {
-			if container.Name == kubeapiserver.ContainerNameKubeAPIServer {
-				// Only set requests to allow limits to be removed
-				b.Shoot.Components.ControlPlane.KubeAPIServer.SetAutoscalingAPIServerResources(corev1.ResourceRequirements{Requests: container.Resources.Requests})
-				break
-			}
-		}
-	}
-
-	externalHostname := b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)
-	b.Shoot.Components.ControlPlane.KubeAPIServer.SetExternalHostname(externalHostname)
-
 	externalServer := b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, false)
-	b.Shoot.Components.ControlPlane.KubeAPIServer.SetExternalServer(externalServer)
 
-	b.Shoot.Components.ControlPlane.KubeAPIServer.SetServerCertificateConfig(b.computeKubeAPIServerServerCertificateConfig())
-	b.Shoot.Components.ControlPlane.KubeAPIServer.SetServiceAccountConfig(b.computeKubeAPIServerServiceAccountConfig(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer, externalHostname))
-	b.Shoot.Components.ControlPlane.KubeAPIServer.SetSNIConfig(b.computeKubeAPIServerSNIConfig())
-
-	etcdEncryptionConfig, err := b.computeKubeAPIServerETCDEncryptionConfig(ctx)
-	if err != nil {
+	if err := shared.DeployKubeAPIServer(
+		ctx,
+		b.SeedClientSet.Client(),
+		b.Shoot.SeedNamespace,
+		b.Shoot.Components.ControlPlane.KubeAPIServer,
+		b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer,
+		b.computeKubeAPIServerServerCertificateConfig(),
+		b.computeKubeAPIServerSNIConfig(),
+		b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
+		externalServer,
+		v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),
+		v1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),
+		b.Shoot.HibernationEnabled,
+	); err != nil {
 		return err
-	}
-	b.Shoot.Components.ControlPlane.KubeAPIServer.SetETCDEncryptionConfig(etcdEncryptionConfig)
-
-	if err := b.Shoot.Components.ControlPlane.KubeAPIServer.Deploy(ctx); err != nil {
-		return err
-	}
-
-	switch v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials) {
-	case gardencorev1beta1.RotationPreparing:
-		if !etcdEncryptionConfig.EncryptWithCurrentKey {
-			if err := b.Shoot.Components.ControlPlane.KubeAPIServer.Wait(ctx); err != nil {
-				return err
-			}
-
-			// If we have hit this point then we have deployed kube-apiserver successfully with the configuration option to
-			// still use the old key for the encryption of ETCD data. Now we can mark this step as "completed" (via an
-			// annotation) and redeploy it with the option to use the current/new key for encryption, see
-			// https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#rotating-a-decryption-key for details.
-			if err := secretsrotation.PatchKubeAPIServerDeploymentMeta(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, func(meta *metav1.PartialObjectMetadata) {
-				metav1.SetMetaDataAnnotation(&meta.ObjectMeta, secretsrotation.AnnotationKeyNewEncryptionKeyPopulated, "true")
-			}); err != nil {
-				return err
-			}
-
-			etcdEncryptionConfig.EncryptWithCurrentKey = true
-			b.Shoot.Components.ControlPlane.KubeAPIServer.SetETCDEncryptionConfig(etcdEncryptionConfig)
-
-			if err := b.Shoot.Components.ControlPlane.KubeAPIServer.Deploy(ctx); err != nil {
-				return err
-			}
-		}
-
-	case gardencorev1beta1.RotationCompleting:
-		if err := secretsrotation.PatchKubeAPIServerDeploymentMeta(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, func(meta *metav1.PartialObjectMetadata) {
-			delete(meta.Annotations, secretsrotation.AnnotationKeyNewEncryptionKeyPopulated)
-		}); err != nil {
-			return err
-		}
 	}
 
 	if enableStaticTokenKubeconfig := b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig; enableStaticTokenKubeconfig == nil || *enableStaticTokenKubeconfig {
