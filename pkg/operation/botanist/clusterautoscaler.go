@@ -16,7 +16,6 @@ package botanist
 
 import (
 	"context"
-
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -44,7 +43,7 @@ func (b *Botanist) DefaultClusterAutoscaler() (clusterautoscaler.Interface, erro
 func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
 	if b.Shoot.WantsClusterAutoscaler {
 		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetNamespaceUID(b.SeedNamespaceObject.UID)
-		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetMachineDeployments(b.Shoot.Components.Extensions.Worker.MachineDeployments())
+		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetMachineDeployments(b.Shoot.GenerateMachineDeployments())
 
 		return b.Shoot.Components.ControlPlane.ClusterAutoscaler.Deploy(ctx)
 	}

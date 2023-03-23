@@ -17,6 +17,7 @@ package shoot
 import (
 	"context"
 	"fmt"
+	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	"net"
 	"strconv"
 
@@ -27,6 +28,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -260,6 +262,35 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 // To properly update the shoot resource of this Shoot use UpdateInfo or UpdateInfoStatus.
 func (s *Shoot) GetInfo() *gardencorev1beta1.Shoot {
 	return s.info.Load().(*gardencorev1beta1.Shoot)
+}
+
+// GenerateMachineDeployments creates a slice of extensionv1alpha1.MachineDeployment using the worker spec present
+// in the provider section of shoot.Spec. This method is only used for generating the slice of machine deployments
+// required by cluster autoscaler to populate its flags.
+func (s *Shoot) GenerateMachineDeployments() []extensionv1alpha1.MachineDeployment {
+	shoot := s.GetInfo()
+	var machineDeployents []extensionv1alpha1.MachineDeployment
+	for _, pool := range shoot.Spec.Provider.Workers {
+		zoneLen := int32(len(pool.Zones))
+		// for a worker with no zone there will only be one machine deployment and it will not have a `-z1` suffix in its name.
+		if zoneLen == 0 {
+			machineDeployents = append(machineDeployents, extensionv1alpha1.MachineDeployment{
+				Name:    fmt.Sprintf("%s-%s", s.SeedNamespace, pool.Name),
+				Minimum: pool.Minimum,
+				Maximum: pool.Maximum,
+			})
+		} else {
+			for zoneIndex := range pool.Zones {
+				zoneIdx := int32(zoneIndex)
+				machineDeployents = append(machineDeployents, extensionv1alpha1.MachineDeployment{
+					Name:    fmt.Sprintf("%s-%s-z%d", s.SeedNamespace, pool.Name, zoneIndex+1),
+					Maximum: worker.DistributeOverZones(zoneIdx, pool.Maximum, zoneLen),
+					Minimum: worker.DistributeOverZones(zoneIdx, pool.Minimum, zoneLen),
+				})
+			}
+		}
+	}
+	return machineDeployents
 }
 
 // SetInfo sets the shoot resource of this Shoot in a concurrency safe way.
