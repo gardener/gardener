@@ -136,11 +136,23 @@ func (m *manager) generateAndCreate(ctx context.Context, config secretsutils.Con
 }
 
 func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName string, newData map[string][]byte) (map[string][]byte, error) {
-	existingSecret := &corev1.Secret{}
+	existingSecrets := &corev1.SecretList{}
+	if err := m.client.List(ctx, existingSecrets, client.InNamespace(m.namespace), client.MatchingLabels{LabelKeyUseDataForName: configName}); err != nil {
+		return nil, err
+	}
+
+	if len(existingSecrets.Items) > 1 {
+		return nil, fmt.Errorf("found more than one existing secret with %q label for config %q", LabelKeyUseDataForName, configName)
+	}
+
+	if len(existingSecrets.Items) == 1 {
+		return existingSecrets.Items[0].Data, nil
+	}
 
 	// For backwards-compatibility, we need to keep some of the existing secrets (cluster-admin token, basic auth
 	// password, etc.).
 	// TODO(rfranzke): Remove this switch statement in the future.
+	existingSecret := &corev1.Secret{}
 	switch configName {
 	case "kube-apiserver-etcd-encryption-key":
 		if err := m.client.Get(ctx, kubernetesutils.Key(m.namespace, "etcd-encryption-secret"), existingSecret); err != nil {
@@ -194,19 +206,6 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 		}
 
 		return existingSecret.Data, nil
-	}
-
-	existingSecrets := &corev1.SecretList{}
-	if err := m.client.List(ctx, existingSecrets, client.InNamespace(m.namespace), client.MatchingLabels{LabelKeyUseDataForName: configName}); err != nil {
-		return nil, err
-	}
-
-	if len(existingSecrets.Items) > 1 {
-		return nil, fmt.Errorf("found more than one existing secret with %q label for config %q", LabelKeyUseDataForName, configName)
-	}
-
-	if len(existingSecrets.Items) == 1 {
-		return existingSecrets.Items[0].Data, nil
 	}
 
 	return newData, nil
