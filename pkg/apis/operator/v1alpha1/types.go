@@ -114,6 +114,8 @@ type VirtualCluster struct {
 	// ControlPlane holds information about the general settings for the control plane of the virtual cluster.
 	// +optional
 	ControlPlane *ControlPlane `json:"controlPlane,omitempty"`
+	// DNS holds information about DNS settings.
+	DNS DNS `json:"dns"`
 	// ETCD contains configuration for the etcds of the virtual garden cluster.
 	// +optional
 	ETCD *ETCD `json:"etcd,omitempty"`
@@ -122,6 +124,16 @@ type VirtualCluster struct {
 	Kubernetes Kubernetes `json:"kubernetes"`
 	// Maintenance contains information about the time window for maintenance operations.
 	Maintenance Maintenance `json:"maintenance"`
+	// Networking contains information about cluster networking such as CIDRs, etc.
+	Networking Networking `json:"networking"`
+}
+
+// DNS holds information about DNS settings.
+type DNS struct {
+	// Domain is the external domain of the virtual garden cluster. This field is immutable.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	Domain string `json:"domain"`
 }
 
 // ETCD contains configuration for the etcds of the virtual garden cluster.
@@ -317,6 +329,14 @@ type SNI struct {
 	// Non-wildcard matches trump over wildcard matches, explicit domain patterns trump over extracted names.
 	// +optional
 	DomainPatterns []string `json:"domainPatterns,omitempty"`
+}
+
+// Networking defines networking parameters for the virtual garden cluster.
+type Networking struct {
+	// Services is the CIDR of the service network. This field is immutable.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	Services string `json:"services"`
 }
 
 // GardenStatus is the status of a garden environment.

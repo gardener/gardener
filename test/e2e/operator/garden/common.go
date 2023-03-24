@@ -88,6 +88,9 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 				ControlPlane: &operatorv1alpha1.ControlPlane{
 					HighAvailability: &operatorv1alpha1.HighAvailability{},
 				},
+				DNS: operatorv1alpha1.DNS{
+					Domain: "virtual-garden.local.gardener.cloud",
+				},
 				ETCD: &operatorv1alpha1.ETCD{
 					Main: &operatorv1alpha1.ETCDMain{
 						Backup: &operatorv1alpha1.Backup{
@@ -108,6 +111,9 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 						Begin: "220000+0100",
 						End:   "230000+0100",
 					},
+				},
+				Networking: operatorv1alpha1.Networking{
+					Services: "100.64.0.0/13",
 				},
 			},
 		},

@@ -28,6 +28,8 @@ spec:
   virtualCluster:
   # controlPlane:
   #   highAvailability: {}
+    dns:
+      domain: virtual-garden.local.gardener.cloud
     etcd:
       main:
         backup:
@@ -129,3 +131,5 @@ spec:
       timeWindow:
         begin: 220000+0100
         end: 230000+0100
+    networking:
+      services: 100.64.0.0/13

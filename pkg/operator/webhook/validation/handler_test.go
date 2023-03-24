@@ -47,8 +47,14 @@ var _ = Describe("Handler", func() {
 		garden = &operatorv1alpha1.Garden{
 			Spec: operatorv1alpha1.GardenSpec{
 				VirtualCluster: operatorv1alpha1.VirtualCluster{
+					DNS: operatorv1alpha1.DNS{
+						Domain: "virtual-garden.local.gardener.cloud",
+					},
 					Kubernetes: operatorv1alpha1.Kubernetes{
 						Version: "1.2.3",
+					},
+					Networking: operatorv1alpha1.Networking{
+						Services: "100.64.0.0/13",
 					},
 				},
 			},

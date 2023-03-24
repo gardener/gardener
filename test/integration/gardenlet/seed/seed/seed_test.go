@@ -581,6 +581,9 @@ var _ = Describe("Seed controller tests", func() {
 							},
 							Spec: operatorv1alpha1.GardenSpec{
 								VirtualCluster: operatorv1alpha1.VirtualCluster{
+									DNS: operatorv1alpha1.DNS{
+										Domain: "virtual-garden.local.gardener.cloud",
+									},
 									Kubernetes: operatorv1alpha1.Kubernetes{
 										Version: "1.2.3",
 									},
@@ -589,6 +592,9 @@ var _ = Describe("Seed controller tests", func() {
 											Begin: "220000+0100",
 											End:   "230000+0100",
 										},
+									},
+									Networking: operatorv1alpha1.Networking{
+										Services: "100.64.0.0/13",
 									},
 								},
 							},
