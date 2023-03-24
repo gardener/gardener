@@ -122,7 +122,7 @@ External components that want to reuse the `SecretsManager` should consider the 
 
 ## Migrating Existing Secrets To SecretsManager
 
-If you already have existing secrets which were not created with `SecretsManager`, then you can (optionally) migrate them by labeling them with `secrets-manager-use-data-for=<config-name>`.
+If you already have existing secrets which were not created with `SecretsManager`, then you can (optionally) migrate them by labeling them with `secrets-manager-use-data-for-name=<config-name>`.
 For example, if your `SecretsManager` generates a `CertificateConfigSecret` with name `foo` like this
 
 ```go
@@ -135,7 +135,7 @@ secret, err := k.secretsManager.Generate(
 )
 ```
 
-and you already have an existing secret in your system whose data should be kept instead of regenerated, then labeling it with `secrets-manager-use-data-for=foo` will instruct `SecretsManager` accordingly.
+and you already have an existing secret in your system whose data should be kept instead of regenerated, then labeling it with `secrets-manager-use-data-for-name=foo` will instruct `SecretsManager` accordingly.
 
 **⚠️ Caveat: You have to make sure that the existing `data` keys match with what `SecretsManager` uses:**
 
