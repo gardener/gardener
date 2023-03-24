@@ -110,6 +110,20 @@ spec:
                           for high availability settings.
                         type: object
                     type: object
+                  dns:
+                    description: DNS holds information about DNS settings.
+                    properties:
+                      domain:
+                        description: Domain is the external domain of the virtual
+                          garden cluster. This field is immutable.
+                        minLength: 1
+                        type: string
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                    required:
+                    - domain
+                    type: object
                   etcd:
                     description: ETCD contains configuration for the etcds of the
                       virtual garden cluster.
@@ -737,9 +751,26 @@ spec:
                     required:
                     - timeWindow
                     type: object
+                  networking:
+                    description: Networking contains information about cluster networking
+                      such as CIDRs, etc.
+                    properties:
+                      services:
+                        description: Services is the CIDR of the service network.
+                          This field is immutable.
+                        minLength: 1
+                        type: string
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                    required:
+                    - services
+                    type: object
                 required:
+                - dns
                 - kubernetes
                 - maintenance
+                - networking
                 type: object
             required:
             - runtimeCluster

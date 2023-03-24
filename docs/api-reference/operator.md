@@ -432,6 +432,36 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDEncryptionKeyRotation
 </tr>
 </tbody>
 </table>
+<h3 id="operator.gardener.cloud/v1alpha1.DNS">DNS
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.VirtualCluster">VirtualCluster</a>)
+</p>
+<p>
+<p>DNS holds information about DNS settings.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>domain</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Domain is the external domain of the virtual garden cluster. This field is immutable.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.ETCD">ETCD
 </h3>
 <p>
@@ -988,6 +1018,36 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceTimeWindow
 </tr>
 </tbody>
 </table>
+<h3 id="operator.gardener.cloud/v1alpha1.Networking">Networking
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.VirtualCluster">VirtualCluster</a>)
+</p>
+<p>
+<p>Networking defines networking parameters for the virtual garden cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>services</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Services is the CIDR of the service network. This field is immutable.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.Provider">Provider
 </h3>
 <p>
@@ -1303,6 +1363,19 @@ ControlPlane
 </tr>
 <tr>
 <td>
+<code>dns</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.DNS">
+DNS
+</a>
+</em>
+</td>
+<td>
+<p>DNS holds information about DNS settings.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>etcd</code></br>
 <em>
 <a href="#operator.gardener.cloud/v1alpha1.ETCD">
@@ -1340,6 +1413,19 @@ Maintenance
 </td>
 <td>
 <p>Maintenance contains information about the time window for maintenance operations.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>networking</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.Networking">
+Networking
+</a>
+</em>
+</td>
+<td>
+<p>Networking contains information about cluster networking such as CIDRs, etc.</p>
 </td>
 </tr>
 </tbody>
