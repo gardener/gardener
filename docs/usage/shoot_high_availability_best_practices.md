@@ -1,6 +1,6 @@
 # Implementing High Availability and Tolerating Zone Outages
 
-Implementing highly available software that can tolerate even a zone outage unscathed is no trivial task. You will find here various recommendations to get closer to that goal. While many recommendations are general enough, the examples are specific in how to achieve this in a Gardener-managed cluster and where/how to tweak the different control plane components. If you do not use Gardener, it may be still a worthwhile read.
+Developing highly available workload that can tolerate a zone outage is no trivial task. You will find here various recommendations to get closer to that goal. While many recommendations are general enough, the examples are specific in how to achieve this in a Gardener-managed cluster and where/how to tweak the different control plane components. If you do not use Gardener, it may be still a worthwhile read.
 
 First however, what is a zone outage? It sounds like a clear-cut "thing", but it isn't. There are many things that can go haywire. Here are some examples:
 
@@ -10,7 +10,7 @@ First however, what is a zone outage? It sounds like a clear-cut "thing", but it
 - Functional issues, of either the entire service (e.g. all block device operations) or only parts of it (e.g. LB listener registration)
 - All services down, temporarily or permanently (the proverbial burning down data center :fire:)
 
-This and everything in between make it hard to prepare for such events, but you can still do a lot. The most important recommendation is to not target specific issues too much - tomorrow another service will fail in an unanticipated way. Rather focus on [meaningful availability](https://research.google/pubs/pub50828) than on internal signals (useful, but not as relevant as the former). Always prefer automation over manual intervention (e.g. leader election is a pretty robust mechanism, auto-scaling may be required as well, etc.).
+This and everything in between make it hard to prepare for such events, but you can still do a lot. The most important recommendation is to not target specific issues exclusively - tomorrow another service will fail in an unanticipated way. Also, focus more on [meaningful availability](https://research.google/pubs/pub50828) than on internal signals (useful, but not as relevant as the former). Always prefer automation over manual intervention (e.g. leader election is a pretty robust mechanism, auto-scaling may be required as well, etc.).
 
 Also remember that HA is costly - you need to balance it against the cost of an outage as silly as this may sound, e.g. running all this excess capacity "just in case" vs. "going down" vs. a risk-based approach in between where you have means that will kick in, but they are not guaranteed to work (e.g. if the cloud provider is out of resource capacity). Maybe some of your components must run at the highest possible availability level, but others not - that's a decision only you can make.
 
@@ -18,7 +18,7 @@ Also remember that HA is costly - you need to balance it against the cost of an 
 
 The Kubernetes cluster control plane is managed by Gardener (as pods in separate infrastructure clusters to which you have no direct access) and can be set up with no failure tolerance (control plane pods will be recreated best-effort when resources are available) or one of the [failure tolerance types `node` or `zone`](/docs/usage/shoot_high_availability.md).
 
-Strictly speaking, static workload does not depend on the (high) availability of the control plane, but static workload doesn't rhyme with Cloud and Kubernetes and also means, that when you possibly need it the most, e.g. during a zone outage, critical self-healing or auto-scaling functionality won't be available to you and your workload, if your control plane is down as well. That's why, even though the resource consumption is significantly higher, we strongly recommend to use the failure tolerance type `zone` for the control planes of productive clusters, at least in all regions that have 3+ zones. Regions that have only 1 or 2 zones don't support the failure tolerance type `zone` and then your second best option is the failure tolerance type `node`. For example, many Azure regions have only 2 zones, which means a zone outage can still take down your control plane, but individual node outages won't.
+Strictly speaking, static workload does not depend on the (high) availability of the control plane, but static workload doesn't rhyme with Cloud and Kubernetes and also means, that when you possibly need it the most, e.g. during a zone outage, critical self-healing or auto-scaling functionality won't be available to you and your workload, if your control plane is down as well. That's why, even though the resource consumption is significantly higher, we generally recommend to use the failure tolerance type `zone` for the control planes of productive clusters, at least in all regions that have 3+ zones. Regions that have only 1 or 2 zones don't support the failure tolerance type `zone` and then your second best option is the failure tolerance type `node`, which means a zone outage can still take down your control plane, but individual node outages won't.
 
 In the `shoot` resource it's merely only this what you need to add:
 
@@ -32,11 +32,11 @@ spec:
         type: zone # valid values are `node` and `zone` (only available if your control plane resides in a region with 3+ zones)
 ```
 
-This setting will scale out all components as necessary, so that no single zone outage can take down the control plane for longer than just a few seconds for the fail-over to take place (e.g. lease expiration and new leader election or readiness probe failure and endpoint removal). Components run highly available in either active-active (servers) or active-passive (controllers) mode at all times, the persistence (ETCD), which is quorum-based, will tolerate the loss of one zone and still maintain quorum and therefore remain operational. These are all patterns that we will revisit down below also for your own workload.
+This setting will scale out all control plane components for a Gardener cluster as necessary, so that no single zone outage can take down the control plane for longer than just a few seconds for the fail-over to take place (e.g. lease expiration and new leader election or readiness probe failure and endpoint removal). Components run highly available in either active-active (servers) or active-passive (controllers) mode at all times, the persistence (ETCD), which is consensus-based, will tolerate the loss of one zone and still maintain quorum and therefore remain operational. These are all patterns that we will revisit down below also for your own workload.
 
 ## Worker Pools
 
-Now that you configured your Kubernetes cluster control plane in HA, i.e. spread it across multiple zones, you need to do the same for your own workload, but in order to do so, you need to spread your nodes across multiple zones first.
+Now that you have configured your Kubernetes cluster control plane in HA, i.e. spread it across multiple zones, you need to do the same for your own workload, but in order to do so, you need to spread your nodes across multiple zones first.
 
 ``` yaml
 apiVersion: core.gardener.cloud/v1beta1
@@ -70,15 +70,12 @@ spec:
   kubernetes:
     clusterAutoscaler:
       expander: "least-waste"
-      scanInterval: 5s
-      scaleDownDelayAfterAdd: 1m
+      scanInterval: 10s
+      scaleDownDelayAfterAdd: 60m
       scaleDownDelayAfterDelete: 0s
-      scaleDownDelayAfterFailure: 1m
-      scaleDownUnneededTime: 1m
+      scaleDownDelayAfterFailure: 3m
+      scaleDownUnneededTime: 30m
       scaleDownUtilizationThreshold: 0.5
-      ignoreTaints:
-      - "node.kubernetes.io/memory-pressure"
-      - "node.kubernetes.io/disk-pressure"
 ```
 
 If you want to be ready for a sudden spike or have some buffer in general, [over-provision nodes by means of "placeholder" pods](https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#how-can-i-configure-overprovisioning-with-cluster-autoscaler) with [low priority](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption) and appropriate resource requests. This way, they will demand nodes to be provisioned for them, but if any pod comes up with a regular/higher priority, the low priority pods will be evicted to make space for the more important ones. Strictly speaking, this is not related to HA, but it may be important to keep this in mind as you generally want critical components to be rescheduled as fast as possible and if there is no node available, it may take 3 minutes or longer to do so (depending on the cloud provider). Besides, not only zones can fail, but also individual nodes.
@@ -107,7 +104,7 @@ spec:
 
 The problem comes with the number of replicas. It's easy only if the number is static, e.g. 2 for active-active/passive or 3 for consensus-based software components, but what with software components that can scale out horizontally? Here you usually do not set the number of replicas statically, but make use of the [horizontal pod autoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale) or HPA for short (built-in; part of the kube-controller-manager). There are also other options like the [cluster proportional autoscaler](https://github.com/kubernetes-sigs/cluster-proportional-autoscaler), but while the former works based on metrics, the latter is more a guestimate approach that derives the number of replicas from the number of nodes/cores in a cluster. Sometimes useful, but often blind to the actual demand.
 
-So, HPA it is then for most of the cases. However, what is the resource (e.g. CPU or memory) that drives the number of desired replicas? Again, this is up to you, but not always are CPU or memory the best choice. In some cases, [custom metrics](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#scaling-on-custom-metrics) may be more appropriate, e.g. requests per second (it was also for us).
+So, HPA it is then for most of the cases. However, what is the resource (e.g. CPU or memory) that drives the number of desired replicas? Again, this is up to you, but not always are CPU or memory the best choices. In some cases, [custom metrics](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#scaling-on-custom-metrics) may be more appropriate, e.g. requests per second (it was also for us).
 
 You will have to create specific `HorizontalPodAutoscaler` resources for your scale target and can [tweak the general HPA knobs](https://gardener.cloud/docs/gardener/api-reference/core/#horizontalpodautoscalerconfig) for Gardener-managed clusters like this:
 
@@ -118,7 +115,7 @@ spec:
   kubernetes:
     kubeControllerManager:
       horizontalPodAutoscaler:
-        syncPeriod: 30s
+        syncPeriod: 15s
         tolerance: 0.1
         downscaleStabilization: 5m0s
         initialReadinessDelay: 30s
@@ -127,7 +124,7 @@ spec:
 
 ## Resources (Vertical Scaling)
 
-While it is important to set a sufficient number of replicas, it is also important to give the pods sufficient resources (CPU and memory). This is especially true when you think about HA. When a zone goes down, you might need to get up replacement pods, if you don't have them running already to take over the load from the impacted zone. Likewise, e.g. with active-active software components, you can expect the remaining pods to receive more load. If you cannot scale them out horizontally to serve the load, you will probably need to scale them out vertically. This is done by the [vertical pod autoscaler](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler) or VPA for short (not built-in; part of the [kubernetes/autoscaler](https://github.com/kubernetes/autoscaler) repository).
+While it is important to set a sufficient number of replicas, it is also important to give the pods sufficient resources (CPU and memory). This is especially true when you think about HA. When a zone goes down, you might need to get up replacement pods, if you don't have them running already to take over the load from the impacted zone. Likewise, e.g. with active-active software components, you can expect the remaining pods to receive more load. If you cannot scale them out horizontally to serve the load, you will probably need to scale them out (or rather up) vertically. This is done by the [vertical pod autoscaler](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler) or VPA for short (not built-in; part of the [kubernetes/autoscaler](https://github.com/kubernetes/autoscaler) repository).
 
 A few caveats though:
 
@@ -152,7 +149,7 @@ spec:
       recommenderInterval: 1m0s
 ```
 
-While horizontal pod autoscaling is relatively straight-forward, it takes a long time to master vertical pod autoscaling. We saw [performance issues](https://github.com/kubernetes/autoscaler/issues/4498), hard-coded behavior (on OOM, memory is bumped by +20% and it may take a few iterations to reach a good level), unintended pod disruptions by applying new resource requests (after 12h all targeted pods will receive new requests even though individually they would be fine without, which also drives active-passive resource consumption up), difficulties to deal with spiky workload in general (due to the algorithmic approach it takes), recommended requests may exceed node capacity, limit scaling is proportional and therefore often useless, and more. VPA is a double-edged sword: useful and necessary, but not easy to handle.
+While horizontal pod autoscaling is relatively straight-forward, it takes a long time to master vertical pod autoscaling. We saw [performance issues](https://github.com/kubernetes/autoscaler/issues/4498), hard-coded behavior (on OOM, memory is bumped by +20% and it may take a few iterations to reach a good level), unintended pod disruptions by applying new resource requests (after 12h all targeted pods will receive new requests even though individually they would be fine without, which also drives active-passive resource consumption up), difficulties to deal with spiky workload in general (due to the algorithmic approach it takes), recommended requests may exceed node capacity, limit scaling is proportional and therefore often questionable, and more. VPA is a double-edged sword: useful and necessary, but not easy to handle.
 
 For the Gardener-managed components, we mostly removed limits. Why?
 
@@ -204,7 +201,7 @@ spec:
         nodeFSAvailable: 0Mi
         nodeFSInodesFree: 0Mi
       evictionMaxPodGracePeriod: 90            # caps pod's `terminationGracePeriodSeconds` value during soft evictions (general grace periods)
-      evictionPressureTransitionPeriod: 4m0s   # stabilization time window to avoid flapping of node eviction state
+      evictionPressureTransitionPeriod: 5m0s   # stabilization time window to avoid flapping of node eviction state
 ```
 
 You can tweak these settings also individually per worker pool (`spec.provider.workers.kubernetes.kubelet...`), which makes sense especially with different machine types (and also workload that you may want to schedule there).
@@ -257,9 +254,9 @@ the new `AlwaysAllow` option is probably the better choice in most of the cases 
 
 [Pod topology spread constraints](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints) or PTSC for short (no official abbreviation exists, but we will use this in the following) are enormously helpful to distribute your replicas across multiple zones, nodes, or any other user-defined topology domain. They complement and improve on [pod (anti-)affinities](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) that still exist and can be used in combination.
 
-PTSCs are an improvement, because they allow for `maxSkew` and `minDomains`. You can steer the "level of tolerated imbalance" with `maxSkew`, e.g. you probably want that to be at least 1, so that you can perform a rolling update, but this all depends on your [deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-update-deployment) (`maxUnavailable` and `maxSurge`), etc. [Stateful sets](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#rolling-updates) are a bit different (`maxUnavailable`) as they are bound to volumes and depend on them, so there usually cannot be 2 pods requiring the same volume. `minDomains` is a hint to tell the scheduler how far to spread, e.g. if all nodes in one zone disappeared because of a zone outage, it may "appear" as if there are only 2 zones in a 3 zones cluster and the scheduling decisions may end up wrong, so a `minDomains` of 3 will tell the scheduler to spread to 3 zones before adding another replica in one zone. Be careful with this setting as it also means, if one zone is down the "spread" is already at least 1, if pods run in the other zones. This is useful where you have exactly as many replicas as you have zones and you do not want any imbalance. Imbalance is critical as if you end up with one, nobody is going to do the (active) re-balancing for you (unless you deploy and configure additional non-standard components such as the [descheduler](https://github.com/kubernetes-sigs/descheduler)). So, for instance, if you have something like a DBMS that you want to spread across 2 zones (active-passive) or 3 zones (quorum-based), you better specify `minDomains` of 2 respectively 3 to force your replicas into at least that many zones before adding more replicas to another zone (if supported).
+PTSCs are an improvement, because they allow for `maxSkew` and `minDomains`. You can steer the "level of tolerated imbalance" with `maxSkew`, e.g. you probably want that to be at least 1, so that you can perform a rolling update, but this all depends on your [deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-update-deployment) (`maxUnavailable` and `maxSurge`), etc. [Stateful sets](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#rolling-updates) are a bit different (`maxUnavailable`) as they are bound to volumes and depend on them, so there usually cannot be 2 pods requiring the same volume. `minDomains` is a hint to tell the scheduler how far to spread, e.g. if all nodes in one zone disappeared because of a zone outage, it may "appear" as if there are only 2 zones in a 3 zones cluster and the scheduling decisions may end up wrong, so a `minDomains` of 3 will tell the scheduler to spread to 3 zones before adding another replica in one zone. Be careful with this setting as it also means, if one zone is down the "spread" is already at least 1, if pods run in the other zones. This is useful where you have exactly as many replicas as you have zones and you do not want any imbalance. Imbalance is critical as if you end up with one, nobody is going to do the (active) re-balancing for you (unless you deploy and configure additional non-standard components such as the [descheduler](https://github.com/kubernetes-sigs/descheduler)). So, for instance, if you have something like a DBMS that you want to spread across 2 zones (active-passive) or 3 zones (consensus-based), you better specify `minDomains` of 2 respectively 3 to force your replicas into at least that many zones before adding more replicas to another zone (if supported).
 
-Anyway, PTSCs are critical to have, but not perfect, so we saw (unsurprisingly, because that's how the scheduler works), that the scheduler may block the deployment of new pods because it takes the decision pod-by-pod (we opened among others [#109364](https://github.com/kubernetes/kubernetes/issues/109364)).
+Anyway, PTSCs are critical to have, but not perfect, so we saw (unsurprisingly, because that's how the scheduler works), that the scheduler may block the deployment of new pods because it takes the decision pod-by-pod (see for instance [#109364](https://github.com/kubernetes/kubernetes/issues/109364)).
 
 ## Pod Affinities and Anti-Affinities
 
@@ -269,13 +266,13 @@ As said, you can combine PTSCs with [pod affinities and/or anti-affinities](http
 
 While [topology aware hints](https://kubernetes.io/docs/concepts/services-networking/topology-aware-hints) are not directly related to HA, they are very relevant in the HA context. Spreading your workload across multiple zones may increase network latency and cost significantly, if the traffic is not shaped. Topology aware hints (beta since Kubernetes `v1.23`, replacing the now deprecated topology aware traffic routing with topology keys) help to route the traffic within the originating zone, if possible. Basically, they tell `kube-proxy` how to setup your routing information, so that clients can talk to endpoints that are located within the same zone.
 
-Be aware however, that there are some limitations that we discussed with the Kubernetes networking SIG and that the maintainers are reluctant to drop. Those are called [safeguards](https://kubernetes.io/docs/concepts/services-networking/topology-aware-hints/#safeguards) and if they strike, the hints are off and traffic is routed again randomly. Especially controversial is the balancing limitation as there is the assumption, that the load that hits an endpoint is determined by the allocatable CPUs in that topology zone, but that's not always if even mostly the case (we opened among others [#113731](https://github.com/kubernetes/kubernetes/issues/113731) and [#110714](https://github.com/kubernetes/kubernetes/issues/110714)). So, this limitation hits far too often and your hints are off, but then again, it's about network latency and cost optimization first, so it's better than nothing.
+Be aware however, that there are some limitations. Those are called [safeguards](https://kubernetes.io/docs/concepts/services-networking/topology-aware-hints/#safeguards) and if they strike, the hints are off and traffic is routed again randomly. Especially controversial is the balancing limitation as there is the assumption, that the load that hits an endpoint is determined by the allocatable CPUs in that topology zone, but that's not always, if even often, the case (see for instance [#113731](https://github.com/kubernetes/kubernetes/issues/113731) and [#110714](https://github.com/kubernetes/kubernetes/issues/110714)). So, this limitation hits far too often and your hints are off, but then again, it's about network latency and cost optimization first, so it's better than nothing.
 
 ## Networking
 
-We have talked about networking only to some small degree so far (`readiness` probes, pod disruption budgets, topology aware hints). The most important component is probably your ingress load balancer - everything else is managed by Kubernetes. AWS, Azure, GCP, and also OpenStack offer multi-zonal load balancers, so make use of them. In Azure and GCP, LBs are regional whereas in AWS and OpenStack, they need to be bound to a zone, which the cloud-controller-manager does by observing the zone labels at the nodes (please note that this behavior is not always working as expected, see [#570](https://github.com/kubernetes/cloud-provider-aws/issues/569) that we opened on the AWS cloud-controller-manager not readjusting to newly observed zones).
+We have talked about networking only to some small degree so far (`readiness` probes, pod disruption budgets, topology aware hints). The most important component is probably your ingress load balancer - everything else is managed by Kubernetes. AWS, Azure, GCP, and also OpenStack offer multi-zonal load balancers, so make use of them. In Azure and GCP, LBs are regional whereas in AWS and OpenStack, they need to be bound to a zone, which the cloud-controller-manager does by observing the zone labels at the nodes (please note that this behavior is not always working as expected, see [#570](https://github.com/kubernetes/cloud-provider-aws/issues/569) where the AWS cloud-controller-manager is not readjusting to newly observed zones).
 
-Please be reminded that even if you use a service mesh like [Istio](https://istio.io), the off-the-shelf installation/configuration usually never comes with productive qualities and you will have to fine-tune your installation/configuration, much like the rest of your workload.
+Please be reminded that even if you use a service mesh like [Istio](https://istio.io), the off-the-shelf installation/configuration usually never comes with productive settings (to simplify first-time installation and improve first-time user experience) and you will have to fine-tune your installation/configuration, much like the rest of your workload.
 
 ## Relevant Cluster Settings
 
@@ -302,7 +299,7 @@ spec:
       nodeMonitorPeriod: 10s
       nodeMonitorGracePeriod: 40s
       horizontalPodAutoscaler:
-        syncPeriod: 30s
+        syncPeriod: 15s
         tolerance: 0.1
         downscaleStabilization: 5m0s
         initialReadinessDelay: 30s
@@ -314,15 +311,15 @@ spec:
       evictionRateLimit: -1
       evictionTolerance: 0.5
       recommendationMarginFraction: 0.15
-      recommenderInterval: 1m0s
       updaterInterval: 1m0s
+      recommenderInterval: 1m0s
     clusterAutoscaler:
       expander: "least-waste"
-      scanInterval: 5s
-      scaleDownDelayAfterAdd: 1m
+      scanInterval: 10s
+      scaleDownDelayAfterAdd: 60m
       scaleDownDelayAfterDelete: 0s
-      scaleDownDelayAfterFailure: 1m
-      scaleDownUnneededTime: 1m
+      scaleDownDelayAfterFailure: 3m
+      scaleDownUnneededTime: 30m
       scaleDownUtilizationThreshold: 0.5
   provider:
     workers:
@@ -337,9 +334,9 @@ spec:
         kubelet:
           ... # similar to `kubelet` above (cluster-wide settings), but here per worker pool (pool-specific settings), see above
       machineControllerManager: # optional, it allows to configure the machine-controller settings.
-        machineCreationTimeout: 10m
-        machineHealthTimeout: 2m
-        machineDrainTimeout: 5m
+        machineCreationTimeout: 20m
+        machineHealthTimeout: 10m
+        machineDrainTimeout: 60h
   systemComponents:
     coreDNS:
       autoscaling:
@@ -379,7 +376,7 @@ Required to be enabled for `minDomains` to work with PTSCs (beta since Kubernete
 
 #### On `spec.kubernetes.kubeControllerManager.nodeMonitorPeriod` and `nodeMonitorGracePeriod`
 
-This is another very interesting [kube-controller-manager setting](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-controller-manager) that can help you speed up or slow down how fast a node shall be considered `Unknown` (node status unknown, a.k.a unreachable) when the `kubelet` is not updating its status anymore (see [node status conditions](https://kubernetes.io/docs/concepts/architecture/nodes/#condition)), which effects eviction (see `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds` and `defaultNotReadyTolerationSeconds` above). The shorter the time window, the faster Kubernetes will act, but the higher the chance of flapping behavior and pod trashing, so you may want to balance that out to your needs, otherwise stick to the default which is a reasonable compromise.
+This is another very interesting [kube-controller-manager setting](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-controller-manager) that can help you speed up or slow down how fast a node shall be considered `Unknown` (node status unknown, a.k.a unreachable) when the `kubelet` is not updating its status anymore (see [node status conditions](https://kubernetes.io/docs/concepts/architecture/nodes/#condition)), which effects eviction (see `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds` and `defaultNotReadyTolerationSeconds` above). The shorter the time window, the faster Kubernetes will act, but the higher the chance of flapping behavior and pod trashing, so you may want to balance that out according to your needs, otherwise stick to the default which is a reasonable compromise.
 
 #### On `spec.kubernetes.kubeControllerManager.horizontalPodAutoscaler...`
 
@@ -399,7 +396,7 @@ If a node fails to come up, the node group (worker pool in that zone) will go in
 
 #### On `spec.provider.workers.minimum`, `maximum`, `maxSurge`, `maxUnavailable`, `zones`, and `machineControllerManager`
 
-Each worker pool in Gardener may be configured differently. Among many other things like machine type, root disk, Kubernetes version, `kubelet` settings, and many more you can also specify the lower and upper bound for the number of machines (`minimum` and `maximum`). How many machines may be added additionally during a rolling update (`maxSurge`) and how many machines may be in termination/recreation during a rolling update (`maxUnavailable`) and of course across how many zones the nodes shall be spread (`zones`).
+Each worker pool in Gardener may be configured differently. Among many other settings like machine type, root disk, Kubernetes version, `kubelet` settings, and many more you can also specify the lower and upper bound for the number of machines (`minimum` and `maximum`), how many machines may be added additionally during a rolling update (`maxSurge`) and how many machines may be in termination/recreation during a rolling update (`maxUnavailable`), and of course across how many zones the nodes shall be spread (`zones`).
 
 Interesting is also the configuration for Gardener's machine-controller-manager or MCM for short that provisions, monitors, terminates, replaces, or updates machines that back your nodes:
 
@@ -415,17 +412,19 @@ DNS is critical, in general and also within a Kubernetes cluster. Gardener-manag
 
 ## More Caveats
 
-Unfortunately, there are a few things of note when it comes to HA in a Kubernetes cluster that may be "surprising" and are hard to mitigate:
+Unfortunately, there are a few more things of note when it comes to HA in a Kubernetes cluster that may be "surprising" and hard to mitigate:
 
-- If the `kubelet` restarts, it will report all pods as `NotReady` on startup until it reruns its probes ([#100277](https://github.com/kubernetes/kubernetes/issues/100277)), which leads to temporary endpoint and load balancer target removal ([#102367](https://github.com/kubernetes/kubernetes/issues/102367)). Pull requests to improve from our colleagues were rejected. Even with support from one of the Kubernetes networking SIG chairs, who joined the discussion and was also questioning the current behavior, the topic didn't move forward. Gardener uses rolling updates and a jitter to spread necessary `kubelet` restarts as good as possible, but the underlying problem remains unsolved in Kubernetes.
-- If a `kube-proxy` pod on a node turns `NotReady`, all load balancer traffic to all pods (on this node) under services with `externalTrafficPolicy` `local` will cease as the load balancer will then take this node out of serving. This makes no sense and was discussed by us in [Slack Kubernetes #sig-network](https://kubernetes.slack.com/archives/C09QYUH5W/p1642764716200400), but the maintainers remain reluctant (like above) to change the current behavior (even though nobody could remember why this was ever done or deliver a reason why it may be a good thing to keep). So, please remember that `externalTrafficPolicy` `local` not only has the disadvantage of imbalanced traffic spreading, but also a dependency to the kube-proxy pod that may and will be unavailable during updates. Gardener uses rolling updates to spread necessary `kube-proxy` updates as good as possible, but the underlying problem remains unsolved in Kubernetes.
+- If the `kubelet` restarts, it will report all pods as `NotReady` on startup until it reruns its probes ([#100277](https://github.com/kubernetes/kubernetes/issues/100277)), which leads to temporary endpoint and load balancer target removal ([#102367](https://github.com/kubernetes/kubernetes/issues/102367)). This topic is somewhat controversial. Gardener uses rolling updates and a jitter to spread necessary `kubelet` restarts as good as possible.
+- If a `kube-proxy` pod on a node turns `NotReady`, all load balancer traffic to all pods (on this node) under services with `externalTrafficPolicy` `local` will cease as the load balancer will then take this node out of serving. This topic is somewhat controversial as well. So, please remember that `externalTrafficPolicy` `local` not only has the disadvantage of imbalanced traffic spreading, but also a dependency to the kube-proxy pod that may and will be unavailable during updates. Gardener uses rolling updates to spread necessary `kube-proxy` updates as good as possible.
 
-These things of note are just a start and by no means complete. They may or may not affect you, but other intricacies may. It's a reminder to be watchful as Kubernetes may have one or two relevant quirks that you need to consider (and will probably only find out over time and with extensive testing).
+These are just a few additional considerations. They may or may not affect you, but other intricacies may. It's a reminder to be watchful as Kubernetes may have one or two relevant quirks that you need to consider (and will probably only find out over time and with extensive testing).
 
 ## Meaningful Availability
 
-Finally, let's go back to where we started. We recommended to measure the [*meaningful availability*](https://research.google/pubs/pub50828) (as opposed to the *meaningless availability*, a term coined by a great colleague of mine who introduced me to the subject matter). For instance, in Gardener, we do not trust only internal signals, but track also whether Gardener or the control planes that it manages are externally available through the external DNS records and load balancers, SNI-routing Istio gateways, etc. (the same path all users must take). It's a huge difference whether the API server's internal readiness probe passes or the user can actually reach the API server and it does what it's supposed to do. Most likely, you will be in a similar spot and can do the same.
+Finally, let's go back to where we started. We recommended to measure [meaningful availability](https://research.google/pubs/pub50828). For instance, in Gardener, we do not trust only internal signals, but track also whether Gardener or the control planes that it manages are externally available through the external DNS records and load balancers, SNI-routing Istio gateways, etc. (the same path all users must take). It's a huge difference whether the API server's internal readiness probe passes or the user can actually reach the API server and it does what it's supposed to do. Most likely, you will be in a similar spot and can do the same.
 
 What you do with these signals is another matter. Maybe there are some actionable metrics and you can trigger some active fail-over, maybe you can only use it to improve your HA setup altogether. In our case, we also use it to deploy mitigations, e.g. via our [dependency-watchdog](https://github.com/gardener/dependency-watchdog) that watches, for instance, Gardener-managed API servers and shuts down components like the controller managers to avert cascading knock-off effects (e.g. melt-down if the `kubelets` cannot reach the API server, but the controller managers can and start taking down nodes and pods).
 
-Either way, understanding how users perceive your service is key to the improvement process as a whole. Even if you are not struck by a zone outage, the measures above and tracking the meaningful availability will help you improve your service. Thank you.
+Either way, understanding how users perceive your service is key to the improvement process as a whole. Even if you are not struck by a zone outage, the measures above and tracking the meaningful availability will help you improve your service.
+
+Thank you for your interest.
