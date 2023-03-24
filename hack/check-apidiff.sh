@@ -30,10 +30,10 @@ temp=0
 # PULL_BASE_SHA env variable is set by default in prow presubmit jobs
 if [ -n "${PULL_BASE_SHA:-}" ]; then
   echo "invoking: go-apidiff ${PULL_BASE_SHA} --print-compatible --repo-path=."
-  go-apidiff ${PULL_BASE_SHA} --print-compatible --repo-path=. >${tmpDir}/output.txt
+  go-apidiff ${PULL_BASE_SHA} --print-compatible --repo-path=. >${tmpDir}/output.txt || true
 else
   echo "invoking: go-apidiff master --print-compatible --repo-path=."
-  go-apidiff master --print-compatible --repo-path=. >${tmpDir}/output.txt
+  go-apidiff master --print-compatible --repo-path=. >${tmpDir}/output.txt || true
 fi
 
 exported_pkg=(
