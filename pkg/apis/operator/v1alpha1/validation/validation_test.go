@@ -58,6 +58,10 @@ var _ = Describe("Validation Tests", func() {
 				Entry("complete all rotations", "rotate-credentials-complete"),
 				Entry("start CA rotation", "rotate-ca-start"),
 				Entry("complete CA rotation", "rotate-ca-complete"),
+				Entry("start ServiceAccount key rotation", "rotate-serviceaccount-key-start"),
+				Entry("complete ServiceAccount key rotation", "rotate-serviceaccount-key-complete"),
+				Entry("start ETCD encryption key rotation", "rotate-etcd-encryption-key-start"),
+				Entry("complete ETCD encryption key rotation", "rotate-etcd-encryption-key-complete"),
 			)
 
 			DescribeTable("starting rotation of all credentials",
@@ -85,10 +89,46 @@ var _ = Describe("Validation Tests", func() {
 						},
 					},
 				}),
+				Entry("sa rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationPreparing,
+							},
+						},
+					},
+				}),
+				Entry("etcd key rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationPreparing,
+							},
+						},
+					},
+				}),
 				Entry("ca rotation phase is prepared", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
 							CertificateAuthorities: &gardencorev1beta1.CARotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("sa rotation phase is prepared", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("etcd key rotation phase is prepared", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
 								Phase: gardencorev1beta1.RotationPrepared,
 							},
 						},
@@ -103,10 +143,46 @@ var _ = Describe("Validation Tests", func() {
 						},
 					},
 				}),
+				Entry("sa rotation phase is completing", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleting,
+							},
+						},
+					},
+				}),
+				Entry("etcd key rotation phase is completing", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleting,
+							},
+						},
+					},
+				}),
 				Entry("ca rotation phase is completed", true, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
 							CertificateAuthorities: &gardencorev1beta1.CARotation{
+								Phase: gardencorev1beta1.RotationCompleted,
+							},
+						},
+					},
+				}),
+				Entry("sa rotation phase is completed", true, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleted,
+							},
+						},
+					},
+				}),
+				Entry("etcd key rotation phase is completed", true, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
 								Phase: gardencorev1beta1.RotationCompleted,
 							},
 						},
@@ -136,6 +212,42 @@ var _ = Describe("Validation Tests", func() {
 							CertificateAuthorities: &gardencorev1beta1.CARotation{
 								Phase: gardencorev1beta1.RotationPreparing,
 							},
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("sa rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationPreparing,
+							},
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("etcd key rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationPreparing,
+							},
 						},
 					},
 				}),
@@ -143,6 +255,12 @@ var _ = Describe("Validation Tests", func() {
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
 							CertificateAuthorities: &gardencorev1beta1.CARotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
 								Phase: gardencorev1beta1.RotationPrepared,
 							},
 						},
@@ -154,6 +272,42 @@ var _ = Describe("Validation Tests", func() {
 							CertificateAuthorities: &gardencorev1beta1.CARotation{
 								Phase: gardencorev1beta1.RotationCompleting,
 							},
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("sa rotation phase is completing", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleting,
+							},
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("etcd key rotation phase is completing", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleting,
+							},
 						},
 					},
 				}),
@@ -161,6 +315,42 @@ var _ = Describe("Validation Tests", func() {
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
 							CertificateAuthorities: &gardencorev1beta1.CARotation{
+								Phase: gardencorev1beta1.RotationCompleted,
+							},
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("sa rotation phase is completed", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleted,
+							},
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("etcd key rotation phase is completed", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							CertificateAuthorities: &gardencorev1beta1.CARotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
 								Phase: gardencorev1beta1.RotationCompleted,
 							},
 						},
@@ -269,6 +459,221 @@ var _ = Describe("Validation Tests", func() {
 					Credentials: &operatorv1alpha1.Credentials{
 						Rotation: &operatorv1alpha1.CredentialsRotation{
 							CertificateAuthorities: &gardencorev1beta1.CARotation{
+								Phase: gardencorev1beta1.RotationCompleted,
+							},
+						},
+					},
+				}),
+			)
+
+			DescribeTable("starting service account key rotation",
+				func(allowed bool, status operatorv1alpha1.GardenStatus) {
+					metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", "rotate-serviceaccount-key-start")
+					garden.Status = status
+
+					matcher := BeEmpty()
+					if !allowed {
+						matcher = ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeForbidden),
+							"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
+						})))
+					}
+
+					Expect(ValidateGarden(garden)).To(matcher)
+				},
+				Entry("rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationPreparing,
+							},
+						},
+					},
+				}),
+				Entry("rotation phase is prepared", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("rotation phase is completing", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleting,
+							},
+						},
+					},
+				}),
+				Entry("rotation phase is completed", true, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleted,
+							},
+						},
+					},
+				}),
+			)
+
+			DescribeTable("completing service account key rotation",
+				func(allowed bool, status operatorv1alpha1.GardenStatus) {
+					metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", "rotate-serviceaccount-key-complete")
+					garden.Status = status
+
+					matcher := BeEmpty()
+					if !allowed {
+						matcher = ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeForbidden),
+							"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
+						})))
+					}
+
+					Expect(ValidateGarden(garden)).To(matcher)
+				},
+
+				Entry("rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationPreparing,
+							},
+						},
+					},
+				}),
+				Entry("rotation phase is prepared", true, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("rotation phase is completing", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleting,
+							},
+						},
+					},
+				}),
+				Entry("rotation phase is completed", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleted,
+							},
+						},
+					},
+				}),
+			)
+
+			DescribeTable("starting ETCD encryption key rotation",
+				func(allowed bool, status operatorv1alpha1.GardenStatus) {
+					metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", "rotate-etcd-encryption-key-start")
+					garden.Status = status
+
+					matcher := BeEmpty()
+					if !allowed {
+						matcher = ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeForbidden),
+							"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
+						})))
+					}
+
+					Expect(ValidateGarden(garden)).To(matcher)
+				},
+
+				Entry("rotation phase is prepare", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationPreparing,
+							},
+						},
+					},
+				}),
+				Entry("rotation phase is prepared", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("rotation phase is complete", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleting,
+							},
+						},
+					},
+				}),
+				Entry("rotation phase is completed", true, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleted,
+							},
+						},
+					},
+				}),
+			)
+
+			DescribeTable("completing ETCD encryption key rotation",
+				func(allowed bool, status operatorv1alpha1.GardenStatus) {
+					metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", "rotate-etcd-encryption-key-complete")
+					garden.Status = status
+
+					matcher := BeEmpty()
+					if !allowed {
+						matcher = ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeForbidden),
+							"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
+						})))
+					}
+
+					Expect(ValidateGarden(garden)).To(matcher)
+				},
+
+				Entry("rotation phase is prepare", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationPreparing,
+							},
+						},
+					},
+				}),
+				Entry("rotation phase is prepared", true, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("rotation phase is complete", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+								Phase: gardencorev1beta1.RotationCompleting,
+							},
+						},
+					},
+				}),
+				Entry("rotation phase is completed", false, operatorv1alpha1.GardenStatus{
+					Credentials: &operatorv1alpha1.Credentials{
+						Rotation: &operatorv1alpha1.CredentialsRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
 								Phase: gardencorev1beta1.RotationCompleted,
 							},
 						},

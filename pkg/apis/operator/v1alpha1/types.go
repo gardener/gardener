@@ -232,6 +232,10 @@ var AvailableOperationAnnotations = sets.New[string](
 	v1beta1constants.GardenerOperationReconcile,
 	v1beta1constants.OperationRotateCAStart,
 	v1beta1constants.OperationRotateCAComplete,
+	v1beta1constants.OperationRotateServiceAccountKeyStart,
+	v1beta1constants.OperationRotateServiceAccountKeyComplete,
+	v1beta1constants.OperationRotateETCDEncryptionKeyStart,
+	v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
 	v1beta1constants.OperationRotateCredentialsStart,
 	v1beta1constants.OperationRotateCredentialsComplete,
 )
