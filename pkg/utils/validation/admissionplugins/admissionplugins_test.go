@@ -278,6 +278,19 @@ exemptions:
 						"Field": Equal(field.NewPath("admissionPlugins[0].kubeconfigSecretName").String()),
 					}))))
 				})
+
+				It("should not return an error when kubeconfig secret is provided while it is allowed", func() {
+					Expect(ValidateAdmissionPlugins([]core.AdmissionPlugin{
+						{
+							Name:                 "PodSecurity",
+							KubeconfigSecretName: pointer.String("foo"),
+						},
+					},
+						"v1.24.8",
+						true,
+						field.NewPath("admissionPlugins"),
+					)).To(BeEmpty())
+				})
 			})
 		})
 	})
