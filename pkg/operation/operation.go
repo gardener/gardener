@@ -578,6 +578,11 @@ func (o *Operation) WantsGrafana() bool {
 	return o.Shoot.Purpose != gardencorev1beta1.ShootPurposeTesting && (helper.IsMonitoringEnabled(o.Config) || helper.IsLokiEnabled(o.Config))
 }
 
+// ComputeKubeAPIServerHost computes the host with a TLS certificate from a trusted origin for KubeAPIServer.
+func (o *Operation) ComputeKubeAPIServerHost() string {
+	return o.ComputeIngressHost(common.KubeAPIServerUsersPrefix)
+}
+
 // ComputeGrafanaHost computes the host for Grafana.
 func (o *Operation) ComputeGrafanaHost() string {
 	return o.ComputeIngressHost(common.GrafanaUsersPrefix)

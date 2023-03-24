@@ -18,6 +18,9 @@ const (
 	// VPNTunnel dictates that VPN is used as a tunnel between seed and shoot networks.
 	VPNTunnel string = "vpn-shoot"
 
+	// KubeAPIServerUsersPrefix is a constant for a prefix used for the users KubeAPIServer instance using a TLS certificate from a trusted origin.
+	KubeAPIServerUsersPrefix = "api"
+
 	// GrafanaUsersPrefix is a constant for a prefix used for the users Grafana instance.
 	GrafanaUsersPrefix = "gu"
 

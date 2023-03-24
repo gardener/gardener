@@ -546,6 +546,11 @@ func (b *Botanist) computeKubeAPIServerSNIConfig() kubeapiserver.SNIConfig {
 		}
 	}
 
+	// Add control plane wildcard certificate to TLS SNI config if it is available.
+	if b.ControlPlaneWildcardCert != nil {
+		config.TLS = append(config.TLS, kubeapiserver.TLSSNIConfig{SecretName: &b.ControlPlaneWildcardCert.Name, DomainPatterns: []string{b.ComputeKubeAPIServerHost()}})
+	}
+
 	return config
 }
 
