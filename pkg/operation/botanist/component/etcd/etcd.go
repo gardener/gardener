@@ -689,7 +689,7 @@ func (e *etcd) Snapshot(ctx context.Context, httpClient rest.HTTPClient) error {
 		return fmt.Errorf("no backup is configured for this etcd, cannot make a snapshot")
 	}
 
-	url := fmt.Sprintf("https://etcd-%s-client.%s:%d/snapshot/full?final=true", e.values.Role, e.namespace, etcdconstants.PortBackupRestore)
+	url := fmt.Sprintf("https://%s.%s:%d/snapshot/full?final=true", etcdconstants.ServiceName(e.values.Role), e.namespace, etcdconstants.PortBackupRestore)
 
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -698,7 +698,7 @@ func (e *etcd) Snapshot(ctx context.Context, httpClient rest.HTTPClient) error {
 
 	resp, err := httpClient.Do(request)
 	if err == nil && resp != nil && resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("error occurred while intiating etcd snapshot: %s", resp.Status)
+		return fmt.Errorf("error occurred while initiating ETCD snapshot: %s", resp.Status)
 	}
 
 	return err
