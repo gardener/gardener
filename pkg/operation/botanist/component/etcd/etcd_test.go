@@ -17,6 +17,7 @@ package etcd_test
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
@@ -32,7 +33,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
@@ -45,7 +45,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	"github.com/gardener/gardener/pkg/mock/client-go/rest"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd/constants"
@@ -243,8 +243,10 @@ var _ = Describe("Etcd", func() {
 			clientService := &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
-						"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":2379},{"protocol":"TCP","port":8080}]`,
+						"networking.resources.gardener.cloud/from-policy-pod-label-selector":     "all-scrape-targets",
+						"networking.resources.gardener.cloud/from-policy-allowed-ports":          `[{"protocol":"TCP","port":2379},{"protocol":"TCP","port":8080}]`,
+						"networking.resources.gardener.cloud/namespace-selectors":                `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`,
+						"networking.resources.gardener.cloud/pod-label-selector-namespace-alias": "all-shoots",
 					},
 				},
 			}
@@ -1689,115 +1691,31 @@ var _ = Describe("Etcd", func() {
 		})
 
 		Context("w/ backup configuration", func() {
-			var (
-				podExecutor *kubernetesmock.MockPodExecutor
-				podName     = "some-etcd-pod"
-				selector    = labels.SelectorFromSet(map[string]string{
-					"app":  "etcd-statefulset",
-					"role": testRole,
-				})
-			)
+			var mockHttpClient *rest.MockHTTPClient
 
 			BeforeEach(func() {
+				mockHttpClient = rest.NewMockHTTPClient(ctrl)
 				etcd.SetBackupConfig(&BackupConfig{})
-				podExecutor = kubernetesmock.NewMockPodExecutor(ctrl)
 			})
 
 			It("should successfully execute the full snapshot command", func() {
-				podList := &corev1.PodList{
-					Items: []corev1.Pod{
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: podName,
-							},
-						},
-					},
-				}
+				url := fmt.Sprintf("https://etcd-%s-client.%s:8080/snapshot/full?final=true", testRole, testNamespace)
+				request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+				Expect(err).ToNot(HaveOccurred())
 
-				c.EXPECT().List(
-					ctx,
-					gomock.AssignableToTypeOf(&corev1.PodList{}),
-					client.InNamespace(testNamespace),
-					client.MatchingLabelsSelector{Selector: selector},
-				).DoAndReturn(
-					func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-						podList.DeepCopyInto(list.(*corev1.PodList))
-						return nil
-					},
-				)
+				mockHttpClient.EXPECT().Do(request)
 
-				podExecutor.EXPECT().Execute(
-					testNamespace,
-					podName,
-					"backup-restore",
-					"/bin/sh",
-					"curl -k https://etcd-"+testRole+"-local:8080/snapshot/full?final=true",
-				)
-
-				Expect(etcd.Snapshot(ctx, podExecutor)).To(Succeed())
-			})
-
-			It("should return an error when the pod listing fails", func() {
-				c.EXPECT().List(
-					ctx,
-					gomock.AssignableToTypeOf(&corev1.PodList{}),
-					client.InNamespace(testNamespace),
-					client.MatchingLabelsSelector{Selector: selector},
-				).Return(fakeErr)
-
-				Expect(etcd.Snapshot(ctx, podExecutor)).To(MatchError(fakeErr))
-			})
-
-			It("should return an error when the pod list is empty", func() {
-				podList := &corev1.PodList{}
-
-				c.EXPECT().List(
-					ctx,
-					gomock.AssignableToTypeOf(&corev1.PodList{}),
-					client.InNamespace(testNamespace),
-					client.MatchingLabelsSelector{Selector: selector},
-				).DoAndReturn(
-					func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-						podList.DeepCopyInto(list.(*corev1.PodList))
-						return nil
-					},
-				)
-
-				Expect(etcd.Snapshot(ctx, podExecutor)).To(MatchError(ContainSubstring("didn't find any pods")))
+				Expect(etcd.Snapshot(ctx, mockHttpClient)).To(Succeed())
 			})
 
 			It("should return an error when the execution command fails", func() {
-				podList := &corev1.PodList{
-					Items: []corev1.Pod{
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: podName,
-							},
-						},
-					},
-				}
+				url := fmt.Sprintf("https://etcd-%s-client.%s:8080/snapshot/full?final=true", testRole, testNamespace)
+				request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+				Expect(err).ToNot(HaveOccurred())
 
-				c.EXPECT().List(
-					ctx,
-					gomock.AssignableToTypeOf(&corev1.PodList{}),
-					client.InNamespace(testNamespace),
-					client.MatchingLabelsSelector{Selector: selector},
-				).DoAndReturn(
-					func(ctx context.Context, obj client.ObjectList, opts ...client.ListOption) error {
-						podList.DeepCopyInto(obj.(*corev1.PodList))
-						return nil
-					},
-				)
+				mockHttpClient.EXPECT().Do(request).Return(nil, fakeErr)
 
-				podExecutor.EXPECT().Execute(
-					testNamespace,
-					podName,
-					"backup-restore",
-					"/bin/sh",
-					"curl -k https://etcd-"+testRole+"-local:8080/snapshot/full?final=true",
-				).Return(nil, fakeErr)
-
-				Expect(etcd.Snapshot(ctx, podExecutor)).To(MatchError(fakeErr))
+				Expect(etcd.Snapshot(ctx, mockHttpClient)).To(MatchError(fakeErr))
 			})
 		})
 	})

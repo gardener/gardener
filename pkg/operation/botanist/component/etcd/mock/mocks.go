@@ -9,9 +9,9 @@ import (
 	reflect "reflect"
 
 	v1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	etcd "github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	gomock "github.com/golang/mock/gomock"
+	rest "k8s.io/client-go/rest"
 )
 
 // MockInterface is a mock of Interface interface.
@@ -177,7 +177,7 @@ func (mr *MockInterfaceMockRecorder) SetHVPAConfig(arg0 interface{}) *gomock.Cal
 }
 
 // Snapshot mocks base method.
-func (m *MockInterface) Snapshot(arg0 context.Context, arg1 kubernetes.PodExecutor) error {
+func (m *MockInterface) Snapshot(arg0 context.Context, arg1 rest.HTTPClient) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Snapshot", arg0, arg1)
 	ret0, _ := ret[0].(error)

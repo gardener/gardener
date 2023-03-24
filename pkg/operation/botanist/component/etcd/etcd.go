@@ -17,6 +17,7 @@ package etcd
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -35,12 +36,13 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -97,7 +99,7 @@ type Interface interface {
 	component.DeployWaiter
 	component.MonitoringComponent
 	// Snapshot triggers the backup-restore sidecar to perform a full snapshot in case backup configuration is provided.
-	Snapshot(context.Context, kubernetes.PodExecutor) error
+	Snapshot(context.Context, rest.HTTPClient) error
 	// SetBackupConfig sets the backup configuration.
 	SetBackupConfig(config *BackupConfig)
 	// SetHVPAConfig sets the HVPA configuration.
@@ -354,6 +356,9 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(etcdconstants.PortEtcdClient), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
 		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(etcdconstants.PortBackupRestore), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
 	))
+	utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(clientService, metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}}))
+	metav1.SetMetaDataAnnotation(&clientService.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
+
 	gardenerutils.ReconcileTopologyAwareRoutingMetadata(clientService, e.values.TopologyAwareRoutingEnabled)
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, e.etcd, func() error {
@@ -679,28 +684,23 @@ func (e *etcd) emptyHVPA() *hvpav1alpha1.Hvpa {
 	return &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: e.etcd.Name, Namespace: e.namespace}}
 }
 
-func (e *etcd) Snapshot(ctx context.Context, podExecutor kubernetes.PodExecutor) error {
+func (e *etcd) Snapshot(ctx context.Context, httpClient rest.HTTPClient) error {
 	if e.values.BackupConfig == nil {
 		return fmt.Errorf("no backup is configured for this etcd, cannot make a snapshot")
 	}
 
-	etcdMainSelector := e.podLabelSelector()
+	url := fmt.Sprintf("https://etcd-%s-client.%s:%d/snapshot/full?final=true", e.values.Role, e.namespace, etcdconstants.PortBackupRestore)
 
-	podsList := &corev1.PodList{}
-	if err := e.client.List(ctx, podsList, client.InNamespace(e.namespace), client.MatchingLabelsSelector{Selector: etcdMainSelector}); err != nil {
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
 		return err
 	}
-	if len(podsList.Items) == 0 {
-		return fmt.Errorf("didn't find any pods for selector: %v", etcdMainSelector)
+
+	resp, err := httpClient.Do(request)
+	if err == nil && resp != nil && resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("error occurred while intiating etcd snapshot: %s", resp.Status)
 	}
 
-	_, err := podExecutor.Execute(
-		e.namespace,
-		podsList.Items[0].GetName(),
-		containerNameBackupRestore,
-		"/bin/sh",
-		fmt.Sprintf("curl -k https://etcd-%s-local:%d/snapshot/full?final=true", e.values.Role, etcdconstants.PortBackupRestore),
-	)
 	return err
 }
 

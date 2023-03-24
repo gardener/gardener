@@ -136,7 +136,7 @@ var _ = Describe("ETCD", func() {
 			})
 
 			It("should create a snapshot of ETCD and annotate kube-apiserver accordingly", func() {
-				etcdMain.EXPECT().Snapshot(ctx, gomock.Any())
+				etcdMain.EXPECT().Snapshot(ctx, nil)
 
 				Expect(SnapshotETCDAfterRewritingSecrets(ctx, runtimeClient, func(ctx context.Context) error { return etcdMain.Snapshot(ctx, nil) }, kubeAPIServerNamespace)).To(Succeed())
 
