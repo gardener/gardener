@@ -14,7 +14,7 @@
 
 package fluentoperator
 
+// TODO(Kristian-ZH): Remove this when the fluent operator releases a version where the fluentd controller can be turned off. Ref https://github.com/fluent/fluent-operator/issues/612
 import (
-	// TODO(Kristian-ZH): Remove this when the fluent operator releses a version where the fluentd controller can be turned off. Ref https://github.com/fluent/fluent-operator/issues/612
-	_ "github.com/fluent/fluent-operator/apis/fluentd/v1alpha1"
+	_ "github.com/fluent/fluent-operator/apis/fluentd/v1alpha1" //This is needed to vendor the fluentd packages
 )

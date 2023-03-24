@@ -96,6 +96,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
@@ -1056,19 +1057,28 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return flow.Errors(err)
 	}
 
-	// Patching fluent-bit service with the network policy annotations
-	fluentBitService := &corev1.Service{}
-	if err := seedClient.Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, v1beta1constants.DaemonsetNameFluentBit), fluentBitService); err != nil {
-		return err
-	}
+	if loggingEnabled {
+		// Waiting for fluent-bit service to be created
+		fluentBitService := &corev1.Service{}
+		if err := retry.UntilTimeout(ctx, 5*time.Second, time.Minute, func(ctx context.Context) (done bool, err error) {
+			if err = seedClient.Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, v1beta1constants.DaemonsetNameFluentBit), fluentBitService); err != nil {
+				return retry.MinorError(fmt.Errorf("%s service is not ready: %v", v1beta1constants.DaemonsetNameFluentBit, err))
+			}
+			return retry.Ok()
+		}); err != nil {
+			return err
+		}
 
-	fluentBitServicePatch := client.MergeFrom(fluentBitService.DeepCopy())
-	fluentBitService.ObjectMeta.Annotations[v1beta1constants.AnnotationNetworkPolicyFromPolicyPodLabelSelector] = v1beta1constants.NetworkPolicyAllScrapeTargets
-	fluentBitService.ObjectMeta.Annotations[v1beta1constants.AnnotationNetworkPolicyFromPolicyAllowedPorts] = "[{\"port\":\"2020\",\"protocol\":\"TCP\"},{\"port\":\"2021\",\"protocol\":\"TCP\"}]"
-
-	log.Info("Pathing network policy annotation of the FluentBit Service")
-	if err := seedClient.Patch(ctx, fluentBitService, fluentBitServicePatch); err != nil {
-		return err
+		// Patching fluent-bit service with the network policy annotations
+		fluentBitServicePatch := client.MergeFrom(fluentBitService.DeepCopy())
+		fluentBitService.ObjectMeta.Annotations = map[string]string{
+			v1beta1constants.AnnotationNetworkPolicyFromPolicyPodLabelSelector: v1beta1constants.NetworkPolicyAllScrapeTargets,
+			v1beta1constants.AnnotationNetworkPolicyFromPolicyAllowedPorts:     "[{\"port\":\"2020\",\"protocol\":\"TCP\"},{\"port\":\"2021\",\"protocol\":\"TCP\"}]",
+		}
+		log.Info("Pathing network policy annotation of the FluentBit Service")
+		if err := seedClient.Patch(ctx, fluentBitService, fluentBitServicePatch); err != nil {
+			return err
+		}
 	}
 
 	return secretsManager.Cleanup(ctx)
