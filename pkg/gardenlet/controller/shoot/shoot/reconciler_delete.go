@@ -534,6 +534,11 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 		_ = g.Add(flow.Task{
+			Name:         "Destroying Kubernetes API server ingress with trusted certificate",
+			Fn:           flow.TaskFn(botanist.DestroyKubeAPIServerIngress),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
+		})
+		_ = g.Add(flow.Task{
 			Name:         "Destroying Kubernetes API server service",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServerService.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted, destroyKubeAPIServerSNI),
