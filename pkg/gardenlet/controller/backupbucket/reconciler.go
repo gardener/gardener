@@ -367,7 +367,7 @@ func (r *Reconciler) syncGeneratedSecretToGarden(ctx context.Context, backupBuck
 		}
 		ownerRef := metav1.NewControllerRef(backupBucket, gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"))
 
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.GardenClient, gardenGeneratedSecret, func() error {
+		if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, r.GardenClient, gardenGeneratedSecret, func() error {
 			gardenGeneratedSecret.OwnerReferences = []metav1.OwnerReference{*ownerRef}
 			controllerutil.AddFinalizer(gardenGeneratedSecret, finalizerName)
 			gardenGeneratedSecret.Data = seedGeneratedSecret.DeepCopy().Data
