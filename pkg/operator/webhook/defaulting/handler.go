@@ -38,7 +38,6 @@ func (h *Handler) Default(_ context.Context, obj runtime.Object) error {
 	}
 
 	if kubeAPIServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; kubeAPIServer != nil {
-		kubeAPIServer.KubeAPIServerConfig = &gardencorev1beta1.KubeAPIServerConfig{}
 		gardencorev1beta1.SetDefaults_KubeAPIServerConfig(kubeAPIServer.KubeAPIServerConfig)
 	}
 
