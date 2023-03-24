@@ -15,6 +15,9 @@
 package validation
 
 import (
+	"fmt"
+	"net"
+
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -68,6 +71,8 @@ func ValidateGardenUpdate(oldGarden, newGarden *operatorv1alpha1.Garden) field.E
 func validateVirtualCluster(virtualCluster operatorv1alpha1.VirtualCluster, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(virtualCluster.DNS.Domain, fldPath.Child("dns", "domain"))...)
+
 	if err := kubernetesversion.CheckIfSupported(virtualCluster.Kubernetes.Version); err != nil {
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("kubernetes", "version"), virtualCluster.Kubernetes.Version, kubernetesversion.SupportedVersions))
 	}
@@ -81,6 +86,10 @@ func validateVirtualCluster(virtualCluster operatorv1alpha1.VirtualCluster, fldP
 		}
 
 		allErrs = append(allErrs, gardencorevalidation.ValidateKubeAPIServer(coreKubeAPIServerConfig, virtualCluster.Kubernetes.Version, true, path)...)
+	}
+
+	if _, _, err := net.ParseCIDR(virtualCluster.Networking.Services); err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services"), virtualCluster.Networking.Services, fmt.Sprintf("cannot parse service network cidr: %s", err.Error())))
 	}
 
 	return allErrs

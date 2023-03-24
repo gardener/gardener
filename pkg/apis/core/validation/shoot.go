@@ -648,7 +648,7 @@ func validateDNS(dns *core.DNS, fldPath *field.Path) field.ErrorList {
 	}
 
 	if dns.Domain != nil {
-		allErrs = append(allErrs, validateDNS1123Subdomain(*dns.Domain, fldPath.Child("domain"))...)
+		allErrs = append(allErrs, ValidateDNS1123Subdomain(*dns.Domain, fldPath.Child("domain"))...)
 	}
 
 	primaryDNSProvider := helper.FindPrimaryDNSProvider(dns.Providers)

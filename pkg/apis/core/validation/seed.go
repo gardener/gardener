@@ -200,7 +200,7 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 		if len(seedSpec.Ingress.Domain) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child("ingress", "domain"), "cannot be empty"))
 		} else {
-			allErrs = append(allErrs, validateDNS1123Subdomain(seedSpec.Ingress.Domain, fldPath.Child("ingress", "domain"))...)
+			allErrs = append(allErrs, ValidateDNS1123Subdomain(seedSpec.Ingress.Domain, fldPath.Child("ingress", "domain"))...)
 		}
 		if !availableIngressKinds.Has(seedSpec.Ingress.Controller.Kind) {
 			allErrs = append(allErrs, field.NotSupported(
