@@ -20,9 +20,13 @@ import (
 	"path/filepath"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/backupbucket"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
@@ -43,9 +47,9 @@ func (a *actuator) InjectClient(client client.Client) error {
 	return nil
 }
 
-func (a *actuator) Reconcile(_ context.Context, log logr.Logger, bb *extensionsv1alpha1.BackupBucket) error {
+func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, backupBucket *extensionsv1alpha1.BackupBucket) error {
 	var (
-		filePath             = filepath.Join(a.bbDirectory, bb.Name)
+		filePath             = filepath.Join(a.bbDirectory, backupBucket.Name)
 		fileMode os.FileMode = 0775
 	)
 	log.Info("Reconciling directory", "path", filePath)
@@ -58,6 +62,12 @@ func (a *actuator) Reconcile(_ context.Context, log logr.Logger, bb *extensionsv
 		return err
 	}
 
+	if backupBucket.Status.GeneratedSecretRef == nil {
+		if err := a.createBackupBucketGeneratedSecret(ctx, backupBucket); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -65,4 +75,29 @@ func (a *actuator) Delete(_ context.Context, log logr.Logger, bb *extensionsv1al
 	path := filepath.Join(a.bbDirectory, bb.Name)
 	log.Info("Deleting directory", "path", path)
 	return os.RemoveAll(path)
+}
+
+func (a *actuator) createBackupBucketGeneratedSecret(ctx context.Context, backupBucket *extensionsv1alpha1.BackupBucket) error {
+	var generatedSecret = &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      v1beta1constants.SecretPrefixGeneratedBackupBucket + backupBucket.Name,
+			Namespace: v1beta1constants.GardenNamespace,
+		},
+	}
+
+	if _, err := controllerutil.CreateOrUpdate(ctx, a.client, generatedSecret, func() error {
+		generatedSecret.Data = map[string][]byte{
+			"foo": []byte("bar"),
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	patch := client.MergeFrom(backupBucket.DeepCopy())
+	backupBucket.Status.GeneratedSecretRef = &corev1.SecretReference{
+		Name:      generatedSecret.Name,
+		Namespace: generatedSecret.Namespace,
+	}
+	return a.client.Status().Patch(ctx, backupBucket, patch)
 }
