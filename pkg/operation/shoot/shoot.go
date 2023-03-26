@@ -17,7 +17,6 @@ package shoot
 import (
 	"context"
 	"fmt"
-	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	"net"
 	"strconv"
 
@@ -25,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
