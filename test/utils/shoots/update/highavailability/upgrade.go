@@ -156,7 +156,7 @@ func DeployZeroDownTimeValidatorJob(ctx context.Context, c client.Client, testNa
 									"else failed=$((failed+1)); " +
 									"echo $(date +'%Y-%m-%dT%H:%M:%S.%3N%z') ERROR: kube-apiserver is unhealthy and retrying.; " +
 									"fi; " +
-									"sleep 1; " +
+									"sleep 10; " +
 									"done; " +
 									"echo $(date +'%Y-%m-%dT%H:%M:%S.%3N%z') ERROR: kube-apiserver is still unhealthy after $failed attempts. Considered as downtime.; " +
 									"exit 1; "},
