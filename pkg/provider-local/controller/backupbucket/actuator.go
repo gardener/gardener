@@ -78,7 +78,7 @@ func (a *actuator) Delete(_ context.Context, log logr.Logger, bb *extensionsv1al
 }
 
 func (a *actuator) createBackupBucketGeneratedSecret(ctx context.Context, backupBucket *extensionsv1alpha1.BackupBucket) error {
-	var generatedSecret = &corev1.Secret{
+	generatedSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v1beta1constants.SecretPrefixGeneratedBackupBucket + backupBucket.Name,
 			Namespace: v1beta1constants.GardenNamespace,
@@ -86,9 +86,7 @@ func (a *actuator) createBackupBucketGeneratedSecret(ctx context.Context, backup
 	}
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, a.client, generatedSecret, func() error {
-		generatedSecret.Data = map[string][]byte{
-			"foo": []byte("bar"),
-		}
+		generatedSecret.Data = map[string][]byte{}
 		return nil
 	}); err != nil {
 		return err

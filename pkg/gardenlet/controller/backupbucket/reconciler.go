@@ -350,28 +350,37 @@ func (r *Reconciler) reconcileBackupBucketExtensionSecret(ctx context.Context, e
 }
 
 func (r *Reconciler) syncGeneratedSecretToGarden(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket, extensionBackupBucket *extensionsv1alpha1.BackupBucket) error {
-	if extensionBackupBucket.Status.GeneratedSecretRef != nil {
-		seedGeneratedSecret, err := kubernetesutils.GetSecretByReference(ctx, r.SeedClient, extensionBackupBucket.Status.GeneratedSecretRef)
-		if err != nil {
-			return err
-		}
-
-		gardenGeneratedSecret := &corev1.Secret{
+	var (
+		gardenGeneratedSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      generateGeneratedBackupBucketSecretName(backupBucket.Name),
 				Namespace: r.GardenNamespace,
 			},
 		}
+		gardenGeneratedSecretRef *corev1.SecretReference
+	)
 
-		// Update the BackupBucket status here before going for the CreateOrGetAndStrategicMergePatch call, so that the SeedAuthorizer
-		// can add the entry for this secret in the graph. See https://github.com/gardener/gardener/issues/7705 for more details.
-		patch := client.MergeFrom(backupBucket.DeepCopy())
-		backupBucket.Status.GeneratedSecretRef = &corev1.SecretReference{
+	if extensionBackupBucket.Status.GeneratedSecretRef != nil {
+		gardenGeneratedSecretRef = &corev1.SecretReference{
 			Name:      gardenGeneratedSecret.Name,
 			Namespace: gardenGeneratedSecret.Namespace,
 		}
+	}
+
+	if extensionBackupBucket.Status.GeneratedSecretRef != nil || extensionBackupBucket.Status.ProviderStatus != nil {
+		patch := client.MergeFrom(backupBucket.DeepCopy())
+		// Update the BackupBucket status here before going for the CreateOrGetAndStrategicMergePatch call, so that the SeedAuthorizer
+		// can add the entry for this secret in the graph. See https://github.com/gardener/gardener/issues/7705 for more details.
+		backupBucket.Status.GeneratedSecretRef = gardenGeneratedSecretRef
 		backupBucket.Status.ProviderStatus = extensionBackupBucket.Status.ProviderStatus
 		if err := r.GardenClient.Status().Patch(ctx, backupBucket, patch); err != nil {
+			return err
+		}
+	}
+
+	if extensionBackupBucket.Status.GeneratedSecretRef != nil {
+		seedGeneratedSecret, err := kubernetesutils.GetSecretByReference(ctx, r.SeedClient, extensionBackupBucket.Status.GeneratedSecretRef)
+		if err != nil {
 			return err
 		}
 
