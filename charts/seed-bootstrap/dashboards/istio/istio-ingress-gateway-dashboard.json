@@ -280,7 +280,7 @@
           "hide": false,
           "interval": "",
           "intervalFactor": 2,
-          "legendFormat": "{{ pod }}",
+          "legendFormat": "{{ namespace }}",
           "refId": "A",
           "step": 2
         }
@@ -383,7 +383,7 @@
           "hide": false,
           "interval": "",
           "intervalFactor": 2,
-          "legendFormat": "{{ pod }}",
+          "legendFormat": "{{ namespace }}",
           "refId": "B",
           "step": 2
         }
