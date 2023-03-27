@@ -27,6 +27,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 )
 
@@ -53,7 +54,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 
 	// Timeout for all calls (e.g. status updates), give status updates a bit of headroom if health checks
 	// themselves run into timeouts, so that we will still update the status with that timeout error.
-	reconcileCtx, cancel := context.WithTimeout(reconcileCtx, r.Config.SyncPeriod.Duration)
+	reconcileCtx, cancel := controllerutils.GetMainReconciliationContext(reconcileCtx, r.Config.SyncPeriod.Duration)
 	defer cancel()
 
 	seed := &gardencorev1beta1.Seed{}
@@ -65,7 +66,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(reconcileCtx, r.Config.SyncPeriod.Duration/2)
+	ctx, cancel := controllerutils.GetChildReconciliationContext(reconcileCtx, r.Config.SyncPeriod.Duration)
 	defer cancel()
 
 	log.V(1).Info("Starting seed care")

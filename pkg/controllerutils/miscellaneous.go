@@ -129,8 +129,8 @@ func ReconcileOncePer24hDuration(clock clock.Clock, objectMeta metav1.ObjectMeta
 	return 0
 }
 
-// GetMainReconciliationContext returns context with timeout for main client. Timeout should be equal to timeout passed in the argument but
-// not more than the DefaultReconciliationTimeout.
+// GetMainReconciliationContext returns a context with timeout for the controller's main client. The resulting context has a timeout equal to the timeout passed in the argument but
+// not more than DefaultReconciliationTimeout.
 func GetMainReconciliationContext(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
 	t := timeout
 	if timeout > DefaultReconciliationTimeout {
@@ -140,8 +140,8 @@ func GetMainReconciliationContext(ctx context.Context, timeout time.Duration) (c
 	return context.WithTimeout(ctx, t)
 }
 
-// GetChildReconciliationContext returns context with timeout for the secondary client. Timeout should should be set to half of the main
-// timeout.
+// GetChildReconciliationContext returns context with timeout for the controller's secondary client. The resulting context has a timeout equal to half of the timeout
+// for the controller's main client.
 func GetChildReconciliationContext(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
 	t := timeout
 	if timeout > DefaultReconciliationTimeout {

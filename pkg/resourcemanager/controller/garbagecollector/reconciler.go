@@ -32,6 +32,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
@@ -52,7 +53,7 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(reconcileCtx)
 
-	ctx, cancel := context.WithTimeout(reconcileCtx, time.Minute)
+	ctx, cancel := controllerutils.GetMainReconciliationContext(reconcileCtx, time.Minute)
 	defer cancel()
 
 	log.Info("Starting garbage collection")

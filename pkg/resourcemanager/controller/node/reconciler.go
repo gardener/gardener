@@ -37,6 +37,7 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/node/helper"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -54,7 +55,7 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(reconcileCtx)
 
-	ctx, cancel := context.WithTimeout(reconcileCtx, time.Minute)
+	ctx, cancel := controllerutils.GetMainReconciliationContext(reconcileCtx, time.Minute)
 	defer cancel()
 
 	node := &corev1.Node{}

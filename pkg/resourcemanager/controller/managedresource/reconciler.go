@@ -158,7 +158,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 		forceOverwriteAnnotations = *v
 	}
 
-	reconcileCtx, cancel := context.WithTimeout(ctx, time.Minute)
+	reconcileCtx, cancel := controllerutils.GetMainReconciliationContext(ctx, time.Minute)
 	defer cancel()
 
 	// Initialize condition based on the current status.
@@ -377,7 +377,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 func (r *Reconciler) delete(ctx context.Context, log logr.Logger, mr *resourcesv1alpha1.ManagedResource) (reconcile.Result, error) {
 	log.Info("Starting to delete ManagedResource")
 
-	deleteCtx, cancel := context.WithTimeout(ctx, time.Minute)
+	deleteCtx, cancel := controllerutils.GetMainReconciliationContext(ctx, time.Minute)
 	defer cancel()
 
 	if err := r.updateConditionsForDeletion(ctx, mr); err != nil {
