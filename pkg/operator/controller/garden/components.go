@@ -150,7 +150,7 @@ func (r *Reconciler) newEtcd(
 		return nil, err
 	}
 
-	highAvailabilityEnabled := garden.Spec.VirtualCluster.ControlPlane != nil && garden.Spec.VirtualCluster.ControlPlane.HighAvailability != nil
+	highAvailabilityEnabled := helper.HighAvailabilityEnabled(garden)
 
 	replicas := pointer.Int32(1)
 	if highAvailabilityEnabled {

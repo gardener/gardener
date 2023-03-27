@@ -125,4 +125,28 @@ var _ = Describe("helper", func() {
 			Entry("certificateAuthorities non-nil", &operatorv1alpha1.Garden{Status: operatorv1alpha1.GardenStatus{Credentials: &operatorv1alpha1.Credentials{Rotation: &operatorv1alpha1.CredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{}}}}}, gardencorev1beta1.RotationCompleting),
 		)
 	})
+
+	DescribeTable("#HighAvailabilityEnabled",
+		func(controlPlane *operatorv1alpha1.ControlPlane, expected bool) {
+			garden := &operatorv1alpha1.Garden{}
+			garden.Spec.VirtualCluster.ControlPlane = controlPlane
+
+			Expect(HighAvailabilityEnabled(garden)).To(Equal(expected))
+		},
+
+		Entry("no control-plane", nil, false),
+		Entry("no high-availability", &operatorv1alpha1.ControlPlane{HighAvailability: nil}, false),
+		Entry("high-availability set", &operatorv1alpha1.ControlPlane{HighAvailability: &operatorv1alpha1.HighAvailability{}}, true),
+	)
+
+	DescribeTable("#TopologyAwareRoutingEnabled",
+		func(settings *operatorv1alpha1.Settings, expected bool) {
+			Expect(TopologyAwareRoutingEnabled(settings)).To(Equal(expected))
+		},
+
+		Entry("no settings", nil, false),
+		Entry("no topology-aware routing setting", &operatorv1alpha1.Settings{}, false),
+		Entry("topology-aware routing enabled", &operatorv1alpha1.Settings{TopologyAwareRouting: &operatorv1alpha1.SettingTopologyAwareRouting{Enabled: true}}, true),
+		Entry("topology-aware routing disabled", &operatorv1alpha1.Settings{TopologyAwareRouting: &operatorv1alpha1.SettingTopologyAwareRouting{Enabled: false}}, false),
+	)
 })
