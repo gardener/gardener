@@ -45,7 +45,7 @@ Please find an exemplary `Garden` resource [here](../../example/operator/20-gard
 ### Settings For Runtime Cluster
 
 The `Garden` resource offers a few settings that are used to control the behaviour of `gardener-operator` in the runtime cluster.
-This section provides an overview over the available settings:
+This section provides an overview over the available settings in `.spec.runtimeCluster.settings`:
 
 #### Load Balancer Services
 
@@ -72,7 +72,7 @@ Using a runtime cluster without VPA is not supported.
 
 ## Credentials Rotation
 
-The credentials rotation works in the same way like it does for `Shoot` resources, i.e. there are `gardener.cloud/operation` annotation values for starting or completing the rotation procedures.
+The credentials rotation works in the same way as it does for `Shoot` resources, i.e. there are `gardener.cloud/operation` annotation values for starting or completing the rotation procedures.
 
 For certificate authorities, `gardener-operator` generates one which is automatically rotated roughly each month (`ca-garden-runtime`) and several CAs which are **NOT** automatically rotated but only on demand.
 
@@ -86,27 +86,103 @@ Please refer to [this document](../usage/shoot_credentials_rotation.md#gardener-
 
 The easiest setup is using a local [KinD](https://kind.sigs.k8s.io/) cluster and the [Skaffold](https://skaffold.dev/) based approach to deploy and develop the `gardener-operator`.
 
+### Setting Up the KinD Cluster (runtime cluster)
+
 ```shell
-# prepare a kind cluster
 make kind-operator-up
+```
 
-# deploy gardener-operator
-# option 1: one-time build and deployment
+This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind/operator/kubeconfig` file.
+
+> It might be helpful to copy this file to `$HOME/.kube/config`, since you will need to target this KinD cluster multiple times.
+Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind/operator/kubeconfig` for all future steps via `export KUBECONFIG=example/gardener-local/kind/operator/kubeconfig`.
+ 
+All of the following steps assume that you are using this kubeconfig.
+
+
+### Setting Up Gardener Operator
+
+```shell
 make operator-up
-# option 2: full dev loop, press any key to build and deploy new changes
+```
+
+This will first build the base image (which might take a bit if you do it for the first time).
+Afterwards, the Gardener Operator resources will be deployed into the cluster.
+
+### Developing Gardener Operator (Optional)
+
+```shell
 make operator-dev
+```
 
-# now you can create Garden resources, for example
-kubectl create -f example/operator/20-garden.yaml
-# alternatively, you can run the e2e test
+This is similar to `make operator-up` but additionally starts a [skaffold dev loop](https://skaffold.dev/docs/workflows/dev/).
+After the initial deployment, skaffold starts watching source files.
+Once it has detected changes, press any key to trigger a new build and deployment of the changed components.
+
+### Creating a `Garden`
+
+In order to create a garden, just run:
+
+```shell
+kubectl apply -f example/operator/20-garden.yaml
+```
+
+You can wait for the `Garden` to be ready by running:
+
+```shell
+./hack/usage/wait-for.sh garden garden Reconciled
+```
+
+Alternatively, you can run `kubectl get garden` and wait for the `RECONCILED` status to reach `True`:
+
+```shell
+NAME     RECONCILED    AGE
+garden   Progressing   1s
+```
+
+(Optional): Instead of creating above `Garden` resource manually, you could execute the e2e tests by running:
+
+```shell
 make test-e2e-local-operator
+```
 
-# clean up
+#### Accessing the Virtual Garden Cluster
+
+⚠️ Please note that in this setup, the virtual garden cluster is not accessible by default when you download the kubeconfig and try to communicate with them.
+The reason is that your host most probably cannot resolve the DNS names of the clusters.
+Hence, if you want to access the virtual garden cluster, you have to run the following command which will extend your `/etc/hosts` file with the required information to make the DNS names resolvable:
+
+```shell
+cat <<EOF | sudo tee -a /etc/hosts
+
+# Manually created to access local Gardener virtual garden cluster.
+# TODO: Remove this again when the virtual garden cluster access is no longer required.
+127.0.0.1 api.virtual-garden.local.gardener.cloud
+EOF
+```
+
+To access the virtual garden, you can acquire a `kubeconfig` by
+
+```shell
+kubectl -n garden get secret -l name=user-kubeconfig -o jsonpath={..data.kubeconfig} | base64 -d > /tmp/virtual-garden-kubeconfig
+kubectl --kubeconfig /tmp/virtual-garden-kubeconfig get namespaces
+```
+
+### Deleting the `Garden`
+
+```shell
+./hack/usage/delete garden garden
+```
+
+### Tear Down the Gardener Operator Environment
+
+```shell
 make operator-down
 make kind-operator-down
 ```
 
-Generally, any Kubernetes cluster can be used.
+## Alternative Development Variant
+
 An alternative approach is to start the process locally and manually deploy the `CustomResourceDefinition` for the `Garden` resources into the targeted cluster (potentially remote):
 
 ```shell
@@ -146,6 +222,7 @@ The virtual garden control plane components are:
 
 - `virtual-garden-etcd-main`
 - `virtual-garden-etcd-events`
+- `virtual-garden-kube-apiserver`
 
 If the `.spec.virtualCluster.controlPlane.highAvailability={}` is set then these components will be deployed in a "highly available" mode.
 For ETCD, this means that there will be 3 replicas each.
@@ -154,8 +231,18 @@ The `gardener-resource-manager`'s [HighAvailabilityConfig webhook](resource-mana
 
 > If once set, removing `.spec.virtualCluster.controlPlane.highAvailability` again is not supported.
 
-The `virtual-garden-kube-apiserver` `Deployment` (not yet managed by the operator) is exposed via a `Service` of type `LoadBalancer` with the same name.
+The `virtual-garden-kube-apiserver` `Deployment` is exposed via a `Service` of type `LoadBalancer` with the same name.
 In the future, we might switch to exposing it via Istio, similar to how the `kube-apiservers` of shoot clusters are exposed.
+
+Like for the `Shoot` API, the version of the virtual garden cluster is controlled via `.spec.virtualCluster.kubernetes.version`.
+Similarly, specific configuration for the control plane components can be provided in the same section, e.g. via `.spec.virtualCluster.kubernetes.kubeAPIServer` for the `kube-apiserver`.
+
+For the virtual cluster, it is essential to provide a DNS domain via `.spec.virtualCluster.dns.domain`.
+**The respective DNS record is not managed by `gardener-operator` and should be manually created and pointed to the load balancer IP of the `virtual-garden-kube-apiserver` `Service`.**
+The DNS domain is used for the `server` in the kubeconfig, and for configuring the `--external-hostname` flag of the API server.
+
+It is also mandatory to provide an IPv4 CIDR for the service network of the virtual cluster via `.spec.virtualCluster.networking.services`.
+This range is used by the API server to compute the cluster IPs of `Service`s.
 
 The controller maintains the `Reconciled` condition which indicates the status of an operation.
 
@@ -175,3 +262,9 @@ This prevents users from accidental/undesired deletions.
 
 Another validation is to check that there is only one `Garden` resource at a time.
 It prevents creating a second `Garden` when there is already one in the system.
+
+#### Defaulting
+
+This webhook handler mutates the `Garden` resource on `CREATE`/`UPDATE`/`DELETE` operations.
+Simple defaulting is performed via [standard CRD defaulting](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#defaulting).
+However, more advanced defaulting is hard to express via these means and is performed by this webhook handler.
