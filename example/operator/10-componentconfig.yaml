@@ -4,6 +4,9 @@ kind: OperatorConfiguration
 runtimeClientConnection:
   qps: 100
   burst: 130
+virtualClientConnection:
+  qps: 100
+  burst: 130
 leaderElection:
   leaderElect: true
   leaseDuration: 15s

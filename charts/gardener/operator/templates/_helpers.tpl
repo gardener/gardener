@@ -35,6 +35,9 @@ config.yaml: |
   {{- if .Values.config.runtimeClientConnection.kubeconfig }}
     kubeconfig: /etc/gardener-operator/kubeconfig/kubeconfig
   {{- end }}
+  virtualClientConnection:
+    qps: {{ .Values.config.virtualClientConnection.qps }}
+    burst: {{ .Values.config.virtualClientConnection.burst }}
   leaderElection:
     leaderElect: {{ .Values.config.leaderElection.leaderElect }}
     leaseDuration: {{ .Values.config.leaderElection.leaseDuration }}

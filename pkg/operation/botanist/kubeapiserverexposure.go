@@ -50,6 +50,7 @@ func (b *Botanist) newKubeAPIServiceServiceComponent(sniPhase component.Phase) c
 			b.newDNSComponentsTargetingAPIServerAddress()
 		},
 		gardenletfeatures.FeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster),
+		"",
 	)
 }
 

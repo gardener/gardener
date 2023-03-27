@@ -81,6 +81,7 @@ func (in *OperatorConfiguration) DeepCopyInto(out *OperatorConfiguration) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	out.RuntimeClientConnection = in.RuntimeClientConnection
+	out.VirtualClientConnection = in.VirtualClientConnection
 	out.LeaderElection = in.LeaderElection
 	in.Server.DeepCopyInto(&out.Server)
 	if in.Debugging != nil {

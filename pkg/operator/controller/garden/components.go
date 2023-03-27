@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -195,9 +196,17 @@ func (r *Reconciler) newEtcd(
 }
 
 func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1alpha1.Garden) component.DeployWaiter {
-	var annotations map[string]string
+	var (
+		annotations map[string]string
+		clusterIP   string
+	)
+
 	if settings := garden.Spec.RuntimeCluster.Settings; settings != nil && settings.LoadBalancerServices != nil {
 		annotations = settings.LoadBalancerServices.Annotations
+	}
+
+	if os.Getenv("GARDENER_OPERATOR_LOCAL") == "true" {
+		clusterIP = "10.2.10.2"
 	}
 
 	return kubeapiserverexposure.NewService(
@@ -215,6 +224,7 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 		nil,
 		nil,
 		false,
+		clusterIP,
 	)
 }
 

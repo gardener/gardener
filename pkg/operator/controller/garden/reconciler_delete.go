@@ -53,9 +53,9 @@ func (r *Reconciler) delete(
 	reconcile.Result,
 	error,
 ) {
+	log.Info("Instantiating component destroyers")
 	applier := kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper())
 
-	log.Info("Instantiating component destroyers")
 	// garden system components
 	hvpaCRD := hvpa.NewCRD(applier)
 	vpaCRD := vpa.NewCRD(applier, nil)

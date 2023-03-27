@@ -146,6 +146,9 @@ func autoConvert_v1alpha1_OperatorConfiguration_To_config_OperatorConfiguration(
 	if err := componentbaseconfigv1alpha1.Convert_v1alpha1_ClientConnectionConfiguration_To_config_ClientConnectionConfiguration(&in.RuntimeClientConnection, &out.RuntimeClientConnection, s); err != nil {
 		return err
 	}
+	if err := componentbaseconfigv1alpha1.Convert_v1alpha1_ClientConnectionConfiguration_To_config_ClientConnectionConfiguration(&in.VirtualClientConnection, &out.VirtualClientConnection, s); err != nil {
+		return err
+	}
 	if err := componentbaseconfigv1alpha1.Convert_v1alpha1_LeaderElectionConfiguration_To_config_LeaderElectionConfiguration(&in.LeaderElection, &out.LeaderElection, s); err != nil {
 		return err
 	}
@@ -177,6 +180,9 @@ func Convert_v1alpha1_OperatorConfiguration_To_config_OperatorConfiguration(in *
 
 func autoConvert_config_OperatorConfiguration_To_v1alpha1_OperatorConfiguration(in *config.OperatorConfiguration, out *OperatorConfiguration, s conversion.Scope) error {
 	if err := componentbaseconfigv1alpha1.Convert_config_ClientConnectionConfiguration_To_v1alpha1_ClientConnectionConfiguration(&in.RuntimeClientConnection, &out.RuntimeClientConnection, s); err != nil {
+		return err
+	}
+	if err := componentbaseconfigv1alpha1.Convert_config_ClientConnectionConfiguration_To_v1alpha1_ClientConnectionConfiguration(&in.VirtualClientConnection, &out.VirtualClientConnection, s); err != nil {
 		return err
 	}
 	if err := componentbaseconfigv1alpha1.Convert_config_LeaderElectionConfiguration_To_v1alpha1_LeaderElectionConfiguration(&in.LeaderElection, &out.LeaderElection, s); err != nil {

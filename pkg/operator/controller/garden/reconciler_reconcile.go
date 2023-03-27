@@ -25,6 +25,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -42,6 +43,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
+	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -58,8 +60,6 @@ func (r *Reconciler) reconcile(
 	reconcile.Result,
 	error,
 ) {
-	applier := kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper())
-
 	if !controllerutil.ContainsFinalizer(garden, finalizerName) {
 		log.Info("Adding finalizer")
 		if err := controllerutils.AddFinalizers(ctx, r.RuntimeClientSet.Client(), garden, finalizerName); err != nil {
@@ -94,6 +94,8 @@ func (r *Reconciler) reconcile(
 	}
 
 	log.Info("Instantiating component deployers")
+	applier := kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper())
+
 	// garden system components
 	vpaCRD := vpa.NewCRD(applier, nil)
 	hvpaCRD := hvpa.NewCRD(applier)
@@ -134,6 +136,8 @@ func (r *Reconciler) reconcile(
 	}
 
 	var (
+		virtualClusterClient client.Client
+
 		g            = flow.NewGraph("Garden reconciliation")
 		deployVPACRD = g.Add(flow.Task{
 			Name: "Deploying custom resource definition for VPA",
@@ -195,10 +199,19 @@ func (r *Reconciler) reconcile(
 			Fn:           r.deployKubeAPIServerFunc(ctx, garden, kubeAPIServer),
 			Dependencies: flow.NewTaskIDs(waitUntilEtcdsReady),
 		})
-		_ = g.Add(flow.Task{
+		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API server rolled out",
 			Fn:           kubeAPIServer.Wait,
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
+		})
+		initializeVirtualClusterClient = g.Add(flow.Task{
+			Name: "Initializing connection to virtual garden cluster",
+			Fn: func(ctx context.Context) error {
+				var err error
+				virtualClusterClient, err = r.initializeVirtualClusterClient(secretsManager)
+				return err
+			},
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
 	)
 
@@ -350,4 +363,30 @@ func (r *Reconciler) deployKubeAPIServerFunc(ctx context.Context, garden *operat
 			false,
 		)
 	}
+}
+
+// NewClientFromSecretObject is an alias for kubernetes.NewClientFromSecretObject.
+var NewClientFromSecretObject = kubernetes.NewClientFromSecretObject
+
+// For convenience, this function reuses/misuses the static token kubeconfig which is unconditionally enabled as of now.
+// TODO: Replace this with a shoot-access token once gardener-operator deploys a gardener-resource-manager responsible
+// for the virtual cluster with an enabled token-requestor controller. The goal is to make it work similar as for
+// shoots.
+func (r *Reconciler) initializeVirtualClusterClient(secretsManager secretsmanager.Interface) (client.Client, error) {
+	userKubeconfigSecret, found := secretsManager.Get(kubeapiserver.SecretNameUserKubeconfig)
+	if !found {
+		return nil, fmt.Errorf("secret %q not found", kubeapiserver.SecretNameUserKubeconfig)
+	}
+
+	clientSet, err := NewClientFromSecretObject(
+		userKubeconfigSecret,
+		kubernetes.WithClientConnectionOptions(r.Config.VirtualClientConnection),
+		kubernetes.WithClientOptions(client.Options{Scheme: operatorclient.VirtualScheme}),
+		kubernetes.WithDisabledCachedClient(),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return clientSet.Client(), nil
 }

@@ -39,6 +39,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
@@ -147,6 +149,12 @@ var _ = Describe("Garden controller tests", func() {
 			By("Stop manager")
 			mgrCancel()
 		})
+
+		DeferCleanup(test.WithVar(&gardencontroller.NewClientFromSecretObject, func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
+			Expect(secret.Name).To(HavePrefix("user-kubeconfig"))
+			Expect(secret.Namespace).To(Equal(testNamespace.Name))
+			return kubernetesfake.NewClientSetBuilder().WithClient(testClient).Build(), nil
+		}))
 
 		garden = &operatorv1alpha1.Garden{
 			ObjectMeta: metav1.ObjectMeta{
