@@ -27,7 +27,7 @@ spec:
               sleep 3600;
             done
       - name: logger
-        image: eu.gcr.io/gardener-project/3rd/agnhost:2.40
+        image: registry.k8s.io/e2e-test-images/agnhost:2.40
         args:
           - logs-generator
           - --logtostderr
