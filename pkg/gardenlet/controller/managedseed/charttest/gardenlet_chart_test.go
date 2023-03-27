@@ -42,7 +42,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/features"
@@ -65,9 +65,10 @@ var (
 		"resources.gardener.cloud/garbage-collectable-reference": "true",
 	})
 	expectedLabelsWithSkippedWebhooks = utils.MergeStringMaps(expectedLabels, map[string]string{
-		"projected-token-mount.resources.gardener.cloud/skip":       "true",
-		"seccompprofile.resources.gardener.cloud/skip":              "true",
-		"topology-spread-constraints.resources.gardener.cloud/skip": "true",
+		"projected-token-mount.resources.gardener.cloud/skip":                         "true",
+		"seccompprofile.resources.gardener.cloud/skip":                                "true",
+		"topology-spread-constraints.resources.gardener.cloud/skip":                   "true",
+		"networking.resources.gardener.cloud/to-all-shoots-etcd-main-client-tcp-8080": "allowed",
 	})
 )
 
