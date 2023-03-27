@@ -176,8 +176,9 @@ func (r *Reconciler) newEtcd(
 				MaintenanceTimeWindow: garden.Spec.VirtualCluster.Maintenance.TimeWindow,
 				ScaleDownUpdateMode:   hvpaScaleDownUpdateMode,
 			},
-			PriorityClassName:       v1beta1constants.PriorityClassNameGardenSystem500,
-			HighAvailabilityEnabled: highAvailabilityEnabled,
+			PriorityClassName:           v1beta1constants.PriorityClassNameGardenSystem500,
+			HighAvailabilityEnabled:     highAvailabilityEnabled,
+			TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 		},
 	), nil
 }
