@@ -286,8 +286,10 @@ global:
       requests:
         cpu: 100m
         memory: 200Mi
-  # service:
-  #   clusterIP: 1.2.3.4
+    service:
+      # clusterIP: 1.2.3.4
+      topologyAwareRouting:
+        enabled: false
   # podAnnotations: # YAML formated annotations used for pod template
   # podLabels: # YAML formated labels used for pod template
     vpa: false

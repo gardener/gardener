@@ -4,12 +4,19 @@ kind: Service
 metadata:
   name: gardener-admission-controller
   namespace: garden
+  annotations:
+    {{- if .Values.global.admission.service.topologyAwareRouting.enabled }}
+    service.kubernetes.io/topology-aware-hints: "auto"
+    {{- end }}
   labels:
     app: gardener
     role: admission-controller
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
+    {{- if .Values.global.admission.service.topologyAwareRouting.enabled }}
+    endpoint-slice-hints.resources.gardener.cloud/consider: "true"
+    {{- end }}
 spec:
   type: ClusterIP
 {{- if .Values.global.admission.service }}
