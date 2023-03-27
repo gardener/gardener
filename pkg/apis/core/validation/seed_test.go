@@ -871,8 +871,9 @@ var _ = Describe("Seed Validation Tests", func() {
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.settings.topologyAwareRouting.enabled"),
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.settings.topologyAwareRouting.enabled"),
+						"Detail": Equal("topology-aware routing can only be enabled on multi-zone Seed clusters (with at least two zones in spec.provider.zones)"),
 					})),
 				))
 			})

@@ -718,6 +718,58 @@ var _ = Describe("Validation Tests", func() {
 				})
 			})
 		})
+
+		Context("runtime cluster", func() {
+			Context("topology-aware routing field", func() {
+				It("should prevent enabling topology-aware routing on single-zone cluster", func() {
+					garden.Spec.RuntimeCluster.Provider.Zones = []string{"a"}
+					garden.Spec.RuntimeCluster.Settings = &operatorv1alpha1.Settings{
+						TopologyAwareRouting: &operatorv1alpha1.SettingTopologyAwareRouting{
+							Enabled: true,
+						},
+					}
+					garden.Spec.VirtualCluster.ControlPlane = &operatorv1alpha1.ControlPlane{HighAvailability: &operatorv1alpha1.HighAvailability{}}
+
+					Expect(ValidateGarden(garden)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.runtimeCluster.settings.topologyAwareRouting.enabled"),
+							"Detail": Equal("topology-aware routing can only be enabled on multi-zone garden runtime cluster (with least two zones in spec.provider.zones)"),
+						})),
+					))
+				})
+
+				It("should prevent enabling topology-aware routing when control-plane is not HA", func() {
+					garden.Spec.RuntimeCluster.Provider.Zones = []string{"a", "b", "c"}
+					garden.Spec.RuntimeCluster.Settings = &operatorv1alpha1.Settings{
+						TopologyAwareRouting: &operatorv1alpha1.SettingTopologyAwareRouting{
+							Enabled: true,
+						},
+					}
+					garden.Spec.VirtualCluster.ControlPlane = nil
+
+					Expect(ValidateGarden(garden)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.runtimeCluster.settings.topologyAwareRouting.enabled"),
+							"Detail": Equal("topology-aware routing can only be enabled when virtual cluster's high-availability is enabled"),
+						})),
+					))
+				})
+
+				It("should allow enabling topology-aware routing on multi-zone cluster with HA control-plane", func() {
+					garden.Spec.RuntimeCluster.Provider.Zones = []string{"a", "b", "c"}
+					garden.Spec.RuntimeCluster.Settings = &operatorv1alpha1.Settings{
+						TopologyAwareRouting: &operatorv1alpha1.SettingTopologyAwareRouting{
+							Enabled: true,
+						},
+					}
+					garden.Spec.VirtualCluster.ControlPlane = &operatorv1alpha1.ControlPlane{HighAvailability: &operatorv1alpha1.HighAvailability{}}
+
+					Expect(ValidateGarden(garden)).To(BeEmpty())
+				})
+			})
+		})
 	})
 
 	Describe("#ValidateGardenUpdate", func() {
