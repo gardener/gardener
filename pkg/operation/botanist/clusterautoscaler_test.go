@@ -32,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	mockclusterautoscaler "github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler/mock"
-	mockworker "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker/mock"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -89,17 +88,15 @@ var _ = Describe("ClusterAutoscaler", func() {
 	Describe("#DeployClusterAutoscaler", func() {
 		var (
 			clusterAutoscaler *mockclusterautoscaler.MockInterface
-			worker            *mockworker.MockInterface
 
 			ctx                = context.TODO()
 			fakeErr            = fmt.Errorf("fake err")
 			namespaceUID       = types.UID("5678")
-			machineDeployments = []extensionsv1alpha1.MachineDeployment{{}}
+			machineDeployments = []extensionsv1alpha1.MachineDeployment{{Name: "default-pool"}}
 		)
 
 		BeforeEach(func() {
 			clusterAutoscaler = mockclusterautoscaler.NewMockInterface(ctrl)
-			worker = mockworker.NewMockInterface(ctrl)
 
 			botanist.SeedNamespaceObject = &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
@@ -111,19 +108,19 @@ var _ = Describe("ClusterAutoscaler", func() {
 					ControlPlane: &shootpkg.ControlPlane{
 						ClusterAutoscaler: clusterAutoscaler,
 					},
-					Extensions: &shootpkg.Extensions{
-						Worker: worker,
-					},
 				},
 			}
+			botanist.Shoot.SeedNamespace = "default"
 		})
 
 		Context("CA wanted", func() {
 			BeforeEach(func() {
 				botanist.Shoot.WantsClusterAutoscaler = true
+				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{{Name: "pool"}}},
+				}})
 
 				clusterAutoscaler.EXPECT().SetNamespaceUID(namespaceUID)
-				worker.EXPECT().MachineDeployments().Return(machineDeployments)
 				clusterAutoscaler.EXPECT().SetMachineDeployments(machineDeployments)
 			})
 
