@@ -193,8 +193,9 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 		log,
 		r.RuntimeClient,
 		&kubeapiserverexposure.ServiceValues{
-			AnnotationsFunc: func() map[string]string { return annotations },
-			SNIPhase:        component.PhaseDisabled,
+			AnnotationsFunc:             func() map[string]string { return annotations },
+			SNIPhase:                    component.PhaseDisabled,
+			TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 		},
 		func() client.ObjectKey {
 			return client.ObjectKey{Name: namePrefix + v1beta1constants.DeploymentNameKubeAPIServer, Namespace: r.GardenNamespace}
