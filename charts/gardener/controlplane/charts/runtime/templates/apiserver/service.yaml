@@ -1,15 +1,22 @@
-{{- if and .Values.global.apiserver.enabled .Values.global.apiserver.serviceEnabled }}
+{{- if and .Values.global.apiserver.enabled .Values.global.apiserver.service.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
   name: gardener-apiserver
   namespace: garden
+  annotations:
+    {{- if .Values.global.apiserver.service.topologyAwareRouting.enabled }}
+    service.kubernetes.io/topology-aware-hints: "auto"
+    {{- end }}
   labels:
     app: gardener
     role: apiserver
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
+    {{- if .Values.global.apiserver.service.topologyAwareRouting.enabled }}
+    endpoint-slice-hints.resources.gardener.cloud/consider: "true"
+    {{- end }}
 spec:
   type: ClusterIP
   {{- if .Values.global.deployment.virtualGarden.enabled }}

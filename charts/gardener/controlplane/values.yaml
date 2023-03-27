@@ -2,7 +2,10 @@ global:
   # Gardener API server configuration values
   apiserver:
     enabled: true
-    serviceEnabled: true
+    service:
+      enabled: true
+      topologyAwareRouting:
+        enabled: false
     replicaCount: 1
     securePort: 8443
     serviceAccountName: gardener-apiserver
