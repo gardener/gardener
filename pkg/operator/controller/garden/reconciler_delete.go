@@ -160,7 +160,10 @@ func (r *Reconciler) delete(
 		})
 	)
 
-	if err := g.Compile().Run(ctx, flow.Opts{Log: log}); err != nil {
+	if err := g.Compile().Run(ctx, flow.Opts{
+		Log:              log,
+		ProgressReporter: r.reportProgress(log, garden),
+	}); err != nil {
 		return reconcilerutils.ReconcileErr(flow.Errors(err))
 	}
 

@@ -183,7 +183,10 @@ func (r *Reconciler) reconcile(
 		})
 	)
 
-	if err := g.Compile().Run(ctx, flow.Opts{Log: log}); err != nil {
+	if err := g.Compile().Run(ctx, flow.Opts{
+		Log:              log,
+		ProgressReporter: r.reportProgress(log, garden),
+	}); err != nil {
 		return reconcile.Result{}, flow.Errors(err)
 	}
 

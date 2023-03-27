@@ -17,6 +17,7 @@ package garden
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -38,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -136,6 +138,17 @@ func (r *Reconciler) patchConditionToFalse(ctx context.Context, log logr.Logger,
 		log.Error(patchErr, "Could not patch status", "condition", condition)
 	}
 	return err
+}
+
+func (r *Reconciler) reportProgress(log logr.Logger, garden *operatorv1alpha1.Garden) flow.ProgressReporter {
+	return flow.NewImmediateProgressReporter(func(ctx context.Context, stats *flow.Stats) {
+		patch := client.MergeFrom(garden.DeepCopy())
+		conditionReconciled := v1beta1helper.GetOrInitConditionWithClock(r.Clock, garden.Status.Conditions, operatorv1alpha1.GardenReconciled)
+		garden.Status.Conditions = v1beta1helper.MergeConditions(garden.Status.Conditions, v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionReconciled, gardencorev1beta1.ConditionProgressing, conditionReasonPrefix(garden)+"Progressing", fmt.Sprintf("Garden operation is currently being processed (%s (%d%%)).", strings.Join(stats.Running.StringList(), ", "), stats.ProgressPercent())))
+		if err := r.RuntimeClient.Status().Patch(ctx, garden, patch); err != nil {
+			log.Error(err, "Could not report reconciliation progress")
+		}
+	})
 }
 
 func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *operatorv1alpha1.Garden, conditionReconciled gardencorev1beta1.Condition) error {
