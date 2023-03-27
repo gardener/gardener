@@ -2,7 +2,7 @@
 
 ## Motivation
 
-The enablement of [highly available shoot control-planes](shoot_high_availability.md) requires multi-zone seed clusters. The topology-aware routing is introduced to reduce costs and to improve network performance by avoiding the cross availability zone traffic, if possible. The cross availability zone traffic is charged by the cloud providers and it comes with higher latency compared to the traffic within the same zone. The topology-aware routing feature enables topology-aware routing for `Service`s deployed in the seed clusters. For the clients consuming these topology-aware services, `kube-proxy` favors the endpoints which are located in the same zone where the traffic originated from. In this way, the cross availability zone traffic is avoided.
+The enablement of [highly available shoot control-planes](shoot_high_availability.md) requires multi-zone seed clusters. A garden runtime cluster can also be a multi-zone cluster. The topology-aware routing is introduced to reduce costs and to improve network performance by avoiding the cross availability zone traffic, if possible. The cross availability zone traffic is charged by the cloud providers and it comes with higher latency compared to the traffic within the same zone. The topology-aware routing feature enables topology-aware routing for `Service`s deployed in a seed or garden runtime cluster. For the clients consuming these topology-aware services, `kube-proxy` favors the endpoints which are located in the same zone where the traffic originated from. In this way, the cross availability zone traffic is avoided.
 
 ## How it works
 
@@ -75,9 +75,29 @@ The `gardener-resource-manager` Service that is part of the Shoot control plane 
 
 The `vpa-webhook` Service that is part of the Shoot control plane is topology-aware. It is consumed by the kube-apiserver for the webhook communication.
 
-## How to enable the topology-aware routing?
+## Topology-aware Services in the garden runtime cluster
 
-The topology-aware routing functionality can be enabled in the Seed specification:
+##### virtual-garden-etcd-main-client and virtual-garden-etcd-events-client
+
+The `virtual-garden-etcd-main-client` and `virtual-garden-etcd-events-client` Services are topology-aware. `virtual-garden-etcd-main-client` is consumed by `virtual-garden-kube-apiserver` and `gardener-apiserver`, `virtual-garden-etcd-events-client` is consumed by `virtual-garden-kube-apiserver`.
+
+##### virtual-garden-kube-apiserver
+
+The `virtual-garden-kube-apiserver` Service is topology-aware. It is consumed by `virtual-garden-kube-controller-manager`, `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`, extension admission components, `gardener-dashboard` and other components.
+
+> Note: Unlike the other Services, the `virtual-garden-kube-apiserver` Service is of type LoadBalancer. In-cluster components consuming the `virtual-garden-kube-apiserver` Service by its Service name will have benefit from the topology-aware routing. However, the TopologyAwareHints feature cannot help with external traffic routed to load balancer's address - such traffic won't be routed in a topology-aware manner and will be routed according to the cloud-provider specific implementation.
+
+##### gardener-apiserver
+
+The `gardener-apiserver` Service is topology-aware. It is consumed by `virtual-garden-kube-apiserver`. The aggregation layer in `virtual-garden-kube-apiserver` proxies requests sent for the Gardener API types to the `gardener-apiserver`.
+
+##### gardener-admission-controller
+
+The `gardener-admission-controller` Service is topology-aware. It is consumed by `virtual-garden-kube-apiserver` and `virtual-garden-kube-apiserver` for the webhook communication.
+
+## How to enable the topology-aware routing for a Seed cluster?
+
+For a Seed cluster the topology-aware routing functionality can be enabled in the Seed specification:
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
@@ -92,4 +112,23 @@ spec:
 The topology-aware routing setting can be only enabled for a Seed cluster with more than one zone.
 gardenlet enables topology-aware Services only for Shoot control planes with failure tolerance type `zone` (`.spec.controlPlane.highAvailability.failureTolerance.type=zone`). Control plane Pods of non-HA Shoots and HA Shoots with failure tolerance type `node` are pinned to single zone. For more details, see [High Availability Of Deployed Components](../development/high-availability.md).
 
-⚠️ For K8s < 1.24 clusters, the topology-aware routing setting requires the Kubernetes `TopologyAwareHints` feature gate to be enabled for kube-apiserver, kube-controller-manager and kube-proxy. This is required because the `TopologyAwareHints` feature gate is disabled by default in K8s < 1.24. When `TopologyAwareHints` is disabled, the kube-apiserver does not allow anything to be persisted in the `.endpoints[].hints` field in the EndpointSlice resource. Also, the kube-controller-manager removes the hints, hence kube-proxy is not using topology-aware routing.
+⚠️ For K8s < 1.24 Seed clusters, the topology-aware routing setting requires the Kubernetes `TopologyAwareHints` feature gate to be enabled for kube-apiserver, kube-controller-manager and kube-proxy. This is required because the `TopologyAwareHints` feature gate is disabled by default in K8s < 1.24. When `TopologyAwareHints` is disabled, the kube-apiserver does not allow anything to be persisted in the `.endpoints[].hints` field in the EndpointSlice resource. Also, the kube-controller-manager removes the hints, hence kube-proxy is not using topology-aware routing.
+
+## How to enable the topology-aware routing for a garden runtime cluster?
+
+For a garden runtime cluster the topology-aware routing functionality can be enabled in the Garden resource specification:
+
+```yaml
+apiVersion: operator.gardener.cloud/v1alpha1
+kind: Garden
+# ...
+spec:
+  runtimeCluster:
+    settings:
+      topologyAwareRouting:
+        enabled: true
+```
+
+The topology-aware routing setting can be only enabled for a garden runtime cluster with more than one zone.
+
+⚠️ For K8s < 1.24 garden runtime clusters, the topology-aware routing setting requires the Kubernetes `TopologyAwareHints` feature gate to be enabled for kube-apiserver, kube-controller-manager and kube-proxy. For more details, see the above section.
