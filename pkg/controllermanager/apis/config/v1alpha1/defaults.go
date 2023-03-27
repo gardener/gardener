@@ -138,6 +138,11 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.ShootMaintenance.ConcurrentSyncs = &v
 	}
 
+	if obj.Controllers.ShootQuota.ConcurrentSyncs == nil {
+		v := DefaultControllerConcurrentSyncs
+		obj.Controllers.ShootQuota.ConcurrentSyncs = &v
+	}
+
 	if obj.Controllers.ShootReference == nil {
 		obj.Controllers.ShootReference = &ShootReferenceControllerConfiguration{}
 	}
@@ -264,15 +269,6 @@ func SetDefaults_ManagedSeedSetControllerConfiguration(obj *ManagedSeedSetContro
 		v := 3
 		obj.MaxShootRetries = &v
 	}
-}
-
-// SetDefaults_ShootQuotaControllerConfiguration sets defaults for the given ShootQuotaControllerConfiguration.
-func SetDefaults_ShootQuotaControllerConfiguration(obj *ShootQuotaControllerConfiguration) {
-	if obj.ConcurrentSyncs == nil {
-		v := DefaultControllerConcurrentSyncs
-		obj.ConcurrentSyncs = &v
-	}
-	obj.SyncPeriod = metav1.Duration{Duration: 30 * time.Second}
 }
 
 // SetDefaults_ShootHibernationControllerConfiguration sets defaults for the given ShootHibernationControllerConfiguration.
