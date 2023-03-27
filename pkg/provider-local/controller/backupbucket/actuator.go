@@ -86,7 +86,6 @@ func (a *actuator) createBackupBucketGeneratedSecret(ctx context.Context, backup
 	}
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, a.client, generatedSecret, func() error {
-		generatedSecret.Data = map[string][]byte{}
 		return nil
 	}); err != nil {
 		return err
