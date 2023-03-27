@@ -775,7 +775,7 @@ var _ = Describe("Generate", func() {
 
 			BeforeEach(func() {
 				config = &secretsutils.RSASecretConfig{
-					Name: "foo",
+					Name: "kube-apiserver-etcd-encryption-key",
 					Bits: 4096,
 				}
 			})
@@ -825,7 +825,7 @@ var _ = Describe("Generate", func() {
 
 				By("Generate secret")
 				secret, err := m.Generate(ctx, config)
-				Expect(err).To(MatchError(ContainSubstring(`found more than one existing secret with "secrets-manager-use-data-for-name" label for config "foo"`)))
+				Expect(err).To(MatchError(ContainSubstring(`found more than one existing secret with "secrets-manager-use-data-for-name" label for config "kube-apiserver-etcd-encryption-key"`)))
 				Expect(secret).To(BeNil())
 			})
 		})
