@@ -58,15 +58,15 @@ metric_relabel_configs:
 metrics_path: /stats/prometheus
 kubernetes_sd_configs:
 - role: endpoints
-  namespaces:
-    names: [ istio-ingress ]
+  selectors:
+  - role: "endpoints"
+    field: "metadata.name=istio-ingressgateway"
 relabel_configs:
 - source_labels:
   - __meta_kubernetes_service_name
   - __meta_kubernetes_endpoint_port_name
-  - __meta_kubernetes_namespace
   action: keep
-  regex: istio-ingressgateway;tls-tunnel;istio-ingress
+  regex: istio-ingressgateway;tls-tunnel
 - source_labels: [__meta_kubernetes_pod_ip]
   action: replace
   target_label: __address__
