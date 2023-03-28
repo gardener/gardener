@@ -850,6 +850,9 @@ type AdmissionPlugin struct {
 	// Disabled specifies whether this plugin should be disabled.
 	// +optional
 	Disabled *bool `json:"disabled,omitempty" protobuf:"varint,3,opt,name=disabled"`
+	// KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this admission plugin.
+	// +optional
+	KubeconfigSecretName *string `json:"kubeconfigSecretName,omitempty" protobuf:"bytes,4,opt,name=kubeconfigSecretName"`
 }
 
 // WatchCacheSizes contains configuration of the API server's watch cache sizes.

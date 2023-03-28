@@ -61,6 +61,10 @@ message AdmissionPlugin {
   // Disabled specifies whether this plugin should be disabled.
   // +optional
   optional bool disabled = 3;
+
+  // KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this admission plugin.
+  // +optional
+  optional string kubeconfigSecretName = 4;
 }
 
 // Alerting contains information about how alerting will be done (i.e. who will receive alerts and how).

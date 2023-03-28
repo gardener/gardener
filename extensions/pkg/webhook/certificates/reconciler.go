@@ -50,8 +50,8 @@ type reconciler struct {
 	Clock clock.Clock
 	// SyncPeriod is the frequency with which to reload the server cert. Defaults to 5m.
 	SyncPeriod time.Duration
-	// SourceWebhookConfig is the webhook configuration to reconcile in the Source cluster.
-	SourceWebhookConfig client.Object
+	// SourceWebhookConfigs are the webhook configurations to reconcile in the Source cluster.
+	SourceWebhookConfigs []client.Object
 	// ShootWebhookConfig is the webhook configuration to reconcile in all Shoot clusters.
 	ShootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration
 	// AtomicShootWebhookConfig is an atomic value in which this reconciler will store the updated ShootWebhookConfig.
@@ -166,11 +166,14 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 	}
 	log.Info("Generated webhook server cert", "serverSecretName", serverSecret.Name)
 
-	if r.SourceWebhookConfig != nil {
-		if err := r.reconcileSourceWebhookConfig(ctx, caBundleSecret); err != nil {
-			return reconcile.Result{}, fmt.Errorf("error reconciling source webhook config: %w", err)
+	for _, sourceWebhookConfig := range r.SourceWebhookConfigs {
+		if sourceWebhookConfig == nil {
+			continue
 		}
-		log.Info("Updated source webhook config with new CA bundle", "webhookConfig", r.SourceWebhookConfig)
+		if err := r.reconcileSourceWebhookConfig(ctx, sourceWebhookConfig, caBundleSecret); err != nil {
+			return reconcile.Result{}, fmt.Errorf("error reconciling source webhook config %s: %w", client.ObjectKeyFromObject(sourceWebhookConfig), err)
+		}
+		log.Info("Updated source webhook config with new CA bundle", "webhookConfig", sourceWebhookConfig)
 	}
 
 	if r.ShootWebhookConfig != nil {
@@ -195,9 +198,9 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 	return reconcile.Result{RequeueAfter: r.SyncPeriod}, nil
 }
 
-func (r *reconciler) reconcileSourceWebhookConfig(ctx context.Context, caBundleSecret *corev1.Secret) error {
+func (r *reconciler) reconcileSourceWebhookConfig(ctx context.Context, sourceWebhookConfig client.Object, caBundleSecret *corev1.Secret) error {
 	// copy object so that we don't lose its name on API/client errors
-	config := r.SourceWebhookConfig.DeepCopyObject().(client.Object)
+	config := sourceWebhookConfig.DeepCopyObject().(client.Object)
 	if err := r.client.Get(ctx, client.ObjectKeyFromObject(config), config); err != nil {
 		return err
 	}

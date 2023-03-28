@@ -83,6 +83,7 @@ build:
         - pkg/operator/controller/garden
         - pkg/operator/features
         - pkg/operator/webhook
+        - pkg/operator/webhook/defaulting
         - pkg/operator/webhook/validation
         - pkg/resourcemanager/apis/config
         - pkg/resourcemanager/apis/config/v1alpha1
@@ -117,6 +118,7 @@ build:
         - pkg/utils/validation/admissionplugins
         - pkg/utils/validation/cidr
         - pkg/utils/validation/features
+        - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
         - vendor
         - VERSION
@@ -216,6 +218,7 @@ build:
         - pkg/utils/validation/admissionplugins
         - pkg/utils/validation/cidr
         - pkg/utils/validation/features
+        - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
         - vendor
         - VERSION

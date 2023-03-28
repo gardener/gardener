@@ -114,11 +114,26 @@ type VirtualCluster struct {
 	// ControlPlane holds information about the general settings for the control plane of the virtual cluster.
 	// +optional
 	ControlPlane *ControlPlane `json:"controlPlane,omitempty"`
+	// DNS holds information about DNS settings.
+	DNS DNS `json:"dns"`
 	// ETCD contains configuration for the etcds of the virtual garden cluster.
 	// +optional
 	ETCD *ETCD `json:"etcd,omitempty"`
+	// Kubernetes contains the version and configuration options for the Kubernetes components of the virtual garden
+	// cluster.
+	Kubernetes Kubernetes `json:"kubernetes"`
 	// Maintenance contains information about the time window for maintenance operations.
 	Maintenance Maintenance `json:"maintenance"`
+	// Networking contains information about cluster networking such as CIDRs, etc.
+	Networking Networking `json:"networking"`
+}
+
+// DNS holds information about DNS settings.
+type DNS struct {
+	// Domain is the external domain of the virtual garden cluster. This field is immutable.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	Domain string `json:"domain"`
 }
 
 // ETCD contains configuration for the etcds of the virtual garden cluster.
@@ -187,6 +202,142 @@ type ControlPlane struct {
 
 // HighAvailability specifies the configuration settings for high availability for a resource.
 type HighAvailability struct{}
+
+// Kubernetes contains the version and configuration options for the Kubernetes components of the virtual garden
+// cluster.
+type Kubernetes struct {
+	// KubeAPIServer contains configuration settings for the kube-apiserver.
+	// +optional
+	KubeAPIServer *KubeAPIServerConfig `json:"kubeAPIServer,omitempty"`
+	// Version is the semantic Kubernetes version to use for the virtual garden cluster.
+	// +kubebuilder:validation:MinLength=1
+	Version string `json:"version"`
+}
+
+// KubeAPIServerConfig contains configuration settings for the kube-apiserver.
+type KubeAPIServerConfig struct {
+	// KubeAPIServerConfig contains all configuration values not specific to the virtual garden cluster.
+	// +optional
+	*gardencorev1beta1.KubeAPIServerConfig `json:",inline"`
+	// AuditWebhook contains settings related to an audit webhook configuration.
+	// +optional
+	AuditWebhook *AuditWebhook `json:"auditWebhook,omitempty"`
+	// Authentication contains settings related to authentication.
+	// +optional
+	Authentication *Authentication `json:"authentication,omitempty"`
+	// Authorization contains settings related to authorization.
+	// +optional
+	Authorization *Authorization `json:"authorization,omitempty"`
+	// ResourcesToStoreInETCDEvents contains a list of resources which should be stored in etcd-events instead of
+	// etcd-main. The 'events' resource is always stored in etcd-events. Note that adding or removing resources from
+	// this list will not migrate them automatically from the etcd-main to etcd-events or vice versa.
+	// +optional
+	ResourcesToStoreInETCDEvents []GroupResource `json:"resourcesToStoreInETCDEvents,omitempty"`
+	// SNI contains configuration options for the TLS SNI settings.
+	// +optional
+	SNI *SNI `json:"sni,omitempty"`
+}
+
+// AuditWebhook contains settings related to an audit webhook configuration.
+type AuditWebhook struct {
+	// BatchMaxSize is the maximum size of a batch.
+	// +kubebuilder:default=30
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	BatchMaxSize *int32 `json:"batchMaxSize,omitempty"`
+	// KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this webhook.
+	// +kubebuilder:validation:MinLength=1
+	KubeconfigSecretName string `json:"kubeconfigSecretName"`
+	// Version is the API version to send and expect from the webhook.
+	// +kubebuilder:default=audit.k8s.io/v1
+	// +kubebuilder:validation:Enum=audit.k8s.io/v1
+	// +optional
+	Version *string `json:"version,omitempty"`
+}
+
+// Authentication contains settings related to authentication.
+type Authentication struct {
+	// Webhook contains settings related to an authentication webhook configuration.
+	// +optional
+	Webhook *AuthenticationWebhook `json:"webhook,omitempty"`
+}
+
+// AuthenticationWebhook contains settings related to an authentication webhook configuration.
+type AuthenticationWebhook struct {
+	// CacheTTL is the duration to cache responses from the webhook authenticator.
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$"
+	// +optional
+	CacheTTL *metav1.Duration `json:"cacheTTL,omitempty"`
+	// KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this webhook.
+	// +kubebuilder:validation:MinLength=1
+	KubeconfigSecretName string `json:"kubeconfigSecretName"`
+	// Version is the API version to send and expect from the webhook.
+	// +kubebuilder:default=v1beta1
+	// +kubebuilder:validation:Enum=v1alpha1;v1beta1;v1
+	// +optional
+	Version *string `json:"version,omitempty"`
+}
+
+// Authorization contains settings related to authorization.
+type Authorization struct {
+	// Webhook contains settings related to an authorization webhook configuration.
+	// +optional
+	Webhook *AuthorizationWebhook `json:"webhook,omitempty"`
+}
+
+// AuthorizationWebhook contains settings related to an authorization webhook configuration.
+type AuthorizationWebhook struct {
+	// CacheAuthorizedTTL is the duration to cache 'authorized' responses from the webhook authorizer.
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$"
+	// +optional
+	CacheAuthorizedTTL *metav1.Duration `json:"cacheAuthorizedTTL,omitempty"`
+	// CacheUnauthorizedTTL is the duration to cache 'unauthorized' responses from the webhook authorizer.
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$"
+	// +optional
+	CacheUnauthorizedTTL *metav1.Duration `json:"cacheUnauthorizedTTL,omitempty"`
+	// KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this webhook.
+	// +kubebuilder:validation:MinLength=1
+	KubeconfigSecretName string `json:"kubeconfigSecretName"`
+	// Version is the API version to send and expect from the webhook.
+	// +kubebuilder:default=v1beta1
+	// +kubebuilder:validation:Enum=v1beta1;v1
+	// +optional
+	Version *string `json:"version,omitempty"`
+}
+
+// GroupResource contains a list of resources which should be stored in etcd-events instead of etcd-main.
+type GroupResource struct {
+	// Group is the API group name.
+	// +kubebuilder:validation:MinLength=1
+	Group string `json:"group"`
+	// Resource is the resource name.
+	// +kubebuilder:validation:MinLength=1
+	Resource string `json:"resource"`
+}
+
+// SNI contains configuration options for the TLS SNI settings.
+type SNI struct {
+	// SecretName is the name of a secret containing the TLS certificate and private key.
+	// +kubebuilder:validation:MinLength=1
+	SecretName string `json:"secretName"`
+	// DomainPatterns is a list of fully qualified domain names, possibly with prefixed wildcard segments. The domain
+	// patterns also allow IP addresses, but IPs should only be used if the apiserver has visibility to the IP address
+	// requested by a client. If no domain patterns are provided, the names of the certificate are extracted.
+	// Non-wildcard matches trump over wildcard matches, explicit domain patterns trump over extracted names.
+	// +optional
+	DomainPatterns []string `json:"domainPatterns,omitempty"`
+}
+
+// Networking defines networking parameters for the virtual garden cluster.
+type Networking struct {
+	// Services is the CIDR of the service network. This field is immutable.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	Services string `json:"services"`
+}
 
 // GardenStatus is the status of a garden environment.
 type GardenStatus struct {

@@ -35,10 +35,23 @@ var _ = Describe("Validation Tests", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "garden",
 				},
+				Spec: operatorv1alpha1.GardenSpec{
+					VirtualCluster: operatorv1alpha1.VirtualCluster{
+						DNS: operatorv1alpha1.DNS{
+							Domain: "foo.bar.com",
+						},
+						Kubernetes: operatorv1alpha1.Kubernetes{
+							Version: "1.26.3",
+						},
+						Networking: operatorv1alpha1.Networking{
+							Services: "10.1.0.0/16",
+						},
+					},
+				},
 			}
 		})
 
-		Context("operation validation", func() {
+		Context("operation annotation", func() {
 			It("should do nothing if the operation annotation is not set", func() {
 				Expect(ValidateGarden(garden)).To(BeEmpty())
 			})
@@ -681,9 +694,33 @@ var _ = Describe("Validation Tests", func() {
 				}),
 			)
 		})
+
+		Context("virtual cluster", func() {
+			Context("DNS", func() {
+				It("should complain about an invalid service CIDR", func() {
+					garden.Spec.VirtualCluster.DNS.Domain = ",,,"
+
+					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.virtualCluster.dns.domain"),
+					}))))
+				})
+			})
+
+			Context("networking", func() {
+				It("should complain about an invalid service CIDR", func() {
+					garden.Spec.VirtualCluster.Networking.Services = "not-parseable-cidr"
+
+					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.virtualCluster.networking.services"),
+					}))))
+				})
+			})
+		})
 	})
 
-	Describe("#ValidateGarden", func() {
+	Describe("#ValidateGardenUpdate", func() {
 		var oldGarden, newGarden *operatorv1alpha1.Garden
 
 		BeforeEach(func() {
@@ -695,14 +732,16 @@ var _ = Describe("Validation Tests", func() {
 			newGarden = oldGarden.DeepCopy()
 		})
 
-		Context("high availability setting", func() {
-			It("should not be possible to remove the high availability setting once set", func() {
-				oldGarden.Spec.VirtualCluster.ControlPlane = &operatorv1alpha1.ControlPlane{HighAvailability: &operatorv1alpha1.HighAvailability{}}
+		Context("virtual cluster", func() {
+			Context("control plane", func() {
+				It("should not be possible to remove the high availability setting once set", func() {
+					oldGarden.Spec.VirtualCluster.ControlPlane = &operatorv1alpha1.ControlPlane{HighAvailability: &operatorv1alpha1.HighAvailability{}}
 
-				Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.virtualCluster.controlPlane.highAvailability"),
-				}))))
+					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.virtualCluster.controlPlane.highAvailability"),
+					}))))
+				})
 			})
 		})
 	})

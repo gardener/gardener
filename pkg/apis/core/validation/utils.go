@@ -76,8 +76,8 @@ func validateNameConsecutiveHyphens(name string, fldPath *field.Path) field.Erro
 	return allErrs
 }
 
-// validateDNS1123Subdomain validates that a name is a proper DNS subdomain.
-func validateDNS1123Subdomain(value string, fldPath *field.Path) field.ErrorList {
+// ValidateDNS1123Subdomain validates that a name is a proper DNS subdomain.
+func ValidateDNS1123Subdomain(value string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	for _, msg := range validation.IsDNS1123Subdomain(value) {

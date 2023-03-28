@@ -29,8 +29,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-// Handler checks, if the secrets contains a kubeconfig and denies kubeconfigs with invalid fields (e.g. tokenFile or
-// exec).
+// Handler performs validation.
 type Handler struct {
 	Logger        logr.Logger
 	RuntimeClient client.Client

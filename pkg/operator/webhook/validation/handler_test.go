@@ -44,7 +44,21 @@ var _ = Describe("Handler", func() {
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
 		handler = &Handler{Logger: log, RuntimeClient: fakeClient}
-		garden = &operatorv1alpha1.Garden{}
+		garden = &operatorv1alpha1.Garden{
+			Spec: operatorv1alpha1.GardenSpec{
+				VirtualCluster: operatorv1alpha1.VirtualCluster{
+					DNS: operatorv1alpha1.DNS{
+						Domain: "virtual-garden.local.gardener.cloud",
+					},
+					Kubernetes: operatorv1alpha1.Kubernetes{
+						Version: "1.26.3",
+					},
+					Networking: operatorv1alpha1.Networking{
+						Services: "100.64.0.0/13",
+					},
+				},
+			},
+		}
 	})
 
 	Describe("#ValidateCreate", func() {

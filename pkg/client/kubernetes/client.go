@@ -37,7 +37,6 @@ import (
 	settingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
 	kubernetescache "github.com/gardener/gardener/pkg/client/kubernetes/cache"
 	"github.com/gardener/gardener/pkg/utils"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -230,30 +229,6 @@ func ValidateConfigWithAllowList(config clientcmdapi.Config, allowedFields []str
 		}
 	}
 	return nil
-}
-
-var supportedKubernetesVersions = []string{
-	"1.20",
-	"1.21",
-	"1.22",
-	"1.23",
-	"1.24",
-	"1.25",
-	"1.26",
-}
-
-func checkIfSupportedKubernetesVersion(gitVersion string) error {
-	for _, supportedVersion := range supportedKubernetesVersions {
-		ok, err := versionutils.CompareVersions(gitVersion, "~", supportedVersion)
-		if err != nil {
-			return err
-		}
-
-		if ok {
-			return nil
-		}
-	}
-	return fmt.Errorf("unsupported kubernetes version %q", gitVersion)
 }
 
 // NewWithConfig returns a new Kubernetes base client.

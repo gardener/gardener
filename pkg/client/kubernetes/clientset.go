@@ -26,6 +26,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/utils/validation/kubernetesversion"
 )
 
 // clientSet is a struct containing the configuration for the respective Kubernetes
@@ -118,7 +119,7 @@ func (c *clientSet) DiscoverVersion() (*version.Info, error) {
 		return nil, err
 	}
 
-	if err := checkIfSupportedKubernetesVersion(serverVersion.GitVersion); err != nil {
+	if err := kubernetesversion.CheckIfSupported(serverVersion.GitVersion); err != nil {
 		return nil, err
 	}
 

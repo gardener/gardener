@@ -53,6 +53,7 @@ There is a CI/CD job that runs periodically and releases a new `hyperkube` image
 
 - Allow instantiation of a Kubernetes client for the new minor version and update the `README.md`:
   - See [this](https://github.com/gardener/gardener/pull/5255/commits/63bdae022f1cb1c9cbd1cd49b557545dca2ec32a) example commit.
+  - The list of supported versions is meanwhile maintained [here](../../pkg/utils/validation/kubernetesversion/version.go) in the `SupportedVersions` variable.
 - Maintain the Kubernetes feature gates used for validation of `Shoot` resources:
   - The feature gates are maintained in [this](https://github.com/gardener/gardener/blob/master/pkg/utils/validation/features/featuregates.go) file.
   - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-feature-gates.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-feature-gates.sh v1.22 v1.23`).

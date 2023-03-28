@@ -28,6 +28,8 @@ spec:
   virtualCluster:
   # controlPlane:
   #   highAvailability: {}
+    dns:
+      domain: virtual-garden.local.gardener.cloud
     etcd:
       main:
         backup:
@@ -43,7 +45,91 @@ spec:
         storage:
           capacity: 10Gi
         # className: default
+    kubernetes:
+      version: 1.26.1
+    # kubeAPIServer:
+    #   eventTTL: 1h
+    #   featureGates:
+    #     SomeKubernetesFeature: true
+    #   runtimeConfig:
+    #     scheduling.k8s.io/v1alpha1: true
+    #   oidcConfig:
+    #     caBundle: |
+    #       -----BEGIN CERTIFICATE-----
+    #       Li4u
+    #       -----END CERTIFICATE-----
+    #     clientID: client-id
+    #     groupsClaim: groups-claim
+    #     groupsPrefix: groups-prefix
+    #     issuerURL: https://identity.example.com
+    #     usernameClaim: username-claim
+    #     usernamePrefix: username-prefix
+    #     signingAlgs: # See https://datatracker.ietf.org/doc/html/rfc7518#section-3.1 for the list of valid algorithms
+    #     - RS256
+    #     requiredClaims:
+    #       key: value
+    #   admissionPlugins:
+    #   - name: PodNodeSelector
+    #     disabled: false
+    #     config:
+    #       podNodeSelectorPluginConfig:
+    #         clusterDefaultNodeSelector: <node-selectors-labels>
+    #         namespace1: <node-selectors-labels>
+    #         namespace2: <node-selectors-labels>
+    #     kubeconfigSecretName: name-of-secret-containing-kubeconfig-for-admission-plugin
+    #   authentication:
+    #     webhook:
+    #       kubeconfigSecretName: name-of-secret-containing-kubeconfig-for-authentication-webhook
+    #       cacheTTL: 30m
+    #       version: v1beta1
+    #   authorization:
+    #     webhook:
+    #       kubeconfigSecretName: name-of-secret-containing-kubeconfig-for-authorization-webhook
+    #       cacheAuthorizedTTL: 31m
+    #       cacheUnauthorizedTTL: 32m
+    #       version: v1beta1
+    #   auditConfig:
+    #     auditPolicy:
+    #       configMapRef:
+    #         name: auditpolicy
+    #   auditWebhook:
+    #     kubeconfigSecretName: name-of-secret-containing-kubeconfig-for-audit-webhook
+    #     batchMaxSize: 1337
+    #     version: audit.k8s.io/v1
+    #   watchCacheSizes: # See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+    #     default: 100
+    #     resources:
+    #     - resource: secrets
+    #       size: 500
+    #     - apiGroup: apps
+    #       resource: deployments
+    #       size: 500
+    #   requests:
+    #     maxNonMutatingInflight: 400
+    #     maxMutatingInflight: 200
+    #   enableAnonymousAuthentication: false # See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+    #   serviceAccountConfig:
+    #     issuer: foo
+    #     acceptedIssuers:
+    #     - foo1
+    #     - foo2
+    #     extendTokenExpiration: true
+    #     maxTokenExpiration: 45d
+    #   logging:
+    #     verbosity: 2
+    #     httpAccessLogs: 3
+    #   defaultNotReadyTolerationSeconds: 300
+    #   defaultUnreachableTolerationSeconds: 300
+    #   sni:
+    #     secretName: name-of-secret-containing-tls-cert-and-key
+    #     domainPatterns:
+    #     - foo.example.com
+    #   resourcesToStoreInETCDEvents:
+    #   - group: networking.k8s.io
+    #     resources: networkpolicies
     maintenance:
       timeWindow:
         begin: 220000+0100
         end: 230000+0100
+    networking:
+      services: 100.64.0.0/13
