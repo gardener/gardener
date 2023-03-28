@@ -183,7 +183,7 @@ func (r *Reconciler) reconcileBastion(
 			extensionBastion.Spec = extensionBastionSpec
 			return nil
 		}); err != nil {
-			if patchErr := patchReadyCondition(seedCtx, r.GardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
+			if patchErr := patchReadyCondition(gardenCtx, r.GardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
 				log.Error(patchErr, "Failed patching ready condition")
 			}
 			return fmt.Errorf("failed to ensure bastion extension resource: %w", err)
