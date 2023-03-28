@@ -478,7 +478,7 @@ end`,
 					CustomPlugin: &custom.CustomPlugin{
 						Config: `Name gardenerloki
 Match kubernetes.*
-Url http://loki.garden.svc:3100/loki/api/v1/push
+Url http://logging.garden.svc:3100/loki/api/v1/push
 LogLevel info
 BatchWait 60s
 BatchSize 30720
@@ -491,7 +491,7 @@ LabelSelector gardener.cloud/role:shoot
 RemoveKeys kubernetes,stream,time,tag,gardenuser,job
 LabelMapPath {"kubernetes": {"container_name":"container_name","container_id":"container_id","namespace_name":"namespace_name","pod_name":"pod_name"},"severity": "severity","job": "job"}
 DynamicHostPath {"kubernetes": {"namespace_name": "namespace"}}
-DynamicHostPrefix http://loki.
+DynamicHostPrefix http://logging.
 DynamicHostSuffix .svc:3100/loki/api/v1/push
 DynamicHostRegex ^shoot-
 DynamicTenant user gardenuser user
@@ -526,7 +526,7 @@ TenantID operator`,
 					CustomPlugin: &custom.CustomPlugin{
 						Config: `Name gardenerloki
 Match journald.*
-Url http://loki.garden.svc:3100/loki/api/v1/push
+Url http://logging.garden.svc:3100/loki/api/v1/push
 LogLevel info
 BatchWait 60s
 BatchSize 30720
