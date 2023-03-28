@@ -14,7 +14,7 @@ We provide a central operator UI, which we call the "Gardener Dashboard". It tal
 
 * Create a namespace in the "seed" cluster for the "shoot" cluster, which will host the "shoot" cluster control plane.
 * Generate secrets and credentials, which the worker nodes will need to talk to the control plane.
-* Create the infrastructure (using [Terraform](https://www.terraform.io/)), which basically consists out of the network setup).
+* Create the infrastructure (using [Terraform](https://www.terraform.io/)), which basically consists out of the network setup.
 * Deploy the "shoot" cluster control plane into the "shoot" namespace in the "seed" cluster, containing the "machine-controller-manager" pod.
 * Create machine CRDs in the "seed" cluster, describing the configuration and the number of worker machines for the "shoot" (the machine-controller-manager watches the CRDs and creates virtual machines out of it).
 * Wait for the "shoot" cluster API server to become responsive (pods will be scheduled, persistent volumes and load balancers are created by Kubernetes via the respective cloud provider).
