@@ -59,11 +59,11 @@ func RewriteSecretsAddLabel(ctx context.Context, log logr.Logger, c client.Clien
 // SnapshotETCDAfterRewritingSecrets performs a full snapshot on ETCD after the secrets got rewritten as part of the
 // ETCD encryption secret rotation. It adds an annotation to the kube-apiserver deployment after it's done so that it
 // does not take another snapshot again after it succeeded once.
-func SnapshotETCDAfterRewritingSecrets(ctx context.Context, runtimeClient client.Client, snapshotEtcd func(ctx context.Context) error, kubeAPIServerNamespace string) error {
+func SnapshotETCDAfterRewritingSecrets(ctx context.Context, runtimeClient client.Client, snapshotEtcd func(ctx context.Context) error, kubeAPIServerNamespace, namePrefix string) error {
 	// Check if we have to snapshot ETCD now that we have rewritten all secrets.
 	meta := &metav1.PartialObjectMetadata{}
 	meta.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-	if err := runtimeClient.Get(ctx, kubernetesutils.Key(kubeAPIServerNamespace, v1beta1constants.DeploymentNameKubeAPIServer), meta); err != nil {
+	if err := runtimeClient.Get(ctx, kubernetesutils.Key(kubeAPIServerNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer), meta); err != nil {
 		return err
 	}
 
@@ -78,7 +78,7 @@ func SnapshotETCDAfterRewritingSecrets(ctx context.Context, runtimeClient client
 	// If we have hit this point then we have snapshotted ETCD successfully. Now we can mark this step as "completed"
 	// (via an annotation) so that we do not trigger a snapshot again in a future reconciliation in case the current one
 	// fails after this step.
-	return PatchKubeAPIServerDeploymentMeta(ctx, runtimeClient, kubeAPIServerNamespace, func(meta *metav1.PartialObjectMetadata) {
+	return PatchKubeAPIServerDeploymentMeta(ctx, runtimeClient, kubeAPIServerNamespace, namePrefix, func(meta *metav1.PartialObjectMetadata) {
 		metav1.SetMetaDataAnnotation(&meta.ObjectMeta, AnnotationKeyEtcdSnapshotted, "true")
 	})
 }
@@ -86,7 +86,7 @@ func SnapshotETCDAfterRewritingSecrets(ctx context.Context, runtimeClient client
 // RewriteSecretsRemoveLabel patches all secrets in all namespaces in the target clusters and removes the label whose
 // value is the name of the current ETCD encryption key secret. This function is useful for the ETCD encryption key
 // secret rotation which requires all secrets to be rewritten to ETCD so that they become encrypted with the new key.
-func RewriteSecretsRemoveLabel(ctx context.Context, log logr.Logger, runtimeClient, targetClient client.Client, kubeAPIServerNamespace string) error {
+func RewriteSecretsRemoveLabel(ctx context.Context, log logr.Logger, runtimeClient, targetClient client.Client, kubeAPIServerNamespace, namePrefix string) error {
 	if err := rewriteSecrets(
 		ctx,
 		log,
@@ -99,7 +99,7 @@ func RewriteSecretsRemoveLabel(ctx context.Context, log logr.Logger, runtimeClie
 		return err
 	}
 
-	return PatchKubeAPIServerDeploymentMeta(ctx, runtimeClient, kubeAPIServerNamespace, func(meta *metav1.PartialObjectMetadata) {
+	return PatchKubeAPIServerDeploymentMeta(ctx, runtimeClient, kubeAPIServerNamespace, namePrefix, func(meta *metav1.PartialObjectMetadata) {
 		delete(meta.Annotations, AnnotationKeyEtcdSnapshotted)
 	})
 }
@@ -138,10 +138,10 @@ func rewriteSecrets(ctx context.Context, log logr.Logger, c client.Client, requi
 }
 
 // PatchKubeAPIServerDeploymentMeta patches metadata of a Kubernetes API-Server deployment
-func PatchKubeAPIServerDeploymentMeta(ctx context.Context, c client.Client, namespace string, mutate func(deployment *metav1.PartialObjectMetadata)) error {
+func PatchKubeAPIServerDeploymentMeta(ctx context.Context, c client.Client, namespace, namePrefix string, mutate func(deployment *metav1.PartialObjectMetadata)) error {
 	meta := &metav1.PartialObjectMetadata{}
 	meta.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-	if err := c.Get(ctx, kubernetesutils.Key(namespace, v1beta1constants.DeploymentNameKubeAPIServer), meta); err != nil {
+	if err := c.Get(ctx, kubernetesutils.Key(namespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer), meta); err != nil {
 		return err
 	}
 

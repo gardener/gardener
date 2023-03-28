@@ -45,13 +45,19 @@ type CAVerifier struct {
 }
 
 var allCAs = []string{
+	caCluster,
+	caClient,
 	caETCD,
 	caETCDPeer,
+	caFrontProxy,
 }
 
 const (
-	caETCD     = "ca-etcd"
-	caETCDPeer = "ca-etcd-peer"
+	caCluster    = "ca"
+	caClient     = "ca-client"
+	caETCD       = "ca-etcd"
+	caETCDPeer   = "ca-etcd-peer"
+	caFrontProxy = "ca-front-proxy"
 )
 
 // Before is called before the rotation is started.
@@ -59,7 +65,7 @@ func (v *CAVerifier) Before(ctx context.Context) {
 	By("Verify CA secrets of gardener-operator before rotation")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
-		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v1beta1constants.GardenNamespace), managedByGardenerOperatorSecretsManager)).To(Succeed())
+		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v1beta1constants.GardenNamespace), ManagedByGardenerOperatorSecretsManager)).To(Succeed())
 
 		grouped := rotation.GroupByName(secretList.Items)
 		for _, ca := range allCAs {
@@ -88,7 +94,7 @@ func (v *CAVerifier) AfterPrepared(ctx context.Context) {
 	By("Verify CA secrets of gardener-operator after preparation")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
-		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v1beta1constants.GardenNamespace), managedByGardenerOperatorSecretsManager)).To(Succeed())
+		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v1beta1constants.GardenNamespace), ManagedByGardenerOperatorSecretsManager)).To(Succeed())
 
 		grouped := rotation.GroupByName(secretList.Items)
 		for _, ca := range allCAs {
@@ -121,7 +127,7 @@ func (v *CAVerifier) AfterCompleted(ctx context.Context) {
 	By("Verify CA secrets of gardener-operator after completion")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
-		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v1beta1constants.GardenNamespace), managedByGardenerOperatorSecretsManager)).To(Succeed())
+		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v1beta1constants.GardenNamespace), ManagedByGardenerOperatorSecretsManager)).To(Succeed())
 
 		grouped := rotation.GroupByName(secretList.Items)
 		for _, ca := range allCAs {

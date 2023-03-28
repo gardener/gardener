@@ -23,5 +23,5 @@ import (
 
 func TestSecretsRotation(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Utils Gardener Secretsrotation Suite")
+	RunSpecs(t, "Utils Gardener SecretsRotation Suite")
 }

@@ -18,7 +18,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var managedByGardenletSecretsManager = client.MatchingLabels{
+// ManagedByGardenletSecretsManager is the label selector for selecting secrets managed by gardenlet's instance of
+// secrets manager.
+var ManagedByGardenletSecretsManager = client.MatchingLabels{
 	"managed-by":       "secrets-manager",
 	"manager-identity": "gardenlet",
 }

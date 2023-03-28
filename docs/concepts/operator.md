@@ -80,7 +80,15 @@ For certificate authorities, `gardener-operator` generates one which is automati
 
 Please refer to [this document](../usage/shoot_credentials_rotation.md#gardener-provided-credentials) for more details. As of today, `gardener-operator` only creates the following types of credentials (i.e., some sections of the document don't apply for `Garden`s and can be ignored):
 
-- certificate authorities (and related server and client certificates) 
+- certificate authorities (and related server and client certificates)
+- ETCD encryption key
+- `ServiceAccount` token signing key
+
+⚠️ Since `kube-controller-manager` is not yet deployed by `gardener-operator`, rotation of static `ServiceAccount` secrets is not supported and must be performed manually after the `Garden` has reached `Prepared` phase before completing the rotation.
+
+⚠️ Rotation of the static kubeconfig (which is enabled unconditionally) is not support for now.
+The reason is that it such static kubeconfig will be disabled without configuration option in the near future.
+Instead, we'll implement an approach similar to the [`adminkubeconfig` subresource on `Shoot`s](../usage/shoot_access.md#shootsadminkubeconfig-subresource) which can be used to retrieve a temporary kubeconfig for the virtual garden cluster.
 
 ## Local Development
 

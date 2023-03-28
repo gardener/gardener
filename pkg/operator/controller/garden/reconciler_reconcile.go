@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
@@ -46,6 +47,7 @@ import (
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
@@ -136,6 +138,7 @@ func (r *Reconciler) reconcile(
 	}
 
 	var (
+		allowBackup          = garden.Spec.VirtualCluster.ETCD != nil && garden.Spec.VirtualCluster.ETCD.Main != nil && garden.Spec.VirtualCluster.ETCD.Main.Backup != nil
 		virtualClusterClient client.Client
 
 		g            = flow.NewGraph("Garden reconciliation")
@@ -212,6 +215,32 @@ func (r *Reconciler) reconcile(
 				return err
 			},
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
+		})
+		rewriteSecretsAddLabel = g.Add(flow.Task{
+			Name: "Labeling secrets to encrypt them with new ETCD encryption key",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return secretsrotation.RewriteSecretsAddLabel(ctx, log, virtualClusterClient, secretsManager)
+			}).
+				RetryUntilTimeout(30*time.Second, 10*time.Minute).
+				DoIf(helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationPreparing),
+			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Snapshotting ETCD after secrets were re-encrypted with new ETCD encryption key",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return secretsrotation.SnapshotETCDAfterRewritingSecrets(ctx, r.RuntimeClientSet.Client(), r.snapshotETCDFunc(secretsManager, etcdMain), r.GardenNamespace, namePrefix)
+			}).
+				DoIf(allowBackup && helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationPreparing),
+			Dependencies: flow.NewTaskIDs(rewriteSecretsAddLabel),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Removing label from secrets after rotation of ETCD encryption key",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return secretsrotation.RewriteSecretsRemoveLabel(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClient, r.GardenNamespace, namePrefix)
+			}).
+				RetryUntilTimeout(30*time.Second, 10*time.Minute).
+				DoIf(helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationCompleting),
+			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient),
 		})
 	)
 
@@ -362,6 +391,12 @@ func (r *Reconciler) deployKubeAPIServerFunc(ctx context.Context, garden *operat
 			helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials),
 			false,
 		)
+	}
+}
+
+func (r *Reconciler) snapshotETCDFunc(secretsManager secretsmanager.Interface, etcdMain etcd.Interface) func(context.Context) error {
+	return func(ctx context.Context) error {
+		return shared.SnapshotEtcd(ctx, secretsManager, etcdMain)
 	}
 }
 

@@ -86,7 +86,7 @@ func (v *CAVerifier) Before(ctx context.Context) {
 	By("Verify CA secrets of gardenlet before rotation")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
-		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
+		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), ManagedByGardenletSecretsManager)).To(Succeed())
 
 		grouped := rotation.GroupByName(secretList.Items)
 		for _, ca := range allGardenletCAs {
@@ -143,7 +143,7 @@ func (v *CAVerifier) AfterPrepared(ctx context.Context) {
 	By("Verify CA secrets of gardenlet after preparation")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
-		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
+		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), ManagedByGardenletSecretsManager)).To(Succeed())
 
 		grouped := rotation.GroupByName(secretList.Items)
 		for _, ca := range allGardenletCAs {
@@ -214,7 +214,7 @@ func (v *CAVerifier) AfterCompleted(ctx context.Context) {
 	By("Verify CA secrets of gardenlet after completion")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
-		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
+		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), ManagedByGardenletSecretsManager)).To(Succeed())
 
 		grouped := rotation.GroupByName(secretList.Items)
 		for _, ca := range allGardenletCAs {

@@ -20,12 +20,16 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/test/e2e/operator/garden/internal/rotation"
+	gardenaccess "github.com/gardener/gardener/test/utils/gardens"
 	rotationutils "github.com/gardener/gardener/test/utils/rotation"
 )
 
@@ -60,6 +64,27 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		v := rotationutils.Verifiers{
 			// basic verifiers checking secrets
 			&rotation.CAVerifier{RuntimeClient: runtimeClient, Garden: garden},
+			&rotationutils.ETCDEncryptionKeyVerifier{
+				RuntimeClient:               runtimeClient,
+				Namespace:                   namespace,
+				SecretsManagerLabelSelector: rotation.ManagedByGardenerOperatorSecretsManager,
+				GetETCDEncryptionKeyRotation: func() *gardencorev1beta1.ETCDEncryptionKeyRotation {
+					return garden.Status.Credentials.Rotation.ETCDEncryptionKey
+				},
+			},
+			&rotationutils.ServiceAccountKeyVerifier{
+				RuntimeClient:               runtimeClient,
+				Namespace:                   namespace,
+				SecretsManagerLabelSelector: rotation.ManagedByGardenerOperatorSecretsManager,
+				GetServiceAccountKeyRotation: func() *gardencorev1beta1.ServiceAccountKeyRotation {
+					return garden.Status.Credentials.Rotation.ServiceAccountKey
+				},
+			},
+
+			// advanced verifiers testing things from the user's perspective
+			&rotationutils.SecretEncryptionVerifier{NewTargetClientFunc: func() (kubernetes.Interface, error) {
+				return gardenaccess.CreateVirtualClusterClientFromStaticTokenKubeconfig(ctx, runtimeClient, namespace)
+			}},
 		}
 
 		DeferCleanup(func() {
@@ -72,7 +97,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		v.Before(ctx)
 
 		By("Start credentials rotation")
-		ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)
+		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
 
 		patch := client.MergeFrom(garden.DeepCopy())
@@ -96,7 +121,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		v.AfterPrepared(ctx)
 
 		By("Complete credentials rotation")
-		ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)
+		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
 
 		patch = client.MergeFrom(garden.DeepCopy())

@@ -689,7 +689,7 @@ func (e *etcd) Snapshot(ctx context.Context, httpClient rest.HTTPClient) error {
 		return fmt.Errorf("no backup is configured for this etcd, cannot make a snapshot")
 	}
 
-	url := fmt.Sprintf("https://%s.%s:%d/snapshot/full?final=true", etcdconstants.ServiceName(e.values.Role), e.namespace, etcdconstants.PortBackupRestore)
+	url := fmt.Sprintf("https://%s%s.%s:%d/snapshot/full?final=true", e.values.NamePrefix, etcdconstants.ServiceName(e.values.Role), e.namespace, etcdconstants.PortBackupRestore)
 
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
