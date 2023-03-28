@@ -119,6 +119,7 @@ type ControlPlane struct {
 	EtcdMain              etcd.Interface
 	EtcdEvents            etcd.Interface
 	EtcdCopyBackupsTask   etcdcopybackupstask.Interface
+	KubeAPIServerIngress  component.Deployer
 	KubeAPIServerService  component.DeployWaiter
 	KubeAPIServerSNI      component.DeployWaiter
 	KubeAPIServerSNIPhase component.Phase

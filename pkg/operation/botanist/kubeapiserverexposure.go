@@ -152,31 +152,37 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 	)
 }
 
-// DeployKubeAPIServerIngress deploys ingress for the kube-apiserver.
+// DefaultKubeAPIServerIngress returns a deployer for the kube-apiserver ingress.
+func (b *Botanist) DefaultKubeAPIServerIngress() (component.Deployer, error) {
+	ingressClass, err := gardenerutils.ComputeNginxIngressClassForSeed(b.Seed.GetInfo(), b.Seed.GetInfo().Status.KubernetesVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	return kubeapiserverexposure.NewIngress(
+		b.SeedClientSet.Client(),
+		b.Shoot.SeedNamespace,
+		kubeapiserverexposure.IngressValues{
+			ServiceName:      v1beta1constants.DeploymentNameKubeAPIServer,
+			Host:             b.ComputeKubeAPIServerHost(),
+			IngressClassName: &ingressClass,
+		}), nil
+}
+
+// DeployKubeAPIServerIngress deploys the ingress for the kube-apiserver.
 func (b *Botanist) DeployKubeAPIServerIngress(ctx context.Context) error {
 	// Do not deploy ingress if there is no wildcard certificate
 	if b.ControlPlaneWildcardCert == nil {
 		return b.DestroyKubeAPIServerIngress(ctx)
 	}
-	ingressClass, err := gardenerutils.ComputeNginxIngressClassForSeed(b.Seed.GetInfo(), b.Seed.GetInfo().Status.KubernetesVersion)
-	if err != nil {
-		return err
-	}
-	return kubeapiserverexposure.NewIngress(
-		b.SeedClientSet.Client(),
-		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
-		kubeapiserverexposure.IngressValues{
-			ServiceName:      v1beta1constants.DeploymentNameKubeAPIServer,
-			Host:             b.ComputeKubeAPIServerHost(),
-			IngressClassName: &ingressClass,
-		}).Deploy(ctx)
+	return b.Shoot.Components.ControlPlane.KubeAPIServerIngress.Deploy(ctx)
 }
 
-// DestroyKubeAPIServerIngress deploys ingress for the kube-apiserver.
+// DestroyKubeAPIServerIngress destroys the ingress for the kube-apiserver.
 func (b *Botanist) DestroyKubeAPIServerIngress(ctx context.Context) error {
 	return kubeapiserverexposure.NewIngress(
 		b.SeedClientSet.Client(),
-		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
+		b.Shoot.SeedNamespace,
 		kubeapiserverexposure.IngressValues{},
 	).Destroy(ctx)
 }

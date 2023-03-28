@@ -21,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
@@ -37,25 +38,25 @@ type IngressValues struct {
 	Host string
 	// IngressClassName is the name of the ingress class.
 	IngressClassName *string
-	// ServiceName is the name of the service the ingress is using
+	// ServiceName is the name of the service the ingress is using.
 	ServiceName string
 }
 
 // NewIngress creates a new instance of Deployer for the ingress used to expose the kube-apiserver.
-func NewIngress(c client.Client, objectKey client.ObjectKey, values IngressValues) component.Deployer {
-	return &ingress{client: c, objectKey: objectKey, values: values}
+func NewIngress(c client.Client, namespace string, values IngressValues) component.Deployer {
+	return &ingress{client: c, namespace: namespace, values: values}
 }
 
 type ingress struct {
 	client    client.Client
-	objectKey client.ObjectKey
+	namespace string
 	values    IngressValues
 }
 
 func (i *ingress) Deploy(ctx context.Context) error {
 	ingress := i.emptyIngress()
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, ingress, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, ingress, func() error {
 		metav1.SetMetaDataAnnotation(&ingress.ObjectMeta, nginxIngressSSLPassthrough, "true")
 		ingress.Labels = utils.MergeStringMaps(ingress.Labels, getLabels())
 		pathType := networkingv1.PathTypePrefix
@@ -87,11 +88,8 @@ func (i *ingress) Deploy(ctx context.Context) error {
 			TLS: []networkingv1.IngressTLS{{Hosts: []string{i.values.Host}}},
 		}
 		return nil
-	}); err != nil {
-		return err
-	}
-
-	return nil
+	})
+	return err
 }
 
 func (i *ingress) Destroy(ctx context.Context) error {
@@ -99,5 +97,5 @@ func (i *ingress) Destroy(ctx context.Context) error {
 }
 
 func (i *ingress) emptyIngress() *networkingv1.Ingress {
-	return &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: i.objectKey.Name, Namespace: i.objectKey.Namespace}}
+	return &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: i.namespace}}
 }

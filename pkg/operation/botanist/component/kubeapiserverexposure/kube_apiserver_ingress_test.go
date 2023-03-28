@@ -35,11 +35,12 @@ var _ = Describe("#Ingress", func() {
 		ctx context.Context
 		c   client.Client
 
-		ingressObjKey   client.ObjectKey
-		ingressClass    string
-		pathType        networkingv1.PathType
-		expected        *networkingv1.Ingress
-		defaultDeployer component.Deployer
+		ingressObjKey    client.ObjectKey
+		ingressNamespace string
+		ingressClass     string
+		pathType         networkingv1.PathType
+		expected         *networkingv1.Ingress
+		defaultDeployer  component.Deployer
 	)
 
 	BeforeEach(func() {
@@ -48,7 +49,8 @@ var _ = Describe("#Ingress", func() {
 		Expect(networkingv1.AddToScheme(s)).To(Succeed())
 		c = fake.NewClientBuilder().WithScheme(s).Build()
 
-		ingressObjKey = client.ObjectKey{Name: "foo", Namespace: "bar"}
+		ingressNamespace = "bar"
+		ingressObjKey = client.ObjectKey{Name: "kube-apiserver", Namespace: ingressNamespace}
 		pathType = networkingv1.PathTypePrefix
 		ingressClass = "foo-bar-ingress"
 		expected = &networkingv1.Ingress{
@@ -98,10 +100,10 @@ var _ = Describe("#Ingress", func() {
 	})
 
 	JustBeforeEach(func() {
-		defaultDeployer = NewIngress(c, ingressObjKey, IngressValues{
+		defaultDeployer = NewIngress(c, ingressNamespace, IngressValues{
 			Host:             "foo.bar.example.com",
 			IngressClassName: &ingressClass,
-			ServiceName:      ingressObjKey.Name,
+			ServiceName:      "foo",
 		})
 	})
 

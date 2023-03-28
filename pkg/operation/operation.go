@@ -580,7 +580,7 @@ func (o *Operation) WantsGrafana() bool {
 
 // ComputeKubeAPIServerHost computes the host with a TLS certificate from a trusted origin for KubeAPIServer.
 func (o *Operation) ComputeKubeAPIServerHost() string {
-	return o.ComputeIngressHost(common.KubeAPIServerUsersPrefix)
+	return o.ComputeIngressHost(common.KubeAPIServerPrefix)
 }
 
 // ComputeGrafanaHost computes the host for Grafana.
