@@ -60,7 +60,7 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(reconcileCtx)
 
-	ctx, cancel := controllerutils.GetMainReconciliationContext(reconcileCtx, time.Minute)
+	ctx, cancel := controllerutils.GetMainReconciliationContext(reconcileCtx, controllerutils.DefaultReconciliationTimeout)
 	defer cancel()
 
 	secret := &corev1.Secret{}

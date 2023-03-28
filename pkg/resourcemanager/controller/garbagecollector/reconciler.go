@@ -53,7 +53,7 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(reconcileCtx)
 
-	ctx, cancel := controllerutils.GetMainReconciliationContext(reconcileCtx, time.Minute)
+	ctx, cancel := controllerutils.GetMainReconciliationContext(reconcileCtx, r.Config.SyncPeriod.Duration)
 	defer cancel()
 
 	log.Info("Starting garbage collection")

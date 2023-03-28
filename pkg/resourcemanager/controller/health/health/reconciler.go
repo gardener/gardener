@@ -17,7 +17,6 @@ package health
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/go-logr/logr"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -61,7 +60,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// timeout for all calls (e.g. status updates), give status updates a bit of headroom if health checks
 	// themselves run into timeouts, so that we will still update the status with that timeout error
 	var cancel context.CancelFunc
-	ctx, cancel = controllerutils.GetMainReconciliationContext(ctx, time.Minute)
+	ctx, cancel = controllerutils.GetMainReconciliationContext(ctx, r.Config.SyncPeriod.Duration)
 	defer cancel()
 
 	mr := &resourcesv1alpha1.ManagedResource{}
@@ -103,7 +102,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 func (r *Reconciler) executeHealthChecks(ctx context.Context, log logr.Logger, mr *resourcesv1alpha1.ManagedResource) (reconcile.Result, error) {
 	log.Info("Starting ManagedResource health checks")
 	// don't block workers if calls timeout for some reason
-	healthCheckCtx, cancel := controllerutils.GetChildReconciliationContext(ctx, time.Minute)
+	healthCheckCtx, cancel := controllerutils.GetChildReconciliationContext(ctx, r.Config.SyncPeriod.Duration)
 	defer cancel()
 
 	var (

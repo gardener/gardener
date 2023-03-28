@@ -17,7 +17,6 @@ package progressing
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -53,7 +52,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// timeout for all calls (e.g. status updates), give status updates a bit of headroom if checks
 	// themselves run into timeouts, so that we will still update the status with that timeout error
 	var cancel context.CancelFunc
-	ctx, cancel = controllerutils.GetMainReconciliationContext(ctx, time.Minute)
+	ctx, cancel = controllerutils.GetMainReconciliationContext(ctx, r.Config.SyncPeriod.Duration)
 	defer cancel()
 
 	mr := &resourcesv1alpha1.ManagedResource{}
@@ -96,7 +95,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourcesv1alpha1.ManagedResource) (reconcile.Result, error) {
 	log.V(1).Info("Starting ManagedResource progressing checks")
 	// don't block workers if calls timeout for some reason
-	checkCtx, cancel := controllerutils.GetChildReconciliationContext(ctx, time.Minute)
+	checkCtx, cancel := controllerutils.GetChildReconciliationContext(ctx, r.Config.SyncPeriod.Duration)
 	defer cancel()
 
 	conditionResourcesProgressing := v1beta1helper.GetOrInitConditionWithClock(r.Clock, mr.Status.Conditions, resourcesv1alpha1.ResourcesProgressing)
