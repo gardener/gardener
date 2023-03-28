@@ -32,8 +32,17 @@ images:
   tag: "v0.17.0"
 - name: fluent-operator
   sourceRepository: github.com/fluent/fluent-operator
-  repository: eu.gcr.io/gardener-project/gardener/fluent-operator
+  repository: eu.gcr.io/gardener-project/3rd/kubesphere/fluent-operator
   tag: "v1.7.0"
+  labels:
+  - name: 'gardener.cloud/cve-categorisation'
+    value:
+      network_exposure: 'private'
+      authentication_enforced: false
+      user_interaction: 'gardener-operator'
+      confidentiality_requirement: 'low'
+      integrity_requirement: 'low'
+      availability_requirement: 'low'
 - name: dependency-watchdog
   sourceRepository: github.com/gardener/dependency-watchdog
   repository: eu.gcr.io/gardener-project/gardener/dependency-watchdog
@@ -369,7 +378,7 @@ images:
 # Logging
 - name: fluent-bit
   sourceRepository: github.com/fluent/fluent-operator
-  repository: eu.gcr.io/gardener-project/gardener/fluent-bit
+  repository: eu.gcr.io/gardener-project/3rd/kubesphere/fluent-bit
   tag: "v2.0.9"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
