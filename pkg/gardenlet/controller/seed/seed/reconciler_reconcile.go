@@ -96,8 +96,7 @@ import (
 )
 
 func (r *Reconciler) reconcile(
-	gardenCtx context.Context,
-	seedCtx context.Context,
+	ctx context.Context,
 	log logr.Logger,
 	seedObj *seedpkg.Seed,
 	seedIsGarden bool,
@@ -130,7 +129,7 @@ func (r *Reconciler) reconcile(
 
 	if !controllerutil.ContainsFinalizer(seed, gardencorev1beta1.GardenerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(gardenCtx, r.GardenClient, seed, gardencorev1beta1.GardenerName); err != nil {
+		if err := controllerutils.AddFinalizers(ctx, r.GardenClient, seed, gardencorev1beta1.GardenerName); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
@@ -138,14 +137,14 @@ func (r *Reconciler) reconcile(
 	// Add the Gardener finalizer to the referenced Seed secret to protect it from deletion as long as the Seed resource
 	// does exist.
 	if seed.Spec.SecretRef != nil {
-		secret, err := kubernetesutils.GetSecretByReference(gardenCtx, r.GardenClient, seed.Spec.SecretRef)
+		secret, err := kubernetesutils.GetSecretByReference(ctx, r.GardenClient, seed.Spec.SecretRef)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
 
 		if !controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
 			log.Info("Adding finalizer to referenced secret", "secret", client.ObjectKeyFromObject(secret))
-			if err := controllerutils.AddFinalizers(gardenCtx, r.GardenClient, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
+			if err := controllerutils.AddFinalizers(ctx, r.GardenClient, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
 				return reconcile.Result{}, err
 			}
 		}
@@ -155,30 +154,30 @@ func (r *Reconciler) reconcile(
 	seedKubernetesVersion, err := r.checkMinimumK8SVersion(r.SeedClientSet.Version())
 	if err != nil {
 		conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "K8SVersionTooOld", err.Error())
-		if err := r.patchSeedStatus(gardenCtx, r.GardenClient, seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped); err != nil {
+		if err := r.patchSeedStatus(ctx, r.GardenClient, seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not patch seed status after check for minimum Kubernetes version failed: %w", err)
 		}
 		return reconcile.Result{}, err
 	}
 
-	gardenSecrets, err := gardenerutils.ReadGardenSecrets(gardenCtx, log, r.GardenClient, gardenerutils.ComputeGardenNamespace(seed.Name), true)
+	gardenSecrets, err := gardenerutils.ReadGardenSecrets(ctx, log, r.GardenClient, gardenerutils.ComputeGardenNamespace(seed.Name), true)
 	if err != nil {
 		conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "GardenSecretsError", err.Error())
-		if err := r.patchSeedStatus(gardenCtx, r.GardenClient, seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped); err != nil {
+		if err := r.patchSeedStatus(ctx, r.GardenClient, seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not patch seed status after reading garden secrets failed: %w", err)
 		}
 		return reconcile.Result{}, err
 	}
 
 	conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionProgressing, "BootstrapProgressing", "Seed cluster is currently being bootstrapped.")
-	if err = r.patchSeedStatus(gardenCtx, r.GardenClient, seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped); err != nil {
+	if err = r.patchSeedStatus(ctx, r.GardenClient, seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update status of %s condition to %s: %w", conditionSeedBootstrapped.Type, gardencorev1beta1.ConditionProgressing, err)
 	}
 
 	// Bootstrap the Seed cluster.
-	if err := r.runReconcileSeedFlow(seedCtx, log, seedObj, seedIsGarden, gardenSecrets); err != nil {
+	if err := r.runReconcileSeedFlow(ctx, log, seedObj, seedIsGarden, gardenSecrets); err != nil {
 		conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "BootstrappingFailed", err.Error())
-		if err := r.patchSeedStatus(seedCtx, r.GardenClient, seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped); err != nil {
+		if err := r.patchSeedStatus(ctx, r.GardenClient, seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not patch seed status after reconciliation flow failed: %w", err)
 		}
 		return reconcile.Result{}, err
@@ -191,14 +190,14 @@ func (r *Reconciler) reconcile(
 	conditionSeedSystemComponentsHealthy := v1beta1helper.GetOrInitConditionWithClock(r.Clock, seed.Status.Conditions, gardencorev1beta1.SeedSystemComponentsHealthy)
 	conditionSeedSystemComponentsHealthy = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedSystemComponentsHealthy, gardencorev1beta1.ConditionProgressing, "SystemComponentsCheckProgressing", "Pending health check of system components after successful bootstrap of seed cluster.")
 	conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionTrue, "BootstrappingSucceeded", "Seed cluster has been bootstrapped successfully.")
-	if err = r.patchSeedStatus(gardenCtx, r.GardenClient, seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped, conditionSeedSystemComponentsHealthy); err != nil {
+	if err = r.patchSeedStatus(ctx, r.GardenClient, seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped, conditionSeedSystemComponentsHealthy); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update status of %s condition to %s and %s conditions to %s: %w", conditionSeedBootstrapped.Type, gardencorev1beta1.ConditionTrue, conditionSeedSystemComponentsHealthy.Type, gardencorev1beta1.ConditionProgressing, err)
 	}
 
 	if seed.Spec.Backup != nil {
 		// This should be post updating the seed is available. Since, scheduler will then mostly use
 		// same seed for deploying the backupBucket extension.
-		if err := deployBackupBucketInGarden(gardenCtx, r.GardenClient, seed); err != nil {
+		if err := deployBackupBucketInGarden(ctx, r.GardenClient, seed); err != nil {
 			return reconcile.Result{}, err
 		}
 	}

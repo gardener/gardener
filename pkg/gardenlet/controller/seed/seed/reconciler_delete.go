@@ -61,8 +61,7 @@ import (
 )
 
 func (r *Reconciler) delete(
-	gardenCtx context.Context,
-	seedCtx context.Context,
+	ctx context.Context,
 	log logr.Logger,
 	seedObj *seedpkg.Seed,
 	seedIsGarden bool,
@@ -80,7 +79,7 @@ func (r *Reconciler) delete(
 	// When this happens the controller will remove the finalizers from the Seed so that it can be garbage collected.
 	parentLogMessage := "Can't delete Seed, because the following objects are still referencing it:"
 
-	associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(gardenCtx, r.GardenClient, seed)
+	associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(ctx, r.GardenClient, seed)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -95,12 +94,12 @@ func (r *Reconciler) delete(
 	if seed.Spec.Backup != nil {
 		backupBucket := &gardencorev1beta1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: string(seed.UID)}}
 
-		if err := r.GardenClient.Delete(gardenCtx, backupBucket); client.IgnoreNotFound(err) != nil {
+		if err := r.GardenClient.Delete(ctx, backupBucket); client.IgnoreNotFound(err) != nil {
 			return reconcile.Result{}, err
 		}
 	}
 
-	associatedBackupBuckets, err := controllerutils.DetermineBackupBucketAssociations(gardenCtx, r.GardenClient, seed.Name)
+	associatedBackupBuckets, err := controllerutils.DetermineBackupBucketAssociations(ctx, r.GardenClient, seed.Name)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -114,10 +113,10 @@ func (r *Reconciler) delete(
 
 	log.Info("No Shoots or BackupBuckets are referencing the Seed, deletion accepted")
 
-	if err := r.runDeleteSeedFlow(seedCtx, log, seedObj, seedIsGarden); err != nil {
+	if err := r.runDeleteSeedFlow(ctx, log, seedObj, seedIsGarden); err != nil {
 		conditionSeedBootstrapped := v1beta1helper.GetOrInitConditionWithClock(r.Clock, seedObj.GetInfo().Status.Conditions, gardencorev1beta1.SeedBootstrapped)
 		conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "DebootstrapFailed", fmt.Sprintf("Failed to delete Seed Cluster (%s).", err.Error()))
-		if err := r.patchSeedStatus(seedCtx, r.GardenClient, seed, "<unknown>", nil, nil, conditionSeedBootstrapped); err != nil {
+		if err := r.patchSeedStatus(ctx, r.GardenClient, seed, "<unknown>", nil, nil, conditionSeedBootstrapped); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not patch seed status after deletion flow failed: %w", err)
 		}
 		return reconcile.Result{}, err
@@ -126,10 +125,10 @@ func (r *Reconciler) delete(
 	// Remove finalizer from referenced secret
 	if seed.Spec.SecretRef != nil {
 		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: seed.Spec.SecretRef.Name, Namespace: seed.Spec.SecretRef.Namespace}}
-		if err := r.GardenClient.Get(gardenCtx, client.ObjectKeyFromObject(secret), secret); err == nil {
+		if err := r.GardenClient.Get(ctx, client.ObjectKeyFromObject(secret), secret); err == nil {
 			if controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
 				log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(secret))
-				if err := controllerutils.RemoveFinalizers(gardenCtx, r.GardenClient, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
+				if err := controllerutils.RemoveFinalizers(ctx, r.GardenClient, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
 					return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from secret: %w", err)
 				}
 			}
@@ -141,7 +140,7 @@ func (r *Reconciler) delete(
 	// Remove finalizer from Seed
 	if controllerutil.ContainsFinalizer(seed, gardencorev1beta1.GardenerName) {
 		log.Info("Removing finalizer")
-		if err := controllerutils.RemoveFinalizers(gardenCtx, r.GardenClient, seed, gardencorev1beta1.GardenerName); err != nil {
+		if err := controllerutils.RemoveFinalizers(ctx, r.GardenClient, seed, gardencorev1beta1.GardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 		}
 	}
