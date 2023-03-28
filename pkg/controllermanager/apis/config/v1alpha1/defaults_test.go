@@ -86,8 +86,11 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.ShootMaintenance.ConcurrentSyncs).NotTo(BeNil())
 			Expect(obj.Controllers.ShootMaintenance.ConcurrentSyncs).To(PointTo(Equal(5)))
 
+			Expect(obj.Controllers.ShootQuota).NotTo(BeNil())
 			Expect(obj.Controllers.ShootQuota.ConcurrentSyncs).NotTo(BeNil())
 			Expect(obj.Controllers.ShootQuota.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.Controllers.ShootQuota.SyncPeriod).NotTo(BeNil())
+			Expect(obj.Controllers.ShootQuota.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 60 * time.Minute})))
 
 			Expect(obj.Controllers.ShootReference).NotTo(BeNil())
 			Expect(obj.Controllers.ShootReference.ConcurrentSyncs).NotTo(BeNil())

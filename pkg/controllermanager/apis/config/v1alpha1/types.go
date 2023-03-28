@@ -94,7 +94,8 @@ type ControllerManagerControllerConfiguration struct {
 	// ShootMaintenance defines the configuration of the ShootMaintenance controller.
 	ShootMaintenance ShootMaintenanceControllerConfiguration `json:"shootMaintenance"`
 	// ShootQuota defines the configuration of the ShootQuota controller.
-	ShootQuota ShootQuotaControllerConfiguration `json:"shootQuota"`
+	// +optional
+	ShootQuota *ShootQuotaControllerConfiguration `json:"shootQuota,omitempty"`
 	// ShootHibernation defines the configuration of the ShootHibernation controller.
 	ShootHibernation ShootHibernationControllerConfiguration `json:"shootHibernation"`
 	// ShootReference defines the configuration of the ShootReference controller. If unspecified, it is defaulted with `concurrentSyncs=5`.
@@ -315,7 +316,8 @@ type ShootQuotaControllerConfiguration struct {
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled
 	// (how often Shoots referenced Quota is checked).
-	SyncPeriod metav1.Duration `json:"syncPeriod"`
+	// +optional
+	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
 }
 
 // ShootHibernationControllerConfiguration defines the configuration of the

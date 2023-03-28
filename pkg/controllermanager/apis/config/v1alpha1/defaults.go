@@ -138,9 +138,17 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.ShootMaintenance.ConcurrentSyncs = &v
 	}
 
+	if obj.Controllers.ShootQuota == nil {
+		obj.Controllers.ShootQuota = &ShootQuotaControllerConfiguration{}
+	}
 	if obj.Controllers.ShootQuota.ConcurrentSyncs == nil {
 		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.ShootQuota.ConcurrentSyncs = &v
+	}
+	if obj.Controllers.ShootQuota.SyncPeriod == nil {
+		obj.Controllers.ShootQuota.SyncPeriod = &metav1.Duration{
+			Duration: 60 * time.Minute,
+		}
 	}
 
 	if obj.Controllers.ShootReference == nil {
