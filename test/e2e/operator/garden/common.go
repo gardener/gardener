@@ -82,6 +82,9 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 					VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
 						Enabled: pointer.Bool(true),
 					},
+					TopologyAwareRouting: &operatorv1alpha1.SettingTopologyAwareRouting{
+						Enabled: true,
+					},
 				},
 			},
 			VirtualCluster: operatorv1alpha1.VirtualCluster{
