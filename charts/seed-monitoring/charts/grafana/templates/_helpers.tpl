@@ -42,7 +42,7 @@ datasources.yaml: |-
   - name: loki
     type: loki
     access: proxy
-    url: http://loki.{{ .Release.Namespace }}.svc:3100
+    url: http://logging.{{ .Release.Namespace }}.svc:3100
     jsonData:
       maxLines: 1000
 {{- end -}}

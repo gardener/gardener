@@ -97,7 +97,7 @@
   [Output]
       Name gardenerloki
       Match kubernetes.*
-      Url http://loki.garden.svc:3100/loki/api/v1/push
+      Url http://logging.garden.svc:3100/loki/api/v1/push
       LogLevel info
       BatchWait 60s
       BatchSize 30720
@@ -110,7 +110,7 @@
       RemoveKeys kubernetes,stream,time,tag,gardenuser,job
       LabelMapPath /fluent-bit/etc/kubernetes_label_map.json
       DynamicHostPath {"kubernetes": {"namespace_name": "namespace"}}
-      DynamicHostPrefix http://loki.
+      DynamicHostPrefix http://logging.
       DynamicHostSuffix .svc:3100/loki/api/v1/push
       DynamicHostRegex ^shoot-
       DynamicTenant user gardenuser user
@@ -137,7 +137,7 @@
   [Output]
       Name gardenerloki
       Match journald.*
-      Url http://loki.garden.svc:3100/loki/api/v1/push
+      Url http://logging.garden.svc:3100/loki/api/v1/push
       LogLevel info
       BatchWait 60s
       BatchSize 30720

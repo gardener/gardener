@@ -107,7 +107,7 @@ data:
         - __meta_kubernetes_service_name
         - __meta_kubernetes_endpoint_port_name
         action: keep
-        regex: loki;metrics
+        regex: logging;metrics
       # common metrics
       - action: labelmap
         regex: __meta_kubernetes_service_label_(.+)

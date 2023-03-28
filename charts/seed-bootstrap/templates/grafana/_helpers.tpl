@@ -51,7 +51,7 @@ datasources.yaml: |-
   - name: loki
     type: loki
     access: proxy
-    url: http://loki.garden.svc:3100
+    url: http://logging.garden.svc:3100
     jsonData:
       maxLines: 5000
 {{- end -}}
