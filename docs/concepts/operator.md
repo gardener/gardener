@@ -156,8 +156,8 @@ make test-e2e-local-operator
 
 #### Accessing the Virtual Garden Cluster
 
-⚠️ Please note that in this setup, the virtual garden cluster is not accessible by default when you download the kubeconfig and try to communicate with them.
-The reason is that your host most probably cannot resolve the DNS names of the clusters.
+⚠️ Please note that in this setup, the virtual garden cluster is not accessible by default when you download the kubeconfig and try to communicate with it.
+The reason is that your host most probably cannot resolve the DNS name of the cluster.
 Hence, if you want to access the virtual garden cluster, you have to run the following command which will extend your `/etc/hosts` file with the required information to make the DNS names resolvable:
 
 ```shell

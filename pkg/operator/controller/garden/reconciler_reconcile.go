@@ -354,7 +354,7 @@ func (r *Reconciler) deployKubeAPIServerFunc(ctx context.Context, garden *operat
 			}
 		}
 
-		// Deploy NetworkPolicy allowing kube-apiserver to talk to the runtime cluster's API server.
+		// Deploy NetworkPolicy allowing kube-apiserver to talk all targets (e.g. etcd) and to recei.
 		// TODO(rfranzke): Remove this in the future when the network policy deployment has been refactored.
 		networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-allow-all", Namespace: r.GardenNamespace}}
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.RuntimeClientSet.Client(), networkPolicy, func() error {
