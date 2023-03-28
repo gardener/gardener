@@ -114,7 +114,7 @@ All of the following steps assume that you are using this kubeconfig.
 make operator-up
 ```
 
-This will first build the base image (which might take a bit if you do it for the first time).
+This will first build the base images (which might take a bit if you do it for the first time).
 Afterwards, the Gardener Operator resources will be deployed into the cluster.
 
 ### Developing Gardener Operator (Optional)
@@ -242,8 +242,8 @@ The `gardener-resource-manager`'s [HighAvailabilityConfig webhook](resource-mana
 The `virtual-garden-kube-apiserver` `Deployment` is exposed via a `Service` of type `LoadBalancer` with the same name.
 In the future, we might switch to exposing it via Istio, similar to how the `kube-apiservers` of shoot clusters are exposed.
 
-Like for the `Shoot` API, the version of the virtual garden cluster is controlled via `.spec.virtualCluster.kubernetes.version`.
-Similarly, specific configuration for the control plane components can be provided in the same section, e.g. via `.spec.virtualCluster.kubernetes.kubeAPIServer` for the `kube-apiserver`.
+Similar to the `Shoot` API, the version of the virtual garden cluster is controlled via `.spec.virtualCluster.kubernetes.version`.
+Likewise, specific configuration for the control plane components can be provided in the same section, e.g. via `.spec.virtualCluster.kubernetes.kubeAPIServer` for the `kube-apiserver`.
 
 For the virtual cluster, it is essential to provide a DNS domain via `.spec.virtualCluster.dns.domain`.
 **The respective DNS record is not managed by `gardener-operator` and should be manually created and pointed to the load balancer IP of the `virtual-garden-kube-apiserver` `Service`.**
