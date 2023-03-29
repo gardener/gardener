@@ -259,11 +259,12 @@ func aesKeyFromSecretData(data map[string][]byte) apiserverconfigv1.Key {
 
 func (k *kubeAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.Secret, error) {
 	var (
-		ipAddresses = append([]net.IP{}, k.values.ServerCertificate.ExtraIPAddresses...)
-		dnsNames    = []string{
-			v1beta1constants.DeploymentNameKubeAPIServer,
-			fmt.Sprintf("%s.%s", v1beta1constants.DeploymentNameKubeAPIServer, k.namespace),
-			fmt.Sprintf("%s.%s.svc", v1beta1constants.DeploymentNameKubeAPIServer, k.namespace),
+		ipAddresses    = append([]net.IP{}, k.values.ServerCertificate.ExtraIPAddresses...)
+		deploymentName = k.values.NamePrefix + v1beta1constants.DeploymentNameKubeAPIServer
+		dnsNames       = []string{
+			deploymentName,
+			fmt.Sprintf("%s.%s", deploymentName, k.namespace),
+			fmt.Sprintf("%s.%s.svc", deploymentName, k.namespace),
 		}
 	)
 
@@ -277,7 +278,7 @@ func (k *kubeAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.Secr
 
 	return k.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 		Name:                        secretNameServer,
-		CommonName:                  v1beta1constants.DeploymentNameKubeAPIServer,
+		CommonName:                  deploymentName,
 		IPAddresses:                 append(ipAddresses, k.values.ServerCertificate.ExtraIPAddresses...),
 		DNSNames:                    append(dnsNames, k.values.ServerCertificate.ExtraDNSNames...),
 		CertType:                    secretsutils.ServerCert,
