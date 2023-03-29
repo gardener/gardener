@@ -247,7 +247,11 @@ func (in *ControllerManagerControllerConfiguration) DeepCopyInto(out *Controller
 		(*in).DeepCopyInto(*out)
 	}
 	in.ShootMaintenance.DeepCopyInto(&out.ShootMaintenance)
-	in.ShootQuota.DeepCopyInto(&out.ShootQuota)
+	if in.ShootQuota != nil {
+		in, out := &in.ShootQuota, &out.ShootQuota
+		*out = new(ShootQuotaControllerConfiguration)
+		(*in).DeepCopyInto(*out)
+	}
 	in.ShootHibernation.DeepCopyInto(&out.ShootHibernation)
 	if in.ShootReference != nil {
 		in, out := &in.ShootReference, &out.ShootReference
@@ -720,7 +724,11 @@ func (in *ShootQuotaControllerConfiguration) DeepCopyInto(out *ShootQuotaControl
 		*out = new(int)
 		**out = **in
 	}
-	out.SyncPeriod = in.SyncPeriod
+	if in.SyncPeriod != nil {
+		in, out := &in.SyncPeriod, &out.SyncPeriod
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	return
 }
 

@@ -32,6 +32,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/operation"
@@ -72,6 +73,11 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
+	// Timeout for all calls (e.g. status updates), give status updates a bit of headroom if health checks
+	// themselves run into timeouts, so that we will still update the status with that timeout error.
+	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, r.Config.Controllers.ShootCare.SyncPeriod.Duration)
+	defer cancel()
+
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := r.GardenClient.Get(ctx, req.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -93,7 +99,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, nil
 	}
 
-	careCtx, cancel := context.WithTimeout(ctx, r.Config.Controllers.ShootCare.SyncPeriod.Duration)
+	careCtx, cancel := controllerutils.GetChildReconciliationContext(ctx, r.Config.Controllers.ShootCare.SyncPeriod.Duration)
 	defer cancel()
 
 	// Initialize conditions based on the current status.

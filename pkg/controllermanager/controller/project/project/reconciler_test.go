@@ -209,7 +209,7 @@ var _ = Describe("Default Resource Quota", func() {
 				Config: resourceQuota,
 			}
 
-			c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, ResourceQuotaName), gomock.AssignableToTypeOf(&corev1.ResourceQuota{})).
+			c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, ResourceQuotaName), gomock.AssignableToTypeOf(&corev1.ResourceQuota{})).
 				Return(apierrors.NewNotFound(corev1.Resource("resourcequota"), "resourcequota"))
 
 			expectedResourceQuota := resourceQuota.DeepCopy()
@@ -219,7 +219,7 @@ var _ = Describe("Default Resource Quota", func() {
 			expectedResourceQuota.SetName(ResourceQuotaName)
 			expectedResourceQuota.SetNamespace(namespace)
 
-			c.EXPECT().Create(ctx, expectedResourceQuota).Return(nil)
+			c.EXPECT().Create(gomock.Any(), expectedResourceQuota).Return(nil)
 
 			Expect(createOrUpdateResourceQuota(ctx, c, namespace, ownerRef, config)).To(Succeed())
 		})
@@ -243,7 +243,7 @@ var _ = Describe("Default Resource Quota", func() {
 				},
 			}
 
-			c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, ResourceQuotaName), gomock.AssignableToTypeOf(&corev1.ResourceQuota{})).
+			c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, ResourceQuotaName), gomock.AssignableToTypeOf(&corev1.ResourceQuota{})).
 				DoAndReturn(func(_ context.Context, _ client.ObjectKey, resourceQuota *corev1.ResourceQuota, _ ...client.GetOption) error {
 					*resourceQuota = *existingResourceQuota
 					return nil
@@ -255,7 +255,7 @@ var _ = Describe("Default Resource Quota", func() {
 			expectedResourceQuota.ObjectMeta.Annotations = map[string]string{"foo": "bar"}
 			expectedResourceQuota.Spec.Hard[secrets] = quantity
 
-			c.EXPECT().Patch(ctx, expectedResourceQuota, gomock.Any()).Return(nil)
+			c.EXPECT().Patch(gomock.Any(), expectedResourceQuota, gomock.Any()).Return(nil)
 
 			Expect(createOrUpdateResourceQuota(ctx, c, namespace, ownerRef, config)).To(Succeed())
 		})

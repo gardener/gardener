@@ -69,8 +69,13 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
+	gardenCtx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
+	defer cancel()
+	seedCtx, cancel := controllerutils.GetChildReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
+	defer cancel()
+
 	bastion := &operationsv1alpha1.Bastion{}
-	if err := r.GardenClient.Get(ctx, request.NamespacedName, bastion); err != nil {
+	if err := r.GardenClient.Get(gardenCtx, request.NamespacedName, bastion); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -81,15 +86,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// get Shoot for the bastion
 	shoot := gardencorev1beta1.Shoot{}
 	shootKey := kubernetesutils.Key(bastion.Namespace, bastion.Spec.ShootRef.Name)
-	if err := r.GardenClient.Get(ctx, shootKey, &shoot); err != nil {
+	if err := r.GardenClient.Get(gardenCtx, shootKey, &shoot); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not get shoot %v: %w", shootKey, err)
 	}
 
 	var err error
 	if bastion.DeletionTimestamp != nil {
-		err = r.cleanupBastion(ctx, log, bastion, &shoot)
+		err = r.cleanupBastion(gardenCtx, seedCtx, log, bastion, &shoot)
 	} else {
-		err = r.reconcileBastion(ctx, log, bastion, &shoot)
+		err = r.reconcileBastion(gardenCtx, seedCtx, log, bastion, &shoot)
 	}
 
 	if cause := reconcilerutils.ReconcileErrCause(err); cause != nil {
@@ -100,14 +105,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *Reconciler) reconcileBastion(
-	ctx context.Context,
+	gardenCtx context.Context,
+	seedCtx context.Context,
 	log logr.Logger,
 	bastion *operationsv1alpha1.Bastion,
 	shoot *gardencorev1beta1.Shoot,
 ) error {
 	if !controllerutil.ContainsFinalizer(bastion, finalizerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(ctx, r.GardenClient, bastion, finalizerName); err != nil {
+		if err := controllerutils.AddFinalizers(gardenCtx, r.GardenClient, bastion, finalizerName); err != nil {
 			return fmt.Errorf("failed to add finalizer: %w", err)
 		}
 	}
@@ -132,7 +138,7 @@ func (r *Reconciler) reconcileBastion(
 		}
 	)
 
-	if err := r.SeedClient.Get(ctx, client.ObjectKeyFromObject(extensionBastion), extensionBastion); err != nil {
+	if err := r.SeedClient.Get(seedCtx, client.ObjectKeyFromObject(extensionBastion), extensionBastion); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return err
 		}
@@ -164,20 +170,20 @@ func (r *Reconciler) reconcileBastion(
 		message := fmt.Sprintf("Error while waiting for %s %s/%s to become ready", extensionsv1alpha1.BastionResource, extensionBastion.Namespace, extensionBastion.Name)
 		err := fmt.Errorf("%s: %w", message, lastObservedError)
 
-		if patchErr := patchReadyCondition(ctx, r.GardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
+		if patchErr := patchReadyCondition(gardenCtx, r.GardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
 			log.Error(patchErr, "Failed patching ready condition")
 		}
 	}
 
 	if mustReconcileExtensionBastion {
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.SeedClient, extensionBastion, func() error {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(seedCtx, r.SeedClient, extensionBastion, func() error {
 			metav1.SetMetaDataAnnotation(&extensionBastion.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 			metav1.SetMetaDataAnnotation(&extensionBastion.ObjectMeta, v1beta1constants.GardenerTimestamp, r.Clock.Now().UTC().String())
 
 			extensionBastion.Spec = extensionBastionSpec
 			return nil
 		}); err != nil {
-			if patchErr := patchReadyCondition(ctx, r.GardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
+			if patchErr := patchReadyCondition(gardenCtx, r.GardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
 				log.Error(patchErr, "Failed patching ready condition")
 			}
 			return fmt.Errorf("failed to ensure bastion extension resource: %w", err)
@@ -192,7 +198,7 @@ func (r *Reconciler) reconcileBastion(
 		setReadyCondition(bastion, gardencorev1alpha1.ConditionTrue, "SuccessfullyReconciled", "The bastion has been reconciled successfully.")
 		bastion.Status.Ingress = extensionBastion.Status.Ingress.DeepCopy()
 		bastion.Status.ObservedGeneration = &bastion.Generation
-		if err := r.GardenClient.Status().Patch(ctx, bastion, patch); err != nil {
+		if err := r.GardenClient.Status().Patch(gardenCtx, bastion, patch); err != nil {
 			return fmt.Errorf("failed patching ready condition of Bastion: %w", err)
 		}
 	}
@@ -201,7 +207,8 @@ func (r *Reconciler) reconcileBastion(
 }
 
 func (r *Reconciler) cleanupBastion(
-	ctx context.Context,
+	gardenCtx context.Context,
+	seedCtx context.Context,
 	log logr.Logger,
 	bastion *operationsv1alpha1.Bastion,
 	shoot *gardencorev1beta1.Shoot,
@@ -210,19 +217,19 @@ func (r *Reconciler) cleanupBastion(
 		return nil
 	}
 
-	if err := patchReadyCondition(ctx, r.GardenClient, bastion, gardencorev1alpha1.ConditionFalse, "DeletionInProgress", "The bastion is being deleted."); err != nil {
+	if err := patchReadyCondition(gardenCtx, r.GardenClient, bastion, gardencorev1alpha1.ConditionFalse, "DeletionInProgress", "The bastion is being deleted."); err != nil {
 		return fmt.Errorf("failed patching ready condition of Bastion: %w", err)
 	}
 
 	// delete bastion extension resource in seed cluster
 	extensionBastion := newBastionExtension(bastion, shoot)
-	if err := r.SeedClient.Delete(ctx, extensionBastion); err != nil {
+	if err := r.SeedClient.Delete(seedCtx, extensionBastion); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("Successfully deleted")
 
 			if controllerutil.ContainsFinalizer(bastion, finalizerName) {
 				log.Info("Removing finalizer")
-				if err := controllerutils.RemoveFinalizers(ctx, r.GardenClient, bastion, finalizerName); err != nil {
+				if err := controllerutils.RemoveFinalizers(gardenCtx, r.GardenClient, bastion, finalizerName); err != nil {
 					return fmt.Errorf("failed to remove finalizer: %w", err)
 				}
 			}

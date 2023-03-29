@@ -68,7 +68,7 @@ var _ = Describe("Reconciler", func() {
 	})
 
 	It("should return nil because object not found", func() {
-		c.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfileName), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+		c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(cloudProfileName), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
 		result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: cloudProfileName}})
 		Expect(result).To(Equal(reconcile.Result{}))
@@ -76,7 +76,7 @@ var _ = Describe("Reconciler", func() {
 	})
 
 	It("should return err because object reading failed", func() {
-		c.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfileName), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).Return(fakeErr)
+		c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(cloudProfileName), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).Return(fakeErr)
 
 		result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: cloudProfileName}})
 		Expect(result).To(Equal(reconcile.Result{}))
@@ -85,7 +85,7 @@ var _ = Describe("Reconciler", func() {
 
 	Context("when deletion timestamp not set", func() {
 		BeforeEach(func() {
-			c.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfileName), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(cloudProfileName), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*obj = *cloudProfile
 				return nil
 			})
@@ -94,7 +94,7 @@ var _ = Describe("Reconciler", func() {
 		It("should ensure the finalizer (error)", func() {
 			errToReturn := apierrors.NewNotFound(schema.GroupResource{}, cloudProfileName)
 
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
 				Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
 				return errToReturn
 			})
@@ -105,7 +105,7 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should ensure the finalizer (no error)", func() {
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
 				Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
 				return nil
 			})
@@ -122,7 +122,7 @@ var _ = Describe("Reconciler", func() {
 			cloudProfile.DeletionTimestamp = &now
 			cloudProfile.Finalizers = []string{finalizerName}
 
-			c.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfileName), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+			c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(cloudProfileName), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*obj = *cloudProfile
 				return nil
 			})
@@ -137,7 +137,7 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should return an error because Shoot referencing CloudProfile exists", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
 				(&gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{
 					{
 						ObjectMeta: metav1.ObjectMeta{Name: "test-shoot", Namespace: "test-namespace"},
@@ -155,12 +155,12 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should remove the finalizer (error)", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
 				(&gardencorev1beta1.ShootList{}).DeepCopyInto(obj)
 				return nil
 			})
 
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
 				Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"finalizers":null,"resourceVersion":"42"}}`))
 				return fakeErr
 			})
@@ -171,12 +171,12 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should remove the finalizer (no error)", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
 				(&gardencorev1beta1.ShootList{}).DeepCopyInto(obj)
 				return nil
 			})
 
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
 				Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"finalizers":null,"resourceVersion":"42"}}`))
 				return nil
 			})

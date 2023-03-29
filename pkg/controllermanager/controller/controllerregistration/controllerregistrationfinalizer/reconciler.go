@@ -43,6 +43,9 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
+	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
+	defer cancel()
+
 	controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
 	if err := r.Client.Get(ctx, request.NamespacedName, controllerRegistration); err != nil {
 		if apierrors.IsNotFound(err) {

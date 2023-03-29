@@ -50,7 +50,7 @@ func AddToManager(mgr manager.Manager, cfg config.ControllerManagerConfiguration
 	}
 
 	if err := (&quota.Reconciler{
-		Config: cfg.Controllers.ShootQuota,
+		Config: *cfg.Controllers.ShootQuota,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding quota reconciler: %w", err)
 	}

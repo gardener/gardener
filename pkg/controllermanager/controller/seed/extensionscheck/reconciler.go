@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/utils"
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 var conditionsToCheck = []gardencorev1beta1.ConditionType{
@@ -50,6 +51,9 @@ type Reconciler struct {
 // referencing ControllerInstallations.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
+
+	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, r.Config.SyncPeriod.Duration)
+	defer cancel()
 
 	seed := &gardencorev1beta1.Seed{}
 	if err := r.Client.Get(ctx, request.NamespacedName, seed); err != nil {

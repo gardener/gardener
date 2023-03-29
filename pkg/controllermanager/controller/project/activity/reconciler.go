@@ -27,6 +27,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 // Reconciler reconciles Projects and updates the lastActivityTimestamp in the status.
@@ -39,6 +40,9 @@ type Reconciler struct {
 // Reconcile reconciles Projects and updates the lastActivityTimestamp in the status.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
+
+	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
+	defer cancel()
 
 	project := &gardencorev1beta1.Project{}
 	if err := r.Client.Get(ctx, request.NamespacedName, project); err != nil {

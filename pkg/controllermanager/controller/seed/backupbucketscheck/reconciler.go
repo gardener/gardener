@@ -29,6 +29,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/utils"
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 // Reconciler reconciles Seeds and maintains the BackupBucketsReady condition according to the observed status of the
@@ -43,6 +44,9 @@ type Reconciler struct {
 // referencing BackupBuckets.
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
+
+	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, r.Config.SyncPeriod.Duration)
+	defer cancel()
 
 	seed := &gardencorev1beta1.Seed{}
 	if err := r.Client.Get(ctx, req.NamespacedName, seed); err != nil {

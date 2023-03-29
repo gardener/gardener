@@ -165,24 +165,24 @@ var _ = Describe("SecretBindingControl", func() {
 			reconciler = &Reconciler{Client: c}
 			request = reconcile.Request{NamespacedName: types.NamespacedName{Namespace: secretBindingNamespace, Name: secretBindingName}}
 
-			c.EXPECT().Get(ctx, gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBinding{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.SecretBinding, _ ...client.GetOption) error {
+			c.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBinding{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.SecretBinding, _ ...client.GetOption) error {
 				secretBinding.DeepCopyInto(obj)
 				return nil
 			})
 
-			c.EXPECT().Get(ctx, gomock.Any(), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
+			c.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
 				secret.DeepCopyInto(obj)
 				return nil
 			})
 
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBinding{}), gomock.Any()).DoAndReturn(
+			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBinding{}), gomock.Any()).DoAndReturn(
 				func(_ context.Context, sb *gardencorev1beta1.SecretBinding, _ client.Patch, _ ...client.PatchOption) error {
 					*secretBinding = *sb
 					return nil
 				},
 			).AnyTimes()
 
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).DoAndReturn(
+			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).DoAndReturn(
 				func(_ context.Context, s *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
 					*secret = *s
 					return nil
@@ -204,12 +204,12 @@ var _ = Describe("SecretBindingControl", func() {
 		It("should remove the label from the secret when there are no secretbindings referring it", func() {
 			secretBinding.DeletionTimestamp = &metav1.Time{Time: time.Date(1, 1, 1, 1, 1, 1, 1, time.UTC)}
 
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBindingList{})).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.SecretBindingList, _ ...client.ListOption) error {
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBindingList{})).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.SecretBindingList, _ ...client.ListOption) error {
 				(&gardencorev1beta1.SecretBindingList{Items: []gardencorev1beta1.SecretBinding{*secretBinding}}).DeepCopyInto(list)
 				return nil
 			}).AnyTimes()
 
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
 				(&gardencorev1beta1.ShootList{}).DeepCopyInto(list)
 				return nil
 			})
@@ -281,12 +281,12 @@ var _ = Describe("SecretBindingControl", func() {
 		BeforeEach(func() {
 			reconciler = &Reconciler{Client: c}
 
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBindingList{}), gomock.Any()).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.SecretBindingList, _ ...client.ListOption) error {
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBindingList{}), gomock.Any()).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.SecretBindingList, _ ...client.ListOption) error {
 				(&gardencorev1beta1.SecretBindingList{Items: []gardencorev1beta1.SecretBinding{*secretBinding1, *secretBinding2}}).DeepCopyInto(list)
 				return nil
 			}).AnyTimes()
 
-			c.EXPECT().Get(ctx, gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBinding{})).DoAndReturn(func(_ context.Context, namespacedName client.ObjectKey, obj *gardencorev1beta1.SecretBinding, _ ...client.GetOption) error {
+			c.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBinding{})).DoAndReturn(func(_ context.Context, namespacedName client.ObjectKey, obj *gardencorev1beta1.SecretBinding, _ ...client.GetOption) error {
 				for _, sb := range []gardencorev1beta1.SecretBinding{*secretBinding1, *secretBinding2} {
 					if reflect.DeepEqual(namespacedName.Name, sb.Name) && reflect.DeepEqual(namespacedName.Namespace, sb.Namespace) {
 						sb.DeepCopyInto(obj)
@@ -296,7 +296,7 @@ var _ = Describe("SecretBindingControl", func() {
 				return nil
 			}).AnyTimes()
 
-			c.EXPECT().Get(ctx, gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Quota{})).DoAndReturn(func(_ context.Context, namespacedName client.ObjectKey, obj *gardencorev1beta1.Quota, _ ...client.GetOption) error {
+			c.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Quota{})).DoAndReturn(func(_ context.Context, namespacedName client.ObjectKey, obj *gardencorev1beta1.Quota, _ ...client.GetOption) error {
 				for _, q := range []gardencorev1beta1.Quota{*quota1, *quota2} {
 					if reflect.DeepEqual(namespacedName.Name, q.Name) && reflect.DeepEqual(namespacedName.Namespace, q.Namespace) {
 						q.DeepCopyInto(obj)
@@ -306,7 +306,7 @@ var _ = Describe("SecretBindingControl", func() {
 				return nil
 			}).AnyTimes()
 
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBinding{}), gomock.Any()).DoAndReturn(
+			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBinding{}), gomock.Any()).DoAndReturn(
 				func(_ context.Context, sb *gardencorev1beta1.SecretBinding, _ client.Patch, _ ...client.PatchOption) error {
 					if sb.Name == secretBindingName1 {
 						*secretBinding1 = *sb
@@ -317,7 +317,7 @@ var _ = Describe("SecretBindingControl", func() {
 				},
 			).AnyTimes()
 
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Quota{}), gomock.Any()).DoAndReturn(
+			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Quota{}), gomock.Any()).DoAndReturn(
 				func(_ context.Context, q *gardencorev1beta1.Quota, _ client.Patch, _ ...client.PatchOption) error {
 					if q.Name == quotaName1 {
 						*quota1 = *q
@@ -328,7 +328,7 @@ var _ = Describe("SecretBindingControl", func() {
 				},
 			).AnyTimes()
 
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).DoAndReturn(
+			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).DoAndReturn(
 				func(_ context.Context, s *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
 					return nil
 				},
@@ -336,7 +336,7 @@ var _ = Describe("SecretBindingControl", func() {
 		})
 
 		It("should add the label to the quota referred by the secretbinding", func() {
-			c.EXPECT().Get(ctx, gomock.Any(), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
+			c.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
 				(&corev1.Secret{}).DeepCopyInto(obj)
 				return nil
 			})
@@ -357,7 +357,7 @@ var _ = Describe("SecretBindingControl", func() {
 		It("should remove the label from the quota when there are no secretbindings referring it", func() {
 			secretBinding1.DeletionTimestamp = &metav1.Time{Time: time.Date(1, 1, 1, 1, 1, 1, 1, time.UTC)}
 
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
 				(&gardencorev1beta1.ShootList{}).DeepCopyInto(list)
 				return nil
 			})

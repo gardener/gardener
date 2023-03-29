@@ -519,9 +519,7 @@ func autoConvert_v1alpha1_ControllerManagerControllerConfiguration_To_config_Con
 	if err := Convert_v1alpha1_ShootMaintenanceControllerConfiguration_To_config_ShootMaintenanceControllerConfiguration(&in.ShootMaintenance, &out.ShootMaintenance, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha1_ShootQuotaControllerConfiguration_To_config_ShootQuotaControllerConfiguration(&in.ShootQuota, &out.ShootQuota, s); err != nil {
-		return err
-	}
+	out.ShootQuota = (*config.ShootQuotaControllerConfiguration)(unsafe.Pointer(in.ShootQuota))
 	if err := Convert_v1alpha1_ShootHibernationControllerConfiguration_To_config_ShootHibernationControllerConfiguration(&in.ShootHibernation, &out.ShootHibernation, s); err != nil {
 		return err
 	}
@@ -563,9 +561,7 @@ func autoConvert_config_ControllerManagerControllerConfiguration_To_v1alpha1_Con
 	if err := Convert_config_ShootMaintenanceControllerConfiguration_To_v1alpha1_ShootMaintenanceControllerConfiguration(&in.ShootMaintenance, &out.ShootMaintenance, s); err != nil {
 		return err
 	}
-	if err := Convert_config_ShootQuotaControllerConfiguration_To_v1alpha1_ShootQuotaControllerConfiguration(&in.ShootQuota, &out.ShootQuota, s); err != nil {
-		return err
-	}
+	out.ShootQuota = (*ShootQuotaControllerConfiguration)(unsafe.Pointer(in.ShootQuota))
 	if err := Convert_config_ShootHibernationControllerConfiguration_To_v1alpha1_ShootHibernationControllerConfiguration(&in.ShootHibernation, &out.ShootHibernation, s); err != nil {
 		return err
 	}
@@ -965,7 +961,7 @@ func Convert_config_ShootMaintenanceControllerConfiguration_To_v1alpha1_ShootMai
 
 func autoConvert_v1alpha1_ShootQuotaControllerConfiguration_To_config_ShootQuotaControllerConfiguration(in *ShootQuotaControllerConfiguration, out *config.ShootQuotaControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
-	out.SyncPeriod = in.SyncPeriod
+	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	return nil
 }
 
@@ -976,7 +972,7 @@ func Convert_v1alpha1_ShootQuotaControllerConfiguration_To_config_ShootQuotaCont
 
 func autoConvert_config_ShootQuotaControllerConfiguration_To_v1alpha1_ShootQuotaControllerConfiguration(in *config.ShootQuotaControllerConfiguration, out *ShootQuotaControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
-	out.SyncPeriod = in.SyncPeriod
+	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	return nil
 }
 

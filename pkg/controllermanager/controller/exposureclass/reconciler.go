@@ -28,7 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/ratelimiter"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -49,6 +48,9 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
+	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
+	defer cancel()
+
 	exposureClass := &gardencorev1beta1.ExposureClass{}
 	if err := r.Client.Get(ctx, request.NamespacedName, exposureClass); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -60,7 +62,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	if exposureClass.DeletionTimestamp != nil {
 		// Ignore the exposure class if it has no gardener finalizer.
-		if !sets.New[string](exposureClass.Finalizers...).Has(gardencorev1alpha1.GardenerName) {
+		if !sets.New[string](exposureClass.Finalizers...).Has(gardencorev1beta1.GardenerName) {
 			return reconcile.Result{}, nil
 		}
 
@@ -91,7 +93,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	if !controllerutil.ContainsFinalizer(exposureClass, gardencorev1beta1.GardenerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(ctx, r.Client, exposureClass, gardencorev1alpha1.GardenerName); err != nil {
+		if err := controllerutils.AddFinalizers(ctx, r.Client, exposureClass, gardencorev1beta1.GardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not add finalizer: %w", err)
 		}
 	}

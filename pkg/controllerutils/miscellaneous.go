@@ -15,6 +15,7 @@
 package controllerutils
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -26,6 +27,9 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/utils"
 )
+
+// DefaultReconciliationTimeout is the default timeout for the context of reconciliation functions.
+const DefaultReconciliationTimeout = 1 * time.Minute
 
 const separator = ","
 
@@ -123,4 +127,26 @@ func ReconcileOncePer24hDuration(clock clock.Clock, objectMeta metav1.ObjectMeta
 	}
 
 	return 0
+}
+
+// GetMainReconciliationContext returns a context with timeout for the controller's main client. The resulting context has a timeout equal to the timeout passed in the argument but
+// not more than DefaultReconciliationTimeout.
+func GetMainReconciliationContext(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	t := timeout
+	if timeout > DefaultReconciliationTimeout {
+		t = DefaultReconciliationTimeout
+	}
+
+	return context.WithTimeout(ctx, t)
+}
+
+// GetChildReconciliationContext returns context with timeout for the controller's secondary client. The resulting context has a timeout equal to half of the timeout
+// for the controller's main client.
+func GetChildReconciliationContext(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	t := timeout
+	if timeout > DefaultReconciliationTimeout {
+		t = DefaultReconciliationTimeout
+	}
+
+	return context.WithTimeout(ctx, t/2)
 }

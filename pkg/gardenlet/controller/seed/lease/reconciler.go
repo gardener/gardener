@@ -54,6 +54,9 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
+	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, time.Duration(*r.Config.LeaseResyncSeconds)*time.Second)
+	defer cancel()
+
 	seed := &gardencorev1beta1.Seed{}
 	if err := r.GardenClient.Get(ctx, request.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {

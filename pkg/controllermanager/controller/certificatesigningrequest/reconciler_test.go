@@ -41,7 +41,7 @@ import (
 
 var _ = Describe("Reconciler", func() {
 	var (
-		ctx                    context.Context
+		ctx                    = context.TODO()
 		ctrl                   *gomock.Controller
 		c                      *mockclient.MockClient
 		fakeCertificatesClient certificatesclientv1.CertificateSigningRequestInterface
@@ -93,7 +93,7 @@ var _ = Describe("Reconciler", func() {
 	})
 
 	It("should return nil because object not found", func() {
-		c.EXPECT().Get(ctx, client.ObjectKeyFromObject(csr), &certificatesv1.CertificateSigningRequest{}).Return(errNotFound)
+		c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(csr), &certificatesv1.CertificateSigningRequest{}).Return(errNotFound)
 
 		result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: csr.Name}})
 		Expect(result).To(Equal(reconcile.Result{}))
@@ -102,7 +102,7 @@ var _ = Describe("Reconciler", func() {
 
 	Context("when csr is in final state", func() {
 		It("should ignore it because certificate is present in the status field", func() {
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(csr), gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).DoAndReturn(
+			c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(csr), gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, obj *certificatesv1.CertificateSigningRequest, _ ...client.GetOption) error {
 					csr.Status.Certificate = []byte("test-certificate")
 					csr.DeepCopyInto(obj)
@@ -115,7 +115,7 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should ignore it because csr is Approved", func() {
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(csr), gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).DoAndReturn(
+			c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(csr), gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, obj *certificatesv1.CertificateSigningRequest, _ ...client.GetOption) error {
 					csr.Status.Conditions = append(csr.Status.Conditions, certificatesv1.CertificateSigningRequestCondition{
 						Type: certificatesv1.CertificateApproved,
@@ -139,7 +139,7 @@ var _ = Describe("Reconciler", func() {
 			Expect(err).NotTo(HaveOccurred())
 			csr.Spec.Request = csrData
 
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(csr), gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).DoAndReturn(
+			c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(csr), gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, obj *certificatesv1.CertificateSigningRequest, _ ...client.GetOption) error {
 					csr.DeepCopyInto(obj)
 					return nil
@@ -163,7 +163,7 @@ var _ = Describe("Reconciler", func() {
 			Expect(err).NotTo(HaveOccurred())
 			csr.Spec.Request = csrData
 
-			c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&authorizationv1.SubjectAccessReview{})).DoAndReturn(func(_ context.Context, obj *authorizationv1.SubjectAccessReview, _ ...client.CreateOption) error {
+			c.EXPECT().Create(gomock.Any(), gomock.AssignableToTypeOf(&authorizationv1.SubjectAccessReview{})).DoAndReturn(func(_ context.Context, obj *authorizationv1.SubjectAccessReview, _ ...client.CreateOption) error {
 				// For the simplicity of test, we are assuming SubjectAccessReview will be allowed if user is admin and not allowed for other users.
 				if obj.Spec.User == "admin" {
 					sar.Status = authorizationv1.SubjectAccessReviewStatus{
@@ -182,7 +182,7 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should result an error when user does not has authorization for seedclient subresource (sar.Status.Allowed is false)", func() {
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(csr), gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).DoAndReturn(
+			c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(csr), gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, obj *certificatesv1.CertificateSigningRequest, _ ...client.GetOption) error {
 					csr.Spec.Username = "foo"
 					csr.DeepCopyInto(obj)
@@ -196,7 +196,7 @@ var _ = Describe("Reconciler", func() {
 		It("should approve the csr when user has authorization for seedclient subresource (sar.Status.Allowed is true)", func() {
 			_, err := fakeCertificatesClient.Create(ctx, csr, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(csr), gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).DoAndReturn(
+			c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(csr), gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, obj *certificatesv1.CertificateSigningRequest, _ ...client.GetOption) error {
 					csr.Spec.Username = "admin"
 					csr.DeepCopyInto(obj)

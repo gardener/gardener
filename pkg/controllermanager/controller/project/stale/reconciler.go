@@ -33,6 +33,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -47,6 +48,9 @@ type Reconciler struct {
 // Reconcile reconciles Projects, marks them as stale and auto-deletes them after a certain time if not in-use.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
+
+	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, r.Config.StaleSyncPeriod.Duration)
+	defer cancel()
 
 	project := &gardencorev1beta1.Project{}
 	if err := r.Client.Get(ctx, request.NamespacedName, project); err != nil {

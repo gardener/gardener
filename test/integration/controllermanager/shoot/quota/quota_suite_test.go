@@ -117,7 +117,7 @@ var _ = BeforeSuite(func() {
 	Expect((&quota.Reconciler{
 		Config: config.ShootQuotaControllerConfiguration{
 			ConcurrentSyncs: pointer.Int(5),
-			SyncPeriod:      metav1.Duration{Duration: 500 * time.Millisecond},
+			SyncPeriod:      &metav1.Duration{Duration: 500 * time.Millisecond},
 		},
 		Clock: fakeClock,
 	}).AddToManager(mgr)).To(Succeed())

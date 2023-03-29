@@ -203,7 +203,7 @@ func validateShootMaintenanceControllerConfiguration(conf config.ShootMaintenanc
 	return allErrs
 }
 
-func validateShootQuotaControllerConfiguration(conf config.ShootQuotaControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateShootQuotaControllerConfiguration(conf *config.ShootQuotaControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	return allErrs
 }

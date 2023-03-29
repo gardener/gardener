@@ -43,7 +43,7 @@ var _ = Describe("Reconciler", func() {
 	const syncPeriod = 1 * time.Second
 
 	var (
-		ctx context.Context
+		ctx = context.TODO()
 		c   client.Client
 
 		conf      config.SeedBackupBucketsCheckControllerConfiguration
