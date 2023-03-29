@@ -46,7 +46,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 			kubernetes.WithRuntimeCache(mgr.GetCache()),
 		)
 		if err != nil {
-			return fmt.Errorf("failed creating seed clientset: %w", err)
+			return fmt.Errorf("failed creating runtime clientset: %w", err)
 		}
 	}
 	if r.RuntimeVersion == nil {
