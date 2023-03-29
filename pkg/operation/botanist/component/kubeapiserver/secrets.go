@@ -261,11 +261,7 @@ func (k *kubeAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.Secr
 	var (
 		ipAddresses    = append([]net.IP{}, k.values.ServerCertificate.ExtraIPAddresses...)
 		deploymentName = k.values.NamePrefix + v1beta1constants.DeploymentNameKubeAPIServer
-		dnsNames       = []string{
-			deploymentName,
-			fmt.Sprintf("%s.%s", deploymentName, k.namespace),
-			fmt.Sprintf("%s.%s.svc", deploymentName, k.namespace),
-		}
+		dnsNames       = kubernetesutils.DNSNamesForService(deploymentName, k.namespace)
 	)
 
 	if k.values.SNI.PodMutatorEnabled || (k.values.VPN.Enabled && k.values.VPN.HighAvailabilityEnabled) {
