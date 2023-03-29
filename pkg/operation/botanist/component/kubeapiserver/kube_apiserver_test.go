@@ -80,6 +80,7 @@ var _ = Describe("KubeAPIServer", func() {
 		controlledValues   = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		containerPolicyOff = vpaautoscalingv1.ContainerScalingModeOff
 		directoryOrCreate  = corev1.HostPathDirectoryOrCreate
+		priorityClassName  = "some-priority-class"
 
 		kubernetesInterface kubernetes.Interface
 		c                   client.Client
@@ -142,10 +143,11 @@ var _ = Describe("KubeAPIServer", func() {
 
 	JustBeforeEach(func() {
 		values = Values{
-			Autoscaling:    autoscalingConfig,
-			RuntimeVersion: runtimeVersion,
-			Version:        version,
-			VPN:            VPNConfig{Enabled: true},
+			Autoscaling:       autoscalingConfig,
+			PriorityClassName: priorityClassName,
+			RuntimeVersion:    runtimeVersion,
+			Version:           version,
+			VPN:               VPNConfig{Enabled: true},
 		}
 		kubernetesInterface = kubernetesfake.NewClientSetBuilder().WithAPIReader(c).WithClient(c).Build()
 		kapi = New(kubernetesInterface, namespace, sm, values)
@@ -2085,7 +2087,7 @@ rules:
 			It("should have the expected pod settings", func() {
 				deployAndRead()
 
-				Expect(deployment.Spec.Template.Spec.PriorityClassName).To(Equal("gardener-system-500"))
+				Expect(deployment.Spec.Template.Spec.PriorityClassName).To(Equal(priorityClassName))
 				Expect(deployment.Spec.Template.Spec.AutomountServiceAccountToken).To(PointTo(BeFalse()))
 				Expect(deployment.Spec.Template.Spec.DNSPolicy).To(Equal(corev1.DNSClusterFirst))
 				Expect(deployment.Spec.Template.Spec.RestartPolicy).To(Equal(corev1.RestartPolicyAlways))
@@ -3402,7 +3404,7 @@ rules:
 					values.Audit = &AuditConfig{
 						Webhook: &AuditWebhook{
 							Kubeconfig:   []byte("foo"),
-							BatchMaxSize: pointer.Int(30),
+							BatchMaxSize: pointer.Int32(30),
 							Version:      pointer.String("audit.k8s.io/v1beta1"),
 						},
 					}

@@ -36,6 +36,7 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 func SetObjectDefaults_OperatorConfiguration(in *OperatorConfiguration) {
 	SetDefaults_OperatorConfiguration(in)
 	SetDefaults_ClientConnectionConfiguration(&in.RuntimeClientConnection)
+	SetDefaults_ClientConnectionConfiguration(&in.VirtualClientConnection)
 	SetDefaults_LeaderElectionConfiguration(&in.LeaderElection)
 	SetDefaults_ServerConfiguration(&in.Server)
 	SetDefaults_GardenControllerConfig(&in.Controllers.Garden)

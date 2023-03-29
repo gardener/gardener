@@ -36,25 +36,22 @@ import (
 
 var _ = Describe("Service accounts", func() {
 	var (
-		ctx = context.TODO()
+		ctx    = context.TODO()
+		logger logr.Logger
 
 		kubeAPIServerNamespace = "shoot--foo--bar"
 
-		runtimeClient client.Client
-		targetClient  client.Client
-
+		runtimeClient      client.Client
+		targetClient       client.Client
 		fakeSecretsManager secretsmanager.Interface
-
-		logger logr.Logger
 	)
 
 	BeforeEach(func() {
+		logger = logr.Discard()
+
 		runtimeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		targetClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
-
 		fakeSecretsManager = fakesecretsmanager.New(runtimeClient, kubeAPIServerNamespace)
-
-		logger = logr.Discard()
 	})
 
 	Context("service account signing key secret rotation", func() {

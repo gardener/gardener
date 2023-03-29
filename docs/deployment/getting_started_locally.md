@@ -89,7 +89,7 @@ ip6tables -t nat -A POSTROUTING -o enp3s0 -s fc00:f853:ccd:e793::/64 -j MASQUERA
 make gardener-up
 ```
 
-This will first build the base image (which might take a bit if you do it for the first time).
+This will first build the base images (which might take a bit if you do it for the first time).
 Afterwards, the Gardener resources will be deployed into the cluster.
 
 ## Developing Gardener

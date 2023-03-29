@@ -18,7 +18,6 @@ import (
 	"context"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -26,7 +25,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -37,6 +35,7 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	. "github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	gardenaccess "github.com/gardener/gardener/test/utils/gardens"
 )
 
 var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
@@ -64,6 +63,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			Expect(runtimeClient.Delete(ctx, backupSecret)).To(Succeed())
 			waitForGardenToBeDeleted(ctx, garden)
 			cleanupVolumes(ctx)
+			Expect(runtimeClient.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(namespace), client.MatchingLabels{"role": "kube-apiserver-etcd-encryption-configuration"})).To(Succeed())
 
 			By("Verify deletion")
 			secretList := &corev1.SecretList{}
@@ -92,19 +92,11 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			))
 		}).WithPolling(2 * time.Second).Should(Succeed())
 
-		CEventually(ctx, func(g Gomega) []druidv1alpha1.Etcd {
-			etcdList := &druidv1alpha1.EtcdList{}
-			g.Expect(runtimeClient.List(ctx, etcdList, client.InNamespace(namespace))).To(Succeed())
-			return etcdList.Items
-		}).Should(ConsistOf(
-			healthyEtcd("virtual-garden-etcd-main"),
-			healthyEtcd("virtual-garden-etcd-events"),
-		))
-
-		CEventually(ctx, func(g Gomega) {
-			virtualGardenKubeAPIServerService := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "virtual-garden-kube-apiserver", Namespace: namespace}}
-			g.Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(virtualGardenKubeAPIServerService), virtualGardenKubeAPIServerService)).To(Succeed())
-			g.Expect(virtualGardenKubeAPIServerService.Status.LoadBalancer.Ingress).To(HaveLen(1))
+		By("Verify virtual cluster access using static token kubeconfig")
+		Eventually(func(g Gomega) {
+			virtualClusterClient, err := gardenaccess.CreateVirtualClusterClientFromStaticTokenKubeconfig(ctx, runtimeClient, namespace)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(virtualClusterClient.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
 		}).Should(Succeed())
 	})
 })
@@ -117,17 +109,5 @@ func healthyManagedResource(name string) gomegatypes.GomegaMatcher {
 			ContainCondition(OfType(resourcesv1alpha1.ResourcesHealthy), WithStatus(gardencorev1beta1.ConditionTrue)),
 			ContainCondition(OfType(resourcesv1alpha1.ResourcesProgressing), WithStatus(gardencorev1beta1.ConditionFalse)),
 		)}),
-	})
-}
-
-func healthyEtcd(name string) gomegatypes.GomegaMatcher {
-	return MatchFields(IgnoreExtras, Fields{
-		"ObjectMeta": MatchFields(IgnoreExtras, Fields{
-			"Name": Equal(name),
-		}),
-		"Status": MatchFields(IgnoreExtras, Fields{
-			"Ready":         PointTo(BeTrue()),
-			"ReadyReplicas": Equal(int32(3)),
-		}),
 	})
 }

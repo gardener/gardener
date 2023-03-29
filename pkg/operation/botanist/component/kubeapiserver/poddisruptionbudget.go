@@ -30,7 +30,7 @@ import (
 
 func (k *kubeAPIServer) emptyPodDisruptionBudget() client.Object {
 	pdbObjectMeta := metav1.ObjectMeta{
-		Name:      v1beta1constants.DeploymentNameKubeAPIServer,
+		Name:      k.values.NamePrefix + v1beta1constants.DeploymentNameKubeAPIServer,
 		Namespace: k.namespace,
 	}
 

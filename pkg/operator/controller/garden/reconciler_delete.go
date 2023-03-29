@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,13 +48,14 @@ func (r *Reconciler) delete(
 	log logr.Logger,
 	garden *operatorv1alpha1.Garden,
 	secretsManager secretsmanager.Interface,
+	targetVersion *semver.Version,
 ) (
 	reconcile.Result,
 	error,
 ) {
-	applier := kubernetes.NewApplier(r.RuntimeClient, r.RuntimeClient.RESTMapper())
-
 	log.Info("Instantiating component destroyers")
+	applier := kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper())
+
 	// garden system components
 	hvpaCRD := hvpa.NewCRD(applier)
 	vpaCRD := vpa.NewCRD(applier, nil)
@@ -85,6 +87,10 @@ func (r *Reconciler) delete(
 		return reconcile.Result{}, err
 	}
 	kubeAPIServerService := r.newKubeAPIServerService(log, garden)
+	kubeAPIServer, err := r.newKubeAPIServer(ctx, garden, secretsManager, targetVersion)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
 	var (
 		g = flow.NewGraph("Garden deletion")
@@ -93,6 +99,10 @@ func (r *Reconciler) delete(
 			Name: "Destroying Kubernetes API Server service",
 			Fn:   component.OpDestroyAndWait(kubeAPIServerService).Destroy,
 		})
+		destroyKubeAPIServer = g.Add(flow.Task{
+			Name: "Destroying Kubernetes API Server",
+			Fn:   component.OpDestroyAndWait(kubeAPIServer).Destroy,
+		})
 		destroyEtcd = g.Add(flow.Task{
 			Name: "Destroying main and events ETCDs of virtual garden",
 			Fn: flow.Parallel(
@@ -100,9 +110,10 @@ func (r *Reconciler) delete(
 				component.OpDestroyAndWait(etcdEvents).Destroy,
 				// TODO(rfranzke): Remove this in the future when the network policy deployment has been refactored.
 				func(ctx context.Context) error {
-					return kubernetesutils.DeleteObject(ctx, r.RuntimeClient, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "etcd-to-world", Namespace: r.GardenNamespace}})
+					return kubernetesutils.DeleteObject(ctx, r.RuntimeClientSet.Client(), &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "etcd-to-world", Namespace: r.GardenNamespace}})
 				},
 			),
+			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer),
 		})
 		syncPointVirtualGardenControlPlaneDestroyed = flow.NewTaskIDs(
 			destroyKubeAPIServerService,
@@ -160,13 +171,16 @@ func (r *Reconciler) delete(
 		})
 	)
 
-	if err := g.Compile().Run(ctx, flow.Opts{Log: log}); err != nil {
+	if err := g.Compile().Run(ctx, flow.Opts{
+		Log:              log,
+		ProgressReporter: r.reportProgress(log, garden),
+	}); err != nil {
 		return reconcilerutils.ReconcileErr(flow.Errors(err))
 	}
 
 	if controllerutil.ContainsFinalizer(garden, finalizerName) {
 		log.Info("Removing finalizer")
-		if err := controllerutils.RemoveFinalizers(ctx, r.RuntimeClient, garden, finalizerName); err != nil {
+		if err := controllerutils.RemoveFinalizers(ctx, r.RuntimeClientSet.Client(), garden, finalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 		}
 	}
@@ -176,7 +190,7 @@ func (r *Reconciler) delete(
 
 func (r *Reconciler) checkIfManagedResourcesExist() func(context.Context) error {
 	return func(ctx context.Context) error {
-		managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, r.RuntimeClient, pointer.String(v1beta1constants.SeedResourceManagerClass))
+		managedResourcesStillExist, err := managedresources.CheckIfManagedResourcesExist(ctx, r.RuntimeClientSet.Client(), pointer.String(v1beta1constants.SeedResourceManagerClass))
 		if err != nil {
 			return err
 		}

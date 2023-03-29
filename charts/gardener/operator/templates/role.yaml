@@ -57,6 +57,18 @@ rules:
   - patch
   - update
 - apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
   - resources.gardener.cloud
   resources:
   - managedresources
@@ -172,7 +184,23 @@ rules:
   resourceNames:
   - virtual-garden-etcd-events
   - virtual-garden-etcd-main
+  - virtual-garden-kube-apiserver
   verbs:
   - delete
   - patch
   - update
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - list
+  - watch
+  - delete
+  - deletecollection
+- apiGroups:
+  - ""
+  resources:
+  - pods/log
+  verbs:
+  - get

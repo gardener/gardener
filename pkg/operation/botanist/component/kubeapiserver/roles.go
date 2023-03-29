@@ -22,18 +22,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
-const (
-	serviceAccountName = "kube-apiserver"
-	roleNameHAVPN      = "kube-apiserver-vpn-client-init"
-)
+const roleNameHAVPN = "kube-apiserver-vpn-client-init"
 
 func (k *kubeAPIServer) emptyServiceAccount() *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      serviceAccountName,
+			Name:      k.values.NamePrefix + v1beta1constants.DeploymentNameKubeAPIServer,
 			Namespace: k.namespace,
 		},
 	}
@@ -57,10 +55,9 @@ func (k *kubeAPIServer) emptyRoleBindingHAVPN() *rbacv1.RoleBinding {
 	}
 }
 
-func (k *kubeAPIServer) reconcileServiceAccount(ctx context.Context) error {
-	sa := k.emptyServiceAccount()
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), sa, func() error {
-		sa.AutomountServiceAccountToken = pointer.Bool(false)
+func (k *kubeAPIServer) reconcileServiceAccount(ctx context.Context, serviceAccount *corev1.ServiceAccount) error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), serviceAccount, func() error {
+		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
 		return nil
 	})
 	return err
@@ -81,7 +78,7 @@ func (k *kubeAPIServer) reconcileRoleHAVPN(ctx context.Context) error {
 	return err
 }
 
-func (k *kubeAPIServer) reconcileRoleBindingHAVPN(ctx context.Context) error {
+func (k *kubeAPIServer) reconcileRoleBindingHAVPN(ctx context.Context, serviceAccount *corev1.ServiceAccount) error {
 	roleBinding := k.emptyRoleBindingHAVPN()
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), roleBinding, func() error {
 		roleBinding.RoleRef = rbacv1.RoleRef{
@@ -92,8 +89,8 @@ func (k *kubeAPIServer) reconcileRoleBindingHAVPN(ctx context.Context) error {
 		roleBinding.Subjects = []rbacv1.Subject{
 			{
 				Kind:      "ServiceAccount",
-				Name:      serviceAccountName,
-				Namespace: k.namespace,
+				Name:      serviceAccount.Name,
+				Namespace: serviceAccount.Namespace,
 			},
 		}
 		return nil

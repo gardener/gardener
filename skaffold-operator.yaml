@@ -104,6 +104,7 @@ build:
         - pkg/utils/errors
         - pkg/utils/flow
         - pkg/utils/gardener
+        - pkg/utils/gardener/secretsrotation
         - pkg/utils/images
         - pkg/utils/imagevector
         - pkg/utils/kubernetes
@@ -241,5 +242,7 @@ deploy:
           - name: gardener-resource-manager
             repository: '{{.IMAGE_REPO_eu_gcr_io_gardener_project_gardener_resource_manager}}'
             tag: '{{.IMAGE_TAG_eu_gcr_io_gardener_project_gardener_resource_manager}}@{{.IMAGE_DIGEST_eu_gcr_io_gardener_project_gardener_resource_manager}}'
+        hostAliases[0].ip: "10.2.10.2"
+        hostAliases[0].hostnames[0]: api.virtual-garden.local.gardener.cloud
       createNamespace: true
       wait: true

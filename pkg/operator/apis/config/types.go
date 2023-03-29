@@ -29,6 +29,9 @@ type OperatorConfiguration struct {
 	// RuntimeClientConnection specifies the kubeconfig file and the client connection settings for the proxy server to
 	// use when communicating with the kube-apiserver of the runtime cluster.
 	RuntimeClientConnection componentbaseconfig.ClientConnectionConfiguration
+	// VirtualClientConnection specifies the kubeconfig file and the client connection settings for the proxy server to
+	// use when communicating with the kube-apiserver of the virtual cluster.
+	VirtualClientConnection componentbaseconfig.ClientConnectionConfiguration
 	// LeaderElection defines the configuration of leader election client.
 	LeaderElection componentbaseconfig.LeaderElectionConfiguration
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].

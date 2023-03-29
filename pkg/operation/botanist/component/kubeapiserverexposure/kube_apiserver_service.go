@@ -68,6 +68,7 @@ type serviceValues struct {
 	gardenerManaged             bool
 	topologyAwareRoutingEnabled bool
 	fullNetworkPolicies         bool
+	clusterIP                   string
 }
 
 // NewService creates a new instance of DeployWaiter for the Service used to expose the kube-apiserver.
@@ -82,6 +83,7 @@ func NewService(
 	clusterIPFunc func(clusterIP string),
 	ingressFunc func(ingressIP string),
 	fullNetworkPolicies bool,
+	clusterIP string,
 ) component.DeployWaiter {
 	if waiter == nil {
 		waiter = retry.DefaultOps()
@@ -99,6 +101,7 @@ func NewService(
 		internalValues = &serviceValues{
 			annotationsFunc:     func() map[string]string { return map[string]string{} },
 			fullNetworkPolicies: fullNetworkPolicies,
+			clusterIP:           clusterIP,
 		}
 		loadBalancerServiceKeyFunc func() client.ObjectKey
 	)
@@ -208,6 +211,9 @@ func (s *service) Deploy(ctx context.Context) error {
 				TargetPort: intstr.FromInt(kubeapiserverconstants.Port),
 			},
 		}, s.values.serviceType)
+		if obj.Spec.ClusterIP == "" && s.values.clusterIP != "" {
+			obj.Spec.ClusterIP = s.values.clusterIP
+		}
 
 		return nil
 	}); err != nil {

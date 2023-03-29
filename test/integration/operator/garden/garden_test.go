@@ -16,6 +16,7 @@ package garden_test
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"time"
 
@@ -38,9 +39,12 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
@@ -71,6 +75,8 @@ var _ = Describe("Garden controller tests", func() {
 			&etcd.DefaultTimeout, 500*time.Millisecond,
 			&kubeapiserverexposure.DefaultInterval, 100*time.Millisecond,
 			&kubeapiserverexposure.DefaultTimeout, 500*time.Millisecond,
+			&kubeapiserver.IntervalWaitForDeployment, 100*time.Millisecond,
+			&kubeapiserver.TimeoutWaitForDeployment, 500*time.Millisecond,
 			&resourcemanager.SkipWebhookDeployment, true,
 		))
 
@@ -143,6 +149,12 @@ var _ = Describe("Garden controller tests", func() {
 			By("Stop manager")
 			mgrCancel()
 		})
+
+		DeferCleanup(test.WithVar(&gardencontroller.NewClientFromSecretObject, func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
+			Expect(secret.Name).To(HavePrefix("user-kubeconfig"))
+			Expect(secret.Namespace).To(Equal(testNamespace.Name))
+			return kubernetesfake.NewClientSetBuilder().WithClient(testClient).Build(), nil
+		}))
 
 		garden = &operatorv1alpha1.Garden{
 			ObjectMeta: metav1.ObjectMeta{
@@ -316,6 +328,47 @@ var _ = Describe("Garden controller tests", func() {
 			g.Expect(testClient.Status().Patch(ctx, service, patch)).To(Succeed())
 		}).Should(Succeed())
 
+		Eventually(func(g Gomega) []appsv1.Deployment {
+			deploymentList := &appsv1.DeploymentList{}
+			g.Expect(testClient.List(ctx, deploymentList, client.InNamespace(testNamespace.Name))).To(Succeed())
+			return deploymentList.Items
+		}).Should(ContainElements(
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("virtual-garden-kube-apiserver")})}),
+		))
+
+		// The garden controller waits for the virtual-garden-kube-apiserver Deployment to be healthy, so let's fake
+		// this here.
+		By("Patch virtual-garden-kube-apiserver deployment to report healthiness")
+		Eventually(func(g Gomega) {
+			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "virtual-garden-kube-apiserver", Namespace: testNamespace.Name}}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+			podList := &corev1.PodList{}
+			g.Expect(testClient.List(ctx, podList, client.InNamespace(testNamespace.Name), client.MatchingLabels(kubeapiserver.GetLabels()))).To(Succeed())
+
+			if desiredReplicas := int(pointer.Int32Deref(deployment.Spec.Replicas, 1)); len(podList.Items) != desiredReplicas {
+				g.Expect(testClient.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(testNamespace.Name), client.MatchingLabels(kubeapiserver.GetLabels()))).To(Succeed())
+				for i := 0; i < desiredReplicas; i++ {
+					g.Expect(testClient.Create(ctx, &corev1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("virtual-garden-kube-apiserver-%d", i),
+							Namespace: testNamespace.Name,
+							Labels:    kubeapiserver.GetLabels(),
+						},
+						Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app", Image: "app"}}},
+					})).To(Succeed(), fmt.Sprintf("create virtual-garden-kube-apiserver pod number %d", i))
+				}
+			}
+
+			patch := client.MergeFrom(deployment.DeepCopy())
+			deployment.Status.ObservedGeneration = deployment.Generation
+			deployment.Status.Conditions = []appsv1.DeploymentCondition{
+				{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue},
+				{Type: appsv1.DeploymentProgressing, Status: corev1.ConditionTrue, Reason: "NewReplicaSetAvailable"},
+			}
+			g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
+		}).Should(Succeed())
+
 		By("Wait for Reconciled condition to be set to True")
 		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
@@ -326,9 +379,17 @@ var _ = Describe("Garden controller tests", func() {
 		Expect(testClient.Delete(ctx, garden)).To(Succeed())
 
 		By("Verify that the virtual garden control plane components have been deleted")
+		Eventually(func(g Gomega) []appsv1.Deployment {
+			deploymentList := &appsv1.DeploymentList{}
+			g.Expect(testClient.List(ctx, deploymentList, client.InNamespace(testNamespace.Name))).To(Succeed())
+			return deploymentList.Items
+		}).ShouldNot(ContainElements(
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("virtual-garden-kube-apiserver")})}),
+		))
+
 		Eventually(func(g Gomega) []druidv1alpha1.Etcd {
 			etcdList := &druidv1alpha1.EtcdList{}
-			g.Expect(testClient.List(ctx, etcdList)).To(Succeed())
+			g.Expect(testClient.List(ctx, etcdList, client.InNamespace(testNamespace.Name))).To(Succeed())
 			return etcdList.Items
 		}).ShouldNot(ContainElements(
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("virtual-garden-etcd-main")})}),

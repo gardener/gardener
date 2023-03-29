@@ -16,10 +16,6 @@ package botanist
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
-	"fmt"
-	"net/http"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -34,10 +30,10 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
 
@@ -175,23 +171,7 @@ func (b *Botanist) WaitUntilEtcdsDeleted(ctx context.Context) error {
 
 // SnapshotEtcd executes into the etcd-main pod and triggers a full snapshot.
 func (b *Botanist) SnapshotEtcd(ctx context.Context) error {
-	etcdCASecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCAETCD)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
-	}
-
-	caCerts := x509.NewCertPool()
-	caCerts.AppendCertsFromPEM(etcdCASecret.Data[secretsutils.DataKeyCertificateBundle])
-
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				RootCAs: caCerts,
-			},
-		},
-	}
-
-	return b.Shoot.Components.ControlPlane.EtcdMain.Snapshot(ctx, httpClient)
+	return shared.SnapshotEtcd(ctx, b.SecretsManager, b.Shoot.Components.ControlPlane.EtcdMain)
 }
 
 // ScaleETCDToZero scales ETCD main and events replicas to zero.

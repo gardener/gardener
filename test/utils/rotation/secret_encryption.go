@@ -23,13 +23,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/test/framework"
-	"github.com/gardener/gardener/test/utils/shoots/access"
 )
 
-// SecretEncryptionVerifier creates and reads secrets in the shoot to verify correct configuration of etcd encryption.
+// SecretEncryptionVerifier creates and reads secrets in the cluster to verify correct configuration of etcd encryption.
 type SecretEncryptionVerifier struct {
-	*framework.ShootCreationFramework
+	NewTargetClientFunc func() (kubernetes.Interface, error)
 }
 
 // Before is called before the rotation is started.
@@ -58,12 +56,12 @@ func (v *SecretEncryptionVerifier) AfterCompleted(ctx context.Context) {
 
 func (v *SecretEncryptionVerifier) verifySecretEncryption(ctx context.Context) {
 	var (
-		shootClient kubernetes.Interface
-		err         error
+		targetClient kubernetes.Interface
+		err          error
 	)
 
 	Eventually(func(g Gomega) {
-		shootClient, err = access.CreateShootClientFromAdminKubeconfig(ctx, v.GardenClient, v.Shoot)
+		targetClient, err = v.NewTargetClientFunc()
 		g.Expect(err).NotTo(HaveOccurred())
 	}).Should(Succeed())
 
@@ -74,10 +72,10 @@ func (v *SecretEncryptionVerifier) verifySecretEncryption(ctx context.Context) {
 				"content": "foo",
 			},
 		}
-		g.Expect(shootClient.Client().Create(ctx, secret)).To(Succeed())
+		g.Expect(targetClient.Client().Create(ctx, secret)).To(Succeed())
 	}).Should(Succeed(), "creating secret should succeed")
 
 	Eventually(func(g Gomega) {
-		g.Expect(shootClient.Client().List(ctx, &corev1.SecretList{})).To(Succeed())
+		g.Expect(targetClient.Client().List(ctx, &corev1.SecretList{})).To(Succeed())
 	}).Should(Succeed(), "reading all secrets should succeed")
 }

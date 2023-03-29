@@ -36,25 +36,23 @@ import (
 
 var _ = Describe("ETCD", func() {
 	var (
-		ctx = context.TODO()
+		ctx    = context.TODO()
+		logger logr.Logger
 
 		kubeAPIServerNamespace = "shoot--foo--bar"
+		namePrefix             = "baz-"
 
-		runtimeClient client.Client
-		targetClient  client.Client
-
+		runtimeClient      client.Client
+		targetClient       client.Client
 		fakeSecretsManager secretsmanager.Interface
-
-		logger logr.Logger
 	)
 
 	BeforeEach(func() {
+		logger = logr.Discard()
+
 		runtimeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		targetClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
-
 		fakeSecretsManager = fakesecretsmanager.New(runtimeClient, kubeAPIServerNamespace)
-
-		logger = logr.Discard()
 	})
 
 	Context("etcd encryption key secret rotation", func() {
@@ -88,7 +86,7 @@ var _ = Describe("ETCD", func() {
 			Expect(targetClient.Create(ctx, secret2)).To(Succeed())
 			Expect(targetClient.Create(ctx, secret3)).To(Succeed())
 
-			kubeAPIServerDeployment = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: kubeAPIServerNamespace}}
+			kubeAPIServerDeployment = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: namePrefix + "kube-apiserver", Namespace: kubeAPIServerNamespace}}
 			Expect(runtimeClient.Create(ctx, kubeAPIServerDeployment)).To(Succeed())
 		})
 
@@ -138,7 +136,7 @@ var _ = Describe("ETCD", func() {
 			It("should create a snapshot of ETCD and annotate kube-apiserver accordingly", func() {
 				etcdMain.EXPECT().Snapshot(ctx, nil)
 
-				Expect(SnapshotETCDAfterRewritingSecrets(ctx, runtimeClient, func(ctx context.Context) error { return etcdMain.Snapshot(ctx, nil) }, kubeAPIServerNamespace)).To(Succeed())
+				Expect(SnapshotETCDAfterRewritingSecrets(ctx, runtimeClient, func(ctx context.Context) error { return etcdMain.Snapshot(ctx, nil) }, kubeAPIServerNamespace, namePrefix)).To(Succeed())
 
 				Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(kubeAPIServerDeployment), kubeAPIServerDeployment)).To(Succeed())
 				Expect(kubeAPIServerDeployment.Annotations).To(HaveKeyWithValue("credentials.gardener.cloud/etcd-snapshotted", "true"))
@@ -158,7 +156,7 @@ var _ = Describe("ETCD", func() {
 				secret2ResourceVersion := secret2.ResourceVersion
 				secret3ResourceVersion := secret3.ResourceVersion
 
-				Expect(RewriteSecretsRemoveLabel(ctx, logger, runtimeClient, targetClient, kubeAPIServerNamespace)).To(Succeed())
+				Expect(RewriteSecretsRemoveLabel(ctx, logger, runtimeClient, targetClient, kubeAPIServerNamespace, namePrefix)).To(Succeed())
 
 				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
 				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())

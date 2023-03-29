@@ -33,7 +33,7 @@ import (
 )
 
 func (k *kubeAPIServer) emptyHVPA() *hvpav1alpha1.Hvpa {
-	return &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: k.namespace}}
+	return &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: k.values.NamePrefix + v1beta1constants.DeploymentNameKubeAPIServer, Namespace: k.namespace}}
 }
 
 func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hvpa, deployment *appsv1.Deployment) error {

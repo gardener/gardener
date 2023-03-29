@@ -79,6 +79,16 @@ if [[ "$1" != "operator" ]]; then
       done
     done
   fi
+# If we are running the gardener-operator tests then we have to make the virtual garden domains accessible.
+else
+  if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
+    printf "\n127.0.0.1 api.virtual-garden.local.gardener.cloud\n" >>/etc/hosts
+  else
+    if ! grep -q -x "127.0.0.1 api.virtual-garden.local.gardener.cloud" /etc/hosts; then
+      printf "Hostname for virtual garden cluster is missing in /etc/hosts. To access the virtual garden cluster and run e2e tests, you have to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster\n\n"
+      exit 1
+    fi
+  fi
 fi
 
 GO111MODULE=on ginkgo run --timeout=1h $ginkgo_flags --v --show-node-events "$@"

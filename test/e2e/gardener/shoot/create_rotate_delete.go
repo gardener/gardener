@@ -24,10 +24,13 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/rotation"
 	rotationutils "github.com/gardener/gardener/test/utils/rotation"
+	"github.com/gardener/gardener/test/utils/shoots/access"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
@@ -48,13 +51,30 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		v := rotationutils.Verifiers{
 			// basic verifiers checking secrets
 			&rotation.CAVerifier{ShootCreationFramework: f},
-			&rotation.ETCDEncryptionKeyVerifier{ShootCreationFramework: f},
 			&rotation.KubeconfigVerifier{ShootCreationFramework: f},
 			&rotation.ObservabilityVerifier{ShootCreationFramework: f},
-			&rotation.ServiceAccountKeyVerifier{ShootCreationFramework: f},
 			&rotation.SSHKeypairVerifier{ShootCreationFramework: f},
+			&rotationutils.ETCDEncryptionKeyVerifier{
+				RuntimeClient:               f.ShootFramework.SeedClient.Client(),
+				Namespace:                   f.Shoot.Status.TechnicalID,
+				SecretsManagerLabelSelector: rotation.ManagedByGardenletSecretsManager,
+				GetETCDEncryptionKeyRotation: func() *gardencorev1beta1.ETCDEncryptionKeyRotation {
+					return f.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey
+				},
+			},
+			&rotationutils.ServiceAccountKeyVerifier{
+				RuntimeClient:               f.ShootFramework.SeedClient.Client(),
+				Namespace:                   f.Shoot.Status.TechnicalID,
+				SecretsManagerLabelSelector: rotation.ManagedByGardenletSecretsManager,
+				GetServiceAccountKeyRotation: func() *gardencorev1beta1.ServiceAccountKeyRotation {
+					return f.Shoot.Status.Credentials.Rotation.ServiceAccountKey
+				},
+			},
+
 			// advanced verifiers testing things from the user's perspective
-			&rotation.SecretEncryptionVerifier{ShootCreationFramework: f},
+			&rotationutils.SecretEncryptionVerifier{NewTargetClientFunc: func() (kubernetes.Interface, error) {
+				return access.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, f.Shoot)
+			}},
 			&rotation.ShootAccessVerifier{ShootCreationFramework: f},
 		}
 

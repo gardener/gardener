@@ -30,6 +30,8 @@ import (
 var (
 	// RuntimeScheme is the scheme used in the runtime cluster.
 	RuntimeScheme = runtime.NewScheme()
+	// VirtualScheme is the scheme used in the virtual cluster.
+	VirtualScheme = runtime.NewScheme()
 )
 
 func init() {
@@ -42,8 +44,13 @@ func init() {
 			druidv1alpha1.AddToScheme,
 			hvpav1alpha1.AddToScheme,
 		)
+		virtualSchemeBuilder = runtime.NewSchemeBuilder(
+			kubernetesscheme.AddToScheme,
+		)
 	)
 
 	utilruntime.Must(runtimeSchemeBuilder.AddToScheme(RuntimeScheme))
 	apiextensionsinstall.Install(RuntimeScheme)
+	utilruntime.Must(virtualSchemeBuilder.AddToScheme(VirtualScheme))
+	apiextensionsinstall.Install(VirtualScheme)
 }
