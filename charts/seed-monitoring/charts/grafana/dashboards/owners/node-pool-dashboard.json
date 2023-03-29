@@ -984,7 +984,7 @@
       },
       "yaxes": [
           {
-              "decimals": 1,
+              "decimals": 0,
               "format": "short",
               "label": "Node count",
               "logBase": 1,
