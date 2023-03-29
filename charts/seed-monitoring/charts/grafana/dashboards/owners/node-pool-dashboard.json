@@ -628,6 +628,109 @@
       }
     },
     {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "decimals": 1,
+      "description": "Shows the number of nodes that are in the NotReady state for more than 10 minutes due to the kubelet not responding",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 22
+      },
+      "hiddenSeries": false,
+      "id": 21,
+      "legend": {
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.5.17",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "count_over_time((sum by (node)(kube_node_status_condition{condition=\"Ready\",status!=\"true\"}) == 1)[10m:]) == 10",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{label_worker_gardener_cloud_pool}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Nodes not ready for more than 10 minutes",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:77",
+          "decimals": 0,
+          "format": "short",
+          "label": "Node count",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "$$hashKey": "object:78",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
       "columns": [],
       "datasource": null,
       "description": "Shows an overview of all nodes in the shoot cluster.",
@@ -897,115 +1000,6 @@
       "transform": "table",
       "type": "table-old"
     },
-    {
-      "aliasColors": {
-      },
-      "bars": false,
-      "dashes": false,
-      "dashLength": 10,
-      "datasource": null,
-      "decimals": 1,
-      "description": "Shows the number of nodes that are in the NotReady state for more than 10 minutes due to the kubelet not responding",
-      "fieldConfig": {
-          "defaults": {
-          },
-          "overrides": [
-          ]
-      },
-      "fill": 0,
-      "fillGradient": 0,
-      "gridPos": {
-          "h": 7,
-          "w": 12,
-          "x": 12,
-          "y": 32
-      },
-      "hiddenSeries": false,
-      "id": 21,
-      "legend": {
-          "alignAsTable": false,
-          "avg": false,
-          "current": false,
-          "max": false,
-          "min": false,
-          "show": true,
-          "total": false,
-          "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [
-      ],
-      "nullPointMode": "null",
-      "options": {
-          "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "7.5.17",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [
-      ],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-          {
-              "exemplar": true,
-              "expr": "count_over_time((sum by (node)(kube_node_status_condition{condition=\"Ready\",status!=\"true\"}) == 1)[10m:]) == 10",
-              "format": "time_series",
-              "interval": "",
-              "intervalFactor": 1,
-              "legendFormat": "{{label_worker_gardener_cloud_pool}}",
-              "refId": "A"
-          }
-      ],
-      "thresholds": [
-      ],
-      "timeFrom": null,
-      "timeRegions": [
-      ],
-      "timeShift": null,
-      "title": "Nodes not ready for more than 10 minutes",
-      "tooltip": {
-          "shared": true,
-          "sort": 0,
-          "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-          "buckets": null,
-          "mode": "time",
-          "name": null,
-          "show": true,
-          "values": [
-          ]
-      },
-      "yaxes": [
-          {
-              "decimals": 0,
-              "format": "short",
-              "label": "Node count",
-              "logBase": 1,
-              "max": null,
-              "min": "0",
-              "show": true
-          },
-          {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-          }
-      ],
-      "yaxis": {
-          "align": false,
-          "alignLevel": null
-      }
-  },
     {
       "collapsed": true,
       "datasource": null,
