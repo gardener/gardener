@@ -188,6 +188,8 @@ spec:
   #     maxNonMutatingInflight: 400
   #     maxMutatingInflight: 200
   #   enableAnonymousAuthentication: false # See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+  #   apiAudiences:
+  #   - foo
   #   serviceAccountConfig:
   #     issuer: foo
   #     acceptedIssuers:
