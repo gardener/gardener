@@ -70,7 +70,7 @@ ConditionPathIsReadWrite=/var/lib/ca-certificates-local
 ConditionPathExists=!/var/lib/kubelet/kubeconfig-real
 [Service]
 Type=oneshot
-ExecStart=/etc/ssl/update-local-ca-certificates.sh
+ExecStart=/var/lib/ssl/update-local-ca-certificates.sh
 ExecStartPost=/bin/systemctl restart docker.service
 [Install]
 WantedBy=multi-user.target`),
@@ -78,7 +78,7 @@ WantedBy=multi-user.target`),
 			))
 			Expect(files).To(ConsistOf(
 				extensionsv1alpha1.File{
-					Path:        "/etc/ssl/update-local-ca-certificates.sh",
+					Path:        "/var/lib/ssl/update-local-ca-certificates.sh",
 					Permissions: pointer.Int32(0744),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{

@@ -32,7 +32,7 @@ import (
 
 const (
 	pathLocalSSLCerts             = "/var/lib/ca-certificates-local"
-	pathUpdateLocalCaCertificates = "/etc/ssl/update-local-ca-certificates.sh"
+	pathUpdateLocalCaCertificates = "/var/lib/ssl/update-local-ca-certificates.sh"
 )
 
 var (
