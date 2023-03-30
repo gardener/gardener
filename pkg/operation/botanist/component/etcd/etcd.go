@@ -113,6 +113,10 @@ type Interface interface {
 	RolloutPeerCA(context.Context) error
 	// GetValues returns the current configuration values of the deployer.
 	GetValues() Values
+	// GetReplicas gets the Replicas field in the Values.
+	GetReplicas() *int32
+	// SetReplicas sets the Replicas field in the Values.
+	SetReplicas(*int32)
 }
 
 // New creates a new instance of DeployWaiter for the Etcd.
@@ -808,9 +812,11 @@ func (e *etcd) RolloutPeerCA(ctx context.Context) error {
 	return err
 }
 
-func (e *etcd) GetValues() Values {
-	return e.values
-}
+func (e *etcd) GetValues() Values { return e.values }
+
+func (e *etcd) GetReplicas() *int32 { return e.values.Replicas }
+
+func (e *etcd) SetReplicas(replicas *int32) { e.values.Replicas = replicas }
 
 func (e *etcd) podLabelSelector() labels.Selector {
 	app, _ := labels.NewRequirement(v1beta1constants.LabelApp, selection.Equals, []string{LabelAppValue})
