@@ -734,7 +734,7 @@ var _ = Describe("Validation Tests", func() {
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeForbidden),
 							"Field":  Equal("spec.runtimeCluster.settings.topologyAwareRouting.enabled"),
-							"Detail": Equal("topology-aware routing can only be enabled on multi-zone garden runtime cluster (with least two zones in spec.provider.zones)"),
+							"Detail": Equal("topology-aware routing can only be enabled on multi-zone garden runtime cluster (with at least two zones in spec.provider.zones)"),
 						})),
 					))
 				})

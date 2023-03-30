@@ -51,7 +51,7 @@ func ValidateGarden(garden *operatorv1alpha1.Garden) field.ErrorList {
 
 	if helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings) {
 		if len(garden.Spec.RuntimeCluster.Provider.Zones) <= 1 {
-			allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "runtimeCluster", "settings", "topologyAwareRouting", "enabled"), "topology-aware routing can only be enabled on multi-zone garden runtime cluster (with least two zones in spec.provider.zones)"))
+			allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "runtimeCluster", "settings", "topologyAwareRouting", "enabled"), "topology-aware routing can only be enabled on multi-zone garden runtime cluster (with at least two zones in spec.provider.zones)"))
 		}
 		if !helper.HighAvailabilityEnabled(garden) {
 			allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "runtimeCluster", "settings", "topologyAwareRouting", "enabled"), "topology-aware routing can only be enabled when virtual cluster's high-availability is enabled"))
