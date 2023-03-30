@@ -1202,6 +1202,40 @@ map[string]string
 </tr>
 </tbody>
 </table>
+<h3 id="operator.gardener.cloud/v1alpha1.SettingTopologyAwareRouting">SettingTopologyAwareRouting
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Settings">Settings</a>)
+</p>
+<p>
+<p>SettingTopologyAwareRouting controls certain settings for topology-aware traffic routing in the cluster.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md">https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md</a>.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Enabled controls whether certain Services deployed in the cluster should be topology-aware.
+These Services are virtual-garden-etcd-main-client, virtual-garden-etcd-events-client and virtual-garden-kube-apiserver.
+Additionally, other components that are deployed to the runtime cluster via other means can read this field and
+according to its value enable/disable topology-aware routing for their Services.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.SettingVerticalPodAutoscaler">SettingVerticalPodAutoscaler
 </h3>
 <p>
@@ -1282,6 +1316,21 @@ SettingVerticalPodAutoscaler
 <em>(Optional)</em>
 <p>VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the
 cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>topologyAwareRouting</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.SettingTopologyAwareRouting">
+SettingTopologyAwareRouting
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TopologyAwareRouting controls certain settings for topology-aware traffic routing in the cluster.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md">https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md</a>.</p>
 </td>
 </tr>
 </tbody>

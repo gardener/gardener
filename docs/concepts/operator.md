@@ -70,6 +70,10 @@ By setting the `.spec.settings.verticalPodAutoscaler.enabled=false` you can disa
 ⚠️ In any case, there must be a VPA available for your runtime cluster.
 Using a runtime cluster without VPA is not supported.
 
+#### Topology-Aware Traffic Routing
+
+Refer to the [Topology-Aware Traffic Routing documentation](../usage/topology_aware_routing.md) as this document contains the documentation for the topology-aware routing setting for the garden runtime cluster.
+
 ## Credentials Rotation
 
 The credentials rotation works in the same way as it does for `Shoot` resources, i.e. there are `gardener.cloud/operation` annotation values for starting or completing the rotation procedures.

@@ -87,6 +87,10 @@ type Settings struct {
 	// cluster.
 	// +optional
 	VerticalPodAutoscaler *SettingVerticalPodAutoscaler `json:"verticalPodAutoscaler,omitempty"`
+	// TopologyAwareRouting controls certain settings for topology-aware traffic routing in the cluster.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md.
+	// +optional
+	TopologyAwareRouting *SettingTopologyAwareRouting `json:"topologyAwareRouting,omitempty"`
 }
 
 // SettingLoadBalancerServices controls certain settings for services of type load balancer that are created in the
@@ -107,6 +111,16 @@ type SettingVerticalPodAutoscaler struct {
 	// +kubebuilder:default=true
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`
+}
+
+// SettingTopologyAwareRouting controls certain settings for topology-aware traffic routing in the cluster.
+// See https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md.
+type SettingTopologyAwareRouting struct {
+	// Enabled controls whether certain Services deployed in the cluster should be topology-aware.
+	// These Services are virtual-garden-etcd-main-client, virtual-garden-etcd-events-client and virtual-garden-kube-apiserver.
+	// Additionally, other components that are deployed to the runtime cluster via other means can read this field and
+	// according to its value enable/disable topology-aware routing for their Services.
+	Enabled bool `json:"enabled"`
 }
 
 // VirtualCluster contains configuration for the virtual cluster.

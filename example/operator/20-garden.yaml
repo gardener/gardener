@@ -25,6 +25,8 @@ spec:
     #     foo: bar
       verticalPodAutoscaler:
         enabled: true
+      topologyAwareRouting:
+        enabled: false
   virtualCluster:
   # controlPlane:
   #   highAvailability: {}

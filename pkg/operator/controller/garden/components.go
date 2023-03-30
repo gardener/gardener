@@ -60,7 +60,7 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 		operatorv1alpha1.SecretNameCARuntime,
 		v1beta1constants.PriorityClassNameGardenSystemCritical,
 		operatorfeatures.FeatureGate.Enabled(features.DefaultSeccompProfile),
-		false,
+		helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 		false,
 		false,
 		nil,
@@ -163,7 +163,7 @@ func (r *Reconciler) newEtcd(
 		return nil, err
 	}
 
-	highAvailabilityEnabled := garden.Spec.VirtualCluster.ControlPlane != nil && garden.Spec.VirtualCluster.ControlPlane.HighAvailability != nil
+	highAvailabilityEnabled := helper.HighAvailabilityEnabled(garden)
 
 	replicas := pointer.Int32(1)
 	if highAvailabilityEnabled {
@@ -189,8 +189,9 @@ func (r *Reconciler) newEtcd(
 				MaintenanceTimeWindow: garden.Spec.VirtualCluster.Maintenance.TimeWindow,
 				ScaleDownUpdateMode:   hvpaScaleDownUpdateMode,
 			},
-			PriorityClassName:       v1beta1constants.PriorityClassNameGardenSystem500,
-			HighAvailabilityEnabled: highAvailabilityEnabled,
+			PriorityClassName:           v1beta1constants.PriorityClassNameGardenSystem500,
+			HighAvailabilityEnabled:     highAvailabilityEnabled,
+			TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 		},
 	), nil
 }
@@ -213,8 +214,9 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 		log,
 		r.RuntimeClientSet.Client(),
 		&kubeapiserverexposure.ServiceValues{
-			AnnotationsFunc: func() map[string]string { return annotations },
-			SNIPhase:        component.PhaseDisabled,
+			AnnotationsFunc:             func() map[string]string { return annotations },
+			SNIPhase:                    component.PhaseDisabled,
+			TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 		},
 		func() client.ObjectKey {
 			return client.ObjectKey{Name: namePrefix + v1beta1constants.DeploymentNameKubeAPIServer, Namespace: r.GardenNamespace}

@@ -104,3 +104,13 @@ func MutateETCDEncryptionKeyRotation(garden *operatorv1alpha1.Garden, f func(*ga
 
 	f(garden.Status.Credentials.Rotation.ETCDEncryptionKey)
 }
+
+// HighAvailabilityEnabled returns true if the high-availability is enabled.
+func HighAvailabilityEnabled(garden *operatorv1alpha1.Garden) bool {
+	return garden.Spec.VirtualCluster.ControlPlane != nil && garden.Spec.VirtualCluster.ControlPlane.HighAvailability != nil
+}
+
+// TopologyAwareRoutingEnabled returns true if the topology-aware routing is enabled.
+func TopologyAwareRoutingEnabled(settings *operatorv1alpha1.Settings) bool {
+	return settings != nil && settings.TopologyAwareRouting != nil && settings.TopologyAwareRouting.Enabled
+}
