@@ -244,5 +244,6 @@ deploy:
             tag: '{{.IMAGE_TAG_eu_gcr_io_gardener_project_gardener_resource_manager}}@{{.IMAGE_DIGEST_eu_gcr_io_gardener_project_gardener_resource_manager}}'
         hostAliases[0].ip: "10.2.10.2"
         hostAliases[0].hostnames[0]: api.virtual-garden.local.gardener.cloud
+        replicaCount: 2
       createNamespace: true
       wait: true
