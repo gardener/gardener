@@ -140,7 +140,7 @@ for ((i = 0; i < max_retries; i++)); do
       break
     fi
   fi
-  sleep 1s
+  sleep 1
 done
 if [ $felix_config_found -eq 0 ]; then
   echo "Error: FelixConfiguration 'default' not found or patch failed after $max_retries attempts."
