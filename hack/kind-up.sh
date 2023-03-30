@@ -103,6 +103,7 @@ fi
 
 kind create cluster \
   --name "$CLUSTER_NAME" \
+  --image "kindest/node:v1.24.7" \
   --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "environment=$ENVIRONMENT" --set "gardener.repositoryRoot"=$(dirname "$0")/..)
 
 # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
