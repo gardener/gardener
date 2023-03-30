@@ -173,16 +173,7 @@ func (b *Botanist) DefaultKubeAPIServerIngress() (component.Deployer, error) {
 func (b *Botanist) DeployKubeAPIServerIngress(ctx context.Context) error {
 	// Do not deploy ingress if there is no wildcard certificate
 	if b.ControlPlaneWildcardCert == nil {
-		return b.DestroyKubeAPIServerIngress(ctx)
+		return b.Shoot.Components.ControlPlane.KubeAPIServerIngress.Destroy(ctx)
 	}
 	return b.Shoot.Components.ControlPlane.KubeAPIServerIngress.Deploy(ctx)
-}
-
-// DestroyKubeAPIServerIngress destroys the ingress for the kube-apiserver.
-func (b *Botanist) DestroyKubeAPIServerIngress(ctx context.Context) error {
-	return kubeapiserverexposure.NewIngress(
-		b.SeedClientSet.Client(),
-		b.Shoot.SeedNamespace,
-		kubeapiserverexposure.IngressValues{},
-	).Destroy(ctx)
 }

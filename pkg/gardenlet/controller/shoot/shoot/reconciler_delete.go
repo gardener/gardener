@@ -535,7 +535,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying Kubernetes API server ingress with trusted certificate",
-			Fn:           flow.TaskFn(botanist.DestroyKubeAPIServerIngress),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServerIngress.Destroy),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 		_ = g.Add(flow.Task{
