@@ -21,7 +21,7 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-// GetClusterInputs Returns the ClusterInputs used by the fluent-operator.
+// GetClusterInputs Returns the ClusterInputs used by the Fluent Operator.
 func GetClusterInputs(labels map[string]string) []*fluentbitv1alpha2.ClusterInput {
 	return []*fluentbitv1alpha2.ClusterInput{
 		{

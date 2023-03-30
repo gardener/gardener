@@ -22,13 +22,11 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -52,12 +50,9 @@ var _ = Describe("Fluent Operator", func() {
 		ctx = context.TODO()
 
 		name              = "fluent-operator"
-		fbName            = "fluent-bit"
 		namespace         = "some-namespace"
 		image             = "some-image:some-tag"
 		priorityClassName = "some-priority-class"
-		protocolTCP       = corev1.ProtocolTCP
-		lokiPort          = intstr.FromInt(3100)
 		values            = FluentOperatorValues{
 			OperatorImage:             image,
 			OperatorPriorityClassName: priorityClassName,
@@ -75,7 +70,6 @@ var _ = Describe("Fluent Operator", func() {
 		clusterRoleBinding *rbacv1.ClusterRoleBinding
 		deployment         *appsv1.Deployment
 		vpa                *vpaautoscalingv1.VerticalPodAutoscaler
-		netpol             *networkingv1.NetworkPolicy
 	)
 
 	BeforeEach(func() {
@@ -269,43 +263,11 @@ var _ = Describe("Fluent Operator", func() {
 						{
 							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
 							MinAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("100m"),
 								corev1.ResourceMemory: resource.MustParse("128Mi"),
 							},
 						},
 					},
 				},
-			},
-		}
-
-		netpol = &networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "allow-fluentbit",
-				Namespace: namespace,
-				Annotations: map[string]string{
-					"gardener.cloud/description": "Allows Egress from fluent-bit to loki",
-				},
-			},
-			Spec: networkingv1.NetworkPolicySpec{
-				PodSelector: metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						v1beta1constants.LabelApp:                                    fbName,
-						v1beta1constants.LabelRole:                                   v1beta1constants.LabelLogging,
-						v1beta1constants.GardenRole:                                  v1beta1constants.GardenRoleLogging,
-						v1beta1constants.LabelNetworkPolicyToDNS:                     v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:        v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyToLoggingTCPMetrics:       v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyToAllShootsLokiTCPMetrics: v1beta1constants.LabelNetworkPolicyAllowed,
-					},
-				},
-				Egress: []networkingv1.NetworkPolicyEgressRule{
-					{
-						Ports: []networkingv1.NetworkPolicyPort{
-							{Protocol: &protocolTCP, Port: &lokiPort},
-						},
-					},
-				},
-				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 			},
 		}
 	})
@@ -355,14 +317,13 @@ var _ = Describe("Fluent Operator", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(operatorManagedResourceSecret), operatorManagedResourceSecret)).To(Succeed())
 			Expect(operatorManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(operatorManagedResourceSecret.Data).To(HaveLen(6))
+			Expect(operatorManagedResourceSecret.Data).To(HaveLen(5))
 
 			Expect(string(operatorManagedResourceSecret.Data["serviceaccount__"+namespace+"__fluent-operator.yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
 			Expect(string(operatorManagedResourceSecret.Data["clusterrole____gardener.cloud_logging_fluent-operator.yaml"])).To(Equal(componenttest.Serialize(clusterRole)))
 			Expect(string(operatorManagedResourceSecret.Data["clusterrolebinding____fluent-operator.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
 			Expect(string(operatorManagedResourceSecret.Data["deployment__"+namespace+"__fluent-operator.yaml"])).To(Equal(componenttest.Serialize(deployment)))
 			Expect(string(operatorManagedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__fluent-operator.yaml"])).To(Equal(componenttest.Serialize(vpa)))
-			Expect(string(operatorManagedResourceSecret.Data["networkpolicy__"+namespace+"__allow-fluentbit.yaml"])).To(Equal(componenttest.Serialize(netpol)))
 		})
 	})
 

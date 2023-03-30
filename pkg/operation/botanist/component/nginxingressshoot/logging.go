@@ -26,7 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 )
 
-// CentralLoggingConfiguration returns a fluent-bit parser and filter for the nginxingress logs.
+// CentralLoggingConfiguration returns a fluent-bit parser and filter for the nginx-ingress logs.
 func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
 	return component.CentralLoggingConfig{Filters: generateClusterFilters()}, nil
 }

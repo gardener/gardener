@@ -79,14 +79,14 @@ type crds struct {
 	applier kubernetes.Applier
 }
 
-// NewCRDs can be used to deploy fluent operator CRDs.
+// NewCRDs can be used to deploy Fluent Operator CRDs.
 func NewCRDs(a kubernetes.Applier) component.DeployWaiter {
 	return &crds{
 		applier: a,
 	}
 }
 
-// Deploy creates and updates the CRD definitions for the fluent operator.
+// Deploy creates and updates the CRD definitions for the Fluent Operator.
 func (c *crds) Deploy(ctx context.Context) error {
 	var fns []flow.TaskFn
 
@@ -100,7 +100,7 @@ func (c *crds) Deploy(ctx context.Context) error {
 	return flow.Parallel(fns...)(ctx)
 }
 
-// Destroy deletes the CRDs for the fluent operator
+// Destroy deletes the CRDs for the Fluent Operator.
 func (c *crds) Destroy(ctx context.Context) error {
 	var fns []flow.TaskFn
 

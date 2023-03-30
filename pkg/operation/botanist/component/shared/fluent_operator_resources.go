@@ -25,7 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
-// NewFluentOperatorResources instantiates a new `fluent-operator-custom-resources` component.
+// NewFluentOperatorResources instantiates a new `Fluent Operator Resources` component.
 func NewFluentOperatorResources(
 	c client.Client,
 	gardenNamespaceName string,
@@ -64,7 +64,7 @@ func NewFluentOperatorResources(
 	)
 
 	if !enabled {
-		deployer = component.OpDestroyWithoutWait(deployer)
+		deployer = component.OpDestroyAndWait(deployer)
 	}
 
 	return deployer, nil

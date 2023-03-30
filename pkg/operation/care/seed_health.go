@@ -29,8 +29,6 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
@@ -55,23 +53,23 @@ var requiredManagedResourcesSeed = sets.New(
 
 // SeedHealth contains information needed to execute health checks for seed.
 type SeedHealth struct {
-	seed            *gardencorev1beta1.Seed
-	seedClient      client.Client
-	gardenletConfig config.GardenletConfiguration
-	clock           clock.Clock
-	namespace       *string
-	seedIsGarden    bool
+	seed           *gardencorev1beta1.Seed
+	seedClient     client.Client
+	clock          clock.Clock
+	namespace      *string
+	seedIsGarden   bool
+	loggingEnabled bool
 }
 
 // NewHealthForSeed creates a new Health instance with the given parameters.
-func NewHealthForSeed(seed *gardencorev1beta1.Seed, seedClient client.Client, gardenletConfig config.GardenletConfiguration, clock clock.Clock, namespace *string, seedIsGarden bool) *SeedHealth {
+func NewHealthForSeed(seed *gardencorev1beta1.Seed, seedClient client.Client, clock clock.Clock, namespace *string, seedIsGarden bool, loggingEnabled bool) *SeedHealth {
 	return &SeedHealth{
-		seedClient:      seedClient,
-		seed:            seed,
-		gardenletConfig: gardenletConfig,
-		clock:           clock,
-		namespace:       namespace,
-		seedIsGarden:    seedIsGarden,
+		seedClient:     seedClient,
+		seed:           seed,
+		clock:          clock,
+		namespace:      namespace,
+		seedIsGarden:   seedIsGarden,
+		loggingEnabled: loggingEnabled,
 	}
 }
 
@@ -126,7 +124,7 @@ func (h *SeedHealth) checkSeedSystemComponents(
 	if v1beta1helper.SeedUsesNginxIngressController(h.seed) {
 		managedResources = append(managedResources, nginxingress.ManagedResourceName)
 	}
-	if gardenlethelper.IsLoggingEnabled(&h.gardenletConfig) {
+	if h.loggingEnabled {
 		managedResources = append(managedResources, fluentoperator.OperatorManagedResourceName)
 		managedResources = append(managedResources, fluentoperator.CustomResourcesManagedResourceName)
 	}

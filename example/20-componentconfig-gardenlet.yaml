@@ -131,13 +131,6 @@ logging:
     - "evaluation"
 # logging:
 #   enabled: false
-#   fluentBit:
-#     networkPolicy:
-#       additionalEgressIPBlock: # add additional egress IPBlock to allow-fluentbit NetworkPolicy
-#         - 123.123.123.123/24
-#     output: |-
-#       [Output]
-#           ...
 #   loki:
 #     enabled: true
 #     garden:

@@ -53,7 +53,7 @@ var _ = Describe("Fluent Operator Custom Resources", func() {
 	var (
 		ctx = context.TODO()
 
-		fbName                = "fluent-bit"
+		fluentBitName         = "fluent-bit"
 		namespace             = "some-namespace"
 		image                 = "some-image:some-tag"
 		priorityClassName     = "some-priority-class"
@@ -159,10 +159,10 @@ end`,
 
 		fluentBit = &fluentbitv1alpha2.FluentBit{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fbName,
+				Name:      fluentBitName,
 				Namespace: namespace,
 				Labels: map[string]string{
-					v1beta1constants.LabelApp:                                    fbName,
+					v1beta1constants.LabelApp:                                    fluentBitName,
 					v1beta1constants.LabelRole:                                   v1beta1constants.LabelLogging,
 					v1beta1constants.GardenRole:                                  v1beta1constants.GardenRoleLogging,
 					v1beta1constants.LabelNetworkPolicyToDNS:                     v1beta1constants.LabelNetworkPolicyAllowed,
@@ -294,9 +294,9 @@ end`,
 
 		clusterFluentBitConfig = &fluentbitv1alpha2.ClusterFluentBitConfig{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: fbName + "-config",
+				Name: fluentBitName + "-config",
 				Labels: map[string]string{
-					"app.kubernetes.io/name": fbName,
+					"app.kubernetes.io/name": fluentBitName,
 				},
 			},
 			Spec: fluentbitv1alpha2.FluentBitConfigSpec{

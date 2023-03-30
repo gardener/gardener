@@ -21,16 +21,16 @@ import (
 )
 
 const (
-	fbConfigName = "fluent-bit-config"
+	fluentBitConfigName = "fluent-bit-config"
 )
 
 // GetClusterFluentBitConfig returns the ClusterFluentBitConfig used by the Fluent Operator.
-func GetClusterFluentBitConfig(fbName string, matchLabels map[string]string) *fluentbitv1alpha2.ClusterFluentBitConfig {
+func GetClusterFluentBitConfig(fluentBitName string, matchLabels map[string]string) *fluentbitv1alpha2.ClusterFluentBitConfig {
 	return &fluentbitv1alpha2.ClusterFluentBitConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fbConfigName,
+			Name: fluentBitConfigName,
 			Labels: map[string]string{
-				"app.kubernetes.io/name": fbName,
+				"app.kubernetes.io/name": fluentBitName,
 			},
 		},
 		Spec: fluentbitv1alpha2.FluentBitConfigSpec{

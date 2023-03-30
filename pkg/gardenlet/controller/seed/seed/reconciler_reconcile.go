@@ -363,8 +363,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			images.ImageNameLoki,
 			images.ImageNameLokiCurator,
 			images.ImageNameTune2fs,
-			images.ImageNameFluentBit,
-			images.ImageNameFluentBitPluginInstaller,
 			images.ImageNameGrafana,
 			images.ImageNamePrometheus,
 		},
@@ -539,12 +537,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 						"begin": maintenanceBegin,
 						"end":   maintenanceEnd,
 					},
-				}
-
-				lokiValues["labels"] = map[string]interface{}{
-					v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging,
-					v1beta1constants.LabelRole:  v1beta1constants.GardenRoleLogging,
-					v1beta1constants.LabelApp:   v1beta1constants.StatefulSetNameLoki,
 				}
 
 				currentResources, err := kubernetesutils.GetContainerResourcesInStatefulSet(ctx, seedClient, kubernetesutils.Key(r.GardenNamespace, v1beta1constants.StatefulSetNameLoki))
@@ -943,7 +935,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			r.Config.ETCDConfig,
 			v1beta1constants.PriorityClassNameSeedSystem800,
 		)
-
 		if err != nil {
 			return err
 		}
@@ -964,7 +955,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			filters,
 			parsers,
 		)
-
 		if err != nil {
 			return err
 		}
@@ -977,7 +967,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			loggingEnabled,
 			v1beta1constants.PriorityClassNameSeedSystem600,
 		)
-
 		if err != nil {
 			return err
 		}
@@ -1058,11 +1047,12 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 
 	if loggingEnabled {
+		// TODO(Kristian-ZH): Delete this in a future when the operator releases a version with this improvement: Ref https://github.com/fluent/fluent-operator/issues/654
 		// Waiting for fluent-bit service to be created
 		fluentBitService := &corev1.Service{}
 		if err := retry.UntilTimeout(ctx, 5*time.Second, time.Minute, func(ctx context.Context) (done bool, err error) {
 			if err = seedClient.Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, v1beta1constants.DaemonsetNameFluentBit), fluentBitService); err != nil {
-				return retry.MinorError(fmt.Errorf("%s service is not ready: %v", v1beta1constants.DaemonsetNameFluentBit, err))
+				return retry.MinorError(fmt.Errorf("fluent-bit service does not exist yet"))
 			}
 			return retry.Ok()
 		}); err != nil {
@@ -1070,13 +1060,13 @@ func (r *Reconciler) runReconcileSeedFlow(
 		}
 
 		// Patching fluent-bit service with the network policy annotations
-		fluentBitServicePatch := client.MergeFrom(fluentBitService.DeepCopy())
+		patch = client.MergeFrom(fluentBitService.DeepCopy())
 		fluentBitService.ObjectMeta.Annotations = map[string]string{
-			v1beta1constants.AnnotationNetworkPolicyFromPolicyPodLabelSelector: v1beta1constants.NetworkPolicyAllScrapeTargets,
-			v1beta1constants.AnnotationNetworkPolicyFromPolicyAllowedPorts:     "[{\"port\":\"2020\",\"protocol\":\"TCP\"},{\"port\":\"2021\",\"protocol\":\"TCP\"}]",
+			v1beta1constants.AnnotationNetworkPolicyFromPolicyPodLabelSelector: v1beta1constants.NetworkPolicyAllSeedScrapeTargets,
+			v1beta1constants.AnnotationNetworkPolicyFromPolicyAllowedPorts:     `[{"port":"2020","protocol":"TCP"},{"port":"2021","protocol":"TCP"}]`,
 		}
-		log.Info("Pathing network policy annotation of the FluentBit Service")
-		if err := seedClient.Patch(ctx, fluentBitService, fluentBitServicePatch); err != nil {
+		log.Info("Patching network policy annotation of the fluent-bit Service")
+		if err := seedClient.Patch(ctx, fluentBitService, patch); err != nil {
 			return err
 		}
 	}

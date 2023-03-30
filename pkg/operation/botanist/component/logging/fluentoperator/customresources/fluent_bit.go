@@ -24,15 +24,15 @@ import (
 )
 
 // GetFluentBit returns instance of FluentBit custom resource.
-func GetFluentBit(labels map[string]string, fbName, namespace, image, initImage, priorityClass string) *fluentbitv1alpha2.FluentBit {
+func GetFluentBit(labels map[string]string, fluentBitName, namespace, image, initImage, priorityClass string) *fluentbitv1alpha2.FluentBit {
 	return &fluentbitv1alpha2.FluentBit{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fbName,
+			Name:      fluentBitName,
 			Namespace: namespace,
 			Labels:    labels,
 		},
 		Spec: fluentbitv1alpha2.FluentBitSpec{
-			FluentBitConfigName: fbConfigName,
+			FluentBitConfigName: fluentBitConfigName,
 			Image:               image,
 			Command: []string{
 				"/fluent-bit/bin/fluent-bit-watcher",

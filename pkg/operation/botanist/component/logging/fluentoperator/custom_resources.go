@@ -55,7 +55,7 @@ type customResources struct {
 	additionalParsers []*fluentbitv1alpha2.ClusterParser
 }
 
-// NewCustomResources creates a new instance of fluent-operator custom resources.
+// NewCustomResources creates a new instance of Fluent Operator Custom Resources.
 func NewCustomResources(
 	client client.Client,
 	namespace string,

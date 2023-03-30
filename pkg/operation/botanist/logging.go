@@ -70,11 +70,6 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		"global":      seedImages,
 		"replicas":    b.Shoot.GetReplicas(1),
 		"clusterType": "shoot",
-		"labels": map[string]interface{}{
-			v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging,
-			v1beta1constants.LabelRole:  v1beta1constants.GardenRoleLogging,
-			v1beta1constants.LabelApp:   v1beta1constants.StatefulSetNameLoki,
-		},
 	}
 
 	// check if loki is enabled in gardenlet config, default is true

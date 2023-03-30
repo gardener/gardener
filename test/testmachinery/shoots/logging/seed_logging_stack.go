@@ -67,7 +67,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 	var (
 		f                           = framework.NewShootFramework(nil)
 		fluentBit                   = &appsv1.DaemonSet{}
-		fluentBitSecretConfig       = &corev1.Secret{}
+		fluentBitSecret             = &corev1.Secret{}
 		fluentBitService            = &corev1.Service{}
 		fluentBitClusterRole        = &rbacv1.ClusterRole{}
 		fluentBitClusterRoleBinding = &rbacv1.ClusterRoleBinding{}
@@ -106,7 +106,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		}))
 		framework.ExpectNoError(err)
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitName}, fluentBit))
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: getSecretNameFromVolume(fluentBit.Spec.Template.Spec.Volumes, fluentBitConfigVolumeName)}, fluentBitSecretConfig))
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: getSecretNameFromVolume(fluentBit.Spec.Template.Spec.Volumes, fluentBitConfigVolumeName)}, fluentBitSecret))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitName}, fluentBitService))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitClusterRoleName}, fluentBitClusterRole))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitClusterRoleName}, fluentBitClusterRoleBinding))
@@ -179,7 +179,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		}
 
 		ginkgo.By("Deploy the fluent-bit DaemonSet")
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), fluentBitSecretConfig))
+		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), fluentBitSecret))
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), fluentBit))
 
 		ginkgo.By("Wait until fluent-bit DaemonSet is ready")
@@ -262,7 +262,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		ginkgo.By("Cleanup garden namespace")
 		objectsToDelete := []client.Object{
 			fluentBit,
-			fluentBitSecretConfig,
+			fluentBitSecret,
 			fluentBitService,
 			fluentBitClusterRole,
 			fluentBitClusterRoleBinding,

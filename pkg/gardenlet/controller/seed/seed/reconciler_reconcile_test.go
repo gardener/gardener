@@ -320,23 +320,29 @@ var _ = Describe("Reconcile", func() {
 		})
 
 		It("should delete all fluent bit resources if they are not managed by the fluent operator", func() {
-			runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(fluentBitDaemonSet.GetNamespace(), fluentBitDaemonSet.GetName()), fluentBitDaemonSet).DoAndReturn(funcGetNotManagedByOperatorFluentBitDaemonSet)
-			runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(fluentBitService.GetNamespace(), fluentBitService.GetName()), fluentBitService).DoAndReturn(funcGetNotManagedByOperatorFluentBitService)
-			runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(fluentBitServiceAccount.GetNamespace(), fluentBitServiceAccount.GetName()), fluentBitServiceAccount).DoAndReturn(funcGetNotManagedByOperatorFluentBitServiceAccount)
-			runtimeClient.EXPECT().Delete(ctx, fluentBitClusterRole)
-			runtimeClient.EXPECT().Delete(ctx, fluentBitClusterRoleBinding)
-			runtimeClient.EXPECT().Delete(ctx, fluentBitDaemonSet)
-			runtimeClient.EXPECT().Delete(ctx, fluentBitService)
-			runtimeClient.EXPECT().Delete(ctx, fluentBitServiceAccount)
+			gomock.InOrder(
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(fluentBitDaemonSet.GetNamespace(), fluentBitDaemonSet.GetName()), fluentBitDaemonSet).DoAndReturn(funcGetNotManagedByOperatorFluentBitDaemonSet),
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(fluentBitService.GetNamespace(), fluentBitService.GetName()), fluentBitService).DoAndReturn(funcGetNotManagedByOperatorFluentBitService),
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(fluentBitServiceAccount.GetNamespace(), fluentBitServiceAccount.GetName()), fluentBitServiceAccount).DoAndReturn(funcGetNotManagedByOperatorFluentBitServiceAccount),
+				runtimeClient.EXPECT().Delete(ctx, fluentBitDaemonSet),
+				runtimeClient.EXPECT().Delete(ctx, fluentBitService),
+				runtimeClient.EXPECT().Delete(ctx, fluentBitServiceAccount),
+				runtimeClient.EXPECT().Delete(ctx, fluentBitClusterRole),
+				runtimeClient.EXPECT().Delete(ctx, fluentBitClusterRoleBinding),
+			)
+
 			Expect(CleanupOldFluentBit(ctx, runtimeClient)).To(Succeed())
 		})
 
 		It("should not delete resources if they are managed by the fluent operator", func() {
-			runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(fluentBitDaemonSet.GetNamespace(), fluentBitDaemonSet.GetName()), fluentBitDaemonSet).DoAndReturn(funcGetManagedByOperatorFluentBitDaemonSet)
-			runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(fluentBitService.GetNamespace(), fluentBitService.GetName()), fluentBitService).DoAndReturn(funcGetManagedByOperatorFluentBitService)
-			runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(fluentBitServiceAccount.GetNamespace(), fluentBitServiceAccount.GetName()), fluentBitServiceAccount).DoAndReturn(funcGetManagedByOperatorFluentBitServiceAccount)
-			runtimeClient.EXPECT().Delete(ctx, fluentBitClusterRole)
-			runtimeClient.EXPECT().Delete(ctx, fluentBitClusterRoleBinding)
+			gomock.InOrder(
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(fluentBitDaemonSet.GetNamespace(), fluentBitDaemonSet.GetName()), fluentBitDaemonSet).DoAndReturn(funcGetManagedByOperatorFluentBitDaemonSet),
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(fluentBitService.GetNamespace(), fluentBitService.GetName()), fluentBitService).DoAndReturn(funcGetManagedByOperatorFluentBitService),
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(fluentBitServiceAccount.GetNamespace(), fluentBitServiceAccount.GetName()), fluentBitServiceAccount).DoAndReturn(funcGetManagedByOperatorFluentBitServiceAccount),
+				runtimeClient.EXPECT().Delete(ctx, fluentBitClusterRole),
+				runtimeClient.EXPECT().Delete(ctx, fluentBitClusterRoleBinding),
+			)
+
 			Expect(CleanupOldFluentBit(ctx, runtimeClient)).To(Succeed())
 		})
 	})

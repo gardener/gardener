@@ -24,7 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
-// NewFluentOperator instantiates a new `fluent-operator` component.
+// NewFluentOperator instantiates a new `Fluent Operator` component.
 func NewFluentOperator(
 	c client.Client,
 	gardenNamespaceName string,

@@ -23,7 +23,6 @@ import (
 	"github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -32,7 +31,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
@@ -78,8 +76,6 @@ var _ = Describe("Seed health", func() {
 
 		seed *gardencorev1beta1.Seed
 
-		gardenletConfig config.GardenletConfiguration
-
 		seedSystemComponentsHealthyCondition gardencorev1beta1.Condition
 	)
 
@@ -118,12 +114,6 @@ var _ = Describe("Seed health", func() {
 			},
 		}
 
-		gardenletConfig = config.GardenletConfiguration{
-			Logging: &config.Logging{
-				Enabled: pointer.Bool(false),
-			},
-		}
-
 		fakeClock = testclock.NewFakeClock(time.Now())
 
 		seedSystemComponentsHealthyCondition = gardencorev1beta1.Condition{
@@ -135,19 +125,13 @@ var _ = Describe("Seed health", func() {
 	Describe("#CheckSeed", func() {
 		Context("When all managed resources are deployed successfully", func() {
 			JustBeforeEach(func() {
-				gardenletConfig = config.GardenletConfiguration{
-					Logging: &config.Logging{
-						Enabled: pointer.Bool(true),
-					},
-				}
-
 				for _, name := range append(requiredManagedResources, optionalManagedResources...) {
 					Expect(c.Create(ctx, healthyManagedResource(name))).To(Succeed())
 				}
 			})
 
 			It("should set SeedSystemComponentsHealthy condition to true", func() {
-				healthCheck := care.NewHealthForSeed(seed, c, gardenletConfig, fakeClock, nil, false)
+				healthCheck := care.NewHealthForSeed(seed, c, fakeClock, nil, false, true)
 				updatedConditions := healthCheck.CheckSeed(ctx, []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition}, nil)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy."))
@@ -169,7 +153,7 @@ var _ = Describe("Seed health", func() {
 			})
 
 			It("should set SeedSystemComponentsHealthy condition to true", func() {
-				healthCheck := care.NewHealthForSeed(seed, c, gardenletConfig, fakeClock, nil, true)
+				healthCheck := care.NewHealthForSeed(seed, c, fakeClock, nil, true, false)
 				updatedConditions := healthCheck.CheckSeed(ctx, []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition}, nil)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy."))
@@ -180,7 +164,7 @@ var _ = Describe("Seed health", func() {
 			var (
 				tests = func(reason, message string) {
 					It("should set SeedSystemComponentsHealthy condition to False if there is no Progressing threshold duration mapping", func() {
-						healthCheck := care.NewHealthForSeed(seed, c, gardenletConfig, fakeClock, nil, false)
+						healthCheck := care.NewHealthForSeed(seed, c, fakeClock, nil, false, false)
 						updatedConditions := healthCheck.CheckSeed(ctx, []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition}, nil)
 
 						Expect(len(updatedConditions)).ToNot(BeZero())
@@ -191,7 +175,7 @@ var _ = Describe("Seed health", func() {
 						seedSystemComponentsHealthyCondition.Status = gardencorev1beta1.ConditionFalse
 						fakeClock.Step(30 * time.Second)
 
-						healthCheck := care.NewHealthForSeed(seed, c, gardenletConfig, fakeClock, nil, false)
+						healthCheck := care.NewHealthForSeed(seed, c, fakeClock, nil, false, false)
 						updatedConditions := healthCheck.CheckSeed(
 							ctx,
 							[]gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
@@ -206,7 +190,7 @@ var _ = Describe("Seed health", func() {
 						seedSystemComponentsHealthyCondition.Status = gardencorev1beta1.ConditionTrue
 						fakeClock.Step(30 * time.Second)
 
-						healthCheck := care.NewHealthForSeed(seed, c, gardenletConfig, fakeClock, nil, false)
+						healthCheck := care.NewHealthForSeed(seed, c, fakeClock, nil, false, false)
 						updatedConditions := healthCheck.CheckSeed(
 							ctx,
 							[]gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
@@ -221,7 +205,7 @@ var _ = Describe("Seed health", func() {
 						seedSystemComponentsHealthyCondition.Status = gardencorev1beta1.ConditionProgressing
 						fakeClock.Step(30 * time.Second)
 
-						healthCheck := care.NewHealthForSeed(seed, c, gardenletConfig, fakeClock, nil, false)
+						healthCheck := care.NewHealthForSeed(seed, c, fakeClock, nil, false, false)
 						updatedConditions := healthCheck.CheckSeed(
 							ctx,
 							[]gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
@@ -236,7 +220,7 @@ var _ = Describe("Seed health", func() {
 						seedSystemComponentsHealthyCondition.Status = gardencorev1beta1.ConditionProgressing
 						fakeClock.Step(90 * time.Second)
 
-						healthCheck := care.NewHealthForSeed(seed, c, gardenletConfig, fakeClock, nil, false)
+						healthCheck := care.NewHealthForSeed(seed, c, fakeClock, nil, false, false)
 						updatedConditions := healthCheck.CheckSeed(
 							ctx,
 							[]gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},

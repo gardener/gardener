@@ -598,8 +598,8 @@ const (
 	AnnotationNetworkPolicyFromPolicyPodLabelSelector = "networking.resources.gardener.cloud/from-policy-pod-label-selector"
 	// AnnotationNetworkPolicyFromPolicyAllowedPorts allows Prometheus to scape mentioned ports.
 	AnnotationNetworkPolicyFromPolicyAllowedPorts = "networking.resources.gardener.cloud/from-policy-allowed-ports"
-	// NetworkPolicyAllScrapeTargets is a constant which allows Prometheus to scape all the targets.
-	NetworkPolicyAllScrapeTargets = "all-scrape-targets"
+	// NetworkPolicyAllSeedScrapeTargets is a constant which allows Prometheus to scape all the targets in the seed.
+	NetworkPolicyAllSeedScrapeTargets = "all-seed-scrape-targets"
 	// OperatingSystemConfigUnitNameKubeletService is a constant for a unit in the operating system config that contains the kubelet service.
 	OperatingSystemConfigUnitNameKubeletService = "kubelet.service"
 	// OperatingSystemConfigUnitNameDockerService is a constant for a unit in the operating system config that contains the docker service.
