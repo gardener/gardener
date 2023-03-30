@@ -197,18 +197,19 @@ func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration
 		return fmt.Errorf("failed adding webhook certificate management to manager: %w", err)
 	}
 
-	log.Info("Adding runnables to manager")
-	if err := mgr.Add(&controllerutils.ControlledRunner{
-		Manager: mgr,
-		BootstrapRunnables: []manager.Runnable{
-			reconcileWebhookConfigurations(ctx, mgr, validatingWebhookConfiguration, mutatingWebhookConfiguration),
-		},
-		ActualRunnables: []manager.Runnable{
-			manager.RunnableFunc(func(context.Context) error { return webhook.AddToManager(mgr) }),
-			manager.RunnableFunc(func(context.Context) error { return controller.AddToManager(mgr, cfg) }),
-		},
-	}); err != nil {
-		return err
+	log.Info("Adding webhook config reconciliation func to manager")
+	if err := mgr.Add(reconcileWebhookConfigurations(ctx, mgr, validatingWebhookConfiguration, mutatingWebhookConfiguration)); err != nil {
+		return fmt.Errorf("failed adding webhook config reconciliation func: %w", err)
+	}
+
+	log.Info("Adding webhook handlers to manager")
+	if err := webhook.AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding webhook handlers to manager: %w", err)
+	}
+
+	log.Info("Adding controllers to manager")
+	if err := controller.AddToManager(mgr, cfg); err != nil {
+		return fmt.Errorf("failed adding controllers to manager: %w", err)
 	}
 
 	log.Info("Starting manager")
