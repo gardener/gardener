@@ -353,7 +353,7 @@ images:
 # Miscellaenous
 - name: alpine
   repository: eu.gcr.io/gardener-project/3rd/alpine
-  tag: "3.15.4"
+  tag: "3.15.8"
 
 # Logging
 - name: fluent-bit
