@@ -129,6 +129,9 @@ var _ = Describe("Miscellaneous", func() {
 				Spec: core.ShootSpec{
 					SeedName: &seedName,
 				},
+				Status: core.ShootStatus{
+					SeedName: &seedName,
+				},
 			}
 		})
 

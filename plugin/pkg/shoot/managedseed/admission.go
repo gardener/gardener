@@ -29,11 +29,15 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	"github.com/gardener/gardener/plugin/pkg/utils"
+	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 const (
@@ -48,11 +52,12 @@ func Register(plugins *admission.Plugins) {
 	})
 }
 
-// ManagedSeed contains listers and and admission handler.
+// ManagedSeed contains listers and admission handler.
 type ManagedSeed struct {
 	*admission.Handler
 	coreClient           gardencoreclientset.Interface
 	seedManagementClient seedmanagementclientset.Interface
+	shootLister          gardencorelisters.ShootLister
 	readyFunc            admission.ReadyFunc
 }
 
@@ -86,6 +91,14 @@ func (v *ManagedSeed) SetSeedManagementClientset(c seedmanagementclientset.Inter
 	v.seedManagementClient = c
 }
 
+// SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
+func (v *ManagedSeed) SetInternalCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+	shootInformer := f.Core().InternalVersion().Shoots()
+	v.shootLister = shootInformer.Lister()
+
+	readyFuncs = append(readyFuncs, shootInformer.Informer().HasSynced)
+}
+
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (v *ManagedSeed) ValidateInitialization() error {
 	if v.coreClient == nil {
@@ -94,12 +107,15 @@ func (v *ManagedSeed) ValidateInitialization() error {
 	if v.seedManagementClient == nil {
 		return errors.New("missing garden seedmanagement client")
 	}
+	if v.shootLister == nil {
+		return errors.New("missing shoot lister")
+	}
 	return nil
 }
 
 var _ admission.ValidationInterface = &ManagedSeed{}
 
-// Validate validates if the Shoot can be deleted. If the
+// Validate validates changes to the Shoot referenced by a ManagedSeed.
 func (v *ManagedSeed) Validate(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if v.readyFunc == nil {
@@ -180,11 +196,56 @@ func (v *ManagedSeed) validateUpdate(ctx context.Context, a admission.Attributes
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "kubernetes", "enableStaticTokenKubeconfig"), shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, "shoot static token kubeconfig cannot be disabled when the seed secretRef is set"))
 	}
 
+	zoneValidationErrrs, err := v.validateWorkerZoneChanges(ctx, field.NewPath("spec", "providers", "workers"), shoot, oldShoot, seedTemplate)
+	if err != nil {
+		return apierrors.NewInternalError(err)
+	}
+	allErrs = append(allErrs, zoneValidationErrrs...)
+
 	if len(allErrs) > 0 {
 		return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, allErrs)
 	}
 
 	return nil
+}
+
+// validateWorkerZoneChanges returns an error if worker zones for the given shoot were changed
+// while it still hosts shoot control-planes.
+func (v *ManagedSeed) validateWorkerZoneChanges(ctx context.Context, fldPath *field.Path, shoot, oldShoot *core.Shoot, seedTemplate *gardencorev1beta1.SeedTemplate) (field.ErrorList, error) {
+	allErrs := field.ErrorList{}
+
+	shootZones := gardencorehelper.GetAllZonesFromShoot(shoot)
+
+	// return if zones in shoot workers are unchanged
+	if shootZones.Equal(gardencorehelper.GetAllZonesFromShoot(oldShoot)) {
+		return allErrs, nil
+	}
+
+	// return if all zones in seedTemplate are available in shoot workers, i.e. no zone previously available
+	// in seed was removed from shoot workers.
+	if shootZones.HasAll(seedTemplate.Spec.Provider.Zones...) {
+		return allErrs, nil
+	}
+
+	managedSeed, err := utils.GetManagedSeed(ctx, v.seedManagementClient, shoot.GetNamespace(), shoot.GetName())
+	if err != nil {
+		return allErrs, apierrors.NewInternalError(fmt.Errorf("could not get ManagedSeed for shoot '%s/%s': %v", shoot.GetNamespace(), shoot.GetName(), err))
+	}
+
+	if managedSeed == nil {
+		return allErrs, nil
+	}
+
+	shoots, err := v.shootLister.List(labels.Everything())
+	if err != nil {
+		return allErrs, err
+	}
+
+	if admissionutils.IsSeedUsedByShoot(managedSeed.Name, shoots) {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "cannot change zone information since shoot is registered as seed which is still used by shoot(s)"))
+	}
+
+	return allErrs, nil
 }
 
 func (v *ManagedSeed) validateDeleteCollection(ctx context.Context, a admission.Attributes) error {

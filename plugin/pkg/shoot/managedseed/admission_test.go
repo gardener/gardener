@@ -32,6 +32,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	corefake "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	fakeseedmanagement "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -48,12 +49,19 @@ var _ = Describe("ManagedSeed", func() {
 		var (
 			shoot                *core.Shoot
 			managedSeed          *seedmanagementv1alpha1.ManagedSeed
+			gardenletConfig      *gardenletv1alpha1.GardenletConfiguration
 			coreClient           *corefake.Clientset
+			coreInformerFactory  gardencoreinformers.SharedInformerFactory
 			seedManagementClient *fakeseedmanagement.Clientset
 			admissionHandler     *ManagedSeed
+
+			worker1Zones, worker2Zones []string
 		)
 
 		BeforeEach(func() {
+			worker1Zones = []string{"1", "2", "3"}
+			worker2Zones = []string{"4", "5", "6"}
+
 			shoot = &core.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -76,6 +84,30 @@ var _ = Describe("ManagedSeed", func() {
 						Type:  "foo",
 						Nodes: pointer.String("10.181.0.0/18"),
 					},
+					Provider: core.Provider{
+						Workers: []core.Worker{
+							{
+								Name:  "worker-1",
+								Zones: worker1Zones,
+							},
+							{
+								Name:  "worker-2",
+								Zones: worker2Zones,
+							},
+						},
+					},
+				},
+			}
+
+			gardenletConfig = &gardenletv1alpha1.GardenletConfiguration{
+				SeedConfig: &gardenletv1alpha1.SeedConfig{
+					SeedTemplate: gardencorev1beta1.SeedTemplate{
+						Spec: gardencorev1beta1.SeedSpec{
+							Provider: gardencorev1beta1.SeedProvider{
+								Zones: append(worker1Zones, worker2Zones...),
+							},
+						},
+					},
 				},
 			}
 
@@ -90,11 +122,7 @@ var _ = Describe("ManagedSeed", func() {
 					},
 					Gardenlet: &seedmanagementv1alpha1.Gardenlet{
 						Config: runtime.RawExtension{
-							Object: &gardenletv1alpha1.GardenletConfiguration{
-								SeedConfig: &gardenletv1alpha1.SeedConfig{
-									SeedTemplate: gardencorev1beta1.SeedTemplate{},
-								},
-							},
+							Object: gardenletConfig,
 						},
 					},
 				},
@@ -105,6 +133,9 @@ var _ = Describe("ManagedSeed", func() {
 
 			coreClient = &corefake.Clientset{}
 			admissionHandler.SetInternalCoreClientset(coreClient)
+
+			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
 
 			seedManagementClient = &fakeseedmanagement.Clientset{}
 			admissionHandler.SetSeedManagementClientset(seedManagementClient)
@@ -223,6 +254,93 @@ var _ = Describe("ManagedSeed", func() {
 				Expect(err).To(BeInvalidError())
 				Expect(err).To(MatchError(ContainSubstring("shoot static token kubeconfig cannot be disabled when the seed secretRef is set")))
 			})
+
+			It("should forbid Shoot update when zones have changed but shoot is scheduled to seed", func() {
+				scheduledShoot := &core.Shoot{
+					Spec: core.ShootSpec{
+						SeedName: pointer.String(name),
+					},
+					Status: core.ShootStatus{
+						SeedName: pointer.String(name),
+					},
+				}
+				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(scheduledShoot)).To(Succeed())
+
+				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
+				})
+
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Provider.Workers[0].Zones = []string{"new-zone"}
+				attrs := getShootAttributes(shoot, oldShoot, admission.Update, &metav1.UpdateOptions{})
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(BeInvalidError())
+				Expect(err).To(MatchError(ContainSubstring("cannot change zone information since shoot is registered as seed which is still used by shoot(s)")))
+			})
+
+			It("should allow Shoot update when zones have changed which are not registered in seed", func() {
+				scheduledShoot := &core.Shoot{
+					Spec: core.ShootSpec{
+						SeedName: pointer.String(name),
+					},
+					Status: core.ShootStatus{
+						SeedName: pointer.String(name),
+					},
+				}
+				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(scheduledShoot)).To(Succeed())
+
+				gardenletConfig.SeedConfig.Spec.Provider.Zones = worker2Zones
+				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
+				})
+
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Provider.Workers[0].Zones = []string{"new-zone"}
+				attrs := getShootAttributes(shoot, oldShoot, admission.Update, &metav1.UpdateOptions{})
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
+			It("should allow Shoot update when new zone is added", func() {
+				scheduledShoot := &core.Shoot{
+					Spec: core.ShootSpec{
+						SeedName: pointer.String(name),
+					},
+					Status: core.ShootStatus{
+						SeedName: pointer.String(name),
+					},
+				}
+				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(scheduledShoot)).To(Succeed())
+
+				gardenletConfig.SeedConfig.Spec.Provider.Zones = worker2Zones
+				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
+				})
+
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Provider.Workers[0].Zones = append(shoot.Spec.Provider.Workers[0].Zones, "new-zone")
+				attrs := getShootAttributes(shoot, oldShoot, admission.Update, &metav1.UpdateOptions{})
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
+			It("should allow Shoot update when zones have changed but no shoot is scheduled to seed", func() {
+				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
+				})
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Provider.Workers[0].Zones = []string{"new-zone"}
+				attrs := getShootAttributes(shoot, oldShoot, admission.Update, &metav1.UpdateOptions{})
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
+			It("should allow Shoot update", func() {
+				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
+				})
+				oldShoot := shoot.DeepCopy()
+				attrs := getShootAttributes(shoot, oldShoot, admission.Update, &metav1.UpdateOptions{})
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+			})
 		})
 
 		Context("delete", func() {
@@ -332,6 +450,7 @@ var _ = Describe("ManagedSeed", func() {
 			admissionHandler, _ := New()
 			admissionHandler.SetInternalCoreClientset(&corefake.Clientset{})
 			admissionHandler.SetSeedManagementClientset(&fakeseedmanagement.Clientset{})
+			admissionHandler.SetInternalCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 
 			err := admissionHandler.ValidateInitialization()
 			Expect(err).ToNot(HaveOccurred())

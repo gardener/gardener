@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
@@ -80,15 +79,13 @@ func NewAttributesWithName(a admission.Attributes, name string) admission.Attrib
 // shoots.
 func ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec *core.SeedSpec, seedName string, shootLister gardencorelisters.ShootLister, kind string) error {
 	if removedZones := sets.New[string](oldSeedSpec.Provider.Zones...).Difference(sets.New[string](newSeedSpec.Provider.Zones...)); removedZones.Len() > 0 {
-		shootList, err := GetFilteredShootList(shootLister, func(shoot *core.Shoot) bool {
-			return pointer.StringDeref(shoot.Spec.SeedName, "") == seedName
-		})
+		shoots, err := shootLister.List(labels.Everything())
 		if err != nil {
 			return err
 		}
 
-		if len(shootList) > 0 {
-			return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot remove zones %v from %s %s as there are %d Shoots scheduled to this Seed", sets.List(removedZones), kind, seedName, len(shootList)))
+		if IsSeedUsedByShoot(seedName, shoots) {
+			return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot remove zones %v from %s %s as there are Shoots scheduled to this Seed", sets.List(removedZones), kind, seedName))
 		}
 	}
 

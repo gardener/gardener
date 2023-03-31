@@ -453,7 +453,7 @@ var _ = Describe("ManagedSeed", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.gardenlet.config.seedConfig.spec.provider.zones"),
-						"Detail": ContainSubstring("seed provider zones must be equal to shoot zones"),
+						"Detail": ContainSubstring("[]string{\"foo\", \"bar\"}: cannot use zone in seed provider that is not available in referenced shoot"),
 					})),
 				))
 			})
@@ -698,7 +698,7 @@ var _ = Describe("ManagedSeed", func() {
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.provider.zones"),
-							"Detail": ContainSubstring("added zones must match the zones configured in the ManagedSeed's shoot cluster"),
+							"Detail": ContainSubstring("added zones must match zone names configured for workers in the referenced shoot cluster"),
 						})),
 					))
 				})
@@ -725,7 +725,7 @@ var _ = Describe("ManagedSeed", func() {
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
 							"Field":  Equal("spec.gardenlet.config.seedConfig.spec.provider.zones"),
-							"Detail": ContainSubstring("[]string{\"zone-foobar\"}: added zones must match the zones configured in the ManagedSeed's shoot cluster"),
+							"Detail": ContainSubstring("[]string{\"zone-foobar\"}: added zones must match zone names configured for workers in the referenced shoot cluster"),
 						})),
 					))
 				})

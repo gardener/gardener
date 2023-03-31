@@ -250,7 +250,7 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, o admis
 	case admission.Update:
 		oldManagedSeed, ok := a.GetOldObject().(*seedmanagement.ManagedSeed)
 		if !ok {
-			return apierrors.NewInternalError(errors.New("could not covert old resource into ManagedSeed object"))
+			return apierrors.NewInternalError(errors.New("could not convert old resource into ManagedSeed object"))
 		}
 		errs, err := v.validateManagedSeedUpdate(oldManagedSeed, managedSeed, shoot)
 		if err != nil {
@@ -276,8 +276,8 @@ func (v *ManagedSeed) validateManagedSeedCreate(managedSeed *seedmanagement.Mana
 
 	shootZones := helper.GetAllZonesFromShoot(shoot)
 
-	if len(seedSpec.Provider.Zones) > 0 && !sets.New[string](seedSpec.Provider.Zones...).Equal(shootZones) {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec", "provider", "zones"), seedSpec.Provider.Zones, fmt.Sprintf("seed provider zones must be equal to shoot zones (%v)", sets.List(shootZones))))
+	if !shootZones.HasAll(seedSpec.Provider.Zones...) {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec", "provider", "zones"), seedSpec.Provider.Zones, "cannot use zone in seed provider that is not available in referenced shoot"))
 	}
 
 	return allErrs, nil
@@ -307,11 +307,7 @@ func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *
 	// Zone names were allowed to deviate from the zones configured for shoot clusters, see https://github.com/gardener/gardener/commit/8d28452e7f718d0041fbe82eb83543e3a87ea8ad.
 	// Thus, we can only check added zones here.
 	if !shootZones.HasAll(newZones.UnsortedList()...) {
-		allErrs = append(allErrs, field.Invalid(zonesFieldPath, newZones.UnsortedList(), "added zones must match the zones configured in the ManagedSeed's shoot cluster"))
-	}
-
-	if len(newSeedSpec.Provider.Zones) > 0 && shootZones.Len() != len(newSeedSpec.Provider.Zones) {
-		allErrs = append(allErrs, field.Invalid(zonesFieldPath, newSeedSpec.Provider.Zones, "seed provider zones size must be equal to shoot zones"))
+		allErrs = append(allErrs, field.Invalid(zonesFieldPath, newZones.UnsortedList(), "added zones must match zone names configured for workers in the referenced shoot cluster"))
 	}
 
 	return allErrs, nil
