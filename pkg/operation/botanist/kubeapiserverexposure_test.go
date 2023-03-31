@@ -22,6 +22,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
@@ -34,15 +35,17 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/garden"
+	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("KubeAPIServerExposure", func() {
 	var (
 		ctrl   *gomock.Controller
 		scheme *runtime.Scheme
-		client client.Client
+		c      client.Client
 
 		botanist *Botanist
 
@@ -55,10 +58,12 @@ var _ = Describe("KubeAPIServerExposure", func() {
 
 		scheme = runtime.NewScheme()
 		Expect(corev1.AddToScheme(scheme)).NotTo(HaveOccurred())
-		client = fake.NewClientBuilder().WithScheme(scheme).Build()
+		Expect(networkingv1.AddToScheme(scheme)).NotTo(HaveOccurred())
+		c = fake.NewClientBuilder().WithScheme(scheme).Build()
 
 		fakeClientSet := kubernetesfake.NewClientSetBuilder().
-			WithAPIReader(client).
+			WithAPIReader(c).
+			WithClient(c).
 			Build()
 
 		botanist = &Botanist{
@@ -109,7 +114,7 @@ var _ = Describe("KubeAPIServerExposure", func() {
 
 			It("returns Enabling for service of type LoadBalancer", func() {
 				svc.Spec.Type = corev1.ServiceTypeLoadBalancer
-				Expect(client.Create(ctx, svc)).NotTo(HaveOccurred())
+				Expect(c.Create(ctx, svc)).NotTo(HaveOccurred())
 
 				phase, err := botanist.SNIPhase(ctx)
 				Expect(err).NotTo(HaveOccurred())
@@ -118,7 +123,7 @@ var _ = Describe("KubeAPIServerExposure", func() {
 
 			It("returns Enabled for service of type ClusterIP", func() {
 				svc.Spec.Type = corev1.ServiceTypeClusterIP
-				Expect(client.Create(ctx, svc)).NotTo(HaveOccurred())
+				Expect(c.Create(ctx, svc)).NotTo(HaveOccurred())
 
 				phase, err := botanist.SNIPhase(ctx)
 				Expect(err).NotTo(HaveOccurred())
@@ -129,7 +134,7 @@ var _ = Describe("KubeAPIServerExposure", func() {
 				"return Enabled for service of type",
 				func(svcType corev1.ServiceType) {
 					svc.Spec.Type = svcType
-					Expect(client.Create(ctx, svc)).NotTo(HaveOccurred())
+					Expect(c.Create(ctx, svc)).NotTo(HaveOccurred())
 
 					phase, err := botanist.SNIPhase(ctx)
 					Expect(err).NotTo(HaveOccurred())
@@ -139,6 +144,70 @@ var _ = Describe("KubeAPIServerExposure", func() {
 				Entry("ExternalName", corev1.ServiceTypeExternalName),
 				Entry("NodePort", corev1.ServiceTypeNodePort),
 			)
+		})
+	})
+
+	Describe("#Ingress", func() {
+		var (
+			ingress *networkingv1.Ingress
+			secret  *corev1.Secret
+			err     error
+		)
+
+		BeforeEach(func() {
+			gardenletfeatures.RegisterFeatureGates()
+
+			botanist.Shoot.Components = &shoot.Components{
+				ControlPlane: &shoot.ControlPlane{},
+			}
+
+			kubernetesVersion := "1.26.0"
+			botanist.Seed = &seed.Seed{}
+			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
+				Status: gardencorev1beta1.SeedStatus{
+					KubernetesVersion: &kubernetesVersion,
+				},
+			})
+
+			ingress = &networkingv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "kube-apiserver",
+					Namespace: namespace,
+				},
+			}
+
+			secret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "wildcard-secret",
+					Namespace: namespace,
+					Labels: map[string]string{
+						"gardener.cloud/role": "controlplane-cert",
+					},
+				},
+			}
+		})
+
+		It("should create the ingress if there is a wildcard certificate", func() {
+			botanist.ControlPlaneWildcardCert = secret
+			botanist.Shoot.Components.ControlPlane.KubeAPIServerIngress, err = botanist.DefaultKubeAPIServerIngress()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(botanist.DeployKubeAPIServerIngress(ctx)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(ingress), ingress)).To(Succeed())
+		})
+
+		It("should not create the ingress if there is no wildcard certificate", func() {
+			botanist.Shoot.Components.ControlPlane.KubeAPIServerIngress, err = botanist.DefaultKubeAPIServerIngress()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(botanist.DeployKubeAPIServerIngress(ctx)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(ingress), ingress)).To(BeNotFoundError())
+		})
+
+		It("should delete an existing ingress if there is no wildcard certificate", func() {
+			Expect(c.Create(ctx, ingress)).To(Succeed())
+			botanist.Shoot.Components.ControlPlane.KubeAPIServerIngress, err = botanist.DefaultKubeAPIServerIngress()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(botanist.DeployKubeAPIServerIngress(ctx)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(ingress), ingress)).To(BeNotFoundError())
 		})
 	})
 })

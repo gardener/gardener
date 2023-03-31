@@ -172,6 +172,11 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.InitializeSecretsManagement).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Kubernetes API server ingress with trusted certificate in the Seed cluster",
+			Fn:           flow.TaskFn(botanist.DeployKubeAPIServerIngress),
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
+		})
 		deployReferencedResources = g.Add(flow.Task{
 			Name:         "Deploying referenced resources",
 			Fn:           flow.TaskFn(botanist.DeployReferencedResources).RetryUntilTimeout(defaultInterval, defaultTimeout),

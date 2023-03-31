@@ -152,3 +152,29 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 		},
 	)
 }
+
+// DefaultKubeAPIServerIngress returns a deployer for the kube-apiserver ingress.
+func (b *Botanist) DefaultKubeAPIServerIngress() (component.Deployer, error) {
+	ingressClass, err := gardenerutils.ComputeNginxIngressClassForSeed(b.Seed.GetInfo(), b.Seed.GetInfo().Status.KubernetesVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	return kubeapiserverexposure.NewIngress(
+		b.SeedClientSet.Client(),
+		b.Shoot.SeedNamespace,
+		kubeapiserverexposure.IngressValues{
+			ServiceName:      v1beta1constants.DeploymentNameKubeAPIServer,
+			Host:             b.ComputeKubeAPIServerHost(),
+			IngressClassName: &ingressClass,
+		}), nil
+}
+
+// DeployKubeAPIServerIngress deploys the ingress for the kube-apiserver.
+func (b *Botanist) DeployKubeAPIServerIngress(ctx context.Context) error {
+	// Do not deploy ingress if there is no wildcard certificate
+	if b.ControlPlaneWildcardCert == nil {
+		return b.Shoot.Components.ControlPlane.KubeAPIServerIngress.Destroy(ctx)
+	}
+	return b.Shoot.Components.ControlPlane.KubeAPIServerIngress.Deploy(ctx)
+}

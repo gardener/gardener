@@ -161,6 +161,14 @@ var _ = Describe("KubeAPIServer", func() {
 			},
 		})
 		botanist.SetShootState(&gardencorev1beta1.ShootState{})
+
+		botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
+			Spec: gardencorev1beta1.SeedSpec{
+				Ingress: &gardencorev1beta1.Ingress{
+					Domain: "foo.bar.local",
+				},
+			},
+		})
 	})
 
 	AfterEach(func() {
@@ -369,6 +377,17 @@ var _ = Describe("KubeAPIServer", func() {
 
 	Describe("#DeployKubeAPIServer", func() {
 		Describe("SNIConfig", func() {
+
+			var secret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "wildcard-secret",
+					Namespace: seedNamespace,
+					Labels: map[string]string{
+						"gardener.cloud/role": "controlplane-cert",
+					},
+				},
+			}
+
 			DescribeTable("should have the expected SNI config",
 				func(prepTest func(), featureGate *featuregate.Feature, value *bool, expectedConfig kubeapiserver.SNIConfig) {
 					if prepTest != nil {
@@ -428,6 +447,21 @@ var _ = Describe("KubeAPIServer", func() {
 						AdvertiseAddress:  apiServerClusterIP,
 						PodMutatorEnabled: true,
 						APIServerFQDN:     "api." + internalClusterDomain,
+					},
+				),
+				Entry("Control plane wildcard certificate available",
+					func() {
+						botanist.ControlPlaneWildcardCert = secret
+					},
+					featureGatePtr(features.APIServerSNI), pointer.Bool(true),
+					kubeapiserver.SNIConfig{
+						PodMutatorEnabled: false,
+						TLS: []kubeapiserver.TLSSNIConfig{
+							{
+								SecretName:     &secret.Name,
+								DomainPatterns: []string{"api-foo--bar.foo.bar.local"},
+							},
+						},
 					},
 				),
 			)
