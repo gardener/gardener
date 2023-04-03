@@ -66,10 +66,13 @@ setup_kind_network() {
 
   if [ -n "$existing_network_id" ] ; then
     # ensure the network is configured correctly
-    local existing_network_config
-    existing_network_config="$(docker network inspect $existing_network_id | jq -r '.[] | "\(.EnableIPv6),\(.IPAM.Config),\(.Options["com.docker.network.bridge.enable_ip_masquerade"])"')"
-    local expected_network_config='true,[{"Subnet":"172.18.0.0/16","Gateway":"172.18.0.1"},{"Subnet":"fd00:10::/64","Gateway":"fd00:10::1"}],true'
-    if [ "$existing_network_config" = "$expected_network_config" ] ; then
+    local network network_options network_ipam expected_network_ipam
+    network="$(docker network inspect $existing_network_id | yq '.[]')"
+    network_options="$(echo "$network" | yq '.EnableIPv6 + "," + .Options["com.docker.network.bridge.enable_ip_masquerade"]')"
+    network_ipam="$(echo "$network" | yq '.IPAM.Config' -o=json -I=0)"
+    expected_network_ipam='[{"Subnet":"172.18.0.0/16","Gateway":"172.18.0.1"},{"Subnet":"fd00:10::/64","Gateway":"fd00:10::1"}]'
+
+    if [ "$network_options" = 'true,true' ] && [ "$network_ipam" = "$expected_network_ipam" ] ; then
       # kind network is already configured correctly, nothing to do
       return 0
     else
