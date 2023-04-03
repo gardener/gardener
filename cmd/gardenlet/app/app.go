@@ -610,6 +610,11 @@ func migrationTasksForShootVPARecommenders(cl client.Client, shootNamespaces []c
 	for _, ns := range shootNamespaces {
 		namespace := ns
 
+		// It is forbidden to create a new resource in already terminating Namespace.
+		if namespace.DeletionTimestamp != nil {
+			continue
+		}
+
 		taskFns = append(taskFns, func(ctx context.Context) error {
 			service := &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
