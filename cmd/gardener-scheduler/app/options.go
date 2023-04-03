@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	schedulerv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	schedulervalidation "github.com/gardener/gardener/pkg/scheduler/apis/config/validation"
@@ -68,6 +69,11 @@ func (o *options) complete() error {
 }
 
 func (o *options) validate() error {
+	// Add feature flags before validating the config file, as they might influence the validation logic.
+	if err := features.DefaultFeatureGate.SetFromMap(o.config.FeatureGates); err != nil {
+		return err
+	}
+
 	if errs := schedulervalidation.ValidateConfiguration(o.config); len(errs) > 0 {
 		return errs.ToAggregate()
 	}

@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	controllermanagerv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	controllermanagervalidation "github.com/gardener/gardener/pkg/controllermanager/apis/config/validation"
+	"github.com/gardener/gardener/pkg/features"
 )
 
 var configDecoder runtime.Decoder
@@ -68,6 +69,11 @@ func (o *options) complete() error {
 }
 
 func (o *options) validate() error {
+	// Add feature flags before validating the config file, as they might influence the validation logic.
+	if err := features.DefaultFeatureGate.SetFromMap(o.config.FeatureGates); err != nil {
+		return err
+	}
+
 	if errs := controllermanagervalidation.ValidateControllerManagerConfiguration(o.config); len(errs) > 0 {
 		return errs.ToAggregate()
 	}

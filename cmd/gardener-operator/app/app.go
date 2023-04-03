@@ -106,10 +106,6 @@ func NewCommand() *cobra.Command {
 }
 
 func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration) error {
-	// Add feature flags
-	if err := features.DefaultFeatureGate.SetFromMap(cfg.FeatureGates); err != nil {
-		return err
-	}
 	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 
 	log.Info("Getting rest config")

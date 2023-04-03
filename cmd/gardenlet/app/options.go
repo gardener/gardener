@@ -73,7 +73,7 @@ func (o *options) complete() error {
 }
 
 func (o *options) validate() error {
-	// Add feature flags
+	// Add feature flags before validating the config file, as they might influence the validation logic.
 	if err := features.DefaultFeatureGate.SetFromMap(o.config.FeatureGates); err != nil {
 		return err
 	}

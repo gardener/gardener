@@ -99,10 +99,6 @@ func NewCommand() *cobra.Command {
 }
 
 func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConfiguration) error {
-	// Add feature flags
-	if err := features.DefaultFeatureGate.SetFromMap(cfg.FeatureGates); err != nil {
-		return err
-	}
 	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 
 	// This is like importing the automaxprocs package for its init func (it will in turn call maxprocs.Set).

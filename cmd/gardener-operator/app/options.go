@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	operatorvalidation "github.com/gardener/gardener/pkg/operator/apis/config/validation"
@@ -68,6 +69,11 @@ func (o *options) complete() error {
 }
 
 func (o *options) validate() error {
+	// Add feature flags before validating the config file, as they might influence the validation logic.
+	if err := features.DefaultFeatureGate.SetFromMap(o.config.FeatureGates); err != nil {
+		return err
+	}
+
 	if errs := operatorvalidation.ValidateOperatorConfiguration(o.config); len(errs) > 0 {
 		return errs.ToAggregate()
 	}
