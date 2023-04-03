@@ -4,7 +4,7 @@ config:
       networks:
         ipFamilies:
         - IPv6
-        nodes: fc00:f853:ccd:e793::/64
+        nodes: fd00:10::/64
         # Those CIDRs must match those specified in the kind Cluster configuration.
         pods: fd00:10:1::/56
         services: fd00:10:2::/112
