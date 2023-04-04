@@ -89,7 +89,7 @@ var _ = Describe("validator", func() {
 				newSeed.Spec.Provider.Zones = []string{"2"}
 			})
 
-			It("should allow zone removal there are no shoots", func() {
+			It("should allow zone removal when there are no shoots", func() {
 				attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())

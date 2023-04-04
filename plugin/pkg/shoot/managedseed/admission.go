@@ -181,11 +181,11 @@ func (v *ManagedSeed) validateUpdate(ctx context.Context, a admission.Attributes
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "kubernetes", "enableStaticTokenKubeconfig"), shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, "shoot static token kubeconfig cannot be disabled when the seed secretRef is set"))
 	}
 
-	zoneValidationErrrs, err := v.validateWorkerZoneChanges(field.NewPath("spec", "providers", "workers"), shoot, seedTemplate)
+	zoneValidationErrs, err := v.validateWorkerZoneChanges(field.NewPath("spec", "providers", "workers"), shoot, seedTemplate)
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}
-	allErrs = append(allErrs, zoneValidationErrrs...)
+	allErrs = append(allErrs, zoneValidationErrs...)
 
 	if len(allErrs) > 0 {
 		return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, allErrs)
@@ -195,7 +195,7 @@ func (v *ManagedSeed) validateUpdate(ctx context.Context, a admission.Attributes
 }
 
 // validateWorkerZoneChanges returns an error if worker zones for the given shoot were changed
-// while it still hosts shoot control-planes.
+// while they are still registered in the managedseed.
 func (v *ManagedSeed) validateWorkerZoneChanges(fldPath *field.Path, shoot *core.Shoot, seedTemplate *gardencorev1beta1.SeedTemplate) (field.ErrorList, error) {
 	allErrs := field.ErrorList{}
 
