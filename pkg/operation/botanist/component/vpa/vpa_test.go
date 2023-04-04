@@ -646,6 +646,7 @@ var _ = Describe("VPA", func() {
 									fmt.Sprintf("--recommender-interval=%s", flagRecommenderIntervalValue),
 									"--kube-api-qps=100",
 									"--kube-api-burst=120",
+									"--memory-saver=true",
 								},
 								LivenessProbe: livenessProbeVpa,
 								Ports: []corev1.ContainerPort{
