@@ -419,6 +419,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 						Labels: utils.MergeStringMaps(getLabels(LabelValueController, labelValueAddons), map[string]string{
 							v1beta1constants.LabelNetworkPolicyToDNS:                                        v1beta1constants.LabelNetworkPolicyAllowed,
 							v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                           v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyToPublicNetworks:                             v1beta1constants.LabelNetworkPolicyAllowed,
 							gardenerutils.NetworkPolicyLabel(serviceNameBackend, int(containerPortBackend)): v1beta1constants.LabelNetworkPolicyAllowed,
 						}),
 						Annotations: map[string]string{

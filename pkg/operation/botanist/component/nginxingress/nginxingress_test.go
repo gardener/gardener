@@ -471,6 +471,7 @@ spec:
         app: nginx-ingress
         component: controller
         networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-public-networks: allowed
         networking.gardener.cloud/to-runtime-apiserver: allowed
         networking.resources.gardener.cloud/to-nginx-ingress-k8s-backend-tcp-8080: allowed
         release: addons
