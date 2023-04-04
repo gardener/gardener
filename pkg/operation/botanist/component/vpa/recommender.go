@@ -204,6 +204,7 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 						fmt.Sprintf("--recommender-interval=%s", durationDeref(v.values.Recommender.Interval, gardencorev1beta1.DefaultRecommenderInterval).Duration),
 						"--kube-api-qps=100",
 						"--kube-api-burst=120",
+						"--memory-saver=true",
 					},
 					LivenessProbe: newDefaultLivenessProbe(),
 					Ports: []corev1.ContainerPort{
