@@ -48,13 +48,14 @@ var (
 	lokiPort    = utils.IntStrPtrFromInt(3100)
 )
 
-// FluentOperatorValues are the values for the Fluent Operator.
+// FluentOperator are the values for the Fluent Operator.
 type FluentOperatorValues struct {
-	// Image of the operator.
+	// OperatorImage is the image of the Fluent Operator
 	OperatorImage string
 	// FluentBitImage is the Fluent-bit image
 	OperatorPriorityClassName string
 }
+
 type fluentOperator struct {
 	client    client.Client
 	namespace string

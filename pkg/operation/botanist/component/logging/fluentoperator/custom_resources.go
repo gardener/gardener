@@ -80,7 +80,7 @@ func (c *customResources) Deploy(ctx context.Context) error {
 
 		config = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      v1beta1constants.DaemonsetNameFluentBit + "-lua-config",
+				Name:      v1beta1constants.DaemonSetNameFluentBit + "-lua-config",
 				Namespace: c.namespace,
 			},
 			Data: map[string]string{
@@ -143,10 +143,10 @@ end`,
 
 	resources := []client.Object{config}
 
-	fluentBit := customresources.GetFluentBit(getFluentBitLabels(), v1beta1constants.DaemonsetNameFluentBit, c.namespace, c.values.FluentBitImage, c.values.FluentBitInitImage, c.values.FluentBitPriorityClass)
+	fluentBit := customresources.GetFluentBit(getFluentBitLabels(), v1beta1constants.DaemonSetNameFluentBit, c.namespace, c.values.FluentBitImage, c.values.FluentBitInitImage, c.values.FluentBitPriorityClass)
 	resources = append(resources, fluentBit)
 
-	clusterFluentBitConfig := customresources.GetClusterFluentBitConfig(v1beta1constants.DaemonsetNameFluentBit, getCustomResourcesLabels())
+	clusterFluentBitConfig := customresources.GetClusterFluentBitConfig(v1beta1constants.DaemonSetNameFluentBit, getCustomResourcesLabels())
 	resources = append(resources, clusterFluentBitConfig)
 
 	for _, clusterInput := range customresources.GetClusterInputs(getCustomResourcesLabels()) {

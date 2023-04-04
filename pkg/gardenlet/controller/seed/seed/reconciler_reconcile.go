@@ -60,8 +60,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/crds"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/extension"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker"
@@ -563,7 +563,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			containerd.CentralLoggingConfiguration,
 			downloader.CentralLoggingConfiguration,
 			// seed system components
-			extension.CentralLoggingConfiguration,
+			extensions.CentralLoggingConfiguration,
 			dependencywatchdog.CentralLoggingConfiguration,
 			resourcemanager.CentralLoggingConfiguration,
 			monitoring.CentralLoggingConfiguration,
@@ -1051,7 +1051,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		// Waiting for fluent-bit service to be created
 		fluentBitService := &corev1.Service{}
 		if err := retry.UntilTimeout(ctx, 5*time.Second, time.Minute, func(ctx context.Context) (done bool, err error) {
-			if err = seedClient.Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, v1beta1constants.DaemonsetNameFluentBit), fluentBitService); err != nil {
+			if err = seedClient.Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, v1beta1constants.DaemonSetNameFluentBit), fluentBitService); err != nil {
 				return retry.MinorError(fmt.Errorf("fluent-bit service does not exist yet"))
 			}
 			return retry.Ok()
@@ -1062,8 +1062,8 @@ func (r *Reconciler) runReconcileSeedFlow(
 		// Patching fluent-bit service with the network policy annotations
 		patch = client.MergeFrom(fluentBitService.DeepCopy())
 		fluentBitService.ObjectMeta.Annotations = map[string]string{
-			v1beta1constants.AnnotationNetworkPolicyFromPolicyPodLabelSelector: v1beta1constants.NetworkPolicyAllSeedScrapeTargets,
-			v1beta1constants.AnnotationNetworkPolicyFromPolicyAllowedPorts:     `[{"port":"2020","protocol":"TCP"},{"port":"2021","protocol":"TCP"}]`,
+			resourcesv1alpha1.NetworkingFromPolicyPodLabelSelector: "all-seed-scrape-targets",
+			resourcesv1alpha1.NetworkingFromPolicyAllowedPorts:     `[{"port":"2020","protocol":"TCP"},{"port":"2021","protocol":"TCP"}]`,
 		}
 		log.Info("Patching network policy annotation of the fluent-bit Service")
 		if err := seedClient.Patch(ctx, fluentBitService, patch); err != nil {
