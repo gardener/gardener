@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
@@ -1825,6 +1826,36 @@ var _ = Describe("Etcd", func() {
 			)
 
 			Expect(etcd.Scale(ctx, 1)).Should(MatchError(`etcd object still has operation annotation set`))
+		})
+
+		It("should update HVPA with the new replica count if it is enabled", func() {
+			etcd.SetHVPAConfig(&HVPAConfig{
+				Enabled: true,
+			})
+			etcdObj.Spec.Replicas = 1
+
+			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
+				func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd, _ ...client.GetOption) error {
+					*etcd = *etcdObj
+					return nil
+				},
+			)
+			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any())
+
+			hvpaObj := hvpaFor(ClassImportant, 1, hvpav1alpha1.UpdateModeDefault)
+			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(hvpaObj), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})).DoAndReturn(
+				func(_ context.Context, _ client.ObjectKey, hvpa *hvpav1alpha1.Hvpa, _ ...client.GetOptions) error {
+					*hvpa = *hvpaObj
+					return nil
+				},
+			)
+
+			expectedHvpa := hvpaObj.DeepCopy()
+			expectedHvpa.Spec.Hpa.Template.Spec.MaxReplicas = 3
+			expectedHvpa.Spec.Hpa.Template.Spec.MinReplicas = pointer.Int32(3)
+			test.EXPECTPatch(ctx, c, expectedHvpa, hvpaObj, types.MergePatchType)
+
+			Expect(etcd.Scale(ctx, 3)).To(Succeed())
 		})
 	})
 

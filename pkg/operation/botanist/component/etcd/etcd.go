@@ -766,7 +766,25 @@ func (e *etcd) Scale(ctx context.Context, replicas int32) error {
 
 	e.etcd = etcdObj
 
-	return e.client.Patch(ctx, etcdObj, patch)
+	if err := e.client.Patch(ctx, etcdObj, patch); err != nil {
+		return err
+	}
+
+	if e.values.HvpaConfig != nil && e.values.HvpaConfig.Enabled {
+		// Keep the `hvpa.Spec.Hpa.Template.Spec.MaxReplicas` and `hvpa.Spec.Hpa.Template.Spec.MinReplicas`
+		// values consistent with the replica count of the etcd.
+		hvpa := e.emptyHVPA()
+		if err := e.client.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa); err != nil {
+			return err
+		}
+
+		patch := client.MergeFrom(hvpa.DeepCopy())
+		hvpa.Spec.Hpa.Template.Spec.MaxReplicas = replicas
+		hvpa.Spec.Hpa.Template.Spec.MinReplicas = pointer.Int32(replicas)
+		return e.client.Patch(ctx, hvpa, patch)
+	}
+
+	return nil
 }
 
 func (e *etcd) RolloutPeerCA(ctx context.Context) error {

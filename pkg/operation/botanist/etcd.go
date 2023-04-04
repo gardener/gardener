@@ -234,9 +234,11 @@ func (b *Botanist) isRestorationOfMultiNodeMainEtcdRequired(ctx context.Context)
 }
 
 func (b *Botanist) restoreMultiNodeMainEtcd(ctx context.Context) error {
-	desiredReplicas := b.Shoot.Components.ControlPlane.EtcdMain.GetReplicas()
+	originalReplicas := b.Shoot.Components.ControlPlane.EtcdMain.GetReplicas()
 	defer func() {
-		b.Shoot.Components.ControlPlane.EtcdMain.SetReplicas(desiredReplicas)
+		// Revert the original replica count for the etcd. This is done in case a step
+		// is added to the reconciliation flow that depends on the etcd's replica count.
+		b.Shoot.Components.ControlPlane.EtcdMain.SetReplicas(originalReplicas)
 	}()
 
 	b.Shoot.Components.ControlPlane.EtcdMain.SetReplicas(pointer.Int32(1))
