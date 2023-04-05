@@ -44,12 +44,10 @@ kubectl delete seed \
   --wait \
   --timeout 5m
 
+kubectl annotate project local garden confirmation.gardener.cloud/deletion=true
 skaffold delete -m provider-local,gardenlet $SKAFFOLD_PROFILE
 
 kubectl delete validatingwebhookconfiguration/gardener-admission-controller --ignore-not-found
-kubectl annotate project local garden confirmation.gardener.cloud/deletion=true
-
-skaffold delete -m local-env $SKAFFOLD_PROFILE
 skaffold delete -m etcd,controlplane $SKAFFOLD_PROFILE
 
 # workaround for https://github.com/gardener/gardener/issues/5164

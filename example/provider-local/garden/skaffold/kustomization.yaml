@@ -3,6 +3,3 @@ kind: Kustomization
 
 resources:
 - ../base
-
-patchesStrategicMerge:
-- delete-controller-deployment.yaml
