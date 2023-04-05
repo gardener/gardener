@@ -81,8 +81,28 @@ type: helm
 providerConfig:
   chart: $chart
   values:
+EOM
+
+if [ -n "$(yq '.image.repository' "$CHART_DIR"/values.yaml)" ] ; then
+  # image value specifies repository and tag separately, output the image stanza with the given version as tag value
+  cat <<EOM >> "$DEST"
     image:
       tag: $VERSION
+EOM
+else
+  # image value specifies a fully-qualified image reference, output the default image plus the given version as tag
+  default_image="$(yq '.image' "$CHART_DIR"/values.yaml)"
+  if [ -n "$VERSION" ] ; then
+    # if a version is given, replace the default tag
+    default_image="${default_image%%:*}:$VERSION"
+  fi
+
+  cat <<EOM >> "$DEST"
+    image: $default_image
+EOM
+fi
+
+cat <<EOM >> "$DEST"
 ---
 apiVersion: core.gardener.cloud/v1beta1
 kind: ControllerRegistration
