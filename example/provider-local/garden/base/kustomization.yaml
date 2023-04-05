@@ -13,3 +13,24 @@ resources:
 patchesStrategicMerge:
 - patch-controller-registrations.yaml
 - patch-controller-deployment.yaml
+
+patches:
+- target:
+    group: core.gardener.cloud
+    kind: ControllerRegistration
+    name: provider-local
+  patch: |
+    - op: add
+      path: /spec/resources/-
+      value:
+        kind: Extension
+        type: local-ext-seed
+        lifecycle:
+          reconcile: BeforeKubeAPIServer
+          delete: AfterKubeAPIServer
+          migrate: AfterKubeAPIServer
+    - op: add
+      path: /spec/resources/-
+      value:
+        kind: Extension
+        type: local-ext-shoot

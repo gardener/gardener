@@ -26,14 +26,6 @@ spec:
     type: local
   - kind: ControlPlane
     type: local
-  - kind: Extension
-    type: local-ext-seed
-    lifecycle:
-      reconcile: BeforeKubeAPIServer
-      delete: AfterKubeAPIServer
-      migrate: AfterKubeAPIServer
-  - kind: Extension
-    type: local-ext-shoot
   - kind: Infrastructure
     type: local
   - kind: OperatingSystemConfig
