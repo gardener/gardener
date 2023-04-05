@@ -9,6 +9,8 @@ images:
   sourceRepository: github.com/gardener/gardener
   repository: eu.gcr.io/gardener-project/gardener/gardenlet
 - name: gardener-resource-manager
+  resourceId:
+    name: 'resource-manager'
   sourceRepository: github.com/gardener/gardener
   repository: eu.gcr.io/gardener-project/gardener/resource-manager
 
@@ -370,6 +372,8 @@ images:
       integrity_requirement: 'low'
       availability_requirement: 'low'
 - name: fluent-bit-plugin-installer
+  resourceId:
+    name: fluent-bit-to-loki
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/fluent-bit-to-loki
   tag: "v0.52.0"
@@ -438,6 +442,8 @@ images:
       availability_requirement: 'low'
       comment: network exposure is public due to the outbound connectivity, there is no exposed endpoint requiring auth.
 - name: telegraf
+  resourceId:
+    name: telegraf-iptables
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/telegraf-iptables
   tag: "v0.52.0"
@@ -648,6 +654,8 @@ images:
     - type: 'githubTeam'
       teamname: 'gardener/gardener-core-networking-maintainers'
 - name: apiserver-proxy-sidecar
+  resourceId:
+    name: apiserver-proxy
   sourceRepository: github.com/gardener/apiserver-proxy
   repository: eu.gcr.io/gardener-project/gardener/apiserver-proxy
   tag: "v0.11.0"
