@@ -38,8 +38,8 @@ spec:
       serviceAccountName: {{ include "name" . }}
       containers:
       - name: {{ include "name" . }}
-        image: {{ include "image" . }}
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        image: {{ .Values.image }}
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
         args:
         - --leader-election-resource-lock={{ .Values.leaderElection.resourceLock }}
         - --controlplane-max-concurrent-reconciles={{ .Values.controllers.controlplane.concurrentSyncs }}
