@@ -10,7 +10,7 @@ images:
   repository: eu.gcr.io/gardener-project/gardener/gardenlet
 - name: gardener-resource-manager
   resourceId:
-    name: 'resource-manager'
+    name: resource-manager
   sourceRepository: github.com/gardener/gardener
   repository: eu.gcr.io/gardener-project/gardener/resource-manager
 
