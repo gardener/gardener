@@ -20,7 +20,7 @@ set -o pipefail
 function usage {
     cat <<EOM
 Usage:
-generate-controller-registration <name> <chart-dir> <dest> <kind-and-type> [kinds-and-types ...]
+generate-controller-registration <name> <chart-dir> <version> <dest> <kind-and-type> [kinds-and-types ...]
 
     <name>            Name of the controller registration to generate.
     <chart-dir>       Location of the chart directory.
@@ -65,7 +65,7 @@ trap cleanup EXIT ERR INT TERM
 
 export HELM_HOME="$temp_helm_home"
 [ "$(helm version --client --template "{{.Version}}" | head -c2 | tail -c1)" = "3" ] || helm init --client-only > /dev/null 2>&1
-helm package "$CHART_DIR" --version "$VERSION" --app-version "$VERSION" --destination "$temp_dir" > /dev/null
+helm package "$CHART_DIR" --destination "$temp_dir" > /dev/null
 tar -xzm -C "$temp_extract_dir" -f "$temp_dir"/*
 chart="$(tar --sort=name -c --owner=root:0 --group=root:0 --mtime='UTC 2019-01-01' -C "$temp_extract_dir" "$(basename "$temp_extract_dir"/*)" | gzip -n | base64 | tr -d '\n')"
 
