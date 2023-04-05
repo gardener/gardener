@@ -18,22 +18,6 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-SKAFFOLD_PROFILE=""
-
-parse_flags() {
-  while test $# -gt 0; do
-    case "$1" in
-    --skaffold-profile)
-      shift; SKAFFOLD_PROFILE="-p $1"
-      ;;
-    esac
-
-    shift
-  done
-}
-
-parse_flags "$@"
-
 # delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding
 kubectl delete seed \
   local \
@@ -45,10 +29,10 @@ kubectl delete seed \
   --timeout 5m
 
 kubectl annotate project local garden confirmation.gardener.cloud/deletion=true
-skaffold delete -m provider-local,gardenlet $SKAFFOLD_PROFILE
+skaffold delete -m provider-local,gardenlet
 
 kubectl delete validatingwebhookconfiguration/gardener-admission-controller --ignore-not-found
-skaffold delete -m etcd,controlplane $SKAFFOLD_PROFILE
+skaffold delete -m etcd,controlplane
 
 # workaround for https://github.com/gardener/gardener/issues/5164
 kubectl delete ns \

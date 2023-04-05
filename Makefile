@@ -400,12 +400,14 @@ register-kind2-env: $(KUBECTL)
 tear-down-kind2-env: $(KUBECTL)
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind2/local
 
+gardener-ha-single-zone%: export SKAFFOLD_PROFILE=ha-single-zone
+
 gardener-ha-single-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) run -p ha-single-zone
+	$(SKAFFOLD) run
 gardener-ha-single-zone-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) dev -p ha-single-zone
+	$(SKAFFOLD) dev
 gardener-ha-single-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	./hack/gardener-down.sh --skaffold-profile ha-single-zone
+	./hack/gardener-down.sh
 register-kind-ha-single-zone-env: $(KUBECTL)
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/local
@@ -414,12 +416,14 @@ tear-down-kind-ha-single-zone-env: $(KUBECTL)
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/local
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/garden/local
 
+gardener-ha-multi-zone%: export SKAFFOLD_PROFILE=ha-multi-zone
+
 gardener-ha-multi-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) run -p ha-multi-zone
+	$(SKAFFOLD) run
 gardener-ha-multi-zone-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) dev -p ha-multi-zone
+	$(SKAFFOLD) dev
 gardener-ha-multi-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	./hack/gardener-down.sh --skaffold-profile ha-multi-zone
+	./hack/gardener-down.sh
 register-kind-ha-multi-zone-env: $(KUBECTL)
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/local
