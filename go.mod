@@ -20,7 +20,7 @@ require (
 	github.com/google/gnostic v0.5.7-v3refs
 	github.com/google/go-cmp v0.5.9
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/kubernetes-csi/external-snapshotter/v2 v2.1.4
+	github.com/kubernetes-csi/external-snapshotter/client/v4 v4.2.0
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/mitchellh/hashstructure/v2 v2.0.2
 	github.com/onsi/ginkgo/v2 v2.8.3
