@@ -27,8 +27,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -161,15 +159,7 @@ func (b *backupEntry) WaitMigrate(ctx context.Context) error {
 // Restore uses the garden client to update the BackupEntry and set the name of the new seed to which it shall be scheduled.
 // If the BackupEntry was deleted it will be recreated.
 func (b *backupEntry) Restore(ctx context.Context, _ *gardencorev1beta1.ShootState) error {
-	bucketName := b.values.BucketName
-	if !gardenletfeatures.FeatureGate.Enabled(features.CopyEtcdBackupsDuringControlPlaneMigration) {
-		if err := b.client.Get(ctx, kubernetesutils.Key(b.values.Namespace, b.values.Name), b.backupEntry); err == nil {
-			bucketName = b.backupEntry.Spec.BucketName
-		} else if client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-	return b.reconcile(ctx, b.backupEntry, b.values.SeedName, bucketName, v1beta1constants.GardenerOperationRestore)
+	return b.reconcile(ctx, b.backupEntry, b.values.SeedName, b.values.BucketName, v1beta1constants.GardenerOperationRestore)
 }
 
 func (b *backupEntry) reconcile(ctx context.Context, backupEntry *gardencorev1beta1.BackupEntry, seedName *string, bucketName string, operation string) error {

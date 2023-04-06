@@ -76,6 +76,7 @@ const (
 	// owner: @plkokanov
 	// alpha: v1.37.0
 	// beta: v1.53.0
+	// GA: v1.69.0
 	CopyEtcdBackupsDuringControlPlaneMigration featuregate.Feature = "CopyEtcdBackupsDuringControlPlaneMigration"
 
 	// HAControlPlanes allows shoot control planes to be run in high availability mode.
@@ -118,7 +119,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	APIServerSNI:       {Default: true, PreRelease: featuregate.Deprecated, LockToDefault: true},
 	SeedChange:         {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ReversedVPN:        {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	CopyEtcdBackupsDuringControlPlaneMigration: {Default: true, PreRelease: featuregate.Beta},
+	CopyEtcdBackupsDuringControlPlaneMigration: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	HAControlPlanes:                     {Default: false, PreRelease: featuregate.Alpha},
 	DefaultSeccompProfile:               {Default: false, PreRelease: featuregate.Alpha},
 	CoreDNSQueryRewriting:               {Default: false, PreRelease: featuregate.Alpha},

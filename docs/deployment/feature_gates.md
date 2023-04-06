@@ -28,8 +28,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | APIServerSNI                               | `false` | `Alpha` | `1.7`  | `1.18` |
 | APIServerSNI                               | `true`  | `Beta`  | `1.19` |        |
 | APIServerSNI (deprecated)                  | `true`  | `Beta`  | `1.48` |        |
-| CopyEtcdBackupsDuringControlPlaneMigration | `false` | `Alpha` | `1.37` | `1.52` |
-| CopyEtcdBackupsDuringControlPlaneMigration | `true`  | `Beta`  | `1.53` |        |
 | HAControlPlanes                            | `false` | `Alpha` | `1.49` |        |
 | DefaultSeccompProfile                      | `false` | `Alpha` | `1.54` |        |
 | CoreDNSQueryRewriting                      | `false` | `Alpha` | `1.55` |        |
@@ -113,6 +111,9 @@ The following tables are a summary of the feature gates that you can set on diff
 | SeedChange                                   | `false` | `Alpha`      | `1.12` | `1.52` |
 | SeedChange                                   | `true`  | `Beta`       | `1.53` | `1.68` |
 | SeedChange                                   | `true`  | `GA`         | `1.69` |        |
+| CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha`      | `1.37` | `1.52` |
+| CopyEtcdBackupsDuringControlPlaneMigration   | `true`  | `Beta`       | `1.53` | `1.68` |
+| CopyEtcdBackupsDuringControlPlaneMigration   | `true`  | `GA`         | `1.69` |        |
 
 ## Using a Feature
 
