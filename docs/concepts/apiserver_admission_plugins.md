@@ -47,7 +47,7 @@ This prevents users from accidental/undesired deletions.
 
 _(enabled by default)_
 
-This admission controller reacts on `Create` operations for `Shoots`s.
+This admission controller reacts on `Create` operations for `Shoot`s.
 It mutates `Shoot` resources which have an `ExposureClass` referenced by merging both their `shootSelectors` and/or `tolerations` into the `Shoot` resource.
 
 ## `ExtensionValidator`

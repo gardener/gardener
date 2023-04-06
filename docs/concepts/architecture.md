@@ -10,7 +10,7 @@ While self-hosting, meaning to run Kubernetes components inside Kubernetes, is a
 
 ## Setting The Scene - Components and Procedure
 
-We provide a central operator UI, which we call the "Gardener Dashboard". It talks to a dedicated cluster, which we call the "Garden" cluster and uses custom resources managed by an [aggregated API server](https://kubernetes.io/docs/concepts/api-extension/custom-resources/#api-server-aggregation), one of the general extension concepts of Kubernetes) to represent "shoot" clusters. In this "Garden" cluster runs the "Gardener", which is basically a Kubernetes controller that watches the custom resources and acts upon them, i.e. creates, updates/modifies, or deletes "shoot" clusters. The creation follows basically these steps:
+We provide a central operator UI, which we call the "Gardener Dashboard". It talks to a dedicated cluster, which we call the "Garden" cluster, and uses custom resources managed by an [aggregated API server](https://kubernetes.io/docs/concepts/api-extension/custom-resources/#api-server-aggregation) (one of the general extension concepts of Kubernetes) to represent "shoot" clusters. In this "Garden" cluster runs the "Gardener", which is basically a Kubernetes controller that watches the custom resources and acts upon them, i.e. creates, updates/modifies, or deletes "shoot" clusters. The creation follows basically these steps:
 
 * Create a namespace in the "seed" cluster for the "shoot" cluster, which will host the "shoot" cluster control plane.
 * Generate secrets and credentials, which the worker nodes will need to talk to the control plane.
