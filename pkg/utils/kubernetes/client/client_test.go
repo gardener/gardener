@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	volumesnapshotv1beta1 "github.com/kubernetes-csi/external-snapshotter/v2/pkg/apis/volumesnapshot/v1beta1"
+	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -335,7 +335,7 @@ var _ = Describe("Cleaner", func() {
 			cleanOps []CleanOption
 
 			deletionTimestamp                metav1.Time
-			cleanupContent, remainingContent map[string]*volumesnapshotv1beta1.VolumeSnapshotContent
+			cleanupContent, remainingContent map[string]*volumesnapshotv1.VolumeSnapshotContent
 		)
 
 		BeforeEach(func() {
@@ -359,7 +359,7 @@ var _ = Describe("Cleaner", func() {
 				},
 			}
 
-			cleanupContent = map[string]*volumesnapshotv1beta1.VolumeSnapshotContent{
+			cleanupContent = map[string]*volumesnapshotv1.VolumeSnapshotContent{
 				"content1": {
 					ObjectMeta: metav1.ObjectMeta{
 						DeletionTimestamp: &deletionTimestamp,
@@ -396,7 +396,7 @@ var _ = Describe("Cleaner", func() {
 				},
 			}
 
-			remainingContent = map[string]*volumesnapshotv1beta1.VolumeSnapshotContent{
+			remainingContent = map[string]*volumesnapshotv1.VolumeSnapshotContent{
 				// Object not in deletion.
 				"content4": {
 					ObjectMeta: metav1.ObjectMeta{
@@ -443,9 +443,9 @@ var _ = Describe("Cleaner", func() {
 		})
 
 		It("should maintain the right annotations for all contents in the list to be cleaned up", func() {
-			Expect(cleaner.Clean(ctx, cl, &volumesnapshotv1beta1.VolumeSnapshotContentList{}, cleanOps...)).To(Succeed())
+			Expect(cleaner.Clean(ctx, cl, &volumesnapshotv1.VolumeSnapshotContentList{}, cleanOps...)).To(Succeed())
 
-			contents := &volumesnapshotv1beta1.VolumeSnapshotContentList{}
+			contents := &volumesnapshotv1.VolumeSnapshotContentList{}
 			Expect(cl.List(ctx, contents)).To(Succeed())
 
 			for _, content := range contents.Items {
@@ -465,7 +465,7 @@ var _ = Describe("Cleaner", func() {
 
 			Expect(cleaner.Clean(ctx, cl, cleanupContent, cleanOps...)).To(Succeed())
 
-			content := &volumesnapshotv1beta1.VolumeSnapshotContent{}
+			content := &volumesnapshotv1.VolumeSnapshotContent{}
 			Expect(cl.Get(ctx, client.ObjectKeyFromObject(cleanupContent), content)).To(Succeed())
 
 			Expect(content.Annotations).To(HaveKeyWithValue("snapshot.storage.kubernetes.io/volumesnapshot-being-deleted", "yes"))

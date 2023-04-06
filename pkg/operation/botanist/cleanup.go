@@ -18,7 +18,7 @@ import (
 	"context"
 	"strconv"
 
-	volumesnapshotv1beta1 "github.com/kubernetes-csi/external-snapshotter/v2/pkg/apis/volumesnapshot/v1beta1"
+	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -243,8 +243,8 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		return flow.Parallel(
 			cleanResourceFn(ops, c, &corev1.ServiceList{}, ServiceCleanOption, cleanOptions),
 			cleanResourceFn(ops, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOption, cleanOptions),
-			cleanResourceFn(ops, c, &volumesnapshotv1beta1.VolumeSnapshotList{}, VolumeSnapshotContentCleanOption, cleanOptions),
-			cleanResourceFn(ops, c, &volumesnapshotv1beta1.VolumeSnapshotContentList{}, VolumeSnapshotContentCleanOption, cleanOptions),
+			cleanResourceFn(ops, c, &volumesnapshotv1.VolumeSnapshotList{}, VolumeSnapshotContentCleanOption, cleanOptions),
+			cleanResourceFn(ops, c, &volumesnapshotv1.VolumeSnapshotContentList{}, VolumeSnapshotContentCleanOption, cleanOptions),
 		)(ctx)
 	}
 
@@ -271,8 +271,8 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		cleanResourceFn(ops, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOption, cleanOptions),
 		// Cleaning up VolumeSnapshots can take a longer time if many snapshots were taken.
 		// Hence, we only finalize these objects after 1h.
-		cleanResourceFn(ops, c, &volumesnapshotv1beta1.VolumeSnapshotList{}, VolumeSnapshotContentCleanOption, snapshotCleanOptions),
-		cleanResourceFn(snapshotContentOps, c, &volumesnapshotv1beta1.VolumeSnapshotContentList{}, VolumeSnapshotContentCleanOption, snapshotCleanOptions),
+		cleanResourceFn(ops, c, &volumesnapshotv1.VolumeSnapshotList{}, VolumeSnapshotContentCleanOption, snapshotCleanOptions),
+		cleanResourceFn(snapshotContentOps, c, &volumesnapshotv1.VolumeSnapshotContentList{}, VolumeSnapshotContentCleanOption, snapshotCleanOptions),
 	)(ctx)
 }
 
