@@ -61,6 +61,7 @@ const (
 	// owner: @plkokanov
 	// alpha: v1.12.0
 	// beta: v1.53.0
+	// GA: v1.69.0
 	SeedChange featuregate.Feature = "SeedChange"
 
 	// ReversedVPN moves the openvpn server to the seed.
@@ -115,7 +116,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HVPAForShootedSeed: {Default: false, PreRelease: featuregate.Alpha},
 	ManagedIstio:       {Default: true, PreRelease: featuregate.Deprecated, LockToDefault: true},
 	APIServerSNI:       {Default: true, PreRelease: featuregate.Deprecated, LockToDefault: true},
-	SeedChange:         {Default: true, PreRelease: featuregate.Beta},
+	SeedChange:         {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ReversedVPN:        {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: true, PreRelease: featuregate.Beta},
 	HAControlPlanes:                     {Default: false, PreRelease: featuregate.Alpha},

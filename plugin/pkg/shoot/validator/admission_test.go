@@ -31,7 +31,6 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/utils/pointer"
 
@@ -40,10 +39,8 @@ import (
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
 	mockauthorizer "github.com/gardener/gardener/pkg/mock/apiserver/authorization/authorizer"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 )
@@ -3722,8 +3719,7 @@ var _ = Describe("validator", func() {
 					Expect(err.Error()).To(ContainSubstring("spec.seedName cannot be set to nil"))
 				})
 
-				It("should allow update of binding when shoot.spec.seedName is not nil and SeedChange feature gate is enabled", func() {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
+				It("should allow update of binding when shoot.spec.seedName is not nil", func() {
 					shoot.Spec.SeedName = pointer.String(newSeed.Name)
 
 					shootState.Spec.Gardener = append(shootState.Spec.Gardener, core.GardenerResourceData{
@@ -3739,19 +3735,7 @@ var _ = Describe("validator", func() {
 					Expect(err).NotTo(HaveOccurred())
 				})
 
-				It("should reject update of binding when shoot.spec.seedName is not nil and SeedChange feature gate is disabled", func() {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, false)()
-					shoot.Spec.SeedName = pointer.String(newSeed.Name)
-
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
-					err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("spec.seedName: Invalid value: %q: field is immutable", seedName))
-				})
-
 				It("should reject update of binding if target seed does not exist", func() {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
 					shoot.Spec.SeedName = pointer.String(newSeed.Name + " other")
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
@@ -3762,7 +3746,6 @@ var _ = Describe("validator", func() {
 				})
 
 				It("should reject update of binding if spec other than .spec.seedName is changed", func() {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
 					shoot.Spec.SeedName = pointer.String(newSeed.Name)
 					shoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)}
 
@@ -3794,7 +3777,6 @@ var _ = Describe("validator", func() {
 				})
 
 				It("should reject update of binding if target seed is marked for deletion", func() {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
 					now := metav1.Now()
 					newSeed.DeletionTimestamp = &now
 
@@ -3806,8 +3788,6 @@ var _ = Describe("validator", func() {
 				})
 
 				It("should reject update of binding, because target Seed doesn't have configuration for backup", func() {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
-
 					newSeed.Spec.Backup = nil
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
@@ -3818,8 +3798,6 @@ var _ = Describe("validator", func() {
 				})
 
 				It("should reject update of binding, because old Seed doesn't have configuration for backup", func() {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
-
 					seed.Spec.Backup = nil
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
@@ -3830,8 +3808,6 @@ var _ = Describe("validator", func() {
 				})
 
 				It("should reject update of binding, because cloud provider for new Seed is not equal to cloud provider for old Seed", func() {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
-
 					seed.Spec.Provider.Type = "gcp"
 					newSeed.Spec.Provider.Type = "aws"
 
@@ -3843,8 +3819,6 @@ var _ = Describe("validator", func() {
 				})
 
 				It("should reject update of binding when etcd encryption key is missing", func() {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
-
 					shootState.Spec.Gardener = nil
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
@@ -3868,8 +3842,6 @@ var _ = Describe("validator", func() {
 				})
 
 				It("update of binding should fail because the seed specified in the binding has non-tolerated taints", func() {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
-
 					newSeed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
@@ -3880,8 +3852,6 @@ var _ = Describe("validator", func() {
 				})
 
 				It("update of binding should fail because the new Seed specified in the binding has non-tolerated taints", func() {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
-
 					shoot.Spec.SeedName = pointer.String(newSeedName)
 					newSeed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
 
