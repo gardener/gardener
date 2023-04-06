@@ -390,3 +390,74 @@ func shootNetpolAnnotations() map[string]string {
 		"networking.resources.gardener.cloud/pod-label-selector-namespace-alias": "all-shoots",
 	}
 }
+
+var _ = Describe("#KubeAPIServerService", func() {
+	var (
+		ctx context.Context
+		c   client.Client
+
+		serviceObjKey   client.ObjectKey
+		defaultDeployer component.Deployer
+		namespace       string
+		expected        *corev1.Service
+	)
+
+	BeforeEach(func() {
+		ctx = context.TODO()
+
+		s := runtime.NewScheme()
+		Expect(corev1.AddToScheme(s)).To(Succeed())
+		c = fake.NewClientBuilder().WithScheme(s).Build()
+
+		namespace = "foobar"
+		serviceObjKey = client.ObjectKey{Name: "kube-apiserver", Namespace: namespace}
+		expected = &corev1.Service{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: corev1.SchemeGroupVersion.String(),
+				Kind:       "Service",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "kube-apiserver",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "kubernetes",
+					"role": "apiserver",
+				},
+			},
+			Spec: corev1.ServiceSpec{
+				Type:         corev1.ServiceTypeExternalName,
+				ExternalName: "kubernetes.default.svc.cluster.local",
+			},
+		}
+	})
+
+	JustBeforeEach(func() {
+		defaultDeployer = NewKubeAPIServerService(
+			c,
+			namespace,
+		)
+	})
+
+	Context("Deploy", func() {
+		It("should create the expected service", func() {
+			Expect(defaultDeployer.Deploy(ctx)).To(Succeed())
+
+			actual := &corev1.Service{}
+			Expect(c.Get(ctx, serviceObjKey, actual)).To(Succeed())
+			Expect(actual.Annotations).To(DeepEqual(expected.Annotations))
+			Expect(actual.Labels).To(DeepEqual(expected.Labels))
+			Expect(actual.Spec).To(DeepEqual(expected.Spec))
+		})
+	})
+
+	Context("Destroy", func() {
+		It("should delete the ingress object", func() {
+			Expect(c.Create(ctx, expected)).To(Succeed())
+			Expect(c.Get(ctx, serviceObjKey, &corev1.Service{})).To(Succeed())
+
+			Expect(defaultDeployer.Destroy(ctx)).To(Succeed())
+
+			Expect(c.Get(ctx, serviceObjKey, &corev1.Service{})).To(BeNotFoundError())
+		})
+	})
+})

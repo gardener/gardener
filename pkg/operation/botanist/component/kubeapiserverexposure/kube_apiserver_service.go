@@ -270,3 +270,38 @@ func getLabels() map[string]string {
 func isShootNamespace(namespace string) bool {
 	return strings.HasPrefix(namespace, v1beta1constants.TechnicalIDPrefix)
 }
+
+type kubeAPIServerService struct {
+	client    client.Client
+	namespace string
+}
+
+// NewKubeAPIServerService creates a new instance of Deployer for the service pointing to kubernetes.default.svc.cluster.local.
+func NewKubeAPIServerService(c client.Client, namespace string) component.Deployer {
+	return &kubeAPIServerService{
+		client:    c,
+		namespace: namespace,
+	}
+}
+
+func (ks *kubeAPIServerService) Deploy(ctx context.Context) error {
+	svc := ks.emptyService()
+
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, ks.client, svc, func() error {
+		svc.Labels = utils.MergeStringMaps(svc.Labels, getLabels())
+		svc.Spec = corev1.ServiceSpec{
+			Type:         corev1.ServiceTypeExternalName,
+			ExternalName: "kubernetes.default.svc.cluster.local",
+		}
+		return nil
+	})
+	return err
+}
+
+func (ks *kubeAPIServerService) Destroy(ctx context.Context) error {
+	return client.IgnoreNotFound(ks.client.Delete(ctx, ks.emptyService()))
+}
+
+func (ks *kubeAPIServerService) emptyService() *corev1.Service {
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: ks.namespace}}
+}

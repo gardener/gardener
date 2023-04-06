@@ -221,6 +221,7 @@ func (r *Reconciler) checkMinimumK8SVersion(version string) (string, error) {
 
 const (
 	seedBootstrapChartName        = "seed-bootstrap"
+	kubeAPIServerPrefix           = "a-seed"
 	grafanaPrefix                 = "g-seed"
 	prometheusPrefix              = "p-seed"
 	ingressTLSCertificateValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
@@ -1006,6 +1007,38 @@ func (r *Reconciler) runReconcileSeedFlow(
 		)
 	}
 
+	kubeAPIServerService := kubeapiserverexposure.NewKubeAPIServerService(seedClient, r.GardenNamespace)
+	if wildcardCert == nil {
+		kubeAPIServerIngress := kubeapiserverexposure.NewIngress(seedClient, r.GardenNamespace, kubeapiserverexposure.IngressValues{})
+		var (
+			_ = g.Add(flow.Task{
+				Name: "Destroying kube-apiserver service",
+				Fn:   kubeAPIServerService.Destroy,
+			})
+			_ = g.Add(flow.Task{
+				Name: "Destroying kube-apiserver ingress",
+				Fn:   kubeAPIServerIngress.Destroy,
+			})
+		)
+	} else {
+		kubeAPIServerIngress := kubeapiserverexposure.NewIngress(seedClient, r.GardenNamespace, kubeapiserverexposure.IngressValues{
+			Host:             seed.GetIngressFQDN(kubeAPIServerPrefix),
+			IngressClassName: &ingressClass,
+			ServiceName:      v1beta1constants.DeploymentNameKubeAPIServer,
+			TLSSecretName:    &wildcardCert.Name,
+		})
+		var (
+			_ = g.Add(flow.Task{
+				Name: "Deploying kube-apiserver service",
+				Fn:   kubeAPIServerService.Deploy,
+			})
+			_ = g.Add(flow.Task{
+				Name: "Deploying kube-apiserver ingress",
+				Fn:   kubeAPIServerIngress.Deploy,
+			})
+		)
+	}
+
 	if err := g.Compile().Run(ctx, flow.Opts{Log: log}); err != nil {
 		return flow.Errors(err)
 	}
@@ -1125,7 +1158,7 @@ func cleanupOrphanExposureClassHandlerResources(
 		return err
 	}
 
-	zoneSet := sets.New[string](zones...)
+	zoneSet := sets.New(zones...)
 	for _, namespace := range zonalExposureClassHandlerNamespaces.Items {
 		if ok, zone := operation.IsZonalIstioExtension(namespace.Labels); ok {
 			if err := cleanupOrphanIstioNamespace(ctx, log, c, namespace, true, func() bool {
