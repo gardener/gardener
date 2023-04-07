@@ -351,8 +351,8 @@ func RegisterShootCreationFrameworkFlags() *ShootCreationConfig {
 
 	// ProviderConfigs flags
 	flag.StringVar(&newCfg.infrastructureProviderConfig, "infrastructure-provider-config-filepath", "", "filepath to the provider specific infrastructure config.")
-	flag.StringVar(&newCfg.controlPlaneProviderConfig, "controlplane-provider-config-filepath", "", "filepath to the provider specific infrastructure config.")
-	flag.StringVar(&newCfg.networkingProviderConfig, "networking-provider-config-filepath", "", "filepath to the provider specific infrastructure config.")
+	flag.StringVar(&newCfg.controlPlaneProviderConfig, "controlplane-provider-config-filepath", "", "filepath to the control plane config.")
+	flag.StringVar(&newCfg.networkingProviderConfig, "networking-provider-config-filepath", "", "filepath to the network provider config.")
 	flag.StringVar(&newCfg.workersConfig, "workers-config-filepath", "", "filepath to the worker config.")
 
 	// other
