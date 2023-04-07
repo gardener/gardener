@@ -62,6 +62,10 @@ images:
       confidentiality_requirement: 'low'
       integrity_requirement: 'low'
       availability_requirement: 'low'
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/gardener-landscape-stability'
 - name: nginx-ingress-controller-seed
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: registry.k8s.io/ingress-nginx/controller-chroot
@@ -76,6 +80,10 @@ images:
       confidentiality_requirement: 'low'
       integrity_requirement: 'low'
       availability_requirement: 'low'
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/gardener-landscape-stability'
 - name: nginx-ingress-controller-seed
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: registry.k8s.io/ingress-nginx/controller-chroot
@@ -90,6 +98,10 @@ images:
       confidentiality_requirement: 'low'
       integrity_requirement: 'low'
       availability_requirement: 'low'
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/gardener-landscape-stability'
 - name: ingress-default-backend
   sourceRepository: github.com/gardener/ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
@@ -104,6 +116,10 @@ images:
       integrity_requirement: 'none'
       availability_requirement: 'none'
       comment: Show static page when no path is found
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/gardener-landscape-stability'
 
 # Seed controlplane
 #   hyperkube is used for kubectl + kubelet binaries on the worker nodes
