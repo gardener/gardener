@@ -451,6 +451,7 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, gardenClient, seed, func() error {
+		seed.Annotations = utils.MergeStringMaps(seed.Annotations, g.config.SeedConfig.Annotations)
 		seed.Labels = utils.MergeStringMaps(map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
 		}, g.config.SeedConfig.Labels)

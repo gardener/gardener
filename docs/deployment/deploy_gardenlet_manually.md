@@ -293,10 +293,14 @@ The field `seedConfig.spec.provider.type` specifies the infrastructure provider 
 For all supported infrastructure providers, see [Known Extension Implementations](../../extensions/README.md#known-extension-implementations).
 
     ```yaml
-    ....
+    # ...
     seedConfig:
       metadata:
         name: sweet-seed
+        labels:
+          environment: evaluation
+        annotations:
+          custom.gardener.cloud/option: special
       spec:
         dns:
           provider:
@@ -319,6 +323,14 @@ For all supported infrastructure providers, see [Known Extension Implementations
           region: eu-west-1
           type: <provider>
     ```
+
+Apart from the seed's name, `seedConfig.metadata` can optionally contain `labels` and `annotations`.
+gardenlet will set the labels of the registered `Seed` object to the labels given in the `seedConfig` plus `gardener.cloud/role=seed`.
+Any custom labels on the `Seed` object will be removed on the next restart of gardenlet.
+If a label is removed from the `seedConfig` it is removed from the `Seed` object as well.
+In contrast to labels, annotations in the `seedConfig` are added to existing annotations on the `Seed` object.
+Thus, custom annotations that are added to the `Seed` object during runtime are not removed by gardenlet on restarts.
+Furthermore, if an annotation is removed from the `seedConfig`, gardenlet does **not** remove it from the `Seed` object.
 
 ### Optional: Enable HA Mode
 
@@ -360,7 +372,7 @@ data:
 Configure the `Seed` resource in the `seedConfig` section of your gardenlet configuration to use backup and restore:
 
 ```yaml
-...
+# ...
 seedConfig:
   metadata:
     name: sweet-seed
@@ -383,11 +395,11 @@ The `gardenlet-values.yaml` looks something like this
 (with automatic Seed registration and backup for shoot clusters enabled):
 
 ```yaml
-<default config>
-...
+# <default config>
+# ...
 config:
   gardenClientConnection:
-    ...
+    # ...
     bootstrapKubeconfig:
       name: gardenlet-bootstrap-kubeconfig
       namespace: garden
@@ -398,14 +410,14 @@ config:
             certificate-authority-data: <dummy>
             server: <my-garden-cluster-endpoint>
           name: my-kubernetes-cluster
-        ....
+        # ...
 
     kubeconfigSecret:
       name: gardenlet-kubeconfig
       namespace: garden
-  ...
-  <default config>
-  ...
+  # ...
+  # <default config>
+  # ...
   seedConfig:
     metadata:
       name: sweet-seed
