@@ -208,7 +208,7 @@ var _ = Describe("migration", func() {
 			botanist.Shoot.Components.SourceBackupEntry = sourceBackupEntry
 		})
 
-		It("should return false if lastOpreation is not restore", func() {
+		It("should return false if lastOperation is not restore", func() {
 			botanist.Shoot.GetInfo().Status.LastOperation.Type = v1beta1.LastOperationTypeReconcile
 			copyRequired, err := botanist.IsCopyOfBackupsRequired(ctx)
 			Expect(err).NotTo(HaveOccurred())
