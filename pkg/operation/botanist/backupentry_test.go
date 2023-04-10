@@ -23,14 +23,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	mockbackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/backupentry/mock"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("BackupEntry", func() {
@@ -87,15 +84,7 @@ var _ = Describe("BackupEntry", func() {
 	})
 
 	Describe("#DestroySourceBackupEntry", func() {
-		It("shouldn't destroy the SourceBackupEntry component when CopyEtcdBackupsDuringControlPlaneMigration=false", func() {
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.CopyEtcdBackupsDuringControlPlaneMigration, false)()
-
-			Expect(botanist.DestroySourceBackupEntry(ctx)).To(Succeed())
-		})
-
 		It("shouldn't destroy the SourceBackupEntry component when Seed backup is not enabled", func() {
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.CopyEtcdBackupsDuringControlPlaneMigration, true)()
-
 			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "seed",
@@ -110,8 +99,6 @@ var _ = Describe("BackupEntry", func() {
 		})
 
 		It("shouldn't destroy the SourceBackupEntry component when Shoot is not in restore phase", func() {
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.CopyEtcdBackupsDuringControlPlaneMigration, true)()
-
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "bar",
@@ -128,8 +115,6 @@ var _ = Describe("BackupEntry", func() {
 		})
 
 		It("should set force-deletion annotation and destroy the SourceBackupEntry component", func() {
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.CopyEtcdBackupsDuringControlPlaneMigration, true)()
-
 			sourceBackupEntry.EXPECT().SetForceDeletionAnnotation(ctx)
 			sourceBackupEntry.EXPECT().Destroy(ctx)
 

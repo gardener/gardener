@@ -30,8 +30,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/backupentry"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -186,32 +184,8 @@ var _ = Describe("BackupEntry", func() {
 			defaultDepWaiter = New(log, c, values, time.Millisecond, 500*time.Millisecond)
 		})
 
-		It("should not change the BucketName of the BackupEntry when the CopyEtcdBackupsDuringControlPlaneMigration feature gate is disabled", func() {
+		It("should change the BucketName of the BackupEntry", func() {
 			defer test.WithVars(&TimeNow, mockNow.Do)()
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.CopyEtcdBackupsDuringControlPlaneMigration, false)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
-
-			existing := expected.DeepCopy()
-			existing.ResourceVersion = ""
-			existing.Spec.BucketName = differentBucketName
-			existing.Spec.SeedName = &differentSeedName
-			Expect(c.Create(ctx, existing)).To(Succeed(), "restoring BackupEntry succeeds")
-
-			Expect(defaultDepWaiter.Restore(ctx, nil)).To(Succeed())
-
-			actual := &gardencorev1beta1.BackupEntry{}
-			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, actual)).To(Succeed())
-
-			expected.ResourceVersion = "2"
-			expected.Spec.BucketName = differentBucketName
-			expected.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationRestore
-
-			Expect(actual).To(DeepEqual(expected))
-		})
-
-		It("should change the BucketName of the BackupEntry when the CopyEtcdBackupsDuringControlPlaneMigration feature gate is enabled", func() {
-			defer test.WithVars(&TimeNow, mockNow.Do)()
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.CopyEtcdBackupsDuringControlPlaneMigration, true)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			existing := expected.DeepCopy()

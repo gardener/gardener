@@ -24,8 +24,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	corebackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/backupentry"
 )
 
@@ -94,11 +92,10 @@ func (b *Botanist) DeploySourceBackupEntry(ctx context.Context) error {
 	return b.Shoot.Components.SourceBackupEntry.Deploy(ctx)
 }
 
-// DestroySourceBackupEntry destroys the source BackupEntry. It returns nil if the CopyEtcdBackupsDuringControlPlaneMigration feature gate
-// is disabled or the Seed backup is not enabled or the Shoot is not in restore phase.
+// DestroySourceBackupEntry destroys the source BackupEntry. It returns nil if the
+// Seed backup is not enabled or the Shoot is not in restore phase.
 func (b *Botanist) DestroySourceBackupEntry(ctx context.Context) error {
-	if !gardenletfeatures.FeatureGate.Enabled(features.CopyEtcdBackupsDuringControlPlaneMigration) ||
-		b.Seed.GetInfo().Spec.Backup == nil || !b.isRestorePhase() {
+	if b.Seed.GetInfo().Spec.Backup == nil || !b.isRestorePhase() {
 		return nil
 	}
 

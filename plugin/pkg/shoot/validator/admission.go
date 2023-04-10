@@ -27,7 +27,6 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
-	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
@@ -36,7 +35,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/strings/slices"
 
@@ -47,7 +45,6 @@ import (
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
@@ -384,12 +381,6 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 			}
 
 			if shootIsBeingRescheduled {
-				if !utilfeature.DefaultFeatureGate.Enabled(features.SeedChange) {
-					if err := apivalidation.ValidateImmutableField(c.oldShoot.Spec.SeedName, c.shoot.Spec.SeedName, field.NewPath("spec", "seedName")).ToAggregate(); err != nil {
-						return err
-					}
-				}
-
 				newShootSpec := c.shoot.Spec
 				newShootSpec.SeedName = c.oldShoot.Spec.SeedName
 				if !reflect.DeepEqual(newShootSpec, c.oldShoot.Spec) {
