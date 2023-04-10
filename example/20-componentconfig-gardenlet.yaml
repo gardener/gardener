@@ -111,7 +111,6 @@ featureGates:
   HVPAForShootedSeed: true
   ManagedIstio: true
   APIServerSNI: true
-  CopyEtcdBackupsDuringControlPlaneMigration: true
   DefaultSeccompProfile: true
   CoreDNSQueryRewriting: true
 # seedConfig:
