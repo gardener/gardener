@@ -829,7 +829,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if err != nil {
 		return err
 	}
-	kubeStateMetrics, err := defaultKubeStateMetrics(seedClient, r.ImageVector, kubernetesVersion, r.GardenNamespace)
+	kubeStateMetrics, err := sharedcomponent.NewKubeStateMetrics(seedClient, r.GardenNamespace, kubernetesVersion, r.ImageVector, v1beta1constants.PriorityClassNameSeedSystem600)
 	if err != nil {
 		return err
 	}
