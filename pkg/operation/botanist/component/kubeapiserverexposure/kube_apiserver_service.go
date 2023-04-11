@@ -291,7 +291,7 @@ func (ks *kubeAPIServerService) Deploy(ctx context.Context) error {
 		svc.Labels = utils.MergeStringMaps(svc.Labels, getLabels())
 		svc.Spec = corev1.ServiceSpec{
 			Type:         corev1.ServiceTypeExternalName,
-			ExternalName: "kubernetes.default.svc.cluster.local",
+			ExternalName: kubernetesutils.FQDNForService("kubernetes", metav1.NamespaceDefault),
 		}
 		return nil
 	})
