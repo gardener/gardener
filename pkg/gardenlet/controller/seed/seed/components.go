@@ -63,9 +63,10 @@ func defaultKubeStateMetrics(
 	}
 
 	return kubestatemetrics.New(c, gardenNamespaceName, nil, kubestatemetrics.Values{
-		ClusterType: component.ClusterTypeSeed,
-		Image:       image.String(),
-		Replicas:    1,
+		ClusterType:       component.ClusterTypeSeed,
+		Image:             image.String(),
+		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
+		Replicas:          1,
 	}), nil
 }
 
