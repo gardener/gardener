@@ -92,16 +92,32 @@ func (r *Reconciler) delete(
 		return reconcile.Result{}, err
 	}
 
+	// observability components
+	kubeStateMetrics, err := r.newKubeStateMetrics()
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	var (
 		g = flow.NewGraph("Garden deletion")
 
+		destroyKubeStateMetrics = g.Add(flow.Task{
+			Name: "Destroying Kube State Metrics",
+			Fn:   component.OpDestroyAndWait(kubeStateMetrics).Destroy,
+		})
+		syncPointObservabilityComponentsDestroyed = flow.NewTaskIDs(
+			destroyKubeStateMetrics,
+		)
+
 		destroyKubeAPIServerService = g.Add(flow.Task{
-			Name: "Destroying Kubernetes API Server service",
-			Fn:   component.OpDestroyAndWait(kubeAPIServerService).Destroy,
+			Name:         "Destroying Kubernetes API Server service",
+			Fn:           component.OpDestroyAndWait(kubeAPIServerService).Destroy,
+			Dependencies: flow.NewTaskIDs(syncPointObservabilityComponentsDestroyed),
 		})
 		destroyKubeAPIServer = g.Add(flow.Task{
-			Name: "Destroying Kubernetes API Server",
-			Fn:   component.OpDestroyAndWait(kubeAPIServer).Destroy,
+			Name:         "Destroying Kubernetes API Server",
+			Fn:           component.OpDestroyAndWait(kubeAPIServer).Destroy,
+			Dependencies: flow.NewTaskIDs(syncPointObservabilityComponentsDestroyed),
 		})
 		destroyEtcd = g.Add(flow.Task{
 			Name: "Destroying main and events ETCDs of virtual garden",
@@ -116,9 +132,11 @@ func (r *Reconciler) delete(
 			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer),
 		})
 		syncPointVirtualGardenControlPlaneDestroyed = flow.NewTaskIDs(
+			syncPointObservabilityComponentsDestroyed,
 			destroyKubeAPIServerService,
 			destroyEtcd,
 		)
+
 		destroyEtcdDruid = g.Add(flow.Task{
 			Name:         "Destroying ETCD Druid",
 			Fn:           component.OpDestroyAndWait(etcdDruid).Destroy,
@@ -139,6 +157,7 @@ func (r *Reconciler) delete(
 			destroyHVPAController,
 			destroyVerticalPodAutoscaler,
 		)
+
 		destroySystemResources = g.Add(flow.Task{
 			Name:         "Destroying system resources",
 			Fn:           component.OpDestroyAndWait(system).Destroy,

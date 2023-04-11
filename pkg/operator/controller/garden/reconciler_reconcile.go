@@ -137,6 +137,12 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
+	// observability components
+	kubeStateMetrics, err := r.newKubeStateMetrics()
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	var (
 		allowBackup          = garden.Spec.VirtualCluster.ETCD != nil && garden.Spec.VirtualCluster.ETCD.Main != nil && garden.Spec.VirtualCluster.ETCD.Main.Backup != nil
 		virtualClusterClient client.Client
@@ -241,6 +247,16 @@ func (r *Reconciler) reconcile(
 				RetryUntilTimeout(30*time.Second, 10*time.Minute).
 				DoIf(helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationCompleting),
 			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient),
+		})
+		syncPointControlPlaneComponents = flow.NewTaskIDs(
+			syncPointSystemComponents,
+			initializeVirtualClusterClient,
+		)
+
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Kube State Metrics",
+			Fn:           kubeStateMetrics.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointControlPlaneComponents),
 		})
 	)
 
