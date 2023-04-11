@@ -128,10 +128,10 @@ kubectl get nodes -l node-role.kubernetes.io/control-plane -o name |\
 
 # Allow multiple shoot worker nodes with calico as shoot CNI: As we run overlay in overlay ip-in-ip needs to be allowed in the workload.
 # Unfortunately, the felix configuration is created on the fly by calico. Hence, we need to poll until kubectl wait for new resources
-# (https://github.com/kubernetes/kubernetes/issues/83242) is fixed. (2 minutes should be enough for the felix configuration to be created.)
+# (https://github.com/kubernetes/kubernetes/issues/83242) is fixed. (10 minutes should be enough for the felix configuration to be created.)
 echo "Waiting for FelixConfiguration to be created..."
 felix_config_found=0
-max_retries=120
+max_retries=600
 for ((i = 0; i < max_retries; i++)); do
   if kubectl get felixconfiguration default > /dev/null 2>&1; then
     if kubectl patch felixconfiguration default --type merge --patch '{"spec":{"allowIPIPPacketsFromWorkloads":true}}' > /dev/null 2>&1; then
