@@ -69,15 +69,16 @@ func (o *options) complete() error {
 		return fmt.Errorf("error decoding config: %w", err)
 	}
 
-	return nil
-}
-
-func (o *options) validate() error {
-	// Add feature flags before validating the config file, as they might influence the validation logic.
+	// Set feature gates immediately after decoding the config.
+	// Feature gates might influence the next steps, e.g., validating the config.
 	if err := features.DefaultFeatureGate.SetFromMap(o.config.FeatureGates); err != nil {
 		return err
 	}
 
+	return nil
+}
+
+func (o *options) validate() error {
 	if errs := gardenletvalidation.ValidateGardenletConfiguration(o.config, nil, false); len(errs) > 0 {
 		return errs.ToAggregate()
 	}
