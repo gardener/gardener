@@ -136,14 +136,14 @@ Please check your console output for the concrete port-forwarding on your machin
 > Note: Resuming or stopping only a single goroutine (Go Issue [25578](https://github.com/golang/go/issues/25578), [31132](https://github.com/golang/go/issues/31132)) is currently not supported, so the action will cause all the goroutines to get activated or paused.
 ([vscode-go wiki](https://github.com/golang/vscode-go/wiki/debugging#connecting-to-headless-delve-with-target-specified-at-server-start-up))
 
-This means that when a goroutine of gardenlet (or any other gardener-core component you try to debug) is paused on a breakpoint, all the other goroutines are paused. Hence, when the whole gardenlet process is paused, it can not renew its lease and can not respond to the liveness and readiness probes. Skaffold automatically increases `timeoutSeconds` of liveness and readiness probes to 600. In our local setups the gardener-core components should run with one replica only, so leases which are not renewed should cause problems. Anyway, if you face problems when debugging, you could temporarily turn off the leader election e.g. by adding
+This means that when a goroutine of gardenlet (or any other gardener-core component you try to debug) is paused on a breakpoint, all the other goroutines are paused. Hence, when the whole gardenlet process is paused, it can not renew its lease and can not respond to the liveness and readiness probes. Skaffold automatically increases `timeoutSeconds` of liveness and readiness probes to 600. In our local setups the gardener-core components should run with one replica only, so leases which are not renewed should not cause problems. Anyway, if you face problems when debugging, you could temporarily turn off the leader election e.g. by adding
 
 ```
   leaderElection:
     leaderElect: false
 ```
 
-to `example/gardener-local/gardenlet/values.yaml` and disabling the various probes.
+to `example/gardener-local/gardenlet/values.yaml` and disable liveness and readiness probes.
 
 ## Creating a `Shoot` Cluster
 
