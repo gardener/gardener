@@ -32,11 +32,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -53,7 +53,7 @@ var _ = Describe("istiod", func() {
 	var (
 		ctx            context.Context
 		c              client.Client
-		istiod         component.DeployWaiter
+		istiod         Interface
 		igw            []IngressGatewayValues
 		igwAnnotations map[string]string
 		labels         map[string]string
@@ -2144,11 +2144,12 @@ spec:
 			renderer,
 			Values{
 				Istiod: IstiodValues{
-					Enabled:     true,
-					Image:       "foo/bar",
-					Namespace:   deployNS,
-					TrustDomain: "foo.local",
-					Zones:       []string{"a", "b", "c"},
+					Enabled:           true,
+					Image:             "foo/bar",
+					Namespace:         deployNS,
+					PriorityClassName: v1beta1constants.PriorityClassNameSeedSystemCritical,
+					TrustDomain:       "foo.local",
+					Zones:             []string{"a", "b", "c"},
 				},
 				IngressGateway: igw,
 			},
@@ -2348,10 +2349,11 @@ spec:
 					renderer,
 					Values{
 						Istiod: IstiodValues{
-							Enabled:     true,
-							Image:       "foo/bar",
-							Namespace:   deployNS,
-							TrustDomain: "foo.local",
+							Enabled:           true,
+							Image:             "foo/bar",
+							Namespace:         deployNS,
+							PriorityClassName: v1beta1constants.PriorityClassNameSeedSystemCritical,
+							TrustDomain:       "foo.local",
 						},
 						IngressGateway: igw,
 					},
@@ -2608,6 +2610,20 @@ spec:
 		})
 	})
 
+	Describe("#AddIngressGateway", func() {
+		It("should add the given ingress gateway", func() {
+			igValues := IngressGatewayValues{
+				Namespace: "additition-istio-ingress",
+			}
+
+			istiod.AddIngressGateway(igValues)
+
+			igwLen := len(istiod.GetValues().IngressGateway)
+			Expect(igwLen).To(Equal(len(igw) + 1))
+			Expect(istiod.GetValues().IngressGateway[igwLen-1]).To(Equal(igValues))
+		})
+	})
+
 	Context("waiting functions", func() {
 		var (
 			fakeOps *retryfake.Ops
@@ -2733,6 +2749,7 @@ func makeIngressGateway(namespace string, annotations, labels map[string]string)
 				{Name: "foo", Port: 999, TargetPort: intstr.FromInt(999)},
 			},
 			Namespace:            namespace,
+			PriorityClassName:    v1beta1constants.PriorityClassNameSeedSystemCritical,
 			ProxyProtocolEnabled: true,
 			VPNEnabled:           true,
 		},

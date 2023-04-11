@@ -212,7 +212,7 @@ spec:
               path: istio-token
               expirationSeconds: 43200
               audience: istio-ca
-      priorityClassName: gardener-system-critical
+      priorityClassName: {{ .Values.priorityClassName }}
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

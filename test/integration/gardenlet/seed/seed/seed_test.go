@@ -462,20 +462,24 @@ var _ = Describe("Seed controller tests", func() {
 							g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
 						}).Should(Succeed())
 					} else {
-						// Usually, the gardener-operator would deploy gardener-resource-manager and the related CRD for
-						// ManagedResources and VerticalPodAutoscaler. However, it is not really running, so we have to fake its behaviour here.
-						By("Create CustomResourceDefinition for ManagedResources")
+						// Usually, the gardener-operator deploys and managed the following resource.
+						// However, it is not really running, so we have to fake its behaviour here.
+						By("Create resources managed by Gardener-Operator")
 						var (
-							applier = kubernetes.NewApplier(testClient, testClient.RESTMapper())
-							mrCRD   = kubernetes.NewManifestReader([]byte(managedResourcesCRD))
-							vpaCRD  = kubernetes.NewManifestReader([]byte(verticalPodAutoscalerCRD))
+							applier              = kubernetes.NewApplier(testClient, testClient.RESTMapper())
+							mrCRD                = kubernetes.NewManifestReader([]byte(managedResourcesCRD))
+							vpaCRD               = kubernetes.NewManifestReader([]byte(verticalPodAutoscalerCRD))
+							istioSystenNamespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "istio-system"}}
 						)
 
 						Expect(applier.ApplyManifest(ctx, mrCRD, kubernetes.DefaultMergeFuncs)).To(Succeed())
 						Expect(applier.ApplyManifest(ctx, vpaCRD, kubernetes.DefaultMergeFuncs)).To(Succeed())
+						Expect(testClient.Create(ctx, istioSystenNamespace)).To(Succeed())
+
 						DeferCleanup(func() {
 							Expect(applier.DeleteManifest(ctx, mrCRD)).To(Succeed())
 							Expect(applier.DeleteManifest(ctx, vpaCRD)).To(Succeed())
+							Expect(testClient.Delete(ctx, istioSystenNamespace)).To(Succeed())
 						})
 					}
 

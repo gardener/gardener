@@ -44,6 +44,7 @@ type IngressGatewayValues struct {
 	MaxReplicas           *int
 	MinReplicas           *int
 	Namespace             string
+	PriorityClassName     string
 	TrustDomain           string
 	ProxyProtocolEnabled  bool
 	VPNEnabled            bool
@@ -64,7 +65,7 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 			"annotations":           istioIngressGateway.Annotations,
 			"externalTrafficPolicy": istioIngressGateway.ExternalTrafficPolicy,
 			"deployNamespace":       false,
-			"priorityClassName":     "istio-ingressgateway",
+			"priorityClassName":     istioIngressGateway.PriorityClassName,
 			"ports":                 istioIngressGateway.Ports,
 			"image":                 istioIngressGateway.Image,
 			"istiodNamespace":       istioIngressGateway.IstiodNamespace,

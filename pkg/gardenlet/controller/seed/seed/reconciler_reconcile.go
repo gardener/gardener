@@ -382,7 +382,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		}
 	}
 
-	istioCRDs := istio.NewCRD(chartApplier, seedClient)
+	istioCRDs := istio.NewCRD(chartApplier)
 	if err := istioCRDs.Deploy(ctx); err != nil {
 		return err
 	}
@@ -821,7 +821,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	// setup for flow graph
 	var dnsRecord component.DeployMigrateWaiter
 
-	istio, err := defaultIstio(seedClient, r.ImageVector, chartRenderer, seed, &r.Config, sniEnabledOrInUse)
+	istio, err := defaultIstio(seedClient, r.ImageVector, chartRenderer, seed, &r.Config, sniEnabledOrInUse, seedIsGarden)
 	if err != nil {
 		return err
 	}

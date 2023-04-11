@@ -204,10 +204,10 @@ func (r *Reconciler) runDeleteSeedFlow(
 		dwdProber            = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProber})
 		systemResources      = seedsystem.New(seedClient, r.GardenNamespace, seedsystem.Values{})
 		vpnAuthzServer       = vpnauthzserver.New(seedClient, r.GardenNamespace, "", kubernetesVersion)
-		istioCRDs            = istio.NewCRD(r.SeedClientSet.ChartApplier(), seedClient)
+		istioCRDs            = istio.NewCRD(r.SeedClientSet.ChartApplier())
 		istio                = istio.NewIstio(seedClient, r.SeedClientSet.ChartRenderer(), istio.Values{
 			Istiod: istio.IstiodValues{
-				Enabled:   true,
+				Enabled:   !seedIsGarden,
 				Namespace: v1beta1constants.IstioSystemNamespace,
 			},
 			IngressGateway: istioIngressGateway,
@@ -273,8 +273,10 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Fn:   component.OpDestroyAndWait(istio).Destroy,
 		})
 		destroyIstioCRDs = g.Add(flow.Task{
-			Name:         "Destroy Istio CRDs",
-			Fn:           component.OpDestroyAndWait(istioCRDs).Destroy,
+			Name: "Destroy Istio CRDs",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return component.OpDestroyAndWait(istioCRDs).Destroy(ctx)
+			}).DoIf(!seedIsGarden),
 			Dependencies: flow.NewTaskIDs(destroyIstio),
 		})
 		destroyFluentOperatorCRDs = g.Add(flow.Task{

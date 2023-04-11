@@ -21,7 +21,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -34,10 +33,10 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
@@ -54,145 +53,100 @@ func defaultIstio(
 	seed *seedpkg.Seed,
 	conf *config.GardenletConfiguration,
 	sniEnabledOrInUse bool,
+	isGardenCluster bool,
 ) (
 	component.DeployWaiter,
 	error,
 ) {
-	var (
-		minReplicas *int
-		maxReplicas *int
-		seedObj     = seed.GetInfo()
-	)
+	seedObj := seed.GetInfo()
 
-	istiodImage, err := imageVector.FindImage(images.ImageNameIstioIstiod)
-	if err != nil {
-		return nil, err
-	}
-
-	igwImage, err := imageVector.FindImage(images.ImageNameIstioProxy)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(seedObj.Spec.Provider.Zones) > 1 {
-		// Each availability zone should have at least 2 replicas as on some infrastructures each
-		// zonal load balancer is exposed individually via its own IP address. Therefore, having
-		// just one replica may negatively affect availability.
-		minReplicas = pointer.Int(len(seedObj.Spec.Provider.Zones) * 2)
-		// The default configuration without availability zones has 5 as the maximum amount of
-		// replicas, which apparently works in all known Gardener scenarios. Reducing it to less
-		// per zone gives some room for autoscaling while it is assumed to never reach the maximum.
-		maxReplicas = pointer.Int(len(seedObj.Spec.Provider.Zones) * 4)
-	}
-
-	defaultIngressGatewayConfig := istio.IngressGatewayValues{
-		TrustDomain:           gardencorev1beta1.DefaultDomain,
-		Image:                 igwImage.String(),
-		IstiodNamespace:       v1beta1constants.IstioSystemNamespace,
-		Annotations:           seed.GetLoadBalancerServiceAnnotations(),
-		ExternalTrafficPolicy: seed.GetLoadBalancerServiceExternalTrafficPolicy(),
-		MinReplicas:           minReplicas,
-		MaxReplicas:           maxReplicas,
-		Ports:                 []corev1.ServicePort{},
-		LoadBalancerIP:        conf.SNI.Ingress.ServiceExternalIP,
-		Labels:                operation.GetIstioZoneLabels(conf.SNI.Ingress.Labels, nil),
-		Namespace:             *conf.SNI.Ingress.Namespace,
-		ProxyProtocolEnabled:  features.DefaultFeatureGate.Enabled(features.APIServerSNI),
-		VPNEnabled:            true,
-	}
+	labels := operation.GetIstioZoneLabels(conf.SNI.Ingress.Labels, nil)
 
 	// even if SNI is being disabled, the existing ports must stay the same
 	// until all APIServer SNI resources are removed.
+	var servicePorts []corev1.ServicePort
 	if sniEnabledOrInUse {
-		defaultIngressGatewayConfig.Ports = append(
-			defaultIngressGatewayConfig.Ports,
-			corev1.ServicePort{Name: "proxy", Port: 8443, TargetPort: intstr.FromInt(8443)},
-			corev1.ServicePort{Name: "tcp", Port: 443, TargetPort: intstr.FromInt(9443)},
-			corev1.ServicePort{Name: "tls-tunnel", Port: vpnseedserver.GatewayPort, TargetPort: intstr.FromInt(vpnseedserver.GatewayPort)},
-		)
+		servicePorts = []corev1.ServicePort{
+			{Name: "proxy", Port: 8443, TargetPort: intstr.FromInt(8443)},
+			{Name: "tcp", Port: 443, TargetPort: intstr.FromInt(9443)},
+			{Name: "tls-tunnel", Port: vpnseedserver.GatewayPort, TargetPort: intstr.FromInt(vpnseedserver.GatewayPort)},
+		}
 	}
 
-	istioIngressGateway := []istio.IngressGatewayValues{
-		defaultIngressGatewayConfig,
+	istioDeployer, err := shared.NewIstio(
+		seedClient,
+		imageVector,
+		chartRenderer,
+		"",
+		*conf.SNI.Ingress.Namespace,
+		v1beta1constants.PriorityClassNameSeedSystemCritical,
+		!isGardenCluster,
+		labels,
+		seed.GetLoadBalancerServiceAnnotations(),
+		seed.GetLoadBalancerServiceExternalTrafficPolicy(),
+		conf.SNI.Ingress.ServiceExternalIP,
+		servicePorts,
+		features.DefaultFeatureGate.Enabled(features.APIServerSNI),
+		true,
+		seedObj.Spec.Provider.Zones,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	// Automatically create ingress gateways for single-zone control planes on multi-zonal seeds
 	if len(seedObj.Spec.Provider.Zones) > 1 {
-		for _, zone := range seedObj.Spec.Provider.Zones {
+		for _, z := range seedObj.Spec.Provider.Zones {
+			zone := z
 			namespace := operation.GetIstioNamespaceForZone(*conf.SNI.Ingress.Namespace, zone)
 
-			istioIngressGateway = append(istioIngressGateway, istio.IngressGatewayValues{
-				TrustDomain:           gardencorev1beta1.DefaultDomain,
-				Image:                 igwImage.String(),
-				IstiodNamespace:       v1beta1constants.IstioSystemNamespace,
-				Annotations:           seed.GetZonalLoadBalancerServiceAnnotations(zone),
-				ExternalTrafficPolicy: seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone),
-				Ports:                 defaultIngressGatewayConfig.Ports,
-				// LoadBalancerIP can currently not be provided for automatic ingress gateways
-				Labels:               operation.GetIstioZoneLabels(defaultIngressGatewayConfig.Labels, &zone),
-				Zones:                []string{zone},
-				Namespace:            namespace,
-				ProxyProtocolEnabled: features.DefaultFeatureGate.Enabled(features.APIServerSNI),
-				VPNEnabled:           true,
-			})
+			if err := shared.AddIstioIngressGateway(
+				istioDeployer,
+				namespace,
+				seed.GetZonalLoadBalancerServiceAnnotations(zone),
+				operation.GetIstioZoneLabels(labels, &zone),
+				seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone),
+				nil,
+				&zone); err != nil {
+				return nil, err
+			}
 		}
 	}
 
 	// Add for each ExposureClass handler in the config an own Ingress Gateway and Proxy Gateway.
 	for _, handler := range conf.ExposureClassHandlers {
-		istioIngressGateway = append(istioIngressGateway, istio.IngressGatewayValues{
-			TrustDomain:           gardencorev1beta1.DefaultDomain,
-			Image:                 igwImage.String(),
-			IstiodNamespace:       v1beta1constants.IstioSystemNamespace,
-			Annotations:           utils.MergeStringMaps(seed.GetLoadBalancerServiceAnnotations(), handler.LoadBalancerService.Annotations),
-			ExternalTrafficPolicy: seed.GetLoadBalancerServiceExternalTrafficPolicy(),
-			MinReplicas:           minReplicas,
-			MaxReplicas:           maxReplicas,
-			Ports:                 defaultIngressGatewayConfig.Ports,
-			LoadBalancerIP:        handler.SNI.Ingress.ServiceExternalIP,
-			Labels:                operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
-			Namespace:             *handler.SNI.Ingress.Namespace,
-			ProxyProtocolEnabled:  features.DefaultFeatureGate.Enabled(features.APIServerSNI),
-			VPNEnabled:            true,
-		})
+		if err := shared.AddIstioIngressGateway(
+			istioDeployer,
+			*handler.SNI.Ingress.Namespace,
+			utils.MergeStringMaps(seed.GetLoadBalancerServiceAnnotations(), handler.LoadBalancerService.Annotations),
+			operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
+			seed.GetLoadBalancerServiceExternalTrafficPolicy(),
+			handler.SNI.Ingress.ServiceExternalIP,
+			nil); err != nil {
+			return nil, err
+		}
 
 		// Automatically create ingress gateways for single-zone control planes on multi-zonal seeds
 		if len(seedObj.Spec.Provider.Zones) > 1 {
-			for _, zone := range seedObj.Spec.Provider.Zones {
+			for _, z := range seedObj.Spec.Provider.Zones {
+				zone := z
 				namespace := operation.GetIstioNamespaceForZone(*handler.SNI.Ingress.Namespace, zone)
 
-				istioIngressGateway = append(istioIngressGateway, istio.IngressGatewayValues{
-					TrustDomain:           gardencorev1beta1.DefaultDomain,
-					Image:                 igwImage.String(),
-					IstiodNamespace:       v1beta1constants.IstioSystemNamespace,
-					Annotations:           utils.MergeStringMaps(handler.LoadBalancerService.Annotations, seed.GetZonalLoadBalancerServiceAnnotations(zone)),
-					ExternalTrafficPolicy: seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone),
-					Ports:                 defaultIngressGatewayConfig.Ports,
-					// LoadBalancerIP can currently not be provided for automatic ingress gateways
-					Labels:               operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
-					Zones:                []string{zone},
-					Namespace:            namespace,
-					ProxyProtocolEnabled: features.DefaultFeatureGate.Enabled(features.APIServerSNI),
-					VPNEnabled:           true,
-				})
+				if err := shared.AddIstioIngressGateway(
+					istioDeployer,
+					namespace,
+					utils.MergeStringMaps(handler.LoadBalancerService.Annotations, seed.GetZonalLoadBalancerServiceAnnotations(zone)),
+					operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
+					seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone),
+					nil,
+					&zone); err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
 
-	return istio.NewIstio(
-		seedClient,
-		chartRenderer,
-		istio.Values{
-			Istiod: istio.IstiodValues{
-				Enabled:     true,
-				Image:       istiodImage.String(),
-				Namespace:   v1beta1constants.IstioSystemNamespace,
-				TrustDomain: gardencorev1beta1.DefaultDomain,
-				Zones:       seedObj.Spec.Provider.Zones,
-			},
-			IngressGateway: istioIngressGateway,
-		},
-	), nil
+	return istioDeployer, nil
 }
 
 func defaultNetworkPolicies(

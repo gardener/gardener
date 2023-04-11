@@ -45,12 +45,12 @@ const (
 	// DefaultZoneKey is the label key for the istio default ingress gateway.
 	DefaultZoneKey = "istio"
 	// IstiodServiceName is the name of the istiod service.
-	IstiodServiceName            = "istiod"
-	istiodServicePortNameMetrics = "metrics"
+	IstiodServiceName = "istiod"
 	// PortWebhookServer is the port of the validating webhook server.
 	PortWebhookServer = 10250
 
-	releaseName = "istio"
+	istiodServicePortNameMetrics = "metrics"
+	releaseName                  = "istio"
 )
 
 var (
@@ -76,6 +76,8 @@ type IstiodValues struct {
 	Namespace string
 	// Image is the image used for the `istiod` deployment.
 	Image string
+	// PriorityClassName is the name of the priority class used for the Istiod deployment.
+	PriorityClassName string
 	// TrustDomain is the domain used for service discovery, e.g. `cluster.local`.
 	TrustDomain string
 	// Zones are the availability zones used for this `istiod` deployment.
@@ -92,13 +94,24 @@ type Values struct {
 	NamePrefix string
 }
 
+// Interface contains functions for an Istio deployer.
+type Interface interface {
+	component.DeployWaiter
+	// AddIngressGateway adds another ingress gateway to the existing Istio deployer.
+	AddIngressGateway(values IngressGatewayValues)
+	// GetValues returns the configured values of the Istio deployer.
+	GetValues() Values
+}
+
+var _ Interface = (*istiod)(nil)
+
 // NewIstio can be used to deploy istio's istiod in a namespace.
 // Destroy does nothing.
 func NewIstio(
 	client client.Client,
 	chartRenderer chartrenderer.Interface,
 	values Values,
-) component.DeployWaiter {
+) Interface {
 	return &istiod{
 		client:        client,
 		chartRenderer: chartRenderer,
@@ -281,23 +294,33 @@ func (i *istiod) WaitCleanup(ctx context.Context) error {
 	return flow.Parallel(taskFns...)(timeoutCtx)
 }
 
+func (i *istiod) AddIngressGateway(values IngressGatewayValues) {
+	i.values.IngressGateway = append(i.values.IngressGateway, values)
+}
+
+func (i *istiod) GetValues() Values {
+	return i.values
+}
+
 func (i *istiod) generateIstiodChart(ignoreMode bool) (*chartrenderer.RenderedChart, error) {
+	istiodValues := i.values.Istiod
+
 	return i.chartRenderer.RenderEmbeddedFS(chartIstiod, chartPathIstiod, releaseName, i.values.Istiod.Namespace, map[string]interface{}{
 		"serviceName": IstiodServiceName,
-		"trustDomain": i.values.Istiod.TrustDomain,
+		"trustDomain": istiodValues.TrustDomain,
 		"labels": map[string]interface{}{
 			"app":   "istiod",
 			"istio": "pilot",
 		},
 		"deployNamespace":   false,
-		"priorityClassName": "istiod",
+		"priorityClassName": istiodValues.PriorityClassName,
 		"ports": map[string]interface{}{
 			"https": PortWebhookServer,
 		},
 		"portsNames": map[string]interface{}{
 			"metrics": istiodServicePortNameMetrics,
 		},
-		"image":      i.values.Istiod.Image,
+		"image":      istiodValues.Image,
 		"ignoreMode": ignoreMode,
 	})
 }
