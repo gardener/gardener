@@ -165,15 +165,15 @@ func getCluster(number int) *extensionsv1alpha1.Cluster {
 	}
 }
 
-func getLokiShootService(number int) *corev1.Service {
+func getLoggingShootService(number int) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      lokiName,
+			Name:      "logging",
 			Namespace: fmt.Sprintf("%s%v", simulatedShootNamespacePrefix, number),
 		},
 		Spec: corev1.ServiceSpec{
 			Type:         corev1.ServiceType(corev1.ServiceTypeExternalName),
-			ExternalName: "loki-shoots.garden.svc.cluster.local",
+			ExternalName: "logging-shoot.garden.svc.cluster.local",
 		},
 	}
 }
