@@ -14,13 +14,10 @@ spec:
       app: prometheus
       role: monitoring
   egress:
-  - to:
-    - podSelector:
-        matchLabels:
-          component: node-exporter
-      namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: kube-system
+  # A podselector to select the node-exporter pods in the kube-system namespace does not work here
+  # because the node-exporter uses the host network. Network policies are currently not supported
+  # with pods in the host network.
+  - to: []
     ports:
     - port: 16909
       protocol: TCP
