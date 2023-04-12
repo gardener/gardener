@@ -93,7 +93,7 @@ The `gardener-apiserver` Service is topology-aware. It is consumed by `virtual-g
 
 ##### gardener-admission-controller
 
-The `gardener-admission-controller` Service is topology-aware. It is consumed by `virtual-garden-kube-apiserver` and `virtual-garden-kube-apiserver` for the webhook communication.
+The `gardener-admission-controller` Service is topology-aware. It is consumed by `virtual-garden-kube-apiserver` and `gardener-apiserver` for the webhook communication.
 
 ## How to enable the topology-aware routing for a Seed cluster?
 
