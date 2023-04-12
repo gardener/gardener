@@ -852,6 +852,7 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 					From: []networkingv1.NetworkPolicyPeer{
 						{PodSelector: &metav1.LabelSelector{}, NamespaceSelector: &metav1.LabelSelector{}},
 						{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
+						{IPBlock: &networkingv1.IPBlock{CIDR: "::/0"}},
 					},
 					Ports: []networkingv1.NetworkPolicyPort{
 						{Protocol: &port1Protocol, Port: &port1TargetPort},
@@ -882,6 +883,7 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 					From: []networkingv1.NetworkPolicyPeer{
 						{PodSelector: &metav1.LabelSelector{}, NamespaceSelector: &metav1.LabelSelector{}},
 						{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
+						{IPBlock: &networkingv1.IPBlock{CIDR: "::/0"}},
 					},
 				}},
 			}))

@@ -25,6 +25,7 @@ import (
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletvalidation "github.com/gardener/gardener/pkg/gardenlet/apis/config/validation"
@@ -66,6 +67,12 @@ func (o *options) complete() error {
 	o.config = &config.GardenletConfiguration{}
 	if err = runtime.DecodeInto(configDecoder, data, o.config); err != nil {
 		return fmt.Errorf("error decoding config: %w", err)
+	}
+
+	// Set feature gates immediately after decoding the config.
+	// Feature gates might influence the next steps, e.g., validating the config.
+	if err := features.DefaultFeatureGate.SetFromMap(o.config.FeatureGates); err != nil {
+		return err
 	}
 
 	return nil

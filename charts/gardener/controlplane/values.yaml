@@ -303,7 +303,6 @@ global:
       logFormat: json
       server:
         webhooks:
-          bindAddress: 0.0.0.0
           port: 2719
           tlsSecretName:
           tls:
@@ -320,10 +319,8 @@ global:
               ...
               -----END RSA PRIVATE KEY-----
         healthProbes:
-          bindAddress: 0.0.0.0
           port: 2722
         metrics:
-          bindAddress: 0.0.0.0
           port: 2723
       # resourceAdmissionConfiguration:
       #   limits:
@@ -447,10 +444,8 @@ global:
       logLevel: info
       server:
         healthProbes:
-          bindAddress: 0.0.0.0
           port: 2718
         metrics:
-          bindAddress: 0.0.0.0
           port: 2719
       debugging:
         enableProfiling: false
@@ -494,10 +489,8 @@ global:
       logLevel: info
       server:
         healthProbes:
-          bindAddress: 0.0.0.0
           port: 10251
         metrics:
-          bindAddress: 0.0.0.0
           port: 19251
       debugging:
         enableProfiling: false

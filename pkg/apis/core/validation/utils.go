@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/features"
@@ -189,7 +188,7 @@ func ValidateIPFamilies(ipFamilies []core.IPFamily, fldPath *field.Path) field.E
 	if len(ipFamilies) > 1 {
 		allErrs = append(allErrs, field.Invalid(fldPath, ipFamilies, "dual-stack networking is not supported"))
 	}
-	if len(ipFamilies) > 0 && ipFamilies[0] == core.IPFamilyIPv6 && !utilfeature.DefaultFeatureGate.Enabled(features.IPv6SingleStack) {
+	if len(ipFamilies) > 0 && ipFamilies[0] == core.IPFamilyIPv6 && !features.DefaultFeatureGate.Enabled(features.IPv6SingleStack) {
 		allErrs = append(allErrs, field.Invalid(fldPath, ipFamilies, "IPv6 single-stack networking is not supported"))
 	}
 

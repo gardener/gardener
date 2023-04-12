@@ -52,7 +52,6 @@ global:
     logFormat: text
     server:
       webhooks:
-        bindAddress: 0.0.0.0
         port: 10250
       # ca: |
       #   some-tls-certificate
@@ -61,10 +60,8 @@ global:
       # privateKey: |
       #   some-private-key
       healthProbes:
-        bindAddress: 0.0.0.0
         port: 8081
       metrics:
-        bindAddress: 0.0.0.0
         port: 8080
     debugging:
       enableProfiling: false

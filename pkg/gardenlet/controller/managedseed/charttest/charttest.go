@@ -847,12 +847,10 @@ func ComputeExpectedGardenletConfiguration(
 		},
 		Server: gardenletv1alpha1.ServerConfiguration{
 			HealthProbes: &gardenletv1alpha1.Server{
-				BindAddress: "0.0.0.0",
-				Port:        2728,
+				Port: 2728,
 			},
 			Metrics: &gardenletv1alpha1.Server{
-				BindAddress: "0.0.0.0",
-				Port:        2729,
+				Port: 2729,
 			},
 		},
 		Debugging: &baseconfigv1alpha1.DebuggingConfiguration{

@@ -42,7 +42,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
 	sharedcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/shared"
-	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
@@ -59,7 +58,7 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 		r.Config.LogLevel, r.Config.LogFormat,
 		operatorv1alpha1.SecretNameCARuntime,
 		v1beta1constants.PriorityClassNameGardenSystemCritical,
-		operatorfeatures.FeatureGate.Enabled(features.DefaultSeccompProfile),
+		features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
 		helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 		false,
 		false,

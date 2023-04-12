@@ -31,9 +31,6 @@ In these cases, you might want to check out one of the following options that ru
 
   Additionally, please configure at least `120Gi` of disk size for the Docker daemon.
   > Tip: With `docker system df` and `docker system prune -a` you can cleanup unused data.
-- Make sure the `kind` docker network is using the CIDR `172.18.0.0/16`.
-  - If the network does not exist, it can be created with `docker network create kind --subnet 172.18.0.0/16`
-  - If the network already exists, the CIDR can be checked with `docker network inspect kind  | jq '.[].IPAM.Config[].Subnet'`. If it is not `172.18.0.0/16`, delete the network with `docker network rm kind` and create it with the command above.
 - Make sure that you increase the maximum number of open files on your host:
   - On Mac, run `sudo launchctl limit maxfiles 65536 200000`
   - On Linux, extend the `/etc/security/limits.conf` file with
@@ -51,7 +48,7 @@ In these cases, you might want to check out one of the following options that ru
 make kind-up KIND_ENV=local
 ```
 
-> If you want to setup an IPv6 KinD cluster, use `make kind-up IPFAMILY=ipv6` instead.
+> If you want to setup an IPv6 KinD cluster, use `make kind-up KIND_ENV=local IPFAMILY=ipv6` instead.
 
 This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind/local/kubeconfig` file.
 
@@ -69,27 +66,22 @@ With this, mirrored images don't have to be pulled again after recreating the cl
 The command also deploys a default [calico](https://github.com/projectcalico/calico) installation as the cluster's CNI implementation with `NetworkPolicy` support (the default `kindnet` CNI doesn't provide `NetworkPolicy` support).
 Furthermore, it deploys the [metrics-server](https://github.com/kubernetes-sigs/metrics-server) in order to support HPA and VPA on the seed cluster.
 
-## Outgoing IPv6 Single-Stack Networking (optional)
+## Setting Up IPv6 Single-Stack Networking (optional)
 
-If you want to test IPv6-related features, we need to configure NAT for outgoing traffic from the kind network to the internet.
-After `make kind-up IPFAMILY=ipv6`, check the network created by kind:
+First, ensure that your `/etc/hosts` file contains an entry resolving `localhost` to the IPv6 loopback address:
 
-```bash
-$ docker network inspect kind | jq '.[].IPAM.Config[].Subnet'
-"172.18.0.0/16"
-"fc00:f853:ccd:e793::/64"
+```text
+::1 localhost
 ```
 
-Determine which device is used for outgoing internet traffic by looking at the default route:
+Typically, only `ip6-localhost` is mapped to `::1` on linux machines.
+However, we need `localhost` to resolve to both `127.0.0.1` and `::1` so that we can talk to our registry via a single address (`localhost:5001`).
+
+Next, we need to configure NAT for outgoing traffic from the kind network to the internet.
+After executing `make kind-up IPFAMILY=ipv6`, execute the following command to set up the corresponding iptables rules:
 
 ```bash
-$ ip route show default
-default via 192.168.195.1 dev enp3s0 proto dhcp src 192.168.195.34 metric 100
-```
-
-Configure NAT for traffic from the kind cluster to the internet using the IPv6 range and the network device from the previous two steps:
-```bash
-ip6tables -t nat -A POSTROUTING -o enp3s0 -s fc00:f853:ccd:e793::/64 -j MASQUERADE
+ip6tables -t nat -A POSTROUTING -o $(ip route show default | awk '{print $5}') -s fd00:10::/64 -j MASQUERADE
 ```
 
 ## Setting Up Gardener
@@ -101,6 +93,8 @@ make dev-setup                                                                # 
 kubectl wait --for=condition=ready pod -l run=etcd -n garden --timeout 2m     # wait for etcd to be ready
 make start-apiserver                                                          # starting gardener-apiserver
 ```
+
+> For IPv6 use `make dev-setup IPFAMILY=ipv6` instead.
 
 In a new terminal pane, run:
 
@@ -116,6 +110,8 @@ make dev-setup DEV_SETUP_WITH_WEBHOOKS=true                                   # 
 make start-controller-manager                                                 # starting gardener-controller-manager
 ```
 
+> For IPv6 use `make dev-setup DEV_SETUP_WITH_WEBHOOKS=true IPFAMILY=ipv6` instead.
+
 (Optional): In a new terminal pane, run:
 
 ```bash
@@ -129,11 +125,15 @@ make register-local-env                                                       # 
 make start-gardenlet SEED_NAME=local                                          # starting gardenlet
 ```
 
+> For IPv6 use `make register-local-env IPFAMILY=ipv6` instead.
+
 In a new terminal pane, run:
 
 ```bash
 make start-extension-provider-local                                           # starting gardener-extension-provider-local
 ```
+
+> For IPv6 use `make start-extension-provider-local IPFAMILY=ipv6` instead.
 
 ℹ️ The [`provider-local`](../extensions/provider-local.md) is started with elevated privileges since it needs to manipulate your `/etc/hosts` file to enable you accessing the created shoot clusters from your local machine, see [this](../extensions/provider-local.md#dnsrecord) for more details.
 

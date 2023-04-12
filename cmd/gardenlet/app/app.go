@@ -17,8 +17,10 @@ package app
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	goruntime "runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -62,12 +64,12 @@ import (
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
 	"github.com/gardener/gardener/pkg/gardenlet/controller"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/constants"
@@ -131,11 +133,7 @@ func NewCommand() *cobra.Command {
 }
 
 func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *config.GardenletConfiguration) error {
-	// Add feature flags
-	if err := gardenletfeatures.FeatureGate.SetFromMap(cfg.FeatureGates); err != nil {
-		return err
-	}
-	log.Info("Feature Gates", "featureGates", gardenletfeatures.FeatureGate.String())
+	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 
 	if kubeconfig := os.Getenv("GARDEN_KUBECONFIG"); kubeconfig != "" {
 		cfg.GardenClientConnection.Kubeconfig = kubeconfig
@@ -156,8 +154,8 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		Scheme:                  kubernetes.SeedScheme,
 		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
 
-		HealthProbeBindAddress: fmt.Sprintf("%s:%d", cfg.Server.HealthProbes.BindAddress, cfg.Server.HealthProbes.Port),
-		MetricsBindAddress:     fmt.Sprintf("%s:%d", cfg.Server.Metrics.BindAddress, cfg.Server.Metrics.Port),
+		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
+		MetricsBindAddress:     net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
 
 		LeaderElection:                cfg.LeaderElection.LeaderElect,
 		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,

@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	controllermanagerv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	controllermanagervalidation "github.com/gardener/gardener/pkg/controllermanager/apis/config/validation"
+	"github.com/gardener/gardener/pkg/features"
 )
 
 var configDecoder runtime.Decoder
@@ -62,6 +63,12 @@ func (o *options) complete() error {
 	o.config = &config.ControllerManagerConfiguration{}
 	if err = runtime.DecodeInto(configDecoder, data, o.config); err != nil {
 		return fmt.Errorf("error decoding config: %w", err)
+	}
+
+	// Set feature gates immediately after decoding the config.
+	// Feature gates might influence the next steps, e.g., validating the config.
+	if err := features.DefaultFeatureGate.SetFromMap(o.config.FeatureGates); err != nil {
+		return err
 	}
 
 	return nil

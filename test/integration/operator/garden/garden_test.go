@@ -50,7 +50,6 @@ import (
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	gardencontroller "github.com/gardener/gardener/pkg/operator/controller/garden"
-	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -69,7 +68,7 @@ var _ = Describe("Garden controller tests", func() {
 
 	BeforeEach(func() {
 		DeferCleanup(test.WithVar(&secretsutils.GenerateKey, secretsutils.FakeGenerateKey))
-		DeferCleanup(test.WithFeatureGate(operatorfeatures.FeatureGate, features.HVPA, true))
+		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.HVPA, true))
 		DeferCleanup(test.WithVars(
 			&etcd.DefaultInterval, 100*time.Millisecond,
 			&etcd.DefaultTimeout, 500*time.Millisecond,

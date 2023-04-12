@@ -249,11 +249,15 @@ config.yaml: |
   logFormat: {{ .Values.config.logFormat }}
   server:
     healthProbes:
-      bindAddress: {{ required ".Values.config.server.healthProbes.bindAddress is required" .Values.config.server.healthProbes.bindAddress }}
+      {{- if .Values.config.server.healthProbes.bindAddress }}
+      bindAddress: {{ .Values.config.server.healthProbes.bindAddress }}
+      {{- end }}
       port: {{ required ".Values.config.server.healthProbes.port is required" .Values.config.server.healthProbes.port }}
     {{- if .Values.config.server.metrics }}
     metrics:
-      bindAddress: {{ required ".Values.config.server.metrics.bindAddress is required" .Values.config.server.metrics.bindAddress }}
+      {{- if .Values.config.server.metrics.bindAddress }}
+      bindAddress: {{ .Values.config.server.metrics.bindAddress }}
+      {{- end }}
       port: {{ required ".Values.config.server.metrics.port is required" .Values.config.server.metrics.port }}
     {{- end }}
   {{- if .Values.config.debugging }}

@@ -31,7 +31,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
@@ -79,7 +78,7 @@ var _ = Describe("Seed health", func() {
 	)
 
 	BeforeEach(func() {
-		defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HVPA, true)()
+		defer test.WithFeatureGate(features.DefaultFeatureGate, features.HVPA, true)()
 
 		ctx = context.TODO()
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
@@ -139,7 +138,7 @@ var _ = Describe("Seed health", func() {
 
 		Context("When optional managed resources are turned off, and required resources are deployed successfully", func() {
 			JustBeforeEach(func() {
-				defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HVPA, false)()
+				defer test.WithFeatureGate(features.DefaultFeatureGate, features.HVPA, false)()
 				seed.Spec.Ingress.Controller.Kind = "foo"
 				seed.Spec.Settings.DependencyWatchdog.Endpoint.Enabled = false
 				seed.Spec.Settings.DependencyWatchdog.Probe.Enabled = false

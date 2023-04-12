@@ -160,7 +160,7 @@ var _ = Describe("Defaults", func() {
 
 			SetDefaults_ServerConfiguration(obj)
 
-			Expect(obj.Webhooks.BindAddress).To(Equal("0.0.0.0"))
+			Expect(obj.Webhooks.BindAddress).To(BeEmpty())
 			Expect(obj.Webhooks.Port).To(Equal(9449))
 			Expect(obj.HealthProbes.Port).To(Equal(8081))
 			Expect(obj.Metrics.Port).To(Equal(8080))

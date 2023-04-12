@@ -23,7 +23,6 @@ spec:
       context: ANY
       listener:
         portNumber: 8443
-        name: 0.0.0.0_8443
     patch:
       operation: ADD
       value:

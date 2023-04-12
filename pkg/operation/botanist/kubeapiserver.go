@@ -30,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -74,7 +73,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 
 func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.AutoscalingConfig {
 	var (
-		hvpaEnabled               = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
+		hvpaEnabled               = features.DefaultFeatureGate.Enabled(features.HVPA)
 		useMemoryMetricForHvpaHPA = false
 		scaleDownDisabledForHvpa  = false
 		defaultReplicas           *int32
@@ -103,7 +102,7 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 	apiServerResources = resourcesRequirementsForKubeAPIServer(nodeCount, b.Shoot.GetInfo().Annotations[v1beta1constants.ShootAlphaScalingAPIServerClass])
 
 	if b.ManagedSeed != nil {
-		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
+		hvpaEnabled = features.DefaultFeatureGate.Enabled(features.HVPAForShootedSeed)
 		useMemoryMetricForHvpaHPA = true
 
 		if b.ManagedSeedAPIServer != nil {

@@ -15,6 +15,7 @@
 package features
 
 import (
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/component-base/featuregate"
 )
 
@@ -111,6 +112,29 @@ const (
 	// alpha: v1.66.0
 	FullNetworkPoliciesInRuntimeCluster featuregate.Feature = "FullNetworkPoliciesInRuntimeCluster"
 )
+
+// DefaultFeatureGate is the central feature gate map used by all gardener components.
+// On startup, the component needs to register all feature gates that are available for this component via `Add`, e.g.:
+//
+//	 utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(
+//			features.HAControlPlanes,
+//		)))
+//
+// With this, every component has its individual set of available feature gates (different to Kubernetes, where all
+// components have all feature gates even if irrelevant).
+// Additionally, the component needs to set the feature gates' states based on the operator's configuration, e.g.:
+//
+//	features.DefaultFeatureGate.SetFromMap(o.config.FeatureGates)
+//
+// For checking whether a given feature gate is enabled (regardless of which component the code is executed in), use:
+//
+//	features.DefaultFeatureGate.Enabled(features.IPv6SingleStack)
+//
+// With this, code that needs to check a given feature gate's state can be shared across components, e.g. in API
+// validation code for Seeds (executed in gardener-apiserver and gardenlet).
+// This variable is an alias to the feature gate map in the apiserver library. The library doesn't allow using a custom
+// feature gate map for gardener-apiserver. Hence, we reuse it for all our components.
+var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 
 var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HVPA:               {Default: false, PreRelease: featuregate.Alpha},

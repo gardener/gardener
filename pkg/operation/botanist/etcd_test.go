@@ -42,7 +42,6 @@ import (
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
@@ -136,7 +135,7 @@ var _ = Describe("Etcd", func() {
 						purpose = shootPurpose
 					)
 					It(fmt.Sprintf("should successfully create an etcd interface: class = %q, purpose = %q", class, purpose), func() {
-						defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HVPA, hvpaEnabled)()
+						defer test.WithFeatureGate(features.DefaultFeatureGate, features.HVPA, hvpaEnabled)()
 
 						botanist.Shoot.Purpose = purpose
 
@@ -178,7 +177,7 @@ var _ = Describe("Etcd", func() {
 			})
 
 			It("should successfully create an etcd interface (normal class)", func() {
-				defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HVPAForShootedSeed, hvpaForShootedSeedEnabled)()
+				defer test.WithFeatureGate(features.DefaultFeatureGate, features.HVPAForShootedSeed, hvpaForShootedSeedEnabled)()
 
 				validator := &newEtcdValidator{
 					expectedClient:                  Equal(c),
@@ -210,7 +209,7 @@ var _ = Describe("Etcd", func() {
 			It("should successfully create an etcd interface (important class)", func() {
 				class := etcd.ClassImportant
 
-				defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HVPAForShootedSeed, hvpaForShootedSeedEnabled)()
+				defer test.WithFeatureGate(features.DefaultFeatureGate, features.HVPAForShootedSeed, hvpaForShootedSeedEnabled)()
 
 				validator := &newEtcdValidator{
 					expectedClient:                  Equal(c),
@@ -241,7 +240,7 @@ var _ = Describe("Etcd", func() {
 		})
 
 		It("should return an error because the maintenance time window cannot be parsed", func() {
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HVPA, true)()
+			defer test.WithFeatureGate(features.DefaultFeatureGate, features.HVPA, true)()
 			botanist.Shoot.GetInfo().Spec.Maintenance.TimeWindow = &gardencorev1beta1.MaintenanceTimeWindow{
 				Begin: "foobar",
 				End:   "barfoo",

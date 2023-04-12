@@ -25,7 +25,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	mockkubernetesdashboard "github.com/gardener/gardener/pkg/operation/botanist/component/kubernetesdashboard/mock"
@@ -78,7 +77,7 @@ var _ = Describe("Kubernetes Dashboard", func() {
 		})
 
 		It("should successfully create a Kubernetes Dashboard interface", func() {
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.APIServerSNI, true)()
+			defer test.WithFeatureGate(features.DefaultFeatureGate, features.APIServerSNI, true)()
 
 			botanist.ImageVector = imagevector.ImageVector{
 				{Name: "kubernetes-dashboard"},

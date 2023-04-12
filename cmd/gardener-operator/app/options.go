@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	operatorvalidation "github.com/gardener/gardener/pkg/operator/apis/config/validation"
@@ -62,6 +63,12 @@ func (o *options) complete() error {
 	o.config = &config.OperatorConfiguration{}
 	if err = runtime.DecodeInto(configDecoder, data, o.config); err != nil {
 		return fmt.Errorf("error decoding config: %w", err)
+	}
+
+	// Set feature gates immediately after decoding the config.
+	// Feature gates might influence the next steps, e.g., validating the config.
+	if err := features.DefaultFeatureGate.SetFromMap(o.config.FeatureGates); err != nil {
+		return err
 	}
 
 	return nil

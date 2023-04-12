@@ -17,8 +17,10 @@ package app
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	goruntime "runtime"
+	"strconv"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -35,11 +37,11 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
+	"github.com/gardener/gardener/pkg/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	"github.com/gardener/gardener/pkg/scheduler/controller"
-	schedulerfeatures "github.com/gardener/gardener/pkg/scheduler/features"
 )
 
 // Name is a const for the name of this component.
@@ -93,11 +95,7 @@ func NewCommand() *cobra.Command {
 }
 
 func run(ctx context.Context, log logr.Logger, cfg *config.SchedulerConfiguration) error {
-	// Add feature flags
-	if err := schedulerfeatures.FeatureGate.SetFromMap(cfg.FeatureGates); err != nil {
-		return fmt.Errorf("failed to set feature gates: %w", err)
-	}
-	log.Info("Feature Gates", "featureGates", schedulerfeatures.FeatureGate.String())
+	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 
 	log.Info("Getting rest config")
 	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
@@ -115,8 +113,8 @@ func run(ctx context.Context, log logr.Logger, cfg *config.SchedulerConfiguratio
 		Scheme:                  kubernetes.GardenScheme,
 		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
 
-		HealthProbeBindAddress: fmt.Sprintf("%s:%d", cfg.Server.HealthProbes.BindAddress, cfg.Server.HealthProbes.Port),
-		MetricsBindAddress:     fmt.Sprintf("%s:%d", cfg.Server.Metrics.BindAddress, cfg.Server.Metrics.Port),
+		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
+		MetricsBindAddress:     net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
 
 		LeaderElection:                cfg.LeaderElection.LeaderElect,
 		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,

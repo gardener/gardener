@@ -76,7 +76,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 
-	DeferCleanup(test.WithFeatureGate(gardenletfeatures.FeatureGate, features.FullNetworkPoliciesInRuntimeCluster, true))
+	DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.FullNetworkPoliciesInRuntimeCluster, true))
 
 	By("Start test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{

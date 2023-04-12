@@ -23,7 +23,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -37,9 +36,9 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interfa
 		return nil, err
 	}
 
-	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
+	hvpaEnabled := features.DefaultFeatureGate.Enabled(features.HVPA)
 	if b.ManagedSeed != nil {
-		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
+		hvpaEnabled = features.DefaultFeatureGate.Enabled(features.HVPAForShootedSeed)
 	}
 
 	scaleDownUpdateMode := hvpav1alpha1.UpdateModeAuto

@@ -32,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -157,7 +156,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 		})
 
 		It("should create a namespace and deploy the chart", func() {
-			DeferCleanup(test.WithFeatureGate(gardenletfeatures.FeatureGate, features.FullNetworkPoliciesInRuntimeCluster, false))
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.FullNetworkPoliciesInRuntimeCluster, false))
 
 			By("Ensure namespace was created")
 			namespace := &corev1.Namespace{}
@@ -322,7 +321,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 		})
 
 		It("should delete the 'gardenlet-allow-all-traffic' network policy", func() {
-			DeferCleanup(test.WithFeatureGate(gardenletfeatures.FeatureGate, features.FullNetworkPoliciesInRuntimeCluster, true))
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.FullNetworkPoliciesInRuntimeCluster, true))
 
 			By("Ensure namespace was created")
 			namespace := &corev1.Namespace{}

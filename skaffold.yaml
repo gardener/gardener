@@ -345,6 +345,7 @@ build:
         - pkg/controllerutils
         - pkg/controllerutils/predicate
         - pkg/controllerutils/routes
+        - pkg/features
         - pkg/gardenlet/apis/config
         - pkg/gardenlet/apis/config/v1alpha1
         - pkg/healthz
@@ -506,6 +507,15 @@ profiles:
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
     value: example/provider-extensions/garden/controlplane/values.yaml
+- name: ipv6
+  activation:
+  - env: IPFAMILY=ipv6
+  patches:
+  - op: add
+    path: /deploy/helm/releases/0/setValues
+    value:
+      global.admission.service.clusterIP: fd00:10:2::1000
+      global.apiserver.featureGates.IPv6SingleStack: true
 ---
 apiVersion: skaffold/v4beta3
 kind: Config
@@ -666,6 +676,20 @@ deploy:
       upgrade:
       - --disable-openapi-validation
 profiles:
+- name: ipv6
+  activation:
+  - env: IPFAMILY=ipv6
+  patches:
+  - op: add
+    path: /deploy/helm/releases/0/setValues
+    value:
+      values:
+        controllers:
+          service:
+            hostIP: "::1"
+            zone0IP: "::10"
+            zone1IP: "::11"
+            zone2IP: "::12"
 - name: kind2
   patches:
   # The deploy stage must be skipped because provider-local can only be registered in the garden cluster.
@@ -1123,3 +1147,11 @@ profiles:
     - bash
     - -ec
     - TIMEOUT=1200 hack/usage/wait-for.sh seed local-ha-multi-zone GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
+
+- name: ipv6
+  activation:
+  - env: IPFAMILY=ipv6
+  patches:
+  - op: add
+    path: /deploy/helm/releases/0/valuesFiles/-
+    value: example/gardener-local/gardenlet/values-ipv6.yaml

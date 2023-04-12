@@ -17,8 +17,10 @@ package app
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	goruntime "runtime"
+	"strconv"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -44,12 +46,12 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
+	"github.com/gardener/gardener/pkg/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/operator/controller"
-	operatorfeatures "github.com/gardener/gardener/pkg/operator/features"
 	"github.com/gardener/gardener/pkg/operator/webhook"
 )
 
@@ -104,11 +106,7 @@ func NewCommand() *cobra.Command {
 }
 
 func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration) error {
-	// Add feature flags
-	if err := operatorfeatures.FeatureGate.SetFromMap(cfg.FeatureGates); err != nil {
-		return err
-	}
-	log.Info("Feature Gates", "featureGates", operatorfeatures.FeatureGate.String())
+	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 
 	log.Info("Getting rest config")
 	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
@@ -130,8 +128,8 @@ func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration
 		Host:                   cfg.Server.Webhooks.BindAddress,
 		Port:                   cfg.Server.Webhooks.Port,
 		CertDir:                "/tmp/gardener-operator-cert",
-		HealthProbeBindAddress: fmt.Sprintf("%s:%d", cfg.Server.HealthProbes.BindAddress, cfg.Server.HealthProbes.Port),
-		MetricsBindAddress:     fmt.Sprintf("%s:%d", cfg.Server.Metrics.BindAddress, cfg.Server.Metrics.Port),
+		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
+		MetricsBindAddress:     net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
 
 		LeaderElection:                cfg.LeaderElection.LeaderElect,
 		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,

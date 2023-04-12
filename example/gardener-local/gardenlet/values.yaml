@@ -14,7 +14,11 @@ config:
         clusters:
         - cluster:
             insecure-skip-tls-verify: true
-            server: https://gardener-local-control-plane:6443
+            # We use the kind node's hostname (docker container name) as the garden cluster address.
+            # This works from within the kind cluster itself, from within ManagedSeeds, and from within additional kind clusters.
+            # Note that this doesn't work in IPv6 single-stack kind clusters,
+            # ref https://github.com/kubernetes-sigs/kind/issues/3114
+            server: https://garden.local.gardener.cloud:6443
           name: default
         contexts:
         - context:
@@ -35,6 +39,10 @@ config:
     APIServerSNI: true
     DefaultSeccompProfile: true
     CoreDNSQueryRewriting: true
+    # Enable IPv6SingleStack to allow creating IPv6 seed clusters without changing the config.
+    # This feature gate doesn't change gardenlet's default behavior, it only allows setting `ipFamilies=[IPv6]` in the
+    # Seed config. Only when this is set, gardenlet's behavior changes.
+    IPv6SingleStack: true
     FullNetworkPoliciesInRuntimeCluster: true
   logging:
     enabled: true

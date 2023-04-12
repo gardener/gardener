@@ -47,7 +47,6 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
@@ -190,7 +189,7 @@ var _ = Describe("Seed controller tests", func() {
 			&secretsutils.GenerateKey, secretsutils.FakeGenerateKey,
 			&resourcemanager.SkipWebhookDeployment, true,
 		))
-		DeferCleanup(test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HVPA, true))
+		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.HVPA, true))
 
 		By("Create DNS provider secret in garden namespace")
 		dnsProviderSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{

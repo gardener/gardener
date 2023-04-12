@@ -16,12 +16,16 @@ spec:
       namespaceSelector: {}
     - ipBlock:
         cidr: 0.0.0.0/0
+    - ipBlock:
+        cidr: ::/0
   ingress:
   - from:
     - podSelector: {}
       namespaceSelector: {}
     - ipBlock:
         cidr: 0.0.0.0/0
+    - ipBlock:
+        cidr: ::/0
   policyTypes:
   - Egress
   - Ingress

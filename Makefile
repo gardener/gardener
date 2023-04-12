@@ -72,6 +72,8 @@ GOMEGACHECK_DIR := $(TOOLS_DIR)/gomegacheck
 # Rules for local development scenarios #
 #########################################
 
+dev-setup register-local-env start-extension-provider-local: export IPFAMILY := $(IPFAMILY)
+
 .PHONY: dev-setup
 dev-setup:
 	@if [ "$(DEV_SETUP_WITH_WEBHOOKS)" = "true" ]; then ./hack/local-development/dev-setup --with-webhooks; else ./hack/local-development/dev-setup; fi
@@ -310,12 +312,12 @@ kind-ha-single-zone-up kind-ha-single-zone-down gardener-ha-single-zone-up regis
 kind-ha-multi-zone-up kind-ha-multi-zone-down gardener-ha-multi-zone-up register-kind-ha-multi-zone-env tear-down-kind-ha-multi-zone-env ci-e2e-kind-ha-multi-zone ci-e2e-kind-ha-multi-zone-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG)
 kind-operator-up kind-operator-down operator-up operator-down test-e2e-local-operator ci-e2e-kind-operator: export KUBECONFIG = $(GARDENER_LOCAL_OPERATOR_KUBECONFIG)
 
-kind-up: $(KIND) $(KUBECTL) $(HELM)
+kind-up: $(KIND) $(KUBECTL) $(HELM) $(YQ)
 	./hack/kind-up.sh --cluster-name gardener-local --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/local/values.yaml
 kind-down: $(KIND)
 	./hack/kind-down.sh --cluster-name gardener-local --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
 
-kind2-up: $(KIND) $(KUBECTL) $(HELM)
+kind2-up: $(KIND) $(KUBECTL) $(HELM) $(YQ)
 	./hack/kind-up.sh --cluster-name gardener-local2 --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind2/base/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/local2/values.yaml --skip-registry
 kind2-down: $(KIND)
 	./hack/kind-down.sh --cluster-name gardener-local2 --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind2/base/kubeconfig --keep-backupbuckets-dir
@@ -327,17 +329,17 @@ kind-extensions-down: $(KIND)
 kind-extensions-clean:
 	./hack/kind-down.sh --cluster-name gardener-extensions --path-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig
 
-kind-ha-single-zone-up: $(KIND) $(KUBECTL) $(HELM)
+kind-ha-single-zone-up: $(KIND) $(KUBECTL) $(HELM) $(YQ)
 	./hack/kind-up.sh --cluster-name gardener-local-ha-single-zone --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/base/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/ha-single-zone/values.yaml
 kind-ha-single-zone-down: $(KIND)
 	./hack/kind-down.sh --cluster-name gardener-local-ha-single-zone --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/base/kubeconfig
 
-kind-ha-multi-zone-up: $(KIND) $(KUBECTL) $(HELM)
+kind-ha-multi-zone-up: $(KIND) $(KUBECTL) $(HELM) $(YQ)
 	./hack/kind-up.sh --cluster-name gardener-local-ha-multi-zone --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/base/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/ha-multi-zone/values.yaml --multi-zonal
 kind-ha-multi-zone-down: $(KIND)
 	./hack/kind-down.sh --cluster-name gardener-local-ha-multi-zone --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/base/kubeconfig
 
-kind-operator-up: $(KIND) $(KUBECTL) $(HELM)
+kind-operator-up: $(KIND) $(KUBECTL) $(HELM) $(YQ)
 	./hack/kind-up.sh --cluster-name gardener-operator-local --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/gardener-local/kind/operator/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/operator/values.yaml
 	mkdir -p $(REPO_ROOT)/dev/local-backupbuckets/gardener-operator
 kind-operator-down: $(KIND)
@@ -375,7 +377,8 @@ gardener-extensions-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 
 register-local-env: $(KUBECTL)
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind/local
+	@if [[ -z "$(IPFAMILY)" ]]; then $(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind/local; else $(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind/local-ipv6; fi
+
 tear-down-local-env: $(KUBECTL)
 	$(KUBECTL) annotate project local confirmation.gardener.cloud/deletion=true
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind/local

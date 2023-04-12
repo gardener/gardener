@@ -92,20 +92,12 @@ func SetDefaults_ServerConfiguration(obj *ServerConfiguration) {
 		obj.HealthProbes = &Server{}
 	}
 
-	if len(obj.HealthProbes.BindAddress) == 0 {
-		obj.HealthProbes.BindAddress = "0.0.0.0"
-	}
-
 	if obj.HealthProbes.Port == 0 {
 		obj.HealthProbes.Port = 10251
 	}
 
 	if obj.Metrics == nil {
 		obj.Metrics = &Server{}
-	}
-
-	if len(obj.Metrics.BindAddress) == 0 {
-		obj.Metrics.BindAddress = "0.0.0.0"
 	}
 
 	if obj.Metrics.Port == 0 {

@@ -85,10 +85,8 @@ logLevel: info
 logFormat: text
 server:
   healthProbes:
-    bindAddress: 0.0.0.0
     port: 2718
   metrics:
-    bindAddress: 0.0.0.0
     port: 2719
 debugging:
   enableProfiling: false

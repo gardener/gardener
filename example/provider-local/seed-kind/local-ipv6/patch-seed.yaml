@@ -1,0 +1,11 @@
+- op: replace
+  path: /spec/networks
+  value:
+    ipFamilies:
+      - IPv6
+    nodes: fd00:10::/64
+    pods: fd00:10:1::/56
+    services: fd00:10:2::/112
+    shootDefaults:
+      pods: fd00:10:3::/56
+      services: fd00:10:4::/112

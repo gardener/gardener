@@ -19,7 +19,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"k8s.io/utils/pointer"
@@ -67,12 +66,11 @@ func getWebhookServerCertConfig(name, namespace, componentName, mode, url string
 		dnsNames    []string
 		ipAddresses []net.IP
 
-		serverName     = url
-		serverNameData = strings.SplitN(url, ":", 3)
+		serverName = url
 	)
 
-	if len(serverNameData) == 2 {
-		serverName = serverNameData[0]
+	if host, _, err := net.SplitHostPort(url); err == nil {
+		serverName = host
 	}
 
 	switch mode {

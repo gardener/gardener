@@ -62,7 +62,7 @@ var _ = Describe("ValuesHelper", func() {
 		gardenletfeatures.RegisterFeatureGates()
 
 		cleanupFuncs = []func(){
-			test.WithFeatureGate(gardenletfeatures.FeatureGate, features.APIServerSNI, true),
+			test.WithFeatureGate(features.DefaultFeatureGate, features.APIServerSNI, true),
 			test.WithTempFile("", "image-vector-overwrite", []byte("image vector overwrite"), &imageVectorOverwritePath),
 			test.WithTempFile("", "component-image-vector-overwrites", []byte("component image vector overwrites"), &componentImageVectorOverwritesPath),
 			test.WithTempFile("", "garden-kubeconfig", []byte("garden kubeconfig"), &gardenKubeconfigPath),

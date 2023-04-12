@@ -42,7 +42,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.LogLevel).To(Equal(logger.InfoLevel))
 			Expect(obj.LogFormat).To(Equal(logger.FormatJSON))
 
-			Expect(obj.Server.Webhooks.BindAddress).To(Equal("0.0.0.0"))
+			Expect(obj.Server.Webhooks.BindAddress).To(BeEmpty())
 			Expect(obj.Server.Webhooks.Port).To(Equal(2750))
 			Expect(obj.Server.HealthProbes.BindAddress).To(BeEmpty())
 			Expect(obj.Server.HealthProbes.Port).To(Equal(2751))

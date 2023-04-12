@@ -36,7 +36,6 @@ spec:
     match:
       context: GATEWAY
       listener:
-        name: 0.0.0.0_{{ .targetPort }}
         portNumber: {{ .targetPort }}
     patch:
       operation: MERGE

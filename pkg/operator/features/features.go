@@ -16,17 +16,13 @@ package features
 
 import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/component-base/featuregate"
 
 	"github.com/gardener/gardener/pkg/features"
 )
 
-// FeatureGate is a shared global FeatureGate for Gardener Operator flags.
-var FeatureGate = featuregate.NewFeatureGate()
-
-// RegisterFeatureGates registers the feature gates of the Gardener Operator.
+// RegisterFeatureGates registers the feature gates of gardener-operator.
 func RegisterFeatureGates() {
-	utilruntime.Must(FeatureGate.Add(features.GetFeatures(
+	utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(
 		features.DefaultSeccompProfile,
 		features.HVPA,
 	)))

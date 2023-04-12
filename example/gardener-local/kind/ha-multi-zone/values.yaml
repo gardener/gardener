@@ -8,9 +8,6 @@ gardener:
       - 127.0.0.11
       - 127.0.0.12
 
-registry:
-  hostname: gardener-local-ha-multi-zone-control-plane
-
 workers:
 - zone: "1"
 - zone: "2"

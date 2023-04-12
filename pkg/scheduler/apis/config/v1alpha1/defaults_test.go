@@ -58,12 +58,10 @@ var _ = Describe("Defaults", func() {
 			It("should not default any values for ServerConfiguration", func() {
 				serverConfiguration := &schedulerv1alpha1.ServerConfiguration{
 					HealthProbes: &schedulerv1alpha1.Server{
-						BindAddress: "127.0.0.1",
-						Port:        1234,
+						Port: 1234,
 					},
 					Metrics: &schedulerv1alpha1.Server{
-						BindAddress: "10.0.0.1",
-						Port:        1235,
+						Port: 1235,
 					},
 				}
 
@@ -78,12 +76,10 @@ var _ = Describe("Defaults", func() {
 
 				expectedServerConfiguration := &schedulerv1alpha1.ServerConfiguration{
 					HealthProbes: &schedulerv1alpha1.Server{
-						BindAddress: "0.0.0.0",
-						Port:        10251,
+						Port: 10251,
 					},
 					Metrics: &schedulerv1alpha1.Server{
-						BindAddress: "0.0.0.0",
-						Port:        19251,
+						Port: 19251,
 					},
 				}
 

@@ -32,9 +32,6 @@ In these cases, you might want to check out one of the following options that ru
   > If you plan on following the optional steps to [create a second seed cluster](#optional-setting-up-a-second-seed-cluster), the required resources will be more - at least `10` CPUs and `18Gi` memory.
   Additionally, please configure at least `120Gi` of disk size for the Docker daemon.
   > Tip: You can clean up unused data with `docker system df` and `docker system prune -a`.
-- Make sure the `kind` docker network is using the CIDR `172.18.0.0/16`.
-  - If the network does not exist, it can be created with `docker network create kind --subnet 172.18.0.0/16`
-  - If the network already exists, the CIDR can be checked with `docker network inspect kind  | jq '.[].IPAM.Config[].Subnet'`. If it is not `172.18.0.0/16`, delete the network with `docker network rm kind` and create it with the command above.
 
 ## Setting Up the KinD Cluster (Garden and Seed)
 
@@ -60,27 +57,22 @@ With this, mirrored images don't have to be pulled again after recreating the cl
 The command also deploys a default [calico](https://github.com/projectcalico/calico) installation as the cluster's CNI implementation with `NetworkPolicy` support (the default `kindnet` CNI doesn't provide `NetworkPolicy` support).
 Furthermore, it deploys the [metrics-server](https://github.com/kubernetes-sigs/metrics-server) in order to support HPA and VPA on the seed cluster.
 
-## Outgoing IPv6 Single-Stack Networking (optional)
+## Setting Up IPv6 Single-Stack Networking (optional)
 
-If you want to test IPv6-related features, we need to configure NAT for outgoing traffic from the kind network to the internet.
-After `make kind-up IPFAMILY=ipv6`, check the network created by kind:
+First, ensure that your `/etc/hosts` file contains an entry resolving `localhost` to the IPv6 loopback address:
 
-```bash
-$ docker network inspect kind | jq '.[].IPAM.Config[].Subnet'
-"172.18.0.0/16"
-"fc00:f853:ccd:e793::/64"
+```text
+::1 localhost
 ```
 
-Determine which device is used for outgoing internet traffic by looking at the default route:
+Typically, only `ip6-localhost` is mapped to `::1` on linux machines.
+However, we need `localhost` to resolve to both `127.0.0.1` and `::1` so that we can talk to our registry via a single address (`localhost:5001`).
+
+Next, we need to configure NAT for outgoing traffic from the kind network to the internet.
+After executing `make kind-up IPFAMILY=ipv6`, execute the following command to set up the corresponding iptables rules:
 
 ```bash
-$ ip route show default
-default via 192.168.195.1 dev enp3s0 proto dhcp src 192.168.195.34 metric 100
-```
-
-Configure NAT for traffic from the kind cluster to the internet using the IPv6 range and the network device from the previous two steps:
-```bash
-ip6tables -t nat -A POSTROUTING -o enp3s0 -s fc00:f853:ccd:e793::/64 -j MASQUERADE
+ip6tables -t nat -A POSTROUTING -o $(ip route show default | awk '{print $5}') -s fd00:10::/64 -j MASQUERADE
 ```
 
 ## Setting Up Gardener
@@ -88,6 +80,8 @@ ip6tables -t nat -A POSTROUTING -o enp3s0 -s fc00:f853:ccd:e793::/64 -j MASQUERA
 ```bash
 make gardener-up
 ```
+
+> If you want to setup an IPv6 ready Gardener, use `make gardener-up IPFAMILY=ipv6` instead.
 
 This will first build the base images (which might take a bit if you do it for the first time).
 Afterwards, the Gardener resources will be deployed into the cluster.

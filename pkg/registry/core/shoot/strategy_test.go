@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/component-base/featuregate"
 	"k8s.io/utils/pointer"
 
@@ -55,7 +54,7 @@ var _ = Describe("Strategy", func() {
 				Expect(testFeatureGate.Set(fmt.Sprintf("%s=%v", features.HAControlPlanes, featureGateEnabled))).To(Succeed())
 
 				DeferCleanup(test.WithVars(
-					&utilfeature.DefaultFeatureGate,
+					&features.DefaultFeatureGate,
 					testFeatureGate,
 				))
 
@@ -307,7 +306,7 @@ var _ = Describe("Strategy", func() {
 					Expect(testFeatureGate.Set(fmt.Sprintf("%s=%v", features.HAControlPlanes, featureGateEnabled))).To(Succeed())
 
 					DeferCleanup(test.WithVars(
-						&utilfeature.DefaultFeatureGate,
+						&features.DefaultFeatureGate,
 						testFeatureGate,
 					))
 

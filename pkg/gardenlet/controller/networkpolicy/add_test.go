@@ -34,7 +34,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/features"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
@@ -97,7 +96,7 @@ var _ = Describe("Add", func() {
 		)
 
 		BeforeEach(func() {
-			DeferCleanup(test.WithFeatureGate(gardenletfeatures.FeatureGate, features.FullNetworkPoliciesInRuntimeCluster, true))
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.FullNetworkPoliciesInRuntimeCluster, true))
 
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 			reconciler.RuntimeClient = fakeClient

@@ -22,7 +22,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
@@ -133,7 +132,7 @@ var _ = Describe("Utils tests", func() {
 		})
 
 		It("should allow IPv6 single-stack if feature gate is enabled", func() {
-			defer test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.IPv6SingleStack, true)()
+			defer test.WithFeatureGate(features.DefaultFeatureGate, features.IPv6SingleStack, true)()
 
 			errorList := ValidateIPFamilies([]core.IPFamily{core.IPFamilyIPv6}, fldPath)
 			Expect(errorList).To(BeEmpty())

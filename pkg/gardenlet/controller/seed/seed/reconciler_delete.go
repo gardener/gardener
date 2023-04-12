@@ -37,7 +37,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
@@ -268,13 +267,13 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Name: "Destroy Istio",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return component.OpDestroyAndWait(istio).Destroy(ctx)
-			}).DoIf(gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio)),
+			}).DoIf(features.DefaultFeatureGate.Enabled(features.ManagedIstio)),
 		})
 		destroyIstioCRDs = g.Add(flow.Task{
 			Name: "Destroy Istio CRDs",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return component.OpDestroyAndWait(istioCRDs).Destroy(ctx)
-			}).DoIf(gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio)),
+			}).DoIf(features.DefaultFeatureGate.Enabled(features.ManagedIstio)),
 			Dependencies: flow.NewTaskIDs(destroyIstio),
 		})
 		destroyFluentOperatorCRDs = g.Add(flow.Task{

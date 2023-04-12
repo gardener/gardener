@@ -29,7 +29,6 @@ import (
 	extensionscontextwebhook "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 )
@@ -73,20 +72,8 @@ func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ extensionscont
 
 // EnsureAdditionalFiles ensures that additional required system files are added.
 func (e *ensurer) EnsureAdditionalFiles(ctx context.Context, gc extensionscontextwebhook.GardenContext, new, _ *[]extensionsv1alpha1.File) error {
-	cluster, err := gc.GetCluster(ctx)
-	if err != nil {
-		return err
-	}
-
-	kindClusterName := "gardener-local-control-plane"
-	if v1beta1helper.IsHAControlPlaneConfigured(cluster.Shoot) {
-		kindClusterName = "gardener-local-ha-control-plane"
-	}
-
 	var script bytes.Buffer
-	if err := tplInitializer.Execute(&script, map[string]interface{}{
-		"kindClusterName": kindClusterName,
-	}); err != nil {
+	if err := tplInitializer.Execute(&script, nil); err != nil {
 		return err
 	}
 
