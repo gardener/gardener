@@ -132,6 +132,11 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 		return fmt.Errorf("failed to generate the machine deployment config: %w", err)
 	}
 
+	// update machineDeploymentsLastUpdateTime and the machine deployment slice in worker status
+	if err := a.updateWorkerStatusMachineDeployments(ctx, worker, wantedMachineDeployments); err != nil {
+		return fmt.Errorf("failed to update the machine deployments in worker status: %w", err)
+	}
+
 	// Wait until all generated machine deployments are healthy/available.
 	if err := a.waitUntilWantedMachineDeploymentsAvailable(ctx, log, cluster, worker, existingMachineDeploymentNames, existingMachineClassNames, wantedMachineDeployments); err != nil {
 		// check if the machine-controller-manager is stuck
@@ -197,10 +202,6 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 		if err = a.scaleClusterAutoscaler(ctx, log, worker, 1); err != nil {
 			return err
 		}
-	}
-
-	if err := a.updateWorkerStatusMachineDeployments(ctx, worker, wantedMachineDeployments); err != nil {
-		return fmt.Errorf("failed to update the machine deployments in worker status: %w", err)
 	}
 
 	// Call post reconcilation hook after Worker reconciliation has happened.
@@ -469,9 +470,11 @@ func (a *genericActuator) updateWorkerStatusMachineDeployments(ctx context.Conte
 			Maximum: machineDeployment.Maximum,
 		})
 	}
+	updateTime := metav1.Now()
 
 	patch := client.MergeFrom(worker.DeepCopy())
 	worker.Status.MachineDeployments = statusMachineDeployments
+	worker.Status.MachineDeploymentsLastUpdateTime = &updateTime
 	return a.client.Status().Patch(ctx, worker, patch)
 }
 

@@ -185,3 +185,17 @@ func (mr *MockInterfaceMockRecorder) WaitMigrate(arg0 interface{}) *gomock.Call 
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitMigrate", reflect.TypeOf((*MockInterface)(nil).WaitMigrate), arg0)
 }
+
+// WaitUntilWorkerStatusMachineDeploymentsUpdate mocks base method.
+func (m *MockInterface) WaitUntilWorkerStatusMachineDeploymentsUpdate(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitUntilWorkerStatusMachineDeploymentsUpdate", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitUntilWorkerStatusMachineDeploymentsUpdate indicates an expected call of WaitUntilWorkerStatusMachineDeploymentsUpdate.
+func (mr *MockInterfaceMockRecorder) WaitUntilWorkerStatusMachineDeploymentsUpdate(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilWorkerStatusMachineDeploymentsUpdate", reflect.TypeOf((*MockInterface)(nil).WaitUntilWorkerStatusMachineDeploymentsUpdate), arg0)
+}

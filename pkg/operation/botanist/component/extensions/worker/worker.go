@@ -16,6 +16,7 @@ package worker
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -58,6 +59,7 @@ type Interface interface {
 	SetInfrastructureProviderStatus(*runtime.RawExtension)
 	SetWorkerNameToOperatingSystemConfigsMap(map[string]*operatingsystemconfig.OperatingSystemConfigs)
 	MachineDeployments() []extensionsv1alpha1.MachineDeployment
+	WaitUntilWorkerStatusMachineDeploymentsUpdate(ctx context.Context) error
 }
 
 // Values contains the values used to create a Worker resources.
@@ -121,8 +123,9 @@ type worker struct {
 	waitSevereThreshold time.Duration
 	waitTimeout         time.Duration
 
-	worker             *extensionsv1alpha1.Worker
-	machineDeployments []extensionsv1alpha1.MachineDeployment
+	worker                          *extensionsv1alpha1.Worker
+	machineDeployments              []extensionsv1alpha1.MachineDeployment
+	machineDeploymentLastUpdateTime *metav1.Time
 }
 
 // Deploy uses the seed client to create or update the Worker resource.
@@ -250,6 +253,10 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 		return nil
 	})
 
+	// populate the MachineDeploymentsLastUpdate time as it will be used later to confirm if the machineDeployments slice in the worker
+	// status got updated with the latest ones.
+	w.machineDeploymentLastUpdateTime = obj.Status.MachineDeploymentsLastUpdateTime
+
 	return w.worker, err
 }
 
@@ -288,6 +295,22 @@ func (w *worker) Wait(ctx context.Context) error {
 		ctx,
 		w.client,
 		w.log,
+		w.worker,
+		extensionsv1alpha1.WorkerResource,
+		w.waitInterval,
+		w.waitSevereThreshold,
+		w.waitTimeout,
+		nil,
+	)
+}
+
+// WaitUntilWorkerStatusMachineDeploymentsUpdate waits until the worker status is updated with the latest machineDeployment slice.
+func (w *worker) WaitUntilWorkerStatusMachineDeploymentsUpdate(ctx context.Context) error {
+	return extensions.WaitUntilObjectReadyWithHealthFunction(
+		ctx,
+		w.client,
+		w.log,
+		w.CheckWorkerStatusMachineDeployments,
 		w.worker,
 		extensionsv1alpha1.WorkerResource,
 		w.waitInterval,
@@ -352,4 +375,20 @@ func (w *worker) findNodeTemplateAndMachineTypeByPoolName(ctx context.Context, o
 		}
 	}
 	return nil, ""
+}
+
+// CheckWorkerStatusMachineDeployments checks if the status of the worker is updated or not during its reconciliation.
+// It is updated if
+// * The status.MachineDeploymentsLastUpdateTime > the value of the time stamp stored in worker struct before the reconciliation begins.
+func (w *worker) CheckWorkerStatusMachineDeployments(o client.Object) error {
+	obj, ok := o.(*extensionsv1alpha1.Worker)
+	if !ok {
+		return fmt.Errorf("expected *extensionsv1alpha1.Worker but got %T", o)
+	}
+
+	if obj.Status.MachineDeploymentsLastUpdateTime != nil && (w.machineDeploymentLastUpdateTime == nil || obj.Status.MachineDeploymentsLastUpdateTime.After(w.machineDeploymentLastUpdateTime.Time)) {
+		return nil
+	}
+
+	return fmt.Errorf("worker status machineDeployments has not been updated")
 }
