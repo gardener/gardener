@@ -856,7 +856,7 @@
       "gridPos": {
         "h": 3,
         "w": 4,
-        "x": 3,
+        "x": 0,
         "y": 12
       },
       "hideTimeOverride": false,
@@ -939,7 +939,7 @@
       "gridPos": {
         "h": 3,
         "w": 4,
-        "x": 7,
+        "x": 4,
         "y": 12
       },
       "id": 43,
