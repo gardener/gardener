@@ -1007,7 +1007,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		)
 	}
 
-	kubeAPIServerService := kubeapiserverexposure.NewKubeAPIServerService(seedClient, r.GardenNamespace)
+	kubeAPIServerService := kubeapiserverexposure.NewInternalNameService(seedClient, r.GardenNamespace)
 	if wildcardCert != nil {
 		kubeAPIServerIngress := kubeapiserverexposure.NewIngress(seedClient, r.GardenNamespace, kubeapiserverexposure.IngressValues{
 			Host:             seed.GetIngressFQDN(kubeAPIServerPrefix),
