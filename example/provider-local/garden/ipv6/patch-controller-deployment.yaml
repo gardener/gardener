@@ -1,0 +1,12 @@
+apiVersion: core.gardener.cloud/v1beta1
+kind: ControllerDeployment
+metadata:
+  name: provider-local
+providerConfig:
+  values:
+    controllers:
+      service:
+        hostIP: "::1"
+        zone0IP: "::10"
+        zone1IP: "::11"
+        zone2IP: "::12"

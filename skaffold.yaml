@@ -668,21 +668,6 @@ resourceSelector:
   # instruct skaffold to inject the built image reference into the image field in our ControllerDeployment
   - groupKind: ControllerDeployment.core.gardener.cloud
     image: [".*"]
-profiles:
-- name: ipv6
-  activation:
-  - env: IPFAMILY=ipv6
-  patches:
-  - op: add
-    path: /deploy/helm/releases/0/setValues
-    value:
-      values:
-        controllers:
-          service:
-            hostIP: "::1"
-            zone0IP: "::10"
-            zone1IP: "::11"
-            zone2IP: "::12"
 manifests:
   rawYaml:
   - example/gardener-local/gardenlet/secret-bootstrap-token.yaml
@@ -693,6 +678,14 @@ manifests:
 deploy:
   kubectl: {}
 profiles:
+- name: ipv6
+  activation:
+  - env: IPFAMILY=ipv6
+  manifests:
+    kustomize:
+      paths:
+      - example/provider-local/garden/skaffold-ipv6
+      - example/provider-local/seed-kind/skaffold
 - name: ha-single-zone
   manifests:
     kustomize:
