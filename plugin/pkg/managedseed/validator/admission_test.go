@@ -229,6 +229,20 @@ var _ = Describe("ManagedSeed", func() {
 			))
 		})
 
+		It("should forbid the ManagedSeed if the Shoot does not have any worker", func() {
+			shoot.Spec.Provider.Workers = []core.Worker{}
+
+			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
+			Expect(err).To(BeInvalidError())
+			Expect(getErrorList(err)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.shoot.name"),
+					"Detail": ContainSubstring("shoot workers can not be empty for managed seeds"),
+				})),
+			))
+		})
+
 		It("should forbid the ManagedSeed creation if the Shoot does not specify a domain", func() {
 			shoot.Spec.DNS = nil
 

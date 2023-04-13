@@ -204,7 +204,18 @@ func ValidateShootTemplateForManagedSeedSet(template *gardencore.ShootTemplate, 
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateTemplateLabels(&template.ObjectMeta, selector, fldPath.Child("metadata"))...)
+	allErrs = append(allErrs, validateIfWorkerless(&template.Spec, fldPath.Child("spec"))...)
 	allErrs = append(allErrs, gardencorevalidation.ValidateShootTemplate(template, fldPath)...)
+
+	return allErrs
+}
+
+func validateIfWorkerless(spec *gardencore.ShootSpec, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(spec.Provider.Workers) == 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "workers"), spec.Provider.Workers, "workers cannot be empty in the Shoot template for a managedseedset"))
+	}
 
 	return allErrs
 }

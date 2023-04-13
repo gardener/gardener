@@ -218,6 +218,9 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, o admis
 	if !gardencorehelper.ShootWantsVerticalPodAutoscaler(shoot) {
 		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "shoot VPA has to be enabled for managed seeds")))
 	}
+	if shoot.IsWorkerless() {
+		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "shoot workers can not be empty for managed seeds")))
+	}
 
 	// Ensure shoot is not already registered as seed
 	ms, err := admissionutils.GetManagedSeed(ctx, v.seedManagementClient, managedSeed.Namespace, managedSeed.Spec.Shoot.Name)

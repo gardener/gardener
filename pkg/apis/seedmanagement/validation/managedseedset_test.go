@@ -319,6 +319,22 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 				})),
 			))
 		})
+
+		It("should forbid workerless Shoot in shootTemplate", func() {
+			shootCopy := shoot.DeepCopy()
+			shootCopy.Spec.Provider.Workers = []core.Worker{}
+			managedSeedSet.Spec.ShootTemplate.Spec = shootCopy.Spec
+
+			errorList := ValidateManagedSeedSet(managedSeedSet)
+
+			Expect(errorList).To(ContainElement(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.shootTemplate.spec.provider.workers"),
+					"Detail": ContainSubstring("workers cannot be empty in the Shoot template for a managedseedset"),
+				})),
+			))
+		})
 	})
 
 	Describe("#ValidateManagedSeedSetUpdate", func() {
