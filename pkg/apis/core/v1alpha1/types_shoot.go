@@ -1239,9 +1239,11 @@ type Maintenance struct {
 // MaintenanceAutoUpdate contains information about which constraints should be automatically updated.
 type MaintenanceAutoUpdate struct {
 	// KubernetesVersion indicates whether the patch Kubernetes version may be automatically updated (default: true).
-	KubernetesVersion bool `json:"kubernetesVersion" protobuf:"varint,1,opt,name=kubernetesVersion"`
+	// +optional
+	KubernetesVersion *bool `json:"kubernetesVersion,omitempty" protobuf:"varint,1,opt,name=kubernetesVersion"`
 	// MachineImageVersion indicates whether the machine image version may be automatically updated (default: true).
-	MachineImageVersion bool `json:"machineImageVersion" protobuf:"varint,2,opt,name=machineImageVersion"`
+	// +optional
+	MachineImageVersion *bool `json:"machineImageVersion,omitempty" protobuf:"varint,2,opt,name=machineImageVersion"`
 }
 
 // MaintenanceTimeWindow contains information about the time window for maintenance operations.
