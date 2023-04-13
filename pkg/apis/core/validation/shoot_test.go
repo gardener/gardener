@@ -1204,6 +1204,29 @@ var _ = Describe("Shoot Validation Tests", func() {
 					})
 				})
 			})
+
+			Describe("WorkersSettings validation", func() {
+				It("should not allow setting it for workerless Shoots", func() {
+					shoot.Spec.Provider.Workers = []core.Worker{}
+					shoot.Spec.Provider.WorkersSettings = &core.WorkersSettings{}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.provider.workersSettings"),
+						"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+					}))))
+				})
+
+				It("should be able to set it for Shoots with worker", func() {
+					shoot.Spec.Provider.WorkersSettings = &core.WorkersSettings{}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(BeEmpty())
+				})
+			})
 		})
 
 		Context("dns section", func() {

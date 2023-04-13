@@ -1292,6 +1292,9 @@ func validateProvider(provider core.Provider, kubernetes core.Kubernetes, networ
 		if provider.ControlPlaneConfig != nil {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("controlPlaneConfig"), workerlessErrorMsg))
 		}
+		if provider.WorkersSettings != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("workersSettings"), workerlessErrorMsg))
+		}
 	} else {
 		if kubernetes.Kubelet != nil && kubernetes.Kubelet.MaxPods != nil {
 			maxPod = *kubernetes.Kubelet.MaxPods
