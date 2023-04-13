@@ -203,6 +203,10 @@ type SeedSettings struct {
 	// VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.
 	VerticalPodAutoscaler *SeedSettingVerticalPodAutoscaler
 	// SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
+	//
+	// Deprecated: This field is deprecated. The "bad-case" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302).
+	// The field will be locked to false in a future version of Gardener. In this way gardenlet will clean up all owner DNSRecords. Finally, the field will be removed from the API.
+	// Set this field to false to be prepared for the above-mentioned locking.
 	OwnerChecks *SeedSettingOwnerChecks
 	// DependencyWatchdog controls certain settings for the dependency-watchdog components deployed in the seed.
 	DependencyWatchdog *SeedSettingDependencyWatchdog
@@ -262,6 +266,10 @@ type SeedSettingVerticalPodAutoscaler struct {
 }
 
 // SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
+//
+// Deprecated: This field is deprecated. The "bad-case" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302).
+// The field will be locked to false in a future version of Gardener. In this way gardenlet will clean up all owner DNSRecords. Finally, the field will be removed from the API.
+// Set this field to false to be prepared for the above-mentioned locking.
 type SeedSettingOwnerChecks struct {
 	// Enabled controls whether owner checks are enabled for shoots scheduled on this seed. It
 	// is enabled by default because it is a prerequisite for control plane migration.

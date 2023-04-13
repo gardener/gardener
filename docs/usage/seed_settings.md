@@ -111,6 +111,8 @@ By setting the `.spec.settings.verticalPodAutoscaler.enabled=false`, you can dis
 
 ## Owner Checks
 
+> Note: The owner checks are deprecated. The "bad-case" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302). The field will be locked to `false` in a future version of Gardener. In this way gardenlet will clean up all owner DNSRecords. Finally, the field will be removed from the API. Set this field to `false` to be prepared for the above-mentioned locking.
+
 When a shoot is scheduled to a seed and actually reconciled, Gardener appoints the seed as the current "owner" of the shoot by creating a special "owner DNS record" and checking against it if the seed still owns the shoot in order to guard against "split brain scenario" during control plane migration, as described in [GEP-17 Shoot Control Plane Migration "Bad Case" Scenario](../proposals/17-shoot-control-plane-migration-bad-case.md).
 This mechanism relies on the DNS resolution of TXT DNS records being possible and highly reliable, since if the owner check fails, the shoot will be effectively disabled for the duration of the failure.
 In environments where resolving TXT DNS records is either not possible or not considered reliable enough, it may be necessary to disable the owner check mechanism, in order to avoid shoots failing to reconcile or temporary outages due to transient DNS failures.
