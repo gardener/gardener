@@ -41,5 +41,8 @@ func SecretBindingNameIndexerFunc(rawObj client.Object) []string {
 	if !ok {
 		return []string{}
 	}
-	return []string{shoot.Spec.SecretBindingName}
+	if shoot.Spec.SecretBindingName == nil {
+		return []string{}
+	}
+	return []string{*shoot.Spec.SecretBindingName}
 }

@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/extensions/pkg/util/index"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -31,7 +32,6 @@ func TestIndex(t *testing.T) {
 }
 
 var _ = Describe("Index", func() {
-
 	Context("#SecretRefNamespaceIndexerFunc", func() {
 		It("should return empty slice for non SecretBinding", func() {
 			actual := index.SecretRefNamespaceIndexerFunc(&corev1.Secret{})
@@ -53,13 +53,22 @@ var _ = Describe("Index", func() {
 	Context("#SecretBindingNameIndexerFunc", func() {
 		It("should return empty slice for non Shoot", func() {
 			actual := index.SecretBindingNameIndexerFunc(&corev1.Pod{})
-			Expect(actual).To(Equal([]string{}))
+			Expect(actual).To(BeEmpty())
+		})
+
+		It("should return empty slice for nil secretBindingName", func() {
+			shoot := &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{},
+			}
+
+			actual := index.SecretBindingNameIndexerFunc(shoot)
+			Expect(actual).To(BeEmpty())
 		})
 
 		It("should return spec.secretBindingName for Shoot", func() {
 			shoot := &gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
-					SecretBindingName: "foo",
+					SecretBindingName: pointer.String("foo"),
 				},
 			}
 

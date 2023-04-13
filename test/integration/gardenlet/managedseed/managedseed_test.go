@@ -266,7 +266,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 		})
 
 		By("Create Shoot")
-		shoot.Spec.SecretBindingName = shootSecretBinding.Name
+		shoot.Spec.SecretBindingName = pointer.String(shootSecretBinding.Name)
 		Expect(testClient.Create(ctx, shoot)).To(Succeed())
 		log.Info("Created Shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
 

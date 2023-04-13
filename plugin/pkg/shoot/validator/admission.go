@@ -246,8 +246,8 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	}
 
 	var secretBinding *core.SecretBinding
-	if a.GetOperation() == admission.Create {
-		secretBinding, err = v.secretBindingLister.SecretBindings(shoot.Namespace).Get(shoot.Spec.SecretBindingName)
+	if a.GetOperation() == admission.Create && shoot.Spec.SecretBindingName != nil {
+		secretBinding, err = v.secretBindingLister.SecretBindings(shoot.Namespace).Get(*shoot.Spec.SecretBindingName)
 		if err != nil {
 			return apierrors.NewInternalError(fmt.Errorf("could not find referenced secret binding: %+v", err.Error()))
 		}
@@ -742,7 +742,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 		return allErrs
 	}
 
-	if a.GetOperation() == admission.Create {
+	if a.GetOperation() == admission.Create && c.secretBinding != nil {
 		if !helper.SecretBindingHasType(c.secretBinding, c.shoot.Spec.Provider.Type) {
 			var secretBindingProviderType string
 			if c.secretBinding.Provider != nil {

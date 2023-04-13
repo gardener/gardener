@@ -174,7 +174,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					CloudProfileName:  "aws-profile",
 					Region:            "eu-west-1",
-					SecretBindingName: "my-secret",
+					SecretBindingName: pointer.String("my-secret"),
 					Purpose:           &purpose,
 					DNS: &core.DNS{
 						Providers: []core.DNSProvider{
@@ -576,7 +576,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		It("should forbid unsupported specification (provider independent)", func() {
 			shoot.Spec.CloudProfileName = ""
 			shoot.Spec.Region = ""
-			shoot.Spec.SecretBindingName = ""
+			shoot.Spec.SecretBindingName = pointer.String("")
 			shoot.Spec.SeedName = pointer.String("")
 			shoot.Spec.SeedSelector = &core.SeedSelector{
 				LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"foo": "no/slash/allowed"}},
@@ -692,7 +692,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			newShoot := prepareShootForUpdate(shoot)
 			shoot.Spec.CloudProfileName = "another-profile"
 			shoot.Spec.Region = "another-region"
-			shoot.Spec.SecretBindingName = "another-reference"
+			shoot.Spec.SecretBindingName = pointer.String("another-reference")
 			shoot.Spec.Provider.Type = "another-provider"
 
 			errorList := ValidateShootUpdate(newShoot, shoot)

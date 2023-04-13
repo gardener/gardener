@@ -481,12 +481,15 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencore.Shoot)
 		secretRef.Name = *primaryProvider.SecretName
 		secretRef.Namespace = shoot.Namespace
 	} else {
-		secretBinding, err := v.getSecretBinding(shoot.Namespace, shoot.Spec.SecretBindingName)
+		if shoot.Spec.SecretBindingName == nil {
+			return nil, fmt.Errorf("shoot secretbindingName is nil for %s/%s", shoot.Namespace, shoot.Name)
+		}
+		secretBinding, err := v.getSecretBinding(shoot.Namespace, *shoot.Spec.SecretBindingName)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				return nil, fmt.Errorf("secret binding %s/%s not found", shoot.Namespace, shoot.Spec.SecretBindingName)
+				return nil, fmt.Errorf("secret binding %s/%s not found", shoot.Namespace, *shoot.Spec.SecretBindingName)
 			}
-			return nil, apierrors.NewInternalError(fmt.Errorf("could not get secret binding %s/%s: %v", shoot.Namespace, shoot.Spec.SecretBindingName, err))
+			return nil, apierrors.NewInternalError(fmt.Errorf("could not get secret binding %s/%s: %v", shoot.Namespace, *shoot.Spec.SecretBindingName, err))
 		}
 		secretRef = secretBinding.SecretRef
 	}

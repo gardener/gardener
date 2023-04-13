@@ -34,7 +34,7 @@ var _ = Describe("Shoot Hibernation controller tests", func() {
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{GenerateName: "test-", Namespace: testNamespace.Name},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: "my-provider-account",
+				SecretBindingName: pointer.String("my-provider-account"),
 				CloudProfileName:  "cloudprofile1",
 				Region:            "europe-central-1",
 				Provider: gardencorev1beta1.Provider{

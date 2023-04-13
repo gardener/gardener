@@ -210,7 +210,7 @@ var _ = Describe("ManagedSeedSet controller test", func() {
 					},
 				},
 				Region:            "some-region",
-				SecretBindingName: "shoot-operator-foo",
+				SecretBindingName: pointer.String("shoot-operator-foo"),
 			},
 		}
 

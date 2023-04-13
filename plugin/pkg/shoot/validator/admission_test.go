@@ -230,7 +230,7 @@ var _ = Describe("validator", func() {
 				Spec: core.ShootSpec{
 					CloudProfileName:  "profile",
 					Region:            "europe",
-					SecretBindingName: "my-secret",
+					SecretBindingName: pointer.String("my-secret"),
 					SeedName:          &seedName,
 					DNS: &core.DNS{
 						Domain: pointer.String(fmt.Sprintf("shoot.%s", baseDomain)),

@@ -142,7 +142,7 @@ var _ = Describe("Actuator", func() {
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					EnableStaticTokenKubeconfig: pointer.Bool(true),
 				},
-				SecretBindingName: secretBindingName,
+				SecretBindingName: pointer.String(secretBindingName),
 				SeedName:          pointer.String(seedName),
 			},
 			Status: gardencorev1beta1.ShootStatus{

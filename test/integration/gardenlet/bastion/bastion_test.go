@@ -120,7 +120,7 @@ var _ = Describe("Bastion controller tests", func() {
 				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: "my-provider-account",
+				SecretBindingName: pointer.String("my-provider-account"),
 				CloudProfileName:  "test-cloudprofile",
 				Region:            "foo-region",
 				Provider: gardencorev1beta1.Provider{

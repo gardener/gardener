@@ -55,7 +55,7 @@ var _ = Describe("validator", func() {
 				Spec: core.ShootSpec{
 					CloudProfileName:  "profile",
 					Region:            "europe",
-					SecretBindingName: "my-secret",
+					SecretBindingName: pointer.String("my-secret"),
 					SeedName:          &seedName,
 				},
 			}

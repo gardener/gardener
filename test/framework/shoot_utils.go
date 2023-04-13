@@ -239,7 +239,7 @@ func setShootGeneralSettings(shoot *gardencorev1beta1.Shoot, cfg *ShootCreationC
 	}
 
 	if StringSet(cfg.secretBinding) {
-		shoot.Spec.SecretBindingName = cfg.secretBinding
+		shoot.Spec.SecretBindingName = pointer.String(cfg.secretBinding)
 	}
 
 	if StringSet(cfg.shootProviderType) {

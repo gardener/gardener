@@ -74,7 +74,7 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 		Spec: gardencorev1beta1.ShootSpec{
 			ControlPlane:      getShootControlPlane(),
 			Region:            "local",
-			SecretBindingName: "local",
+			SecretBindingName: pointer.String("local"),
 			CloudProfileName:  "local",
 			Kubernetes: gardencorev1beta1.Kubernetes{
 				Version:                     "1.26.0",

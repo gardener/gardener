@@ -19,6 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -85,7 +86,7 @@ var _ = Describe("SecretBinding controller test", func() {
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				CloudProfileName:  "test-cloudprofile",
-				SecretBindingName: secretBinding.Name,
+				SecretBindingName: pointer.String(secretBinding.Name),
 				Region:            "foo-region",
 				Provider: gardencorev1beta1.Provider{
 					Type: "test-provider",

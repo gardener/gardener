@@ -58,7 +58,7 @@ var _ = Describe("ExposureClass controller test", func() {
 			Spec: gardencorev1beta1.ShootSpec{
 				ExposureClassName: pointer.String(exposureClass.Name),
 				CloudProfileName:  "test-cloudprofile",
-				SecretBindingName: "my-provider-account",
+				SecretBindingName: pointer.String("my-provider-account"),
 				Region:            "foo-region",
 				Provider: gardencorev1beta1.Provider{
 					Type: "test-provider",

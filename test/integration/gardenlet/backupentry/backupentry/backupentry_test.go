@@ -175,7 +175,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 				UID:       "foo",
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: "test-sb",
+				SecretBindingName: pointer.String("test-sb"),
 				CloudProfileName:  "test-cloudprofile",
 				Region:            "foo-region",
 				Provider: gardencorev1beta1.Provider{

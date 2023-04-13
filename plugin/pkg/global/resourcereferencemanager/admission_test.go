@@ -187,7 +187,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Spec: core.ShootSpec{
 					CloudProfileName:  cloudProfileName,
 					SeedName:          &seedName,
-					SecretBindingName: bindingName,
+					SecretBindingName: pointer.String(bindingName),
 					Kubernetes: core.Kubernetes{
 						KubeAPIServer: &core.KubeAPIServerConfig{
 							AuditConfig: &core.AuditConfig{
@@ -686,7 +686,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
 
 				oldShoot := shoot.DeepCopy()
-				oldShoot.Spec.SecretBindingName = ""
+				oldShoot.Spec.SecretBindingName = pointer.String("")
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 

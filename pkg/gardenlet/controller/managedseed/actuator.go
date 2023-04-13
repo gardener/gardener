@@ -595,7 +595,10 @@ func (a *actuator) getSeedSecrets(ctx context.Context, spec *gardencorev1beta1.S
 
 func (a *actuator) getShootSecret(ctx context.Context, shoot *gardencorev1beta1.Shoot) (*corev1.Secret, error) {
 	shootSecretBinding := &gardencorev1beta1.SecretBinding{}
-	if err := a.gardenClient.Get(ctx, kubernetesutils.Key(shoot.Namespace, shoot.Spec.SecretBindingName), shootSecretBinding); err != nil {
+	if shoot.Spec.SecretBindingName == nil {
+		return nil, fmt.Errorf("secretbinding name is nil for the Shoot: %s/%s", shoot.Namespace, shoot.Name)
+	}
+	if err := a.gardenClient.Get(ctx, kubernetesutils.Key(shoot.Namespace, *shoot.Spec.SecretBindingName), shootSecretBinding); err != nil {
 		return nil, err
 	}
 	return kubernetesutils.GetSecretByReference(ctx, a.gardenClient, &shootSecretBinding.SecretRef)

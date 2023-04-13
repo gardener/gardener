@@ -57,12 +57,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	secretBinding := &gardencorev1beta1.SecretBinding{}
-	if err := r.Client.Get(ctx, kubernetesutils.Key(shoot.Namespace, shoot.Spec.SecretBindingName), secretBinding); err != nil {
-		return reconcile.Result{}, err
-	}
+	var (
+		secretBinding   = &gardencorev1beta1.SecretBinding{}
+		clusterLifeTime *int32
+	)
 
-	var clusterLifeTime *int32
+	if shoot.Spec.SecretBindingName != nil {
+		if err := r.Client.Get(ctx, kubernetesutils.Key(shoot.Namespace, *shoot.Spec.SecretBindingName), secretBinding); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
 
 	for _, quotaRef := range secretBinding.Quotas {
 		quota := &gardencorev1beta1.Quota{}

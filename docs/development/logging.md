@@ -194,9 +194,9 @@ See [Dave Cheney's post](https://dave.cheney.net/2015/11/05/lets-talk-about-logg
   )
   
   // option a: full object key, manually constructed
-  log.Info("Shoot uses SecretBinding", "secretBinding", client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Spec.SecretBindingName})
+  log.Info("Shoot uses SecretBinding", "secretBinding", client.ObjectKey{Namespace: shoot.Namespace, Name: *shoot.Spec.SecretBindingName})
   // option b: only name under respective *Name log key
-  log.Info("Shoot uses SecretBinding", "secretBindingName", shoot.Spec.SecretBindingName)
+  log.Info("Shoot uses SecretBinding", "secretBindingName", *shoot.Spec.SecretBindingName)
   ```
   
   Both options result in well-structured logs, that are easy to interpret and process:

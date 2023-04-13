@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
@@ -182,39 +183,41 @@ func (q *QuotaValidator) Validate(ctx context.Context, a admission.Attributes, o
 		checkLifetime = lifetimeVerificationNeeded(*shoot, *oldShoot)
 	}
 
-	secretBinding, err := q.secretBindingLister.SecretBindings(shoot.Namespace).Get(shoot.Spec.SecretBindingName)
-	if err != nil {
-		return apierrors.NewInternalError(err)
-	}
-
-	// Quotas are cumulative, means each quota must be not exceeded that the admission pass.
-	for _, quotaRef := range secretBinding.Quotas {
-		quota, err := q.quotaLister.Quotas(quotaRef.Namespace).Get(quotaRef.Name)
+	if shoot.Spec.SecretBindingName != nil {
+		secretBinding, err := q.secretBindingLister.SecretBindings(shoot.Namespace).Get(*shoot.Spec.SecretBindingName)
 		if err != nil {
 			return apierrors.NewInternalError(err)
 		}
 
-		// Get the max clusterLifeTime
-		if checkLifetime && quota.Spec.ClusterLifetimeDays != nil {
-			if maxShootLifetime == nil {
-				maxShootLifetime = quota.Spec.ClusterLifetimeDays
-			}
-			if *maxShootLifetime > *quota.Spec.ClusterLifetimeDays {
-				maxShootLifetime = quota.Spec.ClusterLifetimeDays
-			}
-		}
-
-		if checkQuota {
-			exceededMetrics, err := q.isQuotaExceeded(*shoot, *quota)
+		// Quotas are cumulative, means each quota must be not exceeded that the admission pass.
+		for _, quotaRef := range secretBinding.Quotas {
+			quota, err := q.quotaLister.Quotas(quotaRef.Namespace).Get(quotaRef.Name)
 			if err != nil {
 				return apierrors.NewInternalError(err)
 			}
-			if exceededMetrics != nil {
-				message := ""
-				for _, metric := range *exceededMetrics {
-					message = message + metric.String() + " "
+
+			// Get the max clusterLifeTime
+			if checkLifetime && quota.Spec.ClusterLifetimeDays != nil {
+				if maxShootLifetime == nil {
+					maxShootLifetime = quota.Spec.ClusterLifetimeDays
 				}
-				return admission.NewForbidden(a, fmt.Errorf("quota limits exceeded. Unable to allocate further %s", message))
+				if *maxShootLifetime > *quota.Spec.ClusterLifetimeDays {
+					maxShootLifetime = quota.Spec.ClusterLifetimeDays
+				}
+			}
+
+			if checkQuota {
+				exceededMetrics, err := q.isQuotaExceeded(*shoot, *quota)
+				if err != nil {
+					return apierrors.NewInternalError(err)
+				}
+				if exceededMetrics != nil {
+					message := ""
+					for _, metric := range *exceededMetrics {
+						message = message + metric.String() + " "
+					}
+					return admission.NewForbidden(a, fmt.Errorf("quota limits exceeded. Unable to allocate further %s", message))
+				}
 			}
 		}
 	}
@@ -226,7 +229,7 @@ func (q *QuotaValidator) Validate(ctx context.Context, a admission.Attributes, o
 			maxPossibleExpirationTime time.Time
 		)
 
-		plannedExpirationTime, err = time.Parse(time.RFC3339, lifetime)
+		plannedExpirationTime, err := time.Parse(time.RFC3339, lifetime)
 		if err != nil {
 			return apierrors.NewInternalError(err)
 		}
@@ -325,7 +328,7 @@ func (q *QuotaValidator) findShootsReferQuota(quota core.Quota, shoot core.Shoot
 			if shoot.Namespace == s.Namespace && shoot.Name == s.Name {
 				continue
 			}
-			if s.Spec.SecretBindingName == binding.Name {
+			if pointer.StringDeref(s.Spec.SecretBindingName, "") == binding.Name {
 				shootsReferQuota = append(shootsReferQuota, *s)
 			}
 		}

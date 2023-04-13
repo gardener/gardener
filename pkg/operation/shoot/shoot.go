@@ -163,7 +163,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 	shoot.CloudProfile = cloudProfile
 
-	secret, err := b.shootSecretFunc(ctx, shootObject.Namespace, shootObject.Spec.SecretBindingName)
+	secret, err := b.shootSecretFunc(ctx, shootObject.Namespace, *shootObject.Spec.SecretBindingName)
 	if err != nil {
 		return nil, err
 	}

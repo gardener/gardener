@@ -91,14 +91,16 @@ func (g *graph) handleShootCreateOrUpdate(shoot *gardencorev1beta1.Shoot) {
 	g.deleteAllOutgoingEdges(VertexTypeShoot, shoot.Namespace, shoot.Name, VertexTypeSeed)
 
 	var (
-		shootVertex         = g.getOrCreateVertex(VertexTypeShoot, shoot.Namespace, shoot.Name)
-		namespaceVertex     = g.getOrCreateVertex(VertexTypeNamespace, "", shoot.Namespace)
-		secretBindingVertex = g.getOrCreateVertex(VertexTypeSecretBinding, shoot.Namespace, shoot.Spec.SecretBindingName)
-		cloudProfileVertex  = g.getOrCreateVertex(VertexTypeCloudProfile, "", shoot.Spec.CloudProfileName)
+		shootVertex        = g.getOrCreateVertex(VertexTypeShoot, shoot.Namespace, shoot.Name)
+		namespaceVertex    = g.getOrCreateVertex(VertexTypeNamespace, "", shoot.Namespace)
+		cloudProfileVertex = g.getOrCreateVertex(VertexTypeCloudProfile, "", shoot.Spec.CloudProfileName)
 	)
 
+	if shoot.Spec.SecretBindingName != nil {
+		secretBindingVertex := g.getOrCreateVertex(VertexTypeSecretBinding, shoot.Namespace, *shoot.Spec.SecretBindingName)
+		g.addEdge(secretBindingVertex, shootVertex)
+	}
 	g.addEdge(namespaceVertex, shootVertex)
-	g.addEdge(secretBindingVertex, shootVertex)
 	g.addEdge(cloudProfileVertex, shootVertex)
 
 	if shoot.Spec.SeedName != nil {
