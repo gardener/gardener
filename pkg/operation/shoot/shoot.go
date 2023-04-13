@@ -204,6 +204,8 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 	shoot.GardenerVersion = gardenerVersion
 
+	shoot.IsWorkerless = shoot.GetInfo().IsWorkerless()
+
 	shoot.VPNHighAvailabilityEnabled = v1beta1helper.IsHAControlPlaneConfigured(shoot.GetInfo())
 	if haVPNEnabled, err := strconv.ParseBool(shoot.GetInfo().GetAnnotations()[v1beta1constants.ShootAlphaControlPlaneHAVPN]); err == nil {
 		shoot.VPNHighAvailabilityEnabled = haVPNEnabled
