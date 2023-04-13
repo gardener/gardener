@@ -37,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/strings/slices"
 
@@ -123,6 +124,8 @@ var (
 		"PS512",
 		"none",
 	)
+
+	workerlessErrorMsg = "this field should not be set for Workerless Shoot clusters"
 )
 
 // ValidateShoot validates a Shoot object.
@@ -207,9 +210,13 @@ func validateShootKubeconfigRotation(newMeta, oldMeta metav1.ObjectMeta, fldPath
 
 // ValidateShootSpec validates the specification of a Shoot object.
 func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *field.Path, inTemplate bool) field.ErrorList {
-	allErrs := field.ErrorList{}
+	var (
+		allErrs    = field.ErrorList{}
+		workerless = len(spec.Provider.Workers) == 0
+	)
 
-	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Kubernetes, spec.Purpose, fldPath.Child("addons"))...)
+	allErrs = append(allErrs, validateProvider(spec.Provider, spec.Kubernetes, spec.Networking, workerless, fldPath.Child("provider"), inTemplate)...)
+	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Kubernetes, spec.Purpose, workerless, fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, validateResources(spec.Resources, fldPath.Child("resources"))...)
@@ -218,7 +225,6 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"))...)
 	allErrs = append(allErrs, validateMonitoring(spec.Monitoring, fldPath.Child("monitoring"))...)
 	allErrs = append(allErrs, ValidateHibernation(meta.Annotations, spec.Hibernation, fldPath.Child("hibernation"))...)
-	allErrs = append(allErrs, validateProvider(spec.Provider, spec.Kubernetes, spec.Networking, fldPath.Child("provider"), inTemplate)...)
 
 	if len(spec.Region) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("region"), "must specify a region"))
@@ -385,8 +391,13 @@ func validateAdvertisedURL(URL string, fldPath *field.Path) field.ErrorList {
 	return allErrors
 }
 
-func validateAddons(addons *core.Addons, kubernetes core.Kubernetes, purpose *core.ShootPurpose, fldPath *field.Path) field.ErrorList {
+func validateAddons(addons *core.Addons, kubernetes core.Kubernetes, purpose *core.ShootPurpose, workerless bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	if workerless && addons != nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "addons cannot be enabled for Workerless Shoot clusters"))
+		return allErrs
+	}
 
 	versionGreaterOrEqual122, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.22")
 	if (helper.NginxIngressEnabled(addons) || helper.KubernetesDashboardEnabled(addons)) && versionGreaterOrEqual122 && (purpose != nil && *purpose != core.ShootPurposeEvaluation) {
@@ -1183,27 +1194,41 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path) fie
 	return allErrs
 }
 
-func validateProvider(provider core.Provider, kubernetes core.Kubernetes, networking core.Networking, fldPath *field.Path, inTemplate bool) field.ErrorList {
-	allErrs := field.ErrorList{}
+func validateProvider(provider core.Provider, kubernetes core.Kubernetes, networking core.Networking, workerless bool, fldPath *field.Path, inTemplate bool) field.ErrorList {
+	var (
+		allErrs = field.ErrorList{}
+		maxPod  int32
+	)
 
 	if len(provider.Type) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "must specify a provider type"))
 	}
 
-	var maxPod int32
-	if kubernetes.Kubelet != nil && kubernetes.Kubelet.MaxPods != nil {
-		maxPod = *kubernetes.Kubelet.MaxPods
-	}
-
-	for i, worker := range provider.Workers {
-		allErrs = append(allErrs, ValidateWorker(worker, kubernetes, fldPath.Child("workers").Index(i), inTemplate)...)
-
-		if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil && worker.Kubernetes.Kubelet.MaxPods != nil && *worker.Kubernetes.Kubelet.MaxPods > maxPod {
-			maxPod = *worker.Kubernetes.Kubelet.MaxPods
+	if workerless {
+		if !utilfeature.DefaultFeatureGate.Enabled(features.WorkerlessShoots) {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("workers"), "workers cannot be zero when WorkerlessShoots featuregate is disabled"))
 		}
-	}
+		if provider.InfrastructureConfig != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("infrastructureConfig"), workerlessErrorMsg))
+		}
+		if provider.ControlPlaneConfig != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("controlPlaneConfig"), workerlessErrorMsg))
+		}
+	} else {
+		if kubernetes.Kubelet != nil && kubernetes.Kubelet.MaxPods != nil {
+			maxPod = *kubernetes.Kubelet.MaxPods
+		}
 
-	allErrs = append(allErrs, ValidateWorkers(provider.Workers, fldPath.Child("workers"))...)
+		for i, worker := range provider.Workers {
+			allErrs = append(allErrs, ValidateWorker(worker, kubernetes, fldPath.Child("workers").Index(i), inTemplate)...)
+
+			if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil && worker.Kubernetes.Kubelet.MaxPods != nil && *worker.Kubernetes.Kubelet.MaxPods > maxPod {
+				maxPod = *worker.Kubernetes.Kubelet.MaxPods
+			}
+		}
+
+		allErrs = append(allErrs, ValidateWorkers(provider.Workers, fldPath.Child("workers"))...)
+	}
 
 	if kubernetes.KubeControllerManager != nil && kubernetes.KubeControllerManager.NodeCIDRMaskSize != nil {
 		if maxPod == 0 {
