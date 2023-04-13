@@ -16,13 +16,13 @@ However, we have not touched the logic how it performs auto-scaling decisions.
 Consequently, please refer to the [offical documentation](https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler#faqdocumentation) for this component.
 
 The `Shoot` API allows to configure a few flags of the `cluster-autoscaler`:
-* `.spec.kubernetes.clusterAutoscaler.ScaleDownDelayAfterAdd` defines how long after scale up that scale down evaluation resumes (default: `1h`).
-* `.spec.kubernetes.clusterAutoscaler.ScaleDownDelayAfterDelete` defines how long after node deletion that scale down evaluation resumes (defaults to `ScanInterval`).
-* `.spec.kubernetes.clusterAutoscaler.ScaleDownDelayAfterFailure` defines how long after scale down failure that scale down evaluation resumes (default: `3m`).
-* `.spec.kubernetes.clusterAutoscaler.ScaleDownUnneededTime` defines how long a node should be unneeded before it is eligible for scale down (default: `30m`).
-* `.spec.kubernetes.clusterAutoscaler.ScaleDownUtilizationThreshold` defines the threshold under which a node is being removed (default: `0.5`).
-* `.spec.kubernetes.clusterAutoscaler.ScanInterval` defines how often cluster is reevaluated for scale up or down (default: `10s`). 
-* `.spec.kubernetes.clusterAutoscaler.IgnoreTaints` specifies a list of taint keys to ignore in node templates when considering to scale a node group (default: `nil`). 
+* `.spec.kubernetes.clusterAutoscaler.scaleDownDelayAfterAdd` defines how long after scale up that scale down evaluation resumes (default: `1h`).
+* `.spec.kubernetes.clusterAutoscaler.scaleDownDelayAfterDelete` defines how long after node deletion that scale down evaluation resumes (defaults to `ScanInterval`).
+* `.spec.kubernetes.clusterAutoscaler.scaleDownDelayAfterFailure` defines how long after scale down failure that scale down evaluation resumes (default: `3m`).
+* `.spec.kubernetes.clusterAutoscaler.scaleDownUnneededTime` defines how long a node should be unneeded before it is eligible for scale down (default: `30m`).
+* `.spec.kubernetes.clusterAutoscaler.scaleDownUtilizationThreshold` defines the threshold under which a node is being removed (default: `0.5`).
+* `.spec.kubernetes.clusterAutoscaler.scanInterval` defines how often cluster is reevaluated for scale up or down (default: `10s`). 
+* `.spec.kubernetes.clusterAutoscaler.ignoreTaints` specifies a list of taint keys to ignore in node templates when considering to scale a node group (default: `nil`). 
 
 ## Vertical Pod Auto-Scaling
 
