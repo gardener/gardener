@@ -4304,6 +4304,7 @@ Kubernetes meta/v1.Time
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>MachineDeploymentsLastUpdateTime is the timestamp when the status.MachineDeployments slice was last updated.</p>
 </td>
 </tr>

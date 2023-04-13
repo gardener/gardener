@@ -310,7 +310,7 @@ func (w *worker) WaitUntilWorkerStatusMachineDeploymentsUpdate(ctx context.Conte
 		ctx,
 		w.client,
 		w.log,
-		w.CheckWorkerStatusMachineDeployments,
+		w.checkWorkerStatusMachineDeployments,
 		w.worker,
 		extensionsv1alpha1.WorkerResource,
 		w.waitInterval,
@@ -380,7 +380,7 @@ func (w *worker) findNodeTemplateAndMachineTypeByPoolName(ctx context.Context, o
 // CheckWorkerStatusMachineDeployments checks if the status of the worker is updated or not during its reconciliation.
 // It is updated if
 // * The status.MachineDeploymentsLastUpdateTime > the value of the time stamp stored in worker struct before the reconciliation begins.
-func (w *worker) CheckWorkerStatusMachineDeployments(o client.Object) error {
+func (w *worker) checkWorkerStatusMachineDeployments(o client.Object) error {
 	obj, ok := o.(*extensionsv1alpha1.Worker)
 	if !ok {
 		return fmt.Errorf("expected *extensionsv1alpha1.Worker but got %T", o)
