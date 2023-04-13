@@ -20,7 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
-// FQDNForService returns the fully qualified domain name of a service with the given name and namespace
+// FQDNForService returns the fully qualified domain name of a service with the given name and namespace.
 func FQDNForService(name, namespace string) string {
 	return fmt.Sprintf("%s.%s.svc.%s", name, namespace, v1beta1.DefaultDomain)
 }
