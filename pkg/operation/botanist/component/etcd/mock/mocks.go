@@ -95,6 +95,20 @@ func (mr *MockInterfaceMockRecorder) Get(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockInterface)(nil).Get), arg0)
 }
 
+// GetReplicas mocks base method.
+func (m *MockInterface) GetReplicas() *int32 {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetReplicas")
+	ret0, _ := ret[0].(*int32)
+	return ret0
+}
+
+// GetReplicas indicates an expected call of GetReplicas.
+func (mr *MockInterfaceMockRecorder) GetReplicas() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReplicas", reflect.TypeOf((*MockInterface)(nil).GetReplicas))
+}
+
 // GetValues mocks base method.
 func (m *MockInterface) GetValues() etcd.Values {
 	m.ctrl.T.Helper()
@@ -174,6 +188,18 @@ func (m *MockInterface) SetHVPAConfig(arg0 *etcd.HVPAConfig) {
 func (mr *MockInterfaceMockRecorder) SetHVPAConfig(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHVPAConfig", reflect.TypeOf((*MockInterface)(nil).SetHVPAConfig), arg0)
+}
+
+// SetReplicas mocks base method.
+func (m *MockInterface) SetReplicas(arg0 *int32) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetReplicas", arg0)
+}
+
+// SetReplicas indicates an expected call of SetReplicas.
+func (mr *MockInterfaceMockRecorder) SetReplicas(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetReplicas", reflect.TypeOf((*MockInterface)(nil).SetReplicas), arg0)
 }
 
 // Snapshot mocks base method.

@@ -19,6 +19,7 @@ import (
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
@@ -139,7 +140,7 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 	}
 
 	return flow.Parallel(
-		b.Shoot.Components.ControlPlane.EtcdMain.Deploy,
+		b.deployOrRestoreMainEtcd,
 		b.Shoot.Components.ControlPlane.EtcdEvents.Deploy,
 	)(ctx)
 }
@@ -188,6 +189,65 @@ func (b *Botanist) scaleETCD(ctx context.Context, replicas int32) error {
 		return err
 	}
 	return b.Shoot.Components.ControlPlane.EtcdEvents.Scale(ctx, replicas)
+}
+
+func (b *Botanist) deployOrRestoreMainEtcd(ctx context.Context) error {
+	isRestoreRequired, err := b.isRestorationOfMultiNodeMainEtcdRequired(ctx)
+	if err != nil {
+		return err
+	}
+
+	if isRestoreRequired {
+		return b.restoreMultiNodeMainEtcd(ctx)
+	}
+
+	return b.Shoot.Components.ControlPlane.EtcdMain.Deploy(ctx)
+}
+
+func (b *Botanist) isRestorationOfMultiNodeMainEtcdRequired(ctx context.Context) (bool, error) {
+	if !b.isRestorePhase() || !v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()) {
+		return false, nil
+	}
+
+	etcd, err := b.Shoot.Components.ControlPlane.EtcdMain.Get(ctx)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, err
+	}
+
+	// The etcd has already been scaled up to the desired number of replicas
+	// and therefore has been restored, then it has been scaled down to 0
+	// replicas as part of the reconciliation flow for hibernated shoots.
+	if b.Shoot.HibernationEnabled && etcd.Spec.Replicas == 0 {
+		return false, nil
+	}
+	// The etcd has already been scaled up to the desired number of replicas
+	// and therefore has been restored.
+	if etcd.Spec.Replicas == getEtcdReplicas(b.Shoot.GetInfo()) {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func (b *Botanist) restoreMultiNodeMainEtcd(ctx context.Context) error {
+	originalReplicas := b.Shoot.Components.ControlPlane.EtcdMain.GetReplicas()
+	defer func() {
+		// Revert the original replica count for the etcd. This is done in case a step
+		// is added to the reconciliation flow that depends on the etcd's replica count.
+		b.Shoot.Components.ControlPlane.EtcdMain.SetReplicas(originalReplicas)
+	}()
+
+	b.Shoot.Components.ControlPlane.EtcdMain.SetReplicas(pointer.Int32(1))
+	if err := b.Shoot.Components.ControlPlane.EtcdMain.Deploy(ctx); err != nil {
+		return err
+	}
+	if err := b.Shoot.Components.ControlPlane.EtcdMain.Wait(ctx); err != nil {
+		return err
+	}
+	return b.Shoot.Components.ControlPlane.EtcdMain.Scale(ctx, getEtcdReplicas(b.Shoot.GetInfo()))
 }
 
 func determineBackupSchedule(shoot *gardencorev1beta1.Shoot) (string, error) {

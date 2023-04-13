@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
@@ -28,7 +29,9 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
@@ -400,6 +403,91 @@ var _ = Describe("Etcd", func() {
 				expectGetBackupSecret()
 
 				Expect(botanist.DeployEtcd(ctx)).To(HaveOccurred())
+			})
+
+			Context("cpm restore phase", func() {
+				BeforeEach(func() {
+					botanist.Shoot.GetInfo().Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+						HighAvailability: &gardencorev1beta1.HighAvailability{
+							FailureTolerance: gardencorev1beta1.FailureTolerance{
+								Type: gardencorev1beta1.FailureToleranceTypeNode,
+							},
+						},
+					}
+					botanist.Shoot.GetInfo().Status.LastOperation = &gardencorev1beta1.LastOperation{
+						Type: gardencorev1beta1.LastOperationTypeRestore,
+					}
+
+					expectSetBackupConfig()
+					expectGetBackupSecret()
+				})
+
+				It("should properly restore multi-node main etcd from backup if etcd does not exist", func() {
+					gomock.InOrder(
+						etcdMain.EXPECT().Get(ctx).Return(nil, apierrors.NewNotFound(schema.GroupResource{}, "")),
+						etcdMain.EXPECT().GetReplicas().Return(pointer.Int32(3)),
+						etcdMain.EXPECT().SetReplicas(pointer.Int32(1)),
+						etcdMain.EXPECT().Deploy(ctx),
+						etcdMain.EXPECT().Wait(ctx),
+						etcdMain.EXPECT().Scale(ctx, int32(3)),
+						etcdMain.EXPECT().SetReplicas(pointer.Int32(3)),
+					)
+
+					etcdEvents.EXPECT().Deploy(ctx)
+					Expect(botanist.DeployEtcd(ctx)).To(Succeed())
+				})
+
+				It("should properly restore multi-node main etcd from backup if it is deployed with 1 replica", func() {
+					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(ctx context.Context) (*druidv1alpha1.Etcd, error) {
+						return &druidv1alpha1.Etcd{
+							Spec: druidv1alpha1.EtcdSpec{
+								Replicas: 1,
+							},
+						}, nil
+					})
+					gomock.InOrder(
+						etcdMain.EXPECT().GetReplicas().Return(pointer.Int32(3)),
+						etcdMain.EXPECT().SetReplicas(pointer.Int32(1)),
+						etcdMain.EXPECT().Deploy(ctx),
+						etcdMain.EXPECT().Wait(ctx),
+						etcdMain.EXPECT().Scale(ctx, int32(3)),
+						etcdMain.EXPECT().SetReplicas(pointer.Int32(3)),
+					)
+
+					etcdEvents.EXPECT().Deploy(ctx)
+
+					Expect(botanist.DeployEtcd(ctx)).To(Succeed())
+				})
+
+				It("should not try to restore multi-node etcd from backup if it has alrady been scaled up", func() {
+					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(ctx context.Context) (*druidv1alpha1.Etcd, error) {
+						return &druidv1alpha1.Etcd{
+							Spec: druidv1alpha1.EtcdSpec{
+								Replicas: 3,
+							},
+						}, nil
+					})
+					etcdMain.EXPECT().Deploy(ctx)
+					etcdEvents.EXPECT().Deploy(ctx)
+
+					Expect(botanist.DeployEtcd(ctx)).To(Succeed())
+				})
+
+				It("should not try to restore multi-node etcd from backup if it has alrady been scaled down and the shoot is hibernated", func() {
+					botanist.Shoot.HibernationEnabled = true
+
+					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(ctx context.Context) (*druidv1alpha1.Etcd, error) {
+						return &druidv1alpha1.Etcd{
+							Spec: druidv1alpha1.EtcdSpec{
+								Replicas: 0,
+							},
+						}, nil
+					})
+					etcdMain.EXPECT().Deploy(ctx)
+					etcdEvents.EXPECT().Deploy(ctx)
+
+					Expect(botanist.DeployEtcd(ctx)).To(Succeed())
+				})
 			})
 		})
 	})

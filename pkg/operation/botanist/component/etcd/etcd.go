@@ -113,6 +113,10 @@ type Interface interface {
 	RolloutPeerCA(context.Context) error
 	// GetValues returns the current configuration values of the deployer.
 	GetValues() Values
+	// GetReplicas gets the Replicas field in the Values.
+	GetReplicas() *int32
+	// SetReplicas sets the Replicas field in the Values.
+	SetReplicas(*int32)
 }
 
 // New creates a new instance of DeployWaiter for the Etcd.
@@ -762,7 +766,25 @@ func (e *etcd) Scale(ctx context.Context, replicas int32) error {
 
 	e.etcd = etcdObj
 
-	return e.client.Patch(ctx, etcdObj, patch)
+	if err := e.client.Patch(ctx, etcdObj, patch); err != nil {
+		return err
+	}
+
+	if e.values.HvpaConfig != nil && e.values.HvpaConfig.Enabled {
+		// Keep the `hvpa.Spec.Hpa.Template.Spec.MaxReplicas` and `hvpa.Spec.Hpa.Template.Spec.MinReplicas`
+		// values consistent with the replica count of the etcd.
+		hvpa := e.emptyHVPA()
+		if err := e.client.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa); err != nil {
+			return err
+		}
+
+		patch := client.MergeFrom(hvpa.DeepCopy())
+		hvpa.Spec.Hpa.Template.Spec.MaxReplicas = replicas
+		hvpa.Spec.Hpa.Template.Spec.MinReplicas = pointer.Int32(replicas)
+		return e.client.Patch(ctx, hvpa, patch)
+	}
+
+	return nil
 }
 
 func (e *etcd) RolloutPeerCA(ctx context.Context) error {
@@ -808,9 +830,11 @@ func (e *etcd) RolloutPeerCA(ctx context.Context) error {
 	return err
 }
 
-func (e *etcd) GetValues() Values {
-	return e.values
-}
+func (e *etcd) GetValues() Values { return e.values }
+
+func (e *etcd) GetReplicas() *int32 { return e.values.Replicas }
+
+func (e *etcd) SetReplicas(replicas *int32) { e.values.Replicas = replicas }
 
 func (e *etcd) podLabelSelector() labels.Selector {
 	app, _ := labels.NewRequirement(v1beta1constants.LabelApp, selection.Equals, []string{LabelAppValue})
