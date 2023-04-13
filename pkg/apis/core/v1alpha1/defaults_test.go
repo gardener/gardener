@@ -119,8 +119,52 @@ var _ = Describe("Defaults", func() {
 					Kubernetes: Kubernetes{
 						Version: "1.22.1",
 					},
+					Provider: Provider{
+						Workers: []Worker{Worker{}},
+					},
 				},
 			}
+		})
+
+		Describe("Kubernetes", func() {
+			It("should set the kubeScheduler field for Shoot with workers", func() {
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.KubeScheduler).NotTo(BeNil())
+			})
+
+			It("should not set the kubeScheduler field for workerless Shoot", func() {
+				obj.Spec.Provider.Workers = nil
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.KubeScheduler).To(BeNil())
+			})
+
+			It("should set the kubeProxy field for Shoot with workers", func() {
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.KubeProxy).NotTo(BeNil())
+			})
+
+			It("should not set the kubeProxy field for workerless Shoot", func() {
+				obj.Spec.Provider.Workers = nil
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.KubeProxy).To(BeNil())
+			})
+
+			It("should set the kubelet field for Shoot with workers", func() {
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet).NotTo(BeNil())
+			})
+
+			It("should not set the kubelet field for workerless Shoot", func() {
+				obj.Spec.Provider.Workers = nil
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet).To(BeNil())
+			})
 		})
 
 		It("should not add the 'protected' toleration if the namespace is not 'garden'", func() {
@@ -220,6 +264,7 @@ var _ = Describe("Defaults", func() {
 			Describe("nodeCIDRMaskSize", func() {
 				Context("IPv4", func() {
 					It("should make nodeCIDRMaskSize big enough for 2*maxPods", func() {
+						obj.Spec.Provider.Workers = []Worker{Worker{}}
 						obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
 							MaxPods: pointer.Int32(250),
 						}
@@ -257,6 +302,8 @@ var _ = Describe("Defaults", func() {
 
 				Context("IPv6", func() {
 					BeforeEach(func() {
+						obj.Spec.Provider.Workers = []Worker{Worker{}}
+						obj.Spec.Networking = &Networking{}
 						obj.Spec.Networking.IPFamilies = []IPFamily{IPFamilyIPv6}
 					})
 
@@ -269,23 +316,25 @@ var _ = Describe("Defaults", func() {
 			})
 		})
 
-		It("should default the kubeScheduler.profile field", func() {
-			obj.Spec.Kubernetes.KubeScheduler = &KubeSchedulerConfig{}
+		Describe("KubeScheduler", func() {
+			It("should default the kubeScheduler.profile field", func() {
+				obj.Spec.Kubernetes.KubeScheduler = &KubeSchedulerConfig{}
 
-			SetObjectDefaults_Shoot(obj)
+				SetObjectDefaults_Shoot(obj)
 
-			Expect(obj.Spec.Kubernetes.KubeScheduler.Profile).To(PointTo(Equal(SchedulingProfileBalanced)))
-		})
+				Expect(obj.Spec.Kubernetes.KubeScheduler.Profile).To(PointTo(Equal(SchedulingProfileBalanced)))
+			})
 
-		It("should not default the kubeScheduler.profile field if it is already set", func() {
-			profile := SchedulingProfileBinPacking
-			obj.Spec.Kubernetes.KubeScheduler = &KubeSchedulerConfig{
-				Profile: &profile,
-			}
+			It("should not default the kubeScheduler.profile field if it is already set", func() {
+				profile := SchedulingProfileBinPacking
+				obj.Spec.Kubernetes.KubeScheduler = &KubeSchedulerConfig{
+					Profile: &profile,
+				}
 
-			SetObjectDefaults_Shoot(obj)
+				SetObjectDefaults_Shoot(obj)
 
-			Expect(obj.Spec.Kubernetes.KubeScheduler.Profile).To(PointTo(Equal(SchedulingProfileBinPacking)))
+				Expect(obj.Spec.Kubernetes.KubeScheduler.Profile).To(PointTo(Equal(SchedulingProfileBinPacking)))
+			})
 		})
 
 		Context("default kubeReserved", func() {
@@ -326,18 +375,68 @@ var _ = Describe("Defaults", func() {
 			})
 		})
 
-		It("should default ipFamilies setting to IPv4 single-stack", func() {
-			SetObjectDefaults_Shoot(obj)
+		Describe("maintenance", func() {
+			It("should set the maintenance field", func() {
+				obj.Spec.Maintenance = nil
 
-			Expect(obj.Spec.Networking.IPFamilies).To(ConsistOf(IPFamilyIPv4))
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Maintenance).NotTo(BeNil())
+				Expect(obj.Spec.Maintenance.AutoUpdate).NotTo(BeNil())
+				Expect(obj.Spec.Maintenance.AutoUpdate.KubernetesVersion).NotTo(BeNil())
+			})
+
+			It("should set both KubernetesVersion and MachineImageVersion field for shoot with workers", func() {
+				obj.Spec.Maintenance = nil
+
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Maintenance).NotTo(BeNil())
+				Expect(obj.Spec.Maintenance.AutoUpdate).NotTo(BeNil())
+				Expect(obj.Spec.Maintenance.AutoUpdate.KubernetesVersion).NotTo(BeNil())
+				Expect(obj.Spec.Maintenance.AutoUpdate.MachineImageVersion).NotTo(BeNil())
+			})
+
+			It("should set only KubernetesVersion field for workerless shoot", func() {
+				obj.Spec.Provider.Workers = nil
+				obj.Spec.Maintenance = nil
+
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Maintenance).NotTo(BeNil())
+				Expect(obj.Spec.Maintenance.AutoUpdate).NotTo(BeNil())
+				Expect(obj.Spec.Maintenance.AutoUpdate.KubernetesVersion).NotTo(BeNil())
+				Expect(obj.Spec.Maintenance.AutoUpdate.MachineImageVersion).To(BeNil())
+			})
 		})
 
-		It("should set the maintenance field", func() {
-			obj.Spec.Maintenance = nil
+		Describe("Addons", func() {
+			It("should set the addons field for shoot with workers", func() {
+				obj.Spec.Addons = nil
 
-			SetObjectDefaults_Shoot(obj)
+				SetObjectDefaults_Shoot(obj)
 
-			Expect(obj.Spec.Maintenance).NotTo(BeNil())
+				Expect(obj.Spec.Addons).NotTo(BeNil())
+			})
+
+			It("should set the kubernetesDashboard field for shoot with workers", func() {
+				obj.Spec.Addons = nil
+
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Addons).NotTo(BeNil())
+				Expect(obj.Spec.Addons.KubernetesDashboard).NotTo(BeNil())
+				Expect(obj.Spec.Addons.KubernetesDashboard.AuthenticationMode).To(PointTo(Equal(KubernetesDashboardAuthModeToken)))
+			})
+
+			It("should not set the addons field for workerless Shoot", func() {
+				obj.Spec.Provider.Workers = nil
+				obj.Spec.Addons = nil
+
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Addons).To(BeNil())
+			})
 		})
 
 		It("should default the max inflight requests fields", func() {
@@ -439,6 +538,31 @@ var _ = Describe("Defaults", func() {
 			Expect(*obj.Spec.Provider.Workers[1].Machine.Architecture).To(Equal("test"))
 		})
 
+		Describe("Networking", func() {
+			It("should set the networking field for shoot with workers", func() {
+				obj.Spec.Provider.Workers = []Worker{Worker{}}
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Networking).NotTo(BeNil())
+			})
+
+			It("should not set the networking field for Workerless shoot", func() {
+				obj.Spec.Provider.Workers = nil
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Networking).To(BeNil())
+			})
+
+			It("should default ipFamilies setting to IPv4 single-stack for shoot with workers", func() {
+				obj.Spec.Provider.Workers = []Worker{Worker{}}
+
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Networking).NotTo(BeNil())
+				Expect(obj.Spec.Networking.IPFamilies).To(ConsistOf(IPFamilyIPv4))
+			})
+		})
+
 		It("should default cri.name to containerd when control plane Kubernetes version >= 1.22", func() {
 			obj.Spec.Kubernetes.Version = "1.22"
 			obj.Spec.Provider.Workers = []Worker{
@@ -491,12 +615,21 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Provider.Workers[1].CRI.Name).To(BeEquivalentTo("some configured value"))
 		})
 
-		It("should set the workers settings field", func() {
+		It("should set the workers settings field for shoot with workers", func() {
 			obj.Spec.Provider.WorkersSettings = nil
 
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Provider.WorkersSettings).To(Equal(&WorkersSettings{SSHAccess: &SSHAccess{Enabled: true}}))
+		})
+
+		It("should not set the workers settings field for workerless Shoot", func() {
+			obj.Spec.Provider.Workers = nil
+			obj.Spec.Provider.WorkersSettings = nil
+
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Provider.WorkersSettings).To(BeNil())
 		})
 
 		It("should not overwrite the ssh access field in workers settings", func() {
@@ -511,12 +644,23 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Provider.WorkersSettings).To(Equal(&WorkersSettings{SSHAccess: &SSHAccess{Enabled: false}}))
 		})
 
-		It("should set the system components and coredns autoscaling fields", func() {
-			obj.Spec.SystemComponents = nil
+		Describe("SystemComponents", func() {
+			It("should set the system components and coredns autoscaling fields for shoot with workers", func() {
+				obj.Spec.SystemComponents = nil
 
-			SetObjectDefaults_Shoot(obj)
+				SetObjectDefaults_Shoot(obj)
 
-			Expect(obj.Spec.SystemComponents).To(Equal(&SystemComponents{CoreDNS: &CoreDNS{Autoscaling: &CoreDNSAutoscaling{Mode: CoreDNSAutoscalingModeHorizontal}}}))
+				Expect(obj.Spec.SystemComponents).To(Equal(&SystemComponents{CoreDNS: &CoreDNS{Autoscaling: &CoreDNSAutoscaling{Mode: CoreDNSAutoscalingModeHorizontal}}}))
+			})
+
+			It("should not set the system components for workerless Shoot", func() {
+				obj.Spec.Provider.Workers = nil
+				obj.Spec.SystemComponents = nil
+
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.SystemComponents).To(BeNil())
+			})
 		})
 
 		Context("static token kubeconfig", func() {
@@ -554,13 +698,23 @@ var _ = Describe("Defaults", func() {
 					Version:       "1.24.0",
 					KubeAPIServer: &KubeAPIServerConfig{},
 				}
+				obj.Spec.Provider = Provider{
+					Workers: []Worker{Worker{}},
+				}
 			})
 
 			Context("allowPrivilegedContainers field is not set", func() {
-				It("should set the field to true if PodSecurityPolicy admission plugin is not disabled", func() {
+				It("should set the field to true if PodSecurityPolicy admission plugin is not disabled and shoot has workers", func() {
 					SetObjectDefaults_Shoot(obj)
 
 					Expect(obj.Spec.Kubernetes.AllowPrivilegedContainers).To(PointTo(BeTrue()))
+				})
+
+				It("should not set the field if the shoot is workerless", func() {
+					obj.Spec.Provider.Workers = nil
+					SetObjectDefaults_Shoot(obj)
+
+					Expect(obj.Spec.Kubernetes.AllowPrivilegedContainers).To(BeNil())
 				})
 
 				It("should not default the field if PodSecurityPolicy admission plugin is disabled in the shoot spec", func() {
@@ -572,6 +726,13 @@ var _ = Describe("Defaults", func() {
 							},
 						},
 					}
+					SetObjectDefaults_Shoot(obj)
+
+					Expect(obj.Spec.Kubernetes.AllowPrivilegedContainers).To(BeNil())
+				})
+
+				It("should not default the field if the Shoot is workerless", func() {
+					obj.Spec.Provider.Workers = nil
 					SetObjectDefaults_Shoot(obj)
 
 					Expect(obj.Spec.Kubernetes.AllowPrivilegedContainers).To(BeNil())
@@ -610,18 +771,14 @@ var _ = Describe("Defaults", func() {
 		var obj *Maintenance
 
 		BeforeEach(func() {
-			obj = &Maintenance{}
+			obj = &Maintenance{AutoUpdate: &MaintenanceAutoUpdate{}}
 		})
 
 		It("should correctly default the maintenance", func() {
-			obj.AutoUpdate = nil
 			obj.TimeWindow = nil
 
 			SetDefaults_Maintenance(obj)
 
-			Expect(obj.AutoUpdate).NotTo(BeNil())
-			Expect(obj.AutoUpdate.KubernetesVersion).To(BeTrue())
-			Expect(obj.AutoUpdate.MachineImageVersion).To(BeTrue())
 			Expect(obj.TimeWindow).NotTo(BeNil())
 			Expect(obj.TimeWindow.Begin).To(HaveSuffix("0000+0000"))
 			Expect(obj.TimeWindow.End).To(HaveSuffix("0000+0000"))
