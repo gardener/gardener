@@ -51,7 +51,7 @@ var _ = Describe("shoot", func() {
 			})
 
 			It("returns correct network", func() {
-				result, err := ToNetworks(shoot)
+				result, err := ToNetworks(shoot, false)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result).To(PointTo(Equal(Networks{
@@ -68,9 +68,34 @@ var _ = Describe("shoot", func() {
 				})))
 			})
 
+			It("returns correct network (workerless Shoot)", func() {
+				shoot.Spec.Networking.Pods = nil
+				result, err := ToNetworks(shoot, true)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(PointTo(Equal(Networks{
+					Pods: nil,
+					Services: &net.IPNet{
+						IP:   []byte{20, 0, 0, 0},
+						Mask: []byte{255, 255, 255, 0},
+					},
+					APIServer: []byte{20, 0, 0, 1},
+					CoreDNS:   []byte{20, 0, 0, 10},
+				})))
+			})
+
+			It("returns nil if serviceCIDR is nil (workerless Shoot)", func() {
+				shoot.Spec.Networking.Pods = nil
+				shoot.Spec.Networking.Services = nil
+				result, err := ToNetworks(shoot, true)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(BeNil())
+			})
+
 			DescribeTable("#ConstructInternalClusterDomain", func(mutateFunc func(s *gardencorev1beta1.Shoot)) {
 				mutateFunc(shoot)
-				result, err := ToNetworks(shoot)
+				result, err := ToNetworks(shoot, false)
 
 				Expect(err).To(HaveOccurred())
 				Expect(result).To(BeNil())

@@ -163,11 +163,13 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 	shoot.CloudProfile = cloudProfile
 
-	secret, err := b.shootSecretFunc(ctx, shootObject.Namespace, *shootObject.Spec.SecretBindingName)
-	if err != nil {
-		return nil, err
+	if shootObject.Spec.SecretBindingName != nil {
+		secret, err := b.shootSecretFunc(ctx, shootObject.Namespace, *shootObject.Spec.SecretBindingName)
+		if err != nil {
+			return nil, err
+		}
+		shoot.Secret = secret
 	}
-	shoot.Secret = secret
 
 	shoot.HibernationEnabled = v1beta1helper.HibernationIsEnabled(shootObject)
 	shoot.SeedNamespace = ComputeTechnicalID(b.projectName, shootObject)
@@ -185,7 +187,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 
 	// Determine information about external domain for shoot cluster.
-	externalDomain, err := gardenerutils.ConstructExternalDomain(ctx, c, shootObject, secret, b.defaultDomains)
+	externalDomain, err := gardenerutils.ConstructExternalDomain(ctx, c, shootObject, shoot.Secret, b.defaultDomains)
 	if err != nil {
 		return nil, err
 	}
@@ -219,11 +221,13 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 	shoot.WantsClusterAutoscaler = needsClusterAutoscaler
 
-	networks, err := ToNetworks(shootObject)
-	if err != nil {
-		return nil, err
+	if shootObject.Spec.Networking != nil {
+		networks, err := ToNetworks(shootObject, shoot.IsWorkerless)
+		if err != nil {
+			return nil, err
+		}
+		shoot.Networks = networks
 	}
-	shoot.Networks = networks
 
 	shoot.NodeLocalDNSEnabled = v1beta1helper.IsNodeLocalDNSEnabled(shoot.GetInfo().Spec.SystemComponents, shoot.GetInfo().Annotations)
 	shoot.Purpose = v1beta1helper.GetPurpose(shootObject)
@@ -449,23 +453,37 @@ func ComputeTechnicalID(projectName string, shoot *gardencorev1beta1.Shoot) stri
 
 // ToNetworks return a network with computed cidrs and ClusterIPs
 // for a Shoot
-func ToNetworks(s *gardencorev1beta1.Shoot) (*Networks, error) {
-	if s.Spec.Networking.Services == nil {
-		return nil, fmt.Errorf("shoot's service cidr is empty")
+func ToNetworks(s *gardencorev1beta1.Shoot, workerless bool) (*Networks, error) {
+	var (
+		svc, pods *net.IPNet
+		err       error
+	)
+
+	if !workerless {
+		if s.Spec.Networking.Services == nil {
+			return nil, fmt.Errorf("shoot's service cidr is empty")
+		}
+
+		if s.Spec.Networking.Pods == nil {
+			return nil, fmt.Errorf("shoot's pods cidr is empty")
+		}
 	}
 
-	if s.Spec.Networking.Pods == nil {
-		return nil, fmt.Errorf("shoot's pods cidr is empty")
+	if s.Spec.Networking.Pods != nil {
+		_, pods, err = net.ParseCIDR(*s.Spec.Networking.Pods)
+		if err != nil {
+			return nil, fmt.Errorf("cannot parse shoot's network cidr %w", err)
+		}
 	}
 
-	_, svc, err := net.ParseCIDR(*s.Spec.Networking.Services)
-	if err != nil {
-		return nil, fmt.Errorf("cannot parse shoot's network cidr %w", err)
-	}
-
-	_, pods, err := net.ParseCIDR(*s.Spec.Networking.Pods)
-	if err != nil {
-		return nil, fmt.Errorf("cannot parse shoot's network cidr %w", err)
+	if s.Spec.Networking.Services != nil {
+		_, svc, err = net.ParseCIDR(*s.Spec.Networking.Services)
+		if err != nil {
+			return nil, fmt.Errorf("cannot parse shoot's network cidr %w", err)
+		}
+	} else {
+		// if serviceCIDR is nil, then the Networks struct is not required
+		return nil, nil
 	}
 
 	apiserver, err := common.ComputeOffsetIP(svc, 1)

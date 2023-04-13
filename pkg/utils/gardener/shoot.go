@@ -587,6 +587,9 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 			}
 			externalDomain.SecretData = secret.Data
 		} else {
+			if shootSecret == nil {
+				return nil, fmt.Errorf("default domain is not present, secret for primary dns provider is required")
+			}
 			externalDomain.SecretData = shootSecret.Data
 		}
 		if primaryProvider.Type != nil {
