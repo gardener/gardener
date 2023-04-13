@@ -220,7 +220,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, validateResources(spec.Resources, fldPath.Child("resources"))...)
-	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, isDockerConfigured(spec.Provider.Workers), fldPath.Child("kubernetes"))...)
+	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, isDockerConfigured(spec.Provider.Workers), workerless, fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateNetworking(spec.Networking, fldPath.Child("networking"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"))...)
 	allErrs = append(allErrs, validateMonitoring(spec.Monitoring, fldPath.Child("monitoring"))...)
@@ -736,7 +736,7 @@ func validateResources(resources []core.NamedResourceReference, fldPath *field.P
 	return allErrs
 }
 
-func validateKubernetes(kubernetes core.Kubernetes, networking core.Networking, dockerConfigured bool, fldPath *field.Path) field.ErrorList {
+func validateKubernetes(kubernetes core.Kubernetes, networking core.Networking, dockerConfigured, workerless bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(kubernetes.Version) == 0 {
@@ -745,23 +745,78 @@ func validateKubernetes(kubernetes core.Kubernetes, networking core.Networking, 
 	}
 
 	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, false, fldPath.Child("kubeAPIServer"))...)
-	allErrs = append(allErrs, validateKubeControllerManager(kubernetes.KubeControllerManager, networking, kubernetes.Version, fldPath.Child("kubeControllerManager"))...)
-	allErrs = append(allErrs, validateKubeScheduler(kubernetes.KubeScheduler, kubernetes.Version, fldPath.Child("kubeScheduler"))...)
-	allErrs = append(allErrs, validateKubeProxy(kubernetes.KubeProxy, kubernetes.Version, fldPath.Child("kubeProxy"))...)
+	allErrs = append(allErrs, validateKubeControllerManager(kubernetes.KubeControllerManager, networking, kubernetes.Version, workerless, fldPath.Child("kubeControllerManager"))...)
+
+	if workerless {
+		allErrs = append(allErrs, validateKubernetesForWorkerlessShoot(kubernetes, fldPath)...)
+	} else {
+		allErrs = append(allErrs, validateKubeScheduler(kubernetes.KubeScheduler, kubernetes.Version, fldPath.Child("kubeScheduler"))...)
+
+		allErrs = append(allErrs, validateKubeProxy(kubernetes.KubeProxy, kubernetes.Version, fldPath.Child("kubeProxy"))...)
+
+		if kubernetes.Kubelet != nil {
+			allErrs = append(allErrs, ValidateKubeletConfig(*kubernetes.Kubelet, kubernetes.Version, dockerConfigured, fldPath.Child("kubelet"))...)
+		}
+
+		if clusterAutoscaler := kubernetes.ClusterAutoscaler; clusterAutoscaler != nil {
+			allErrs = append(allErrs, ValidateClusterAutoscaler(*clusterAutoscaler, kubernetes.Version, fldPath.Child("clusterAutoscaler"))...)
+		}
+
+		if verticalPodAutoscaler := kubernetes.VerticalPodAutoscaler; verticalPodAutoscaler != nil {
+			allErrs = append(allErrs, ValidateVerticalPodAutoscaler(*verticalPodAutoscaler, fldPath.Child("verticalPodAutoscaler"))...)
+		}
+
+		k8sGreaterEqual125, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.25")
+		if k8sGreaterEqual125 && kubernetes.AllowPrivilegedContainers != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("allowPrivilegedContainers"), "for Kubernetes versions >= 1.25, allowPrivilegedContainers field should not be set, please see https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#speckubernetesallowprivilegedcontainers-in-the-shoot-spec"))
+		}
+	}
+
+	return allErrs
+}
+
+func validateKubernetesForWorkerlessShoot(kubernetes core.Kubernetes, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if kubernetes.KubeScheduler != nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeScheduler"), workerlessErrorMsg))
+	}
+
+	if kubernetes.KubeProxy != nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeProxy"), workerlessErrorMsg))
+	}
+
 	if kubernetes.Kubelet != nil {
-		allErrs = append(allErrs, ValidateKubeletConfig(*kubernetes.Kubelet, kubernetes.Version, dockerConfigured, fldPath.Child("kubelet"))...)
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubelet"), workerlessErrorMsg))
 	}
 
-	if clusterAutoscaler := kubernetes.ClusterAutoscaler; clusterAutoscaler != nil {
-		allErrs = append(allErrs, ValidateClusterAutoscaler(*clusterAutoscaler, kubernetes.Version, fldPath.Child("clusterAutoscaler"))...)
-	}
-	if verticalPodAutoscaler := kubernetes.VerticalPodAutoscaler; verticalPodAutoscaler != nil {
-		allErrs = append(allErrs, ValidateVerticalPodAutoscaler(*verticalPodAutoscaler, fldPath.Child("verticalPodAutoscaler"))...)
+	if kcm := kubernetes.KubeControllerManager; kcm != nil {
+		kcmPath := fldPath.Child("kubeControllerManager")
+
+		if kcm.NodeCIDRMaskSize != nil {
+			allErrs = append(allErrs, field.Forbidden(kcmPath.Child("nodeCIDRMaskSize"), workerlessErrorMsg))
+		}
+		if kcm.HorizontalPodAutoscalerConfig != nil {
+			allErrs = append(allErrs, field.Forbidden(kcmPath.Child("horizontalPodAutoscaler"), workerlessErrorMsg))
+		}
+		if kcm.PodEvictionTimeout != nil {
+			allErrs = append(allErrs, field.Forbidden(kcmPath.Child("podEvictionTimeout"), workerlessErrorMsg))
+		}
+		if kcm.NodeMonitorGracePeriod != nil {
+			allErrs = append(allErrs, field.Forbidden(kcmPath.Child("nodeMonitorGracePeriod"), workerlessErrorMsg))
+		}
 	}
 
-	k8sGreaterEqual125, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.25")
-	if k8sGreaterEqual125 && kubernetes.AllowPrivilegedContainers != nil {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("allowPrivilegedContainers"), "for Kubernetes versions >= 1.25, allowPrivilegedContainers field should not be set, please see https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#speckubernetesallowprivilegedcontainers-in-the-shoot-spec"))
+	if kubernetes.ClusterAutoscaler != nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("clusterAutoScaler"), workerlessErrorMsg))
+	}
+
+	if kubernetes.VerticalPodAutoscaler != nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("verticalPodAutoScaler"), workerlessErrorMsg))
+	}
+
+	if kubernetes.AllowPrivilegedContainers != nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("allowPrivilegedContainers"), workerlessErrorMsg))
 	}
 
 	return allErrs
@@ -1067,10 +1122,14 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 	return allErrs
 }
 
-func validateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networking core.Networking, version string, fldPath *field.Path) field.ErrorList {
+func validateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networking core.Networking, version string, workerless bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if kcm != nil {
+	if kcm == nil {
+		return nil
+	}
+
+	if !workerless {
 		if maskSize := kcm.NodeCIDRMaskSize; maskSize != nil {
 			if core.IsIPv4SingleStack(networking.IPFamilies) {
 				if *maskSize < 16 || *maskSize > 28 {
@@ -1106,9 +1165,9 @@ func validateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networ
 				allErrs = append(allErrs, field.Invalid(hpaPath.Child("cpuInitializationPeriod"), *hpa.CPUInitializationPeriod, "cpu initialization period must not be less than a second"))
 			}
 		}
-
-		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kcm.FeatureGates, version, fldPath.Child("featureGates"))...)
 	}
+
+	allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kcm.FeatureGates, version, fldPath.Child("featureGates"))...)
 
 	return allErrs
 }
