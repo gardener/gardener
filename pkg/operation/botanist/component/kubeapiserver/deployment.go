@@ -494,8 +494,14 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	var out []string
 
 	out = append(out, "/usr/local/bin/kube-apiserver")
-	out = append(out, "--enable-admission-plugins="+strings.Join(k.admissionPluginNames(), ","))
-	out = append(out, "--disable-admission-plugins="+strings.Join(k.disabledAdmissionPluginNames(), ","))
+
+	if len(k.values.EnabledAdmissionPlugins) > 0 {
+		out = append(out, "--enable-admission-plugins="+strings.Join(k.admissionPluginNames(), ","))
+	}
+	if len(k.values.DisabledAdmissionPlugins) > 0 {
+		out = append(out, "--disable-admission-plugins="+strings.Join(k.disabledAdmissionPluginNames(), ","))
+	}
+
 	out = append(out, fmt.Sprintf("--admission-control-config-file=%s/%s", volumeMountPathAdmissionConfiguration, configMapAdmissionDataKey))
 	out = append(out, "--anonymous-auth="+strconv.FormatBool(k.values.AnonymousAuthenticationEnabled))
 
