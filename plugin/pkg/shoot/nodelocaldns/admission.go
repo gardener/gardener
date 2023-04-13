@@ -67,7 +67,7 @@ func (c *ShootNodeLocalDNS) Admit(_ context.Context, a admission.Attributes, _ a
 		shoot.Spec.SystemComponents = &core.SystemComponents{}
 	}
 
-	if shoot.Spec.SystemComponents.NodeLocalDNS == nil {
+	if shoot.Spec.SystemComponents.NodeLocalDNS == nil && !shoot.IsWorkerless() {
 		shoot.Spec.SystemComponents.NodeLocalDNS = &core.NodeLocalDNS{Enabled: true}
 	}
 

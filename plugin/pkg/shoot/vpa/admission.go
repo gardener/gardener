@@ -63,7 +63,7 @@ func (c *ShootVPA) Admit(_ context.Context, a admission.Attributes, _ admission.
 		return apierrors.NewInternalError(errors.New("could not convert resource into Shoot object"))
 	}
 
-	if shoot.Spec.Kubernetes.VerticalPodAutoscaler == nil {
+	if shoot.Spec.Kubernetes.VerticalPodAutoscaler == nil && !shoot.IsWorkerless() {
 		shoot.Spec.Kubernetes.VerticalPodAutoscaler = &core.VerticalPodAutoscaler{Enabled: true}
 	}
 
