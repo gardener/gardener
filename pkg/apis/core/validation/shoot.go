@@ -286,6 +286,12 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	allErrs = append(allErrs, ValidateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
 
 	allErrs = append(allErrs, validateKubeControllerManagerUpdate(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
+
+	if err := validateWorkerUpdate(len(newSpec.Provider.Workers) > 0, len(oldSpec.Provider.Workers) > 0, fldPath.Child("provider", "workers")); err != nil {
+		allErrs = append(allErrs, err)
+		return allErrs
+	}
+
 	allErrs = append(allErrs, ValidateProviderUpdate(&newSpec.Provider, &oldSpec.Provider, fldPath.Child("provider"))...)
 
 	for i, newWorker := range newSpec.Provider.Workers {
@@ -314,6 +320,17 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	allErrs = append(allErrs, validateNetworkingUpdate(newSpec.Networking, oldSpec.Networking, fldPath.Child("networking"))...)
 
 	return allErrs
+}
+
+func validateWorkerUpdate(newHasWorkers, oldHasWorkers bool, fldPath *field.Path) *field.Error {
+	if oldHasWorkers && !newHasWorkers {
+		return field.Forbidden(fldPath, "cannot switch from a Shoot with workers to a workerless Shoot")
+	}
+	if !oldHasWorkers && newHasWorkers {
+		return field.Forbidden(fldPath, "cannot switch from a workerless Shoot to a Shoot with workers")
+	}
+
+	return nil
 }
 
 // ValidateProviderUpdate validates the specification of a Provider object.
