@@ -1284,7 +1284,8 @@ type Provider struct {
 	// Workers is a list of worker groups.
 	// +patchMergeKey=name
 	// +patchStrategy=merge
-	Workers []Worker `json:"workers" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,4,rep,name=workers"`
+	// +optional
+	Workers []Worker `json:"workers,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,4,rep,name=workers"`
 	// WorkersSettings contains settings for all workers.
 	// +optional
 	WorkersSettings *WorkersSettings `json:"workersSettings,omitempty" protobuf:"bytes,5,opt,name=workersSettings"`
