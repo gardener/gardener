@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -332,14 +333,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field": Equal("spec.provider.type"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.provider.workers"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.provider.workers"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.cloudProfileName"),
 				})),
@@ -348,8 +341,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field": Equal("spec.region"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.secretBindingName"),
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.provider.workers"),
+					"Detail": ContainSubstring("workers cannot be zero when WorkerlessShoots featuregate is disabled"),
 				})),
 			))
 		})
@@ -526,6 +520,21 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Entry("should allow addons on development shoots with version < 1.22", core.ShootPurposeDevelopment, "1.21.10", true),
 			Entry("should allow addons on production shoots with version < 1.22", core.ShootPurposeProduction, "1.21.10", true),
 		)
+
+		It("should forbid addon configuration if the shoot is workerless", func() {
+			DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true))
+			shoot.Spec.Provider.Workers = []core.Worker{}
+			shoot.Spec.Addons = &core.Addons{}
+			shoot.Spec.Kubernetes.KubeControllerManager = nil
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("spec.addons"),
+				"Detail": ContainSubstring("addons cannot be enabled for Workerless Shoot clusters"),
+			}))))
+		})
 
 		It("should forbid unsupported addon configuration", func() {
 			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = pointer.String("does-not-exist")
@@ -795,21 +804,27 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 
-			It("should forbid an empty worker list", func() {
+			It("should forbid an empty worker list if WorkerlessShoots featuregate is disabled", func() {
 				shoot.Spec.Provider.Workers = []core.Worker{}
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.provider.workers"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.provider.workers"),
-					})),
-				))
+				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.provider.workers"),
+					"Detail": ContainSubstring("workers cannot be zero when WorkerlessShoots featuregate is disabled"),
+				}))))
+			})
+
+			It("should allow an empty worker list if WorkerlessShoots featuregate is enabled", func() {
+				DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true))
+				shoot.Spec.Provider.Workers = []core.Worker{}
+				shoot.Spec.Addons = nil
+				shoot.Spec.Kubernetes.KubeControllerManager = nil
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should enforce unique worker names", func() {
@@ -891,6 +906,33 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
+			It("should not allow adding a worker pool to a workerless shoot", func() {
+				shoot.Spec.Provider.Workers = []core.Worker{}
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Provider.Workers = append(newShoot.Spec.Provider.Workers, worker)
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.provider.workers"),
+					"Detail": ContainSubstring("cannot switch from a workerless Shoot to a Shoot with workers"),
+				}))))
+			})
+
+			It("should not allow switching from a Shoot with workers to a workerless Shoot", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Provider.Workers = []core.Worker{}
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.provider.workers"),
+					"Detail": ContainSubstring("cannot switch from a Shoot with workers to a workerless Shoot"),
+				}))))
+			})
+
 			It("should allow adding a worker pool", func() {
 				newShoot := prepareShootForUpdate(shoot)
 
@@ -931,6 +973,44 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
 				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should prevent setting InfrastructureConfig for workerless Shoot", func() {
+				DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true))
+				shoot.Spec.Provider.Workers = nil
+				shoot.Spec.Addons = nil
+				shoot.Spec.Kubernetes.KubeControllerManager = nil
+
+				shoot.Spec.Provider.InfrastructureConfig = &runtime.RawExtension{
+					Raw: []byte("foo"),
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.provider.infrastructureConfig"),
+					"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+				}))))
+			})
+
+			It("should prevent setting ControlPlaneConfig for workerless Shoot", func() {
+				DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true))
+				shoot.Spec.Provider.Workers = nil
+				shoot.Spec.Addons = nil
+				shoot.Spec.Kubernetes.KubeControllerManager = nil
+
+				shoot.Spec.Provider.ControlPlaneConfig = &runtime.RawExtension{
+					Raw: []byte("foo"),
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.provider.controlPlaneConfig"),
+					"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+				}))))
 			})
 
 			Context("Worker nodes max count validation", func() {
@@ -1824,6 +1904,59 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("KubeControllerManager validation", func() {
+			Context("for workerless shoots", func() {
+				BeforeEach(func() {
+					DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true))
+					shoot.Spec.Provider.Workers = []core.Worker{}
+				})
+
+				It("should prevent setting nodeCIDRMaskSize", func() {
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(23)
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
+						"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+					}))))
+				})
+
+				It("should prevent setting horizontalPodAutoscaler", func() {
+					shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig = &core.HorizontalPodAutoscalerConfig{
+						CPUInitializationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
+					}
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.kubernetes.kubeControllerManager.horizontalPodAutoscaler"),
+						"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+					}))))
+				})
+
+				It("should prevent setting podEvictionTimeout", func() {
+					shoot.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout = &metav1.Duration{Duration: 5 * time.Minute}
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.kubernetes.kubeControllerManager.podEvictionTimeout"),
+						"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+					}))))
+				})
+
+				It("should prevent setting nodeMonitorGracePeriod", func() {
+					shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod = &metav1.Duration{Duration: 5 * time.Minute}
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeMonitorGracePeriod"),
+						"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+					}))))
+				})
+			})
+
 			It("should forbid unsupported HPA configuration", func() {
 				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.DownscaleStabilization = makeDurationPointer(-1 * time.Second)
 				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.InitialReadinessDelay = makeDurationPointer(-1 * time.Second)
@@ -2029,6 +2162,24 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Spec.Kubernetes.KubeScheduler = &core.KubeSchedulerConfig{}
 			})
 
+			It("should prevent setting kubescheduler config for workerless shoots", func() {
+				DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true))
+
+				profile := core.SchedulingProfileBinPacking
+				shoot.Spec.Provider.Workers = []core.Worker{}
+				shoot.Spec.Kubernetes.KubeScheduler = &core.KubeSchedulerConfig{
+					Profile: &profile,
+				}
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.kubernetes.kubeScheduler"),
+					"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+				}))))
+
+			})
+
 			It("should succeed when using valid scheduling profile", func() {
 				profile := core.SchedulingProfileBalanced
 				shoot.Spec.Kubernetes.KubeScheduler.Profile = &profile
@@ -2059,6 +2210,24 @@ var _ = Describe("Shoot Validation Tests", func() {
 		Context("KubeProxy validation", func() {
 			BeforeEach(func() {
 				shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{}
+			})
+
+			It("should prevent setting kubeproxy config for workerless shoots", func() {
+				DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true))
+
+				shoot.Spec.Provider.Workers = []core.Worker{}
+				shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
+					KubernetesConfig: core.KubernetesConfig{
+						FeatureGates: nil,
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.kubernetes.kubeProxy"),
+					"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+				}))))
 			})
 
 			It("should succeed when using IPTables mode", func() {
@@ -2989,15 +3158,20 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		Describe("#ValidateSystemComponents", func() {
 			DescribeTable("validate system components",
-				func(systemComponents *core.SystemComponents, matcher gomegatypes.GomegaMatcher) {
-					Expect(ValidateSystemComponents(systemComponents, nil)).To(matcher)
+				func(systemComponents *core.SystemComponents, workerlessShoot bool, matcher gomegatypes.GomegaMatcher) {
+					Expect(ValidateSystemComponents(systemComponents, nil, workerlessShoot)).To(matcher)
 				},
-				Entry("no system components", nil, BeEmpty()),
-				Entry("empty system components", &core.SystemComponents{}, BeEmpty()),
-				Entry("empty core dns", &core.SystemComponents{CoreDNS: &core.CoreDNS{}}, BeEmpty()),
-				Entry("horizontal core dns autoscaler", &core.SystemComponents{CoreDNS: &core.CoreDNS{Autoscaling: &core.CoreDNSAutoscaling{Mode: core.CoreDNSAutoscalingModeHorizontal}}}, BeEmpty()),
-				Entry("cluster proportional core dns autoscaler", &core.SystemComponents{CoreDNS: &core.CoreDNS{Autoscaling: &core.CoreDNSAutoscaling{Mode: core.CoreDNSAutoscalingModeHorizontal}}}, BeEmpty()),
-				Entry("incorrect core dns autoscaler", &core.SystemComponents{CoreDNS: &core.CoreDNS{Autoscaling: &core.CoreDNSAutoscaling{Mode: "dummy"}}}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				Entry("no system components", nil, false, BeEmpty()),
+				Entry("no system components Workerless Shoot", nil, false, BeEmpty()),
+				Entry("system components Workerless Shoot", &core.SystemComponents{}, true, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+				})))),
+				Entry("empty system components", &core.SystemComponents{}, false, BeEmpty()),
+				Entry("empty core dns", &core.SystemComponents{CoreDNS: &core.CoreDNS{}}, false, BeEmpty()),
+				Entry("horizontal core dns autoscaler", &core.SystemComponents{CoreDNS: &core.CoreDNS{Autoscaling: &core.CoreDNSAutoscaling{Mode: core.CoreDNSAutoscalingModeHorizontal}}}, false, BeEmpty()),
+				Entry("cluster proportional core dns autoscaler", &core.SystemComponents{CoreDNS: &core.CoreDNS{Autoscaling: &core.CoreDNSAutoscaling{Mode: core.CoreDNSAutoscalingModeHorizontal}}}, false, BeEmpty()),
+				Entry("incorrect core dns autoscaler", &core.SystemComponents{CoreDNS: &core.CoreDNS{Autoscaling: &core.CoreDNSAutoscaling{Mode: "dummy"}}}, false, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeNotSupported),
 				})))),
 			)
