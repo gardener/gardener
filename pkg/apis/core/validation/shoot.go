@@ -252,7 +252,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 		}
 	}
 	allErrs = append(allErrs, ValidateTolerations(spec.Tolerations, fldPath.Child("tolerations"))...)
-	allErrs = append(allErrs, ValidateSystemComponents(spec.SystemComponents, fldPath.Child("systemComponents"))...)
+	allErrs = append(allErrs, ValidateSystemComponents(spec.SystemComponents, fldPath.Child("systemComponents"), workerless)...)
 
 	return allErrs
 }
@@ -1937,10 +1937,13 @@ func ValidateArchitecture(arch *string, fldPath *field.Path) field.ErrorList {
 }
 
 // ValidateSystemComponents validates the given system components.
-func ValidateSystemComponents(systemComponents *core.SystemComponents, fldPath *field.Path) field.ErrorList {
+func ValidateSystemComponents(systemComponents *core.SystemComponents, fldPath *field.Path, workerless bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if systemComponents == nil {
+		return allErrs
+	} else if workerless {
+		allErrs = append(allErrs, field.Forbidden(fldPath, workerlessErrorMsg))
 		return allErrs
 	}
 
