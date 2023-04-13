@@ -295,6 +295,18 @@ var _ = Describe("Add", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
 			})
 
+			It("should return false because networking field was nil", func() {
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.Networking = nil
+				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeFalse())
+			})
+
+			It("should return false because networking field is nil", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Networking = nil
+				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeFalse())
+			})
+
 			It("should return true because networking type changed", func() {
 				oldShoot := shoot.DeepCopy()
 				shoot.Spec.Networking.Type = pointer.String("foo")

@@ -100,6 +100,11 @@ var _ = Describe("Scheduler_Control", func() {
 				Region:           region,
 				Provider: gardencorev1beta1.Provider{
 					Type: providerType,
+					Workers: []gardencorev1beta1.Worker{
+						{
+							Name: "foo",
+						},
+					},
 				},
 				Networking: &gardencorev1beta1.Networking{
 					Nodes:    pointer.String("10.40.0.0/16"),

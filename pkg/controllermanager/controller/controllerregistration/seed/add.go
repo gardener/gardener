@@ -231,7 +231,7 @@ func (r *Reconciler) ShootPredicate() predicate.Predicate {
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.Provider.Workers, shoot.Spec.Provider.Workers) ||
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.Extensions, shoot.Spec.Extensions) ||
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.DNS, shoot.Spec.DNS) ||
-				oldShoot.Spec.Networking.Type != shoot.Spec.Networking.Type ||
+				shootNetworkingTypeHasChanged(oldShoot.Spec.Networking, shoot.Spec.Networking) ||
 				oldShoot.Spec.Provider.Type != shoot.Spec.Provider.Type
 		},
 
@@ -359,4 +359,11 @@ func (r *Reconciler) MapControllerDeploymentToAllSeeds(ctx context.Context, log 
 	}
 
 	return nil
+}
+
+func shootNetworkingTypeHasChanged(old, new *gardencorev1beta1.Networking) bool {
+	if old == nil || new == nil {
+		return false
+	}
+	return !pointer.StringEqual(old.Type, new.Type)
 }

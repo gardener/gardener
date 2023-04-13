@@ -348,11 +348,13 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToPrivateNetworks(ctx context.Co
 			return err
 		}
 
-		if v := shoot.Spec.Networking.Nodes; v != nil {
-			blockedNetworkPeers = append(blockedNetworkPeers, *v)
-		}
-		if v := shoot.Spec.Networking.Pods; v != nil {
-			blockedNetworkPeers = append(blockedNetworkPeers, *v)
+		if !shoot.IsWorkerless() {
+			if v := shoot.Spec.Networking.Nodes; v != nil {
+				blockedNetworkPeers = append(blockedNetworkPeers, *v)
+			}
+			if v := shoot.Spec.Networking.Pods; v != nil {
+				blockedNetworkPeers = append(blockedNetworkPeers, *v)
+			}
 		}
 		if v := shoot.Spec.Networking.Services; v != nil {
 			blockedNetworkPeers = append(blockedNetworkPeers, *v)
@@ -391,11 +393,13 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToShootNetworks(ctx context.Cont
 	}
 
 	var shootNetworks []string
-	if v := shoot.Spec.Networking.Nodes; v != nil {
-		shootNetworks = append(shootNetworks, *v)
-	}
-	if v := shoot.Spec.Networking.Pods; v != nil {
-		shootNetworks = append(shootNetworks, *v)
+	if !shoot.IsWorkerless() {
+		if v := shoot.Spec.Networking.Nodes; v != nil {
+			shootNetworks = append(shootNetworks, *v)
+		}
+		if v := shoot.Spec.Networking.Pods; v != nil {
+			shootNetworks = append(shootNetworks, *v)
+		}
 	}
 	if v := shoot.Spec.Networking.Services; v != nil {
 		shootNetworks = append(shootNetworks, *v)

@@ -627,7 +627,9 @@ func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev
 
 	requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.ControlPlaneResource, shoot.Spec.Provider.Type))
 	requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.InfrastructureResource, shoot.Spec.Provider.Type))
-	requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.NetworkResource, shoot.Spec.Networking.Type))
+	if shoot.Spec.Networking != nil && shoot.Spec.Networking.Type != nil {
+		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.NetworkResource, *shoot.Spec.Networking.Type))
+	}
 	requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.WorkerResource, shoot.Spec.Provider.Type))
 
 	disabledExtensions := utilsets.New[string]()

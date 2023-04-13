@@ -154,6 +154,15 @@ func (r *Reconciler) ClusterPredicate() predicate.Predicate {
 				return false
 			}
 
+			if shoot.IsWorkerless() {
+				// if the shoot has no networking field, nothing to do here
+				if shoot.Spec.Networking == nil {
+					return false
+				}
+				// if the shoot has networking field set and the old shoot has nil, the we cannot compare services, so return true right away
+				return oldShoot.Spec.Networking == nil || !pointer.StringEqual(shoot.Spec.Networking.Services, oldShoot.Spec.Networking.Services)
+			}
+
 			return !pointer.StringEqual(shoot.Spec.Networking.Pods, oldShoot.Spec.Networking.Pods) ||
 				!pointer.StringEqual(shoot.Spec.Networking.Services, oldShoot.Spec.Networking.Services) ||
 				!pointer.StringEqual(shoot.Spec.Networking.Nodes, oldShoot.Spec.Networking.Nodes)
