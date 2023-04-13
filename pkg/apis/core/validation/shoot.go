@@ -232,7 +232,9 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	if len(spec.CloudProfileName) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("cloudProfileName"), "must specify a cloud profile"))
 	}
-	if len(spec.SecretBindingName) == 0 {
+	if spec.SecretBindingName != nil && workerless {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretBindingName"), workerlessErrorMsg))
+	} else if len(pointer.StringDeref(spec.SecretBindingName, "")) == 0 && !workerless {
 		allErrs = append(allErrs, field.Required(fldPath.Child("secretBindingName"), "must specify a name"))
 	}
 	if spec.SeedName != nil && len(*spec.SeedName) == 0 {

@@ -529,7 +529,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			errorList := ValidateShoot(shoot)
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal("spec.addons"),
 				"Detail": ContainSubstring("addons cannot be enabled for Workerless Shoot clusters"),
@@ -611,6 +611,32 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field": Equal("spec.provider.type"),
 				})),
 			))
+		})
+
+		It("should forbid adding secretBindingName in case of workerless shoot", func() {
+			DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true))
+			shoot.Spec.Provider.Workers = nil
+			shoot.Spec.SecretBindingName = pointer.String("foo")
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("spec.secretBindingName"),
+				"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+			}))))
+		})
+
+		It("should allow nil secretBindingName in case of workerless shoot", func() {
+			DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true))
+			shoot.Spec.Provider.Workers = nil
+			shoot.Spec.Addons = nil
+			shoot.Spec.SecretBindingName = nil
+			shoot.Spec.Kubernetes.KubeControllerManager = nil
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should forbid adding invalid/duplicate emails", func() {
@@ -821,6 +847,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Spec.Provider.Workers = []core.Worker{}
 				shoot.Spec.Addons = nil
 				shoot.Spec.Kubernetes.KubeControllerManager = nil
+				shoot.Spec.SecretBindingName = nil
 
 				errorList := ValidateShoot(shoot)
 
