@@ -152,7 +152,7 @@ var _ = Describe("Worker", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		mockNow = mocktime.NewMockNow(ctrl)
 		now = time.Now()
-		metav1Now = metav1.Now()
+		metav1Now = metav1.NewTime(now)
 
 		s := runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
@@ -545,36 +545,22 @@ var _ = Describe("Worker", func() {
 			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdate(ctx)).To(HaveOccurred())
 		})
 
-		It("should return error when status.machineDeploymentsLastUpdateTime is not updated", func() {
+		It("should return error when status.machineDeploymentsLastUpdateTime remains nil", func() {
 			obj := w.DeepCopy()
 			Expect(c.Create(ctx, obj)).To(Succeed(), "creating worker succeeds")
 
 			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdate(ctx)).To(HaveOccurred(), "worker status is not updated")
 		})
 
-		It("should return error if we haven't observed the latest timestamp annotation", func() {
-			defer test.WithVars(
-				&worker.TimeNow, mockNow.Do,
-			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+		It("should return error when status.machineDeploymentsLastUpdateTime is not updated", func() {
+			obj := w.DeepCopy()
+			obj.Status.MachineDeploymentsLastUpdateTime = &metav1Now
+			Expect(c.Create(ctx, obj)).To(Succeed(), "creating worker succeeds")
 
-			By("Deploy")
-			// Deploy should fill internal state with the added timestamp annotation
+			// this will populate the machineDeploymentsLastUpdateTime in the worker struct
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-			By("Patch object")
-			patch := client.MergeFrom(w.DeepCopy())
-			w.Status.LastError = nil
-			// remove operation annotation, add old timestamp annotation
-			w.ObjectMeta.Annotations = map[string]string{
-				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().String(),
-			}
-
-			w.Status.MachineDeploymentsLastUpdateTime = &metav1Now
-			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
-
-			By("WaitUntilWorkerStatusMachineDeploymentsUpdate")
-			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdate(ctx)).NotTo(Succeed(), "worker indicates error")
+			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdate(ctx)).To(HaveOccurred(), "worker status is not updated")
 		})
 
 		It("should return no error when status.machineDeploymentsLastUpdateTime is updated", func() {
@@ -593,6 +579,7 @@ var _ = Describe("Worker", func() {
 			w.ObjectMeta.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: now.UTC().String(),
 			}
+			// update the MachineDeploymentsLastUpdateTime in the worker status
 			w.Status.MachineDeploymentsLastUpdateTime = &metav1Now
 			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
 
