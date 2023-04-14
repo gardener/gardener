@@ -19,14 +19,15 @@ import (
 	"os"
 	"testing"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
 	"github.com/gardener/gardener/test/e2e/gardener"
 	_ "github.com/gardener/gardener/test/e2e/gardener/managedseed"
 	_ "github.com/gardener/gardener/test/e2e/gardener/project"
 	_ "github.com/gardener/gardener/test/e2e/gardener/shoot"
 	_ "github.com/gardener/gardener/test/e2e/gardener/upgrade"
 	"github.com/gardener/gardener/test/framework"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 func TestMain(m *testing.M) {
