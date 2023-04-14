@@ -33,9 +33,7 @@ import (
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/utils/pointer"
 
-	"github.com/gardener/gardener/pkg/apis/core"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
@@ -50,7 +48,6 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
-	"github.com/gardener/gardener/plugin/pkg/utils"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
 
@@ -223,7 +220,7 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, o admis
 	}
 
 	// Ensure shoot is not already registered as seed
-	ms, err := utils.GetManagedSeed(ctx, v.seedManagementClient, managedSeed.Namespace, managedSeed.Spec.Shoot.Name)
+	ms, err := admissionutils.GetManagedSeed(ctx, v.seedManagementClient, managedSeed.Namespace, managedSeed.Spec.Shoot.Name)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not get managed seed for shoot %s/%s: %v", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err))
 	}
@@ -274,7 +271,7 @@ func (v *ManagedSeed) validateManagedSeedCreate(managedSeed *seedmanagement.Mana
 		return nil, err
 	}
 
-	shootZones := helper.GetAllZonesFromShoot(shoot)
+	shootZones := gardencorehelper.GetAllZonesFromShoot(shoot)
 
 	if !shootZones.HasAll(seedSpec.Provider.Zones...) {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "gardenlet", "config", "seedConfig", "spec", "provider", "zones"), seedSpec.Provider.Zones, "cannot use zone in seed provider that is not available in referenced shoot"))
@@ -300,7 +297,7 @@ func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *
 		allErrs = append(allErrs, field.Forbidden(zonesFieldPath, "zones must not be removed while shoots are still scheduled onto seed"))
 	}
 
-	shootZones := helper.GetAllZonesFromShoot(shoot)
+	shootZones := gardencorehelper.GetAllZonesFromShoot(shoot)
 	newZones := sets.New(newSeedSpec.Provider.Zones...).Difference(sets.New(oldSeedSpec.Provider.Zones...))
 
 	// Newly added zones should match the ones found in the shoot cluster.
@@ -356,7 +353,7 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 
 	// Initialize and validate DNS and ingress
 	if spec.Ingress == nil {
-		spec.Ingress = &core.Ingress{}
+		spec.Ingress = &gardencore.Ingress{}
 	}
 
 	if spec.DNS.Provider == nil {
@@ -405,7 +402,7 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 	} else if spec.Provider.Region != shoot.Spec.Region {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "region"), spec.Provider.Region, fmt.Sprintf("seed provider region must be equal to shoot region %s", shoot.Spec.Region)))
 	}
-	if shootZones := helper.GetAllZonesFromShoot(shoot); len(spec.Provider.Zones) == 0 && shootZones.Len() > 0 {
+	if shootZones := gardencorehelper.GetAllZonesFromShoot(shoot); len(spec.Provider.Zones) == 0 && shootZones.Len() > 0 {
 		spec.Provider.Zones = sets.List(shootZones)
 	}
 
@@ -432,15 +429,15 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 		// exit early, all other validation errors will be misleading
 		return allErrs, nil
 	}
-	topologyAwareRoutingEnabled := helper.SeedSettingTopologyAwareRoutingEnabled(spec.Settings)
+	topologyAwareRoutingEnabled := gardencorehelper.SeedSettingTopologyAwareRoutingEnabled(spec.Settings)
 	if topologyAwareRoutingEnabled && versionutils.ConstraintK8sLess124.Check(k8sVersion) {
-		if !helper.KubeAPIServerFeatureGateEnabled(shoot, "TopologyAwareHints") {
+		if !gardencorehelper.KubeAPIServerFeatureGateEnabled(shoot, "TopologyAwareHints") {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "topologyAwareRouting", "enabled"), spec.Settings.TopologyAwareRouting.Enabled, "the topology-aware routing seed setting cannot be enabled for K8s < 1.24 clusters when the TopologyAwareHints feature gate is not enabled for kube-apiserver"))
 		}
-		if !helper.KubeControllerManagerFeatureGateEnabled(shoot, "TopologyAwareHints") {
+		if !gardencorehelper.KubeControllerManagerFeatureGateEnabled(shoot, "TopologyAwareHints") {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "topologyAwareRouting", "enabled"), spec.Settings.TopologyAwareRouting.Enabled, "the topology-aware routing seed setting cannot be enabled for K8s < 1.24 clusters when the TopologyAwareHints feature gate is not enabled for kube-controller-manager"))
 		}
-		if !helper.KubeProxyFeatureGateEnabled(shoot, "TopologyAwareHints") {
+		if !gardencorehelper.KubeProxyFeatureGateEnabled(shoot, "TopologyAwareHints") {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "topologyAwareRouting", "enabled"), spec.Settings.TopologyAwareRouting.Enabled, "the topology-aware routing seed setting cannot be enabled for K8s < 1.24 clusters when the TopologyAwareHints feature gate is not enabled for kube-proxy"))
 		}
 	}
