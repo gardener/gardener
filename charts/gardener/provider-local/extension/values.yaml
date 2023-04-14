@@ -1,7 +1,5 @@
-image:
-  repository: eu.gcr.io/gardener-project/gardener/extensions/provider-local
-  tag: latest
-  pullPolicy: IfNotPresent
+image: eu.gcr.io/gardener-project/gardener/extensions/provider-local:latest
+imagePullPolicy: IfNotPresent
 
 replicaCount: 1
 

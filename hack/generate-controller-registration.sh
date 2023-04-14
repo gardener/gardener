@@ -20,7 +20,7 @@ set -o pipefail
 function usage {
     cat <<EOM
 Usage:
-generate-controller-registration <name> <chart-dir> <dest> <kind-and-type> [kinds-and-types ...]
+generate-controller-registration <name> <chart-dir> <version> <dest> <kind-and-type> [kinds-and-types ...]
 
     <name>            Name of the controller registration to generate.
     <chart-dir>       Location of the chart directory.
@@ -65,7 +65,7 @@ trap cleanup EXIT ERR INT TERM
 
 export HELM_HOME="$temp_helm_home"
 [ "$(helm version --client --template "{{.Version}}" | head -c2 | tail -c1)" = "3" ] || helm init --client-only > /dev/null 2>&1
-helm package "$CHART_DIR" --version "$VERSION" --app-version "$VERSION" --destination "$temp_dir" > /dev/null
+helm package "$CHART_DIR" --destination "$temp_dir" > /dev/null
 tar -xzm -C "$temp_extract_dir" -f "$temp_dir"/*
 chart="$(tar --sort=name -c --owner=root:0 --group=root:0 --mtime='UTC 2019-01-01' -C "$temp_extract_dir" "$(basename "$temp_extract_dir"/*)" | gzip -n | base64 | tr -d '\n')"
 
@@ -81,8 +81,28 @@ type: helm
 providerConfig:
   chart: $chart
   values:
+EOM
+
+if [ -n "$(yq '.image.repository' "$CHART_DIR"/values.yaml)" ] ; then
+  # image value specifies repository and tag separately, output the image stanza with the given version as tag value
+  cat <<EOM >> "$DEST"
     image:
       tag: $VERSION
+EOM
+else
+  # image value specifies a fully-qualified image reference, output the default image plus the given version as tag
+  default_image="$(yq '.image' "$CHART_DIR"/values.yaml)"
+  if [ -n "$VERSION" ] ; then
+    # if a version is given, replace the default tag
+    default_image="${default_image%%:*}:$VERSION"
+  fi
+
+  cat <<EOM >> "$DEST"
+    image: $default_image
+EOM
+fi
+
+cat <<EOM >> "$DEST"
 ---
 apiVersion: core.gardener.cloud/v1beta1
 kind: ControllerRegistration

@@ -663,44 +663,11 @@ build:
       ldflags:
       - '{{.LD_FLAGS}}'
       main: ./cmd/gardener-extension-provider-local
-deploy:
-  helm:
-    releases:
-    - name: gardener-extension-provider-local-registration
-      chartPath: charts/gardener/provider-local/registration
-      namespace: garden
-      setValueTemplates:
-        values.image.repository: '{{.IMAGE_REPO_eu_gcr_io_gardener_project_gardener_extensions_provider_local}}'
-        values.image.tag: '{{.IMAGE_TAG_eu_gcr_io_gardener_project_gardener_extensions_provider_local}}@{{.IMAGE_DIGEST_eu_gcr_io_gardener_project_gardener_extensions_provider_local}}'
-    flags:
-      upgrade:
-      - --disable-openapi-validation
-profiles:
-- name: ipv6
-  activation:
-  - env: IPFAMILY=ipv6
-  patches:
-  - op: add
-    path: /deploy/helm/releases/0/setValues
-    value:
-      values:
-        controllers:
-          service:
-            hostIP: "::1"
-            zone0IP: "::10"
-            zone1IP: "::11"
-            zone2IP: "::12"
-- name: kind2
-  patches:
-  # The deploy stage must be skipped because provider-local can only be registered in the garden cluster.
-  # The build stage is still necessary so that the image can be loaded into the kind cluster later on.
-  - op: remove
-    path: /deploy
----
-apiVersion: skaffold/v4beta3
-kind: Config
-metadata:
-  name: local-env
+resourceSelector:
+  allow:
+  # instruct skaffold to inject the built image reference into the image field in our ControllerDeployment
+  - groupKind: ControllerDeployment.core.gardener.cloud
+    image: [".*"]
 manifests:
   rawYaml:
   - example/gardener-local/gardenlet/secret-bootstrap-token.yaml
@@ -711,6 +678,14 @@ manifests:
 deploy:
   kubectl: {}
 profiles:
+- name: ipv6
+  activation:
+  - env: IPFAMILY=ipv6
+  manifests:
+    kustomize:
+      paths:
+      - example/provider-local/garden/skaffold-ipv6
+      - example/provider-local/seed-kind/skaffold
 - name: ha-single-zone
   manifests:
     kustomize:

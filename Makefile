@@ -234,8 +234,10 @@ check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(
 	@hack/check-license-header.sh
 	@hack/check-skaffold-deps.sh
 
+tools-for-generate: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GOIMPORTS) $(GO_TO_PROTOBUF) $(HELM) $(MOCKGEN) $(OPENAPI_GEN) $(PROTOC_GEN_GOGO) $(YAML2JSON) $(YQ)
+
 .PHONY: generate
-generate: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GOIMPORTS) $(GO_TO_PROTOBUF) $(HELM) $(MOCKGEN) $(OPENAPI_GEN) $(PROTOC_GEN_GOGO) $(YAML2JSON)
+generate: tools-for-generate
 	@hack/update-protobuf.sh
 	@hack/update-codegen.sh
 	@hack/generate-parallel.sh charts cmd example extensions pkg plugin test
@@ -245,7 +247,7 @@ generate: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GOIMPORTS) $(GO_TO_P
 	$(MAKE) format
 
 .PHONY: generate-sequential
-generate-sequential: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GOIMPORTS) $(GO_TO_PROTOBUF) $(HELM) $(MOCKGEN) $(OPENAPI_GEN) $(PROTOC_GEN_GOGO) $(YAML2JSON)
+generate-sequential: tools-for-generate
 	@hack/update-protobuf.sh
 	@hack/update-codegen.sh
 	@hack/generate.sh ./charts/... ./cmd/... ./example/... ./extensions/... ./pkg/... ./plugin/... ./test/...
@@ -387,11 +389,11 @@ tear-down-local-env: $(KUBECTL)
 gardenlet-kind2-up: $(SKAFFOLD) $(HELM)
 	$(SKAFFOLD) deploy -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
 	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
-	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_KUBECONFIG) $(SKAFFOLD) run -m provider-local,gardenlet -p kind2
+	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_KUBECONFIG) $(SKAFFOLD) run -m gardenlet -p kind2
 gardenlet-kind2-dev: $(SKAFFOLD) $(HELM)
 	$(SKAFFOLD) deploy -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
 	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
-	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_KUBECONFIG) $(SKAFFOLD) dev -m provider-local,gardenlet -p kind2
+	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_KUBECONFIG) $(SKAFFOLD) dev -m gardenlet -p kind2
 gardenlet-kind2-down: $(SKAFFOLD) $(HELM)
 	$(SKAFFOLD) delete -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
 	$(SKAFFOLD) delete -m gardenlet,kind2-env -p kind2
@@ -400,12 +402,14 @@ register-kind2-env: $(KUBECTL)
 tear-down-kind2-env: $(KUBECTL)
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind2/local
 
+gardener-ha-single-zone%: export SKAFFOLD_PROFILE=ha-single-zone
+
 gardener-ha-single-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) run -p ha-single-zone
+	$(SKAFFOLD) run
 gardener-ha-single-zone-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) dev -p ha-single-zone
+	$(SKAFFOLD) dev
 gardener-ha-single-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	./hack/gardener-down.sh --skaffold-profile ha-single-zone
+	./hack/gardener-down.sh
 register-kind-ha-single-zone-env: $(KUBECTL)
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/local
@@ -414,12 +418,14 @@ tear-down-kind-ha-single-zone-env: $(KUBECTL)
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/local
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/garden/local
 
+gardener-ha-multi-zone%: export SKAFFOLD_PROFILE=ha-multi-zone
+
 gardener-ha-multi-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) run -p ha-multi-zone
+	$(SKAFFOLD) run
 gardener-ha-multi-zone-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) dev -p ha-multi-zone
+	$(SKAFFOLD) dev
 gardener-ha-multi-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	./hack/gardener-down.sh --skaffold-profile ha-multi-zone
+	./hack/gardener-down.sh
 register-kind-ha-multi-zone-env: $(KUBECTL)
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/local

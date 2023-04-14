@@ -14,14 +14,6 @@ app.kubernetes.io/name
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
-{{-  define "image" -}}
-  {{- if hasPrefix "sha256:" .Values.image.tag }}
-  {{- printf "%s@%s" .Values.image.repository .Values.image.tag }}
-  {{- else }}
-  {{- printf "%s:%s" .Values.image.repository .Values.image.tag }}
-  {{- end }}
-{{- end }}
-
 {{- define "poddisruptionbudgetversion" -}}
 {{- if semverCompare ">= 1.21-0" .Capabilities.KubeVersion.GitVersion -}}
 policy/v1
