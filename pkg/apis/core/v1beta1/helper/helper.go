@@ -1090,7 +1090,7 @@ func SecretBindingHasType(secretBinding *gardencorev1beta1.SecretBinding, provid
 		return false
 	}
 
-	return sets.New[string](types...).Has(providerType)
+	return sets.New(types...).Has(providerType)
 }
 
 // AddTypeToSecretBinding adds the given provider type to the SecretBinding.
@@ -1103,7 +1103,7 @@ func AddTypeToSecretBinding(secretBinding *gardencorev1beta1.SecretBinding, prov
 	}
 
 	types := GetSecretBindingTypes(secretBinding)
-	if !sets.New[string](types...).Has(providerType) {
+	if !sets.New(types...).Has(providerType) {
 		types = append(types, providerType)
 	}
 	secretBinding.Provider.Type = strings.Join(types, ",")

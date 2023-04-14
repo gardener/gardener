@@ -118,7 +118,7 @@ func ValidateNetworkStatusUpdate(newStatus, oldStatus *extensionsv1alpha1.Networ
 	return allErrs
 }
 
-var availableIPFamilies = sets.New[string](
+var availableIPFamilies = sets.New(
 	string(extensionsv1alpha1.IPFamilyIPv4),
 	string(extensionsv1alpha1.IPFamilyIPv6),
 )

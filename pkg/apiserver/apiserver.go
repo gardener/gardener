@@ -118,11 +118,11 @@ func (o *ExtraOptions) Validate() []error {
 		allErrors = append(allErrors, fmt.Errorf("--shoot-credentials-rotation-interval must be between 24 hours and 2^32 seconds"))
 	}
 
-	if !sets.New[string](logger.AllLogLevels...).Has(o.LogLevel) {
+	if !sets.New(logger.AllLogLevels...).Has(o.LogLevel) {
 		allErrors = append(allErrors, fmt.Errorf("invalid --log-level: %s", o.LogLevel))
 	}
 
-	if !sets.New[string](logger.AllLogFormats...).Has(o.LogFormat) {
+	if !sets.New(logger.AllLogFormats...).Has(o.LogFormat) {
 		allErrors = append(allErrors, fmt.Errorf("invalid --log-format: %s", o.LogFormat))
 	}
 

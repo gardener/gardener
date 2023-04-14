@@ -279,7 +279,7 @@ func (r *Reconciler) deleteBackupEntry(
 	reconcile.Result,
 	error,
 ) {
-	if !sets.New[string](backupEntry.Finalizers...).Has(gardencorev1beta1.GardenerName) {
+	if !sets.New(backupEntry.Finalizers...).Has(gardencorev1beta1.GardenerName) {
 		log.V(1).Info("Do not need to do anything as the BackupEntry does not have my finalizer")
 		return reconcile.Result{}, nil
 	}
@@ -380,7 +380,7 @@ func (r *Reconciler) migrateBackupEntry(
 	reconcile.Result,
 	error,
 ) {
-	if !sets.New[string](backupEntry.Finalizers...).Has(gardencorev1beta1.GardenerName) {
+	if !sets.New(backupEntry.Finalizers...).Has(gardencorev1beta1.GardenerName) {
 		log.V(1).Info("Do not need to do anything as the BackupEntry does not have my finalizer")
 		return reconcile.Result{}, nil
 	}

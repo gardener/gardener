@@ -29,13 +29,13 @@ func ValidateConfiguration(config *schedulerconfig.SchedulerConfiguration) field
 	allErrs = append(allErrs, validateStrategy(config.Schedulers.Shoot.Strategy, field.NewPath("schedulers", "shoot", "strategy"))...)
 
 	if config.LogLevel != "" {
-		if !sets.New[string](logger.AllLogLevels...).Has(config.LogLevel) {
+		if !sets.New(logger.AllLogLevels...).Has(config.LogLevel) {
 			allErrs = append(allErrs, field.NotSupported(field.NewPath("logLevel"), config.LogLevel, logger.AllLogLevels))
 		}
 	}
 
 	if config.LogFormat != "" {
-		if !sets.New[string](logger.AllLogFormats...).Has(config.LogFormat) {
+		if !sets.New(logger.AllLogFormats...).Has(config.LogFormat) {
 			allErrs = append(allErrs, field.NotSupported(field.NewPath("logFormat"), config.LogFormat, logger.AllLogFormats))
 		}
 	}

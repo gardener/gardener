@@ -28,10 +28,10 @@ import (
 func ValidateAdmissionControllerConfiguration(config *admissioncontrollerconfig.AdmissionControllerConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if !sets.New[string](logger.AllLogLevels...).Has(config.LogLevel) {
+	if !sets.New(logger.AllLogLevels...).Has(config.LogLevel) {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("logLevel"), config.LogLevel, logger.AllLogLevels))
 	}
-	if !sets.New[string](logger.AllLogFormats...).Has(config.LogFormat) {
+	if !sets.New(logger.AllLogFormats...).Has(config.LogFormat) {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("logFormat"), config.LogFormat, logger.AllLogFormats))
 	}
 
@@ -45,13 +45,13 @@ func ValidateAdmissionControllerConfiguration(config *admissioncontrollerconfig.
 // ValidateResourceAdmissionConfiguration validates the given `ResourceAdmissionConfiguration`.
 func validateResourceAdmissionConfiguration(config *admissioncontrollerconfig.ResourceAdmissionConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	validValues := sets.New[string](string(admissioncontrollerconfig.AdmissionModeBlock), string(admissioncontrollerconfig.AdmissionModeLog))
+	validValues := sets.New(string(admissioncontrollerconfig.AdmissionModeBlock), string(admissioncontrollerconfig.AdmissionModeLog))
 
 	if config.OperationMode != nil && !validValues.Has(string(*config.OperationMode)) {
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("mode"), string(*config.OperationMode), validValues.UnsortedList()))
 	}
 
-	allowedSubjectKinds := sets.New[string](rbacv1.UserKind, rbacv1.GroupKind, rbacv1.ServiceAccountKind)
+	allowedSubjectKinds := sets.New(rbacv1.UserKind, rbacv1.GroupKind, rbacv1.ServiceAccountKind)
 
 	for i, subject := range config.UnrestrictedSubjects {
 		fld := fldPath.Child("unrestrictedSubjects").Index(i)

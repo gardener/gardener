@@ -28,9 +28,9 @@ import (
 
 var (
 	// See https://tools.ietf.org/html/rfc7518#section-3.1 (without "none")
-	validSigningAlgs = sets.New[string]("RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512")
+	validSigningAlgs = sets.New("RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512")
 	// used by oidc-provider
-	forbiddenKeys = sets.New[string]("idp-issuer-url", "client-id", "client-secret", "idp-certificate-authority", "idp-certificate-authority-data", "id-token", "refresh-token")
+	forbiddenKeys = sets.New("idp-issuer-url", "client-id", "client-secret", "idp-certificate-authority", "idp-certificate-authority-data", "id-token", "refresh-token")
 )
 
 func validateOpenIDConnectPresetSpec(spec *settings.OpenIDConnectPresetSpec, fldPath *field.Path) field.ErrorList {

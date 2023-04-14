@@ -39,10 +39,10 @@ func ValidateResourceManagerConfiguration(conf *config.ResourceManagerConfigurat
 	allErrs = append(allErrs, validateServerConfiguration(conf.Server, field.NewPath("server"))...)
 	allErrs = append(allErrs, componentbaseconfigvalidation.ValidateLeaderElectionConfiguration(&conf.LeaderElection, field.NewPath("leaderElection"))...)
 
-	if !sets.New[string](logger.AllLogLevels...).Has(conf.LogLevel) {
+	if !sets.New(logger.AllLogLevels...).Has(conf.LogLevel) {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("logLevel"), conf.LogLevel, logger.AllLogLevels))
 	}
-	if !sets.New[string](logger.AllLogFormats...).Has(conf.LogFormat) {
+	if !sets.New(logger.AllLogFormats...).Has(conf.LogFormat) {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("logFormat"), conf.LogFormat, logger.AllLogFormats))
 	}
 

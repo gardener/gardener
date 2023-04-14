@@ -301,7 +301,7 @@ func (v *ManagedSeed) validateManagedSeedUpdate(oldManagedSeed, newManagedSeed *
 	}
 
 	shootZones := helper.GetAllZonesFromShoot(shoot)
-	newZones := sets.New[string](newSeedSpec.Provider.Zones...).Difference(sets.New[string](oldSeedSpec.Provider.Zones...))
+	newZones := sets.New(newSeedSpec.Provider.Zones...).Difference(sets.New(oldSeedSpec.Provider.Zones...))
 
 	// Newly added zones should match the ones found in the shoot cluster.
 	// Zone names were allowed to deviate from the zones configured for shoot clusters, see https://github.com/gardener/gardener/commit/8d28452e7f718d0041fbe82eb83543e3a87ea8ad.

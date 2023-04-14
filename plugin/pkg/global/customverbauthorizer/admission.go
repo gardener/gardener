@@ -220,7 +220,7 @@ func userIsOwner(userInfo user.Info, owner *rbacv1.Subject) bool {
 		return owner.Name == userInfo.GetName()
 
 	case rbacv1.GroupKind:
-		return sets.New[string](userInfo.GetGroups()...).Has(owner.Name)
+		return sets.New(userInfo.GetGroups()...).Has(owner.Name)
 	}
 
 	return false

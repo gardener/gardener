@@ -159,7 +159,7 @@ func ValidateSubject(subject rbacv1.Subject, fldPath *field.Path) field.ErrorLis
 	return allErrs
 }
 
-var supportedRoles = sets.New[string](
+var supportedRoles = sets.New(
 	core.ProjectMemberOwner,
 	core.ProjectMemberAdmin,
 	core.ProjectMemberViewer,

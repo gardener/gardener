@@ -5589,7 +5589,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Entry("invalid spec", sets.New[string](), "foo", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type": Equal(field.ErrorTypeInvalid),
 			})))),
-			Entry("duplicate spec", sets.New[string]("* * * * *"), "* * * * *", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("duplicate spec", sets.New("* * * * *"), "* * * * *", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type": Equal(field.ErrorTypeDuplicate),
 			})))),
 		)

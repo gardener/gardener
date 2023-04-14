@@ -60,7 +60,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// it has to be ensured that no SecretBindings are depending on the Quota anymore.
 	// When this happens the controller will remove the finalizers from the Quota so that it can be garbage collected.
 	if quota.DeletionTimestamp != nil {
-		if !sets.New[string](quota.Finalizers...).Has(gardencorev1beta1.GardenerName) {
+		if !sets.New(quota.Finalizers...).Has(gardencorev1beta1.GardenerName) {
 			return reconcile.Result{}, nil
 		}
 

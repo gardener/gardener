@@ -72,7 +72,7 @@ func ReadTestResources(scheme *runtime.Scheme, namespaceName, path string) ([]cl
 	}
 
 	// file extensions that may contain Webhooks
-	resourceExtensions := sets.New[string](".json", ".yaml", ".yml")
+	resourceExtensions := sets.New(".json", ".yaml", ".yml")
 
 	var objects []client.Object
 	for _, file := range files {

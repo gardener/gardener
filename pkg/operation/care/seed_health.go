@@ -42,7 +42,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-var requiredManagedResourcesSeed = sets.New[string](
+var requiredManagedResourcesSeed = sets.New(
 	etcd.Druid,
 	clusterautoscaler.ManagedResourceControlName,
 	kubestatemetrics.ManagedResourceName,

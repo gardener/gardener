@@ -30,10 +30,10 @@ import (
 )
 
 var (
-	availableIngressKinds = sets.New[string](
+	availableIngressKinds = sets.New(
 		v1beta1constants.IngressKindNginx,
 	)
-	availableExternalTrafficPolicies = sets.New[string](
+	availableExternalTrafficPolicies = sets.New(
 		string(corev1.ServiceExternalTrafficPolicyTypeCluster),
 		string(corev1.ServiceExternalTrafficPolicyTypeLocal),
 	)
@@ -168,7 +168,7 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child("settings", "loadBalancerServices", "zones"), "zone-specific load balancer settings only allowed with at least two zones in spec.provider.zones"))
 			}
 
-			zones := sets.New[string](seedSpec.Provider.Zones...)
+			zones := sets.New(seedSpec.Provider.Zones...)
 			specifiedZones := sets.New[string]()
 
 			for i, zoneSettings := range seedSpec.Settings.LoadBalancerServices.Zones {

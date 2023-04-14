@@ -78,7 +78,7 @@ func NewAttributesWithName(a admission.Attributes, name string) admission.Attrib
 // ValidateZoneRemovalFromSeeds returns an error when zones are removed from the old seed while it is still in use by
 // shoots.
 func ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec *core.SeedSpec, seedName string, shootLister gardencorelisters.ShootLister, kind string) error {
-	if removedZones := sets.New[string](oldSeedSpec.Provider.Zones...).Difference(sets.New[string](newSeedSpec.Provider.Zones...)); removedZones.Len() > 0 {
+	if removedZones := sets.New(oldSeedSpec.Provider.Zones...).Difference(sets.New(newSeedSpec.Provider.Zones...)); removedZones.Len() > 0 {
 		shoots, err := shootLister.List(labels.Everything())
 		if err != nil {
 			return err
