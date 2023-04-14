@@ -1491,7 +1491,7 @@ func validateKubeletConfigReserved(reserved *core.KubeletConfigReserved, fldPath
 	return allErrs
 }
 
-var reservedTaintKeys = sets.NewString(v1beta1constants.TaintNodeCriticalComponentsNotReady)
+var reservedTaintKeys = sets.New(v1beta1constants.TaintNodeCriticalComponentsNotReady)
 
 func validateClusterAutoscalerIgnoreTaints(ignoredTaints []string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
