@@ -22,6 +22,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -35,12 +36,12 @@ var _ = Describe("#Ingress", func() {
 		ctx context.Context
 		c   client.Client
 
-		ingressObjKey    client.ObjectKey
-		ingressNamespace string
-		ingressClass     string
-		pathType         networkingv1.PathType
-		expected         *networkingv1.Ingress
-		defaultDeployer  component.Deployer
+		ingressObjKey        client.ObjectKey
+		ingressNamespace     string
+		ingressClass         string
+		pathType             networkingv1.PathType
+		expectedPassthrough  *networkingv1.Ingress
+		expectedHTTPSBackend *networkingv1.Ingress
 	)
 
 	BeforeEach(func() {
@@ -53,7 +54,8 @@ var _ = Describe("#Ingress", func() {
 		ingressObjKey = client.ObjectKey{Name: "kube-apiserver", Namespace: ingressNamespace}
 		pathType = networkingv1.PathTypePrefix
 		ingressClass = "foo-bar-ingress"
-		expected = &networkingv1.Ingress{
+
+		expected := &networkingv1.Ingress{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: networkingv1.SchemeGroupVersion.String(),
 				Kind:       "Ingress",
@@ -61,9 +63,6 @@ var _ = Describe("#Ingress", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      ingressObjKey.Name,
 				Namespace: ingressObjKey.Namespace,
-				Annotations: map[string]string{
-					"nginx.ingress.kubernetes.io/ssl-passthrough": "true",
-				},
 				Labels: map[string]string{
 					"app":  "kubernetes",
 					"role": "apiserver",
@@ -94,37 +93,54 @@ var _ = Describe("#Ingress", func() {
 						},
 					},
 				},
-				TLS: []networkingv1.IngressTLS{{Hosts: []string{"foo.bar.example.com"}}},
 			},
 		}
+		expectedPassthrough = expected.DeepCopy()
+		expectedPassthrough.SetAnnotations(map[string]string{"nginx.ingress.kubernetes.io/ssl-passthrough": "true"})
+		expectedPassthrough.Spec.TLS = []networkingv1.IngressTLS{{Hosts: []string{"foo.bar.example.com"}}}
+
+		expectedHTTPSBackend = expected.DeepCopy()
+		expectedHTTPSBackend.SetAnnotations(map[string]string{"nginx.ingress.kubernetes.io/backend-protocol": "HTTPS"})
+		expectedHTTPSBackend.Spec.TLS = []networkingv1.IngressTLS{{Hosts: []string{"foo.bar.example.com"}, SecretName: "foobar"}}
 	})
 
-	JustBeforeEach(func() {
-		defaultDeployer = NewIngress(c, ingressNamespace, IngressValues{
+	getDeployer := func(tlsSecretName *string) component.Deployer {
+		return NewIngress(c, ingressNamespace, IngressValues{
 			Host:             "foo.bar.example.com",
 			IngressClassName: &ingressClass,
 			ServiceName:      "foo",
+			TLSSecretName:    tlsSecretName,
 		})
-	})
+	}
 
 	Context("Deploy", func() {
-		It("should create the expected ingress object", func() {
-			Expect(defaultDeployer.Deploy(ctx)).To(Succeed())
+		It("should create the expected ingress object for ssl passthrough", func() {
+			Expect(getDeployer(nil).Deploy(ctx)).To(Succeed())
 
 			actual := &networkingv1.Ingress{}
 			Expect(c.Get(ctx, ingressObjKey, actual)).To(Succeed())
-			Expect(actual.Annotations).To(DeepEqual(expected.Annotations))
-			Expect(actual.Labels).To(DeepEqual(expected.Labels))
-			Expect(actual.Spec).To(DeepEqual(expected.Spec))
+			Expect(actual.Annotations).To(DeepEqual(expectedPassthrough.Annotations))
+			Expect(actual.Labels).To(DeepEqual(expectedPassthrough.Labels))
+			Expect(actual.Spec).To(DeepEqual(expectedPassthrough.Spec))
+		})
+
+		It("should create the expected ingress object for backend protocol HTTPS", func() {
+			Expect(getDeployer(pointer.String("foobar")).Deploy(ctx)).To(Succeed())
+
+			actual := &networkingv1.Ingress{}
+			Expect(c.Get(ctx, ingressObjKey, actual)).To(Succeed())
+			Expect(actual.Annotations).To(DeepEqual(expectedHTTPSBackend.Annotations))
+			Expect(actual.Labels).To(DeepEqual(expectedHTTPSBackend.Labels))
+			Expect(actual.Spec).To(DeepEqual(expectedHTTPSBackend.Spec))
 		})
 	})
 
 	Context("Destroy", func() {
 		It("should delete the ingress object", func() {
-			Expect(c.Create(ctx, expected)).To(Succeed())
+			Expect(c.Create(ctx, expectedPassthrough)).To(Succeed())
 			Expect(c.Get(ctx, ingressObjKey, &networkingv1.Ingress{})).To(Succeed())
 
-			Expect(defaultDeployer.Destroy(ctx)).To(Succeed())
+			Expect(getDeployer(nil).Destroy(ctx)).To(Succeed())
 
 			Expect(c.Get(ctx, ingressObjKey, &networkingv1.Ingress{})).To(BeNotFoundError())
 		})

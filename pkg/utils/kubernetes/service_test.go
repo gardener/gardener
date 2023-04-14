@@ -32,4 +32,10 @@ var _ = Describe("service", func() {
 			}))
 		})
 	})
+
+	Describe("#FQDNForService", func() {
+		It("should return the expected fully qualified DNS name for the given service name and namespace", func() {
+			Expect(kubernetesutils.FQDNForService("test", "default")).To(Equal("test.default.svc.cluster.local"))
+		})
+	})
 })
