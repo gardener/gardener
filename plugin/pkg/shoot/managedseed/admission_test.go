@@ -48,12 +48,18 @@ var _ = Describe("ManagedSeed", func() {
 		var (
 			shoot                *core.Shoot
 			managedSeed          *seedmanagementv1alpha1.ManagedSeed
+			gardenletConfig      *gardenletv1alpha1.GardenletConfiguration
 			coreClient           *corefake.Clientset
 			seedManagementClient *fakeseedmanagement.Clientset
 			admissionHandler     *ManagedSeed
+
+			worker1Zones, worker2Zones []string
 		)
 
 		BeforeEach(func() {
+			worker1Zones = []string{"1", "2", "3"}
+			worker2Zones = []string{"4", "5", "6"}
+
 			shoot = &core.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -76,6 +82,30 @@ var _ = Describe("ManagedSeed", func() {
 						Type:  "foo",
 						Nodes: pointer.String("10.181.0.0/18"),
 					},
+					Provider: core.Provider{
+						Workers: []core.Worker{
+							{
+								Name:  "worker-1",
+								Zones: worker1Zones,
+							},
+							{
+								Name:  "worker-2",
+								Zones: worker2Zones,
+							},
+						},
+					},
+				},
+			}
+
+			gardenletConfig = &gardenletv1alpha1.GardenletConfiguration{
+				SeedConfig: &gardenletv1alpha1.SeedConfig{
+					SeedTemplate: gardencorev1beta1.SeedTemplate{
+						Spec: gardencorev1beta1.SeedSpec{
+							Provider: gardencorev1beta1.SeedProvider{
+								Zones: append(worker1Zones, worker2Zones...),
+							},
+						},
+					},
 				},
 			}
 
@@ -90,11 +120,7 @@ var _ = Describe("ManagedSeed", func() {
 					},
 					Gardenlet: &seedmanagementv1alpha1.Gardenlet{
 						Config: runtime.RawExtension{
-							Object: &gardenletv1alpha1.GardenletConfiguration{
-								SeedConfig: &gardenletv1alpha1.SeedConfig{
-									SeedTemplate: gardencorev1beta1.SeedTemplate{},
-								},
-							},
+							Object: gardenletConfig,
 						},
 					},
 				},
@@ -222,6 +248,53 @@ var _ = Describe("ManagedSeed", func() {
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(BeInvalidError())
 				Expect(err).To(MatchError(ContainSubstring("shoot static token kubeconfig cannot be disabled when the seed secretRef is set")))
+			})
+
+			It("should forbid Shoot update when zones have changed but still configred in ManagedSeed", func() {
+				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
+				})
+
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Provider.Workers[0].Zones = []string{"new-zone"}
+				attrs := getShootAttributes(shoot, oldShoot, admission.Update, &metav1.UpdateOptions{})
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(BeInvalidError())
+				Expect(err).To(MatchError(ContainSubstring("shoot worker zone(s) must not be removed as long as registered in managedseed")))
+			})
+
+			It("should allow Shoot update when zones have changed which are not registered in seed", func() {
+				gardenletConfig.SeedConfig.Spec.Provider.Zones = worker2Zones
+				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
+				})
+
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Provider.Workers[0].Zones = []string{"new-zone"}
+				attrs := getShootAttributes(shoot, oldShoot, admission.Update, &metav1.UpdateOptions{})
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
+			It("should allow Shoot update when new zone is added", func() {
+				gardenletConfig.SeedConfig.Spec.Provider.Zones = worker2Zones
+				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
+				})
+
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Provider.Workers[0].Zones = append(shoot.Spec.Provider.Workers[0].Zones, "new-zone")
+				attrs := getShootAttributes(shoot, oldShoot, admission.Update, &metav1.UpdateOptions{})
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
+			It("should allow Shoot update", func() {
+				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
+				})
+				oldShoot := shoot.DeepCopy()
+				attrs := getShootAttributes(shoot, oldShoot, admission.Update, &metav1.UpdateOptions{})
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 		})
 

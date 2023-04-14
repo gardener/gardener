@@ -20,6 +20,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -72,4 +73,21 @@ func NewAttributesWithName(a admission.Attributes, name string) admission.Attrib
 		a.GetOperationOptions(),
 		a.IsDryRun(),
 		a.GetUserInfo())
+}
+
+// ValidateZoneRemovalFromSeeds returns an error when zones are removed from the old seed while it is still in use by
+// shoots.
+func ValidateZoneRemovalFromSeeds(oldSeedSpec, newSeedSpec *core.SeedSpec, seedName string, shootLister gardencorelisters.ShootLister, kind string) error {
+	if removedZones := sets.New[string](oldSeedSpec.Provider.Zones...).Difference(sets.New[string](newSeedSpec.Provider.Zones...)); removedZones.Len() > 0 {
+		shoots, err := shootLister.List(labels.Everything())
+		if err != nil {
+			return err
+		}
+
+		if IsSeedUsedByShoot(seedName, shoots) {
+			return apierrors.NewForbidden(core.Resource(kind), seedName, fmt.Errorf("cannot remove zones %v from %s %s as there are Shoots scheduled to this Seed", sets.List(removedZones), kind, seedName))
+		}
+	}
+
+	return nil
 }

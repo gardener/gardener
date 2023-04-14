@@ -29,6 +29,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
@@ -48,7 +49,7 @@ func Register(plugins *admission.Plugins) {
 	})
 }
 
-// ManagedSeed contains listers and and admission handler.
+// ManagedSeed contains listers and admission handler.
 type ManagedSeed struct {
 	*admission.Handler
 	coreClient           gardencoreclientset.Interface
@@ -99,7 +100,7 @@ func (v *ManagedSeed) ValidateInitialization() error {
 
 var _ admission.ValidationInterface = &ManagedSeed{}
 
-// Validate validates if the Shoot can be deleted. If the
+// Validate validates changes to the Shoot referenced by a ManagedSeed.
 func (v *ManagedSeed) Validate(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if v.readyFunc == nil {
@@ -180,11 +181,33 @@ func (v *ManagedSeed) validateUpdate(ctx context.Context, a admission.Attributes
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "kubernetes", "enableStaticTokenKubeconfig"), shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, "shoot static token kubeconfig cannot be disabled when the seed secretRef is set"))
 	}
 
+	zoneValidationErrs, err := v.validateWorkerZoneChanges(field.NewPath("spec", "providers", "workers"), shoot, seedTemplate)
+	if err != nil {
+		return apierrors.NewInternalError(err)
+	}
+	allErrs = append(allErrs, zoneValidationErrs...)
+
 	if len(allErrs) > 0 {
 		return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, allErrs)
 	}
 
 	return nil
+}
+
+// validateWorkerZoneChanges returns an error if worker zones for the given shoot were changed
+// while they are still registered in the managedseed.
+func (v *ManagedSeed) validateWorkerZoneChanges(fldPath *field.Path, shoot *core.Shoot, seedTemplate *gardencorev1beta1.SeedTemplate) (field.ErrorList, error) {
+	allErrs := field.ErrorList{}
+
+	shootZones := gardencorehelper.GetAllZonesFromShoot(shoot)
+
+	// Check if all zones in ManagedSeed are available in shoot workers.
+	// In case of a removal, zone(s) must first be deselected in ManagedSeed before they can be removed in the shoot.
+	if !shootZones.HasAll(seedTemplate.Spec.Provider.Zones...) {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "shoot worker zone(s) must not be removed as long as registered in managedseed"))
+	}
+
+	return allErrs, nil
 }
 
 func (v *ManagedSeed) validateDeleteCollection(ctx context.Context, a admission.Attributes) error {

@@ -78,6 +78,31 @@ var _ = Describe("validator", func() {
 			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
 		})
 
+		Context("Seed Update", func() {
+			var oldSeed, newSeed *core.Seed
+
+			BeforeEach(func() {
+				oldSeed = seedBase.DeepCopy()
+				newSeed = seedBase.DeepCopy()
+
+				oldSeed.Spec.Provider.Zones = []string{"1", "2"}
+				newSeed.Spec.Provider.Zones = []string{"2"}
+			})
+
+			It("should allow zone removal when there are no shoots", func() {
+				attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
+			It("should forbid zone removal when there are shoots", func() {
+				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+				attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(BeForbiddenError())
+			})
+		})
+
 		// The verification of protection is independent of the Cloud Provider (being checked before).
 		Context("Seed deletion", func() {
 			BeforeEach(func() {

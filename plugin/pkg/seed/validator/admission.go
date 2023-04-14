@@ -124,11 +124,23 @@ func (v *ValidateSeed) Validate(_ context.Context, a admission.Attributes, _ adm
 		return nil
 	}
 
-	if a.GetOperation() == admission.Delete {
+	switch a.GetOperation() {
+	case admission.Update:
+		return v.validateSeedUpdate(a)
+	case admission.Delete:
 		return v.validateSeedDeletion(a)
 	}
 
 	return nil
+}
+
+func (v *ValidateSeed) validateSeedUpdate(a admission.Attributes) error {
+	oldSeed, newSeed, err := getOldAndNewSeeds(a)
+	if err != nil {
+		return err
+	}
+
+	return admissionutils.ValidateZoneRemovalFromSeeds(&oldSeed.Spec, &newSeed.Spec, newSeed.Name, v.shootLister, "Seed")
 }
 
 func (v *ValidateSeed) validateSeedDeletion(a admission.Attributes) error {
@@ -143,4 +155,21 @@ func (v *ValidateSeed) validateSeedDeletion(a admission.Attributes) error {
 		return admission.NewForbidden(a, fmt.Errorf("cannot delete seed %s since it is still used by shoot(s)", seedName))
 	}
 	return nil
+}
+
+func getOldAndNewSeeds(attrs admission.Attributes) (*core.Seed, *core.Seed, error) {
+	var (
+		oldSeed, newSeed *core.Seed
+		ok               bool
+	)
+
+	if oldSeed, ok = attrs.GetOldObject().(*core.Seed); !ok {
+		return nil, nil, apierrors.NewInternalError(errors.New("failed to convert old resource into Seed object"))
+	}
+
+	if newSeed, ok = attrs.GetObject().(*core.Seed); !ok {
+		return nil, nil, apierrors.NewInternalError(errors.New("failed to convert new resource into Seed object"))
+	}
+
+	return oldSeed, newSeed, nil
 }

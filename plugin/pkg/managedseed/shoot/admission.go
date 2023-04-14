@@ -100,7 +100,7 @@ func (v *Shoot) ValidateInitialization() error {
 
 var _ admission.ValidationInterface = &Shoot{}
 
-// Validate validates if the Shoot can be deleted. If the
+// Validate validates if the ManagedSeed can be deleted.
 func (v *Shoot) Validate(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if v.readyFunc == nil {
