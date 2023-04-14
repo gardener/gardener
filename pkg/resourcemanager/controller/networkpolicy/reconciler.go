@@ -339,7 +339,7 @@ func (r *Reconciler) reconcileIngressFromWorldPolicy(ctx context.Context, servic
 		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceNamespace, service.Namespace)
 
 		metav1.SetMetaDataAnnotation(&networkPolicy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
-			"ingress traffic from everywhere to ports %v for pods selected by the %s service selector.", ports,
+			"ingress traffic from everywhere to ports %v for pods selected by the %s service selector.", asSliceOfPointers(ports),
 			client.ObjectKeyFromObject(service)))
 
 		networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{{
@@ -357,6 +357,15 @@ func (r *Reconciler) reconcileIngressFromWorldPolicy(ctx context.Context, servic
 		return nil
 	})
 	return err
+}
+
+func asSliceOfPointers(portValues []networkingv1.NetworkPolicyPort) []*networkingv1.NetworkPolicyPort {
+	// 'func (this *NetworkPolicyPort) String() string' is called by fmt.Printf("%v", ports) only for a slice of pointers, not for a slice of values
+	var portPointers []*networkingv1.NetworkPolicyPort
+	for _, v := range portValues {
+		portPointers = append(portPointers, &v)
+	}
+	return portPointers
 }
 
 func (r *Reconciler) portsExposedByIngressResources(ctx context.Context, service *corev1.Service) ([]networkingv1.NetworkPolicyPort, error) {
