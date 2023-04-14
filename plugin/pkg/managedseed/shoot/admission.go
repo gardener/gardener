@@ -46,7 +46,7 @@ func Register(plugins *admission.Plugins) {
 	})
 }
 
-// Shoot contains listers and and admission handler.
+// Shoot contains listers and admission handler.
 type Shoot struct {
 	*admission.Handler
 	shootLister          gardencorelisters.ShootLister

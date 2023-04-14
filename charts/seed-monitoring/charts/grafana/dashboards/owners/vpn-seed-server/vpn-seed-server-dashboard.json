@@ -24,7 +24,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "Traffic for all VPN tunnels of all VPN clients of all all Kube-apiservers pods",
+      "description": "Traffic for all VPN tunnels of all VPN clients of all Kube-apiservers pods",
       "fieldConfig": {
         "defaults": {},
         "overrides": []

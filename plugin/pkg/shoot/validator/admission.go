@@ -65,7 +65,7 @@ func Register(plugins *admission.Plugins) {
 	})
 }
 
-// ValidateShoot contains listers and and admission handler.
+// ValidateShoot contains listers and admission handler.
 type ValidateShoot struct {
 	*admission.Handler
 	authorizer          authorizer.Authorizer

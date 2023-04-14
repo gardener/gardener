@@ -59,7 +59,7 @@ func Register(plugins *admission.Plugins) {
 	})
 }
 
-// QuotaValidator contains listers and and admission handler.
+// QuotaValidator contains listers and admission handler.
 type QuotaValidator struct {
 	*admission.Handler
 	shootLister         gardencorelisters.ShootLister

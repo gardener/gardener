@@ -3287,7 +3287,7 @@ func schema_pkg_apis_core_v1alpha1_HibernationSchedule(ref common.ReferenceCallb
 					},
 					"location": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Location is the time location in which both start and and shall be evaluated.",
+							Description: "Location is the time location in which both start and shall be evaluated.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -11030,7 +11030,7 @@ func schema_pkg_apis_core_v1beta1_HibernationSchedule(ref common.ReferenceCallba
 					},
 					"location": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Location is the time location in which both start and and shall be evaluated.",
+							Description: "Location is the time location in which both start and shall be evaluated.",
 							Type:        []string{"string"},
 							Format:      "",
 						},

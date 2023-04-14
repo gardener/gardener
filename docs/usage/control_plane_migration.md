@@ -12,7 +12,7 @@ Also, the involved Seeds need to have enabled `BackupBucket`s.
 
 ## Shoot Control Plane Migration
 
-Triggering the migration is done by changing the `Shoot`'s `.spec.seedName` to a `Seed` that differs from the `.status.seedName`, we call this `Seed` a `"Destination Seed"`. This action can only be performed by an operator with the necessary RBAC. If the Destination `Seed` does not have a backup and restore configuration, the the change to `spec.seedName` is rejected. Additionally, this Seed must not be set for deletion and must be healthy.
+Triggering the migration is done by changing the `Shoot`'s `.spec.seedName` to a `Seed` that differs from the `.status.seedName`, we call this `Seed` a `"Destination Seed"`. This action can only be performed by an operator with the necessary RBAC. If the Destination `Seed` does not have a backup and restore configuration, the change to `spec.seedName` is rejected. Additionally, this Seed must not be set for deletion and must be healthy.
 
 If the `Shoot` has different `.spec.seedName` and `.status.seedName`, a process is started to prepare the Control Plane for migration:
 

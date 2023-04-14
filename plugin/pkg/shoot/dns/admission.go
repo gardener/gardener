@@ -55,7 +55,7 @@ func Register(plugins *admission.Plugins) {
 	})
 }
 
-// DNS contains listers and and admission handler.
+// DNS contains listers and admission handler.
 type DNS struct {
 	*admission.Handler
 	secretLister  kubecorev1listers.SecretLister
@@ -162,7 +162,7 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 
 	switch a.GetOperation() {
 	case admission.Create:
-		// If shoot uses deafult domain validate domain even though shoot can be assigned to seed
+		// If shoot uses default domain, validate domain even though shoot can be assigned to seed
 		// having dns disabled later on
 		if isShootDomainSet(shoot) && !helper.ShootUsesUnmanagedDNS(shoot) {
 			if err := checkDefaultDomainFormat(a, shoot, d.projectLister, defaultDomains); err != nil {

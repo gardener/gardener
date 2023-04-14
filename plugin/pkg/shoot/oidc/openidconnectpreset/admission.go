@@ -46,7 +46,7 @@ func Register(plugins *admission.Plugins) {
 	})
 }
 
-// OpenIDConnectPreset contains listers and and admission handler.
+// OpenIDConnectPreset contains listers and admission handler.
 type OpenIDConnectPreset struct {
 	*admission.Handler
 

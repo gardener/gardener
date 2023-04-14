@@ -62,7 +62,7 @@ var _ = Describe("Scheduler tests", func() {
 			}).Should(PointTo(Equal(seed.Name)))
 		})
 
-		It("should pass because there is a a seed with < 3 zones for non-HA shoot", func() {
+		It("should pass because there is a seed with < 3 zones for non-HA shoot", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			seed := createSeed(providerType, "some-region", []string{"1"})
 			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), nil)
@@ -72,7 +72,7 @@ var _ = Describe("Scheduler tests", func() {
 			}).Should(PointTo(Equal(seed.Name)))
 		})
 
-		It("should pass because there is a a seed with >= 3 zones for non-HA shoot", func() {
+		It("should pass because there is a seed with >= 3 zones for non-HA shoot", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			seed := createSeed(providerType, "some-region", []string{"1", "2", "3"})
 			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), nil)
@@ -82,7 +82,7 @@ var _ = Describe("Scheduler tests", func() {
 			}).Should(PointTo(Equal(seed.Name)))
 		})
 
-		It("should pass because there is a a seed with < 3 zones for shoot with failure tolerance type 'node'", func() {
+		It("should pass because there is a seed with < 3 zones for shoot with failure tolerance type 'node'", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			seed := createSeed(providerType, "some-region", []string{"1", "2"})
 			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneWithType("node"))
@@ -92,7 +92,7 @@ var _ = Describe("Scheduler tests", func() {
 			}).Should(PointTo(Equal(seed.Name)))
 		})
 
-		It("should pass because there is a a seed with >= 3 zones for shoot with failure tolerance type 'node'", func() {
+		It("should pass because there is a seed with >= 3 zones for shoot with failure tolerance type 'node'", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			seed := createSeed(providerType, "some-region", []string{"1", "2", "3"})
 			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneWithType("node"))
@@ -112,7 +112,7 @@ var _ = Describe("Scheduler tests", func() {
 			}).Should(BeNil())
 		})
 
-		It("should pass because there is a a seed with >= 3 zones for shoot with failure tolerance type 'zone'", func() {
+		It("should pass because there is a seed with >= 3 zones for shoot with failure tolerance type 'zone'", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			seed := createSeed(providerType, "some-region", []string{"1", "2", "3"})
 			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneWithType("zone"))

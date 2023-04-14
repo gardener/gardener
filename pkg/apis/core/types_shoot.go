@@ -410,7 +410,7 @@ type HibernationSchedule struct {
 	Start *string
 	// End is a Cron spec at which time a Shoot will be woken up.
 	End *string
-	// Location is the time location in which both start and and shall be evaluated.
+	// Location is the time location in which both start and shall be evaluated.
 	Location *string
 }
 

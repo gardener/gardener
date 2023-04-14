@@ -902,7 +902,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "The amount of of failures when the `apiserver-proxy`  tries to connect to the upstream Shoot Kube API Server",
+      "description": "The amount of failures when the `apiserver-proxy`  tries to connect to the upstream Shoot Kube API Server",
       "fieldConfig": {
         "defaults": {
           "custom": {

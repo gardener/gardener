@@ -488,7 +488,7 @@ type HibernationSchedule struct {
 	// End is a Cron spec at which time a Shoot will be woken up.
 	// +optional
 	End *string `json:"end,omitempty" protobuf:"bytes,2,opt,name=end"`
-	// Location is the time location in which both start and and shall be evaluated.
+	// Location is the time location in which both start and shall be evaluated.
 	// +optional
 	Location *string `json:"location,omitempty" protobuf:"bytes,3,opt,name=location"`
 }

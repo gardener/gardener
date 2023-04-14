@@ -114,7 +114,7 @@ var _ = Describe("Bastion validation tests", func() {
 			}))))
 		})
 
-		It("should allow updating the the ingress", func() {
+		It("should allow updating the ingress", func() {
 			newBastion := prepareBastionForUpdate(bastion)
 			newBastion.Spec.Ingress[0].IPBlock.CIDR = "8.8.8.8/8"
 
