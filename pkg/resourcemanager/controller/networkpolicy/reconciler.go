@@ -339,7 +339,7 @@ func (r *Reconciler) reconcileIngressFromWorldPolicy(ctx context.Context, servic
 		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceNamespace, service.Namespace)
 
 		metav1.SetMetaDataAnnotation(&networkPolicy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
-			"ingress traffic from everywhere to ports %v for pods selected by the %s service selector.", ports,
+			"ingress traffic from everywhere to ports %v for pods selected by the %s service selector.", portAndProtocolOf(ports),
 			client.ObjectKeyFromObject(service)))
 
 		networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{{
@@ -357,6 +357,18 @@ func (r *Reconciler) reconcileIngressFromWorldPolicy(ctx context.Context, servic
 		return nil
 	})
 	return err
+}
+
+func portAndProtocolOf(ports []networkingv1.NetworkPolicyPort) []string {
+	var result []string
+	for _, v := range ports {
+		if v.Protocol == nil {
+			result = append(result, fmt.Sprintf("%v", v.Port))
+		} else {
+			result = append(result, fmt.Sprintf("%v/%v", *v.Protocol, v.Port))
+		}
+	}
+	return result
 }
 
 func (r *Reconciler) portsExposedByIngressResources(ctx context.Context, service *corev1.Service) ([]networkingv1.NetworkPolicyPort, error) {
