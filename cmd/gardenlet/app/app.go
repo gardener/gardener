@@ -549,13 +549,18 @@ func migrationTasksForServices(cl client.Client, services []corev1.Service, port
 		service := svc
 
 		taskFns = append(taskFns, func(ctx context.Context) error {
-			selectors := []metav1.LabelSelector{
-				{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
-				{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}},
-			}
-
+			selectors := []metav1.LabelSelector{}
 			if withGardenNamespaceSelector {
 				selectors = append(selectors, metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}})
+			}
+
+			selectors = append(selectors,
+				metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
+				metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}},
+			)
+
+			if withGardenNamespaceSelector && features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster) {
+				selectors = append(selectors, metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}})
 			}
 
 			patch := client.MergeFrom(service.DeepCopy())
