@@ -563,7 +563,7 @@ var _ = Describe("Worker", func() {
 			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdate(ctx)).To(HaveOccurred(), "worker status is not updated")
 		})
 
-		It("should return no error when status.machineDeploymentsLastUpdateTime is updated", func() {
+		It(" should return no error when status.machineDeploymentsLastUpdateTime is added for the first time", func() {
 			defer test.WithVars(
 				&worker.TimeNow, mockNow.Do,
 			)()
@@ -581,6 +581,35 @@ var _ = Describe("Worker", func() {
 			}
 			// update the MachineDeploymentsLastUpdateTime in the worker status
 			w.Status.MachineDeploymentsLastUpdateTime = &metav1Now
+			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
+
+			By("WaitUntilWorkerStatusMachineDeploymentsUpdate")
+			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdate(ctx)).To(Succeed(), "worker status is updated with latest machine deployments")
+		})
+
+		It("should return no error when status.machineDeploymentsLastUpdateTime is updated", func() {
+			defer test.WithVars(
+				&worker.TimeNow, mockNow.Do,
+			)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			obj := w.DeepCopy()
+			obj.Status.MachineDeploymentsLastUpdateTime = &metav1Now
+			Expect(c.Create(ctx, obj)).To(Succeed(), "creating worker succeeds")
+
+			By("Deploy")
+			// Deploy should fill internal state with the added timestamp annotation
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+			By("Patch object")
+			patch := client.MergeFrom(w.DeepCopy())
+			// remove operation annotation, add up-to-date timestamp annotation
+			w.ObjectMeta.Annotations = map[string]string{
+				v1beta1constants.GardenerTimestamp: now.UTC().String(),
+			}
+			// update the MachineDeploymentsLastUpdateTime in the worker status
+			lastUpdateTime := metav1.NewTime(metav1Now.Add(1 * time.Second))
+			w.Status.MachineDeploymentsLastUpdateTime = &lastUpdateTime
 			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
 
 			By("WaitUntilWorkerStatusMachineDeploymentsUpdate")
