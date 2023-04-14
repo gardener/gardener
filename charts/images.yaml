@@ -125,27 +125,32 @@ images:
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
-  tag: "v1.25.1"
-  targetVersion: ">= 1.25"
+  tag: "v1.26.1"
+  targetVersion: ">= 1.26"
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
-  tag: "v1.24.1"
+  tag: "v1.25.2"
+  targetVersion: "1.25.x"
+- name: cluster-autoscaler
+  sourceRepository: github.com/gardener/autoscaler
+  repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
+  tag: "v1.24.2"
   targetVersion: "1.24.x"
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
-  tag: "v1.23.2"
+  tag: "v1.23.3"
   targetVersion: "1.23.x"
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
-  tag: "v1.22.4"
+  tag: "v1.22.5"
   targetVersion: "1.22.x"
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
-  tag: "v1.21.4"
+  tag: "v1.21.5"
   targetVersion: "1.21.x"
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
