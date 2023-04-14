@@ -173,10 +173,10 @@ function set_seed_name() {
 function run_pre_upgrade_test() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node | zone)
-    make test-ha-pre-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
+    make test-pre-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
     ;;
   *)
-    make test-pre-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
+    make test-non-ha-pre-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
     ;;
   esac
 }
@@ -184,10 +184,10 @@ function run_pre_upgrade_test() {
 function run_post_upgrade_test() {
   case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
   node | zone)
-    make test-ha-post-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
+    make test-post-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
     ;;
   *)
-    make test-post-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
+    make test-non-ha-post-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
     ;;
   esac
 }
@@ -205,11 +205,11 @@ export GARDENER_PREVIOUS_VERSION="$(cat $GARDENER_RELEASE_DOWNLOAD_PATH/gardener
 kind_up
 
 # export all container logs and events after test execution
-trap '{
-  rm -rf "$GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases"
-  export_artifacts "$CLUSTER_NAME"
-  kind_down
-}' EXIT
+# trap '{
+#   rm -rf "$GARDENER_RELEASE_DOWNLOAD_PATH/gardener-releases"
+#   export_artifacts "$CLUSTER_NAME"
+#   kind_down
+# }' EXIT
 
 echo "Installing gardener version '$GARDENER_PREVIOUS_RELEASE'"
 install_previous_release
@@ -236,4 +236,4 @@ sleep 60
 echo "Running gardener post-upgrade tests"
 run_post_upgrade_test
 
-gardener_down
+# gardener_down
