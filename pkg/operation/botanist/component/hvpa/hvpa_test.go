@@ -138,6 +138,17 @@ var _ = Describe("HVPA", func() {
 					Resources: []string{"jobs"},
 					Verbs:     []string{"get", "list", "patch", "update", "watch"},
 				},
+				{
+					APIGroups: []string{"coordination.k8s.io"},
+					Resources: []string{"leases"},
+					Verbs:     []string{"create"},
+				},
+				{
+					APIGroups:     []string{"coordination.k8s.io"},
+					Resources:     []string{"leases"},
+					ResourceNames: []string{"hvpa-controller"},
+					Verbs:         []string{"get", "watch", "update"},
+				},
 			},
 		}
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
@@ -223,6 +234,7 @@ var _ = Describe("HVPA", func() {
 							Command: []string{
 								"./manager",
 								"--logtostderr=true",
+								"--leader-elect=true",
 								"--enable-detailed-metrics=true",
 								"--metrics-bind-address=:9569",
 								"--v=2",

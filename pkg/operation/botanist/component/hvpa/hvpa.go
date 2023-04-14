@@ -145,6 +145,17 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 					Resources: []string{"jobs"},
 					Verbs:     []string{"get", "list", "patch", "update", "watch"},
 				},
+				{
+					APIGroups: []string{"coordination.k8s.io"},
+					Resources: []string{"leases"},
+					Verbs:     []string{"create"},
+				},
+				{
+					APIGroups:     []string{"coordination.k8s.io"},
+					Resources:     []string{"leases"},
+					ResourceNames: []string{"hvpa-controller"},
+					Verbs:         []string{"get", "watch", "update"},
+				},
 			},
 		}
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
@@ -210,6 +221,7 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 							Command: []string{
 								"./manager",
 								"--logtostderr=true",
+								"--leader-elect=true",
 								"--enable-detailed-metrics=true",
 								fmt.Sprintf("--metrics-bind-address=:%d", portMetrics),
 								"--v=2",
