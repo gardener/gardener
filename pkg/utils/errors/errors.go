@@ -159,23 +159,6 @@ func (e *ErrorContext) HasLastErrorWithID(errorID string) bool {
 	return false
 }
 
-type cancelError struct{}
-
-func (*cancelError) Error() string {
-	return "Canceled"
-}
-
-// Cancel returns an error which will cause the HandleErrors function to stop executing tasks without triggering its FailureHandler.
-func Cancel() error {
-	return &cancelError{}
-}
-
-// WasCanceled checks to see if the HandleErrors function was canceled manually. It can be used to check if execution after HandleErrors should be stopped without returning an error
-func WasCanceled(err error) bool {
-	_, ok := err.(*cancelError)
-	return ok
-}
-
 // FailureHandler is a function which is called when an error occurs
 type FailureHandler func(string, error) error
 
@@ -218,14 +201,11 @@ func ToExecute(errorID string, task func() error) TaskFunc {
 func HandleErrors(errorContext *ErrorContext, onSuccess SuccessHandler, onFailure FailureHandler, tasks ...TaskFunc) error {
 	for _, task := range tasks {
 		errorID, err := task.Do(errorContext)
-		if err != nil && !WasCanceled(err) {
+		if err != nil {
 			return handleFailure(onFailure, errorID, err)
 		}
 		if handlerErr := handleSuccess(errorContext, onSuccess, errorID); handlerErr != nil {
 			return handlerErr
-		}
-		if WasCanceled(err) {
-			return err
 		}
 	}
 	return nil

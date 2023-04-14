@@ -210,16 +210,14 @@ func DeleteGrafana(ctx context.Context, k8sClient kubernetes.Interface, namespac
 		return err
 	}
 
-	if err := k8sClient.Client().Delete(
-		ctx,
-		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "grafana",
-				Namespace: namespace,
-			}},
-	); client.IgnoreNotFound(err) != nil {
-		return err
-	}
-
-	return nil
+	return client.IgnoreNotFound(
+		k8sClient.Client().Delete(
+			ctx,
+			&corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "grafana",
+					Namespace: namespace,
+				}},
+		),
+	)
 }

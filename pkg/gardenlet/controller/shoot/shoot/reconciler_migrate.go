@@ -94,7 +94,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 				}
 				return nil
 			}
-			etcdSnapshotRequired = backupEntry.Spec.SeedName != nil && *backupEntry.Spec.SeedName == *botanist.Shoot.GetInfo().Status.SeedName
+			etcdSnapshotRequired = backupEntry.Spec.SeedName != nil && *backupEntry.Spec.SeedName == *botanist.Shoot.GetInfo().Status.SeedName && botanist.SeedNamespaceObject != nil
 			return nil
 		}),
 		errorsutils.ToExecute("Retrieve the infrastructure resource", func() error {
@@ -115,14 +115,11 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 	)
 
 	if err != nil {
-		if errorsutils.WasCanceled(err) {
-			return nil
-		}
 		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
 	}
 
 	var (
-		nonTerminatingNamespace = botanist.SeedNamespaceObject.Status.Phase != corev1.NamespaceTerminating
+		nonTerminatingNamespace = botanist.SeedNamespaceObject != nil && botanist.SeedNamespaceObject.Status.Phase != corev1.NamespaceTerminating
 		cleanupShootResources   = nonTerminatingNamespace && kubeAPIServerDeploymentFound
 		wakeupRequired          = (o.Shoot.GetInfo().Status.IsHibernated || o.Shoot.HibernationEnabled) && cleanupShootResources
 		defaultTimeout          = 10 * time.Minute
@@ -271,7 +268,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		})
 		deleteKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deleting kube-apiserver deployment",
-			Fn:           flow.TaskFn(botanist.DeleteKubeAPIServer).SkipIf(!kubeAPIServerDeploymentFound),
+			Fn:           flow.TaskFn(botanist.DeleteKubeAPIServer),
 			Dependencies: flow.NewTaskIDs(waitForManagedResourcesDeletion, waitUntilEtcdReady, waitUntilControlPlaneDeleted, waitUntilShootManagedResourcesDeleted),
 		})
 		waitUntilKubeAPIServerDeleted = g.Add(flow.Task{
@@ -340,9 +337,9 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			Fn:           botanist.MigrateInternalDNSRecord,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
-		migrateOwnerDNSRecord = g.Add(flow.Task{
+		migrateOrDestroyOwnerDNSRecord = g.Add(flow.Task{
 			Name:         "Migrating owner domain DNS record",
-			Fn:           botanist.MigrateOwnerDNSResources,
+			Fn:           flow.TaskFn(botanist.MigrateOrDestroyOwnerDNSResources).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 		syncPoint = flow.NewTaskIDs(
@@ -352,8 +349,8 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		)
 		destroyDNSRecords = g.Add(flow.Task{
 			Name:         "Deleting DNSRecords from the Shoot namespace",
-			Fn:           botanist.DestroyDNSRecords,
-			Dependencies: flow.NewTaskIDs(syncPoint, migrateIngressDNSRecord, migrateExternalDNSRecord, migrateInternalDNSRecord, migrateOwnerDNSRecord),
+			Fn:           flow.TaskFn(botanist.DestroyDNSRecords).DoIf(nonTerminatingNamespace),
+			Dependencies: flow.NewTaskIDs(syncPoint, migrateIngressDNSRecord, migrateExternalDNSRecord, migrateInternalDNSRecord, migrateOrDestroyOwnerDNSRecord),
 		})
 		createETCDSnapshot = g.Add(flow.Task{
 			Name:         "Creating ETCD Snapshot",

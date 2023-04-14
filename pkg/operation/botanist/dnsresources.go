@@ -37,11 +37,11 @@ func (b *Botanist) DestroyOwnerDNSResources(ctx context.Context) error {
 	return b.DestroyOwnerDNSRecord(ctx)
 }
 
-// MigrateOwnerDNSResources migrates or deletes the owner DNSRecord resource depending on whether
+// MigrateOrDestroyOwnerDNSResources migrates or destroys the owner DNSRecord resource depending on whether
 // the 'ownerChecks' setting is enabled.
 // * If the ownerChecks is enabled, the DNSRecord resource is migrated.
-// * Otherwise, it is deleted.
-func (b *Botanist) MigrateOwnerDNSResources(ctx context.Context) error {
+// * Otherwise, it is destroyed.
+func (b *Botanist) MigrateOrDestroyOwnerDNSResources(ctx context.Context) error {
 	if v1beta1helper.SeedSettingOwnerChecksEnabled(b.Seed.GetInfo().Spec.Settings) {
 		return b.MigrateOwnerDNSRecord(ctx)
 	} else {
