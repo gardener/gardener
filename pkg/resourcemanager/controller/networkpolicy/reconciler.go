@@ -25,6 +25,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -339,7 +340,7 @@ func (r *Reconciler) reconcileIngressFromWorldPolicy(ctx context.Context, servic
 		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceNamespace, service.Namespace)
 
 		metav1.SetMetaDataAnnotation(&networkPolicy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
-			"ingress traffic from everywhere to ports %v for pods selected by the %s service selector.", asSliceOfPointers(ports),
+			"ingress traffic from everywhere to ports %v for pods selected by the %s service selector.", portIntOrStringsOf(ports),
 			client.ObjectKeyFromObject(service)))
 
 		networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{{
@@ -359,13 +360,12 @@ func (r *Reconciler) reconcileIngressFromWorldPolicy(ctx context.Context, servic
 	return err
 }
 
-func asSliceOfPointers(portValues []networkingv1.NetworkPolicyPort) []*networkingv1.NetworkPolicyPort {
-	// 'func (this *NetworkPolicyPort) String() string' is called by fmt.Printf("%v", ports) only for a slice of pointers, not for a slice of values
-	var portPointers []*networkingv1.NetworkPolicyPort
-	for _, v := range portValues {
-		portPointers = append(portPointers, &v)
+func portIntOrStringsOf(ports []networkingv1.NetworkPolicyPort) []*intstr.IntOrString {
+	var result []*intstr.IntOrString
+	for _, v := range ports {
+		result = append(result, v.Port)
 	}
-	return portPointers
+	return result
 }
 
 func (r *Reconciler) portsExposedByIngressResources(ctx context.Context, service *corev1.Service) ([]networkingv1.NetworkPolicyPort, error) {
