@@ -2520,7 +2520,6 @@ rules:
 					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ConsistOf(
 						"/usr/local/bin/kube-apiserver",
 						"--enable-admission-plugins="+admissionPlugin1+","+admissionPlugin2,
-						"--disable-admission-plugins=",
 						"--admission-control-config-file=/etc/kubernetes/admission/admission-configuration.yaml",
 						"--anonymous-auth=false",
 						"--audit-log-path=/var/lib/audit.log",

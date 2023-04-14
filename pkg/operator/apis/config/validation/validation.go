@@ -30,11 +30,11 @@ import (
 func ValidateOperatorConfiguration(conf *config.OperatorConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if conf.LogLevel != "" && !sets.New[string](logger.AllLogLevels...).Has(conf.LogLevel) {
+	if conf.LogLevel != "" && !sets.New(logger.AllLogLevels...).Has(conf.LogLevel) {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("logLevel"), conf.LogLevel, logger.AllLogLevels))
 	}
 
-	if conf.LogFormat != "" && !sets.New[string](logger.AllLogFormats...).Has(conf.LogFormat) {
+	if conf.LogFormat != "" && !sets.New(logger.AllLogFormats...).Has(conf.LogFormat) {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("logFormat"), conf.LogFormat, logger.AllLogFormats))
 	}
 

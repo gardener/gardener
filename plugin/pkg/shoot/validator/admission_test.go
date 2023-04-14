@@ -468,7 +468,7 @@ var _ = Describe("validator", func() {
 
 				// set old shoot for update and add gardener finalizer to it
 				oldShoot = shoot.DeepCopy()
-				finalizers := sets.New[string](oldShoot.GetFinalizers()...)
+				finalizers := sets.New(oldShoot.GetFinalizers()...)
 				finalizers.Insert(core.GardenerName)
 				oldShoot.SetFinalizers(finalizers.UnsortedList())
 			})

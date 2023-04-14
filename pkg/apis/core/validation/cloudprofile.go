@@ -185,7 +185,7 @@ func validateKubernetesSettings(kubernetes core.KubernetesSettings, fldPath *fie
 	return allErrs
 }
 
-var supportedVersionClassifications = sets.New[string](string(core.ClassificationPreview), string(core.ClassificationSupported), string(core.ClassificationDeprecated))
+var supportedVersionClassifications = sets.New(string(core.ClassificationPreview), string(core.ClassificationSupported), string(core.ClassificationDeprecated))
 
 func validateExpirableVersion(version core.ExpirableVersion, allVersions []core.ExpirableVersion, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}

@@ -161,7 +161,7 @@ func (r *Reconciler) mustApprove(ctx context.Context, csr *certificatesv1.Certif
 		}
 	}
 
-	if !sets.New[string](hostNames...).Equal(sets.New[string](x509cr.DNSNames...)) {
+	if !sets.New(hostNames...).Equal(sets.New(x509cr.DNSNames...)) {
 		return "DNS names in CSR do not match addresses of type 'Hostname' or 'InternalDNS' or 'ExternalDNS' in node object", false, nil
 	}
 
@@ -170,7 +170,7 @@ func (r *Reconciler) mustApprove(ctx context.Context, csr *certificatesv1.Certif
 		ipAddressesInCSR = append(ipAddressesInCSR, ip.String())
 	}
 
-	if !sets.New[string](ipAddresses...).Equal(sets.New[string](ipAddressesInCSR...)) {
+	if !sets.New(ipAddresses...).Equal(sets.New(ipAddressesInCSR...)) {
 		return "IP addresses in CSR do not match addresses of type 'InternalIP' or 'ExternalIP' in node object", false, nil
 	}
 

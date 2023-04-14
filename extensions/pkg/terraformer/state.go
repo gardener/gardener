@@ -66,7 +66,7 @@ func (t *terraformer) GetStateOutputVariables(ctx context.Context, variables ...
 	var (
 		output = make(map[string]string)
 
-		wantedVariables = sets.New[string](variables...)
+		wantedVariables = sets.New(variables...)
 		foundVariables  = sets.New[string]()
 	)
 

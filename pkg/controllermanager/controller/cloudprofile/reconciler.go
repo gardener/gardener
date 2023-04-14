@@ -60,7 +60,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// no Shoots and Seed are assigned to the CloudProfile anymore. If this is the case then the controller will remove
 	// the finalizers from the CloudProfile so that it can be garbage collected.
 	if cloudProfile.DeletionTimestamp != nil {
-		if !sets.New[string](cloudProfile.Finalizers...).Has(gardencorev1beta1.GardenerName) {
+		if !sets.New(cloudProfile.Finalizers...).Has(gardencorev1beta1.GardenerName) {
 			return reconcile.Result{}, nil
 		}
 

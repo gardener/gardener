@@ -206,7 +206,7 @@ var _ = Describe("Add", func() {
 			Expect(fakeSeedClient.Create(ctx, infrastructure2)).To(Succeed())
 
 			Expect(mapFn(ctx, log, nil, nil)).To(BeEmpty())
-			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New[string](type1, type2)))
+			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New(type1, type2)))
 		})
 
 		It("should do nothing when there are no controllerinstallation resources", func() {
@@ -217,7 +217,7 @@ var _ = Describe("Add", func() {
 			Expect(fakeSeedClient.Create(ctx, infrastructure2)).To(Succeed())
 
 			Expect(mapFn(ctx, log, nil, nil)).To(BeEmpty())
-			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New[string](type1, type2)))
+			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New(type1, type2)))
 		})
 
 		It("should return the expected names of controllerinstallations", func() {
@@ -236,7 +236,7 @@ var _ = Describe("Add", func() {
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerInstallation1.Name}},
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerInstallation2.Name}},
 			))
-			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New[string](type1, type2)))
+			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New(type1, type2)))
 		})
 	})
 })

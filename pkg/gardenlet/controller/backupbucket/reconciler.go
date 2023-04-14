@@ -261,7 +261,7 @@ func (r *Reconciler) deleteBackupBucket(
 	reconcile.Result,
 	error,
 ) {
-	if !sets.New[string](backupBucket.Finalizers...).Has(gardencorev1beta1.GardenerName) {
+	if !sets.New(backupBucket.Finalizers...).Has(gardencorev1beta1.GardenerName) {
 		return reconcile.Result{}, nil
 	}
 

@@ -125,7 +125,7 @@ func (r *Reconciler) fetchRelevantNamespaceNames(ctx context.Context, service *c
 		}
 	}
 
-	namespaceNames := sets.New[string](service.Namespace)
+	namespaceNames := sets.New(service.Namespace)
 
 	for _, n := range namespaceSelectors {
 		namespaceSelector := n

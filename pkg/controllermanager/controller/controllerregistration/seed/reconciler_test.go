@@ -456,7 +456,7 @@ var _ = Describe("Reconciler", func() {
 		It("should correctly compute the result", func() {
 			kindTypes, bs := computeKindTypesForBackupBuckets(backupBucketList)
 
-			Expect(kindTypes).To(Equal(sets.New[string](
+			Expect(kindTypes).To(Equal(sets.New(
 				extensionsv1alpha1.BackupBucketResource+"/"+backupBucket1.Spec.Provider.Type,
 				extensionsv1alpha1.BackupBucketResource+"/"+backupBucket2.Spec.Provider.Type,
 			)))
@@ -474,7 +474,7 @@ var _ = Describe("Reconciler", func() {
 		It("should correctly compute the result", func() {
 			kindTypes := computeKindTypesForBackupEntries(nopLogger, backupEntryList, buckets)
 
-			Expect(kindTypes).To(Equal(sets.New[string](
+			Expect(kindTypes).To(Equal(sets.New(
 				extensionsv1alpha1.BackupEntryResource + "/" + backupBucket1.Spec.Provider.Type,
 			)))
 		})
@@ -495,7 +495,7 @@ var _ = Describe("Reconciler", func() {
 
 			kindTypes := computeKindTypesForShoots(ctx, nopLogger, nil, shootList, seed, controllerRegistrationList, internalDomain, nil)
 
-			Expect(kindTypes).To(Equal(sets.New[string](
+			Expect(kindTypes).To(Equal(sets.New(
 				// seed types
 				extensionsv1alpha1.BackupBucketResource+"/"+type8,
 				extensionsv1alpha1.BackupEntryResource+"/"+type8,
@@ -556,7 +556,7 @@ var _ = Describe("Reconciler", func() {
 
 			kindTypes := computeKindTypesForShoots(ctx, nopLogger, nil, shootList, seed, controllerRegistrationList, internalDomain, nil)
 
-			Expect(kindTypes).To(Equal(sets.New[string](
+			Expect(kindTypes).To(Equal(sets.New(
 				// seed types
 				extensionsv1alpha1.BackupBucketResource+"/"+type8,
 				extensionsv1alpha1.BackupEntryResource+"/"+type8,
@@ -591,7 +591,7 @@ var _ = Describe("Reconciler", func() {
 				},
 			}
 
-			expected := sets.New[string](gardenerutils.ExtensionsID(extensionsv1alpha1.DNSRecordResource, providerType))
+			expected := sets.New(gardenerutils.ExtensionsID(extensionsv1alpha1.DNSRecordResource, providerType))
 			actual := computeKindTypesForSeed(seed)
 			Expect(actual).To(Equal(expected))
 		})
@@ -637,14 +637,14 @@ var _ = Describe("Reconciler", func() {
 
 	Describe("#computeWantedControllerRegistrationNames", func() {
 		It("should correctly compute the result w/o error", func() {
-			wantedKindTypeCombinations := sets.New[string](
+			wantedKindTypeCombinations := sets.New(
 				extensionsv1alpha1.NetworkResource+"/"+type2,
 				extensionsv1alpha1.ControlPlaneResource+"/"+type3,
 			)
 
 			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, len(shootList), seedObjectMeta)
 
-			Expect(names).To(Equal(sets.New[string](controllerRegistration1.Name, controllerRegistration2.Name, controllerRegistration3.Name, controllerRegistration4.Name, controllerRegistration7.Name, controllerRegistration8.Name)))
+			Expect(names).To(Equal(sets.New(controllerRegistration1.Name, controllerRegistration2.Name, controllerRegistration3.Name, controllerRegistration4.Name, controllerRegistration7.Name, controllerRegistration8.Name)))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -653,7 +653,7 @@ var _ = Describe("Reconciler", func() {
 
 			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, 0, seedObjectMeta)
 
-			Expect(names).To(Equal(sets.New[string](controllerRegistration4.Name, controllerRegistration7.Name)))
+			Expect(names).To(Equal(sets.New(controllerRegistration4.Name, controllerRegistration7.Name)))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -662,7 +662,7 @@ var _ = Describe("Reconciler", func() {
 
 			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, 0, seedObjectMeta)
 
-			Expect(names).To(Equal(sets.New[string](controllerRegistration4.Name, controllerRegistration7.Name)))
+			Expect(names).To(Equal(sets.New(controllerRegistration4.Name, controllerRegistration7.Name)))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -674,7 +674,7 @@ var _ = Describe("Reconciler", func() {
 
 			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, 0, *seedObjectMetaCopy)
 
-			Expect(names).To(Equal(sets.New[string](controllerRegistration7.Name)))
+			Expect(names).To(Equal(sets.New(controllerRegistration7.Name)))
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
@@ -726,7 +726,7 @@ var _ = Describe("Reconciler", func() {
 		Describe("#deployNeededInstallations", func() {
 			It("should return an error when cannot get controller installation", func() {
 				var (
-					wantedControllerRegistrations  = sets.New[string](controllerRegistration2.Name)
+					wantedControllerRegistrations  = sets.New(controllerRegistration2.Name)
 					registrationNameToInstallation = map[string]*gardencorev1beta1.ControllerInstallation{
 						controllerRegistration1.Name: controllerInstallation1,
 						controllerRegistration2.Name: controllerInstallation2,
@@ -746,7 +746,7 @@ var _ = Describe("Reconciler", func() {
 				installation2 := controllerInstallation2.DeepCopy()
 				installation2.DeletionTimestamp = &now
 				var (
-					wantedControllerRegistrations  = sets.New[string](controllerRegistration2.Name)
+					wantedControllerRegistrations  = sets.New(controllerRegistration2.Name)
 					registrationNameToInstallation = map[string]*gardencorev1beta1.ControllerInstallation{
 						controllerRegistration1.Name: controllerInstallation1,
 						controllerRegistration2.Name: installation2,
@@ -760,7 +760,7 @@ var _ = Describe("Reconciler", func() {
 
 			It("should correctly deploy needed controller installations", func() {
 				var (
-					wantedControllerRegistrations  = sets.New[string](controllerRegistration2.Name, controllerRegistration3.Name, controllerRegistration4.Name)
+					wantedControllerRegistrations  = sets.New(controllerRegistration2.Name, controllerRegistration3.Name, controllerRegistration4.Name)
 					registrationNameToInstallation = map[string]*gardencorev1beta1.ControllerInstallation{
 						controllerRegistration1.Name: controllerInstallation1,
 						controllerRegistration2.Name: controllerInstallation2,
@@ -799,7 +799,7 @@ var _ = Describe("Reconciler", func() {
 				registration1 := controllerRegistration1.DeepCopy()
 				registration1.DeletionTimestamp = &now
 				var (
-					wantedControllerRegistrations  = sets.New[string](registration1.Name, controllerRegistration2.Name)
+					wantedControllerRegistrations  = sets.New(registration1.Name, controllerRegistration2.Name)
 					registrationNameToInstallation = map[string]*gardencorev1beta1.ControllerInstallation{
 						registration1.Name:           controllerInstallation1,
 						controllerRegistration2.Name: controllerInstallation2,
@@ -831,7 +831,7 @@ var _ = Describe("Reconciler", func() {
 				registration2 := controllerRegistration2.DeepCopy()
 				registration2.DeletionTimestamp = &now
 				var (
-					wantedControllerRegistrations  = sets.New[string](registration1.Name, registration2.Name)
+					wantedControllerRegistrations  = sets.New(registration1.Name, registration2.Name)
 					registrationNameToInstallation = map[string]*gardencorev1beta1.ControllerInstallation{
 						registration1.Name: controllerInstallation1,
 						registration2.Name: nil,
@@ -867,7 +867,7 @@ var _ = Describe("Reconciler", func() {
 
 			It("should correctly delete unneeded controller installations", func() {
 				var (
-					wantedControllerRegistrationNames = sets.New[string](controllerRegistration2.Name)
+					wantedControllerRegistrationNames = sets.New(controllerRegistration2.Name)
 					registrationNameToInstallation    = map[string]*gardencorev1beta1.ControllerInstallation{
 						controllerRegistration1.Name: controllerInstallation1,
 						controllerRegistration2.Name: controllerInstallation2,

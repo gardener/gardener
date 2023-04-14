@@ -40,28 +40,28 @@ import (
 )
 
 var (
-	requiredControlPlaneDeployments = sets.New[string](
+	requiredControlPlaneDeployments = sets.New(
 		v1beta1constants.DeploymentNameGardenerResourceManager,
 		v1beta1constants.DeploymentNameKubeAPIServer,
 		v1beta1constants.DeploymentNameKubeControllerManager,
 		v1beta1constants.DeploymentNameKubeScheduler,
 	)
 
-	requiredControlPlaneEtcds = sets.New[string](
+	requiredControlPlaneEtcds = sets.New(
 		v1beta1constants.ETCDMain,
 		v1beta1constants.ETCDEvents,
 	)
 
-	requiredMonitoringSeedDeployments = sets.New[string](
+	requiredMonitoringSeedDeployments = sets.New(
 		v1beta1constants.DeploymentNameGrafana,
 		v1beta1constants.DeploymentNameKubeStateMetrics,
 	)
 
-	requiredLoggingStatefulSets = sets.New[string](
+	requiredLoggingStatefulSets = sets.New(
 		v1beta1constants.StatefulSetNameLoki,
 	)
 
-	requiredLoggingDeployments = sets.New[string](
+	requiredLoggingDeployments = sets.New(
 		v1beta1constants.DeploymentNameEventLogger,
 	)
 )
@@ -347,7 +347,7 @@ func computeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (set
 		return nil, err
 	}
 
-	requiredControlPlaneDeployments := sets.New[string](requiredControlPlaneDeployments.UnsortedList()...)
+	requiredControlPlaneDeployments := sets.New(requiredControlPlaneDeployments.UnsortedList()...)
 	if shootWantsClusterAutoscaler {
 		requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameClusterAutoscaler)
 	}
@@ -364,7 +364,7 @@ func computeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (set
 // computeRequiredMonitoringStatefulSets determine the required monitoring statefulsets
 // which should exist next to the control plane.
 func computeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.Set[string] {
-	var requiredMonitoringStatefulSets = sets.New[string](v1beta1constants.StatefulSetNamePrometheus)
+	var requiredMonitoringStatefulSets = sets.New(v1beta1constants.StatefulSetNamePrometheus)
 	if wantsAlertmanager {
 		requiredMonitoringStatefulSets.Insert(v1beta1constants.StatefulSetNameAlertManager)
 	}

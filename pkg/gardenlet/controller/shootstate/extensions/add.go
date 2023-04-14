@@ -95,7 +95,7 @@ func (r *Reconciler) ObjectPredicate() predicate.Predicate {
 	}
 }
 
-var invalidOperationAnnotations = sets.New[string](
+var invalidOperationAnnotations = sets.New(
 	v1beta1constants.GardenerOperationWaitForState,
 	v1beta1constants.GardenerOperationRestore,
 	v1beta1constants.GardenerOperationMigrate,

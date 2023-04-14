@@ -215,7 +215,7 @@ func (r *Reconciler) relevantSecretBindingsInUse(ctx context.Context, isSecretBi
 		}
 
 		if _, ok := namespaceToSecretBindingNames[secretBinding.Namespace]; !ok {
-			namespaceToSecretBindingNames[secretBinding.Namespace] = sets.New[string](secretBinding.Name)
+			namespaceToSecretBindingNames[secretBinding.Namespace] = sets.New(secretBinding.Name)
 		} else {
 			namespaceToSecretBindingNames[secretBinding.Namespace].Insert(secretBinding.Name)
 		}

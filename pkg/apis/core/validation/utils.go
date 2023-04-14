@@ -116,7 +116,7 @@ func getPercentValue(intOrStringValue intstr.IntOrString) (int, bool) {
 	return value, true
 }
 
-var availableFailureTolerance = sets.New[string](
+var availableFailureTolerance = sets.New(
 	string(core.FailureToleranceTypeNode),
 	string(core.FailureToleranceTypeZone),
 )
@@ -155,7 +155,7 @@ func shootReconciliationSuccessful(shoot *core.Shoot) (bool, string) {
 	return false, fmt.Sprintf("last operation was %s, not Reconcile", shoot.Status.LastOperation.Type)
 }
 
-var availableIPFamilies = sets.New[string](
+var availableIPFamilies = sets.New(
 	string(core.IPFamilyIPv4),
 	string(core.IPFamilyIPv6),
 )

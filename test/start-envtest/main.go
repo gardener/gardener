@@ -81,7 +81,7 @@ const (
 	typeGardener   = "gardener"
 )
 
-var supportedTypes = sets.New[string](typeKubernetes, typeGardener)
+var supportedTypes = sets.New(typeKubernetes, typeGardener)
 
 type options struct {
 	environmentType string

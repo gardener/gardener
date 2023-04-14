@@ -393,7 +393,7 @@ const (
 )
 
 // AvailableOperationAnnotations is the set of available operation annotations for Garden resources.
-var AvailableOperationAnnotations = sets.New[string](
+var AvailableOperationAnnotations = sets.New(
 	v1beta1constants.GardenerOperationReconcile,
 	v1beta1constants.OperationRotateCAStart,
 	v1beta1constants.OperationRotateCAComplete,

@@ -91,7 +91,7 @@ func (h *Handler) Handle(ctx context.Context, req admission.Request) admission.R
 	}
 
 	if v, ok := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones]; ok {
-		zones = sets.List(sets.New[string](strings.Split(v, ",")...).Delete(""))
+		zones = sets.List(sets.New(strings.Split(v, ",")...).Delete(""))
 	}
 
 	if v, err := strconv.ParseBool(namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigZonePinning]); err == nil {

@@ -65,7 +65,7 @@ func Register(plugins *admission.Plugins) {
 	})
 }
 
-// ValidateShoot contains listers and and admission handler.
+// ValidateShoot contains listers and admission handler.
 type ValidateShoot struct {
 	*admission.Handler
 	authorizer          authorizer.Authorizer
@@ -424,7 +424,7 @@ func (c *validationContext) validateScheduling(ctx context.Context, a admission.
 			}
 
 			if seedSelector.ProviderTypes != nil {
-				if !sets.New[string](seedSelector.ProviderTypes...).HasAny(c.seed.Spec.Provider.Type, "*") {
+				if !sets.New(seedSelector.ProviderTypes...).HasAny(c.seed.Spec.Provider.Type, "*") {
 					return admission.NewForbidden(a, fmt.Errorf("cannot schedule shoot '%s' on seed '%s' because none of the provider types in the seed selector of cloud profile '%s' is matching the provider type of the seed", c.shoot.Name, c.seed.Name, c.cloudProfile.Name))
 				}
 			}
@@ -563,8 +563,8 @@ func (c *validationContext) validateDeletion(a admission.Attributes) error {
 
 	// Allow removal of `gardener` finalizer only if the Shoot deletion has completed successfully
 	if len(c.shoot.Status.TechnicalID) > 0 && c.shoot.Status.LastOperation != nil {
-		oldFinalizers := sets.New[string](c.oldShoot.Finalizers...)
-		newFinalizers := sets.New[string](c.shoot.Finalizers...)
+		oldFinalizers := sets.New(c.oldShoot.Finalizers...)
+		newFinalizers := sets.New(c.shoot.Finalizers...)
 
 		if oldFinalizers.Has(core.GardenerName) && !newFinalizers.Has(core.GardenerName) {
 			lastOperation := c.shoot.Status.LastOperation

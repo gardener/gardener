@@ -74,13 +74,13 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 	}
 
 	if cfg.LogLevel != "" {
-		if !sets.New[string](logger.AllLogLevels...).Has(cfg.LogLevel) {
+		if !sets.New(logger.AllLogLevels...).Has(cfg.LogLevel) {
 			allErrs = append(allErrs, field.NotSupported(field.NewPath("logLevel"), cfg.LogLevel, logger.AllLogLevels))
 		}
 	}
 
 	if cfg.LogFormat != "" {
-		if !sets.New[string](logger.AllLogFormats...).Has(cfg.LogFormat) {
+		if !sets.New(logger.AllLogFormats...).Has(cfg.LogFormat) {
 			allErrs = append(allErrs, field.NotSupported(field.NewPath("logFormat"), cfg.LogFormat, logger.AllLogFormats))
 		}
 	}
@@ -228,7 +228,7 @@ func ValidateManagedSeedControllerConfiguration(cfg *config.ManagedSeedControlle
 	return allErrs
 }
 
-var availableShootPurposes = sets.New[string](
+var availableShootPurposes = sets.New(
 	string(gardencore.ShootPurposeEvaluation),
 	string(gardencore.ShootPurposeTesting),
 	string(gardencore.ShootPurposeDevelopment),

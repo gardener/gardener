@@ -62,7 +62,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	if exposureClass.DeletionTimestamp != nil {
 		// Ignore the exposure class if it has no gardener finalizer.
-		if !sets.New[string](exposureClass.Finalizers...).Has(gardencorev1beta1.GardenerName) {
+		if !sets.New(exposureClass.Finalizers...).Has(gardencorev1beta1.GardenerName) {
 			return reconcile.Result{}, nil
 		}
 

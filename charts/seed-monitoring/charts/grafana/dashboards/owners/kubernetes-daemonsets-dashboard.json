@@ -709,7 +709,7 @@
           "refId": "A"
         }
       ],
-      "title": "Drill down to to Pod Dashboard",
+      "title": "Drill down to Pod Dashboard",
       "transform": "timeseries_to_rows",
       "type": "table"
     }

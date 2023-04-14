@@ -4544,7 +4544,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Location is the time location in which both start and and shall be evaluated.</p>
+<p>Location is the time location in which both start and shall be evaluated.</p>
 </td>
 </tr>
 </tbody>

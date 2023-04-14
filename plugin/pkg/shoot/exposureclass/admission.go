@@ -190,7 +190,7 @@ func uniteSeedSelectors(shootSeedSelector *core.SeedSelector, exposureClassSeedS
 }
 
 func uniteTolerations(shootTolerations []core.Toleration, exposureClassTolerations []core.Toleration) ([]core.Toleration, error) {
-	shootTolerationsKeys := sets.NewString()
+	shootTolerationsKeys := sets.New[string]()
 	for _, toleration := range shootTolerations {
 		shootTolerationsKeys.Insert(toleration.Key)
 	}

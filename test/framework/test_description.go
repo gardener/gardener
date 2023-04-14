@@ -31,7 +31,7 @@ type TestDescription struct {
 // NewTestDescription creates a new test description
 func NewTestDescription(baseLabel string) TestDescription {
 	return TestDescription{
-		labels: sets.New[string](baseLabel),
+		labels: sets.New(baseLabel),
 	}
 }
 

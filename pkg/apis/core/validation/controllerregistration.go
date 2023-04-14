@@ -30,13 +30,13 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-var availablePolicies = sets.New[string](
+var availablePolicies = sets.New(
 	string(core.ControllerDeploymentPolicyOnDemand),
 	string(core.ControllerDeploymentPolicyAlways),
 	string(core.ControllerDeploymentPolicyAlwaysExceptNoShoots),
 )
 
-var availableExtensionStrategies = sets.New[string](
+var availableExtensionStrategies = sets.New(
 	string(core.BeforeKubeAPIServer),
 	string(core.AfterKubeAPIServer),
 )
@@ -52,7 +52,7 @@ func ValidateControllerRegistration(controllerRegistration *core.ControllerRegis
 }
 
 // SupportedExtensionKinds contains all supported extension kinds.
-var SupportedExtensionKinds = sets.New[string](
+var SupportedExtensionKinds = sets.New(
 	extensionsv1alpha1.BackupBucketResource,
 	extensionsv1alpha1.BackupEntryResource,
 	extensionsv1alpha1.BastionResource,

@@ -66,7 +66,7 @@ func Register(plugins *admission.Plugins) {
 	})
 }
 
-// ReferenceManager contains listers and and admission handler.
+// ReferenceManager contains listers and admission handler.
 type ReferenceManager struct {
 	*admission.Handler
 	gardenCoreClient           internalversion.Interface

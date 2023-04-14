@@ -67,7 +67,7 @@ import (
 
 var (
 	deletePropagationForeground = metav1.DeletePropagationForeground
-	foregroundDeletionAPIGroups = sets.New[string](appsv1.GroupName, extensionsv1beta1.GroupName, batchv1.GroupName)
+	foregroundDeletionAPIGroups = sets.New(appsv1.GroupName, extensionsv1beta1.GroupName, batchv1.GroupName)
 )
 
 // Reconciler manages the resources reference by ManagedResources.
@@ -640,7 +640,7 @@ func ignore(meta metav1.Object) bool {
 
 func deleteOnInvalidUpdate(obj *unstructured.Unstructured, err error) bool {
 	isImmutableConfigMapOrSecret := false
-	if obj.GetAPIVersion() == "v1" && sets.New[string]("ConfigMap", "Secret").Has(obj.GetKind()) {
+	if obj.GetAPIVersion() == "v1" && sets.New("ConfigMap", "Secret").Has(obj.GetKind()) {
 		cause, ok := apierrors.StatusCause(err, metav1.CauseType(field.ErrorTypeForbidden))
 		if ok && strings.Contains(cause.Message, "field is immutable when `immutable` is set") {
 			isImmutableConfigMapOrSecret = true
@@ -656,7 +656,7 @@ func keepObject(meta metav1.Object) bool {
 
 func isGarbageCollectableResource(obj *unstructured.Unstructured) bool {
 	return keyExistsAndValueTrue(obj.GetLabels(), references.LabelKeyGarbageCollectable) &&
-		obj.GetAPIVersion() == "v1" && sets.New[string]("ConfigMap", "Secret").Has(obj.GetKind())
+		obj.GetAPIVersion() == "v1" && sets.New("ConfigMap", "Secret").Has(obj.GetKind())
 }
 
 func keyExistsAndValueTrue(kv map[string]string, key string) bool {

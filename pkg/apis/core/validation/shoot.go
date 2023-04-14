@@ -54,22 +54,22 @@ import (
 )
 
 var (
-	availableProxyModes = sets.New[string](
+	availableProxyModes = sets.New(
 		string(core.ProxyModeIPTables),
 		string(core.ProxyModeIPVS),
 	)
-	availableKubernetesDashboardAuthenticationModes = sets.New[string](
+	availableKubernetesDashboardAuthenticationModes = sets.New(
 		core.KubernetesDashboardAuthModeToken,
 	)
-	availableNginxIngressExternalTrafficPolicies = sets.New[string](
+	availableNginxIngressExternalTrafficPolicies = sets.New(
 		string(corev1.ServiceExternalTrafficPolicyTypeCluster),
 		string(corev1.ServiceExternalTrafficPolicyTypeLocal),
 	)
-	availableShootOperations = sets.New[string](
+	availableShootOperations = sets.New(
 		v1beta1constants.ShootOperationMaintain,
 		v1beta1constants.ShootOperationRetry,
 	).Union(availableShootMaintenanceOperations)
-	availableShootMaintenanceOperations = sets.New[string](
+	availableShootMaintenanceOperations = sets.New(
 		v1beta1constants.GardenerOperationReconcile,
 		v1beta1constants.OperationRotateCAStart,
 		v1beta1constants.OperationRotateCAComplete,
@@ -77,7 +77,7 @@ var (
 		v1beta1constants.ShootOperationRotateObservabilityCredentials,
 		v1beta1constants.ShootOperationRotateSSHKeypair,
 	).Union(forbiddenShootOperationsWhenHibernated)
-	forbiddenShootOperationsWhenHibernated = sets.New[string](
+	forbiddenShootOperationsWhenHibernated = sets.New(
 		v1beta1constants.OperationRotateCredentialsStart,
 		v1beta1constants.OperationRotateCredentialsComplete,
 		v1beta1constants.OperationRotateETCDEncryptionKeyStart,
@@ -85,33 +85,33 @@ var (
 		v1beta1constants.OperationRotateServiceAccountKeyStart,
 		v1beta1constants.OperationRotateServiceAccountKeyComplete,
 	)
-	availableShootPurposes = sets.New[string](
+	availableShootPurposes = sets.New(
 		string(core.ShootPurposeEvaluation),
 		string(core.ShootPurposeTesting),
 		string(core.ShootPurposeDevelopment),
 		string(core.ShootPurposeProduction),
 	)
-	availableWorkerCRINames = sets.New[string](
+	availableWorkerCRINames = sets.New(
 		string(core.CRINameContainerD),
 		string(core.CRINameDocker),
 	)
-	availableClusterAutoscalerExpanderModes = sets.New[string](
+	availableClusterAutoscalerExpanderModes = sets.New(
 		string(core.ClusterAutoscalerExpanderLeastWaste),
 		string(core.ClusterAutoscalerExpanderMostPods),
 		string(core.ClusterAutoscalerExpanderPriority),
 		string(core.ClusterAutoscalerExpanderRandom),
 	)
-	availableCoreDNSAutoscalingModes = sets.New[string](
+	availableCoreDNSAutoscalingModes = sets.New(
 		string(core.CoreDNSAutoscalingModeClusterProportional),
 		string(core.CoreDNSAutoscalingModeHorizontal),
 	)
-	availableSchedulingProfiles = sets.New[string](
+	availableSchedulingProfiles = sets.New(
 		string(core.SchedulingProfileBalanced),
 		string(core.SchedulingProfileBinPacking),
 	)
 
 	// asymmetric algorithms from https://datatracker.ietf.org/doc/html/rfc7518#section-3.1
-	availableOIDCSigningAlgs = sets.New[string](
+	availableOIDCSigningAlgs = sets.New(
 		"RS256",
 		"RS384",
 		"RS512",
@@ -238,7 +238,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	if purpose := spec.Purpose; purpose != nil {
 		allowedShootPurposes := availableShootPurposes
 		if meta.Namespace == v1beta1constants.GardenNamespace || inTemplate {
-			allowedShootPurposes = sets.New[string](append(sets.List(availableShootPurposes), string(core.ShootPurposeInfrastructure))...)
+			allowedShootPurposes = sets.New(append(sets.List(availableShootPurposes), string(core.ShootPurposeInfrastructure))...)
 		}
 
 		if !allowedShootPurposes.Has(string(*purpose)) {
@@ -1491,7 +1491,7 @@ func validateKubeletConfigReserved(reserved *core.KubeletConfigReserved, fldPath
 	return allErrs
 }
 
-var reservedTaintKeys = sets.NewString(v1beta1constants.TaintNodeCriticalComponentsNotReady)
+var reservedTaintKeys = sets.New(v1beta1constants.TaintNodeCriticalComponentsNotReady)
 
 func validateClusterAutoscalerIgnoreTaints(ignoredTaints []string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}

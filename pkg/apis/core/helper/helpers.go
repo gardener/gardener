@@ -456,7 +456,7 @@ func SecretBindingHasType(secretBinding *core.SecretBinding, providerType string
 		return false
 	}
 
-	return sets.New[string](types...).Has(providerType)
+	return sets.New(types...).Has(providerType)
 }
 
 // GetAllZonesFromShoot returns the set of all availability zones defined in the worker pools of the Shoot specification.

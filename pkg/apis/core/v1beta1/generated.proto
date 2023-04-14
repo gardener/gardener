@@ -869,7 +869,7 @@ message HibernationSchedule {
   // +optional
   optional string end = 2;
 
-  // Location is the time location in which both start and and shall be evaluated.
+  // Location is the time location in which both start and shall be evaluated.
   // +optional
   optional string location = 3;
 }
