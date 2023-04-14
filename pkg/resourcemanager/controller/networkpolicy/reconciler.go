@@ -25,7 +25,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -340,7 +339,7 @@ func (r *Reconciler) reconcileIngressFromWorldPolicy(ctx context.Context, servic
 		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceNamespace, service.Namespace)
 
 		metav1.SetMetaDataAnnotation(&networkPolicy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
-			"ingress traffic from everywhere to ports %v for pods selected by the %s service selector.", portIntOrStringsOf(ports),
+			"ingress traffic from everywhere to ports %v for pods selected by the %s service selector.", portAndProtocolOf(ports),
 			client.ObjectKeyFromObject(service)))
 
 		networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{{
@@ -360,10 +359,14 @@ func (r *Reconciler) reconcileIngressFromWorldPolicy(ctx context.Context, servic
 	return err
 }
 
-func portIntOrStringsOf(ports []networkingv1.NetworkPolicyPort) []*intstr.IntOrString {
-	var result []*intstr.IntOrString
+func portAndProtocolOf(ports []networkingv1.NetworkPolicyPort) []string {
+	var result []string
 	for _, v := range ports {
-		result = append(result, v.Port)
+		if v.Protocol == nil {
+			result = append(result, fmt.Sprintf("%v", v.Port))
+		} else {
+			result = append(result, fmt.Sprintf("%v/%v", *v.Protocol, v.Port))
+		}
 	}
 	return result
 }
