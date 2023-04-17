@@ -797,6 +797,18 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
+	//TODO(rickardsjp, istvanballok): Remove in the next release once the Loki to Vali migration is complete.
+	if exists, err := common.LokiPvcExists(ctx, seedClient, r.GardenNamespace, log); err != nil {
+		return err
+	} else if exists {
+		if err := common.DeleteLokiRetainPvc(ctx, seedClient, r.GardenNamespace, log); err != nil {
+			return err
+		}
+		if err := common.RenameLokiPvcToValiPvc(ctx, seedClient, r.GardenNamespace, log); err != nil {
+			return err
+		}
+	}
+
 	if err := chartApplier.Apply(ctx, filepath.Join(r.ChartsPath, seedBootstrapChartName), r.GardenNamespace, seedBootstrapChartName, values, applierOptions); err != nil {
 		return err
 	}
