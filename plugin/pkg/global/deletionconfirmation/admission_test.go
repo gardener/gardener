@@ -426,6 +426,22 @@ var _ = Describe("deleteconfirmation", func() {
 
 					Expect(err).To(HaveOccurred())
 				})
+
+				It("should not deny deletecollection in this namespace because there is a shootstate in another namespace which does not have the deletion confirmation annotation", func() {
+					shootState2 := shootState.DeepCopy()
+					shootState2.Name = "dummyName2"
+					shootState2.Namespace = "dummyNs2"
+					shootState2.Annotations = map[string]string{gardenerutils.ConfirmationDeletion: "true"}
+
+					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("ShootState").WithVersion("version"), shootState2.Namespace, "", core.Resource("shootstates").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
+
+					Expect(shootStateStore.Add(&shootState)).NotTo(HaveOccurred())
+					Expect(shootStateStore.Add(shootState2)).NotTo(HaveOccurred())
+
+					err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+				})
 			})
 		})
 	})
