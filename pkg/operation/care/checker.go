@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -52,9 +53,18 @@ var (
 		v1beta1constants.ETCDEvents,
 	)
 
+	requiredMonitoringSeedDeploymentsBefore171 = sets.New(
+		v1beta1constants.DeploymentNameGrafana,
+		v1beta1constants.DeploymentNameKubeStateMetrics,
+	)
+
 	requiredMonitoringSeedDeployments = sets.New(
 		v1beta1constants.DeploymentNamePlutono,
 		v1beta1constants.DeploymentNameKubeStateMetrics,
+	)
+
+	requiredLoggingStatefulSetsBefore171 = sets.New(
+		v1beta1constants.StatefulSetNameLoki,
 	)
 
 	requiredLoggingStatefulSets = sets.New(
@@ -65,6 +75,16 @@ var (
 		v1beta1constants.DeploymentNameEventLogger,
 	)
 )
+
+// TODO(rickardsjp, istvanballok): remove in a future release
+var versionConstraintLessThan171 *semver.Constraints
+
+func init() {
+	var err error
+
+	versionConstraintLessThan171, err = semver.NewConstraint("< 1.71-0")
+	utilruntime.Must(err)
+}
 
 func mustGardenRoleLabelSelector(gardenRoles ...string) labels.Selector {
 	if len(gardenRoles) == 1 {
@@ -519,9 +539,15 @@ func (b *HealthChecker) CheckMonitoringControlPlane(
 		return nil, err
 	}
 
-	if exitCondition := b.checkRequiredDeployments(condition, requiredMonitoringSeedDeployments, deploymentList.Items); exitCondition != nil {
+	// TODO(rickardsjp, istvanballok): remove in a future release
+	requiredDeployments := requiredMonitoringSeedDeployments
+	if versionConstraintLessThan171.Check(b.gardenerVersion) {
+		requiredDeployments = requiredMonitoringSeedDeploymentsBefore171
+	}
+	if exitCondition := b.checkRequiredDeployments(condition, requiredDeployments, deploymentList.Items); exitCondition != nil {
 		return exitCondition, nil
 	}
+
 	if exitCondition := b.checkDeployments(condition, deploymentList.Items); exitCondition != nil {
 		return exitCondition, nil
 	}
@@ -558,7 +584,12 @@ func (b *HealthChecker) CheckLoggingControlPlane(
 			return nil, err
 		}
 
-		if exitCondition := b.checkRequiredStatefulSets(condition, requiredLoggingStatefulSets, statefulSetList.Items); exitCondition != nil {
+		// TODO(rickardsjp, istvanballok): remove in a future release
+		requiredStatefulSets := requiredLoggingStatefulSets
+		if versionConstraintLessThan171.Check(b.gardenerVersion) {
+			requiredStatefulSets = requiredLoggingStatefulSetsBefore171
+		}
+		if exitCondition := b.checkRequiredStatefulSets(condition, requiredStatefulSets, statefulSetList.Items); exitCondition != nil {
 			return exitCondition, nil
 		}
 		if exitCondition := b.checkStatefulSets(condition, statefulSetList.Items); exitCondition != nil {

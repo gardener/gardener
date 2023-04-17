@@ -224,10 +224,17 @@ var _ = Describe("health check", func() {
 			etcdEvents,
 		}
 
+		// TODO(rickardsjp, istvanballok): Remove in a future release
+		grafanaDeployment               = newDeployment(seedNamespace, v1beta1constants.DeploymentNameGrafana, v1beta1constants.GardenRoleMonitoring, true)
 		plutonoDeployment               = newDeployment(seedNamespace, v1beta1constants.DeploymentNamePlutono, v1beta1constants.GardenRoleMonitoring, true)
 		kubeStateMetricsShootDeployment = newDeployment(seedNamespace, v1beta1constants.DeploymentNameKubeStateMetrics, v1beta1constants.GardenRoleMonitoring, true)
 
-		requiredMonitoringControlPlaneDeployments = []*appsv1.Deployment{
+		requiredMonitoringControlPlaneDeploymentsLessThan171 = []*appsv1.Deployment{
+			grafanaDeployment,
+			kubeStateMetricsShootDeployment,
+		}
+
+		requiredMonitoringControlPlaneDeploymentsGreaterEqual171 = []*appsv1.Deployment{
 			plutonoDeployment,
 			kubeStateMetricsShootDeployment,
 		}
@@ -240,9 +247,14 @@ var _ = Describe("health check", func() {
 			prometheusStatefulSet,
 		}
 
+		lokiStatefulSet = newStatefulSet(seedNamespace, v1beta1constants.StatefulSetNameLoki, v1beta1constants.GardenRoleLogging, true)
 		valiStatefulSet = newStatefulSet(seedNamespace, v1beta1constants.StatefulSetNameVali, v1beta1constants.GardenRoleLogging, true)
 
-		requiredLoggingControlPlaneStatefulSets = []*appsv1.StatefulSet{
+		requiredLoggingControlPlaneStatefulSetsLessThan171 = []*appsv1.StatefulSet{
+			lokiStatefulSet,
+		}
+
+		requiredLoggingControlPlaneStatefulSetsGreaterEqual171 = []*appsv1.StatefulSet{
 			valiStatefulSet,
 		}
 
@@ -823,8 +835,10 @@ var _ = Describe("health check", func() {
 		)
 	})
 
+	gardenerVersion170 := semver.MustParse("1.70.0-mod1")
+	gardenerVersion171 := semver.MustParse("1.71.0")
 	DescribeTable("#CheckMonitoringControlPlane",
-		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, wantsShootMonitoring, wantsAlertmanager bool, conditionMatcher types.GomegaMatcher) {
+		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, wantsShootMonitoring, wantsAlertmanager bool, gardenerVersion *semver.Version, conditionMatcher types.GomegaMatcher) {
 			for _, obj := range deployments {
 				Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating deployment "+client.ObjectKeyFromObject(obj).String())
 			}
@@ -838,11 +852,19 @@ var _ = Describe("health check", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
-		Entry("all healthy",
-			requiredMonitoringControlPlaneDeployments,
+		Entry("all healthy (1.70)",
+			requiredMonitoringControlPlaneDeploymentsLessThan171,
 			requiredMonitoringControlPlaneStatefulSets,
 			true,
 			true,
+			gardenerVersion170,
+			BeNil()),
+		Entry("all healthy (1.71)",
+			requiredMonitoringControlPlaneDeploymentsGreaterEqual171,
+			requiredMonitoringControlPlaneStatefulSets,
+			true,
+			true,
+			gardenerVersion171,
 			BeNil()),
 		Entry("required deployment missing",
 			[]*appsv1.Deployment{
@@ -851,14 +873,16 @@ var _ = Describe("health check", func() {
 			requiredMonitoringControlPlaneStatefulSets,
 			true,
 			true,
+			gardenerVersion171,
 			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
 		Entry("required stateful set set missing",
-			requiredMonitoringControlPlaneDeployments,
+			requiredMonitoringControlPlaneDeploymentsGreaterEqual171,
 			[]*appsv1.StatefulSet{
 				prometheusStatefulSet,
 			},
 			true,
 			true,
+			gardenerVersion171,
 			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
 		Entry("deployment unhealthy",
 			[]*appsv1.Deployment{
@@ -868,21 +892,24 @@ var _ = Describe("health check", func() {
 			requiredMonitoringControlPlaneStatefulSets,
 			true,
 			true,
+			gardenerVersion171,
 			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
 		Entry("stateful set unhealthy",
-			requiredMonitoringControlPlaneDeployments,
+			requiredMonitoringControlPlaneDeploymentsGreaterEqual171,
 			[]*appsv1.StatefulSet{
 				newStatefulSet(alertManagerStatefulSet.Namespace, alertManagerStatefulSet.Name, roleOf(alertManagerStatefulSet), false),
 				prometheusStatefulSet,
 			},
 			true,
 			true,
+			gardenerVersion171,
 			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
 		Entry("shoot has monitoring disabled, omit all checks",
 			[]*appsv1.Deployment{},
 			[]*appsv1.StatefulSet{},
 			false,
 			true,
+			gardenerVersion171,
 			BeNil()),
 	)
 
@@ -901,14 +928,23 @@ var _ = Describe("health check", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
-		Entry("all healthy",
+		Entry("all healthy (1.70)",
 			requiredLoggingControlPlaneDeployments,
-			requiredLoggingControlPlaneStatefulSets,
+			requiredLoggingControlPlaneStatefulSetsLessThan171,
 			false,
 			true,
 			true,
 			BeNil(),
-			gardenerVersion,
+			gardenerVersion170,
+		),
+		Entry("all healthy (1.71)",
+			requiredLoggingControlPlaneDeployments,
+			requiredLoggingControlPlaneStatefulSetsGreaterEqual171,
+			false,
+			true,
+			true,
+			BeNil(),
+			gardenerVersion171,
 		),
 		Entry("required stateful set missing",
 			requiredLoggingControlPlaneDeployments,
@@ -917,16 +953,16 @@ var _ = Describe("health check", func() {
 			true,
 			true,
 			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
-			gardenerVersion,
+			gardenerVersion171,
 		),
 		Entry("required deployment is missing",
 			nil,
-			requiredLoggingControlPlaneStatefulSets,
+			requiredLoggingControlPlaneStatefulSetsGreaterEqual171,
 			false,
 			true,
 			true,
 			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
-			gardenerVersion,
+			gardenerVersion171,
 		),
 		Entry("stateful set unhealthy",
 			requiredLoggingControlPlaneDeployments,
@@ -937,18 +973,18 @@ var _ = Describe("health check", func() {
 			true,
 			true,
 			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
-			gardenerVersion,
+			gardenerVersion171,
 		),
 		Entry("stateful set unhealthy",
 			[]*appsv1.Deployment{
 				newDeployment(eventLoggerDepployment.Namespace, eventLoggerDepployment.Name, roleOf(eventLoggerDepployment), false),
 			},
-			requiredLoggingControlPlaneStatefulSets,
+			requiredLoggingControlPlaneStatefulSetsGreaterEqual171,
 			false,
 			true,
 			true,
 			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
-			gardenerVersion,
+			gardenerVersion171,
 		),
 		Entry("shoot purpose is testing, omit all checks",
 			[]*appsv1.Deployment{},
@@ -957,7 +993,7 @@ var _ = Describe("health check", func() {
 			true,
 			true,
 			BeNil(),
-			gardenerVersion,
+			gardenerVersion171,
 		),
 		Entry("vali is disabled in gardenlet config, omit stateful set check",
 			requiredLoggingControlPlaneDeployments,
@@ -966,16 +1002,16 @@ var _ = Describe("health check", func() {
 			true,
 			false,
 			BeNil(),
-			gardenerVersion,
+			gardenerVersion171,
 		),
 		Entry("event logging is disabled in gardenlet config, omit deployment check",
 			[]*appsv1.Deployment{},
-			requiredLoggingControlPlaneStatefulSets,
+			requiredLoggingControlPlaneStatefulSetsGreaterEqual171,
 			false,
 			false,
 			true,
 			BeNil(),
-			gardenerVersion,
+			gardenerVersion171,
 		),
 	)
 
