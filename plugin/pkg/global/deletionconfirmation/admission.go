@@ -184,7 +184,7 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 
 	case core.Kind("ShootState"):
 		listFunc = func() ([]client.Object, error) {
-			list, err := d.shootStateLister.List(labels.Everything())
+			list, err := d.shootStateLister.ShootStates(a.GetNamespace()).List(labels.Everything())
 			if err != nil {
 				return nil, err
 			}
