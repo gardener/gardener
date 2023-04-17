@@ -391,6 +391,7 @@ func (w *worker) checkWorkerStatusMachineDeployments(o client.Object) error {
 		return nil
 	}
 
+	// TODO(rishabh-11): Remove this check in a future release when it's ensured that all extensions were upgraded and follow the contract to maintain `MachineDeploymentsLastUpdateTime`.
 	if obj.Status.MachineDeploymentsLastUpdateTime == nil {
 		return health.CheckExtensionObject(o)
 	}

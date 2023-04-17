@@ -563,7 +563,7 @@ var _ = Describe("Worker", func() {
 			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdate(ctx)).To(HaveOccurred(), "worker status is not updated")
 		})
 
-		It(" should return no error when status.machineDeploymentsLastUpdateTime is added for the first time", func() {
+		It("should return no error when status.machineDeploymentsLastUpdateTime is added for the first time", func() {
 			defer test.WithVars(
 				&worker.TimeNow, mockNow.Do,
 			)()
@@ -610,6 +610,33 @@ var _ = Describe("Worker", func() {
 			// update the MachineDeploymentsLastUpdateTime in the worker status
 			lastUpdateTime := metav1.NewTime(metav1Now.Add(1 * time.Second))
 			w.Status.MachineDeploymentsLastUpdateTime = &lastUpdateTime
+			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
+
+			By("WaitUntilWorkerStatusMachineDeploymentsUpdate")
+			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdate(ctx)).To(Succeed(), "worker status is updated with latest machine deployments")
+		})
+
+		// TODO(rishabh-11): Remove this test in a future release when it's ensured that all extensions were upgraded and follow the contract to maintain `MachineDeploymentsLastUpdateTime.
+		It("should return no error when status.machineDeploymentsLastUpdateTime is not maintained and worker is ready", func() {
+			defer test.WithVars(
+				&worker.TimeNow, mockNow.Do,
+			)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			By("Deploy")
+			// Deploy should fill internal state with the added timestamp annotation
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+			By("Patch object")
+			patch := client.MergeFrom(w.DeepCopy())
+			w.Status.LastError = nil
+			// remove operation annotation, add up-to-date timestamp annotation
+			w.ObjectMeta.Annotations = map[string]string{
+				v1beta1constants.GardenerTimestamp: now.UTC().String(),
+			}
+			w.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State: gardencorev1beta1.LastOperationStateSucceeded,
+			}
 			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
 
 			By("WaitUntilWorkerStatusMachineDeploymentsUpdate")
