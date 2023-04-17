@@ -278,7 +278,7 @@ Our cluster-autoscaler only needs to know the minimum and maximum number of repl
 Gardener deploys this autoscaler if there is at least one worker pool that specifies `max>min`.
 In order to know how it needs to configure it, the provider-specific `Worker` extension controller must expose which `MachineDeployment`s it has created and how the `min`/`max` numbers should look like.
 
-Consequently, your controller should write this information into the `Worker` resource's `.status.machineDeployments` field:
+Consequently, your controller should write this information into the `Worker` resource's `.status.machineDeployments` field. It should also update the `.status.machineDeploymentsLastUpdateTime` field along with `.status.machineDeployments`, so that gardener is able to deploy cluster-autoscaler right after the Worker status is updated with the latest machine deployments and does not wait for the Worker reconciliation to be completed:
 
 ```yaml
 ---
@@ -298,6 +298,7 @@ status:
   - name: shoot--foo--bar-cpu-worker-z2
     minimum: 1
     maximum: 2
+  machineDeploymentsLastUpdateTime: <pointer to a metav1.Time value>
 ```
 
 In order to support a new worker provider, you need to write a controller that watches all `Worker`s with `.spec.type=<my-provider-name>`.

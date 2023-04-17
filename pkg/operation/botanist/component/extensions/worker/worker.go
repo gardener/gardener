@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
 const (
@@ -123,9 +124,9 @@ type worker struct {
 	waitSevereThreshold time.Duration
 	waitTimeout         time.Duration
 
-	worker                          *extensionsv1alpha1.Worker
-	machineDeployments              []extensionsv1alpha1.MachineDeployment
-	machineDeploymentLastUpdateTime *metav1.Time
+	worker                           *extensionsv1alpha1.Worker
+	machineDeployments               []extensionsv1alpha1.MachineDeployment
+	machineDeploymentsLastUpdateTime *metav1.Time
 }
 
 // Deploy uses the seed client to create or update the Worker resource.
@@ -255,7 +256,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 
 	// populate the MachineDeploymentsLastUpdate time as it will be used later to confirm if the machineDeployments slice in the worker
 	// status got updated with the latest ones.
-	w.machineDeploymentLastUpdateTime = obj.Status.MachineDeploymentsLastUpdateTime
+	w.machineDeploymentsLastUpdateTime = obj.Status.MachineDeploymentsLastUpdateTime
 
 	return w.worker, err
 }
@@ -386,8 +387,12 @@ func (w *worker) checkWorkerStatusMachineDeployments(o client.Object) error {
 		return fmt.Errorf("expected *extensionsv1alpha1.Worker but got %T", o)
 	}
 
-	if obj.Status.MachineDeploymentsLastUpdateTime != nil && (w.machineDeploymentLastUpdateTime == nil || obj.Status.MachineDeploymentsLastUpdateTime.After(w.machineDeploymentLastUpdateTime.Time)) {
+	if obj.Status.MachineDeploymentsLastUpdateTime != nil && (w.machineDeploymentsLastUpdateTime == nil || obj.Status.MachineDeploymentsLastUpdateTime.After(w.machineDeploymentsLastUpdateTime.Time)) {
 		return nil
+	}
+
+	if obj.Status.MachineDeploymentsLastUpdateTime == nil {
+		return health.CheckExtensionObject(o)
 	}
 
 	return fmt.Errorf("worker status machineDeployments has not been updated")
