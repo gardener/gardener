@@ -780,6 +780,23 @@ func (r *Reconciler) runReconcileSeedFlow(
 		},
 	})
 
+	// Delete Grafana artifacts.
+	if err := common.DeleteGrafana(ctx, r.SeedClientSet, r.GardenNamespace); err != nil {
+		return err
+	}
+
+	// Delete Grafana ingress which doesn't have the component label in the garden namespace.
+	if err := seedClient.Delete(
+		ctx,
+		&networkingv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "grafana",
+				Namespace: r.GardenNamespace,
+			}},
+	); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+
 	if err := chartApplier.Apply(ctx, filepath.Join(r.ChartsPath, seedBootstrapChartName), r.GardenNamespace, seedBootstrapChartName, values, applierOptions); err != nil {
 		return err
 	}
