@@ -114,6 +114,11 @@ func (s *Shoot) GetProviderType() string {
 	return s.Spec.Provider.Type
 }
 
+// IsWorkerless checks if the shoot has zero workers.
+func (s *Shoot) IsWorkerless() bool {
+	return len(s.Spec.Provider.Workers) == 0
+}
+
 // ShootStatus holds the most recently observed status of the Shoot cluster.
 type ShootStatus struct {
 	// Conditions represents the latest available observations of a Shoots's current state.
