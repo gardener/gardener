@@ -681,7 +681,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 	// to be owned by gardenlet exclusively.
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, d.client, d.osc, func() error {
 		metav1.SetMetaDataAnnotation(&d.osc.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-		metav1.SetMetaDataAnnotation(&d.osc.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+		metav1.SetMetaDataAnnotation(&d.osc.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 		metav1.SetMetaDataLabel(&d.osc.ObjectMeta, v1beta1constants.LabelWorkerPool, d.worker.Name)
 
 		d.osc.Spec.Type = d.worker.Machine.Image.Name

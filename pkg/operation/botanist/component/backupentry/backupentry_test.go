@@ -93,7 +93,7 @@ var _ = Describe("BackupEntry", func() {
 				Name:      name,
 				Namespace: namespace,
 				Annotations: map[string]string{
-					v1beta1constants.GardenerTimestamp: now.UTC().String(),
+					v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 					v1beta1constants.ShootPurpose:      string(shootPurpose),
 				},
 				OwnerReferences: []metav1.OwnerReference{*ownerRef},

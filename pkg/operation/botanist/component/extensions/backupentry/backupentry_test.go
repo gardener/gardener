@@ -113,7 +113,7 @@ var _ = Describe("#BackupEntry", func() {
 				Name: name,
 				Annotations: map[string]string{
 					v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-					v1beta1constants.GardenerTimestamp: fakeClock.Now().UTC().String(),
+					v1beta1constants.GardenerTimestamp: fakeClock.Now().UTC().Format(time.RFC3339Nano),
 				},
 			},
 			Spec: extensionsv1alpha1.BackupEntrySpec{
@@ -174,7 +174,7 @@ var _ = Describe("#BackupEntry", func() {
 			expected.Status.LastError = nil
 			// remove operation annotation, add old timestamp annotation
 			expected.ObjectMeta.Annotations = map[string]string{
-				v1beta1constants.GardenerTimestamp: fakeClock.Now().Add(-time.Millisecond).UTC().String(),
+				v1beta1constants.GardenerTimestamp: fakeClock.Now().Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 			}
 			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,
@@ -195,7 +195,7 @@ var _ = Describe("#BackupEntry", func() {
 			expected.Status.LastError = nil
 			// remove operation annotation, add up-to-date timestamp annotation
 			expected.ObjectMeta.Annotations = map[string]string{
-				v1beta1constants.GardenerTimestamp: fakeClock.Now().UTC().String(),
+				v1beta1constants.GardenerTimestamp: fakeClock.Now().UTC().Format(time.RFC3339Nano),
 			}
 			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,
@@ -229,7 +229,7 @@ var _ = Describe("#BackupEntry", func() {
 			expected = empty.DeepCopy()
 			expected.SetAnnotations(map[string]string{
 				gardenerutils.ConfirmationDeletion: "true",
-				v1beta1constants.GardenerTimestamp: fakeClock.Now().UTC().String(),
+				v1beta1constants.GardenerTimestamp: fakeClock.Now().UTC().Format(time.RFC3339Nano),
 			})
 
 			// add deletion confirmation and timestamp annotation
@@ -299,7 +299,7 @@ var _ = Describe("#BackupEntry", func() {
 			// deploy with wait-for-state annotation
 			obj := expected.DeepCopy()
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
-			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", fakeClock.Now().UTC().String())
+			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", fakeClock.Now().UTC().Format(time.RFC3339Nano))
 			obj.TypeMeta = metav1.TypeMeta{}
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
 				DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
@@ -331,7 +331,7 @@ var _ = Describe("#BackupEntry", func() {
 
 			expectedCopy := empty.DeepCopy()
 			metav1.SetMetaDataAnnotation(&expectedCopy.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationMigrate)
-			metav1.SetMetaDataAnnotation(&expectedCopy.ObjectMeta, v1beta1constants.GardenerTimestamp, fakeClock.Now().UTC().String())
+			metav1.SetMetaDataAnnotation(&expectedCopy.ObjectMeta, v1beta1constants.GardenerTimestamp, fakeClock.Now().UTC().Format(time.RFC3339Nano))
 			test.EXPECTPatch(ctx, mc, expectedCopy, empty, types.MergePatchType)
 
 			defaultDepWaiter = backupentry.New(log, mc, fakeClock, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
@@ -347,7 +347,7 @@ var _ = Describe("#BackupEntry", func() {
 
 			expectedCopy := empty.DeepCopy()
 			metav1.SetMetaDataAnnotation(&expectedCopy.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationMigrate)
-			metav1.SetMetaDataAnnotation(&expectedCopy.ObjectMeta, v1beta1constants.GardenerTimestamp, fakeClock.Now().UTC().String())
+			metav1.SetMetaDataAnnotation(&expectedCopy.ObjectMeta, v1beta1constants.GardenerTimestamp, fakeClock.Now().UTC().Format(time.RFC3339Nano))
 			test.EXPECTPatch(ctx, mc, expectedCopy, empty, types.MergePatchType)
 
 			defaultDepWaiter = backupentry.New(log, mc, fakeClock, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)

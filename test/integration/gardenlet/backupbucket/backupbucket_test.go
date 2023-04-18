@@ -101,7 +101,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 					ProviderStatus:     providerStatus,
 					LastOperation: &gardencorev1beta1.LastOperation{
 						State:          lastOperationState,
-						LastUpdateTime: metav1.NewTime(fakeClock.Now()),
+						LastUpdateTime: metav1.NewTime(fakeClock.Now().Add(time.Second * 10)),
 					},
 				},
 				GeneratedSecretRef: &corev1.SecretReference{

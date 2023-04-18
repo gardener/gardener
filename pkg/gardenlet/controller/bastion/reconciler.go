@@ -178,7 +178,7 @@ func (r *Reconciler) reconcileBastion(
 	if mustReconcileExtensionBastion {
 		if _, err := controllerutils.GetAndCreateOrMergePatch(seedCtx, r.SeedClient, extensionBastion, func() error {
 			metav1.SetMetaDataAnnotation(&extensionBastion.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-			metav1.SetMetaDataAnnotation(&extensionBastion.ObjectMeta, v1beta1constants.GardenerTimestamp, r.Clock.Now().UTC().String())
+			metav1.SetMetaDataAnnotation(&extensionBastion.ObjectMeta, v1beta1constants.GardenerTimestamp, r.Clock.Now().UTC().Format(time.RFC3339Nano))
 
 			extensionBastion.Spec = extensionBastionSpec
 			return nil

@@ -118,14 +118,14 @@ var _ = Describe("Default", func() {
 				It("should return true when last operation has not succeeded and the timestamp changed", func() {
 					obj.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateError}
 					oldObj := obj.DeepCopy()
-					obj.SetAnnotations(map[string]string{"gardener.cloud/timestamp": now.UTC().Add(time.Second).String()})
+					obj.SetAnnotations(map[string]string{"gardener.cloud/timestamp": now.UTC().Add(time.Second).Format(time.RFC3339Nano)})
 					Expect(pred.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj})).To(BeTrue())
 				})
 
 				It("should return false when last operation has succeeded and the timestamp changed", func() {
 					obj.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateSucceeded}
 					oldObj := obj.DeepCopy()
-					obj.SetAnnotations(map[string]string{"gardener.cloud/timestamp": now.UTC().Add(time.Second).String()})
+					obj.SetAnnotations(map[string]string{"gardener.cloud/timestamp": now.UTC().Add(time.Second).Format(time.RFC3339Nano)})
 					Expect(pred.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj})).To(BeFalse())
 				})
 			})

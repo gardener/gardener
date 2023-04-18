@@ -165,7 +165,7 @@ func (b *backupEntry) Restore(ctx context.Context, _ *gardencorev1beta1.ShootSta
 func (b *backupEntry) reconcile(ctx context.Context, backupEntry *gardencorev1beta1.BackupEntry, seedName *string, bucketName string, operation string) error {
 	_, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, b.client, backupEntry, func() error {
 		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 
 		if b.values.ShootPurpose != nil {
 			metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.ShootPurpose, string(*b.values.ShootPurpose))

@@ -326,7 +326,7 @@ var _ = Describe("NginxIngress", func() {
 					ResourceVersion: "1",
 					Annotations: map[string]string{
 						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-						v1beta1constants.GardenerTimestamp: now.UTC().String(),
+						v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 					},
 				},
 				Spec: extensionsv1alpha1.DNSRecordSpec{

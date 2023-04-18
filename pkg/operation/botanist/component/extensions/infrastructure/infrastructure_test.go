@@ -121,7 +121,7 @@ var _ = Describe("#Interface", func() {
 				Namespace: namespace,
 				Annotations: map[string]string{
 					v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-					v1beta1constants.GardenerTimestamp: now.UTC().String(),
+					v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 				},
 			},
 			Spec: extensionsv1alpha1.InfrastructureSpec{
@@ -170,7 +170,7 @@ var _ = Describe("#Interface", func() {
 			expected.Spec.SSHPublicKey = []byte("")
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(expected), actual)).To(Succeed())
 			expected.SetAnnotations(map[string]string{
-				v1beta1constants.GardenerTimestamp: now.UTC().String(),
+				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			})
 			Expect(actual).To(DeepEqual(expected))
 		})
@@ -222,7 +222,7 @@ var _ = Describe("#Interface", func() {
 			expected.Status.LastError = nil
 			// remove operation annotation, add old timestamp annotation
 			expected.ObjectMeta.Annotations = map[string]string{
-				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().String(),
+				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 			}
 			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,
@@ -250,7 +250,7 @@ var _ = Describe("#Interface", func() {
 			expected.Status.LastError = nil
 			// remove operation annotation, add up-to-date timestamp annotation
 			expected.ObjectMeta.Annotations = map[string]string{
-				v1beta1constants.GardenerTimestamp: now.UTC().String(),
+				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
 			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,
@@ -305,7 +305,7 @@ var _ = Describe("#Interface", func() {
 			expected = empty.DeepCopy()
 			expected.SetAnnotations(map[string]string{
 				gardenerutils.ConfirmationDeletion: "true",
-				v1beta1constants.GardenerTimestamp: now.UTC().String(),
+				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			})
 
 			// add deletion confirmation and timestamp annotation
@@ -369,7 +369,7 @@ var _ = Describe("#Interface", func() {
 			// deploy with wait-for-state annotation
 			obj := expected.DeepCopy()
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
-			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().String())
+			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().Format(time.RFC3339Nano))
 			obj.TypeMeta = metav1.TypeMeta{}
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
 				DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
@@ -408,7 +408,7 @@ var _ = Describe("#Interface", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(expected), actual)).To(Succeed())
 			expected.SetResourceVersion("2")
 			metav1.SetMetaDataAnnotation(&expected.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationMigrate)
-			metav1.SetMetaDataAnnotation(&expected.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().String())
+			metav1.SetMetaDataAnnotation(&expected.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Format(time.RFC3339Nano))
 			Expect(actual).To(DeepEqual(expected))
 		})
 

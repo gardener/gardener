@@ -399,7 +399,7 @@ func WaitUntilExtensionObjectsMigrated(
 func AnnotateObjectWithOperation(ctx context.Context, w client.Writer, obj client.Object, operation string) error {
 	patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
 	kubernetesutils.SetMetaDataAnnotation(obj, v1beta1constants.GardenerOperation, operation)
-	kubernetesutils.SetMetaDataAnnotation(obj, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+	kubernetesutils.SetMetaDataAnnotation(obj, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 	return w.Patch(ctx, obj, patch)
 }
 

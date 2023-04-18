@@ -267,9 +267,9 @@ var _ = Describe("extensions", func() {
 				LastUpdateTime: metav1.Now(),
 			}
 			now = time.Now()
-			metav1.SetMetaDataAnnotation(&expected.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().String())
+			metav1.SetMetaDataAnnotation(&expected.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Format(time.RFC3339Nano))
 			passedObj := expected.DeepCopy()
-			metav1.SetMetaDataAnnotation(&passedObj.ObjectMeta, v1beta1constants.GardenerTimestamp, now.Add(time.Millisecond).UTC().String())
+			metav1.SetMetaDataAnnotation(&passedObj.ObjectMeta, v1beta1constants.GardenerTimestamp, now.Add(time.Millisecond).UTC().Format(time.RFC3339Nano))
 
 			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "creating worker succeeds")
 			err := WaitUntilObjectReadyWithHealthFunction(
@@ -289,7 +289,7 @@ var _ = Describe("extensions", func() {
 				LastUpdateTime: metav1.Now(),
 			}
 			now = time.Now()
-			metav1.SetMetaDataAnnotation(&expected.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().String())
+			metav1.SetMetaDataAnnotation(&expected.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Format(time.RFC3339Nano))
 			passedObj := expected.DeepCopy()
 
 			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "creating worker succeeds")
@@ -361,7 +361,7 @@ var _ = Describe("extensions", func() {
 			)()
 
 			expected.Annotations = map[string]string{
-				v1beta1constants.GardenerTimestamp: now.UTC().String(),
+				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
 
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
@@ -579,7 +579,7 @@ var _ = Describe("extensions", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(expected.Annotations).To(Equal(map[string]string{
 					v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRestore,
-					v1beta1constants.GardenerTimestamp: now.UTC().String(),
+					v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 				}))
 				Expect(expected.Status.State).To(Equal(expectedState))
 			})
@@ -605,7 +605,7 @@ var _ = Describe("extensions", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(expected.Annotations).To(Equal(map[string]string{
 					v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRestore,
-					v1beta1constants.GardenerTimestamp: now.UTC().String(),
+					v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 				}))
 				Expect(expected.Status.State).To(BeNil())
 			})
@@ -658,7 +658,7 @@ var _ = Describe("extensions", func() {
 			expectedWithAnnotations := expected.DeepCopy()
 			expectedWithAnnotations.Annotations = map[string]string{
 				v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationMigrate,
-				v1beta1constants.GardenerTimestamp: now.UTC().String(),
+				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
 
 			mc := mockclient.NewMockClient(ctrl)
@@ -869,7 +869,7 @@ var _ = Describe("extensions", func() {
 			expectedWithAnnotations := expected.DeepCopy()
 			expectedWithAnnotations.Annotations = map[string]string{
 				v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationMigrate,
-				v1beta1constants.GardenerTimestamp: now.UTC().String(),
+				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
 
 			mc := mockclient.NewMockClient(ctrl)
