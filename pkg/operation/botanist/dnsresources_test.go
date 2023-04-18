@@ -221,7 +221,7 @@ var _ = Describe("dnsrecord", func() {
 				ownerDNSRecord.EXPECT().Migrate(ctx),
 				ownerDNSRecord.EXPECT().WaitMigrate(ctx),
 			)
-			Expect(b.MigrateOwnerDNSResources(ctx)).To(Succeed())
+			Expect(b.MigrateOrDestroyOwnerDNSResources(ctx)).To(Succeed())
 		})
 
 		It("should delete the owner DNSRecord resource if owner checks are disabled", func() {
@@ -234,7 +234,7 @@ var _ = Describe("dnsrecord", func() {
 				ownerDNSRecord.EXPECT().Destroy(ctx),
 				ownerDNSRecord.EXPECT().WaitCleanup(ctx),
 			)
-			Expect(b.MigrateOwnerDNSResources(ctx)).To(Succeed())
+			Expect(b.MigrateOrDestroyOwnerDNSResources(ctx)).To(Succeed())
 		})
 	})
 })

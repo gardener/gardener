@@ -873,8 +873,9 @@ func checkIfSeedNamespaceExists(ctx context.Context, o *operation.Operation, bot
 	botanist.SeedNamespaceObject = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}
 	if err := botanist.SeedClientSet.APIReader().Get(ctx, client.ObjectKeyFromObject(botanist.SeedNamespaceObject), botanist.SeedNamespaceObject); err != nil {
 		if apierrors.IsNotFound(err) {
-			o.Logger.Info("Did not find namespace in the Seed cluster - nothing to be done", "namespace", client.ObjectKeyFromObject(o.SeedNamespaceObject))
-			return errorsutils.Cancel()
+			o.Logger.Info("Did not find namespace in the Seed cluster", "namespace", client.ObjectKeyFromObject(o.SeedNamespaceObject))
+			botanist.SeedNamespaceObject = nil
+			return nil
 		}
 		return err
 	}
