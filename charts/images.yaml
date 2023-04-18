@@ -93,7 +93,7 @@ images:
 - name: ingress-default-backend
   sourceRepository: github.com/gardener/ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
-  tag: "0.14.0"
+  tag: "0.15.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
