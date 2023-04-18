@@ -31,7 +31,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils"
@@ -387,30 +386,4 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 		return nil
 	})
 	return err
-}
-
-// RenewShootAccessSecrets drops the serviceaccount.resources.gardener.cloud/token-renew-timestamp annotation from all
-// shoot access secrets. This will make the TokenRequestor controller part of gardener-resource-manager issuing new
-// tokens immediately.
-func (b *Botanist) RenewShootAccessSecrets(ctx context.Context) error {
-	secretList := &corev1.SecretList{}
-	if err := b.SeedClientSet.Client().List(ctx, secretList, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels{
-		resourcesv1alpha1.ResourceManagerPurpose: resourcesv1alpha1.LabelPurposeTokenRequest,
-	}); err != nil {
-		return err
-	}
-
-	var fns []flow.TaskFn
-
-	for _, obj := range secretList.Items {
-		secret := obj
-
-		fns = append(fns, func(ctx context.Context) error {
-			patch := client.MergeFrom(secret.DeepCopy())
-			delete(secret.Annotations, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp)
-			return b.SeedClientSet.Client().Patch(ctx, &secret, patch)
-		})
-	}
-
-	return flow.Parallel(fns...)(ctx)
 }
