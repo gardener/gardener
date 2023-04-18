@@ -67,6 +67,7 @@ type ensurer struct {
 
 func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ extensionscontextwebhook.GardenContext, _ *semver.Version, newObj, _ *kubeletconfigv1beta1.KubeletConfiguration) error {
 	newObj.FailSwapOn = pointer.Bool(false)
+	newObj.CgroupDriver = "systemd"
 	return nil
 }
 
