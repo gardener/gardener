@@ -234,6 +234,11 @@ func (f *GardenerFramework) UpdateShoot(ctx context.Context, shoot *gardencorev1
 		return err
 	}
 
+	// Verify no running pods after hibernation
+	if err := f.VerifyNoRunningPods(ctx, shoot); err != nil {
+		return fmt.Errorf("failed to verify no running pods after hibernation: %v", err)
+	}
+
 	log.Info("Shoot was successfully updated")
 	return nil
 }
@@ -485,4 +490,27 @@ func setHibernation(shoot *gardencorev1beta1.Shoot, hibernated bool) {
 	shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 		Enabled: &hibernated,
 	}
+}
+
+func (f *GardenerFramework) VerifyNoRunningPods(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
+	_, seedClient, err := f.GetSeed(ctx, *shoot.Spec.SeedName)
+	if err != nil {
+		return err
+	}
+
+	shootSeedNamespace := shoot.Status.TechnicalID
+	podList := &corev1.PodList{}
+	if err := seedClient.Client().List(ctx, podList, client.InNamespace(shootSeedNamespace)); err != nil {
+		return err
+	}
+
+	if len(podList.Items) > 0 {
+		runningPodNames := []string{}
+		for _, pod := range podList.Items {
+			runningPodNames = append(runningPodNames, pod.Name)
+		}
+		return fmt.Errorf("found pods in namespace %s: %v", shootSeedNamespace, runningPodNames)
+	}
+
+	return nil
 }
