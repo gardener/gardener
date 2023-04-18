@@ -75,7 +75,7 @@ type ShootSpec struct {
 	// Kubernetes contains the version and configuration settings of the control plane components.
 	Kubernetes Kubernetes
 	// Networking contains information about cluster networking such as CNI Plugin type, CIDRs, ...etc.
-	Networking Networking
+	Networking *Networking
 	// Maintenance contains information about the time window for maintenance operations and which
 	// operations should be performed.
 	Maintenance *Maintenance
@@ -931,7 +931,7 @@ type KubeletConfigReserved struct {
 // Networking defines networking parameters for the shoot cluster.
 type Networking struct {
 	// Type identifies the type of the networking plugin. This field is immutable.
-	Type string
+	Type *string
 	// ProviderConfig is the configuration passed to network resource.
 	ProviderConfig *runtime.RawExtension
 	// Pods is the CIDR of the pod network. This field is immutable.

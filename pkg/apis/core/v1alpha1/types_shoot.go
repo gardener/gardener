@@ -75,7 +75,8 @@ type ShootSpec struct {
 	// Kubernetes contains the version and configuration settings of the control plane components.
 	Kubernetes Kubernetes `json:"kubernetes" protobuf:"bytes,6,opt,name=kubernetes"`
 	// Networking contains information about cluster networking such as CNI Plugin type, CIDRs, ...etc.
-	Networking Networking `json:"networking" protobuf:"bytes,7,opt,name=networking"`
+	// +optional
+	Networking *Networking `json:"networking,omitempty" protobuf:"bytes,7,opt,name=networking"`
 	// Maintenance contains information about the time window for maintenance operations and which
 	// operations should be performed.
 	// +optional
@@ -1185,7 +1186,8 @@ type KubeletConfigReserved struct {
 // Networking defines networking parameters for the shoot cluster.
 type Networking struct {
 	// Type identifies the type of the networking plugin. This field is immutable.
-	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
+	// +optional
+	Type *string `json:"type,omitempty" protobuf:"bytes,1,opt,name=type"`
 	// ProviderConfig is the configuration passed to network resource.
 	// +optional
 	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
