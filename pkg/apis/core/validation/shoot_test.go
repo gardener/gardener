@@ -234,7 +234,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Maintenance: &core.Maintenance{
 						AutoUpdate: &core.MaintenanceAutoUpdate{
-							KubernetesVersion: true,
+							KubernetesVersion: pointer.Bool(true),
 						},
 						TimeWindow: &core.MaintenanceTimeWindow{
 							Begin: "220000+0100",
@@ -3136,6 +3136,19 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				Expect(errorList).To(BeEmpty())
 			})
+
+			It("should not allow setting machineImageVersion for autoUpdate if it's a workerless Shoot", func() {
+				shoot.Spec.Provider.Workers = nil
+				shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = pointer.Bool(true)
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.maintenance.autoUpdate.machineImageVersion"),
+					"Detail": ContainSubstring("this field should not be set for Workerless Shoot cluster"),
+				}))))
+			})
 		})
 
 		It("should forbid updating the spec for shoots with deletion timestamp", func() {
@@ -3143,7 +3156,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			deletionTimestamp := metav1.NewTime(time.Now())
 			shoot.DeletionTimestamp = &deletionTimestamp
 			newShoot.DeletionTimestamp = &deletionTimestamp
-			newShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
+			newShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = pointer.Bool(false)
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
 

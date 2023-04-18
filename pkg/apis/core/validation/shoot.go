@@ -222,7 +222,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	allErrs = append(allErrs, validateResources(spec.Resources, fldPath.Child("resources"))...)
 	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, isDockerConfigured(spec.Provider.Workers), workerless, fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateNetworking(spec.Networking, fldPath.Child("networking"))...)
-	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"))...)
+	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"), workerless)...)
 	allErrs = append(allErrs, validateMonitoring(spec.Monitoring, fldPath.Child("monitoring"))...)
 	allErrs = append(allErrs, ValidateHibernation(meta.Annotations, spec.Hibernation, fldPath.Child("hibernation"))...)
 
@@ -1245,11 +1245,17 @@ func validateAlerting(alerting *core.Alerting, fldPath *field.Path) field.ErrorL
 	return allErrs
 }
 
-func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path) field.ErrorList {
+func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path, workerless bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if maintenance == nil {
 		return allErrs
+	}
+
+	if maintenance.AutoUpdate != nil {
+		if workerless && maintenance.AutoUpdate.MachineImageVersion != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("autoUpdate", "machineImageVersion"), workerlessErrorMsg))
+		}
 	}
 
 	if maintenance.TimeWindow != nil {
