@@ -54,6 +54,7 @@ if [[ "$1" != "operator" ]]; then
     e2e-update-zone.local
     e2e-upgrade.local
     e2e-upgrade-ha.local
+    e2e-upgrade-hib
   )
 
   if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
