@@ -36,6 +36,7 @@ const (
 	monitoringMetricMCMMachineSetFailedMachines                = "mcm_machine_set_failed_machines"
 	monitoringMetricMCMMachineDeploymentItemsTotal             = "mcm_machine_deployment_items_total"
 	monitoringMetricMCMMachineSetItemsTotal                    = "mcm_machine_set_items_total"
+	monitoringMetricMCMMachineSetStaleMachinesTotal            = "mcm_machine_set_stale_machines_total"
 	monitoringMetricMCMScrapeFailureTotal                      = "mcm_scrape_failure_total"
 	monitoringMetricMCMWorkqueueAddsTotal                      = "mcm_workqueue_adds_total"
 	monitoringMetricMCMWorkqueueDepth                          = "mcm_workqueue_depth"
@@ -79,6 +80,7 @@ var (
 		monitoringMetricMCMMachineSetFailedMachines,
 		monitoringMetricMCMMachineDeploymentItemsTotal,
 		monitoringMetricMCMMachineSetItemsTotal,
+		monitoringMetricMCMMachineSetStaleMachinesTotal,
 		monitoringMetricMCMScrapeFailureTotal,
 		monitoringMetricMCMWorkqueueAddsTotal,
 		monitoringMetricMCMWorkqueueDepth,
