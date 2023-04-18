@@ -106,6 +106,33 @@ kind create cluster \
   --image "kindest/node:v1.24.7" \
   --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "environment=$ENVIRONMENT" --set "gardener.repositoryRoot"=$(dirname "$0")/..)
 
+# adjust Kind's CRI default OCI runtime spec for new containers to include the cgroup namespace
+# this is required for nesting kubelets on cgroupsv2, as the kindest-node entrypoint script assumes an existing cgroupns when the host kernel uses cgroupsv2
+# See containerd CRI: https://github.com/containerd/containerd/commit/687469d3cee18bf0e12defa5c6d0c7b9139a2dbd
+if [ -f "/sys/fs/cgroup/cgroup.controllers" ]; then
+    echo "Host uses cgroupsv2"
+    cat << 'EOF' >>adjust_cri_base.sh
+#!/bin/bash
+if [ -f /etc/containerd/cri-base.json ]; then
+    cat /etc/containerd/cri-base.json | jq '.linux.namespaces += [{
+        "type": "cgroup"
+    }]' > /etc/containerd/cri-base.tmp.json && cp /etc/containerd/cri-base.tmp.json /etc/containerd/cri-base.json
+    echo "Adjusted kind node /etc/containerd/cri-base.json to create containers with a cgroup namespace"
+else
+    echo "/etc/containerd/cri-base.json not found in kind container"
+fi
+EOF
+
+    for node_name in $(kubectl get nodes -o name | cut -d/ -f2)
+    do
+        echo "Adjusting containerd config for kind node $node_name"
+
+        # copy script to the kind's docker container and execute it
+        docker cp adjust_cri_base.sh "$node_name":/etc/containerd/adjust_cri_base.sh
+        docker exec "$node_name" bash -c "chmod +x /etc/containerd/adjust_cri_base.sh && /etc/containerd/adjust_cri_base.sh && systemctl restart containerd"
+    done
+fi
+
 # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
 kubectl get nodes -o name |\
   cut -d/ -f2 |\
