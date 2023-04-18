@@ -250,7 +250,7 @@ var _ = Describe("ManagedSeed", func() {
 				Expect(err).To(MatchError(ContainSubstring("shoot static token kubeconfig cannot be disabled when the seed secretRef is set")))
 			})
 
-			It("should forbid Shoot update when zones have changed but still configred in ManagedSeed", func() {
+			It("should forbid Shoot update when zones have changed but still configured in ManagedSeed", func() {
 				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
 				})
@@ -262,6 +262,18 @@ var _ = Describe("ManagedSeed", func() {
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(BeInvalidError())
 				Expect(err).To(MatchError(ContainSubstring("shoot worker zone(s) must not be removed as long as registered in managedseed")))
+			})
+
+			It("should allow Shoot update when zones were not changed", func() {
+				// Create zone name mismatch between ManagedSeed and Shoot which was once tolerated, see https://github.com/gardener/gardener/pull/7024.
+				gardenletConfig.SeedConfig.Spec.Provider.Zones = []string{"zone-a", "zone-b", "2"}
+				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
+				})
+
+				oldShoot := shoot.DeepCopy()
+				attrs := getShootAttributes(shoot, oldShoot, admission.Update, &metav1.UpdateOptions{})
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
 			It("should allow Shoot update when zones have changed which are not registered in seed", func() {

@@ -181,7 +181,7 @@ func (v *ManagedSeed) validateUpdate(ctx context.Context, a admission.Attributes
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "kubernetes", "enableStaticTokenKubeconfig"), shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, "shoot static token kubeconfig cannot be disabled when the seed secretRef is set"))
 	}
 
-	zoneValidationErrs, err := v.validateWorkerZoneChanges(field.NewPath("spec", "providers", "workers"), shoot, seedTemplate)
+	zoneValidationErrs, err := v.validateZoneRemovalFromShoot(field.NewPath("spec", "providers", "workers"), oldShoot, shoot, seedTemplate)
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}
@@ -194,16 +194,17 @@ func (v *ManagedSeed) validateUpdate(ctx context.Context, a admission.Attributes
 	return nil
 }
 
-// validateWorkerZoneChanges returns an error if worker zones for the given shoot were changed
-// while they are still registered in the managedseed.
-func (v *ManagedSeed) validateWorkerZoneChanges(fldPath *field.Path, shoot *core.Shoot, seedTemplate *gardencorev1beta1.SeedTemplate) (field.ErrorList, error) {
+// validateZoneRemovalFromShoot returns an error if worker zones for the given shoot were changed
+// while they are still registered in the ManagedSeed.
+func (v *ManagedSeed) validateZoneRemovalFromShoot(fldPath *field.Path, oldShoot, newShoot *core.Shoot, seedTemplate *gardencorev1beta1.SeedTemplate) (field.ErrorList, error) {
 	allErrs := field.ErrorList{}
 
-	shootZones := gardencorehelper.GetAllZonesFromShoot(shoot)
+	removedZones := gardencorehelper.GetAllZonesFromShoot(oldShoot).Difference(gardencorehelper.GetAllZonesFromShoot(newShoot))
 
-	// Check if all zones in ManagedSeed are available in shoot workers.
+	// Check if a zones change affect the configuration of the ManagedSeed.
 	// In case of a removal, zone(s) must first be deselected in ManagedSeed before they can be removed in the shoot.
-	if !shootZones.HasAll(seedTemplate.Spec.Provider.Zones...) {
+	// We only check removed zones here because Gardener used to tolerate a zone name mismatch, see https://github.com/gardener/gardener/pull/7024.
+	if removedZones.HasAny(seedTemplate.Spec.Provider.Zones...) {
 		allErrs = append(allErrs, field.Forbidden(fldPath, "shoot worker zone(s) must not be removed as long as registered in managedseed"))
 	}
 
