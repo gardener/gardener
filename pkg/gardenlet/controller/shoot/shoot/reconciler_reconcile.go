@@ -608,7 +608,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		waitUntilWorkerStatusUpdate = g.Add(flow.Task{
 			Name:         "Waiting until worker resource status is updated with latest machine deployments",
-			Fn:           botanist.Shoot.Components.Extensions.Worker.WaitUntilWorkerStatusMachineDeploymentsUpdate,
+			Fn:           botanist.Shoot.Components.Extensions.Worker.WaitUntilWorkerStatusMachineDeploymentsUpdated,
 			Dependencies: flow.NewTaskIDs(deployWorker),
 		})
 		deployClusterAutoscaler = g.Add(flow.Task{

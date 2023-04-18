@@ -60,7 +60,7 @@ type Interface interface {
 	SetInfrastructureProviderStatus(*runtime.RawExtension)
 	SetWorkerNameToOperatingSystemConfigsMap(map[string]*operatingsystemconfig.OperatingSystemConfigs)
 	MachineDeployments() []extensionsv1alpha1.MachineDeployment
-	WaitUntilWorkerStatusMachineDeploymentsUpdate(ctx context.Context) error
+	WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx context.Context) error
 }
 
 // Values contains the values used to create a Worker resources.
@@ -305,13 +305,13 @@ func (w *worker) Wait(ctx context.Context) error {
 	)
 }
 
-// WaitUntilWorkerStatusMachineDeploymentsUpdate waits until the worker status is updated with the latest machineDeployment slice.
-func (w *worker) WaitUntilWorkerStatusMachineDeploymentsUpdate(ctx context.Context) error {
+// WaitUntilWorkerStatusMachineDeploymentsUpdated waits until the worker status is updated with the latest machineDeployment slice.
+func (w *worker) WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx context.Context) error {
 	return extensions.WaitUntilObjectReadyWithHealthFunction(
 		ctx,
 		w.client,
 		w.log,
-		w.checkWorkerStatusMachineDeployments,
+		w.checkWorkerStatusMachineDeploymentsUpdated,
 		w.worker,
 		extensionsv1alpha1.WorkerResource,
 		w.waitInterval,
@@ -378,10 +378,10 @@ func (w *worker) findNodeTemplateAndMachineTypeByPoolName(ctx context.Context, o
 	return nil, ""
 }
 
-// CheckWorkerStatusMachineDeployments checks if the status of the worker is updated or not during its reconciliation.
+// checkWorkerStatusMachineDeploymentsUpdated checks if the status of the worker is updated or not during its reconciliation.
 // It is updated if
 // * The status.MachineDeploymentsLastUpdateTime > the value of the time stamp stored in worker struct before the reconciliation begins.
-func (w *worker) checkWorkerStatusMachineDeployments(o client.Object) error {
+func (w *worker) checkWorkerStatusMachineDeploymentsUpdated(o client.Object) error {
 	obj, ok := o.(*extensionsv1alpha1.Worker)
 	if !ok {
 		return fmt.Errorf("expected *extensionsv1alpha1.Worker but got %T", o)

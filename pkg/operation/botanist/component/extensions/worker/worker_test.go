@@ -540,16 +540,16 @@ var _ = Describe("Worker", func() {
 		})
 	})
 
-	Describe("#WaitUntilWorkerStatusMachineDeploymentsUpdate", func() {
+	Describe("#WaitUntilWorkerStatusMachineDeploymentsUpdated", func() {
 		It("should return error when no resources are found", func() {
-			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdate(ctx)).To(HaveOccurred())
+			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)).To(HaveOccurred())
 		})
 
 		It("should return error when status.machineDeploymentsLastUpdateTime remains nil", func() {
 			obj := w.DeepCopy()
 			Expect(c.Create(ctx, obj)).To(Succeed(), "creating worker succeeds")
 
-			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdate(ctx)).To(HaveOccurred(), "worker status is not updated")
+			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)).To(HaveOccurred(), "worker status is not updated")
 		})
 
 		It("should return error when status.machineDeploymentsLastUpdateTime is not updated", func() {
@@ -560,7 +560,7 @@ var _ = Describe("Worker", func() {
 			// this will populate the machineDeploymentsLastUpdateTime in the worker struct
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdate(ctx)).To(HaveOccurred(), "worker status is not updated")
+			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)).To(HaveOccurred(), "worker status is not updated")
 		})
 
 		It("should return no error when status.machineDeploymentsLastUpdateTime is added for the first time", func() {
@@ -583,8 +583,8 @@ var _ = Describe("Worker", func() {
 			w.Status.MachineDeploymentsLastUpdateTime = &metav1Now
 			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
 
-			By("WaitUntilWorkerStatusMachineDeploymentsUpdate")
-			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdate(ctx)).To(Succeed(), "worker status is updated with latest machine deployments")
+			By("WaitUntilWorkerStatusMachineDeploymentsUpdated")
+			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)).To(Succeed(), "worker status is updated with latest machine deployments")
 		})
 
 		It("should return no error when status.machineDeploymentsLastUpdateTime is updated", func() {
@@ -612,8 +612,8 @@ var _ = Describe("Worker", func() {
 			w.Status.MachineDeploymentsLastUpdateTime = &lastUpdateTime
 			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
 
-			By("WaitUntilWorkerStatusMachineDeploymentsUpdate")
-			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdate(ctx)).To(Succeed(), "worker status is updated with latest machine deployments")
+			By("WaitUntilWorkerStatusMachineDeploymentsUpdated")
+			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)).To(Succeed(), "worker status is updated with latest machine deployments")
 		})
 
 		// TODO(rishabh-11): Remove this test in a future release when it's ensured that all extensions were upgraded and follow the contract to maintain `MachineDeploymentsLastUpdateTime.
@@ -639,8 +639,8 @@ var _ = Describe("Worker", func() {
 			}
 			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
 
-			By("WaitUntilWorkerStatusMachineDeploymentsUpdate")
-			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdate(ctx)).To(Succeed(), "worker status is updated with latest machine deployments")
+			By("WaitUntilWorkerStatusMachineDeploymentsUpdated")
+			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)).To(Succeed(), "worker status is updated with latest machine deployments")
 		})
 	})
 
