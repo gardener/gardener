@@ -492,6 +492,8 @@ func setHibernation(shoot *gardencorev1beta1.Shoot, hibernated bool) {
 	}
 }
 
+// VerifyNoRunningPods verifies that no control plane pods are running for a given shoot.
+// If any control plane pods are found to be running, returns an error with their names. Otherwise, returns nil.
 func (f *GardenerFramework) VerifyNoRunningPods(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
 	_, seedClient, err := f.GetSeed(ctx, *shoot.Spec.SeedName)
 	if err != nil {

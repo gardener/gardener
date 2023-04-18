@@ -225,6 +225,7 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 			})
 
 			It("should be able to wake up a shoot which was hibernated in previous gardener release", func() {
+				Expect(f.Shoot.Status.Gardener.Version).Should(Equal(gardenerPreviousVersion))
 				Expect(f.WakeUpShoot(ctx, shootTest)).To(Succeed())
 			})
 
