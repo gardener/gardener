@@ -307,8 +307,8 @@ verify-extended: check-generate check format test-cov test-cov-clean test-integr
 #####################################################################
 
 kind-% kind2-% gardener-%: export IPFAMILY := $(IPFAMILY)
-kind-up kind-down gardener-up gardener-down register-local-env tear-down-local-env register-kind2-env tear-down-kind2-env test-e2e-local-simple test-e2e-local-migration test-e2e-local ci-e2e-kind ci-e2e-kind-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
-kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
+kind-up kind-down gardener-up gardener-dev gardener-debug gardener-down register-local-env tear-down-local-env register-kind2-env tear-down-kind2-env test-e2e-local-simple test-e2e-local-migration test-e2e-local ci-e2e-kind ci-e2e-kind-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
+kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
 kind-extensions-up kind-extensions-down gardener-extensions-up gardener-extensions-down: export KUBECONFIG = $(GARDENER_EXTENSIONS_KUBECONFIG)
 kind-ha-single-zone-up kind-ha-single-zone-down gardener-ha-single-zone-up register-kind-ha-single-zone-env tear-down-kind-ha-single-zone-env ci-e2e-kind-ha-single-zone ci-e2e-kind-ha-single-zone-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG)
 kind-ha-multi-zone-up kind-ha-multi-zone-down gardener-ha-multi-zone-up register-kind-ha-multi-zone-env tear-down-kind-ha-multi-zone-env ci-e2e-kind-ha-multi-zone ci-e2e-kind-ha-multi-zone-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG)
@@ -351,22 +351,28 @@ kind-operator-down: $(KIND)
 
 # speed-up skaffold deployments by building all images concurrently
 export SKAFFOLD_BUILD_CONCURRENCY = 0
-gardener%up gardener%dev gardenlet%up gardenlet%dev operator-up operator-dev: export SKAFFOLD_DEFAULT_REPO = localhost:5001
-gardener%up gardener%dev gardenlet%up gardenlet%dev operator-up operator-dev: export SKAFFOLD_PUSH = true
+gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator-up operator-dev  operator-debug: export SKAFFOLD_DEFAULT_REPO = localhost:5001
+gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator-up operator-dev operator-debug: export SKAFFOLD_PUSH = true
 # use static label for skaffold to prevent rolling all gardener components on every `skaffold` invocation
-gardener%up gardener%dev gardener%down gardenlet%up gardenlet%dev gardenlet%down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-local
+gardener%up gardener%dev gardener%debug gardener%down gardenlet%up gardenlet%dev gardenlet%debug gardenlet%down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-local
 # set ldflags for skaffold
-gardener%up gardener%dev gardenlet%up gardenlet%dev operator-up operator-dev: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh)
-# skaffold dev cleans up deployed modules by default, disable this
-gardener%dev gardenlet%dev operator-dev: export SKAFFOLD_CLEANUP = false
+gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator-up operator-dev operator-debug: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh)
+# skaffold dev and debug clean up deployed modules by default, disable this
+gardener%dev gardener%debug gardenlet%dev gardenlet%debug operator-dev operator-debug: export SKAFFOLD_CLEANUP = false
 # skaffold dev triggers new builds and deployments immediately on file changes by default,
 # this is too heavy in a large project like gardener, so trigger new builds and deployments manually instead.
 gardener%dev gardenlet%dev operator-dev: export SKAFFOLD_TRIGGER = manual
+# Artifacts might be already built when you decide to start debugging.
+# However, these artifacts do not include the gcflags which `skaffold debug` sets automatically, so delve would not work.
+# Disabling the skaffold cache for debugging ensures that you run artifacts with gcflags required for debugging.
+gardener%debug gardenlet%debug operator-debug: export SKAFFOLD_CACHE_ARTIFACTS = false
 
 gardener-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
 	$(SKAFFOLD) run
 gardener-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
 	$(SKAFFOLD) dev
+gardener-debug: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
+	$(SKAFFOLD) debug
 gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-down.sh
 
@@ -394,6 +400,10 @@ gardenlet-kind2-dev: $(SKAFFOLD) $(HELM)
 	$(SKAFFOLD) deploy -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
 	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
 	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_KUBECONFIG) $(SKAFFOLD) dev -m gardenlet -p kind2
+gardenlet-kind2-debug: $(SKAFFOLD) $(HELM)
+	$(SKAFFOLD) deploy -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
+	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
+	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_KUBECONFIG) $(SKAFFOLD) debug -m gardenlet -p kind2
 gardenlet-kind2-down: $(SKAFFOLD) $(HELM)
 	$(SKAFFOLD) delete -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
 	$(SKAFFOLD) delete -m gardenlet,kind2-env -p kind2
@@ -408,6 +418,8 @@ gardener-ha-single-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(SKAFFOLD) run
 gardener-ha-single-zone-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(SKAFFOLD) dev
+gardener-ha-single-zone-debug: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	$(SKAFFOLD) debug
 gardener-ha-single-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-down.sh
 register-kind-ha-single-zone-env: $(KUBECTL)
@@ -424,6 +436,8 @@ gardener-ha-multi-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(SKAFFOLD) run
 gardener-ha-multi-zone-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(SKAFFOLD) dev
+gardener-ha-multi-zone-debug: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	$(SKAFFOLD) debug
 gardener-ha-multi-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-down.sh
 register-kind-ha-multi-zone-env: $(KUBECTL)
@@ -440,6 +454,8 @@ operator-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(SKAFFOLD) run
 operator-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(SKAFFOLD) dev
+operator-debug: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	$(SKAFFOLD) debug
 operator-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(KUBECTL) delete garden --all --ignore-not-found --wait --timeout 5m
 	$(SKAFFOLD) delete

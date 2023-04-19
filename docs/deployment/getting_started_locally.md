@@ -108,6 +108,43 @@ make gardener-up
 make gardener-dev SKAFFOLD_MODULE=gardenlet
 ```
 
+## Debugging Gardener
+
+```bash
+make gardener-debug
+```
+
+This is using skaffold debugging features. In the Gardener case, Go debugging using [Delve](https://github.com/go-delve/delve) is the most relevant use case.
+Please see the [skaffold debugging documentation](https://skaffold.dev/docs/workflows/debug/) how to setup your IDE accordingly.
+
+`SKAFFOLD_MODULE` environment variable is working the same way as described for [Developing Gardener](#developing-gardener). However, skaffold is not watching for changes when debugging,
+because it would like to avoid interrupting your debugging session.
+
+For example, if you want to debug gardenlet:
+
+```bash
+# initial deployment of all components
+make gardener-up
+# start debugging gardenlet without deploying other components
+make gardener-debug SKAFFOLD_MODULE=gardenlet
+```
+
+In debugging flow, skaffold builds your container images, reconfigures your pods and creates port forwardings for the `Delve` debugging ports to your localhost.
+The default port is `56268`. If you debug multiple pods at the same time, the port of the second pod will be forwarded to `56269` and so on.
+Please check your console output for the concrete port-forwarding on your machine.
+
+> Note: Resuming or stopping only a single goroutine (Go Issue [25578](https://github.com/golang/go/issues/25578), [31132](https://github.com/golang/go/issues/31132)) is currently not supported, so the action will cause all the goroutines to get activated or paused.
+([vscode-go wiki](https://github.com/golang/vscode-go/wiki/debugging#connecting-to-headless-delve-with-target-specified-at-server-start-up))
+
+This means that when a goroutine of gardenlet (or any other gardener-core component you try to debug) is paused on a breakpoint, all the other goroutines are paused. Hence, when the whole gardenlet process is paused, it can not renew its lease and can not respond to the liveness and readiness probes. Skaffold automatically increases `timeoutSeconds` of liveness and readiness probes to 600. In our local setups the gardener-core components should run with one replica only, so leases which are not renewed should not cause problems. Anyway, if you face problems when debugging, you could temporarily turn off the leader election e.g. by adding
+
+```
+  leaderElection:
+    leaderElect: false
+```
+
+to `example/gardener-local/gardenlet/values.yaml` and disable liveness and readiness probes.
+
 ## Creating a `Shoot` Cluster
 
 You can wait for the `Seed` to be ready by running:
