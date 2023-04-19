@@ -72,6 +72,8 @@ var _ = Describe("HVPA", func() {
 		clusterRoleBinding  *rbacv1.ClusterRoleBinding
 		service             *corev1.Service
 		deployment          *appsv1.Deployment
+		role                *rbacv1.Role
+		roleBinding         *rbacv1.RoleBinding
 		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
 		podDisruptionBudget *policyv1.PodDisruptionBudget
 	)
@@ -98,11 +100,6 @@ var _ = Describe("HVPA", func() {
 				Labels: map[string]string{"gardener.cloud/role": "hvpa"},
 			},
 			Rules: []rbacv1.PolicyRule{
-				{
-					APIGroups: []string{""},
-					Resources: []string{"events"},
-					Verbs:     []string{"get", "list", "watch"},
-				},
 				{
 					APIGroups: []string{""},
 					Resources: []string{"pods", "replicationcontrollers"},
@@ -138,17 +135,6 @@ var _ = Describe("HVPA", func() {
 					Resources: []string{"jobs"},
 					Verbs:     []string{"get", "list", "patch", "update", "watch"},
 				},
-				{
-					APIGroups: []string{"coordination.k8s.io"},
-					Resources: []string{"leases"},
-					Verbs:     []string{"create"},
-				},
-				{
-					APIGroups:     []string{"coordination.k8s.io"},
-					Resources:     []string{"leases"},
-					ResourceNames: []string{"hvpa-controller"},
-					Verbs:         []string{"get", "watch", "update"},
-				},
 			},
 		}
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
@@ -166,6 +152,48 @@ var _ = Describe("HVPA", func() {
 				Name:      "hvpa-controller",
 				Namespace: namespace,
 			}},
+		}
+		role = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "hvpa-controller",
+				Namespace: namespace,
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"coordination.k8s.io"},
+					Resources: []string{"leases"},
+					Verbs:     []string{"create"},
+				},
+				{
+					APIGroups:     []string{"coordination.k8s.io"},
+					Resources:     []string{"leases"},
+					ResourceNames: []string{"hvpa-controller"},
+					Verbs:         []string{"get", "watch", "update"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"events"},
+					Verbs:     []string{"create", "get", "list", "watch", "patch"},
+				},
+			},
+		}
+		roleBinding = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      role.Name,
+				Namespace: namespace,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Name:      serviceAccount.Name,
+					Namespace: serviceAccount.Namespace,
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Role",
+				Name:     role.Name,
+			},
 		}
 		service = &corev1.Service{
 			TypeMeta: metav1.TypeMeta{
@@ -344,12 +372,14 @@ var _ = Describe("HVPA", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(7))
+			Expect(managedResourceSecret.Data).To(HaveLen(9))
 			Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
 			Expect(string(managedResourceSecret.Data["clusterrole____system_hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(clusterRole)))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____hvpa-controller-rolebinding.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
 			Expect(string(managedResourceSecret.Data["service__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(service)))
 			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(deployment)))
+			Expect(string(managedResourceSecret.Data["role__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(role)))
+			Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(roleBinding)))
 			Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__hvpa-controller.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudget)))
 			Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__hvpa-controller-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
 		})

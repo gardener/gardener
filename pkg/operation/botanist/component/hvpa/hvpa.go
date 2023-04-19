@@ -52,6 +52,7 @@ const (
 	deploymentName = "hvpa-controller"
 	containerName  = "hvpa-controller"
 	serviceName    = "hvpa-controller"
+	roleName       = "hvpa-controller"
 
 	portNameMetrics = "metrics"
 	portMetrics     = 9569
@@ -107,11 +108,6 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 			Rules: []rbacv1.PolicyRule{
 				{
 					APIGroups: []string{""},
-					Resources: []string{"events"},
-					Verbs:     []string{"get", "list", "watch"},
-				},
-				{
-					APIGroups: []string{""},
 					Resources: []string{"pods", "replicationcontrollers"},
 					Verbs:     []string{"get", "list", "patch", "update", "watch"},
 				},
@@ -145,17 +141,6 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 					Resources: []string{"jobs"},
 					Verbs:     []string{"get", "list", "patch", "update", "watch"},
 				},
-				{
-					APIGroups: []string{"coordination.k8s.io"},
-					Resources: []string{"leases"},
-					Verbs:     []string{"create"},
-				},
-				{
-					APIGroups:     []string{"coordination.k8s.io"},
-					Resources:     []string{"leases"},
-					ResourceNames: []string{"hvpa-controller"},
-					Verbs:         []string{"get", "watch", "update"},
-				},
 			},
 		}
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
@@ -173,6 +158,48 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 				Name:      serviceAccount.Name,
 				Namespace: serviceAccount.Namespace,
 			}},
+		}
+		role = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      roleName,
+				Namespace: h.namespace,
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"coordination.k8s.io"},
+					Resources: []string{"leases"},
+					Verbs:     []string{"create"},
+				},
+				{
+					APIGroups:     []string{"coordination.k8s.io"},
+					Resources:     []string{"leases"},
+					ResourceNames: []string{"hvpa-controller"},
+					Verbs:         []string{"get", "watch", "update"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"events"},
+					Verbs:     []string{"create", "get", "list", "watch", "patch"},
+				},
+			},
+		}
+		roleBinding = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      role.Name,
+				Namespace: h.namespace,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Name:      serviceAccount.Name,
+					Namespace: serviceAccount.Namespace,
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Role",
+				Name:     role.Name,
+			},
 		}
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
@@ -306,6 +333,8 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 		serviceAccount,
 		clusterRole,
 		clusterRoleBinding,
+		role,
+		roleBinding,
 		service,
 		deployment,
 		podDisruptionBudget,
