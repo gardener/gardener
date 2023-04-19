@@ -234,11 +234,6 @@ func (f *GardenerFramework) UpdateShoot(ctx context.Context, shoot *gardencorev1
 		return err
 	}
 
-	// Verify no running pods after hibernation
-	if err := f.VerifyNoRunningPods(ctx, shoot); err != nil {
-		return fmt.Errorf("failed to verify no running pods after hibernation: %v", err)
-	}
-
 	log.Info("Shoot was successfully updated")
 	return nil
 }
@@ -266,6 +261,11 @@ func (f *GardenerFramework) HibernateShoot(ctx context.Context, shoot *gardencor
 
 	if err := f.WaitForShootToBeReconciled(ctx, shoot); err != nil {
 		return err
+	}
+
+	// Verify no running pods after hibernation
+	if err := f.VerifyNoRunningPods(ctx, shoot); err != nil {
+		return fmt.Errorf("failed to verify no running pods after hibernation: %v", err)
 	}
 
 	log.Info("Shoot was hibernated successfully")
