@@ -2651,15 +2651,9 @@ spec:
 					},
 				})).To(Succeed())
 
-				Expect(istiod.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
-			})
-
-			It("should successfully wait for the managed resource to become healthy", func() {
-				fakeOps.MaxAttempts = 2
-
 				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:       managedResourceIstioName,
+						Name:       managedResourceIstioSystemName,
 						Namespace:  deployNS,
 						Generation: 1,
 					},
@@ -2677,6 +2671,35 @@ spec:
 						},
 					},
 				})).To(Succeed())
+
+				Expect(istiod.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
+			})
+
+			It("should successfully wait for the managed resource to become healthy", func() {
+				fakeOps.MaxAttempts = 2
+
+				for _, mr := range []string{managedResourceIstioName, managedResourceIstioSystemName} {
+					Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:       mr,
+							Namespace:  deployNS,
+							Generation: 1,
+						},
+						Status: resourcesv1alpha1.ManagedResourceStatus{
+							ObservedGeneration: 1,
+							Conditions: []gardencorev1beta1.Condition{
+								{
+									Type:   resourcesv1alpha1.ResourcesApplied,
+									Status: gardencorev1beta1.ConditionTrue,
+								},
+								{
+									Type:   resourcesv1alpha1.ResourcesHealthy,
+									Status: gardencorev1beta1.ConditionTrue,
+								},
+							},
+						},
+					})).To(Succeed())
+				}
 
 				Expect(istiod.Wait(ctx)).To(Succeed())
 			})

@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -62,6 +63,9 @@ type istiod struct {
 	client        client.Client
 	chartRenderer chartrenderer.Interface
 	values        Values
+
+	managedResourceIstioIngressName string
+	managedResourceIstioSystemName  string
 }
 
 // IstiodValues contains configuration values for the Istiod component.
@@ -99,6 +103,9 @@ func NewIstio(
 		client:        client,
 		chartRenderer: chartRenderer,
 		values:        values,
+
+		managedResourceIstioIngressName: resourceName(ManagedResourceControlName, values.NamePrefix),
+		managedResourceIstioSystemName:  resourceName(ManagedResourceIstioSystemName, values.NamePrefix),
 	}
 }
 
@@ -124,7 +131,7 @@ func (i *istiod) deployIstiod(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, i.client, i.values.Istiod.Namespace, resourceName(ManagedResourceIstioSystemName, i.values.NamePrefix), false, renderedIstiodChart.AsSecretData())
+	return managedresources.CreateForSeed(ctx, i.client, i.values.Istiod.Namespace, i.managedResourceIstioSystemName, false, renderedIstiodChart.AsSecretData())
 }
 
 func (i *istiod) Deploy(ctx context.Context) error {
@@ -205,14 +212,17 @@ func (i *istiod) Deploy(ctx context.Context) error {
 		chartsMap[key] = objMap[key]
 	}
 
-	return managedresources.CreateForSeed(ctx, i.client, i.values.Istiod.Namespace, resourceName(ManagedResourceControlName, i.values.NamePrefix), false, chartsMap)
+	return managedresources.CreateForSeed(ctx, i.client, i.values.Istiod.Namespace, i.managedResourceIstioIngressName, false, chartsMap)
 }
 
 func (i *istiod) Destroy(ctx context.Context) error {
-	if i.values.Istiod.Enabled {
-		if err := managedresources.DeleteForSeed(ctx, i.client, i.values.Istiod.Namespace, ManagedResourceIstioSystemName); err != nil {
+	for _, mr := range i.managedResourceNames() {
+		if err := managedresources.DeleteForSeed(ctx, i.client, i.values.Istiod.Namespace, mr); err != nil {
 			return err
 		}
+	}
+
+	if i.values.Istiod.Enabled {
 		if err := i.client.Delete(ctx, &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: i.values.Istiod.Namespace,
@@ -220,10 +230,6 @@ func (i *istiod) Destroy(ctx context.Context) error {
 		}); client.IgnoreNotFound(err) != nil {
 			return err
 		}
-	}
-
-	if err := managedresources.DeleteForSeed(ctx, i.client, i.values.Istiod.Namespace, resourceName(ManagedResourceControlName, i.values.NamePrefix)); err != nil {
-		return err
 	}
 
 	for _, istioIngressGateway := range i.values.IngressGateway {
@@ -247,14 +253,32 @@ func (i *istiod) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, i.client, i.values.Istiod.Namespace, ManagedResourceControlName)
+	managedResources := i.managedResourceNames()
+	taskFns := make([]flow.TaskFn, 0, len(managedResources))
+	for _, mr := range managedResources {
+		name := mr
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			return managedresources.WaitUntilHealthy(ctx, i.client, i.values.Istiod.Namespace, name)
+		})
+	}
+
+	return flow.Parallel(taskFns...)(timeoutCtx)
 }
 
 func (i *istiod) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, i.client, i.values.Istiod.Namespace, ManagedResourceControlName)
+	managedResources := i.managedResourceNames()
+	taskFns := make([]flow.TaskFn, 0, len(managedResources))
+	for _, mr := range managedResources {
+		name := mr
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			return managedresources.WaitUntilDeleted(timeoutCtx, i.client, i.values.Istiod.Namespace, name)
+		})
+	}
+
+	return flow.Parallel(taskFns...)(timeoutCtx)
 }
 
 func (i *istiod) generateIstiodChart(ignoreMode bool) (*chartrenderer.RenderedChart, error) {
@@ -276,6 +300,14 @@ func (i *istiod) generateIstiodChart(ignoreMode bool) (*chartrenderer.RenderedCh
 		"image":      i.values.Istiod.Image,
 		"ignoreMode": ignoreMode,
 	})
+}
+
+func (i *istiod) managedResourceNames() []string {
+	names := []string{i.managedResourceIstioIngressName}
+	if i.values.Istiod.Enabled {
+		names = append(names, i.managedResourceIstioSystemName)
+	}
+	return names
 }
 
 func resourceName(name, prefix string) string {
