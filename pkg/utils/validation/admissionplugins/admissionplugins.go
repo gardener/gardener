@@ -49,6 +49,7 @@ var (
 		"CertificateApproval":                  {AddedInVersion: "1.18"},
 		"CertificateSigning":                   {AddedInVersion: "1.18"},
 		"CertificateSubjectRestriction":        {AddedInVersion: "1.18"},
+		"ClusterTrustBundleAttest":             {AddedInVersion: "1.27"},
 		"DefaultIngressClass":                  {AddedInVersion: "1.18"},
 		"DefaultStorageClass":                  {},
 		"DefaultTolerationSeconds":             {},
