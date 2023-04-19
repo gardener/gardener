@@ -84,8 +84,8 @@ type Values struct {
 	Istiod IstiodValues
 	// IngressGateway are configuration values for ingress gateway deployments and objects.
 	IngressGateway []IngressGatewayValues
-	// Suffix can be used to append arbitrary identifiers to resources which are deployed to common namespaces.
-	Suffix string
+	// NamePrefix can be used to prepend arbitrary identifiers to resources which are deployed to common namespaces.
+	NamePrefix string
 }
 
 // NewIstio can be used to deploy istio's istiod in a namespace.
@@ -124,7 +124,7 @@ func (i *istiod) deployIstiod(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, i.client, i.values.Istiod.Namespace, resourceName(ManagedResourceIstioSystemName, i.values.Suffix), false, renderedIstiodChart.AsSecretData())
+	return managedresources.CreateForSeed(ctx, i.client, i.values.Istiod.Namespace, resourceName(ManagedResourceIstioSystemName, i.values.NamePrefix), false, renderedIstiodChart.AsSecretData())
 }
 
 func (i *istiod) Deploy(ctx context.Context) error {
@@ -205,7 +205,7 @@ func (i *istiod) Deploy(ctx context.Context) error {
 		chartsMap[key] = objMap[key]
 	}
 
-	return managedresources.CreateForSeed(ctx, i.client, i.values.Istiod.Namespace, resourceName(ManagedResourceControlName, i.values.Suffix), false, chartsMap)
+	return managedresources.CreateForSeed(ctx, i.client, i.values.Istiod.Namespace, resourceName(ManagedResourceControlName, i.values.NamePrefix), false, chartsMap)
 }
 
 func (i *istiod) Destroy(ctx context.Context) error {
@@ -222,7 +222,7 @@ func (i *istiod) Destroy(ctx context.Context) error {
 		}
 	}
 
-	if err := managedresources.DeleteForSeed(ctx, i.client, i.values.Istiod.Namespace, resourceName(ManagedResourceControlName, i.values.Suffix)); err != nil {
+	if err := managedresources.DeleteForSeed(ctx, i.client, i.values.Istiod.Namespace, resourceName(ManagedResourceControlName, i.values.NamePrefix)); err != nil {
 		return err
 	}
 
@@ -278,9 +278,6 @@ func (i *istiod) generateIstiodChart(ignoreMode bool) (*chartrenderer.RenderedCh
 	})
 }
 
-func resourceName(name, suffix string) string {
-	if len(suffix) == 0 {
-		return name
-	}
-	return fmt.Sprintf("%s-%s", name, suffix)
+func resourceName(name, prefix string) string {
+	return fmt.Sprintf("%s%s", prefix, name)
 }
