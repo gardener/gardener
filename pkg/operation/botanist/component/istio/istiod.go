@@ -117,8 +117,8 @@ func NewIstio(
 		chartRenderer: chartRenderer,
 		values:        values,
 
-		managedResourceIstioIngressName: resourceName(ManagedResourceControlName, values.NamePrefix),
-		managedResourceIstioSystemName:  resourceName(ManagedResourceIstioSystemName, values.NamePrefix),
+		managedResourceIstioIngressName: resourceName(values.NamePrefix, ManagedResourceControlName),
+		managedResourceIstioSystemName:  resourceName(values.NamePrefix, ManagedResourceIstioSystemName),
 	}
 }
 
@@ -229,7 +229,7 @@ func (i *istiod) Deploy(ctx context.Context) error {
 }
 
 func (i *istiod) Destroy(ctx context.Context) error {
-	for _, mr := range i.managedResourceNames() {
+	for _, mr := range ManagedResourceNames(i.values.Istiod.Enabled, i.values.NamePrefix) {
 		if err := managedresources.DeleteForSeed(ctx, i.client, i.values.Istiod.Namespace, mr); err != nil {
 			return err
 		}
@@ -266,7 +266,7 @@ func (i *istiod) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	managedResources := i.managedResourceNames()
+	managedResources := ManagedResourceNames(i.values.Istiod.Enabled, i.values.NamePrefix)
 	taskFns := make([]flow.TaskFn, 0, len(managedResources))
 	for _, mr := range managedResources {
 		name := mr
@@ -282,7 +282,7 @@ func (i *istiod) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	managedResources := i.managedResourceNames()
+	managedResources := ManagedResourceNames(i.values.Istiod.Enabled, i.values.NamePrefix)
 	taskFns := make([]flow.TaskFn, 0, len(managedResources))
 	for _, mr := range managedResources {
 		name := mr
@@ -325,14 +325,15 @@ func (i *istiod) generateIstiodChart(ignoreMode bool) (*chartrenderer.RenderedCh
 	})
 }
 
-func (i *istiod) managedResourceNames() []string {
-	names := []string{i.managedResourceIstioIngressName}
-	if i.values.Istiod.Enabled {
-		names = append(names, i.managedResourceIstioSystemName)
+// ManagedResourceNames returns the names of the `ManagedResource`s being used by Istio.
+func ManagedResourceNames(istiodEnabled bool, namePrefix string) []string {
+	names := []string{resourceName(namePrefix, ManagedResourceControlName)}
+	if istiodEnabled {
+		names = append(names, resourceName(namePrefix, ManagedResourceIstioSystemName))
 	}
 	return names
 }
 
-func resourceName(name, prefix string) string {
+func resourceName(prefix, name string) string {
 	return fmt.Sprintf("%s%s", prefix, name)
 }

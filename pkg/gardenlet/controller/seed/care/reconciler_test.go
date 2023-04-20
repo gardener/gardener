@@ -46,6 +46,7 @@ var _ = Describe("Seed Care Control", func() {
 	var (
 		ctx              context.Context
 		gardenClient     client.Client
+		seedClient       client.Client
 		reconciler       *Reconciler
 		controllerConfig config.SeedCareControllerConfiguration
 		seed             *gardencorev1beta1.Seed
@@ -57,6 +58,7 @@ var _ = Describe("Seed Care Control", func() {
 		logf.IntoContext(ctx, logr.Discard())
 
 		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
@@ -84,7 +86,7 @@ var _ = Describe("Seed Care Control", func() {
 
 		Context("when seed no longer exists", func() {
 			It("should stop reconciling and not requeue", func() {
-				reconciler = &Reconciler{GardenClient: gardenClient, Config: controllerConfig, Clock: fakeClock}
+				reconciler = &Reconciler{GardenClient: gardenClient, SeedClient: seedClient, Config: controllerConfig, Clock: fakeClock}
 
 				req = reconcile.Request{NamespacedName: kubernetesutils.Key("some-other-seed")}
 				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
@@ -93,7 +95,7 @@ var _ = Describe("Seed Care Control", func() {
 
 		Context("when health check setup is successful", func() {
 			JustBeforeEach(func() {
-				reconciler = &Reconciler{GardenClient: gardenClient, Config: controllerConfig, Clock: fakeClock}
+				reconciler = &Reconciler{GardenClient: gardenClient, SeedClient: seedClient, Config: controllerConfig, Clock: fakeClock}
 			})
 
 			Context("when no conditions are returned", func() {
@@ -198,7 +200,7 @@ var _ = Describe("Seed Care Control", func() {
 type resultingConditionFunc func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
 
 func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
-	return func(*gardencorev1beta1.Seed, client.Client, clock.Clock, *string) HealthCheck {
+	return func(*gardencorev1beta1.Seed, client.Client, clock.Clock, *string, bool) HealthCheck {
 		return fn
 	}
 }

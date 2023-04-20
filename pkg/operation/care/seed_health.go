@@ -48,25 +48,25 @@ var requiredManagedResourcesSeed = sets.New(
 	kubestatemetrics.ManagedResourceName,
 	seedsystem.ManagedResourceName,
 	vpa.ManagedResourceControlName,
-	istio.ManagedResourceControlName,
-	istio.ManagedResourceIstioSystemName,
 )
 
 // SeedHealth contains information needed to execute health checks for seed.
 type SeedHealth struct {
-	seed       *gardencorev1beta1.Seed
-	seedClient client.Client
-	clock      clock.Clock
-	namespace  *string
+	seed         *gardencorev1beta1.Seed
+	seedClient   client.Client
+	clock        clock.Clock
+	namespace    *string
+	seedIsGarden bool
 }
 
 // NewHealthForSeed creates a new Health instance with the given parameters.
-func NewHealthForSeed(seed *gardencorev1beta1.Seed, seedClient client.Client, clock clock.Clock, namespace *string) *SeedHealth {
+func NewHealthForSeed(seed *gardencorev1beta1.Seed, seedClient client.Client, clock clock.Clock, namespace *string, seedIsGarden bool) *SeedHealth {
 	return &SeedHealth{
-		seedClient: seedClient,
-		seed:       seed,
-		clock:      clock,
-		namespace:  namespace,
+		seedClient:   seedClient,
+		seed:         seed,
+		clock:        clock,
+		namespace:    namespace,
+		seedIsGarden: seedIsGarden,
 	}
 }
 
@@ -99,6 +99,7 @@ func (h *SeedHealth) checkSeedSystemComponents(
 	error,
 ) {
 	managedResources := sets.List(requiredManagedResourcesSeed)
+	managedResources = append(managedResources, istio.ManagedResourceNames(!h.seedIsGarden, "")...)
 
 	seedIsOriginOfClusterIdentity, err := clusteridentity.IsClusterIdentityEmptyOrFromOrigin(ctx, h.seedClient, v1beta1constants.ClusterIdentityOriginSeed)
 	if err != nil {

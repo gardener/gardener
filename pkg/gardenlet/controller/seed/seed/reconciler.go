@@ -20,7 +20,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
@@ -31,7 +30,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -98,12 +96,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 	}
 
-	seedIsGarden, err := kubernetesutils.ResourcesExist(ctx, r.SeedClientSet.Client(), operatorv1alpha1.SchemeGroupVersion.WithKind("GardenList"))
+	seedIsGarden, err := gardenerutils.SeedIsGarden(ctx, r.SeedClientSet.Client())
 	if err != nil {
-		if !meta.IsNoMatchError(err) {
-			return reconcile.Result{}, err
-		}
-		seedIsGarden = false
+		return reconcile.Result{}, err
 	}
 
 	if seed.DeletionTimestamp != nil {
