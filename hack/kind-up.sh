@@ -96,15 +96,20 @@ kind create cluster \
 # See containerd CRI: https://github.com/containerd/containerd/commit/687469d3cee18bf0e12defa5c6d0c7b9139a2dbd
 if [ -f "/sys/fs/cgroup/cgroup.controllers" ]; then
     echo "Host uses cgroupsv2"
-    cat << 'EOF' >>adjust_cri_base.sh
+    cat << 'EOF' > adjust_cri_base.sh
 #!/bin/bash
 if [ -f /etc/containerd/cri-base.json ]; then
-    cat /etc/containerd/cri-base.json | jq '.linux.namespaces += [{
-        "type": "cgroup"
-    }]' > /etc/containerd/cri-base.tmp.json && cp /etc/containerd/cri-base.tmp.json /etc/containerd/cri-base.json
-    echo "Adjusted kind node /etc/containerd/cri-base.json to create containers with a cgroup namespace"
+  key=$(cat /etc/containerd/cri-base.json | jq '.linux.namespaces | map(select(.type == "cgroup"))[0]')
+  if [ "$key" = "null" ]; then
+      echo "Adjusting kind node /etc/containerd/cri-base.json to create containers with a cgroup namespace";
+      cat /etc/containerd/cri-base.json | jq '.linux.namespaces += [{
+          "type": "cgroup"
+      }]' > /etc/containerd/cri-base.tmp.json && cp /etc/containerd/cri-base.tmp.json /etc/containerd/cri-base.json
+    else
+      echo "cgroup namespace already configured for kind node";
+  fi
 else
-    echo "/etc/containerd/cri-base.json not found in kind container"
+    echo "cannot configure cgroup namespace for kind containers: /etc/containerd/cri-base.json not found in kind container"
 fi
 EOF
 
