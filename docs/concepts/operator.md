@@ -29,6 +29,7 @@ As of today, this applies to:
 - `vpa-{admission-controller,recommender,updater}`
 - `hvpa-controller` (when `HVPA` feature gate is enabled)
 - `etcd-druid`
+- `istio` control-plane
 
 Those components are so-called "seed system components".
 As they were already made available by `gardener-operator`, the `gardenlet` just skips them.
@@ -225,6 +226,7 @@ Other system components are:
 - Vertical Pod Autoscaler (if enabled via `.spec.runtimeCluster.settings.verticalPodAutoscaler.enabled=true` in the `Garden`)
 - HVPA controller (when `HVPA` feature gate is enabled)
 - ETCD Druid
+- Istio
 
 As soon as all system components are up, the reconciler deploys the virtual garden cluster.
 It comprises out of two ETCDs (one "main" etcd, one "events" etcd) which are managed by ETCD Druid via `druid.gardener.cloud/v1alpha1.Etcd` custom resources.
