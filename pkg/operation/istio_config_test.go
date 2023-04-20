@@ -20,13 +20,11 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/operation"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
@@ -34,48 +32,6 @@ import (
 )
 
 var _ = Describe("istioconfig", func() {
-	DescribeTable("#GetIstioNamespaceForZone",
-		func(defaultNamespace string, zone string, matcher gomegatypes.GomegaMatcher) {
-			Expect(GetIstioNamespaceForZone(defaultNamespace, zone)).To(matcher)
-		},
-
-		Entry("short namespace and zone", "default-namespace", "my-zone", Equal("default-namespace--my-zone")),
-		Entry("empty namespace and zone", "", "", Equal("--")),
-		Entry("empty namespace and valid zone", "", "my-zone", Equal("--my-zone")),
-		Entry("valid namespace and empty zone", "default-namespace", "", Equal("default-namespace--")),
-		Entry("namespace and zone too long => hashed zone", "extremely-long-default-namespace", "unnecessarily-long-regional-zone-name", Equal("extremely-long-default-namespace--fc5e9")),
-	)
-
-	DescribeTable("#GetIstioZoneLabels",
-		func(labels map[string]string, zone *string, matcher gomegatypes.GomegaMatcher) {
-			Expect(GetIstioZoneLabels(labels, zone)).To(matcher)
-		},
-
-		Entry("no zone, but istio label", map[string]string{istio.DefaultZoneKey: "istio-value"}, nil, Equal(map[string]string{istio.DefaultZoneKey: "istio-value"})),
-		Entry("no zone, but gardener.cloud/role label", map[string]string{"gardener.cloud/role": "gardener-role"}, nil, Equal(map[string]string{"gardener.cloud/role": "gardener-role"})),
-		Entry("no zone, other labels", map[string]string{"key1": "value1", "key2": "value2"}, nil, Equal(map[string]string{"key1": "value1", "key2": "value2", istio.DefaultZoneKey: "ingressgateway"})),
-		Entry("zone and istio label", map[string]string{istio.DefaultZoneKey: "istio-value"}, pointer.String("my-zone"), Equal(map[string]string{istio.DefaultZoneKey: "istio-value--zone--my-zone"})),
-		Entry("zone and gardener.cloud/role label", map[string]string{"gardener.cloud/role": "gardener-role"}, pointer.String("my-zone"), Equal(map[string]string{"gardener.cloud/role": "gardener-role--zone--my-zone"})),
-		Entry("zone and other labels", map[string]string{"key1": "value1", "key2": "value2"}, pointer.String("my-zone"), Equal(map[string]string{"key1": "value1", "key2": "value2", istio.DefaultZoneKey: "ingressgateway--zone--my-zone"})),
-	)
-
-	DescribeTable("#IsZonalIstioExtension",
-		func(labels map[string]string, matcherBool gomegatypes.GomegaMatcher, matcherZone gomegatypes.GomegaMatcher) {
-			isZone, zone := IsZonalIstioExtension(labels)
-			Expect(isZone).To(matcherBool)
-			Expect(zone).To(matcherZone)
-		},
-
-		Entry("no zonal extension", map[string]string{"key1": "value1", "key2": "value2"}, BeFalse(), Equal("")),
-		Entry("no zone, but istio label", map[string]string{istio.DefaultZoneKey: "istio-value"}, BeFalse(), Equal("")),
-		Entry("no zone, but gardener.cloud/role label without handler", map[string]string{"gardener.cloud/role": "exposureclass-handler-gardener-role"}, BeFalse(), Equal("")),
-		Entry("no zone, but gardener.cloud/role label with handler", map[string]string{"gardener.cloud/role": "exposureclass-handler-gardener-role", "handler.exposureclass.gardener.cloud/name": ""}, BeFalse(), Equal("")),
-		Entry("zone and istio label", map[string]string{istio.DefaultZoneKey: "istio-value--zone--my-zone"}, BeTrue(), Equal("my-zone")),
-		Entry("zone and gardener.cloud/role label without handler", map[string]string{"gardener.cloud/role": "exposureclass-handler-gardener-role--zone--some-zone"}, BeFalse(), Equal("")),
-		Entry("zone and gardener.cloud/role label with handler", map[string]string{"gardener.cloud/role": "exposureclass-handler-gardener-role--zone--some-zone", "handler.exposureclass.gardener.cloud/name": ""}, BeTrue(), Equal("some-zone")),
-		Entry("zone and incorrect gardener.cloud/role label with handler", map[string]string{"gardener.cloud/role": "gardener-role--zone--some-zone", "handler.exposureclass.gardener.cloud/name": ""}, BeFalse(), Equal("")),
-	)
-
 	Describe("Istio related configuration functions", func() {
 		var (
 			defaultServiceName         = "default-service"

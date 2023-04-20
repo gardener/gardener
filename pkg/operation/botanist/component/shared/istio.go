@@ -16,8 +16,10 @@ package shared
 
 import (
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -25,6 +27,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
@@ -162,4 +165,63 @@ func AddIstioIngressGateway(
 	})
 
 	return nil
+}
+
+// GetIstioNamespaceForZone returns the namespace to use for a given zone.
+// In case the zone name is too long the first five characters of the hash of the zone are used as zone identifiers.
+func GetIstioNamespaceForZone(defaultNamespace string, zone string) string {
+	const format = "%s--%s"
+	if ns := fmt.Sprintf(format, defaultNamespace, zone); len(ns) <= validation.DNS1035LabelMaxLength {
+		return ns
+	}
+	// Use the first five characters of the hash of the zone
+	hashedZone := utils.ComputeSHA256Hex([]byte(zone))
+	return fmt.Sprintf(format, defaultNamespace, hashedZone[:5])
+}
+
+const (
+	alternativeZoneKey = v1beta1constants.GardenRole
+	zoneInfix          = "--zone--"
+)
+
+// GetIstioZoneLabels returns the labels to be used for istio with the mandatory zone label set.
+func GetIstioZoneLabels(labels map[string]string, zone *string) map[string]string {
+	// Use "istio" for the default gateways and v1beta1constants.LabelExposureClassHandlerName for exposure classes
+	zonekey := istio.DefaultZoneKey
+	zoneValue := "ingressgateway"
+	if value, ok := labels[zonekey]; ok {
+		zoneValue = value
+	} else if value, ok := labels[alternativeZoneKey]; ok {
+		zonekey = alternativeZoneKey
+		zoneValue = value
+	}
+	if zone != nil {
+		zoneValue = fmt.Sprintf("%s%s%s", zoneValue, zoneInfix, *zone)
+	}
+	return utils.MergeStringMaps(labels, map[string]string{zonekey: zoneValue})
+}
+
+// IsZonalIstioExtension indicates whether the namespace related to the given labels is a zonal istio extension.
+// It also returns the zone.
+func IsZonalIstioExtension(labels map[string]string) (bool, string) {
+	if v, ok := labels[istio.DefaultZoneKey]; ok {
+		i := strings.Index(v, zoneInfix)
+		if i < 0 {
+			return false, ""
+		}
+		// There should be at least one character before and after the zone infix.
+		return i > 0 && i < len(v)-len(zoneInfix), v[i+len(zoneInfix):]
+	}
+	if _, ok := labels[v1beta1constants.LabelExposureClassHandlerName]; ok {
+		if v, ok := labels[alternativeZoneKey]; ok && strings.HasPrefix(v, v1beta1constants.GardenRoleExposureClassHandler) {
+			i := strings.Index(v, zoneInfix)
+			if i < 0 {
+				return false, ""
+			}
+			// There should be at least v1beta1constants.GardenRoleExposureClassHandler characters before
+			// and one after the zone infix.
+			return i >= len(v1beta1constants.GardenRoleExposureClassHandler) && i < len(v)-len(zoneInfix), v[i+len(zoneInfix):]
+		}
+	}
+	return false, ""
 }

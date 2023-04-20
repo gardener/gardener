@@ -26,7 +26,7 @@ import (
 	"github.com/gardener/gardener/charts"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controller/service"
-	"github.com/gardener/gardener/pkg/operation"
+	sharedcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -71,7 +71,7 @@ func AddToManager(mgr manager.Manager, cfg *config.OperatorConfiguration) error 
 			return err
 		}
 
-		virtualGardenIstioIngressPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchLabels: operation.GetIstioZoneLabels(nil, nil)})
+		virtualGardenIstioIngressPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchLabels: sharedcomponent.GetIstioZoneLabels(nil, nil)})
 		if err != nil {
 			return err
 		}

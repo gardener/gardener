@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
@@ -60,7 +59,7 @@ func defaultIstio(
 ) {
 	seedObj := seed.GetInfo()
 
-	labels := operation.GetIstioZoneLabels(conf.SNI.Ingress.Labels, nil)
+	labels := shared.GetIstioZoneLabels(conf.SNI.Ingress.Labels, nil)
 
 	// even if SNI is being disabled, the existing ports must stay the same
 	// until all APIServer SNI resources are removed.
@@ -98,13 +97,13 @@ func defaultIstio(
 	if len(seedObj.Spec.Provider.Zones) > 1 {
 		for _, z := range seedObj.Spec.Provider.Zones {
 			zone := z
-			namespace := operation.GetIstioNamespaceForZone(*conf.SNI.Ingress.Namespace, zone)
+			namespace := shared.GetIstioNamespaceForZone(*conf.SNI.Ingress.Namespace, zone)
 
 			if err := shared.AddIstioIngressGateway(
 				istioDeployer,
 				namespace,
 				seed.GetZonalLoadBalancerServiceAnnotations(zone),
-				operation.GetIstioZoneLabels(labels, &zone),
+				shared.GetIstioZoneLabels(labels, &zone),
 				seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone),
 				nil,
 				&zone); err != nil {
@@ -119,7 +118,7 @@ func defaultIstio(
 			istioDeployer,
 			*handler.SNI.Ingress.Namespace,
 			utils.MergeStringMaps(seed.GetLoadBalancerServiceAnnotations(), handler.LoadBalancerService.Annotations),
-			operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
+			shared.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
 			seed.GetLoadBalancerServiceExternalTrafficPolicy(),
 			handler.SNI.Ingress.ServiceExternalIP,
 			nil); err != nil {
@@ -130,13 +129,13 @@ func defaultIstio(
 		if len(seedObj.Spec.Provider.Zones) > 1 {
 			for _, z := range seedObj.Spec.Provider.Zones {
 				zone := z
-				namespace := operation.GetIstioNamespaceForZone(*handler.SNI.Ingress.Namespace, zone)
+				namespace := shared.GetIstioNamespaceForZone(*handler.SNI.Ingress.Namespace, zone)
 
 				if err := shared.AddIstioIngressGateway(
 					istioDeployer,
 					namespace,
 					utils.MergeStringMaps(handler.LoadBalancerService.Annotations, seed.GetZonalLoadBalancerServiceAnnotations(zone)),
-					operation.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
+					shared.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
 					seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone),
 					nil,
 					&zone); err != nil {
