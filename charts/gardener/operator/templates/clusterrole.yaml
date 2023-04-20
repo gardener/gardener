@@ -24,9 +24,10 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - namespaces
+  - configmaps
+  - serviceaccounts
+  - pods
   verbs:
-  - create
   - get
   - list
   - watch
@@ -34,9 +35,16 @@ rules:
   - ""
   resources:
   - namespaces
-  resourceNames:
-  - {{ .Release.Namespace }}
+  - secrets
+  - services
+  - services/status
   verbs:
+  - create
+  - get
+  - list
+  - watch
+  - delete
+  - deletecollection
   - update
   - patch
 - apiGroups:
@@ -47,6 +55,16 @@ rules:
   - create
   - patch
   - update
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - statefulsets
+  - replicasets
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - admissionregistration.k8s.io
   resources:
@@ -96,3 +114,69 @@ rules:
   verbs:
   - bind
   - escalate
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - resources.gardener.cloud
+  resources:
+  - managedresources
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - autoscaling.k8s.io
+  resources:
+  - verticalpodautoscalers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - druid.gardener.cloud
+  resources:
+  - etcds
+  - etcdcopybackupstasks
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - autoscaling.k8s.io
+  resources:
+  - hvpas
+  verbs:
+  - get
+  - list
+  - watch

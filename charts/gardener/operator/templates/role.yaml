@@ -15,10 +15,17 @@ rules:
   - ""
   resources:
   - configmaps
-  - namespaces
-  - secrets
   - serviceaccounts
   - services
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
   - services/status
   verbs:
   - create
@@ -39,9 +46,6 @@ rules:
   - create
   - delete
   - deletecollection
-  - get
-  - list
-  - watch
   - patch
   - update
 - apiGroups:
@@ -51,9 +55,6 @@ rules:
   verbs:
   - create
   - delete
-  - get
-  - list
-  - watch
   - patch
   - update
 - apiGroups:
@@ -63,22 +64,6 @@ rules:
   verbs:
   - create
   - delete
-  - get
-  - list
-  - watch
-  - patch
-  - update
-- apiGroups:
-  - resources.gardener.cloud
-  resources:
-  - managedresources
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - watch
   - patch
   - update
 - apiGroups:
@@ -88,9 +73,6 @@ rules:
   verbs:
   - create
   - delete
-  - get
-  - list
-  - watch
   - patch
   - update
 - apiGroups:
@@ -151,21 +133,6 @@ rules:
   verbs:
   - create
   - delete
-  - get
-  - list
-  - watch
-  - patch
-  - update
-- apiGroups:
-  - networking.k8s.io
-  resources:
-  - networkpolicies
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - watch
   - patch
   - update
 - apiGroups:
@@ -174,9 +141,6 @@ rules:
   - hvpas
   verbs:
   - create
-  - get
-  - list
-  - watch
 - apiGroups:
   - autoscaling.k8s.io
   resources:
@@ -194,8 +158,6 @@ rules:
   resources:
   - pods
   verbs:
-  - list
-  - watch
   - delete
   - deletecollection
 - apiGroups:
