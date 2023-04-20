@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -39,6 +40,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardensystem"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
 	sharedcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/shared"
@@ -401,5 +403,32 @@ func (r *Reconciler) newKubeStateMetrics() (component.DeployWaiter, error) {
 		r.RuntimeVersion,
 		r.ImageVector,
 		v1beta1constants.PriorityClassNameGardenSystem100,
+	)
+}
+
+func (r *Reconciler) newIstio(garden *operatorv1alpha1.Garden) (istio.Interface, error) {
+	var annotations map[string]string
+	if settings := garden.Spec.RuntimeCluster.Settings; settings != nil && settings.LoadBalancerServices != nil {
+		annotations = settings.LoadBalancerServices.Annotations
+	}
+
+	return sharedcomponent.NewIstio(
+		r.RuntimeClientSet.Client(),
+		r.ImageVector,
+		r.RuntimeClientSet.ChartRenderer(),
+		namePrefix,
+		v1beta1constants.DefaultSNIIngressNamespace,
+		v1beta1constants.PriorityClassNameGardenSystem500,
+		true,
+		sharedcomponent.GetIstioZoneLabels(nil, nil),
+		annotations,
+		nil,
+		nil,
+		[]corev1.ServicePort{
+			{Name: "tcp", Port: 443, TargetPort: intstr.FromInt(9443)},
+		},
+		false,
+		false,
+		garden.Spec.RuntimeCluster.Provider.Zones,
 	)
 }

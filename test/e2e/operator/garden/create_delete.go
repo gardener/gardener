@@ -91,6 +91,12 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				healthyManagedResource("etcd-druid"),
 				healthyManagedResource("kube-state-metrics"),
 			))
+
+			g.Expect(runtimeClient.List(ctx, managedResourceList, client.InNamespace("istio-system"))).To(Succeed())
+			g.Expect(managedResourceList.Items).To(ConsistOf(
+				healthyManagedResource("virtual-garden-istio"),
+				healthyManagedResource("virtual-garden-istio-system"),
+			))
 		}).WithPolling(2 * time.Second).Should(Succeed())
 
 		By("Verify virtual cluster access using static token kubeconfig")

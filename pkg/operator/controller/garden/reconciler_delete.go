@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -59,6 +60,7 @@ func (r *Reconciler) delete(
 	// garden system components
 	hvpaCRD := hvpa.NewCRD(applier)
 	vpaCRD := vpa.NewCRD(applier, nil)
+	istioCRD := istio.NewCRD(r.RuntimeClientSet.ChartApplier())
 	gardenerResourceManager, err := r.newGardenerResourceManager(garden, secretsManager)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -83,6 +85,10 @@ func (r *Reconciler) delete(
 		return reconcile.Result{}, err
 	}
 	etcdEvents, err := r.newEtcd(log, garden, secretsManager, v1beta1constants.ETCDRoleEvents, etcd.ClassNormal)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	istio, err := r.newIstio(garden)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -145,10 +151,15 @@ func (r *Reconciler) delete(
 			Fn:           component.OpDestroyAndWait(verticalPodAutoscaler).Destroy,
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
 		})
+		destroyIstio = g.Add(flow.Task{
+			Name: "Destroying Istio",
+			Fn:   component.OpDestroyAndWait(istio).Destroy,
+		})
 		syncPointCleanedUp = flow.NewTaskIDs(
 			destroyEtcdDruid,
 			destroyHVPAController,
 			destroyVerticalPodAutoscaler,
+			destroyIstio,
 		)
 
 		destroySystemResources = g.Add(flow.Task{
@@ -165,6 +176,11 @@ func (r *Reconciler) delete(
 			Name:         "Destroying and waiting for gardener-resource-manager to be deleted",
 			Fn:           component.OpWait(gardenerResourceManager).Destroy,
 			Dependencies: flow.NewTaskIDs(ensureNoManagedResourcesExistAnymore),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying custom resource definition for Istio",
+			Fn:           istioCRD.Destroy,
+			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for VPA",
