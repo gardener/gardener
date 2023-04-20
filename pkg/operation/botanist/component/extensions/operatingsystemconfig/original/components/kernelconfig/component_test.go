@@ -50,18 +50,22 @@ var _ = Describe("Component", func() {
 			"kernel/panic = 10\n" +
 			"kernel/keys/root_maxkeys = 1000000\n" +
 			"kernel/keys/root_maxbytes = 25000000\n"
+		customKernelSettingsComment = "#Custom kernel settings for worker group\n"
+		dummySettingConfig          = customKernelSettingsComment + "my.kernel.setting = 123\n"
+		dummySettingMap             = map[string]string{"my.kernel.setting": "123"}
 	)
 
 	BeforeEach(func() {
 		component = New()
 	})
 
-	DescribeTable("#Config", func(k8sVersion, additionalData string, protectKernelDefaults *bool) {
+	DescribeTable("#Config", func(k8sVersion, additionalData string, protectKernelDefaults *bool, sysctls map[string]string) {
 		units, files, err := component.Config(components.Context{
 			KubernetesVersion: semver.MustParse(k8sVersion),
 			KubeletConfigParameters: components.ConfigurableKubeletConfigParameters{
 				ProtectKernelDefaults: protectKernelDefaults,
 			},
+			Sysctls: sysctls,
 		})
 		modifiedData := data + additionalData
 
@@ -85,12 +89,13 @@ var _ = Describe("Component", func() {
 			},
 		))
 	},
-		Entry("should return the expected units and files", "1.24.0", "", nil),
-		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set", "1.24.0", kubeletSysctlConfig, pointer.Bool(true)),
-		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set by default", "1.26.0", kubeletSysctlConfig, nil),
-		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set to false", "1.26.0", "", pointer.Bool(false)),
+		Entry("should return the expected units and files", "1.24.0", "", nil, nil),
+		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set", "1.24.0", kubeletSysctlConfig, pointer.Bool(true), nil),
+		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set by default", "1.26.0", kubeletSysctlConfig, nil, nil),
+		Entry("should return the expected units and files when kubelet option protectKernelDefaults is set to false", "1.26.0", "", pointer.Bool(false), nil),
 		// This test prevents from unknowingly upgrading to a newer k8s version which may have different sysctl settings.
-		Entry("should return the expected units and files if k8s version has not been upgraded", "1.26.0", hardCodedKubeletSysctlConfig, nil),
+		Entry("should return the expected units and files if k8s version has not been upgraded", "1.26.0", hardCodedKubeletSysctlConfig, nil, nil),
+		Entry("should return the expected units and files if configured to add kernel settings", "1.25.0", dummySettingConfig, nil, dummySettingMap),
 	)
 })
 

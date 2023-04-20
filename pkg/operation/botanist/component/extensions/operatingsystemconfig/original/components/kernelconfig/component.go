@@ -53,6 +53,13 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 			fmt.Sprintf("%s = %s\n", sysctl.RootMaxBytes, strconv.Itoa(sysctl.RootMaxBytesSetting))
 	}
 
+	if len(ctx.Sysctls) > 0 {
+		newData += "#Custom kernel settings for worker group\n"
+	}
+	for key, value := range ctx.Sysctls {
+		newData += fmt.Sprintf("%s = %s\n", key, value)
+	}
+
 	return []extensionsv1alpha1.Unit{
 			{
 				// it needs to be reloaded, because the /etc/sysctl.d/ files are not present, when this is started for a first time

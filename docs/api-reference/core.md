@@ -12085,6 +12085,18 @@ MachineControllerManagerSettings
 <p>MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>sysctls</code></br>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Sysctls is a map of kernel settings to apply on all VMs in this worker pool.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.WorkerKubernetes">WorkerKubernetes

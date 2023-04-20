@@ -8494,6 +8494,22 @@ func schema_pkg_apis_core_v1alpha1_Worker(ref common.ReferenceCallback) common.O
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineControllerManagerSettings"),
 						},
 					},
+					"sysctls": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Sysctls is a map of kernel settings to apply on all VMs in this worker pool.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"name", "machine", "maximum", "minimum"},
 			},
@@ -16317,6 +16333,22 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 						SchemaProps: spec.SchemaProps{
 							Description: "MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineControllerManagerSettings"),
+						},
+					},
+					"sysctls": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Sysctls is a map of kernel settings to apply on all VMs in this worker pool.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
 						},
 					},
 				},
