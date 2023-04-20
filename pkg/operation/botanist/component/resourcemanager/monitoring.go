@@ -28,7 +28,7 @@ const (
 )
 
 var (
-	monitoringScrapeConfigTmpl = `job_name: ` + monitoringPrometheusJobName + `
+	monitoringScrapeConfigTmpl = `job_name: {{ .namePrefix }}` + monitoringPrometheusJobName + `
 honor_labels: false
 kubernetes_sd_configs:
 - role: endpoints
@@ -39,7 +39,7 @@ relabel_configs:
   - __meta_kubernetes_service_name
   - __meta_kubernetes_endpoint_port_name
   action: keep
-  regex: ` + resourcemanagerconstants.ServiceName + `;` + metricsPortName + `
+  regex: {{ .namePrefix }}` + resourcemanagerconstants.ServiceName + `;` + metricsPortName + `
 - action: labelmap
   regex: __meta_kubernetes_service_label_(.+)
 - source_labels: [ __meta_kubernetes_pod_name ]
@@ -62,7 +62,7 @@ func init() {
 func (r *resourceManager) ScrapeConfigs() ([]string, error) {
 	var scrapeConfig bytes.Buffer
 
-	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]interface{}{"namespace": r.namespace}); err != nil {
+	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]interface{}{"namespace": r.namespace, "namePrefix": r.values.NamePrefix}); err != nil {
 		return nil, err
 	}
 

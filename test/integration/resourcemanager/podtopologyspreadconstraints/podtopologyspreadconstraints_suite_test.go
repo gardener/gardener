@@ -150,6 +150,7 @@ func getMutatingWebhookConfigurations(testID string) []*admissionregistrationv1.
 			},
 			Webhooks: []admissionregistrationv1.MutatingWebhook{
 				resourcemanager.GetPodTopologySpreadConstraintsMutatingWebhook(
+					"",
 					&metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: testID}}, nil, nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
 						return admissionregistrationv1.WebhookClientConfig{
 							Service: &admissionregistrationv1.ServiceReference{
