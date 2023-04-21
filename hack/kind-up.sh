@@ -26,6 +26,10 @@ DEPLOY_REGISTRY=true
 MULTI_ZONAL=false
 CHART=$(dirname "$0")/../example/gardener-local/kind/cluster
 ADDITIONAL_ARGS=""
+SUDO=""
+if [[ "$(id -u)" != "0" ]]; then
+  SUDO="sudo "
+fi
 
 parse_flags() {
   while test $# -gt 0; do
@@ -103,12 +107,12 @@ setup_loopback_device() {
     LOOPBACK_IP_ADDRESSES+=(::10 ::11 ::12)
   fi
   echo "Checking loopback device ${LOOPBACK_DEVICE}..."
-  for address in ${LOOPBACK_IP_ADDRESSES[@]}; do
+  for address in "${LOOPBACK_IP_ADDRESSES[@]}"; do
     if ip address show dev ${LOOPBACK_DEVICE} | grep -q $address; then
       echo "IP address $address already assigned to ${LOOPBACK_DEVICE}."
     else
       echo "Adding IP address $address to ${LOOPBACK_DEVICE}..."
-      sudo ip address add $address dev ${LOOPBACK_DEVICE}
+      ${SUDO}ip address add "$address" dev "${LOOPBACK_DEVICE}"
     fi
   done
   echo "Setting up loopback device ${LOOPBACK_DEVICE} completed."
