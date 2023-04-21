@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/component-base/version"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -43,7 +44,10 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	sharedcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/shared"
+	"github.com/gardener/gardener/pkg/utils/images"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
@@ -73,6 +77,50 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 		features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster),
 		garden.Spec.RuntimeCluster.Provider.Zones,
 	)
+}
+
+func (r *Reconciler) newVirtualGardenGardenerResourceManager(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (resourcemanager.Interface, error) {
+	image, err := r.ImageVector.FindImage(images.ImageNameGardenerResourceManager)
+	if err != nil {
+		return nil, err
+	}
+
+	repository, tag := image.String(), version.Get().GitVersion
+	if image.Tag != nil {
+		repository, tag = image.Repository, *image.Tag
+	}
+	image = &imagevector.Image{Repository: repository, Tag: &tag}
+
+	cfg := resourcemanager.Values{
+		AlwaysUpdate:                         pointer.Bool(true),
+		HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
+		Image:                                image.String(),
+		LogLevel:                             r.Config.LogLevel,
+		LogFormat:                            r.Config.LogFormat,
+		MaxConcurrentTokenInvalidatorWorkers: pointer.Int(5),
+		MaxConcurrentTokenRequestorWorkers:   pointer.Int(5),
+		MaxConcurrentCSRApproverWorkers:      pointer.Int(5),
+		NamePrefix:                           namePrefix,
+		PriorityClassName:                    v1beta1constants.PriorityClassNameGardenSystem500,
+		SecretNameServerCA:                   operatorv1alpha1.SecretNameCARuntime,
+		SyncPeriod:                           &metav1.Duration{Duration: time.Minute},
+		TargetDiffersFromSourceCluster:       true,
+		TargetDisableCache:                   pointer.Bool(true),
+		KubernetesVersion:                    r.RuntimeVersion,
+		VPA: &resourcemanager.VPAConfig{
+			MinAllowed: corev1.ResourceList{
+				corev1.ResourceMemory: resource.MustParse("30Mi"),
+			},
+		},
+		WatchedNamespace: pointer.String(r.GardenNamespace),
+	}
+
+	return resourcemanager.New(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		secretsManager,
+		cfg,
+	), nil
 }
 
 func (r *Reconciler) newVerticalPodAutoscaler(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {

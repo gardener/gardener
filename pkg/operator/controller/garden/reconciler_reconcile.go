@@ -43,6 +43,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
@@ -143,6 +144,10 @@ func (r *Reconciler) reconcile(
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+	virtualGardenGardenerResourceManager, err := r.newVirtualGardenGardenerResourceManager(garden, secretsManager)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
 	// observability components
 	kubeStateMetrics, err := r.newKubeStateMetrics()
@@ -229,6 +234,25 @@ func (r *Reconciler) reconcile(
 			Name:         "Waiting until Kubernetes API server rolled out",
 			Fn:           kubeAPIServer.Wait,
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
+		})
+		generateGenericKubeconfigToken = g.Add(flow.Task{
+			Name: "Generating generic kubeconfig token",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return r.generateGenericTokenKubeconfig(ctx, secretsManager)
+			}),
+			Dependencies: flow.NewTaskIDs(syncPointSystemComponents),
+		})
+		deployVirtualGardenGardenerResourceManager = g.Add(flow.Task{
+			Name: "Deploying virtual-garden-gardener-resource-manager",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return r.deployVirtualGardenGardenerResourceManager(ctx, secretsManager, virtualGardenGardenerResourceManager)
+			}),
+			Dependencies: flow.NewTaskIDs(generateGenericKubeconfigToken, waitUntilKubeAPIServerIsReady),
+		})
+		waitUntilVirtualGardenGardenerResourceManagerIsReady = g.Add(flow.Task{
+			Name:         "Waiting until virtual-garden-gardener-resource-manager rolled out",
+			Fn:           virtualGardenGardenerResourceManager.Wait,
+			Dependencies: flow.NewTaskIDs(deployVirtualGardenGardenerResourceManager),
 		})
 		initializeVirtualClusterClient = g.Add(flow.Task{
 			Name: "Initializing connection to virtual garden cluster",
@@ -423,4 +447,18 @@ func (r *Reconciler) initializeVirtualClusterClient(secretsManager secretsmanage
 	}
 
 	return clientSet.Client(), nil
+}
+
+// deployVirtualGardenGardenerResourceManager deploys the virtual-garden-gardener-resource-manager
+func (r *Reconciler) deployVirtualGardenGardenerResourceManager(ctx context.Context, secretsManager secretsmanager.Interface, resourceManager resourcemanager.Interface) error {
+	return shared.DeployGardenerResourceManager(
+		ctx,
+		r.RuntimeClientSet.Client(),
+		secretsManager,
+		resourceManager,
+		r.GardenNamespace,
+		func(ctx context.Context) (int32, error) {
+			return 2, nil
+		},
+		func() string { return namePrefix + v1beta1constants.DeploymentNameKubeAPIServer })
 }

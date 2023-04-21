@@ -98,6 +98,10 @@ func (r *Reconciler) delete(
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+	virtualGardenGardenerResourceManager, err := r.newVirtualGardenGardenerResourceManager(garden, secretsManager)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
 	// observability components
 	kubeStateMetrics, err := r.newKubeStateMetrics()
@@ -111,6 +115,10 @@ func (r *Reconciler) delete(
 		_ = g.Add(flow.Task{
 			Name: "Destroying Kube State Metrics",
 			Fn:   component.OpDestroyAndWait(kubeStateMetrics).Destroy,
+		})
+		destroyVirtualGardenGardenerResourceManager = g.Add(flow.Task{
+			Name: "Destroying virtual-garden-gardener-resource-manager",
+			Fn:   component.OpDestroyAndWait(virtualGardenGardenerResourceManager).Destroy,
 		})
 		destroyKubeAPIServerService = g.Add(flow.Task{
 			Name: "Destroying Kubernetes API Server service",
@@ -129,6 +137,7 @@ func (r *Reconciler) delete(
 			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer),
 		})
 		syncPointVirtualGardenControlPlaneDestroyed = flow.NewTaskIDs(
+			destroyVirtualGardenGardenerResourceManager,
 			destroyKubeAPIServerService,
 			destroyEtcd,
 		)

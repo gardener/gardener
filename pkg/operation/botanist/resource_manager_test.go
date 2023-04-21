@@ -41,6 +41,7 @@ import (
 	mockkubeapiserver "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/mock"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	mockresourcemanager "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager/mock"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -331,7 +332,7 @@ var _ = Describe("ResourceManager", func() {
 		Context("w/ bootstrapping", func() {
 			Context("with success", func() {
 				AfterEach(func() {
-					defer test.WithVar(&TimeoutWaitForGardenerResourceManagerBootstrapping, time.Second)()
+					defer test.WithVar(&shared.TimeoutWaitForGardenerResourceManagerBootstrapping, time.Second)()
 
 					gomock.InOrder(
 						// create bootstrap kubeconfig
@@ -502,7 +503,7 @@ var _ = Describe("ResourceManager", func() {
 					})
 
 					It("fails because the shoot access token was not generated", func() {
-						defer test.WithVar(&TimeoutWaitForGardenerResourceManagerBootstrapping, time.Millisecond)()
+						defer test.WithVar(&shared.TimeoutWaitForGardenerResourceManagerBootstrapping, time.Millisecond)()
 
 						c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
 							obj.Annotations = nil
@@ -513,7 +514,7 @@ var _ = Describe("ResourceManager", func() {
 					})
 
 					It("fails because the shoot access token renew timestamp cannot be parsed", func() {
-						defer test.WithVar(&TimeoutWaitForGardenerResourceManagerBootstrapping, time.Millisecond)()
+						defer test.WithVar(&shared.TimeoutWaitForGardenerResourceManagerBootstrapping, time.Millisecond)()
 
 						c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
 							obj.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": "foo"}
@@ -524,7 +525,7 @@ var _ = Describe("ResourceManager", func() {
 					})
 
 					It("fails because the shoot access token was not renewed", func() {
-						defer test.WithVar(&TimeoutWaitForGardenerResourceManagerBootstrapping, time.Millisecond)()
+						defer test.WithVar(&shared.TimeoutWaitForGardenerResourceManagerBootstrapping, time.Millisecond)()
 
 						c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
 							obj.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": time.Now().Add(-time.Hour).Format(time.RFC3339)}
@@ -535,7 +536,7 @@ var _ = Describe("ResourceManager", func() {
 					})
 
 					It("fails because the managed resource is not getting healthy", func() {
-						defer test.WithVar(&TimeoutWaitForGardenerResourceManagerBootstrapping, time.Millisecond)()
+						defer test.WithVar(&shared.TimeoutWaitForGardenerResourceManagerBootstrapping, time.Millisecond)()
 
 						gomock.InOrder(
 							c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {

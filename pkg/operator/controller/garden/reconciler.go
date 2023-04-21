@@ -24,6 +24,7 @@ import (
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
@@ -41,6 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -271,6 +273,29 @@ func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *o
 	}
 
 	return r.RuntimeClientSet.Client().Status().Update(ctx, garden)
+}
+
+func (r *Reconciler) generateGenericTokenKubeconfig(ctx context.Context, secretsManager secretsmanager.Interface) error {
+	clusterCABundleSecret, found := secretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+	}
+
+	config := &secretsutils.KubeconfigSecretConfig{
+		Name:        v1beta1constants.SecretNameGenericTokenKubeconfig,
+		ContextName: r.GardenNamespace,
+		Cluster: clientcmdv1.Cluster{
+			Server:                   namePrefix + v1beta1constants.DeploymentNameKubeAPIServer,
+			CertificateAuthorityData: clusterCABundleSecret.Data[secretsutils.DataKeyCertificateBundle],
+		},
+		AuthInfo: clientcmdv1.AuthInfo{
+			TokenFile: gardenerutils.PathShootToken,
+		},
+	}
+
+	_, err := secretsManager.Generate(ctx, config, secretsmanager.Rotate(secretsmanager.InPlace))
+
+	return err
 }
 
 func startRotationCA(garden *operatorv1alpha1.Garden, now *metav1.Time) {
