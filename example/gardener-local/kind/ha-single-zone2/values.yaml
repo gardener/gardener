@@ -1,0 +1,15 @@
+gardener:
+  controlPlane:
+    deployed: false
+  seed:
+    istio:
+      listenAddresses:
+      - 127.0.0.2
+
+registry:
+  deployed: false
+  hostname: gardener-local-ha-single-zone-control-plane
+
+workers:
+- zone: "0"
+- zone: "0"

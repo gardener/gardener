@@ -200,6 +200,10 @@ if [[ "$CLUSTER_NAME" == "gardener-local2" ]] ; then
   garden_cluster="gardener-local"
 fi
 
+if [[ "$CLUSTER_NAME" == "gardener-local2-ha-single-zone" ]]; then
+  garden_cluster="gardener-local-ha-single-zone"
+fi
+
 ip_address_field="IPAddress"
 if [[ "$IPFAMILY" == "ipv6" ]]; then
   ip_address_field="GlobalIPv6Address"
