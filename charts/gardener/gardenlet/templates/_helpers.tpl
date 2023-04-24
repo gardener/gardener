@@ -63,12 +63,21 @@ topologySpreadConstraints:
 {{ include "gardenlet.deployment.matchLabels" . | indent 6 }}
 {{- if gt (int (include "gardenlet.seed.numberOfZones" .)) 1 }}
 - maxSkew: 1
+  minDomains: {{ include "gardenlet.deployment.minDomains" . }}
   topologyKey: topology.kubernetes.io/zone
   whenUnsatisfiable: DoNotSchedule
   labelSelector:
     matchLabels:
 {{ include "gardenlet.deployment.matchLabels" . | indent 6 }}
 {{- end }}
+{{- end }}
+{{- end -}}
+
+{{- define "gardenlet.deployment.minDomains" }}
+{{- if gt (int .Values.replicaCount) (int (include "gardenlet.seed.numberOfZones" .)) }}
+{{- include "gardenlet.seed.numberOfZones" . }}
+{{- else }}
+{{- .Values.replicaCount }}
 {{- end }}
 {{- end -}}
 

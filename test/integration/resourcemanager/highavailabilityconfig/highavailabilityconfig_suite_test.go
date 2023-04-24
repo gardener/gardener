@@ -62,6 +62,9 @@ var _ = BeforeSuite(func() {
 
 	By("Start test environment")
 	testEnv = &envtest.Environment{
+		ControlPlane: envtest.ControlPlane{
+			APIServer: &envtest.APIServer{},
+		},
 		CRDInstallOptions: envtest.CRDInstallOptions{
 			Paths: []string{filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-autoscaling.k8s.io_hvpas.yaml")},
 		},
@@ -70,6 +73,10 @@ var _ = BeforeSuite(func() {
 			MutatingWebhooks: getMutatingWebhookConfigurations(),
 		},
 	}
+
+	// TODO(timuthy): `MinDomainsInPodTopologySpread` feature gate is enabled by default as of Kubernetes v1.27. The following lines can be dropped as soon as `envtest` is updated.
+	args := testEnv.ControlPlane.APIServer.Configure()
+	args.Set("feature-gates", "MinDomainsInPodTopologySpread=true")
 
 	var err error
 	restConfig, err = testEnv.Start()

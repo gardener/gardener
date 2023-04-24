@@ -753,6 +753,7 @@ var _ = Describe("ResourceManager", func() {
 					},
 					{
 						MaxSkew:           1,
+						MinDomains:        pointer.Int32(2),
 						TopologyKey:       "topology.kubernetes.io/zone",
 						WhenUnsatisfiable: "DoNotSchedule",
 						LabelSelector: &metav1.LabelSelector{

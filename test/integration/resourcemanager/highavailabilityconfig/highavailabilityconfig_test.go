@@ -515,6 +515,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 											corev1.TopologySpreadConstraint{
 												TopologyKey:       corev1.LabelTopologyZone,
 												MaxSkew:           1,
+												MinDomains:        pointer.Int32(2),
 												WhenUnsatisfiable: corev1.DoNotSchedule,
 												LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
 											},
@@ -565,6 +566,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 											corev1.TopologySpreadConstraint{
 												TopologyKey:       corev1.LabelTopologyZone,
 												MaxSkew:           1,
+												MinDomains:        pointer.Int32(2),
 												WhenUnsatisfiable: corev1.DoNotSchedule,
 												LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
 											},
@@ -614,7 +616,20 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 							})
 
 							test := func() {
+
 								It("should add topology spread constraints", func() {
+									var maxReplicas *int32
+									if hpa != nil {
+										maxReplicas = &hpa.Spec.MaxReplicas
+									} else if hvpa != nil {
+										maxReplicas = &hvpa.Spec.Hpa.Template.Spec.MaxReplicas
+									}
+
+									minDomains := pointer.Int32(int32(len(zones)))
+									if pointer.Int32Deref(maxReplicas, *minDomains) < *minDomains {
+										minDomains = maxReplicas
+									}
+
 									Expect(getPodSpec().TopologySpreadConstraints).To(ConsistOf(
 										corev1.TopologySpreadConstraint{
 											TopologyKey:       corev1.LabelHostname,
@@ -625,6 +640,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 										corev1.TopologySpreadConstraint{
 											TopologyKey:       corev1.LabelTopologyZone,
 											MaxSkew:           2,
+											MinDomains:        minDomains,
 											WhenUnsatisfiable: corev1.DoNotSchedule,
 											LabelSelector:     &metav1.LabelSelector{MatchLabels: labels},
 										},
