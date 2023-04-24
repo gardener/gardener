@@ -326,10 +326,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.networking.type"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.provider.type"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -633,6 +629,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			shoot.Spec.Addons = nil
 			shoot.Spec.SecretBindingName = nil
 			shoot.Spec.Kubernetes.KubeControllerManager = nil
+			shoot.Spec.Networking = nil
 
 			errorList := ValidateShoot(shoot)
 
@@ -848,6 +845,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Spec.Addons = nil
 				shoot.Spec.Kubernetes.KubeControllerManager = nil
 				shoot.Spec.SecretBindingName = nil
+				shoot.Spec.Networking = nil
 
 				errorList := ValidateShoot(shoot)
 
@@ -2859,6 +2857,58 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("networking section", func() {
+			Context("Workerless Shoots", func() {
+				It("should forbid setting networking.type, networking.providerConfig, networking.pods, networking.nodes", func() {
+					DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true))
+					shoot.Spec.Provider.Workers = nil
+					shoot.Spec.SecretBindingName = nil
+					shoot.Spec.Addons = nil
+					shoot.Spec.Kubernetes.KubeControllerManager = nil
+					shoot.Spec.Networking = &core.Networking{
+						Type: pointer.String("some-type"),
+						ProviderConfig: &runtime.RawExtension{
+							Raw: []byte("foo"),
+						},
+						Pods:       pointer.String("0.0.0.0/0"),
+						Nodes:      pointer.String("0.0.0.0/0"),
+						Services:   pointer.String("0.0.0.0/0"),
+						IPFamilies: []core.IPFamily{core.IPFamilyIPv4},
+					}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.networking.type"),
+						"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.networking.providerConfig"),
+						"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.networking.pods"),
+						"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.networking.nodes"),
+						"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+					}))
+				})
+			})
+
+			It("should forbid empty Network configuration if shoot is having workers", func() {
+				shoot.Spec.Networking = nil
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("spec.networking"),
+					"Detail": ContainSubstring("networking should not be nil for a Shoot with workers"),
+				}))))
+			})
+
 			It("should forbid not specifying a networking type", func() {
 				shoot.Spec.Networking.Type = pointer.String("")
 

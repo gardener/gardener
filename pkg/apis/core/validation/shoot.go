@@ -221,7 +221,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, validateResources(spec.Resources, fldPath.Child("resources"))...)
 	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, isDockerConfigured(spec.Provider.Workers), workerless, fldPath.Child("kubernetes"))...)
-	allErrs = append(allErrs, validateNetworking(spec.Networking, fldPath.Child("networking"))...)
+	allErrs = append(allErrs, validateNetworking(spec.Networking, workerless, fldPath.Child("networking"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"), workerless)...)
 	allErrs = append(allErrs, validateMonitoring(spec.Monitoring, fldPath.Child("monitoring"))...)
 	allErrs = append(allErrs, ValidateHibernation(meta.Annotations, spec.Hibernation, fldPath.Child("hibernation"))...)
@@ -623,7 +623,13 @@ func ValidateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field
 func validateNetworkingUpdate(newNetworking, oldNetworking *core.Networking, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if newNetworking == nil || oldNetworking == nil {
+	if oldNetworking != nil {
+		if newNetworking == nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath, "networking cannot be set to nil if it's already set"))
+			return allErrs
+		}
+	} else {
+		// if we old networking is nil, we cannot validate immutability anyway, so exit early
 		return allErrs
 	}
 
@@ -848,11 +854,36 @@ func fieldNilOrEmptyString(field *string) bool {
 	return field == nil || len(*field) == 0
 }
 
-func validateNetworking(networking core.Networking, fldPath *field.Path) field.ErrorList {
+func validateNetworking(networking *core.Networking, workerless bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if len(networking.Type) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "networking type must be provided"))
+	if workerless {
+		// Nothing to be validated here, exit
+		if networking == nil {
+			return allErrs
+		}
+
+		if networking.Type != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("type"), workerlessErrorMsg))
+		}
+		if networking.ProviderConfig != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("providerConfig"), workerlessErrorMsg))
+		}
+		if networking.Pods != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("pods"), workerlessErrorMsg))
+		}
+		if networking.Nodes != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("nodes"), workerlessErrorMsg))
+		}
+	} else {
+		if networking == nil {
+			allErrs = append(allErrs, field.Required(fldPath, "networking should not be nil for a Shoot with workers"))
+			return allErrs
+		}
+
+		if len(pointer.StringDeref(networking.Type, "")) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("type"), "networking type must be provided"))
+		}
 	}
 
 	if errs := ValidateIPFamilies(networking.IPFamilies, fldPath.Child("ipFamilies")); len(errs) > 0 {
