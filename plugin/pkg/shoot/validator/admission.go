@@ -286,7 +286,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	if a.GetOperation() == admission.Create {
 		allErrs = append(allErrs, validationContext.validateAPIVersionForRawExtensions()...)
 	}
-	allErrs = append(allErrs, validationContext.validateShootNetworks()...)
+	allErrs = append(allErrs, validationContext.validateShootNetworks(shoot.IsWorkerless())...)
 	allErrs = append(allErrs, validationContext.validateKubernetes(a)...)
 	allErrs = append(allErrs, validationContext.validateRegion()...)
 	allErrs = append(allErrs, validationContext.validateProvider(a)...)
@@ -652,14 +652,32 @@ func (c *validationContext) addMetadataAnnotations(a admission.Attributes) {
 	}
 }
 
-func (c *validationContext) validateShootNetworks() field.ErrorList {
+func (c *validationContext) validateShootNetworks(workerless bool) field.ErrorList {
 	var (
 		allErrs field.ErrorList
 		path    = field.NewPath("spec", "networking")
 	)
 
 	if c.seed != nil {
-		if c.shoot.Spec.Networking.Pods == nil {
+		// if the shoot is workerless and doesn't have networking field set yet, but the seed has
+		// shootDefaults set for serviceCIDR, then default networking field
+		if workerless &&
+			c.seed.Spec.Networks.ShootDefaults != nil &&
+			c.seed.Spec.Networks.ShootDefaults.Services != nil {
+			if c.shoot.Spec.Networking == nil {
+				c.shoot.Spec.Networking = &core.Networking{}
+			}
+
+			if len(c.shoot.Spec.Networking.IPFamilies) == 0 {
+				c.shoot.Spec.Networking.IPFamilies = c.seed.Spec.Networks.IPFamilies
+			}
+		}
+
+		if c.shoot.Spec.Networking == nil {
+			return allErrs
+		}
+
+		if c.shoot.Spec.Networking.Pods == nil && !workerless {
 			if c.seed.Spec.Networks.ShootDefaults != nil {
 				c.shoot.Spec.Networking.Pods = c.seed.Spec.Networks.ShootDefaults.Pods
 			} else {
@@ -670,7 +688,7 @@ func (c *validationContext) validateShootNetworks() field.ErrorList {
 		if c.shoot.Spec.Networking.Services == nil {
 			if c.seed.Spec.Networks.ShootDefaults != nil {
 				c.shoot.Spec.Networking.Services = c.seed.Spec.Networks.ShootDefaults.Services
-			} else {
+			} else if !workerless {
 				allErrs = append(allErrs, field.Required(path.Child("services"), "services is required"))
 			}
 		}
@@ -681,6 +699,7 @@ func (c *validationContext) validateShootNetworks() field.ErrorList {
 				c.shoot.Spec.Networking.Nodes,
 				c.shoot.Spec.Networking.Pods,
 				c.shoot.Spec.Networking.Services,
+				workerless,
 			)...)
 		}
 
@@ -694,6 +713,7 @@ func (c *validationContext) validateShootNetworks() field.ErrorList {
 				c.seed.Spec.Networks.Nodes,
 				c.seed.Spec.Networks.Pods,
 				c.seed.Spec.Networks.Services,
+				workerless,
 			)...)
 		}
 	}
@@ -842,8 +862,10 @@ func (c *validationContext) validateAPIVersionForRawExtensions() field.ErrorList
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "controlPlaneConfig"), gvk, internalVersionErrorMsg))
 	}
 
-	if ok, gvk := usesInternalVersion(c.shoot.Spec.Networking.ProviderConfig); ok {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "networking", "providerConfig"), gvk, internalVersionErrorMsg))
+	if c.shoot.Spec.Networking != nil {
+		if ok, gvk := usesInternalVersion(c.shoot.Spec.Networking.ProviderConfig); ok {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "networking", "providerConfig"), gvk, internalVersionErrorMsg))
+		}
 	}
 
 	for i, worker := range c.shoot.Spec.Provider.Workers {
