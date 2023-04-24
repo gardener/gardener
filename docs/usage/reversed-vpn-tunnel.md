@@ -19,9 +19,6 @@ Connection establishment with a reversed tunnel:
 
 `APIServer --> Envoy-Proxy | VPN-Seed-Server <-- Istio/Envoy-Proxy <-- SNI API Server Endpoint <-- LB (one for all clusters of a seed) <--- internet <--- VPN-Shoot-Client --> Pods | Nodes | Services`
 
-The reversed VPN tunnel is always deployed.
-The feature gate `ReversedVPN` is GA and will be removed in a future release.
-
 ## High Availability for Reversed VPN Tunnel
 
 Shoots which define `spec.controlPlane.highAvailability.failureTolerance: {node, zone}` get an HA control-plane, including a

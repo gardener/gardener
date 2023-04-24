@@ -54,13 +54,6 @@ const (
 	// GA: v1.69.0
 	SeedChange featuregate.Feature = "SeedChange"
 
-	// ReversedVPN moves the openvpn server to the seed.
-	// owner: @ScheererJ @DockToFuture
-	// alpha: v1.22.0
-	// beta: v1.42.0
-	// GA: v1.63.0
-	ReversedVPN featuregate.Feature = "ReversedVPN"
-
 	// CopyEtcdBackupsDuringControlPlaneMigration enables the copy of etcd backups from the object store of the source seed
 	// to the object store of the destination seed during control plane migration.
 	// owner: @plkokanov
@@ -130,7 +123,6 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HVPAForShootedSeed: {Default: false, PreRelease: featuregate.Alpha},
 	APIServerSNI:       {Default: true, PreRelease: featuregate.Deprecated, LockToDefault: true},
 	SeedChange:         {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	ReversedVPN:        {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	HAControlPlanes:                     {Default: false, PreRelease: featuregate.Alpha},
 	DefaultSeccompProfile:               {Default: false, PreRelease: featuregate.Alpha},
