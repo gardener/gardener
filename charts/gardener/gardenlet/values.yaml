@@ -146,7 +146,7 @@ config:
     enableContentionProfiling: false
   featureGates: {}
   seedConfig: {}
-  # sni: # SNI configuration used for APIServerSNI and ManagedIstio feature gates.
+  # sni: # SNI configuration used for APIServerSNI feature gate.
   #   ingress:
   #     serviceName: istio-ingress
   #     namespace: istio-ingress

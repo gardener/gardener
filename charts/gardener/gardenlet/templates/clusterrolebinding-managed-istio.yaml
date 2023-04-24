@@ -1,7 +1,3 @@
-# ManagedIstio feature gate related ClusterRoleBinding.
-# It is nice to have the binding even when the feature gate is disabled.
-# In this case the clusterrole is having no rules and the gardenlet is granted with no permissions.
----
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:

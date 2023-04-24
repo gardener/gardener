@@ -382,11 +382,9 @@ func (r *Reconciler) runReconcileSeedFlow(
 		}
 	}
 
-	if features.DefaultFeatureGate.Enabled(features.ManagedIstio) {
-		istioCRDs := istio.NewCRD(chartApplier, seedClient)
-		if err := istioCRDs.Deploy(ctx); err != nil {
-			return err
-		}
+	istioCRDs := istio.NewCRD(chartApplier, seedClient)
+	if err := istioCRDs.Deploy(ctx); err != nil {
+		return err
 	}
 
 	if !seedIsGarden && vpaEnabled {
@@ -442,7 +440,9 @@ func (r *Reconciler) runReconcileSeedFlow(
 	// Fetch component-specific aggregate and central monitoring configuration
 	var (
 		aggregateScrapeConfigs                = strings.Builder{}
-		aggregateMonitoringComponentFunctions []component.AggregateMonitoringConfiguration
+		aggregateMonitoringComponentFunctions = []component.AggregateMonitoringConfiguration{
+			istio.AggregateMonitoringConfiguration,
+		}
 
 		centralScrapeConfigs                            = strings.Builder{}
 		centralCAdvisorScrapeConfigMetricRelabelConfigs = strings.Builder{}
@@ -451,10 +451,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			kubestatemetrics.CentralMonitoringConfiguration,
 		}
 	)
-
-	if features.DefaultFeatureGate.Enabled(features.ManagedIstio) {
-		aggregateMonitoringComponentFunctions = append(aggregateMonitoringComponentFunctions, istio.AggregateMonitoringConfiguration)
-	}
 
 	for _, componentFn := range aggregateMonitoringComponentFunctions {
 		aggregateMonitoringConfig, err := componentFn()
@@ -799,7 +795,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			"enabled": hvpaEnabled,
 		},
 		"istio": map[string]interface{}{
-			"enabled": features.DefaultFeatureGate.Enabled(features.ManagedIstio),
+			"enabled": true,
 		},
 		"ingress": map[string]interface{}{
 			"authSecretName": globalMonitoringSecretSeed.Name,
@@ -823,18 +819,12 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 
 	// setup for flow graph
-	var (
-		dnsRecord component.DeployMigrateWaiter
-		istio     component.DeployWaiter
-	)
+	var dnsRecord component.DeployMigrateWaiter
 
-	if features.DefaultFeatureGate.Enabled(features.ManagedIstio) {
-		istio, err = defaultIstio(seedClient, r.ImageVector, chartRenderer, seed, &r.Config, sniEnabledOrInUse)
-		if err != nil {
-			return err
-		}
+	istio, err := defaultIstio(seedClient, r.ImageVector, chartRenderer, seed, &r.Config, sniEnabledOrInUse)
+	if err != nil {
+		return err
 	}
-
 	networkPolicies, err := defaultNetworkPolicies(seedClient, r.GardenNamespace)
 	if err != nil {
 		return err
@@ -851,7 +841,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if err != nil {
 		return err
 	}
-	vpnAuthzServer, err := defaultVPNAuthzServer(ctx, seedClient, kubernetesVersion, r.ImageVector, r.GardenNamespace)
+	vpnAuthzServer, err := defaultVPNAuthzServer(seedClient, kubernetesVersion, r.ImageVector, r.GardenNamespace)
 	if err != nil {
 		return err
 	}
@@ -878,7 +868,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		g = flow.NewGraph("Seed cluster creation")
 		_ = g.Add(flow.Task{
 			Name: "Deploying Istio",
-			Fn:   flow.TaskFn(func(ctx context.Context) error { return istio.Deploy(ctx) }).DoIf(features.DefaultFeatureGate.Enabled(features.ManagedIstio)),
+			Fn:   istio.Deploy,
 		})
 		_ = g.Add(flow.Task{
 			Name: "Ensuring network policies",

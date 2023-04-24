@@ -22,9 +22,6 @@ The following tables are a summary of the feature gates that you can set on diff
 |--------------------------------------------|---------|---------|--------|--------|
 | HVPA                                       | `false` | `Alpha` | `0.31` |        |
 | HVPAForShootedSeed                         | `false` | `Alpha` | `0.32` |        |
-| ManagedIstio                               | `false` | `Alpha` | `1.5`  | `1.18` |
-| ManagedIstio                               | `true`  | `Beta`  | `1.19` |        |
-| ManagedIstio (deprecated)                  | `true`  | `Beta`  | `1.48` |        |
 | APIServerSNI                               | `false` | `Alpha` | `1.7`  | `1.18` |
 | APIServerSNI                               | `true`  | `Beta`  | `1.19` |        |
 | APIServerSNI (deprecated)                  | `true`  | `Beta`  | `1.48` |        |
@@ -107,13 +104,17 @@ The following tables are a summary of the feature gates that you can set on diff
 | ReversedVPN                                  | `false` | `Alpha`      | `1.22` | `1.41` |
 | ReversedVPN                                  | `true`  | `Beta`       | `1.42` | `1.62` |
 | ReversedVPN                                  | `true`  | `GA`         | `1.63` |        |
-| ForceRestore                                 | `false` | `Removed`    | `1.66` |        |
+| ForceRestore                                 |         | `Removed`    | `1.66` |        |
 | SeedChange                                   | `false` | `Alpha`      | `1.12` | `1.52` |
 | SeedChange                                   | `true`  | `Beta`       | `1.53` | `1.68` |
 | SeedChange                                   | `true`  | `GA`         | `1.69` |        |
 | CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha`      | `1.37` | `1.52` |
 | CopyEtcdBackupsDuringControlPlaneMigration   | `true`  | `Beta`       | `1.53` | `1.68` |
 | CopyEtcdBackupsDuringControlPlaneMigration   | `true`  | `GA`         | `1.69` |        |
+| ManagedIstio                                 | `false` | `Alpha`      | `1.5`  | `1.18` |
+| ManagedIstio                                 | `true`  | `Beta`       | `1.19` |        |
+| ManagedIstio                                 | `true`  | `Deprecated` | `1.48` | `1.69` |
+| ManagedIstio                                 |         | `Removed`    | `1.70` |        |
 
 ## Using a Feature
 
@@ -155,7 +156,6 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 |--------------------------------------------|---------------------------------- |------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | HVPA                                       | `gardenlet`, `gardener-operator`  | Enables simultaneous horizontal and vertical scaling in garden or seed clusters.                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | HVPAForShootedSeed                         | `gardenlet`                       | Enables simultaneous horizontal and vertical scaling in managed seed (aka "shooted seed") clusters.                                                                                                                                                                                                                                                                                                                                                                                                              |
-| ManagedIstio (deprecated)                  | `gardenlet`                       | Enables a Gardener-tailored [Istio](https://istio.io) in each Seed cluster. Disable this feature if Istio is already installed in the cluster. Istio is not automatically removed if this feature is disabled. See the [detailed documentation](../usage/istio.md) for more information.                                                                                                                                                                                                                         |
 | APIServerSNI (deprecated)                  | `gardenlet`                       | Enables only one LoadBalancer to be used for every Shoot cluster API server in a Seed. Enable this feature when `ManagedIstio` is enabled or Istio is manually deployed in the Seed cluster. See [GEP-8](../proposals/08-shoot-apiserver-via-sni.md) for more details.                                                                                                                                                                                                                                           |
 | SeedChange                                 | `gardener-apiserver`              | Enables updating the `spec.seedName` field during shoot validation from a non-empty value in order to trigger shoot control plane migration.                                                                                                                                                                                                                                                                                                                                                                     |
 | ReversedVPN                                | `gardenlet`                       | Reverses the connection setup of the VPN tunnel between the Seed and the Shoot cluster(s). It allows Seed and Shoot clusters to be in different networks with only direct access in one direction (Shoot -> Seed). In addition to that, it reduces the amount of load balancers required, i.e. no load balancers are required for the VPN tunnel anymore. It requires `APIServerSNI` and kubernetes version `1.18` or higher to work. Details can be found in [GEP-14](../proposals/14-reversed-cluster-vpn.md). |

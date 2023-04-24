@@ -37,19 +37,8 @@ const (
 	// alpha: v0.32.0
 	HVPAForShootedSeed featuregate.Feature = "HVPAForShootedSeed"
 
-	// ManagedIstio installs minimal Istio components in istio-system.
-	// Disable this feature if Istio is already installed in the cluster.
-	// Istio is not automatically removed if this feature is set to false.
-	// See https://github.com/gardener/gardener/blob/master/docs/usage/istio.md
-	// owner @ScheererJ @DockToFuture
-	// alpha: v1.5.0
-	// beta: v1.19.0
-	// deprecated: v1.48.0
-	ManagedIstio featuregate.Feature = "ManagedIstio"
-
 	// APIServerSNI allows to use only one LoadBalancer in the Seed cluster
-	// for all Shoot clusters. Requires Istio to be installed in the cluster or
-	// ManagedIstio feature gate to be enabled.
+	// for all Shoot clusters.
 	// See https://github.com/gardener/gardener/blob/master/docs/proposals/08-shoot-apiserver-via-sni.md
 	// owner @ScheererJ @DockToFuture
 	// alpha: v1.7.0
@@ -139,7 +128,6 @@ var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HVPA:               {Default: false, PreRelease: featuregate.Alpha},
 	HVPAForShootedSeed: {Default: false, PreRelease: featuregate.Alpha},
-	ManagedIstio:       {Default: true, PreRelease: featuregate.Deprecated, LockToDefault: true},
 	APIServerSNI:       {Default: true, PreRelease: featuregate.Deprecated, LockToDefault: true},
 	SeedChange:         {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ReversedVPN:        {Default: true, PreRelease: featuregate.GA, LockToDefault: true},

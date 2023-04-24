@@ -48,6 +48,8 @@ var requiredManagedResourcesSeed = sets.New(
 	kubestatemetrics.ManagedResourceName,
 	seedsystem.ManagedResourceName,
 	vpa.ManagedResourceControlName,
+	istio.ManagedResourceControlName,
+	istio.ManagedResourceIstioSystemName,
 )
 
 // SeedHealth contains information needed to execute health checks for seed.
@@ -106,10 +108,6 @@ func (h *SeedHealth) checkSeedSystemComponents(
 		managedResources = append(managedResources, clusteridentity.ManagedResourceControlName)
 	}
 
-	if features.DefaultFeatureGate.Enabled(features.ManagedIstio) {
-		managedResources = append(managedResources, istio.ManagedResourceControlName)
-		managedResources = append(managedResources, istio.ManagedResourceIstioSystemName)
-	}
 	if features.DefaultFeatureGate.Enabled(features.HVPA) {
 		managedResources = append(managedResources, hvpa.ManagedResourceName)
 	}
