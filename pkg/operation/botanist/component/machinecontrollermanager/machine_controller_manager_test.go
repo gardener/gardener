@@ -220,17 +220,13 @@ var _ = Describe("MachineControllerManager", func() {
 							Command: []string{
 								"./machine-controller-manager",
 								"--control-kubeconfig=inClusterConfig",
-								"--delete-migrated-machine-class=true",
-								"--machine-safety-apiserver-statuscheck-timeout=30s",
-								"--machine-safety-apiserver-statuscheck-period=1m",
-								"--machine-safety-orphan-vms-period=30m",
 								"--machine-safety-overshooting-period=1m",
 								"--namespace=" + namespace,
 								"--port=10258",
 								"--safety-up=2",
 								"--safety-down=1",
 								"--target-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
-								"--v=3",
+								"--v=4",
 							},
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
