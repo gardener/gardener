@@ -74,6 +74,7 @@
 * [Controlling the Kubernetes versions for specific worker pools](usage/worker_pool_k8s_versions.md)
 * [Migrating from `PodSecurityPolicy`s to PodSecurity admission controller](usage/pod-security.md)
 * [Supported CPU Architectures for Shoot Worker Nodes](usage/shoot_supported_architectures.md)
+* [Workerless `Shoot`s](usage/shoot_workerless.md)
 
 ## [API Reference](api-reference/README.md)
 

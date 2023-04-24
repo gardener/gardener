@@ -176,6 +176,12 @@ NAME    CLOUDPROFILE   PROVIDER   REGION   K8S VERSION   HIBERNATION   LAST OPER
 local   local          local      local    1.21.0        Awake         Create Processing (43%)   healthy   94s
 ```
 
+If you don't need any worker pools, you can create a workerless `Shoot` by running:
+
+```bash
+kubectl apply -f example/provider-local/shoot-workerless.yaml
+```
+
 (Optional): You could also execute a simple e2e test (creating and deleting a shoot) by running:
 
 ```shell
