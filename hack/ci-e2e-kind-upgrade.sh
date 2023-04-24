@@ -171,25 +171,27 @@ function set_seed_name() {
 }
 
 function run_pre_upgrade_test() {
-  case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
-  node | zone)
-    make test-pre-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
-    ;;
-  *)
-    make test-non-ha-pre-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
-    ;;
-  esac
+  local test_command
+
+  if [[ "$SHOOT_FAILURE_TOLERANCE_TYPE" == "node" || "$SHOOT_FAILURE_TOLERANCE_TYPE" == "zone" ]]; then
+    test_command="test-pre-upgrade"
+  else
+    test_command="test-non-ha-pre-upgrade"
+  fi
+
+  make "$test_command" GARDENER_PREVIOUS_RELEASE="$GARDENER_PREVIOUS_RELEASE" GARDENER_NEXT_RELEASE="$GARDENER_NEXT_RELEASE"
 }
 
 function run_post_upgrade_test() {
-  case "$SHOOT_FAILURE_TOLERANCE_TYPE" in
-  node | zone)
-    make test-post-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
-    ;;
-  *)
-    make test-non-ha-post-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
-    ;;
-  esac
+  local test_command
+
+  if [[ "$SHOOT_FAILURE_TOLERANCE_TYPE" == "node" || "$SHOOT_FAILURE_TOLERANCE_TYPE" == "zone" ]]; then
+    test_command="test-post-upgrade"
+  else
+    test_command="test-non-ha-post-upgrade"
+  fi
+
+  make "$test_command" GARDENER_PREVIOUS_RELEASE="$GARDENER_PREVIOUS_RELEASE" GARDENER_NEXT_RELEASE="$GARDENER_NEXT_RELEASE"
 }
 
 clamp_mss_to_pmtu
