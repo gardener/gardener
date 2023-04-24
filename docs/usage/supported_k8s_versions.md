@@ -9,7 +9,6 @@ The minimum version of a garden cluster that can be used to run Gardener is **`1
 ## Seed Clusters
 
 The minimum version of a seed cluster that can be connected to Gardener is **`1.20.x`**.
-Please note that Gardener does not support seeds with version **>= `1.25`** yet when the `HVPA` or `HVPAForShootedSeed` feature gate is enabled. For more details, see [Issue #6893](https://github.com/gardener/gardener/issues/6893).
 
 ## Shoot Clusters
 
