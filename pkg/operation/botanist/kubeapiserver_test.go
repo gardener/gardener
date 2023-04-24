@@ -148,7 +148,7 @@ var _ = Describe("KubeAPIServer", func() {
 				DNS: &gardencorev1beta1.DNS{
 					Domain: &externalClusterDomain,
 				},
-				Networking: gardencorev1beta1.Networking{
+				Networking: &gardencorev1beta1.Networking{
 					Nodes: &nodeNetworkCIDR,
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{

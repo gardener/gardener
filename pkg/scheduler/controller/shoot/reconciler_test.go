@@ -101,7 +101,7 @@ var _ = Describe("Scheduler_Control", func() {
 				Provider: gardencorev1beta1.Provider{
 					Type: providerType,
 				},
-				Networking: gardencorev1beta1.Networking{
+				Networking: &gardencorev1beta1.Networking{
 					Nodes:    pointer.String("10.40.0.0/16"),
 					Pods:     pointer.String("10.50.0.0/16"),
 					Services: pointer.String("10.60.0.0/16"),
@@ -835,7 +835,7 @@ var _ = Describe("Scheduler_Control", func() {
 		// FAIL
 
 		It("should fail because it cannot find a seed cluster due to network disjointedness", func() {
-			shoot.Spec.Networking = gardencorev1beta1.Networking{
+			shoot.Spec.Networking = &gardencorev1beta1.Networking{
 				Pods:     &seed.Spec.Networks.Pods,
 				Services: &seed.Spec.Networks.Services,
 				Nodes:    seed.Spec.Networks.Nodes,
@@ -903,7 +903,7 @@ var _ = Describe("Scheduler_Control", func() {
 
 		It("should fail because it cannot find a seed cluster due to no shoot networks specified and no defaults", func() {
 			seed.Spec.Networks.ShootDefaults = nil
-			shoot.Spec.Networking = gardencorev1beta1.Networking{}
+			shoot.Spec.Networking = &gardencorev1beta1.Networking{}
 
 			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
 				*actual = cloudProfile

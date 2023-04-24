@@ -37,7 +37,7 @@ var _ = Describe("Shoot", func() {
 		Entry("pod cidr is given", &Cluster{
 			Shoot: &gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
-					Networking: gardencorev1beta1.Networking{
+					Networking: &gardencorev1beta1.Networking{
 						Pods: &cidr,
 					},
 				},

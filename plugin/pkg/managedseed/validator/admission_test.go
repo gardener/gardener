@@ -99,7 +99,7 @@ var _ = Describe("ManagedSeed", func() {
 							Enabled: true,
 						},
 					},
-					Networking: core.Networking{
+					Networking: &core.Networking{
 						Pods:     pointer.String("100.96.0.0/11"),
 						Nodes:    pointer.String("10.250.0.0/16"),
 						Services: pointer.String("100.64.0.0/13"),

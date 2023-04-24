@@ -225,8 +225,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 							},
 						},
 					},
-					Networking: core.Networking{
-						Type: "some-network-plugin",
+					Networking: &core.Networking{
+						Type: pointer.String("some-network-plugin"),
 					},
 					Provider: core.Provider{
 						Type:    "aws",
@@ -2860,7 +2860,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		Context("networking section", func() {
 			It("should forbid not specifying a networking type", func() {
-				shoot.Spec.Networking.Type = ""
+				shoot.Spec.Networking.Type = pointer.String("")
 
 				errorList := ValidateShoot(shoot)
 
@@ -2872,7 +2872,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid changing the networking type", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Networking.Type = "some-other-type"
+				newShoot.Spec.Networking.Type = pointer.String("some-other-type")
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 

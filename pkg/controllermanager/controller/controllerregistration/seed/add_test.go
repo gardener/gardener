@@ -240,7 +240,11 @@ var _ = Describe("Add", func() {
 
 		BeforeEach(func() {
 			p = reconciler.ShootPredicate()
-			shoot = &gardencorev1beta1.Shoot{}
+			shoot = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{},
+				},
+			}
 		})
 
 		Describe("#Create", func() {
@@ -293,7 +297,7 @@ var _ = Describe("Add", func() {
 
 			It("should return true because networking type changed", func() {
 				oldShoot := shoot.DeepCopy()
-				shoot.Spec.Networking.Type = "foo"
+				shoot.Spec.Networking.Type = pointer.String("foo")
 				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
 			})
 

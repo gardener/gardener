@@ -57,6 +57,7 @@ var _ = Describe("CoreDNS", func() {
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.22.1",
 				},
+				Networking: &gardencorev1beta1.Networking{},
 			},
 		})
 	})
@@ -112,6 +113,7 @@ var _ = Describe("CoreDNS", func() {
 						Kubernetes: gardencorev1beta1.Kubernetes{
 							Version: "1.22.1",
 						},
+						Networking: &gardencorev1beta1.Networking{},
 					},
 				})
 			})

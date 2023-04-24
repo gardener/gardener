@@ -166,8 +166,8 @@ var _ = Describe("Reconciler", func() {
 						},
 					},
 				},
-				Networking: gardencorev1beta1.Networking{
-					Type: type3,
+				Networking: &gardencorev1beta1.Networking{
+					Type: pointer.String(type3),
 				},
 				Extensions: []gardencorev1beta1.Extension{
 					{Type: type4},
@@ -192,8 +192,8 @@ var _ = Describe("Reconciler", func() {
 						},
 					},
 				},
-				Networking: gardencorev1beta1.Networking{
-					Type: type3,
+				Networking: &gardencorev1beta1.Networking{
+					Type: pointer.String(type3),
 				},
 			},
 		}
@@ -541,8 +541,8 @@ var _ = Describe("Reconciler", func() {
 								},
 							},
 						},
-						Networking: gardencorev1beta1.Networking{
-							Type: type3,
+						Networking: &gardencorev1beta1.Networking{
+							Type: pointer.String(type3),
 						},
 						Extensions: []gardencorev1beta1.Extension{
 							{Type: type4},

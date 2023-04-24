@@ -65,8 +65,8 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.20.1",
 				},
-				Networking: gardencorev1beta1.Networking{
-					Type: "foo-networking",
+				Networking: &gardencorev1beta1.Networking{
+					Type: pointer.String("foo-networking"),
 				},
 			},
 		}

@@ -87,7 +87,7 @@ var _ = Describe("ShootSystem", func() {
 						End:   maintenanceEnd,
 					},
 				},
-				Networking: gardencorev1beta1.Networking{
+				Networking: &gardencorev1beta1.Networking{
 					Nodes: &nodeCIDR,
 				},
 				Region: region,

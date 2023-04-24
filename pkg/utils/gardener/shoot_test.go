@@ -1141,8 +1141,8 @@ var _ = Describe("Shoot", func() {
 							},
 						},
 					},
-					Networking: gardencorev1beta1.Networking{
-						Type: networkingType,
+					Networking: &gardencorev1beta1.Networking{
+						Type: pointer.String(networkingType),
 					},
 					Extensions: []gardencorev1beta1.Extension{
 						{Type: extensionType1},

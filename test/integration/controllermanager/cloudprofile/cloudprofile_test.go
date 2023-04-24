@@ -83,7 +83,7 @@ var _ = Describe("CloudProfile controller tests", func() {
 					},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.21.1"},
-				Networking: gardencorev1beta1.Networking{Type: "foo-networking"},
+				Networking: &gardencorev1beta1.Networking{Type: pointer.String("foo-networking")},
 			},
 		}
 	})

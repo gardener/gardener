@@ -42,7 +42,7 @@ var _ = Describe("shoot", func() {
 			BeforeEach(func() {
 				shoot = &gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
-						Networking: gardencorev1beta1.Networking{
+						Networking: &gardencorev1beta1.Networking{
 							Pods:     pointer.String("10.0.0.0/24"),
 							Services: pointer.String("20.0.0.0/24"),
 						},

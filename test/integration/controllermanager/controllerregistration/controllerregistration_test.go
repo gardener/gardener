@@ -474,8 +474,8 @@ var _ = Describe("ControllerRegistration controller test", func() {
 					Kubernetes: gardencorev1beta1.Kubernetes{
 						Version: "1.21.1",
 					},
-					Networking: gardencorev1beta1.Networking{
-						Type: providerType,
+					Networking: &gardencorev1beta1.Networking{
+						Type: pointer.String(providerType),
 					},
 					Extensions: []gardencorev1beta1.Extension{{
 						Type: providerType,

@@ -117,8 +117,8 @@ var _ = Describe("Shoot Reference controller tests", func() {
 						},
 					},
 				},
-				Networking: gardencorev1beta1.Networking{
-					Type: "foo-networking",
+				Networking: &gardencorev1beta1.Networking{
+					Type: pointer.String("foo-networking"),
 				},
 			},
 		}

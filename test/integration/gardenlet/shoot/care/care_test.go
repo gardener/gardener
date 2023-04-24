@@ -152,8 +152,8 @@ var _ = Describe("Shoot Care controller tests", func() {
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.20.1",
 				},
-				Networking: gardencorev1beta1.Networking{
-					Type:     "foo-networking",
+				Networking: &gardencorev1beta1.Networking{
+					Type:     pointer.String("foo-networking"),
 					Services: pointer.String("10.0.0.0/16"),
 					Pods:     pointer.String("10.1.0.0/16"),
 				},
