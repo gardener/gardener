@@ -140,7 +140,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 	}
 
 	var (
-		nonTerminatingNamespace = botanist.SeedNamespaceObject != nil && botanist.SeedNamespaceObject.Status.Phase != corev1.NamespaceTerminating
+		nonTerminatingNamespace = botanist.SeedNamespaceObject.UID != "" && botanist.SeedNamespaceObject.Status.Phase != corev1.NamespaceTerminating
 		cleanupShootResources   = nonTerminatingNamespace && kubeAPIServerDeploymentFound && infrastructure != nil
 		defaultInterval         = 5 * time.Second
 		defaultTimeout          = 30 * time.Second
