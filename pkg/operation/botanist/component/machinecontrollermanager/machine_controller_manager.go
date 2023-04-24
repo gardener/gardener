@@ -209,17 +209,13 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 					Command: []string{
 						"./machine-controller-manager",
 						"--control-kubeconfig=inClusterConfig",
-						"--delete-migrated-machine-class=true",
-						"--machine-safety-apiserver-statuscheck-timeout=30s",
-						"--machine-safety-apiserver-statuscheck-period=1m",
-						"--machine-safety-orphan-vms-period=30m",
 						"--machine-safety-overshooting-period=1m",
 						"--namespace=" + m.namespace,
 						fmt.Sprintf("--port=%d", portMetrics),
 						"--safety-up=2",
 						"--safety-down=1",
 						"--target-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
-						"--v=3",
+						"--v=4",
 					},
 					LivenessProbe: &corev1.Probe{
 						ProbeHandler: corev1.ProbeHandler{
