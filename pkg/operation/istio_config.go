@@ -102,12 +102,10 @@ func (o *Operation) singleZoneIfPinned() *string {
 	if len(o.Seed.GetInfo().Spec.Provider.Zones) <= 1 {
 		return nil
 	}
-	if o.SeedNamespaceObject != nil {
-		if v, ok := o.SeedNamespaceObject.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones]; ok {
-			zones := sets.List(sets.New(strings.Split(v, ",")...).Delete(""))
-			if len(zones) == 1 {
-				return &zones[0]
-			}
+	if v, ok := o.SeedNamespaceObject.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones]; ok {
+		zones := sets.List(sets.New(strings.Split(v, ",")...).Delete(""))
+		if len(zones) == 1 {
+			return &zones[0]
 		}
 	}
 	return nil

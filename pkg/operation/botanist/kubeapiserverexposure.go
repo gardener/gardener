@@ -18,7 +18,6 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -136,14 +135,9 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 		b.SeedClientSet.Applier(),
 		b.Shoot.SeedNamespace,
 		func() *kubeapiserverexposure.SNIValues {
-			// Use empty UID when SeedNamespaceObject is not available (e.g. when deleting shoots)
-			var seedNamespaceUID types.UID
-			if b.SeedNamespaceObject != nil {
-				seedNamespaceUID = b.SeedNamespaceObject.UID
-			}
 			return &kubeapiserverexposure.SNIValues{
 				APIServerClusterIP: clusterIP,
-				NamespaceUID:       seedNamespaceUID,
+				NamespaceUID:       b.SeedNamespaceObject.UID,
 				Hosts: []string{
 					gardenerutils.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
 					gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
