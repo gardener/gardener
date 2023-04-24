@@ -219,7 +219,6 @@ var _ = Describe("Controller", func() {
 	})
 
 	It("should not reconcile the extension BackupEntry if the secret data or extension spec hasn't changed", func() {
-		extensionBackupEntry.Status.LastOperation.LastUpdateTime = metav1.NewTime(time.Now().Add(time.Second * 10).UTC())
 		Expect(seedClient.Create(ctx, extensionSecret)).To(Succeed())
 		Expect(seedClient.Create(ctx, extensionBackupEntry)).To(Succeed())
 

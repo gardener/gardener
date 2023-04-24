@@ -53,7 +53,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 	BeforeEach(func() {
 		DeferCleanup(test.WithVar(&backupbucket.RequeueDurationWhenResourceDeletionStillPresent, 30*time.Millisecond))
 
-		fakeClock.SetTime(time.Now())
+		fakeClock.SetTime(time.Now().Round(time.Second))
 
 		reconcileExtensionBackupBucket = func(makeReady bool) {
 			// These should be done by the extension controller, we are faking it here for the tests.
@@ -101,7 +101,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 					ProviderStatus:     providerStatus,
 					LastOperation: &gardencorev1beta1.LastOperation{
 						State:          lastOperationState,
-						LastUpdateTime: metav1.NewTime(fakeClock.Now().Add(time.Second * 10)),
+						LastUpdateTime: metav1.NewTime(fakeClock.Now()),
 					},
 				},
 				GeneratedSecretRef: &corev1.SecretReference{
