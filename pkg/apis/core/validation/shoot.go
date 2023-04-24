@@ -173,7 +173,7 @@ func ValidateShootTemplateUpdate(newShootTemplate, oldShootTemplate *core.ShootT
 
 	allErrs = append(allErrs, ValidateShootSpecUpdate(&newShootTemplate.Spec, &oldShootTemplate.Spec, newShootTemplate.ObjectMeta, fldPath.Child("spec"))...)
 
-	if oldShootTemplate.Spec.Networking.Nodes != nil {
+	if oldShootTemplate.Spec.Networking != nil && oldShootTemplate.Spec.Networking.Nodes != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newShootTemplate.Spec.Networking.Nodes, oldShootTemplate.Spec.Networking.Nodes, fldPath.Child("spec", "networking", "nodes"))...)
 	}
 
@@ -620,8 +620,12 @@ func ValidateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field
 	return allErrs
 }
 
-func validateNetworkingUpdate(newNetworking, oldNetworking core.Networking, fldPath *field.Path) field.ErrorList {
+func validateNetworkingUpdate(newNetworking, oldNetworking *core.Networking, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	if newNetworking == nil || oldNetworking == nil {
+		return allErrs
+	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.Type, oldNetworking.Type, fldPath.Child("type"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.IPFamilies, oldNetworking.IPFamilies, fldPath.Child("ipFamilies"))...)
@@ -755,7 +759,7 @@ func validateResources(resources []core.NamedResourceReference, fldPath *field.P
 	return allErrs
 }
 
-func validateKubernetes(kubernetes core.Kubernetes, networking core.Networking, dockerConfigured, workerless bool, fldPath *field.Path) field.ErrorList {
+func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking, dockerConfigured, workerless bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(kubernetes.Version) == 0 {
@@ -770,7 +774,6 @@ func validateKubernetes(kubernetes core.Kubernetes, networking core.Networking, 
 		allErrs = append(allErrs, validateKubernetesForWorkerlessShoot(kubernetes, fldPath)...)
 	} else {
 		allErrs = append(allErrs, validateKubeScheduler(kubernetes.KubeScheduler, kubernetes.Version, fldPath.Child("kubeScheduler"))...)
-
 		allErrs = append(allErrs, validateKubeProxy(kubernetes.KubeProxy, kubernetes.Version, fldPath.Child("kubeProxy"))...)
 
 		if kubernetes.Kubelet != nil {
@@ -1141,7 +1144,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 	return allErrs
 }
 
-func validateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networking core.Networking, version string, workerless bool, fldPath *field.Path) field.ErrorList {
+func validateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networking *core.Networking, version string, workerless bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if kcm == nil {
@@ -1149,7 +1152,7 @@ func validateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networ
 	}
 
 	if !workerless {
-		if maskSize := kcm.NodeCIDRMaskSize; maskSize != nil {
+		if maskSize := kcm.NodeCIDRMaskSize; maskSize != nil && networking != nil {
 			if core.IsIPv4SingleStack(networking.IPFamilies) {
 				if *maskSize < 16 || *maskSize > 28 {
 					allErrs = append(allErrs, field.Invalid(fldPath.Child("nodeCIDRMaskSize"), *maskSize, "nodeCIDRMaskSize must be between 16 and 28"))
@@ -1278,7 +1281,7 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path, wor
 	return allErrs
 }
 
-func validateProvider(provider core.Provider, kubernetes core.Kubernetes, networking core.Networking, workerless bool, fldPath *field.Path, inTemplate bool) field.ErrorList {
+func validateProvider(provider core.Provider, kubernetes core.Kubernetes, networking *core.Networking, workerless bool, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	var (
 		allErrs = field.ErrorList{}
 		maxPod  int32
@@ -1317,12 +1320,12 @@ func validateProvider(provider core.Provider, kubernetes core.Kubernetes, networ
 		allErrs = append(allErrs, ValidateWorkers(provider.Workers, fldPath.Child("workers"))...)
 	}
 
-	if kubernetes.KubeControllerManager != nil && kubernetes.KubeControllerManager.NodeCIDRMaskSize != nil {
+	if kubernetes.KubeControllerManager != nil && kubernetes.KubeControllerManager.NodeCIDRMaskSize != nil && networking != nil {
 		if maxPod == 0 {
 			// default maxPod setting on kubelet
 			maxPod = 110
 		}
-		allErrs = append(allErrs, ValidateNodeCIDRMaskWithMaxPod(maxPod, *kubernetes.KubeControllerManager.NodeCIDRMaskSize, networking)...)
+		allErrs = append(allErrs, ValidateNodeCIDRMaskWithMaxPod(maxPod, *kubernetes.KubeControllerManager.NodeCIDRMaskSize, *networking)...)
 	}
 
 	return allErrs

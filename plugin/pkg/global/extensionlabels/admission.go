@@ -241,7 +241,9 @@ func addMetaDataLabelsShoot(shoot *core.Shoot, controllerRegistrations []*core.C
 		}
 	}
 	metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+shoot.Spec.Provider.Type, "true")
-	metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionNetworkingTypePrefix+shoot.Spec.Networking.Type, "true")
+	if shoot.Spec.Networking != nil && shoot.Spec.Networking.Type != nil {
+		metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionNetworkingTypePrefix+*shoot.Spec.Networking.Type, "true")
+	}
 }
 
 func getEnabledExtensionsForShoot(shoot *core.Shoot, controllerRegistrations []*core.ControllerRegistration) sets.Set[string] {

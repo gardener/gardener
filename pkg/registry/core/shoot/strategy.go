@@ -159,7 +159,9 @@ func (shootStrategy) Validate(ctx context.Context, obj runtime.Object) field.Err
 	shoot := obj.(*core.Shoot)
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, validation.ValidateShoot(shoot)...)
-	allErrs = append(allErrs, validation.ValidateTotalNodeCountWithPodCIDR(shoot)...)
+	if !shoot.IsWorkerless() && shoot.Spec.Networking != nil {
+		allErrs = append(allErrs, validation.ValidateTotalNodeCountWithPodCIDR(shoot)...)
+	}
 	return allErrs
 }
 

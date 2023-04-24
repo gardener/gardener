@@ -284,7 +284,7 @@ func setShootNetworkingSettings(shoot *gardencorev1beta1.Shoot, cfg *ShootCreati
 	}
 
 	if StringSet(cfg.networkingType) {
-		shoot.Spec.Networking.Type = cfg.networkingType
+		shoot.Spec.Networking.Type = pointer.String(cfg.networkingType)
 	}
 
 	if StringSet(cfg.networkingPods) {
