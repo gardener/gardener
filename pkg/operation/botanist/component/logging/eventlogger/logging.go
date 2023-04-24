@@ -25,6 +25,7 @@ const (
     Match               kubernetes.*` + v1beta1constants.DeploymentNameEventLogger + `*` + name + `*
     Operation           lift
     Nested_under        log
+    log_level           error
 
 [FILTER]
     Name                record_modifier
