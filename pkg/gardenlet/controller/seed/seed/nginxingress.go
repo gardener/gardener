@@ -52,6 +52,7 @@ func defaultNginxIngress(
 	kubernetesVersion *semver.Version,
 	ingressClass string,
 	config map[string]string,
+	lbAnnotations map[string]string,
 	gardenNamespaceName string,
 ) (
 	component.DeployWaiter,
@@ -67,11 +68,12 @@ func defaultNginxIngress(
 	}
 
 	values := nginxingress.Values{
-		ImageController:     imageController.String(),
-		ImageDefaultBackend: imageDefaultBackend.String(),
-		KubernetesVersion:   kubernetesVersion,
-		IngressClass:        ingressClass,
-		ConfigData:          config,
+		ImageController:         imageController.String(),
+		ImageDefaultBackend:     imageDefaultBackend.String(),
+		KubernetesVersion:       kubernetesVersion,
+		IngressClass:            ingressClass,
+		ConfigData:              config,
+		LoadBalancerAnnotations: lbAnnotations,
 	}
 
 	return nginxingress.New(c, gardenNamespaceName, values), nil
