@@ -5,6 +5,9 @@ resources:
 - ../base
 - ../../seed-kind-ha-single-zone/local
 
+patchesStrategicMerge:
+  - delete-secret-seed-local-ha-single-zone.yaml
+
 patchesJson6902:
 - target:
     group: core.gardener.cloud
