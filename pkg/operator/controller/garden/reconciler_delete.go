@@ -141,6 +141,10 @@ func (r *Reconciler) delete(
 			Fn:           component.OpDestroyAndWait(etcdDruid).Destroy,
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
 		})
+		destroyIstio = g.Add(flow.Task{
+			Name: "Destroying Istio",
+			Fn:   component.OpDestroyAndWait(istio).Destroy,
+		})
 		destroyHVPAController = g.Add(flow.Task{
 			Name:         "Destroying HVPA controller",
 			Fn:           component.OpDestroyAndWait(hvpaController).Destroy,
@@ -151,15 +155,11 @@ func (r *Reconciler) delete(
 			Fn:           component.OpDestroyAndWait(verticalPodAutoscaler).Destroy,
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
 		})
-		destroyIstio = g.Add(flow.Task{
-			Name: "Destroying Istio",
-			Fn:   component.OpDestroyAndWait(istio).Destroy,
-		})
 		syncPointCleanedUp = flow.NewTaskIDs(
 			destroyEtcdDruid,
+			destroyIstio,
 			destroyHVPAController,
 			destroyVerticalPodAutoscaler,
-			destroyIstio,
 		)
 
 		destroySystemResources = g.Add(flow.Task{

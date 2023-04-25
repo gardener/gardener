@@ -48,7 +48,11 @@ func NewIstio(
 	servicePorts []corev1.ServicePort,
 	proxyProtocolEnabled bool,
 	vpnEnabled bool,
-	zones []string) (istio.Interface, error) {
+	zones []string,
+) (
+	istio.Interface,
+	error,
+) {
 	var (
 		minReplicas *int
 		maxReplicas *int
@@ -75,8 +79,6 @@ func NewIstio(
 		maxReplicas = pointer.Int(len(zones) * 4)
 	}
 
-	ingressGatewayNamespace := fmt.Sprintf("%s%s", namePrefix, ingressNamespace)
-
 	defaultIngressGatewayConfig := istio.IngressGatewayValues{
 		TrustDomain:           gardencorev1beta1.DefaultDomain,
 		Image:                 igwImage.String(),
@@ -88,7 +90,7 @@ func NewIstio(
 		Ports:                 servicePorts,
 		LoadBalancerIP:        serviceExternalIP,
 		Labels:                labels,
-		Namespace:             ingressGatewayNamespace,
+		Namespace:             namePrefix + ingressNamespace,
 		PriorityClassName:     priorityClassName,
 		ProxyProtocolEnabled:  proxyProtocolEnabled,
 		VPNEnabled:            vpnEnabled,
@@ -124,7 +126,8 @@ func AddIstioIngressGateway(
 	labels map[string]string,
 	externalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType,
 	serviceExternalIP *string,
-	zone *string) error {
+	zone *string,
+) error {
 	gatewayValues := istioDeployer.GetValues().IngressGateway
 	if len(gatewayValues) < 1 {
 		return fmt.Errorf("at least one ingress gateway must be present before adding further ones")

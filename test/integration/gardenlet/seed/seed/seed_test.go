@@ -462,9 +462,9 @@ var _ = Describe("Seed controller tests", func() {
 							g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
 						}).Should(Succeed())
 					} else {
-						// Usually, the gardener-operator deploys and managed the following resource.
+						// Usually, the gardener-operator deploys and manages the following resources.
 						// However, it is not really running, so we have to fake its behaviour here.
-						By("Create resources managed by Gardener-Operator")
+						By("Create resources managed by gardener-operator")
 						var (
 							applier              = kubernetes.NewApplier(testClient, testClient.RESTMapper())
 							mrCRD                = kubernetes.NewManifestReader([]byte(managedResourcesCRD))

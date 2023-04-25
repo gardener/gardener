@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
@@ -46,12 +45,12 @@ var _ = Describe("Seed Care controller tests", func() {
 			kubestatemetrics.ManagedResourceName,
 			seedsystem.ManagedResourceName,
 			vpa.ManagedResourceControlName,
-			istio.ManagedResourceControlName,
-			istio.ManagedResourceIstioSystemName,
 			hvpa.ManagedResourceName,
 			dependencywatchdog.ManagedResourceDependencyWatchdogWeeder,
 			dependencywatchdog.ManagedResourceDependencyWatchdogProber,
 			nginxingress.ManagedResourceName,
+			"istio",
+			"istio-system",
 		}
 
 		seed *gardencorev1beta1.Seed

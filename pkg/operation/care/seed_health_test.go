@@ -36,7 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
@@ -54,15 +53,15 @@ var (
 		kubestatemetrics.ManagedResourceName,
 		seedsystem.ManagedResourceName,
 		vpa.ManagedResourceControlName,
-		istio.ManagedResourceControlName,
+		"istio",
 	}
 
 	optionalManagedResources = []string{
 		dependencywatchdog.ManagedResourceDependencyWatchdogWeeder,
 		dependencywatchdog.ManagedResourceDependencyWatchdogProber,
-		istio.ManagedResourceIstioSystemName,
 		nginxingress.ManagedResourceName,
 		hvpa.ManagedResourceName,
+		"istio-system",
 	}
 )
 
@@ -386,7 +385,7 @@ func progressingManagedResource(name string) *resourcesv1alpha1.ManagedResource 
 
 func managedResource(name string, conditions []gardencorev1beta1.Condition) *resourcesv1alpha1.ManagedResource {
 	namespace := v1beta1constants.GardenNamespace
-	if name == istio.ManagedResourceControlName || name == istio.ManagedResourceIstioSystemName {
+	if name == "istio" || name == "istio-system" {
 		namespace = v1beta1constants.IstioSystemNamespace
 	}
 

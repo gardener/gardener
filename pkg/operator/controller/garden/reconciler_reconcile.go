@@ -191,11 +191,17 @@ func (r *Reconciler) reconcile(
 			Fn:           etcdDruid.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
+		deployIstio = g.Add(flow.Task{
+			Name:         "Deploying Istio",
+			Fn:           r.deployIstioFunc(istio),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
 		syncPointSystemComponents = flow.NewTaskIDs(
 			deploySystemResources,
 			deployVPA,
 			deployHVPA,
 			deployEtcdDruid,
+			deployIstio,
 		)
 
 		deployEtcds = g.Add(flow.Task{
@@ -207,11 +213,6 @@ func (r *Reconciler) reconcile(
 			Name:         "Waiting until main and event ETCDs report readiness",
 			Fn:           flow.Parallel(etcdMain.Wait, etcdEvents.Wait),
 			Dependencies: flow.NewTaskIDs(deployEtcds),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Deploying Istio",
-			Fn:           r.deployIstioFunc(istio),
-			Dependencies: flow.NewTaskIDs(syncPointSystemComponents),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying and waiting for kube-apiserver service in the runtime cluster",
@@ -461,7 +462,7 @@ func (r *Reconciler) deployIstioFunc(istioDeploy istio.Interface) flow.TaskFn {
 		}
 
 		// Deploy NetworkPolicy allowing kube-apiserver to talk all targets (e.g. etcd) and to receive traffic from outside.
-		// TODO(timuthy): Remove this in the future when the network policy deployment has been refactored.
+		// TODO(rfranzke): Remove this in the future when the network policy deployment has been refactored.
 		networkPolicies := []*networkingv1.NetworkPolicy{{ObjectMeta: metav1.ObjectMeta{Name: "istio-allow-all", Namespace: istioDeploy.GetValues().Istiod.Namespace}}}
 		for _, istioIngress := range istioDeploy.GetValues().IngressGateway {
 			networkPolicies = append(networkPolicies, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "istio-allow-all", Namespace: istioIngress.Namespace}})

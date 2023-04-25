@@ -294,6 +294,34 @@ var _ = Describe("Garden controller tests", func() {
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-state-metrics")})}),
 		))
 
+		// The garden controller waits for the Istio ManagedResources to be healthy, but Istio is not really running in
+		// this test, so let's fake this here.
+		By("Patch Istio ManagedResources to report healthiness")
+		Eventually(func(g Gomega) {
+			for _, suffix := range []string{"istio", "istio-system"} {
+				mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "virtual-garden-" + suffix, Namespace: "istio-system"}}
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed(), "for "+mr.Name)
+
+				patch := client.MergeFrom(mr.DeepCopy())
+				mr.Status.ObservedGeneration = mr.Generation
+				mr.Status.Conditions = []gardencorev1beta1.Condition{
+					{
+						Type:               "ResourcesHealthy",
+						Status:             "True",
+						LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
+						LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
+					},
+					{
+						Type:               "ResourcesApplied",
+						Status:             "True",
+						LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
+						LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
+					},
+				}
+				g.Expect(testClient.Status().Patch(ctx, mr, patch)).To(Succeed(), "for "+mr.Name)
+			}
+		}).Should(Succeed())
+
 		By("Verify that the virtual garden control plane components have been deployed")
 		Eventually(func(g Gomega) []druidv1alpha1.Etcd {
 			etcdList := &druidv1alpha1.EtcdList{}
@@ -381,34 +409,6 @@ var _ = Describe("Garden controller tests", func() {
 				{Type: appsv1.DeploymentProgressing, Status: corev1.ConditionTrue, Reason: "NewReplicaSetAvailable"},
 			}
 			g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
-		}).Should(Succeed())
-
-		// The garden controller waits for the Istio ManagedResources to be healthy, but Istio is not really running in
-		// this test, so let's fake this here.
-		By("Patch Istio ManagedResources to report healthiness")
-		Eventually(func(g Gomega) {
-			for _, suffix := range []string{"istio", "istio-system"} {
-				mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "virtual-garden-" + suffix, Namespace: "istio-system"}}
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed(), "for "+mr.Name)
-
-				patch := client.MergeFrom(mr.DeepCopy())
-				mr.Status.ObservedGeneration = mr.Generation
-				mr.Status.Conditions = []gardencorev1beta1.Condition{
-					{
-						Type:               "ResourcesHealthy",
-						Status:             "True",
-						LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
-						LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
-					},
-					{
-						Type:               "ResourcesApplied",
-						Status:             "True",
-						LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
-						LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
-					},
-				}
-				g.Expect(testClient.Status().Patch(ctx, mr, patch)).To(Succeed(), "for "+mr.Name)
-			}
 		}).Should(Succeed())
 
 		By("Wait for Reconciled condition to be set to True")

@@ -17,7 +17,6 @@ package istio
 import (
 	"context"
 	"embed"
-	"fmt"
 	"path/filepath"
 	"strings"
 	"time"
@@ -38,16 +37,17 @@ import (
 )
 
 const (
-	// ManagedResourceControlName is the name of the ManagedResource containing the resource specifications.
-	ManagedResourceControlName = "istio"
-	// ManagedResourceIstioSystemName is the name of the ManagedResource containing Istio-System resource specifications.
-	ManagedResourceIstioSystemName = "istio-system"
 	// DefaultZoneKey is the label key for the istio default ingress gateway.
 	DefaultZoneKey = "istio"
 	// IstiodServiceName is the name of the istiod service.
 	IstiodServiceName = "istiod"
 	// PortWebhookServer is the port of the validating webhook server.
 	PortWebhookServer = 10250
+
+	// managedResourceControlName is the name of the ManagedResource containing the resource specifications.
+	managedResourceControlName = "istio"
+	// managedResourceIstioSystemName is the name of the ManagedResource containing Istio-System resource specifications.
+	managedResourceIstioSystemName = "istio-system"
 
 	istiodServicePortNameMetrics = "metrics"
 	releaseName                  = "istio"
@@ -117,8 +117,8 @@ func NewIstio(
 		chartRenderer: chartRenderer,
 		values:        values,
 
-		managedResourceIstioIngressName: resourceName(values.NamePrefix, ManagedResourceControlName),
-		managedResourceIstioSystemName:  resourceName(values.NamePrefix, ManagedResourceIstioSystemName),
+		managedResourceIstioIngressName: values.NamePrefix + managedResourceControlName,
+		managedResourceIstioSystemName:  values.NamePrefix + managedResourceIstioSystemName,
 	}
 }
 
@@ -327,13 +327,9 @@ func (i *istiod) generateIstiodChart(ignoreMode bool) (*chartrenderer.RenderedCh
 
 // ManagedResourceNames returns the names of the `ManagedResource`s being used by Istio.
 func ManagedResourceNames(istiodEnabled bool, namePrefix string) []string {
-	names := []string{resourceName(namePrefix, ManagedResourceControlName)}
+	names := []string{namePrefix + managedResourceControlName}
 	if istiodEnabled {
-		names = append(names, resourceName(namePrefix, ManagedResourceIstioSystemName))
+		names = append(names, namePrefix+managedResourceIstioSystemName)
 	}
 	return names
-}
-
-func resourceName(prefix, name string) string {
-	return fmt.Sprintf("%s%s", prefix, name)
 }

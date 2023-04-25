@@ -19,14 +19,25 @@ When using the `gardener-operator` for managing the garden runtime and virtual c
 
 ### `PriorityClass`es for Garden Control Plane Components
 
+<<<<<<< HEAD
 | Name                              | Priority  | Associated Components (Examples)                                                          |
 |---------------------------------- |-----------|-------------------------------------------------------------------------------------------|
-| `gardener-garden-system-critical` | 999999550 | `gardener-operator`, `gardener-resource-manager`                                          |
+| `gardener-garden-system-critical` | 999999550 | `gardener-operator`, `gardener-resource-manager`, `istio`                                 |
 | `gardener-garden-system-500`      | 999999500 | `virtual-garden-etcd-events`, `virtual-garden-etcd-main`, `virtual-garden-kube-apiserver` |
 | `gardener-garden-system-400`      | 999999400 |                                                                                           |
 | `gardener-garden-system-300`      | 999999300 | `vpa-admission-controller`, `etcd-druid`                                                  |
 | `gardener-garden-system-200`      | 999999200 | `vpa-recommender`, `vpa-updater`, `hvpa-controller`                                       |
 | `gardener-garden-system-100`      | 999999100 | `kube-state-metrics`                                                                      |
+=======
+| Name                              | Priority  | Associated Components (Examples)                                                                    |
+|---------------------------------- |-----------|-----------------------------------------------------------------------------------------------------|
+| `gardener-garden-system-critical` | 999999550 | `gardener-operator`, `gardener-resource-manager`                                                    |
+| `gardener-garden-system-500`      | 999999500 | `virtual-garden-etcd-events`, `virtual-garden-etcd-main`, `virtual-garden-kube-apiserver`, `istio`  |
+| `gardener-garden-system-400`      | 999999400 |                                                                                                     |
+| `gardener-garden-system-300`      | 999999300 | `vpa-admission-controller`, `etcd-druid`                                                            |
+| `gardener-garden-system-200`      | 999999200 | `vpa-recommender`, `vpa-updater`, `hvpa-controller`                                                 |
+| `gardener-garden-system-100`      | 999999100 |                                                                                                     |
+>>>>>>> 878377d9c (Address review comments)
 
 ## Seed Clusters
 

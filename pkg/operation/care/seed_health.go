@@ -124,7 +124,7 @@ func (h *SeedHealth) checkSeedSystemComponents(
 
 	for _, name := range managedResources {
 		namespace := v1beta1constants.GardenNamespace
-		if name == istio.ManagedResourceControlName || name == istio.ManagedResourceIstioSystemName {
+		if sets.New(istio.ManagedResourceNames(true, "")...).Has(name) {
 			namespace = v1beta1constants.IstioSystemNamespace
 		}
 		namespace = pointer.StringDeref(h.namespace, namespace)
