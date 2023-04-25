@@ -164,8 +164,7 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should be able to upgrade a non-HA shoot which was created in previous gardener release to HA with failure tolerance type '"+
-				os.Getenv("SHOOT_FAILURE_TOLERANCE_TYPE")+"'", func() {
+			It("should be able to upgrade a non-HA shoot which was created in previous gardener release to HA with failure tolerance type '"+os.Getenv("SHOOT_FAILURE_TOLERANCE_TYPE")+"'", func() {
 				highavailability.UpgradeAndVerify(ctx, f.ShootFramework, getFailureToleranceType())
 			})
 
