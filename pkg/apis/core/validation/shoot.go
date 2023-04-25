@@ -125,7 +125,7 @@ var (
 		"none",
 	)
 
-	workerlessErrorMsg = "this field should not be set for Workerless Shoot clusters"
+	workerlessErrorMsg = "this field should not be set for workerless Shoot clusters"
 )
 
 // ValidateShoot validates a Shoot object.
@@ -1324,7 +1324,7 @@ func validateProvider(provider core.Provider, kubernetes core.Kubernetes, networ
 
 	if workerless {
 		if !utilfeature.DefaultFeatureGate.Enabled(features.WorkerlessShoots) {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("workers"), "workers cannot be zero when WorkerlessShoots featuregate is disabled"))
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("workers"), "must provide at least one worker pool when WorkerlessShoots feature gate is disabled"))
 		}
 		if provider.InfrastructureConfig != nil {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("infrastructureConfig"), workerlessErrorMsg))

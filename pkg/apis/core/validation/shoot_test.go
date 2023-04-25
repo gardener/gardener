@@ -339,7 +339,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.provider.workers"),
-					"Detail": ContainSubstring("workers cannot be zero when WorkerlessShoots featuregate is disabled"),
+					"Detail": ContainSubstring("must provide at least one worker pool when WorkerlessShoots feature gate is disabled"),
 				})),
 			))
 		})
@@ -619,7 +619,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal("spec.secretBindingName"),
-				"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+				"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
 			}))))
 		})
 
@@ -835,7 +835,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.provider.workers"),
-					"Detail": ContainSubstring("workers cannot be zero when WorkerlessShoots featuregate is disabled"),
+					"Detail": ContainSubstring("must provide at least one worker pool when WorkerlessShoots feature gate is disabled"),
 				}))))
 			})
 
@@ -1015,7 +1015,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.provider.infrastructureConfig"),
-					"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+					"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
 				}))))
 			})
 
@@ -1034,7 +1034,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.provider.controlPlaneConfig"),
-					"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+					"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
 				}))))
 			})
 
@@ -1213,7 +1213,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.provider.workersSettings"),
-						"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+						"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
 					}))))
 				})
 
@@ -1965,7 +1965,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-						"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+						"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
 					}))))
 				})
 
@@ -1978,7 +1978,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.kubernetes.kubeControllerManager.horizontalPodAutoscaler"),
-						"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+						"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
 					}))))
 				})
 
@@ -1989,7 +1989,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.kubernetes.kubeControllerManager.podEvictionTimeout"),
-						"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+						"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
 					}))))
 				})
 
@@ -2000,7 +2000,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.kubernetes.kubeControllerManager.nodeMonitorGracePeriod"),
-						"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+						"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
 					}))))
 				})
 			})
@@ -2223,7 +2223,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.kubernetes.kubeScheduler"),
-					"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+					"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
 				}))))
 
 			})
@@ -2274,7 +2274,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.kubernetes.kubeProxy"),
-					"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+					"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
 				}))))
 			})
 
@@ -2880,19 +2880,19 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(errorList).To(ConsistOfFields(Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.networking.type"),
-						"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+						"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
 					}, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.networking.providerConfig"),
-						"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+						"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
 					}, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.networking.pods"),
-						"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+						"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
 					}, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.networking.nodes"),
-						"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+						"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
 					}))
 				})
 			})
@@ -3196,7 +3196,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(ContainElements(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.maintenance.autoUpdate.machineImageVersion"),
-					"Detail": ContainSubstring("this field should not be set for Workerless Shoot cluster"),
+					"Detail": ContainSubstring("this field should not be set for workerless Shoot cluster"),
 				}))))
 			})
 		})
@@ -3278,7 +3278,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("no system components Workerless Shoot", nil, false, BeEmpty()),
 				Entry("system components Workerless Shoot", &core.SystemComponents{}, true, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
-					"Detail": ContainSubstring("this field should not be set for Workerless Shoot clusters"),
+					"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
 				})))),
 				Entry("empty system components", &core.SystemComponents{}, false, BeEmpty()),
 				Entry("empty core dns", &core.SystemComponents{CoreDNS: &core.CoreDNS{}}, false, BeEmpty()),
