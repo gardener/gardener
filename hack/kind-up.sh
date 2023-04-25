@@ -235,7 +235,7 @@ kubectl apply -k "$(dirname "$0")/../example/gardener-local/metrics-server"   --
 
 kubectl get nodes -l node-role.kubernetes.io/control-plane -o name |\
   cut -d/ -f2 |\
-  xargs -I {} kubectl taint node {} node-role.kubernetes.io/master:NoSchedule- node-role.kubernetes.io/control-plane:NoSchedule- || true
+  xargs -I {} kubectl taint node {} node-role.kubernetes.io/control-plane:NoSchedule- || true
 
 # Allow multiple shoot worker nodes with calico as shoot CNI: As we run overlay in overlay ip-in-ip needs to be allowed in the workload.
 # Unfortunately, the felix configuration is created on the fly by calico. Hence, we need to poll until kubectl wait for new resources
