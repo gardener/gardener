@@ -428,10 +428,10 @@ func (b *Botanist) DeploySeedPlutono(ctx context.Context) error {
 	// Read extension monitoring configurations
 	for _, cm := range existingConfigMaps.Items {
 		if operatorsDashboard, ok := cm.Data[v1beta1constants.PlutonoConfigMapOperatorDashboard]; ok && operatorsDashboard != "" {
-			dashboards.WriteString(fmt.Sprintln(operatorsDashboard))
+			dashboards.WriteString(fmt.Sprintln(strings.ReplaceAll(strings.ReplaceAll(operatorsDashboard, "Grafana", "Plutono"), "loki", "vali")))
 		}
 		if usersDashboard, ok := cm.Data[v1beta1constants.PlutonoConfigMapUserDashboard]; ok && usersDashboard != "" {
-			dashboards.WriteString(fmt.Sprintln(usersDashboard))
+			dashboards.WriteString(fmt.Sprintln(strings.ReplaceAll(strings.ReplaceAll(usersDashboard, "Grafana", "Plutono"), "loki", "vali")))
 		}
 	}
 
