@@ -37,19 +37,8 @@ const (
 	// alpha: v0.32.0
 	HVPAForShootedSeed featuregate.Feature = "HVPAForShootedSeed"
 
-	// ManagedIstio installs minimal Istio components in istio-system.
-	// Disable this feature if Istio is already installed in the cluster.
-	// Istio is not automatically removed if this feature is set to false.
-	// See https://github.com/gardener/gardener/blob/master/docs/usage/istio.md
-	// owner @ScheererJ @DockToFuture
-	// alpha: v1.5.0
-	// beta: v1.19.0
-	// deprecated: v1.48.0
-	ManagedIstio featuregate.Feature = "ManagedIstio"
-
 	// APIServerSNI allows to use only one LoadBalancer in the Seed cluster
-	// for all Shoot clusters. Requires Istio to be installed in the cluster or
-	// ManagedIstio feature gate to be enabled.
+	// for all Shoot clusters.
 	// See https://github.com/gardener/gardener/blob/master/docs/proposals/08-shoot-apiserver-via-sni.md
 	// owner @ScheererJ @DockToFuture
 	// alpha: v1.7.0
@@ -64,13 +53,6 @@ const (
 	// beta: v1.53.0
 	// GA: v1.69.0
 	SeedChange featuregate.Feature = "SeedChange"
-
-	// ReversedVPN moves the openvpn server to the seed.
-	// owner: @ScheererJ @DockToFuture
-	// alpha: v1.22.0
-	// beta: v1.42.0
-	// GA: v1.63.0
-	ReversedVPN featuregate.Feature = "ReversedVPN"
 
 	// CopyEtcdBackupsDuringControlPlaneMigration enables the copy of etcd backups from the object store of the source seed
 	// to the object store of the destination seed during control plane migration.
@@ -139,10 +121,8 @@ var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HVPA:               {Default: false, PreRelease: featuregate.Alpha},
 	HVPAForShootedSeed: {Default: false, PreRelease: featuregate.Alpha},
-	ManagedIstio:       {Default: true, PreRelease: featuregate.Deprecated, LockToDefault: true},
 	APIServerSNI:       {Default: true, PreRelease: featuregate.Deprecated, LockToDefault: true},
 	SeedChange:         {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	ReversedVPN:        {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	HAControlPlanes:                     {Default: false, PreRelease: featuregate.Alpha},
 	DefaultSeccompProfile:               {Default: false, PreRelease: featuregate.Alpha},

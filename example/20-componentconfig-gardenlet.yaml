@@ -107,7 +107,6 @@ debugging:
 featureGates:
   HVPA: true
   HVPAForShootedSeed: true
-  ManagedIstio: true
   APIServerSNI: true
   DefaultSeccompProfile: true
   CoreDNSQueryRewriting: true
@@ -148,7 +147,7 @@ logging:
 #     - "development"
 #   shootEventLogging:
 #     enabled: true
-# sni: # SNI configuration used for APIServerSNI and ManagedIstio feature gates with default values.
+# sni: # SNI configuration used for APIServerSNI feature gate with default values.
 #   ingress:
 #     serviceName: istio-ingress
 #     namespace: istio-ingress

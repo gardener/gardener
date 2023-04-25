@@ -113,14 +113,11 @@ func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLa
 	gardenletClusterRole := getGardenletClusterRole(expectedLabels)
 	apiServerSNIEnabled, ok := featureGates[string(features.APIServerSNI)]
 	apiServerSNIClusterRole := getAPIServerSNIClusterRole(expectedLabels, !ok || apiServerSNIEnabled)
+	managedIstioClusterRole := getManagedIstioClusterRole(expectedLabels)
 	expectedClusterRoles := map[types.NamespacedName]*rbacv1.ClusterRole{
 		{Name: gardenletClusterRole.Name}:    gardenletClusterRole,
 		{Name: apiServerSNIClusterRole.Name}: apiServerSNIClusterRole,
-	}
-	if featureGates[string(features.ManagedIstio)] {
-		managedIstioClusterRole := getManagedIstioClusterRole(expectedLabels)
-		key := types.NamespacedName{Name: managedIstioClusterRole.Name}
-		expectedClusterRoles[key] = managedIstioClusterRole
+		{Name: managedIstioClusterRole.Name}: managedIstioClusterRole,
 	}
 	for key, expected := range expectedClusterRoles {
 		actual := &rbacv1.ClusterRole{}
@@ -132,14 +129,11 @@ func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLa
 	// ClusterRoleBindings
 	gardenletClusterRoleBinding := getGardenletClusterRoleBinding(expectedLabels, serviceAccountName)
 	apiServerSNIClusterRoleBinding := getAPIServerSNIClusterRoleBinding(expectedLabels, serviceAccountName)
+	managedIstioClusterRoleBinding := getManagedIstioClusterRoleBinding(expectedLabels, serviceAccountName)
 	expectedClusterRoleBindings := map[types.NamespacedName]*rbacv1.ClusterRoleBinding{
 		{Name: gardenletClusterRoleBinding.Name}:    gardenletClusterRoleBinding,
 		{Name: apiServerSNIClusterRoleBinding.Name}: apiServerSNIClusterRoleBinding,
-	}
-	if featureGates[string(features.ManagedIstio)] {
-		managedIstioClusterRoleBinding := getManagedIstioClusterRoleBinding(expectedLabels, serviceAccountName)
-		key := types.NamespacedName{Name: managedIstioClusterRoleBinding.Name}
-		expectedClusterRoleBindings[key] = managedIstioClusterRoleBinding
+		{Name: managedIstioClusterRoleBinding.Name}: managedIstioClusterRoleBinding,
 	}
 	for key, expected := range expectedClusterRoleBindings {
 		actual := &rbacv1.ClusterRoleBinding{}

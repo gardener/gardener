@@ -25,9 +25,7 @@ func RegisterFeatureGates() {
 	utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(
 		features.HVPA,
 		features.HVPAForShootedSeed,
-		features.ManagedIstio,
 		features.APIServerSNI,
-		features.ReversedVPN,
 		features.CopyEtcdBackupsDuringControlPlaneMigration,
 		features.DefaultSeccompProfile,
 		features.CoreDNSQueryRewriting,

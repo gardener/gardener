@@ -40,7 +40,7 @@
 * [Gardener configuration and usage](usage/configuration.md)
 * [Hibernate a Cluster](usage/shoot_hibernate.md)
 * [IPv6 in Gardener Clusters](usage/ipv6.md)
-* [`ManagedIstio` feature](usage/istio.md)
+* [Istio](usage/istio.md)
 * [`NetworkPolicy`s In Garden, Seed, Shoot Clusters](usage/network_policies.md)
 * [`NodeLocalDNS` feature](usage/node-local-dns.md)
 * [OpenIDConnect presets](usage/openidconnect-presets.md)

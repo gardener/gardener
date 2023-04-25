@@ -392,7 +392,6 @@ rules:
   - gardener-extension-heartbeat
   verbs:
   - get
-# Istio related rules that are required even when ManagedIstio and APIServerSNI feature gates are not enabled due to clean up logic.
 - apiGroups:
   - networking.istio.io
   resources:

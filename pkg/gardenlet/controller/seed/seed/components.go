@@ -15,12 +15,9 @@
 package seed
 
 import (
-	"context"
-
 	"github.com/Masterminds/semver"
 	proberapi "github.com/gardener/dependency-watchdog/api/prober"
 	weederapi "github.com/gardener/dependency-watchdog/api/weeder"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -49,7 +46,6 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 func defaultKubeStateMetrics(
@@ -314,42 +310,25 @@ func defaultDependencyWatchdogs(
 }
 
 func defaultVPNAuthzServer(
-	ctx context.Context,
 	c client.Client,
 	seedVersion *semver.Version,
 	imageVector imagevector.ImageVector,
 	gardenNamespaceName string,
 ) (
-	extAuthzServer component.DeployWaiter,
-	err error,
+	component.DeployWaiter,
+	error,
 ) {
 	image, err := imageVector.FindImage(images.ImageNameExtAuthzServer, imagevector.RuntimeVersion(seedVersion.String()), imagevector.TargetVersion(seedVersion.String()))
 	if err != nil {
 		return nil, err
 	}
 
-	vpnAuthzServer := vpnauthzserver.New(
+	return vpnauthzserver.New(
 		c,
 		gardenNamespaceName,
 		image.String(),
 		seedVersion,
-	)
-
-	if features.DefaultFeatureGate.Enabled(features.ManagedIstio) {
-		return vpnAuthzServer, nil
-	}
-
-	hasVPNSeedDeployments, err := kubernetesutils.ResourcesExist(ctx, c, appsv1.SchemeGroupVersion.WithKind("DeploymentList"), client.MatchingLabels(map[string]string{v1beta1constants.LabelApp: v1beta1constants.DeploymentNameVPNSeedServer}))
-	if err != nil {
-		return nil, err
-	}
-	if hasVPNSeedDeployments {
-		// Even though the ManagedIstio feature gate is turned off, there are still shoots which have not been reconciled yet.
-		// Thus, we cannot destroy the ext-authz-server.
-		return component.NoOp(), nil
-	}
-
-	return component.OpDestroyWithoutWait(vpnAuthzServer), nil
+	), nil
 }
 
 func defaultSystem(
