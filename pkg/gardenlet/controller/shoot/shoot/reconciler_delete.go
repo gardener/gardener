@@ -201,7 +201,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		deployOwnerDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Deploying owner domain DNS record",
-			Fn:           flow.TaskFn(botanist.DeployOwnerDNSResources).DoIf(cleanupShootResources),
+			Fn:           flow.TaskFn(botanist.DeployOwnerDNSResources),
 			Dependencies: flow.NewTaskIDs(ensureShootStateExists, deployReferencedResources),
 		})
 		deployInternalDomainDNSRecord = g.Add(flow.Task{
