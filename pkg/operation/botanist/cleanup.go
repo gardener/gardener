@@ -62,7 +62,6 @@ const (
 var (
 	// FinalizeAfterFiveMinutes is an option to finalize resources after five minutes.
 	FinalizeAfterFiveMinutes = utilclient.FinalizeGracePeriodSeconds(5 * 60)
-
 	// FinalizeAfterOneHour is an option to finalize resources after one hour.
 	FinalizeAfterOneHour = utilclient.FinalizeGracePeriodSeconds(60 * 60)
 
@@ -182,7 +181,7 @@ func cleanResourceFn(cleanOps utilclient.CleanOps, c client.Client, list client.
 func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 	var (
 		c       = b.ShootClientSet.Client()
-		ensurer = utilclient.GoneBeforeEnsurer(b.Shoot.GetInfo().GetDeletionTimestamp().Time)
+		ensurer = utilclient.DefaultGoneEnsurer()
 		ops     = utilclient.NewCleanOps(ensurer, utilclient.DefaultCleaner())
 	)
 
@@ -201,7 +200,7 @@ func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 	var (
 		c       = b.ShootClientSet.Client()
-		ensurer = utilclient.GoneBeforeEnsurer(b.Shoot.GetInfo().GetDeletionTimestamp().Time)
+		ensurer = utilclient.DefaultGoneEnsurer()
 		ops     = utilclient.NewCleanOps(ensurer, utilclient.DefaultCleaner())
 	)
 
@@ -223,7 +222,7 @@ func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 	var (
 		c                  = b.ShootClientSet.Client()
-		ensurer            = utilclient.GoneBeforeEnsurer(b.Shoot.GetInfo().GetDeletionTimestamp().Time)
+		ensurer            = utilclient.DefaultGoneEnsurer()
 		cleaner            = utilclient.DefaultCleaner()
 		ops                = utilclient.NewCleanOps(ensurer, cleaner)
 		snapshotContentOps = utilclient.NewCleanOps(ensurer, cleaner, utilclient.DefaultVolumeSnapshotContentCleaner())
