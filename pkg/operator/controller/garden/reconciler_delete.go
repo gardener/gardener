@@ -101,23 +101,17 @@ func (r *Reconciler) delete(
 	var (
 		g = flow.NewGraph("Garden deletion")
 
-		destroyKubeStateMetrics = g.Add(flow.Task{
+		_ = g.Add(flow.Task{
 			Name: "Destroying Kube State Metrics",
 			Fn:   component.OpDestroyAndWait(kubeStateMetrics).Destroy,
 		})
-		syncPointObservabilityComponentsDestroyed = flow.NewTaskIDs(
-			destroyKubeStateMetrics,
-		)
-
 		destroyKubeAPIServerService = g.Add(flow.Task{
-			Name:         "Destroying Kubernetes API Server service",
-			Fn:           component.OpDestroyAndWait(kubeAPIServerService).Destroy,
-			Dependencies: flow.NewTaskIDs(syncPointObservabilityComponentsDestroyed),
+			Name: "Destroying Kubernetes API Server service",
+			Fn:   component.OpDestroyAndWait(kubeAPIServerService).Destroy,
 		})
 		destroyKubeAPIServer = g.Add(flow.Task{
-			Name:         "Destroying Kubernetes API Server",
-			Fn:           component.OpDestroyAndWait(kubeAPIServer).Destroy,
-			Dependencies: flow.NewTaskIDs(syncPointObservabilityComponentsDestroyed),
+			Name: "Destroying Kubernetes API Server",
+			Fn:   component.OpDestroyAndWait(kubeAPIServer).Destroy,
 		})
 		destroyEtcd = g.Add(flow.Task{
 			Name: "Destroying main and events ETCDs of virtual garden",
@@ -132,7 +126,6 @@ func (r *Reconciler) delete(
 			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer),
 		})
 		syncPointVirtualGardenControlPlaneDestroyed = flow.NewTaskIDs(
-			syncPointObservabilityComponentsDestroyed,
 			destroyKubeAPIServerService,
 			destroyEtcd,
 		)

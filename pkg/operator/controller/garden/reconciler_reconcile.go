@@ -248,15 +248,12 @@ func (r *Reconciler) reconcile(
 				DoIf(helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationCompleting),
 			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient),
 		})
-		syncPointControlPlaneComponents = flow.NewTaskIDs(
-			syncPointSystemComponents,
-			initializeVirtualClusterClient,
-		)
 
+		// observability components
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Kube State Metrics",
 			Fn:           kubeStateMetrics.Deploy,
-			Dependencies: flow.NewTaskIDs(syncPointControlPlaneComponents),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 	)
 
