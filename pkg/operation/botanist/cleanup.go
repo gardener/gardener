@@ -81,86 +81,8 @@ var (
 
 	// CleanupSelector is a selector that excludes system components and all resources not considered for auto cleanup.
 	CleanupSelector = labels.NewSelector().Add(NotSystemComponent).Add(NoCleanupPrevention)
-
 	// NoCleanupPreventionListOption are CollectionMatching that exclude system components or non-auto cleaned up resource.
 	NoCleanupPreventionListOption = client.MatchingLabelsSelector{Selector: CleanupSelector}
-
-	// MutatingWebhookConfigurationCleanOption is the delete selector for MutatingWebhookConfigurations.
-	MutatingWebhookConfigurationCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
-
-	// ValidatingWebhookConfigurationCleanOption is the delete selector for ValidatingWebhookConfigurations.
-	ValidatingWebhookConfigurationCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
-
-	// CustomResourceDefinitionCleanOption is the delete selector for CustomResources.
-	CustomResourceDefinitionCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
-
-	// DaemonSetCleanOption is the delete selector for DaemonSets.
-	DaemonSetCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
-
-	// DeploymentCleanOption is the delete selector for Deployments.
-	DeploymentCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
-
-	// StatefulSetCleanOption is the delete selector for StatefulSets.
-	StatefulSetCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
-
-	// ServiceCleanOption is the delete selector for Services.
-	ServiceCleanOption = utilclient.ListWith{
-		client.MatchingLabelsSelector{
-			Selector: labels.NewSelector().Add(NotKubernetesProvider, NotSystemComponent, NoCleanupPrevention),
-		},
-	}
-
-	// NamespaceMatchingLabelsSelector is the delete label selector for Namespaces.
-	NamespaceMatchingLabelsSelector = utilclient.ListWith{&NoCleanupPreventionListOption}
-
-	// NamespaceMatchingFieldsSelector is the delete field selector for Namespaces.
-	NamespaceMatchingFieldsSelector = utilclient.ListWith{
-		client.MatchingFieldsSelector{
-			Selector: fields.AndSelectors(
-				fields.OneTermNotEqualSelector(MetadataNameField, metav1.NamespacePublic),
-				fields.OneTermNotEqualSelector(MetadataNameField, metav1.NamespaceSystem),
-				fields.OneTermNotEqualSelector(MetadataNameField, metav1.NamespaceDefault),
-				fields.OneTermNotEqualSelector(MetadataNameField, corev1.NamespaceNodeLease),
-			),
-		},
-	}
-
-	// APIServiceCleanOption is the delete selector for APIServices.
-	APIServiceCleanOption = utilclient.ListWith{
-		client.MatchingLabelsSelector{
-			Selector: labels.NewSelector().Add(NotSystemComponent, NotKubeAggregatorAutoManaged),
-		},
-	}
-
-	// CronJobCleanOption is the delete selector for CronJobs.
-	CronJobCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
-
-	// IngressCleanOption is the delete selector for Ingresses.
-	IngressCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
-
-	// JobCleanOption is the delete selector for Jobs.
-	JobCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
-
-	// PodCleanOption is the delete selector for Pods.
-	PodCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
-
-	// ReplicaSetCleanOption is the delete selector for ReplicaSets.
-	ReplicaSetCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
-
-	// ReplicationControllerCleanOption is the delete selector for ReplicationControllers.
-	ReplicationControllerCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
-
-	// PersistentVolumeClaimCleanOption is the delete selector for PersistentVolumeClaims.
-	PersistentVolumeClaimCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
-
-	// VolumeSnapshotCleanOption is the delete selector for VolumeSnapshots.
-	VolumeSnapshotCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
-
-	// VolumeSnapshotContentCleanOption is the delete selector for VolumeSnapshotContents.
-	VolumeSnapshotContentCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
-
-	// NamespaceErrorToleration are the errors to be tolerated during deletion.
-	NamespaceErrorToleration = utilclient.TolerateErrors{apierrors.IsConflict}
 )
 
 type cleanAttributes struct {
@@ -206,6 +128,9 @@ func (b *Botanist) cleanWebhooksAttributes() ([]cleanAttributes, error) {
 	var (
 		ensurer = utilclient.DefaultGoneEnsurer()
 		ops     = utilclient.NewCleanOps(ensurer, utilclient.DefaultCleaner())
+
+		mutatingWebhookConfigurationCleanOption   = utilclient.ListWith{&NoCleanupPreventionListOption}
+		validatingWebhookConfigurationCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
 	)
 
 	cleanOptions, err := b.getCleanOptions(GracePeriodFiveMinutes, FinalizeAfterFiveMinutes, v1beta1constants.AnnotationShootCleanupWebhooksFinalizeGracePeriodSeconds, 1)
@@ -214,8 +139,8 @@ func (b *Botanist) cleanWebhooksAttributes() ([]cleanAttributes, error) {
 	}
 
 	return []cleanAttributes{
-		{ops, &admissionregistrationv1.MutatingWebhookConfigurationList{}, cleanOpts(MutatingWebhookConfigurationCleanOption, cleanOptions)},
-		{ops, &admissionregistrationv1.ValidatingWebhookConfigurationList{}, cleanOpts(ValidatingWebhookConfigurationCleanOption, cleanOptions)},
+		{ops, &admissionregistrationv1.MutatingWebhookConfigurationList{}, cleanOpts(mutatingWebhookConfigurationCleanOption, cleanOptions)},
+		{ops, &admissionregistrationv1.ValidatingWebhookConfigurationList{}, cleanOpts(validatingWebhookConfigurationCleanOption, cleanOptions)},
 	}, nil
 }
 
@@ -223,6 +148,9 @@ func (b *Botanist) cleanExtendedAPIsAttributes() ([]cleanAttributes, error) {
 	var (
 		ensurer = utilclient.DefaultGoneEnsurer()
 		ops     = utilclient.NewCleanOps(ensurer, utilclient.DefaultCleaner())
+
+		apiServiceCleanOption               = utilclient.ListWith{client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(NotSystemComponent, NotKubeAggregatorAutoManaged)}}
+		customResourceDefinitionCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
 	)
 
 	cleanOptions, err := b.getCleanOptions(GracePeriodFiveMinutes, FinalizeAfterOneHour, v1beta1constants.AnnotationShootCleanupExtendedAPIsFinalizeGracePeriodSeconds, 0.1)
@@ -231,8 +159,8 @@ func (b *Botanist) cleanExtendedAPIsAttributes() ([]cleanAttributes, error) {
 	}
 
 	return []cleanAttributes{
-		{ops, &apiregistrationv1.APIServiceList{}, cleanOpts(APIServiceCleanOption, cleanOptions)},
-		{ops, &apiextensionsv1.CustomResourceDefinitionList{}, cleanOpts(CustomResourceDefinitionCleanOption, cleanOptions)},
+		{ops, &apiregistrationv1.APIServiceList{}, cleanOpts(apiServiceCleanOption, cleanOptions)},
+		{ops, &apiextensionsv1.CustomResourceDefinitionList{}, cleanOpts(customResourceDefinitionCleanOption, cleanOptions)},
 	}, nil
 }
 
@@ -242,6 +170,20 @@ func (b *Botanist) cleanKubernetesResourcesAttributes() ([]cleanAttributes, erro
 		cleaner            = utilclient.DefaultCleaner()
 		ops                = utilclient.NewCleanOps(ensurer, cleaner)
 		snapshotContentOps = utilclient.NewCleanOps(ensurer, cleaner, utilclient.DefaultVolumeSnapshotContentCleaner())
+
+		daemonSetCleanOption             = utilclient.ListWith{&NoCleanupPreventionListOption}
+		deploymentCleanOption            = utilclient.ListWith{&NoCleanupPreventionListOption}
+		statefulSetCleanOption           = utilclient.ListWith{&NoCleanupPreventionListOption}
+		serviceCleanOption               = utilclient.ListWith{client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(NotKubernetesProvider, NotSystemComponent, NoCleanupPrevention)}}
+		cronJobCleanOption               = utilclient.ListWith{&NoCleanupPreventionListOption}
+		ingressCleanOption               = utilclient.ListWith{&NoCleanupPreventionListOption}
+		jobCleanOption                   = utilclient.ListWith{&NoCleanupPreventionListOption}
+		podCleanOption                   = utilclient.ListWith{&NoCleanupPreventionListOption}
+		replicaSetCleanOption            = utilclient.ListWith{&NoCleanupPreventionListOption}
+		replicationControllerCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
+		persistentVolumeClaimCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
+		volumeSnapshotCleanOption        = utilclient.ListWith{&NoCleanupPreventionListOption}
+		volumeSnapshotContentCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
 	)
 
 	cleanOptions, err := b.getCleanOptions(GracePeriodFiveMinutes, FinalizeAfterFiveMinutes, v1beta1constants.AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds, 1)
@@ -255,32 +197,32 @@ func (b *Botanist) cleanKubernetesResourcesAttributes() ([]cleanAttributes, erro
 	}
 
 	attrs := []cleanAttributes{
-		{ops, &corev1.ServiceList{}, cleanOpts(ServiceCleanOption, cleanOptions)},
-		{ops, &corev1.PersistentVolumeClaimList{}, cleanOpts(PersistentVolumeClaimCleanOption, cleanOptions)},
+		{ops, &corev1.ServiceList{}, cleanOpts(serviceCleanOption, cleanOptions)},
+		{ops, &corev1.PersistentVolumeClaimList{}, cleanOpts(persistentVolumeClaimCleanOption, cleanOptions)},
 	}
 
 	if metav1.HasAnnotation(b.Shoot.GetInfo().ObjectMeta, v1beta1constants.AnnotationShootSkipCleanup) {
-		attrs = append(attrs, cleanAttributes{ops, &volumesnapshotv1.VolumeSnapshotList{}, cleanOpts(VolumeSnapshotContentCleanOption, cleanOptions)})
-		attrs = append(attrs, cleanAttributes{ops, &volumesnapshotv1.VolumeSnapshotContentList{}, cleanOpts(VolumeSnapshotContentCleanOption, cleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, &volumesnapshotv1.VolumeSnapshotList{}, cleanOpts(volumeSnapshotContentCleanOption, cleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, &volumesnapshotv1.VolumeSnapshotContentList{}, cleanOpts(volumeSnapshotContentCleanOption, cleanOptions)})
 	} else {
 		cronJobList := client.ObjectList(&batchv1beta1.CronJobList{})
 		if version.ConstraintK8sGreaterEqual121.Check(b.Shoot.KubernetesVersion) {
 			cronJobList = &batchv1.CronJobList{}
 		}
 
-		attrs = append(attrs, cleanAttributes{ops, cronJobList, cleanOpts(CronJobCleanOption, cleanOptions)})
-		attrs = append(attrs, cleanAttributes{ops, &appsv1.DaemonSetList{}, cleanOpts(DaemonSetCleanOption, cleanOptions)})
-		attrs = append(attrs, cleanAttributes{ops, &appsv1.DeploymentList{}, cleanOpts(DeploymentCleanOption, cleanOptions)})
-		attrs = append(attrs, cleanAttributes{ops, &networkingv1.IngressList{}, cleanOpts(IngressCleanOption, cleanOptions)})
-		attrs = append(attrs, cleanAttributes{ops, &batchv1.JobList{}, cleanOpts(JobCleanOption, cleanOptions)})
-		attrs = append(attrs, cleanAttributes{ops, &corev1.PodList{}, cleanOpts(PodCleanOption, cleanOptions)})
-		attrs = append(attrs, cleanAttributes{ops, &appsv1.ReplicaSetList{}, cleanOpts(ReplicaSetCleanOption, cleanOptions)})
-		attrs = append(attrs, cleanAttributes{ops, &corev1.ReplicationControllerList{}, cleanOpts(ReplicationControllerCleanOption, cleanOptions)})
-		attrs = append(attrs, cleanAttributes{ops, &appsv1.StatefulSetList{}, cleanOpts(StatefulSetCleanOption, cleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, cronJobList, cleanOpts(cronJobCleanOption, cleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, &appsv1.DaemonSetList{}, cleanOpts(daemonSetCleanOption, cleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, &appsv1.DeploymentList{}, cleanOpts(deploymentCleanOption, cleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, &networkingv1.IngressList{}, cleanOpts(ingressCleanOption, cleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, &batchv1.JobList{}, cleanOpts(jobCleanOption, cleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, &corev1.PodList{}, cleanOpts(podCleanOption, cleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, &appsv1.ReplicaSetList{}, cleanOpts(replicaSetCleanOption, cleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, &corev1.ReplicationControllerList{}, cleanOpts(replicationControllerCleanOption, cleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, &appsv1.StatefulSetList{}, cleanOpts(statefulSetCleanOption, cleanOptions)})
 		// Cleaning up VolumeSnapshots can take a longer time if many snapshots were taken.
 		// Hence, we only finalize these objects after 1h.
-		attrs = append(attrs, cleanAttributes{ops, &volumesnapshotv1.VolumeSnapshotList{}, cleanOpts(VolumeSnapshotContentCleanOption, snapshotCleanOptions)})
-		attrs = append(attrs, cleanAttributes{snapshotContentOps, &volumesnapshotv1.VolumeSnapshotContentList{}, cleanOpts(VolumeSnapshotContentCleanOption, snapshotCleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, &volumesnapshotv1.VolumeSnapshotList{}, cleanOpts(volumeSnapshotCleanOption, snapshotCleanOptions)})
+		attrs = append(attrs, cleanAttributes{snapshotContentOps, &volumesnapshotv1.VolumeSnapshotContentList{}, cleanOpts(volumeSnapshotContentCleanOption, snapshotCleanOptions)})
 	}
 
 	return attrs, nil
@@ -311,6 +253,19 @@ func (b *Botanist) CleanShootNamespaces(ctx context.Context) error {
 		c                 = b.ShootClientSet.Client()
 		namespaceCleaner  = utilclient.NewNamespaceCleaner()
 		namespaceCleanOps = utilclient.NewCleanOps(utilclient.DefaultGoneEnsurer(), namespaceCleaner)
+
+		namespaceMatchingLabelsSelector = utilclient.ListWith{&NoCleanupPreventionListOption}
+		namespaceMatchingFieldsSelector = utilclient.ListWith{
+			client.MatchingFieldsSelector{
+				Selector: fields.AndSelectors(
+					fields.OneTermNotEqualSelector(MetadataNameField, metav1.NamespacePublic),
+					fields.OneTermNotEqualSelector(MetadataNameField, metav1.NamespaceSystem),
+					fields.OneTermNotEqualSelector(MetadataNameField, metav1.NamespaceDefault),
+					fields.OneTermNotEqualSelector(MetadataNameField, corev1.NamespaceNodeLease),
+				),
+			},
+		}
+		namespaceErrorToleration = utilclient.TolerateErrors{apierrors.IsConflict}
 	)
 
 	cleanOptions, err := b.getCleanOptions(ZeroGracePeriod, FinalizeAfterFiveMinutes, v1beta1constants.AnnotationShootCleanupNamespaceResourcesFinalizeGracePeriodSeconds, 0)
@@ -318,7 +273,7 @@ func (b *Botanist) CleanShootNamespaces(ctx context.Context) error {
 		return err
 	}
 
-	return cleanResourceFn(namespaceCleanOps, c, &corev1.NamespaceList{}, cleanOptions, NamespaceMatchingLabelsSelector, NamespaceMatchingFieldsSelector, NamespaceErrorToleration)(ctx)
+	return cleanResourceFn(namespaceCleanOps, c, &corev1.NamespaceList{}, cleanOptions, namespaceMatchingLabelsSelector, namespaceMatchingFieldsSelector, namespaceErrorToleration)(ctx)
 }
 
 // CleanVolumeAttachments cleans up all VolumeAttachments in the cluster, waits for them to be gone and finalizes any
