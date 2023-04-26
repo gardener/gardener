@@ -200,10 +200,14 @@ func (r *Reconciler) reconcileBackupEntry(
 		BackupBucketProviderStatus: backupBucket.Status.ProviderStatus,
 	}
 
-	secretLastUpdateTime, err := time.Parse(time.RFC3339, extensionSecret.Annotations[v1beta1constants.GardenerTimestamp])
+	secretLastUpdateTime, err := time.Parse(time.RFC3339Nano, extensionSecret.Annotations[v1beta1constants.GardenerTimestamp])
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+
+	// truncate the secret timestamp because extension.Status.LastOperation.LastUpdateTime
+	// is represented in time.RFC3339 format which does not include the Nano precision
+	secretLastUpdateTime = secretLastUpdateTime.Truncate(time.Second)
 
 	if err := r.SeedClient.Get(seedCtx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -626,7 +630,7 @@ func (r *Reconciler) getGardenSecret(ctx context.Context, backupBucket *gardenco
 
 func (r *Reconciler) reconcileBackupEntryExtensionSecret(ctx context.Context, extensionSecret, gardenSecret *corev1.Secret) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.SeedClient, extensionSecret, func() error {
-		metav1.SetMetaDataAnnotation(&extensionSecret.ObjectMeta, v1beta1constants.GardenerTimestamp, r.Clock.Now().UTC().Format(time.RFC3339))
+		metav1.SetMetaDataAnnotation(&extensionSecret.ObjectMeta, v1beta1constants.GardenerTimestamp, r.Clock.Now().UTC().Format(time.RFC3339Nano))
 		extensionSecret.Data = gardenSecret.DeepCopy().Data
 		return nil
 	}); err != nil {

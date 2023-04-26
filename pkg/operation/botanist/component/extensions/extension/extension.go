@@ -164,7 +164,7 @@ func (e *extension) DeployBeforeKubeAPIServer(ctx context.Context) error {
 func (e *extension) deploy(ctx context.Context, ext *extensionsv1alpha1.Extension, extType string, providerConfig *runtime.RawExtension, operation string) (extensionsv1alpha1.Object, error) {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, ext, func() error {
 		metav1.SetMetaDataAnnotation(&ext.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-		metav1.SetMetaDataAnnotation(&ext.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+		metav1.SetMetaDataAnnotation(&ext.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 		ext.Spec.Type = extType
 		ext.Spec.ProviderConfig = providerConfig
 		return nil

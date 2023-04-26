@@ -148,12 +148,13 @@ var _ = Describe("Controller", func() {
 
 		Expect(gardenClient.Create(ctx, backupEntry)).To(Succeed())
 
+		now := fakeClock.Now().UTC()
 		extensionSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "entry-" + backupEntry.Name,
 				Namespace: gardenNamespaceName,
 				Annotations: map[string]string{
-					v1beta1constants.GardenerTimestamp: fakeClock.Now().UTC().Format(time.RFC3339),
+					v1beta1constants.GardenerTimestamp: now.Format(time.RFC3339Nano),
 				},
 			},
 			Data: gardenSecret.Data,
@@ -180,7 +181,7 @@ var _ = Describe("Controller", func() {
 				DefaultStatus: extensionsv1alpha1.DefaultStatus{
 					LastOperation: &gardencorev1beta1.LastOperation{
 						State:          gardencorev1beta1.LastOperationStateSucceeded,
-						LastUpdateTime: metav1.NewTime(fakeClock.Now().UTC()),
+						LastUpdateTime: metav1.NewTime(now),
 					},
 				},
 			},
@@ -242,7 +243,7 @@ var _ = Describe("Controller", func() {
 		Expect(result).To(Equal(reconcile.Result{}))
 
 		Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(Succeed())
-		Expect(extensionSecret.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerTimestamp, fakeClock.Now().UTC().Format(time.RFC3339)))
+		Expect(extensionSecret.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerTimestamp, fakeClock.Now().UTC().Format(time.RFC3339Nano)))
 		Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(Succeed())
 		Expect(extensionBackupEntry.Annotations).To(HaveKey(v1beta1constants.GardenerOperation))
 	})
@@ -261,7 +262,7 @@ var _ = Describe("Controller", func() {
 	})
 
 	It("should reconcile the extension BackupEntry if the secret update timestamp is after the extension last update time", func() {
-		time := fakeClock.Now().Add(time.Second).UTC().Format(time.RFC3339)
+		time := fakeClock.Now().Add(time.Second).UTC().Format(time.RFC3339Nano)
 		metav1.SetMetaDataAnnotation(&extensionSecret.ObjectMeta, v1beta1constants.GardenerTimestamp, time)
 		Expect(seedClient.Create(ctx, extensionSecret)).To(Succeed())
 		Expect(seedClient.Create(ctx, extensionBackupEntry)).To(Succeed())

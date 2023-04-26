@@ -129,7 +129,7 @@ func (c *controlPlane) deploy(ctx context.Context, operation string) (extensions
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, c.controlPlane, func() error {
 		metav1.SetMetaDataAnnotation(&c.controlPlane.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-		metav1.SetMetaDataAnnotation(&c.controlPlane.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+		metav1.SetMetaDataAnnotation(&c.controlPlane.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 
 		c.controlPlane.Spec = extensionsv1alpha1.ControlPlaneSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{

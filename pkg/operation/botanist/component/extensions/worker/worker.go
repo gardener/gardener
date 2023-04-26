@@ -231,7 +231,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 	// to be owned by gardenlet exclusively.
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, w.client, w.worker, func() error {
 		metav1.SetMetaDataAnnotation(&w.worker.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-		metav1.SetMetaDataAnnotation(&w.worker.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+		metav1.SetMetaDataAnnotation(&w.worker.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 
 		w.worker.Spec = extensionsv1alpha1.WorkerSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{

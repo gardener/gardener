@@ -137,8 +137,7 @@ func (i *infrastructure) deploy(ctx context.Context, operation string) (extensio
 			metav1.SetMetaDataAnnotation(&i.infrastructure.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 		}
 
-		metav1.SetMetaDataAnnotation(&i.infrastructure.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
-
+		metav1.SetMetaDataAnnotation(&i.infrastructure.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 		i.infrastructure.Spec = extensionsv1alpha1.InfrastructureSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type:           i.values.Type,

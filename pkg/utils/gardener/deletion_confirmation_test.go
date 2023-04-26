@@ -94,7 +94,7 @@ var _ = Describe("DeletionConfirmation", func() {
 			)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-			expectedAnnotations := map[string]string{ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().String()}
+			expectedAnnotations := map[string]string{ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano)}
 
 			Expect(ConfirmDeletion(ctx, c, obj)).To(Succeed())
 
@@ -111,7 +111,7 @@ var _ = Describe("DeletionConfirmation", func() {
 			obj.SetAnnotations(map[string]string{"foo": "bar"})
 			Expect(c.Update(ctx, obj)).To(Succeed())
 
-			expectedAnnotations := map[string]string{"foo": "bar", ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().String()}
+			expectedAnnotations := map[string]string{"foo": "bar", ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano)}
 
 			Expect(ConfirmDeletion(ctx, c, obj)).To(Succeed())
 

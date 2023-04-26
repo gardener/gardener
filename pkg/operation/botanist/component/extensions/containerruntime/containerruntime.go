@@ -108,7 +108,7 @@ func (c *containerRuntime) Deploy(ctx context.Context) error {
 func (c *containerRuntime) deploy(ctx context.Context, cr *extensionsv1alpha1.ContainerRuntime, coreCR gardencorev1beta1.ContainerRuntime, workerName, operation string) (extensionsv1alpha1.Object, error) {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, cr, func() error {
 		metav1.SetMetaDataAnnotation(&cr.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-		metav1.SetMetaDataAnnotation(&cr.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+		metav1.SetMetaDataAnnotation(&cr.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 
 		cr.Spec.BinaryPath = extensionsv1alpha1.ContainerDRuntimeContainersBinFolder
 		cr.Spec.Type = coreCR.Type

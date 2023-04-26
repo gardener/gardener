@@ -262,7 +262,7 @@ var _ = Describe("Etcd", func() {
 					Namespace: testNamespace,
 					Annotations: map[string]string{
 						"gardener.cloud/operation": "reconcile",
-						"gardener.cloud/timestamp": now.String(),
+						"gardener.cloud/timestamp": now.Format(time.RFC3339Nano),
 					},
 					Labels: map[string]string{
 						"gardener.cloud/role": "controlplane",
@@ -1633,7 +1633,7 @@ var _ = Describe("Etcd", func() {
 				Namespace: testNamespace,
 				Annotations: map[string]string{
 					"confirmation.gardener.cloud/deletion": "true",
-					"gardener.cloud/timestamp":             nowFunc().String(),
+					"gardener.cloud/timestamp":             nowFunc().Format(time.RFC3339Nano),
 				},
 			}}
 		})
@@ -1752,7 +1752,7 @@ var _ = Describe("Etcd", func() {
 				func(_ context.Context, etcd *druidv1alpha1.Etcd, patch client.Patch, _ ...client.PatchOption) error {
 					data, err := patch.Data(etcd)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(string(data)).To(Equal(fmt.Sprintf(`{"metadata":{"annotations":{"gardener.cloud/operation":"reconcile","gardener.cloud/timestamp":"%s"}},"spec":{"replicas":1}}`, now.String())))
+					Expect(string(data)).To(Equal(fmt.Sprintf(`{"metadata":{"annotations":{"gardener.cloud/operation":"reconcile","gardener.cloud/timestamp":"%s"}},"spec":{"replicas":1}}`, now.Format(time.RFC3339Nano))))
 					return nil
 				})
 
@@ -1778,7 +1778,7 @@ var _ = Describe("Etcd", func() {
 				func(_ context.Context, etcd *druidv1alpha1.Etcd, patch client.Patch, _ ...client.PatchOption) error {
 					data, err := patch.Data(etcd)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(string(data)).To(Equal(fmt.Sprintf(`{"metadata":{"annotations":{"gardener.cloud/operation":"reconcile","gardener.cloud/timestamp":"%s"}}}`, now.String())))
+					Expect(string(data)).To(Equal(fmt.Sprintf(`{"metadata":{"annotations":{"gardener.cloud/operation":"reconcile","gardener.cloud/timestamp":"%s"}}}`, now.Format(time.RFC3339Nano))))
 					return nil
 				})
 
@@ -1811,7 +1811,7 @@ var _ = Describe("Etcd", func() {
 			)
 
 			Expect(etcd.Scale(ctx, 1)).To(Succeed())
-			Expect(etcd.Scale(ctx, 1)).Should(MatchError(`object's "gardener.cloud/timestamp" annotation is not "0001-01-01 00:00:00 +0000 UTC" but "foo"`))
+			Expect(etcd.Scale(ctx, 1)).Should(MatchError(`object's "gardener.cloud/timestamp" annotation is not "0001-01-01T00:00:00Z" but "foo"`))
 		})
 
 		It("should fail because operation annotation is set", func() {
@@ -1930,7 +1930,7 @@ var _ = Describe("Etcd", func() {
 					func(_ context.Context, obj *druidv1alpha1.Etcd, patch client.Patch, _ ...client.PatchOption) error {
 						data, err := patch.Data(obj)
 						Expect(err).ToNot(HaveOccurred())
-						Expect(data).To(MatchJSON("{\"metadata\":{\"annotations\":{\"gardener.cloud/operation\":\"reconcile\",\"gardener.cloud/timestamp\":\"0001-01-01 00:00:00 +0000 UTC\"}},\"spec\":{\"etcd\":{\"peerUrlTls\":{\"tlsCASecretRef\":{\"name\":\"ca-etcd-peer\"}}}}}"))
+						Expect(data).To(MatchJSON("{\"metadata\":{\"annotations\":{\"gardener.cloud/operation\":\"reconcile\",\"gardener.cloud/timestamp\":\"0001-01-01T00:00:00Z\"}},\"spec\":{\"etcd\":{\"peerUrlTls\":{\"tlsCASecretRef\":{\"name\":\"ca-etcd-peer\"}}}}}"))
 						return nil
 					})
 

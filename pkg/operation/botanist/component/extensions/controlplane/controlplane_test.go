@@ -88,7 +88,7 @@ var _ = Describe("ControlPlane", func() {
 		cp = empty.DeepCopy()
 		cp.SetAnnotations(map[string]string{
 			v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-			v1beta1constants.GardenerTimestamp: now.UTC().String(),
+			v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 		})
 
 		cpSpec = extensionsv1alpha1.ControlPlaneSpec{
@@ -142,7 +142,7 @@ var _ = Describe("ControlPlane", func() {
 					Namespace: namespace,
 					Annotations: map[string]string{
 						"gardener.cloud/operation": "reconcile",
-						"gardener.cloud/timestamp": now.UTC().String(),
+						"gardener.cloud/timestamp": now.UTC().Format(time.RFC3339Nano),
 					},
 					ResourceVersion: "1",
 				},
@@ -174,7 +174,7 @@ var _ = Describe("ControlPlane", func() {
 					Namespace: namespace,
 					Annotations: map[string]string{
 						"gardener.cloud/operation": "reconcile",
-						"gardener.cloud/timestamp": now.UTC().String(),
+						"gardener.cloud/timestamp": now.UTC().Format(time.RFC3339Nano),
 					},
 					ResourceVersion: "1",
 				},
@@ -210,7 +210,7 @@ var _ = Describe("ControlPlane", func() {
 			patch := client.MergeFrom(cp.DeepCopy())
 			// remove operation annotation, add old timestamp annotation
 			cp.ObjectMeta.Annotations = map[string]string{
-				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().String(),
+				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 			}
 			cp.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,
@@ -233,7 +233,7 @@ var _ = Describe("ControlPlane", func() {
 			patch := client.MergeFrom(cp.DeepCopy())
 			// remove operation annotation, add up-to-date timestamp annotation
 			cp.ObjectMeta.Annotations = map[string]string{
-				v1beta1constants.GardenerTimestamp: now.UTC().String(),
+				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
 			cp.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,
@@ -260,7 +260,7 @@ var _ = Describe("ControlPlane", func() {
 			patch := client.MergeFrom(cp.DeepCopy())
 			// remove operation annotation, add old timestamp annotation
 			cp.ObjectMeta.Annotations = map[string]string{
-				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().String(),
+				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 			}
 			cp.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,
@@ -287,7 +287,7 @@ var _ = Describe("ControlPlane", func() {
 			patch := client.MergeFrom(cp.DeepCopy())
 			// remove operation annotation, add up-to-date timestamp annotation
 			cp.ObjectMeta.Annotations = map[string]string{
-				v1beta1constants.GardenerTimestamp: now.UTC().String(),
+				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
 			cp.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,
@@ -320,7 +320,7 @@ var _ = Describe("ControlPlane", func() {
 			obj := cp.DeepCopy()
 			obj.Annotations = map[string]string{
 				"confirmation.gardener.cloud/deletion": "true",
-				"gardener.cloud/timestamp":             now.UTC().String(),
+				"gardener.cloud/timestamp":             now.UTC().Format(time.RFC3339Nano),
 			}
 
 			mc := mockclient.NewMockClient(ctrl)
@@ -344,7 +344,7 @@ var _ = Describe("ControlPlane", func() {
 			obj.Name += "-exposure"
 			obj.Annotations = map[string]string{
 				"confirmation.gardener.cloud/deletion": "true",
-				"gardener.cloud/timestamp":             now.UTC().String(),
+				"gardener.cloud/timestamp":             now.UTC().Format(time.RFC3339Nano),
 			}
 
 			mc := mockclient.NewMockClient(ctrl)
@@ -423,7 +423,7 @@ var _ = Describe("ControlPlane", func() {
 			obj := cp.DeepCopy()
 			obj.Spec = cpSpec
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
-			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().String())
+			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().Format(time.RFC3339Nano))
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
 				DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
 					Expect(actual).To(DeepEqual(obj))
@@ -466,7 +466,7 @@ var _ = Describe("ControlPlane", func() {
 			obj.Spec = cpSpec
 			obj.Spec.Purpose = &values.Purpose
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
-			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().String())
+			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().Format(time.RFC3339Nano))
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
 				DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
 					Expect(actual).To(DeepEqual(obj))

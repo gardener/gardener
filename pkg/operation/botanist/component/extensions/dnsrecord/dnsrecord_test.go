@@ -111,7 +111,7 @@ var _ = Describe("DNSRecord", func() {
 				Namespace: namespace,
 				Annotations: map[string]string{
 					v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-					v1beta1constants.GardenerTimestamp: now.UTC().String(),
+					v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 				},
 			},
 			Spec: extensionsv1alpha1.DNSRecordSpec{
@@ -174,7 +174,7 @@ var _ = Describe("DNSRecord", func() {
 					Namespace: namespace,
 					Annotations: map[string]string{
 						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-						v1beta1constants.GardenerTimestamp: now.UTC().String(),
+						v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 					},
 					ResourceVersion: "1",
 				},
@@ -203,7 +203,7 @@ var _ = Describe("DNSRecord", func() {
 			By("Create existing DNSRecord")
 			existingDNS := dns.DeepCopy()
 			delete(existingDNS.Annotations, v1beta1constants.GardenerOperation)
-			metav1.SetMetaDataAnnotation(&existingDNS.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
+			metav1.SetMetaDataAnnotation(&existingDNS.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).Format(time.RFC3339Nano))
 			Expect(c.Create(ctx, existingDNS)).To(Succeed())
 
 			By("Deploy DNSRecord again")
@@ -224,7 +224,7 @@ var _ = Describe("DNSRecord", func() {
 					Name:      name,
 					Namespace: namespace,
 					Annotations: map[string]string{
-						v1beta1constants.GardenerTimestamp: now.UTC().String(),
+						v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 					},
 					ResourceVersion: "2",
@@ -252,7 +252,7 @@ var _ = Describe("DNSRecord", func() {
 					Name:      name,
 					Namespace: namespace,
 					Annotations: map[string]string{
-						v1beta1constants.GardenerTimestamp: now.UTC().String(),
+						v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 					},
 					ResourceVersion: "1",
@@ -282,7 +282,7 @@ var _ = Describe("DNSRecord", func() {
 			By("Create existing DNSRecord")
 			existingDNS := dns.DeepCopy()
 			delete(existingDNS.Annotations, v1beta1constants.GardenerOperation)
-			metav1.SetMetaDataAnnotation(&existingDNS.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
+			metav1.SetMetaDataAnnotation(&existingDNS.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).Format(time.RFC3339Nano))
 			Expect(c.Create(ctx, existingDNS)).To(Succeed())
 
 			By("Deploy DNSRecord again")
@@ -303,7 +303,7 @@ var _ = Describe("DNSRecord", func() {
 					Name:      name,
 					Namespace: namespace,
 					Annotations: map[string]string{
-						v1beta1constants.GardenerTimestamp: now.UTC().String(),
+						v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 					},
 					ResourceVersion: "2",
 				},
@@ -316,7 +316,7 @@ var _ = Describe("DNSRecord", func() {
 			By("Create existing DNSRecord")
 			existingDNS := dns.DeepCopy()
 			delete(existingDNS.Annotations, v1beta1constants.GardenerOperation)
-			metav1.SetMetaDataAnnotation(&existingDNS.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
+			metav1.SetMetaDataAnnotation(&existingDNS.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).Format(time.RFC3339Nano))
 			Expect(c.Create(ctx, existingDNS)).To(Succeed())
 
 			By("Deploy DNSRecord again with changed values")
@@ -341,7 +341,7 @@ var _ = Describe("DNSRecord", func() {
 					Name:      name,
 					Namespace: namespace,
 					Annotations: map[string]string{
-						v1beta1constants.GardenerTimestamp: now.UTC().String(),
+						v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 					},
 					ResourceVersion: "2",
@@ -386,7 +386,7 @@ var _ = Describe("DNSRecord", func() {
 						Namespace: namespace,
 						Annotations: map[string]string{
 							v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-							v1beta1constants.GardenerTimestamp: now.UTC().String(),
+							v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 						},
 					},
 					Spec: dns.Spec,
@@ -408,7 +408,7 @@ var _ = Describe("DNSRecord", func() {
 			It("should deploy the DNSRecord resource if the DNSRecord is not Succeeded", func() {
 				existingDNS := dns.DeepCopy()
 				delete(existingDNS.Annotations, v1beta1constants.GardenerOperation)
-				metav1.SetMetaDataAnnotation(&existingDNS.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
+				metav1.SetMetaDataAnnotation(&existingDNS.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).Format(time.RFC3339Nano))
 				existingDNS.Status.LastOperation = &gardencorev1beta1.LastOperation{
 					State: gardencorev1beta1.LastOperationStateError,
 				}
@@ -433,10 +433,10 @@ var _ = Describe("DNSRecord", func() {
 			It("should only update the timestamp annotation if the DNSRecord exists with the same values", func() {
 				delete(dns.Annotations, v1beta1constants.GardenerOperation)
 				// set old timestamp (e.g. added on creation / earlier Deploy call)
-				metav1.SetMetaDataAnnotation(&dns.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
+				metav1.SetMetaDataAnnotation(&dns.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).Format(time.RFC3339Nano))
 
 				expectedDNSRecord.Annotations = map[string]string{
-					v1beta1constants.GardenerTimestamp: now.UTC().String(),
+					v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 				}
 
 				Expect(c.Create(ctx, dns)).To(Succeed())
@@ -451,7 +451,7 @@ var _ = Describe("DNSRecord", func() {
 			DescribeTable("should reconcile the DNSRecord if desired values differ from current state", func(modifyValues func(), modifyExpected func()) {
 				delete(dns.Annotations, v1beta1constants.GardenerOperation)
 				// set old timestamp (e.g. added on creation / earlier Deploy call)
-				metav1.SetMetaDataAnnotation(&dns.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
+				metav1.SetMetaDataAnnotation(&dns.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).Format(time.RFC3339Nano))
 				Expect(c.Create(ctx, dns)).To(Succeed())
 
 				modifyValues()
@@ -481,7 +481,7 @@ var _ = Describe("DNSRecord", func() {
 
 		It("should fail if the resource is not ready", func() {
 			dns.ObjectMeta.Annotations = map[string]string{
-				v1beta1constants.GardenerTimestamp: now.UTC().String(),
+				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
 			dns.Status.LastError = &gardencorev1beta1.LastError{
 				Description: "Some error",
@@ -496,7 +496,7 @@ var _ = Describe("DNSRecord", func() {
 
 			patch := client.MergeFrom(dns.DeepCopy())
 			dns.ObjectMeta.Annotations = map[string]string{
-				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().String(),
+				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 			}
 			dns.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,
@@ -511,7 +511,7 @@ var _ = Describe("DNSRecord", func() {
 
 			patch := client.MergeFrom(dns.DeepCopy())
 			dns.ObjectMeta.Annotations = map[string]string{
-				v1beta1constants.GardenerTimestamp: now.UTC().String(),
+				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
 			dns.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,
@@ -530,7 +530,7 @@ var _ = Describe("DNSRecord", func() {
 					Namespace: namespace,
 					Annotations: map[string]string{
 						"confirmation.gardener.cloud/deletion": "true",
-						v1beta1constants.GardenerTimestamp:     now.UTC().String(),
+						v1beta1constants.GardenerTimestamp:     now.UTC().Format(time.RFC3339Nano),
 					},
 				},
 			}
@@ -577,7 +577,7 @@ var _ = Describe("DNSRecord", func() {
 					Namespace: namespace,
 					Annotations: map[string]string{
 						"confirmation.gardener.cloud/deletion": "true",
-						v1beta1constants.GardenerTimestamp:     now.UTC().String(),
+						v1beta1constants.GardenerTimestamp:     now.UTC().Format(time.RFC3339Nano),
 					},
 				},
 			}

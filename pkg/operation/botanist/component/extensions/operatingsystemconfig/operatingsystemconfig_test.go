@@ -258,7 +258,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						Namespace: namespace,
 						Annotations: map[string]string{
 							v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-							v1beta1constants.GardenerTimestamp: now.UTC().String(),
+							v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 						},
 						Labels: map[string]string{
 							"worker.gardener.cloud/pool": worker.Name,
@@ -282,7 +282,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						Namespace: namespace,
 						Annotations: map[string]string{
 							v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-							v1beta1constants.GardenerTimestamp: now.UTC().String(),
+							v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 						},
 						Labels: map[string]string{
 							"worker.gardener.cloud/pool": worker.Name,
@@ -485,7 +485,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					// deploy with wait-for-state annotation
 					obj := expected[i].DeepCopy()
 					metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
-					metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().String())
+					metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().Format(time.RFC3339Nano))
 					obj.TypeMeta = metav1.TypeMeta{}
 					mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
 						DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
@@ -558,7 +558,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					patch := client.MergeFrom(expected[i].DeepCopy())
 					// remove operation annotation, add old timestamp annotation
 					expected[i].ObjectMeta.Annotations = map[string]string{
-						v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().String(),
+						v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 					}
 					// set last operation
 					expected[i].Status.LastOperation = &gardencorev1beta1.LastOperation{
@@ -610,7 +610,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					patch := client.MergeFrom(expected[i].DeepCopy())
 					// remove operation annotation, add up-to-date timestamp annotation
 					expected[i].ObjectMeta.Annotations = map[string]string{
-						v1beta1constants.GardenerTimestamp: now.UTC().String(),
+						v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 					}
 					// set last operation
 					expected[i].Status.LastOperation = &gardencorev1beta1.LastOperation{
@@ -745,7 +745,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						Namespace: namespace,
 						Annotations: map[string]string{
 							gardenerutils.ConfirmationDeletion: "true",
-							v1beta1constants.GardenerTimestamp: now.UTC().String(),
+							v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 						},
 					},
 				}

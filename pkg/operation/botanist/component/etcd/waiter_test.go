@@ -112,7 +112,7 @@ var _ = Describe("#Wait", func() {
 				Namespace: testNamespace,
 				Annotations: map[string]string{
 					v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-					v1beta1constants.GardenerTimestamp: now.UTC().String(),
+					v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 				},
 			},
 			Spec: druidv1alpha1.EtcdSpec{},
@@ -154,7 +154,7 @@ var _ = Describe("#Wait", func() {
 		expected.Status.LastError = nil
 		// remove operation annotation, add old timestamp annotation
 		expected.ObjectMeta.Annotations = map[string]string{
-			v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().String(),
+			v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 		}
 		expected.Status.Ready = pointer.Bool(true)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
@@ -180,7 +180,7 @@ var _ = Describe("#Wait", func() {
 		expected.Status.LastError = nil
 		// remove operation annotation, add up-to-date timestamp annotation
 		expected.ObjectMeta.Annotations = map[string]string{
-			v1beta1constants.GardenerTimestamp: now.UTC().String(),
+			v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 		}
 		expected.Status.Ready = pointer.Bool(true)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")

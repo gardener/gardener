@@ -146,7 +146,7 @@ func (c *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 		if c.values.AnnotateOperation || c.valuesDontMatchDNSRecord() {
 			metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 		}
-		metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+		metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 
 		c.dnsRecord.Spec = extensionsv1alpha1.DNSRecordSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
@@ -188,7 +188,7 @@ func (c *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 				// Otherwise, just update the timestamp annotation.
 				// If the object is still annotated with the operation annotation (e.g. not reconciled yet) this will send a watch
 				// event to the extension controller triggering a new reconciliation.
-				metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+				metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 			}
 			if err := c.client.Patch(ctx, c.dnsRecord, patch); err != nil {
 				return nil, err

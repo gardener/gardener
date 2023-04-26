@@ -367,7 +367,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, e.etcd, func() error {
 		metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-		metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+		metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 
 		e.etcd.Labels = map[string]string{
 			v1beta1constants.LabelRole:  e.values.Role,
@@ -761,7 +761,7 @@ func (e *etcd) Scale(ctx context.Context, replicas int32) error {
 	}
 
 	etcdObj.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationReconcile
-	etcdObj.Annotations[v1beta1constants.GardenerTimestamp] = TimeNow().UTC().String()
+	etcdObj.Annotations[v1beta1constants.GardenerTimestamp] = TimeNow().UTC().Format(time.RFC3339Nano)
 	etcdObj.Spec.Replicas = replicas
 
 	e.etcd = etcdObj
@@ -806,7 +806,7 @@ func (e *etcd) RolloutPeerCA(ctx context.Context) error {
 
 		e.etcd.Annotations = map[string]string{
 			v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-			v1beta1constants.GardenerTimestamp: TimeNow().UTC().String(),
+			v1beta1constants.GardenerTimestamp: TimeNow().UTC().Format(time.RFC3339Nano),
 		}
 
 		var dataKey *string

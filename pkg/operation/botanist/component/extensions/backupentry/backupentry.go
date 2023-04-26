@@ -118,7 +118,7 @@ func (b *backupEntry) Deploy(ctx context.Context) error {
 func (b *backupEntry) deploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.client, b.backupEntry, func() error {
 		metav1.SetMetaDataAnnotation(&b.backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-		metav1.SetMetaDataAnnotation(&b.backupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, b.clock.Now().UTC().String())
+		metav1.SetMetaDataAnnotation(&b.backupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, b.clock.Now().UTC().Format(time.RFC3339Nano))
 
 		b.backupEntry.Spec = extensionsv1alpha1.BackupEntrySpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{

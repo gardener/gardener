@@ -185,7 +185,7 @@ var _ = Describe("operation", func() {
 					&gardener.TimeNow, mockNow.Do,
 				)()
 
-				shootState.Annotations = map[string]string{gardener.ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().String()}
+				shootState.Annotations = map[string]string{gardener.ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano)}
 				gomock.InOrder(
 					gardenClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()),
 					gardenClient.EXPECT().Delete(ctx, shootState).Return(nil),

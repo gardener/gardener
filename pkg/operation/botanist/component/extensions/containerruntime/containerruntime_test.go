@@ -112,7 +112,7 @@ var _ = Describe("#ContainerRuntime", func() {
 						Namespace: namespace,
 						Annotations: map[string]string{
 							v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-							v1beta1constants.GardenerTimestamp: now.UTC().String(),
+							v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 						},
 					},
 					Spec: extensionsv1alpha1.ContainerRuntimeSpec{
@@ -198,7 +198,7 @@ var _ = Describe("#ContainerRuntime", func() {
 				patch := client.MergeFrom(expected[i].DeepCopy())
 				// remove operation annotation, add old timestamp annotation
 				expected[i].ObjectMeta.Annotations = map[string]string{
-					v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().String(),
+					v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 				}
 				// set last operation
 				expected[i].Status.LastOperation = &gardencorev1beta1.LastOperation{
@@ -226,7 +226,7 @@ var _ = Describe("#ContainerRuntime", func() {
 				patch := client.MergeFrom(expected[i].DeepCopy())
 				// remove operation annotation, add up-to-date timestamp annotation
 				expected[i].ObjectMeta.Annotations = map[string]string{
-					v1beta1constants.GardenerTimestamp: now.UTC().String(),
+					v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 				}
 				// set last operation
 				expected[i].Status.LastOperation = &gardencorev1beta1.LastOperation{
@@ -279,7 +279,7 @@ var _ = Describe("#ContainerRuntime", func() {
 					Namespace: namespace,
 					Annotations: map[string]string{
 						gardenerutils.ConfirmationDeletion: "true",
-						v1beta1constants.GardenerTimestamp: now.UTC().String(),
+						v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 					},
 				},
 			}
@@ -367,7 +367,7 @@ var _ = Describe("#ContainerRuntime", func() {
 
 			// deploy with wait-for-state annotation
 			expected[0].Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationWaitForState
-			expected[0].Annotations[v1beta1constants.GardenerTimestamp] = now.UTC().String()
+			expected[0].Annotations[v1beta1constants.GardenerTimestamp] = now.UTC().Format(time.RFC3339Nano)
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(expected[0])).
 				DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
 					Expect(actual).To(DeepEqual(expected[0]))

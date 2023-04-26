@@ -245,7 +245,7 @@ var _ = Describe("Extension", func() {
 			patch := client.MergeFrom(beforeExtension.DeepCopy())
 			// remove operation annotation, add old timestamp annotation
 			beforeExtension.ObjectMeta.Annotations = map[string]string{
-				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().String(),
+				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 			}
 			// set last operation
 			beforeExtension.Status.LastOperation = &gardencorev1beta1.LastOperation{
@@ -295,7 +295,7 @@ var _ = Describe("Extension", func() {
 			patch := client.MergeFrom(defaultExtension.DeepCopy())
 			// remove operation annotation, add old timestamp annotation
 			defaultExtension.ObjectMeta.Annotations = map[string]string{
-				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().String(),
+				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 			}
 			// set last operation
 			defaultExtension.Status.LastOperation = &gardencorev1beta1.LastOperation{
