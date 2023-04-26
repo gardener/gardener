@@ -163,6 +163,16 @@ var (
 	NamespaceErrorToleration = utilclient.TolerateErrors{apierrors.IsConflict}
 )
 
+type cleanAttributes struct {
+	cleanOps     utilclient.CleanOps
+	listObj      client.ObjectList
+	cleanOptions []utilclient.CleanOption
+}
+
+func cleanOpts(opts ...utilclient.CleanOption) []utilclient.CleanOption {
+	return opts
+}
+
 func cleanResourceFn(cleanOps utilclient.CleanOps, c client.Client, list client.ObjectList, opts ...utilclient.CleanOption) flow.TaskFn {
 	return func(ctx context.Context) error {
 		return retry.Until(ctx, DefaultInterval, func(ctx context.Context) (done bool, err error) {
@@ -177,51 +187,57 @@ func cleanResourceFn(cleanOps utilclient.CleanOps, c client.Client, list client.
 	}
 }
 
-// CleanWebhooks deletes all Webhooks in the Shoot cluster that are not being managed by the addon manager.
-func (b *Botanist) CleanWebhooks(ctx context.Context) error {
+func (b *Botanist) clean(ctx context.Context, getAttrs func() ([]cleanAttributes, error)) error {
+	attrs, err := getAttrs()
+	if err != nil {
+		return err
+	}
+
+	taskFns := make([]flow.TaskFn, 0, len(attrs))
+
+	for _, attr := range attrs {
+		taskFns = append(taskFns, cleanResourceFn(attr.cleanOps, b.ShootClientSet.Client(), attr.listObj, attr.cleanOptions...))
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
+}
+
+func (b *Botanist) cleanWebhooksAttributes() ([]cleanAttributes, error) {
 	var (
-		c       = b.ShootClientSet.Client()
 		ensurer = utilclient.DefaultGoneEnsurer()
 		ops     = utilclient.NewCleanOps(ensurer, utilclient.DefaultCleaner())
 	)
 
 	cleanOptions, err := b.getCleanOptions(GracePeriodFiveMinutes, FinalizeAfterFiveMinutes, v1beta1constants.AnnotationShootCleanupWebhooksFinalizeGracePeriodSeconds, 1)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return flow.Parallel(
-		cleanResourceFn(ops, c, &admissionregistrationv1.MutatingWebhookConfigurationList{}, MutatingWebhookConfigurationCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &admissionregistrationv1.ValidatingWebhookConfigurationList{}, ValidatingWebhookConfigurationCleanOption, cleanOptions),
-	)(ctx)
+	return []cleanAttributes{
+		{ops, &admissionregistrationv1.MutatingWebhookConfigurationList{}, cleanOpts(MutatingWebhookConfigurationCleanOption, cleanOptions)},
+		{ops, &admissionregistrationv1.ValidatingWebhookConfigurationList{}, cleanOpts(ValidatingWebhookConfigurationCleanOption, cleanOptions)},
+	}, nil
 }
 
-// CleanExtendedAPIs removes API extensions like CRDs and API services from the Shoot cluster.
-func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
+func (b *Botanist) cleanExtendedAPIsAttributes() ([]cleanAttributes, error) {
 	var (
-		c       = b.ShootClientSet.Client()
 		ensurer = utilclient.DefaultGoneEnsurer()
 		ops     = utilclient.NewCleanOps(ensurer, utilclient.DefaultCleaner())
 	)
 
 	cleanOptions, err := b.getCleanOptions(GracePeriodFiveMinutes, FinalizeAfterOneHour, v1beta1constants.AnnotationShootCleanupExtendedAPIsFinalizeGracePeriodSeconds, 0.1)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return flow.Parallel(
-		cleanResourceFn(ops, c, &apiregistrationv1.APIServiceList{}, APIServiceCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &apiextensionsv1.CustomResourceDefinitionList{}, CustomResourceDefinitionCleanOption, cleanOptions),
-	)(ctx)
+	return []cleanAttributes{
+		{ops, &apiregistrationv1.APIServiceList{}, cleanOpts(APIServiceCleanOption, cleanOptions)},
+		{ops, &apiextensionsv1.CustomResourceDefinitionList{}, cleanOpts(CustomResourceDefinitionCleanOption, cleanOptions)},
+	}, nil
 }
 
-// CleanKubernetesResources deletes all the Kubernetes resources in the Shoot cluster
-// other than those stored in the exceptions map. It will check whether all the Kubernetes resources
-// in the Shoot cluster other than those stored in the exceptions map have been deleted.
-// It will return an error in case it has not finished yet, and nil if all resources are gone.
-func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
+func (b *Botanist) cleanKubernetesResourcesAttributes() ([]cleanAttributes, error) {
 	var (
-		c                  = b.ShootClientSet.Client()
 		ensurer            = utilclient.DefaultGoneEnsurer()
 		cleaner            = utilclient.DefaultCleaner()
 		ops                = utilclient.NewCleanOps(ensurer, cleaner)
@@ -230,49 +246,62 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 
 	cleanOptions, err := b.getCleanOptions(GracePeriodFiveMinutes, FinalizeAfterFiveMinutes, v1beta1constants.AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds, 1)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	snapshotCleanOptions, err := b.getCleanOptions(GracePeriodFiveMinutes, FinalizeAfterOneHour, v1beta1constants.AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds, 0.5)
 	if err != nil {
-		return err
+		return nil, err
+	}
+
+	attrs := []cleanAttributes{
+		{ops, &corev1.ServiceList{}, cleanOpts(ServiceCleanOption, cleanOptions)},
+		{ops, &corev1.PersistentVolumeClaimList{}, cleanOpts(PersistentVolumeClaimCleanOption, cleanOptions)},
 	}
 
 	if metav1.HasAnnotation(b.Shoot.GetInfo().ObjectMeta, v1beta1constants.AnnotationShootSkipCleanup) {
-		return flow.Parallel(
-			cleanResourceFn(ops, c, &corev1.ServiceList{}, ServiceCleanOption, cleanOptions),
-			cleanResourceFn(ops, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOption, cleanOptions),
-			cleanResourceFn(ops, c, &volumesnapshotv1.VolumeSnapshotList{}, VolumeSnapshotContentCleanOption, cleanOptions),
-			cleanResourceFn(ops, c, &volumesnapshotv1.VolumeSnapshotContentList{}, VolumeSnapshotContentCleanOption, cleanOptions),
-		)(ctx)
-	}
+		attrs = append(attrs, cleanAttributes{ops, &volumesnapshotv1.VolumeSnapshotList{}, cleanOpts(VolumeSnapshotContentCleanOption, cleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, &volumesnapshotv1.VolumeSnapshotContentList{}, cleanOpts(VolumeSnapshotContentCleanOption, cleanOptions)})
+	} else {
+		cronJobList := client.ObjectList(&batchv1beta1.CronJobList{})
+		if version.ConstraintK8sGreaterEqual121.Check(b.Shoot.KubernetesVersion) {
+			cronJobList = &batchv1.CronJobList{}
+		}
 
-	var (
-		ingressList client.ObjectList = &networkingv1.IngressList{}
-		cronJobList client.ObjectList = &batchv1beta1.CronJobList{}
-	)
-
-	if version.ConstraintK8sGreaterEqual121.Check(b.Shoot.KubernetesVersion) {
-		cronJobList = &batchv1.CronJobList{}
-	}
-
-	return flow.Parallel(
-		cleanResourceFn(ops, c, cronJobList, CronJobCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &appsv1.DaemonSetList{}, DaemonSetCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &appsv1.DeploymentList{}, DeploymentCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, ingressList, IngressCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &batchv1.JobList{}, JobCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &corev1.PodList{}, PodCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &appsv1.ReplicaSetList{}, ReplicaSetCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &corev1.ReplicationControllerList{}, ReplicationControllerCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &corev1.ServiceList{}, ServiceCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &appsv1.StatefulSetList{}, StatefulSetCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOption, cleanOptions),
+		attrs = append(attrs, cleanAttributes{ops, cronJobList, cleanOpts(CronJobCleanOption, cleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, &appsv1.DaemonSetList{}, cleanOpts(DaemonSetCleanOption, cleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, &appsv1.DeploymentList{}, cleanOpts(DeploymentCleanOption, cleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, &networkingv1.IngressList{}, cleanOpts(IngressCleanOption, cleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, &batchv1.JobList{}, cleanOpts(JobCleanOption, cleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, &corev1.PodList{}, cleanOpts(PodCleanOption, cleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, &appsv1.ReplicaSetList{}, cleanOpts(ReplicaSetCleanOption, cleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, &corev1.ReplicationControllerList{}, cleanOpts(ReplicationControllerCleanOption, cleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, &appsv1.StatefulSetList{}, cleanOpts(StatefulSetCleanOption, cleanOptions)})
 		// Cleaning up VolumeSnapshots can take a longer time if many snapshots were taken.
 		// Hence, we only finalize these objects after 1h.
-		cleanResourceFn(ops, c, &volumesnapshotv1.VolumeSnapshotList{}, VolumeSnapshotContentCleanOption, snapshotCleanOptions),
-		cleanResourceFn(snapshotContentOps, c, &volumesnapshotv1.VolumeSnapshotContentList{}, VolumeSnapshotContentCleanOption, snapshotCleanOptions),
-	)(ctx)
+		attrs = append(attrs, cleanAttributes{ops, &volumesnapshotv1.VolumeSnapshotList{}, cleanOpts(VolumeSnapshotContentCleanOption, snapshotCleanOptions)})
+		attrs = append(attrs, cleanAttributes{snapshotContentOps, &volumesnapshotv1.VolumeSnapshotContentList{}, cleanOpts(VolumeSnapshotContentCleanOption, snapshotCleanOptions)})
+	}
+
+	return attrs, nil
+}
+
+// CleanWebhooks deletes all Webhooks in the Shoot cluster that are not being managed by the addon manager.
+func (b *Botanist) CleanWebhooks(ctx context.Context) error {
+	return b.clean(ctx, b.cleanWebhooksAttributes)
+}
+
+// CleanExtendedAPIs removes API extensions like CRDs and API services from the Shoot cluster.
+func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
+	return b.clean(ctx, b.cleanExtendedAPIsAttributes)
+}
+
+// CleanKubernetesResources deletes all the Kubernetes resources in the Shoot cluster
+// other than those stored in the exceptions map. It will check whether all the Kubernetes resources
+// in the Shoot cluster other than those stored in the exceptions map have been deleted.
+// It will return an error in case it has not finished yet, and nil if all resources are gone.
+func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
+	return b.clean(ctx, b.cleanKubernetesResourcesAttributes)
 }
 
 // CleanShootNamespaces deletes all non-system namespaces in the Shoot cluster.
