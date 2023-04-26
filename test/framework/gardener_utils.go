@@ -501,7 +501,8 @@ func (f *GardenerFramework) VerifyNoRunningPods(ctx context.Context, shoot *gard
 	}
 
 	shootSeedNamespace := shoot.Status.TechnicalID
-	podList := &corev1.PodList{}
+	podList := &metav1.PartialObjectMetadataList{}
+	podList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("PodList"))
 	if err := seedClient.Client().List(ctx, podList, client.InNamespace(shootSeedNamespace)); err != nil {
 		return err
 	}
