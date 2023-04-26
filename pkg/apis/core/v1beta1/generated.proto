@@ -2999,6 +2999,10 @@ message Worker {
   // MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
   // +optional
   optional MachineControllerManagerSettings machineControllerManager = 19;
+
+  // Sysctls is a map of kernel settings to apply on all VMs in this worker pool.
+  // +optional
+  map<string, string> sysctls = 20;
 }
 
 // WorkerKubernetes contains configuration for Kubernetes components related to this worker pool.

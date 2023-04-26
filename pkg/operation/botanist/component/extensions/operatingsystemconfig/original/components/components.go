@@ -47,4 +47,5 @@ type Context struct {
 	LokiIngress             string
 	PromtailEnabled         bool
 	APIServerURL            string
+	Sysctls                 map[string]string
 }

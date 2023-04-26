@@ -6136,6 +6136,7 @@ func autoConvert_v1beta1_Worker_To_core_Worker(in *Worker, out *core.Worker, s c
 	out.Zones = *(*[]string)(unsafe.Pointer(&in.Zones))
 	out.SystemComponents = (*core.WorkerSystemComponents)(unsafe.Pointer(in.SystemComponents))
 	out.MachineControllerManagerSettings = (*core.MachineControllerManagerSettings)(unsafe.Pointer(in.MachineControllerManagerSettings))
+	out.Sysctls = *(*map[string]string)(unsafe.Pointer(&in.Sysctls))
 	return nil
 }
 
@@ -6174,6 +6175,7 @@ func autoConvert_core_Worker_To_v1beta1_Worker(in *core.Worker, out *Worker, s c
 	out.KubeletDataVolumeName = (*string)(unsafe.Pointer(in.KubeletDataVolumeName))
 	out.Zones = *(*[]string)(unsafe.Pointer(&in.Zones))
 	out.MachineControllerManagerSettings = (*MachineControllerManagerSettings)(unsafe.Pointer(in.MachineControllerManagerSettings))
+	out.Sysctls = *(*map[string]string)(unsafe.Pointer(&in.Sysctls))
 	return nil
 }
 

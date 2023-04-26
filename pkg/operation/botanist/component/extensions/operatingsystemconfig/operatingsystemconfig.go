@@ -632,6 +632,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			PromtailEnabled:         d.promtailEnabled,
 			LokiIngress:             d.lokiIngressHostName,
 			APIServerURL:            d.apiServerURL,
+			Sysctls:                 d.worker.Sysctls,
 		})
 		if err != nil {
 			return nil, err
