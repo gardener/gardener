@@ -52,7 +52,7 @@ func defaultNginxIngress(
 	kubernetesVersion *semver.Version,
 	ingressClass string,
 	config map[string]string,
-	lbAnnotations map[string]string,
+	loadBalancerAnnotations map[string]string,
 	gardenNamespaceName string,
 ) (
 	component.DeployWaiter,
@@ -73,7 +73,7 @@ func defaultNginxIngress(
 		KubernetesVersion:       kubernetesVersion,
 		IngressClass:            ingressClass,
 		ConfigData:              config,
-		LoadBalancerAnnotations: lbAnnotations,
+		LoadBalancerAnnotations: loadBalancerAnnotations,
 	}
 
 	return nginxingress.New(c, gardenNamespaceName, values), nil
