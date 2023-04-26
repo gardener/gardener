@@ -21,7 +21,7 @@ spec:
         - |
           set -ex
           cd
-          apk add bash bash-completion curl fzf g++ git jq less lsof make mandoc mc procps tmux tmux-doc yq vim go
+          apk add bash bash-completion curl fzf g++ git jq less lsof make mandoc mc procps sed tmux tmux-doc yq vim go
           apk add --repository=http://dl-cdn.alpinelinux.org/alpine/edge/main mount
           apk add --repository=http://dl-cdn.alpinelinux.org/alpine/edge/k9s k9s
           echo golang            && curl -sLO "https://go.dev/dl/$(curl -sL https://golang.org/VERSION?m=text).linux-amd64.tar.gz" && tar -C /usr/local -xzf go1.*.linux-amd64.tar.gz
