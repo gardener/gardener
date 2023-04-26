@@ -281,7 +281,7 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 func (b *Botanist) CleanShootNamespaces(ctx context.Context) error {
 	var (
 		c                 = b.ShootClientSet.Client()
-		namespaceCleaner  = utilclient.NewNamespaceCleaner(b.ShootClientSet.Kubernetes().CoreV1().Namespaces())
+		namespaceCleaner  = utilclient.NewNamespaceCleaner()
 		namespaceCleanOps = utilclient.NewCleanOps(utilclient.DefaultGoneEnsurer(), namespaceCleaner)
 	)
 

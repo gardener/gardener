@@ -24,7 +24,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
-	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -147,7 +146,7 @@ func DefaultCleaner() Cleaner {
 }
 
 // NewNamespaceCleaner instantiates a new Cleaner with ability to clean namespaces.
-func NewNamespaceCleaner(namespaceInterface typedcorev1.NamespaceInterface) Cleaner {
+func NewNamespaceCleaner() Cleaner {
 	return NewCleaner(timeutils.DefaultOps(), NewNamespaceFinalizer())
 }
 
