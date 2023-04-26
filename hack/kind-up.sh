@@ -215,11 +215,11 @@ kubectl get nodes -o name |\
 # Inject garden.local.gardener.cloud into coredns config (after ready plugin, before kubernetes plugin)
 kubectl -n kube-system get configmap coredns -ojson | \
   yq '.data.Corefile' | \
-  sed '0,/ready.*$/s//&'" \n\
-    hosts { \n\
-      $garden_cluster_ip garden.local.gardener.cloud \n\
-      fallthrough \n\
-    } \
+  sed '0,/ready.*$/s//&'"\n\
+    hosts {\n\
+      $garden_cluster_ip garden.local.gardener.cloud\n\
+      fallthrough\n\
+    }\
 "'/' | \
   kubectl -n kube-system create configmap coredns --from-file Corefile=/dev/stdin --dry-run=client -oyaml | \
   kubectl -n kube-system patch configmap coredns --patch-file /dev/stdin
