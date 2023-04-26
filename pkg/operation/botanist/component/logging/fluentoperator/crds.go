@@ -38,21 +38,16 @@ var (
 	fluentBitClusterParserCRD string
 	//go:embed assets/crd-fluentbit.fluent.io_fluentbits.yaml
 	fluentBitCRD string
-
-	//go:embed assets/crd-fluentd.fluent.io_clusterfilters.yaml
-	fluentDClusterFilterCRD string
-	//go:embed assets/crd-fluentd.fluent.io_clusterfluentdconfigs.yaml
-	fluentDClusterFluentDConfigCRD string
-	//go:embed assets/crd-fluentd.fluent.io_clusteroutputs.yaml
-	fluentDClusterOutputCRD string
-	//go:embed assets/crd-fluentd.fluent.io_filters.yaml
-	fluentDFilterCRD string
-	//go:embed assets/crd-fluentd.fluent.io_fluentdconfigs.yaml
-	fluentDConfigCRD string
-	//go:embed assets/crd-fluentd.fluent.io_fluentds.yaml
-	fluentDCRD string
-	//go:embed assets/crd-fluentd.fluent.io_outputs.yaml
-	fluentDOutputCRD string
+	//go:embed assets/crd-fluentbit.fluent.io_collectors.yaml
+	fluentBitCollectorCRD string
+	//go:embed assets/crd-fluentbit.fluent.io_fluentbitconfigs.yaml
+	fluentBitConfigCRD string
+	//go:embed assets/crd-fluentbit.fluent.io_filters.yaml
+	fluentBitFilterCRD string
+	//go:embed assets/crd-fluentbit.fluent.io_parsers.yaml
+	fluentBitParserCRD string
+	//go:embed assets/crd-fluentbit.fluent.io_outputs.yaml
+	fluentBitOutputCRD string
 
 	resources []string
 )
@@ -65,13 +60,11 @@ func init() {
 		fluentBitClusterOutputCRD,
 		fluentBitClusterParserCRD,
 		fluentBitCRD,
-		fluentDClusterFilterCRD,
-		fluentDClusterFluentDConfigCRD,
-		fluentDClusterOutputCRD,
-		fluentDFilterCRD,
-		fluentDConfigCRD,
-		fluentDCRD,
-		fluentDOutputCRD,
+		fluentBitCollectorCRD,
+		fluentBitConfigCRD,
+		fluentBitFilterCRD,
+		fluentBitParserCRD,
+		fluentBitOutputCRD,
 	)
 }
 

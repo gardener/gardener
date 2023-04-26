@@ -17,11 +17,11 @@ package fluentoperator_test
 import (
 	"context"
 
-	fluentbitv1alpha2 "github.com/fluent/fluent-operator/apis/fluentbit/v1alpha2"
-	"github.com/fluent/fluent-operator/apis/fluentbit/v1alpha2/plugins/custom"
-	"github.com/fluent/fluent-operator/apis/fluentbit/v1alpha2/plugins/filter"
-	"github.com/fluent/fluent-operator/apis/fluentbit/v1alpha2/plugins/input"
-	"github.com/fluent/fluent-operator/apis/fluentbit/v1alpha2/plugins/parser"
+	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
+	"github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/custom"
+	"github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/filter"
+	"github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/input"
+	"github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/parser"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -287,6 +287,22 @@ end`,
 						APIGroups: []string{"extensions.gardener.cloud"},
 						Resources: []string{"clusters"},
 						Verbs:     []string{"get", "list", "watch"},
+					},
+				},
+				Service: fluentbitv1alpha2.FluentBitService{
+					Name: fluentBitName,
+					Annotations: map[string]string{
+						resourcesv1alpha1.NetworkingFromPolicyPodLabelSelector: "all-seed-scrape-targets",
+						resourcesv1alpha1.NetworkingFromPolicyAllowedPorts:     `[{"port":"2020","protocol":"TCP"},{"port":"2021","protocol":"TCP"}]`,
+					},
+					Labels: map[string]string{
+						v1beta1constants.LabelApp:                                            fluentBitName,
+						v1beta1constants.LabelRole:                                           v1beta1constants.LabelLogging,
+						v1beta1constants.GardenRole:                                          v1beta1constants.GardenRoleLogging,
+						v1beta1constants.LabelNetworkPolicyToDNS:                             v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                v1beta1constants.LabelNetworkPolicyAllowed,
+						"networking.resources.gardener.cloud/to-logging-tcp-metrics":         v1beta1constants.LabelNetworkPolicyAllowed,
+						"networking.resources.gardener.cloud/to-all-shoots-loki-tcp-metrics": v1beta1constants.LabelNetworkPolicyAllowed,
 					},
 				},
 			},

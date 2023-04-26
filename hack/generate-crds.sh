@@ -54,10 +54,7 @@ get_group_package () {
     echo "github.com/gardener/hvpa-controller/api/v1alpha1"
     ;;
   "fluentbit.fluent.io")
-    echo "github.com/fluent/fluent-operator/apis/fluentbit/v1alpha2"
-    ;;
-  "fluentd.fluent.io")
-    echo "github.com/fluent/fluent-operator/apis/fluentd/v1alpha1"
+    echo "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
     ;;
   *)
     >&2 echo "unknown group $1"
@@ -122,7 +119,6 @@ if [ -n "${2:-}" ]; then
       generate_group druid.gardener.cloud
       generate_group autoscaling.k8s.io
       generate_group fluentbit.fluent.io
-      generate_group fluentd.fluent.io
     fi
   else
     while [ -n "${2:-}" ] ; do
@@ -137,5 +133,4 @@ else
   generate_group druid.gardener.cloud
   generate_group autoscaling.k8s.io
   generate_group fluentbit.fluent.io
-  generate_group fluentd.fluent.io
 fi

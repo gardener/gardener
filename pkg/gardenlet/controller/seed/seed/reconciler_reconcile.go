@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
-	fluentbitv1alpha2 "github.com/fluent/fluent-operator/apis/fluentbit/v1alpha2"
+	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
 	"github.com/go-logr/logr"
 	istiov1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -96,7 +96,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
@@ -1044,31 +1043,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 	if err := g.Compile().Run(ctx, flow.Opts{Log: log}); err != nil {
 		return flow.Errors(err)
-	}
-
-	if loggingEnabled {
-		// TODO(Kristian-ZH): Delete this in a future when the operator releases a version with this improvement: Ref https://github.com/fluent/fluent-operator/issues/654
-		// Waiting for fluent-bit service to be created
-		fluentBitService := &corev1.Service{}
-		if err := retry.UntilTimeout(ctx, 5*time.Second, time.Minute, func(ctx context.Context) (done bool, err error) {
-			if err = seedClient.Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, v1beta1constants.DaemonSetNameFluentBit), fluentBitService); err != nil {
-				return retry.MinorError(fmt.Errorf("fluent-bit service does not exist yet"))
-			}
-			return retry.Ok()
-		}); err != nil {
-			return err
-		}
-
-		// Patching fluent-bit service with the network policy annotations
-		patch = client.MergeFrom(fluentBitService.DeepCopy())
-		fluentBitService.ObjectMeta.Annotations = map[string]string{
-			resourcesv1alpha1.NetworkingFromPolicyPodLabelSelector: "all-seed-scrape-targets",
-			resourcesv1alpha1.NetworkingFromPolicyAllowedPorts:     `[{"port":"2020","protocol":"TCP"},{"port":"2021","protocol":"TCP"}]`,
-		}
-		log.Info("Patching network policy annotation of the fluent-bit Service")
-		if err := seedClient.Patch(ctx, fluentBitService, patch); err != nil {
-			return err
-		}
 	}
 
 	return secretsManager.Cleanup(ctx)

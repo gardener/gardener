@@ -251,6 +251,11 @@ spec:
                       split lines.
                     format: int64
                     type: integer
+                  dockerModeParser:
+                    description: Specify an optional parser for the first line of
+                      the docker multiline mode. The parser name to be specified must
+                      be registered in the parsers.conf file.
+                    type: string
                   excludePath:
                     description: 'Set one or multiple shell patterns separated by
                       commas to exclude files matching a certain criteria, e.g: exclude_path=*.gz,*.zip'

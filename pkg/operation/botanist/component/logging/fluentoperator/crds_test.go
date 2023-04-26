@@ -71,14 +71,11 @@ var _ = Describe("#CRDs", func() {
 		Entry("ClusterOutput", "clusteroutputs.fluentbit.fluent.io"),
 		Entry("ClusterParser", "clusterparsers.fluentbit.fluent.io"),
 		Entry("FluentBit", "fluentbits.fluentbit.fluent.io"),
-
-		Entry("ClusterFilter", "clusterfilters.fluentd.fluent.io"),
-		Entry("ClusterFluentdConfig", "clusterfluentdconfigs.fluentd.fluent.io"),
-		Entry("ClusterOutput", "clusteroutputs.fluentd.fluent.io"),
-		Entry("Filter", "filters.fluentd.fluent.io"),
-		Entry("FluentdConfig", "fluentdconfigs.fluentd.fluent.io"),
-		Entry("Fluentd", "fluentds.fluentd.fluent.io"),
-		Entry("Output", "outputs.fluentd.fluent.io"),
+		Entry("Collector", "collectors.fluentbit.fluent.io"),
+		Entry("FluentBitConfig", "fluentbitconfigs.fluentbit.fluent.io"),
+		Entry("Filter", "filters.fluentbit.fluent.io"),
+		Entry("Parser", "parsers.fluentbit.fluent.io"),
+		Entry("Output", "outputs.fluentbit.fluent.io"),
 	)
 
 	DescribeTable("should re-create CRD if it is deleted",
@@ -95,13 +92,10 @@ var _ = Describe("#CRDs", func() {
 		Entry("ClusterOutput", "clusteroutputs.fluentbit.fluent.io"),
 		Entry("ClusterParser", "clusterparsers.fluentbit.fluent.io"),
 		Entry("FluentBit", "fluentbits.fluentbit.fluent.io"),
-
-		Entry("ClusterFilter", "clusterfilters.fluentd.fluent.io"),
-		Entry("ClusterFluentdConfig", "clusterfluentdconfigs.fluentd.fluent.io"),
-		Entry("ClusterOutput", "clusteroutputs.fluentd.fluent.io"),
-		Entry("Filter", "filters.fluentd.fluent.io"),
-		Entry("FluentdConfig", "fluentdconfigs.fluentd.fluent.io"),
-		Entry("Fluentd", "fluentds.fluentd.fluent.io"),
-		Entry("Output", "outputs.fluentd.fluent.io"),
+		Entry("Collectors", "collectors.fluentbit.fluent.io"),
+		Entry("FluentBitConfig", "fluentbitconfigs.fluentbit.fluent.io"),
+		Entry("Filter", "filters.fluentbit.fluent.io"),
+		Entry("Parser", "parsers.fluentbit.fluent.io"),
+		Entry("Output", "outputs.fluentbit.fluent.io"),
 	)
 })

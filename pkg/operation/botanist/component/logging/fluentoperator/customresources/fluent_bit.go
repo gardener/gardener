@@ -15,12 +15,14 @@
 package customresources
 
 import (
-	fluentbitv1alpha2 "github.com/fluent/fluent-operator/apis/fluentbit/v1alpha2"
+	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
 
 // GetFluentBit returns instance of FluentBit custom resource.
@@ -148,6 +150,14 @@ func GetFluentBit(labels map[string]string, fluentBitName, namespace, image, ini
 					Resources: []string{"clusters"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
+			},
+			Service: fluentbitv1alpha2.FluentBitService{
+				Name: fluentBitName,
+				Annotations: map[string]string{
+					resourcesv1alpha1.NetworkingFromPolicyPodLabelSelector: "all-seed-scrape-targets",
+					resourcesv1alpha1.NetworkingFromPolicyAllowedPorts:     `[{"port":"2020","protocol":"TCP"},{"port":"2021","protocol":"TCP"}]`,
+				},
+				Labels: labels,
 			},
 		},
 	}

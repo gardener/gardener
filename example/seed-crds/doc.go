@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate ../../hack/generate-crds.sh 10-crd- extensions.gardener.cloud resources.gardener.cloud druid.gardener.cloud autoscaling.k8s.io fluentbit.fluent.io fluentd.fluent.io
+//go:generate ../../hack/generate-crds.sh 10-crd- extensions.gardener.cloud resources.gardener.cloud druid.gardener.cloud autoscaling.k8s.io fluentbit.fluent.io
 
 // Package seed_crds contains generated manifests for all CRDs that are present on a Seed cluster.
 // Useful for development purposes.

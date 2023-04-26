@@ -48,7 +48,7 @@ var (
 	lokiPort    = utils.IntStrPtrFromInt(3100)
 )
 
-// FluentOperator are the values for the Fluent Operator.
+// FluentOperatorValues are the values for the Fluent Operator.
 type FluentOperatorValues struct {
 	// OperatorImage is the image of the Fluent Operator
 	OperatorImage string
@@ -110,18 +110,13 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 				},
 				{
 					APIGroups: []string{"fluentbit.fluent.io"},
-					Resources: []string{"fluentbits", "clusterfluentbitconfigs", "clusterfilters", "clusterinputs", "clusteroutputs", "clusterparsers"},
-					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
-				},
-				{
-					APIGroups: []string{"fluentd.fluent.io"},
-					Resources: []string{"fluentds", "fluentds/status", "clusterfluentdconfigs", "clusterfluentdconfigs/status", "fluentdconfigs", "fluentdconfigs/status", "clusterfilters", "filters", "clusteroutputs", "outputs"},
+					Resources: []string{"fluentbits", "clusterfluentbitconfigs", "clusterfilters", "clusterinputs", "clusteroutputs", "clusterparsers", "collectors", "fluentbitconfigs", "filters", "outputs", "parsers"},
 					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 				},
 				{
 					APIGroups: []string{"rbac.authorization.k8s.io"},
 					Resources: []string{"clusterrolebindings", "clusterroles"},
-					Verbs:     []string{"create"},
+					Verbs:     []string{"get", "list", "watch", "create"},
 				},
 				{
 					APIGroups: []string{"extensions.gardener.cloud"},
@@ -170,6 +165,7 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 								Name:            name,
 								Image:           f.values.OperatorImage,
 								ImagePullPolicy: corev1.PullIfNotPresent,
+								Args:            []string{"--disable-component-controllers", "fluentd"},
 								Env:             f.computeEnv(),
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{

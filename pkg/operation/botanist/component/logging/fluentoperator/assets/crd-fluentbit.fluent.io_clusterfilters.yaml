@@ -139,6 +139,20 @@ spec:
                             responses from Kubernetes API server.
                           pattern: ^\d+(k|K|KB|kb|m|M|MB|mb|g|G|GB|gb)?$
                           type: string
+                        cacheUseDockerId:
+                          description: When enabled, metadata will be fetched from
+                            K8s when docker_id is changed.
+                          type: boolean
+                        dnsRetries:
+                          description: DNS lookup retries N times until the network
+                            start working
+                          format: int32
+                          type: integer
+                        dnsWaitTime:
+                          description: DNS lookup interval between network status
+                            checks
+                          format: int32
+                          type: integer
                         dummyMeta:
                           description: If set, use dummy-meta data (for test/dev purposes)
                           type: boolean
@@ -162,6 +176,15 @@ spec:
                         kubeCAPath:
                           description: Absolute path to scan for certificate files
                           type: string
+                        kubeMetaCacheTTL:
+                          description: configurable TTL for K8s cached metadata. By
+                            default, it is set to 0 which means TTL for cache entries
+                            is disabled and cache entries are evicted at random when
+                            capacity is reached. In order to enable this option, you
+                            should set the number to a time interval. For example,
+                            set this value to 60 or 60s and cache entries which have
+                            been created more than 60s will be evicted.
+                          type: string
                         kubeMetaPreloadCacheDir:
                           description: If set, Kubernetes meta-data can be cached/pre-loaded
                             from files in JSON format in this directory, named as
@@ -175,9 +198,23 @@ spec:
                         kubeTokenFile:
                           description: Token file
                           type: string
+                        kubeTokenTTL:
+                          description: configurable 'time to live' for the K8s token.
+                            By default, it is set to 600 seconds. After this time,
+                            the token is reloaded from Kube_Token_File or the Kube_Token_Command.
+                          type: string
                         kubeURL:
                           description: API Server end-point
                           type: string
+                        kubeletHost:
+                          description: kubelet host using for HTTP request, this only
+                            works when Use_Kubelet set to On.
+                          type: string
+                        kubeletPort:
+                          description: kubelet port using for HTTP request, this only
+                            works when useKubelet is set to On.
+                          format: int32
+                          type: integer
                         labels:
                           description: Include Kubernetes resource labels in the extra
                             metadata.
@@ -233,6 +270,12 @@ spec:
                         useJournal:
                           description: When enabled, the filter reads logs coming
                             in Journald format.
+                          type: boolean
+                        useKubelet:
+                          description: This is an optional feature flag to get metadata
+                            information from kubelet instead of calling Kube Server
+                            API to enhance the log. This could mitigate the Kube API
+                            heavy traffic issue for large cluster.
                           type: boolean
                       type: object
                     lua:
@@ -553,6 +596,11 @@ spec:
                         alias:
                           description: Alias for the plugin
                           type: string
+                        allowlistKeys:
+                          description: If the key is not matched, that field is removed.
+                          items:
+                            type: string
+                          type: array
                         records:
                           description: Append fields. This parameter needs key and
                             value pair.
@@ -574,8 +622,14 @@ spec:
                             default value: 1.'
                           pattern: ^(((f|F)alse)|(no_limits)|(no_retries)|([1-9]+[0-9]*))$
                           type: string
+                        uuidKeys:
+                          description: If set, the plugin appends uuid to each record.
+                            The value assigned becomes the key in the map.
+                          items:
+                            type: string
+                          type: array
                         whitelistKeys:
-                          description: If the key is not matched, that field is removed.
+                          description: An alias of allowlistKeys for backwards compatibility.
                           items:
                             type: string
                           type: array
