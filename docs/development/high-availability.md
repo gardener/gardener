@@ -61,6 +61,7 @@ Concretely, all seed system components should respect the following conventions:
     spec:
       topologySpreadConstraints:
       - maxSkew: 1
+        minDomains: 2 # lower value of max replicas or number of zones
         topologyKey: topology.kubernetes.io/zone
         whenUnsatisfiable: DoNotSchedule
         matchLabels: ...
@@ -118,6 +119,7 @@ All control plane components should respect the following conventions:
     spec:
       topologySpreadConstraints:
       - maxSkew: 1
+        minDomains: 2 # lower value of max replicas or number of zones
         topologyKey: topology.kubernetes.io/zone
         whenUnsatisfiable: DoNotSchedule
         matchLabels: ...
@@ -194,6 +196,7 @@ All system components should respect the following conventions:
     spec:
       topologySpreadConstraints:
       - maxSkew: 1
+        minDomains: 2 # lower value of max replicas or number of zones
         topologyKey: topology.kubernetes.io/zone
         whenUnsatisfiable: DoNotSchedule
         matchLabels: ...

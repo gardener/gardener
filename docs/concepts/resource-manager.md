@@ -919,6 +919,7 @@ The webhook performs the following actions:
           whenUnsatisfiable: ScheduleAnyway
           labelSelector: ...
         - topologyKey: topology.kubernetes.io/zone
+          minDomains: 2 # lower value of max replicas or number of zones
           maxSkew: 1
           whenUnsatisfiable: DoNotSchedule
           labelSelector: ...
@@ -927,6 +928,7 @@ The webhook performs the following actions:
       This enforces that the (multiple) pods are scheduled across zones.
       It circumvents a known limitation in Kubernetes for clusters < 1.26 (ref [kubernetes/kubernetes#109364](https://github.com/kubernetes/kubernetes/issues/109364).
       In case the number of replicas is larger than twice the number of zones, then the `maxSkew=2` for the second spread constraints.
+      The `minDomains` calculation is based on whatever value is lower - (maximum) replicas or number of zones. This is the number of minimum domains required to schedule pods in a highly available manner.
 
    Independent on the number of zones, when the `high-availability-config.resources.gardener.cloud/failure-tolerance-type` annotation is set and NOT empty, then the `whenUnsatisfiable` is set to `DoNotSchedule` for the constraint with `topologyKey=kubernetes.io/hostname` (which enforces the node-spread).
 
