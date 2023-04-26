@@ -62,10 +62,15 @@ var _ = Describe("Nginx Ingress", func() {
 			"dash": "false",
 		}
 
+		loadBalancerAnnotations = map[string]string{
+			"some": "value",
+		}
+
 		values = Values{
-			ImageController:     imageController,
-			ImageDefaultBackend: imageDefaultBackend,
-			ConfigData:          configMapData,
+			ImageController:         imageController,
+			ImageDefaultBackend:     imageDefaultBackend,
+			ConfigData:              configMapData,
+			LoadBalancerAnnotations: loadBalancerAnnotations,
 		}
 
 		configMapName = "nginx-ingress-controller-" + utils.ComputeConfigMapChecksum(configMapData)[:8]
@@ -275,6 +280,7 @@ kind: Service
 metadata:
   annotations:
     networking.resources.gardener.cloud/from-world-to-ports: '[{"protocol":"TCP","port":80},{"protocol":"TCP","port":443}]'
+    some: value
   creationTimestamp: null
   labels:
     app: nginx-ingress

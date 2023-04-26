@@ -93,6 +93,8 @@ type Values struct {
 	IngressClass string
 	// ConfigData contains the configuration details for the nginx-ingress controller
 	ConfigData map[string]string
+	// LoadBalancerAnnotations are the annotations added to the nginx-ingress load balancer service.
+	LoadBalancerAnnotations map[string]string
 }
 
 // New creates a new instance of DeployWaiter for nginx-ingress
@@ -177,9 +179,10 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 
 		serviceController = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      serviceNameController,
-				Namespace: n.namespace,
-				Labels:    getLabels(LabelValueController, ""),
+				Name:        serviceNameController,
+				Namespace:   n.namespace,
+				Annotations: n.values.LoadBalancerAnnotations,
+				Labels:      getLabels(LabelValueController, ""),
 			},
 			Spec: corev1.ServiceSpec{
 				Type: corev1.ServiceTypeLoadBalancer,
