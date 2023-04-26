@@ -312,7 +312,7 @@ kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug
 kind-extensions-up kind-extensions-down gardener-extensions-up gardener-extensions-down: export KUBECONFIG = $(GARDENER_EXTENSIONS_KUBECONFIG)
 kind-ha-single-zone-up kind-ha-single-zone-down gardener-ha-single-zone-up register-kind-ha-single-zone-env tear-down-kind-ha-single-zone-env test-e2e-local-ha-single-zone ci-e2e-kind-ha-single-zone ci-e2e-kind-ha-single-zone-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG)
 kind-ha-multi-zone-up kind-ha-multi-zone-down gardener-ha-multi-zone-up register-kind-ha-multi-zone-env tear-down-kind-ha-multi-zone-env test-e2e-local-ha-multi-zone ci-e2e-kind-ha-multi-zone ci-e2e-kind-ha-multi-zone-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG)
-kind-operator-up kind-operator-down operator-up operator-down test-e2e-local-operator ci-e2e-kind-operator: export KUBECONFIG = $(GARDENER_LOCAL_OPERATOR_KUBECONFIG)
+kind-operator-up kind-operator-down operator-up operator-dev operator-debug operator-down test-e2e-local-operator ci-e2e-kind-operator: export KUBECONFIG = $(GARDENER_LOCAL_OPERATOR_KUBECONFIG)
 
 kind-up: $(KIND) $(KUBECTL) $(HELM) $(YQ)
 	./hack/kind-up.sh --cluster-name gardener-local --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/local/values.yaml
@@ -351,7 +351,7 @@ kind-operator-down: $(KIND)
 
 # speed-up skaffold deployments by building all images concurrently
 export SKAFFOLD_BUILD_CONCURRENCY = 0
-gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator-up operator-dev  operator-debug: export SKAFFOLD_DEFAULT_REPO = localhost:5001
+gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator-up operator-dev operator-debug: export SKAFFOLD_DEFAULT_REPO = localhost:5001
 gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator-up operator-dev operator-debug: export SKAFFOLD_PUSH = true
 # use static label for skaffold to prevent rolling all gardener components on every `skaffold` invocation
 gardener%up gardener%dev gardener%debug gardener%down gardenlet%up gardenlet%dev gardenlet%debug gardenlet%down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-local
