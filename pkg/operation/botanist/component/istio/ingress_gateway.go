@@ -80,6 +80,10 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 		}
 
 		if istioIngressGateway.MinReplicas != nil {
+			// Apply minReplicas here to deploy the Ingress-Gateway with the intended number of replicas from the beginning (creation).
+			// Otherwise, we would need to wait until HPA scales up the deployment which then again can trigger unnecessary rolling updates
+			// when additional configuration is added by registered webhooks, e.g. high-availability-config webhook.
+			values["replicas"] = *istioIngressGateway.MinReplicas
 			values["minReplicas"] = *istioIngressGateway.MinReplicas
 		}
 		if istioIngressGateway.MaxReplicas != nil {
