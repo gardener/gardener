@@ -16,7 +16,9 @@ package kernelconfig_test
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
@@ -67,7 +69,20 @@ var _ = Describe("Component", func() {
 			},
 			Sysctls: sysctls,
 		})
-		modifiedData := data + additionalData
+		unsortedData := data + additionalData
+		linesWithComments := strings.Split(unsortedData, "\n")
+		lines := []string{}
+		for _, line := range linesWithComments {
+			// Remove comments and empty lines
+			if !strings.HasPrefix(line, "#") && line != "" {
+				lines = append(lines, line)
+			}
+		}
+		sort.Strings(lines)
+		modifiedData := ""
+		for _, line := range lines {
+			modifiedData += line + "\n"
+		}
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(units).To(ConsistOf(
@@ -108,8 +123,6 @@ kernel.softlockup_all_cpu_backtrace = 1
 # See https://github.com/kubernetes/kube-deploy/issues/261
 # Increase the number of connections
 net.core.somaxconn = 32768
-# Increase number of incoming connections backlog
-net.core.netdev_max_backlog = 5000
 # Maximum Socket Receive Buffer
 net.core.rmem_max = 16777216
 # Default Socket Send Buffer
