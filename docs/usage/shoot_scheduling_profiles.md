@@ -18,15 +18,13 @@ As of today, Gardener supports two predefined scheduling profiles:
    
    The kube-scheduler is started without any profiles. In such case, by default, one profile with the scheduler name `default-scheduler` is created. This profile includes the default plugins. If a Pod doesn't specify the `.spec.schedulerName` field, kube-apiserver sets it to `default-scheduler`. Then, the Pod gets scheduled by the `default-scheduler` accordingly.
   
-- `bin-packing` (alpha)
+- `bin-packing`
 
    **Overview**
 
    The `bin-packing` profile scores Nodes based on the allocation of resources. It prioritizes Nodes with the most allocated resources. By favoring the Nodes with the most allocation, some of the other Nodes become under-utilized over time (because new Pods keep being scheduled to the most allocated Nodes). Then, the cluster-autoscaler identifies such under-utilized Nodes and removes them from the cluster. In this way, this profile provides a greater overall resource utilization (compared to the `balanced` profile).
 
    > **Note:** The decision of when to remove a Node is a trade-off between optimizing for utilization or the availability of resources. Removing under-utilized Nodes improves cluster utilization, but new workloads might have to wait for resources to be provisioned again before they can run.
-
-   > **Note:** The `bin-packing` profile is considered as an alpha feature. Use it only for evaluation purposes.
 
    **How it works?**
    
