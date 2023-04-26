@@ -23,6 +23,9 @@ import (
 
 // Finalizer checks and removes the finalizers of given resource.
 type Finalizer interface {
+	// MayFinalize checks whether finalizing the resource is allowed.
+	MayFinalize(ctx context.Context, c client.Client, obj client.Object) (bool, string, error)
+
 	// Finalize removes the resource finalizers (so it can be garbage collected).
 	Finalize(ctx context.Context, c client.Client, obj client.Object) error
 

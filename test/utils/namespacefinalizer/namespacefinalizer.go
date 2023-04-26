@@ -47,7 +47,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		r.Client = mgr.GetClient()
 	}
 	if r.NamespaceFinalizer == nil {
-		r.NamespaceFinalizer = utilclient.NewNamespaceFinalizer()
+		r.NamespaceFinalizer = utilclient.NewNamespaceFinalizer(nil)
 	}
 
 	return builder.ControllerManagedBy(mgr).

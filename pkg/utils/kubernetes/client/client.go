@@ -83,6 +83,11 @@ func NewFinalizer() Finalizer {
 
 var defaultFinalizer = NewFinalizer()
 
+// MayFinalize checks whether finalizing the resource is allowed.
+func (f *finalizer) MayFinalize(ctx context.Context, c client.Client, obj client.Object) (bool, string, error) {
+	return true, "", nil
+}
+
 // Finalize removes the finalizers (.meta.finalizers) of given resource.
 func (f *finalizer) Finalize(ctx context.Context, c client.Client, obj client.Object) error {
 	withFinalizers := obj.DeepCopyObject().(client.Object)
@@ -95,11 +100,21 @@ func (f *finalizer) HasFinalizers(obj client.Object) (bool, error) {
 	return len(obj.GetFinalizers()) > 0, nil
 }
 
-type namespaceFinalizer struct{}
+type namespaceFinalizer struct {
+	mayFinalizeCheck func(context.Context, client.Client, client.Object) (bool, string, error)
+}
 
 // NewNamespaceFinalizer instantiates a namespace finalizer.
-func NewNamespaceFinalizer() Finalizer {
-	return &namespaceFinalizer{}
+func NewNamespaceFinalizer(mayFinalizeCheck func(context.Context, client.Client, client.Object) (bool, string, error)) Finalizer {
+	return &namespaceFinalizer{mayFinalizeCheck}
+}
+
+// MayFinalize checks whether finalizing the resource is allowed.
+func (f *namespaceFinalizer) MayFinalize(ctx context.Context, c client.Client, obj client.Object) (bool, string, error) {
+	if f.mayFinalizeCheck == nil {
+		return true, "", nil
+	}
+	return f.mayFinalizeCheck(ctx, c, obj)
 }
 
 // Finalize removes the finalizers of given namespace resource.
@@ -146,8 +161,8 @@ func DefaultCleaner() Cleaner {
 }
 
 // NewNamespaceCleaner instantiates a new Cleaner with ability to clean namespaces.
-func NewNamespaceCleaner() Cleaner {
-	return NewCleaner(timeutils.DefaultOps(), NewNamespaceFinalizer())
+func NewNamespaceCleaner(mayFinalizeCheck func(context.Context, client.Client, client.Object) (bool, string, error)) Cleaner {
+	return NewCleaner(timeutils.DefaultOps(), NewNamespaceFinalizer(mayFinalizeCheck))
 }
 
 // Clean deletes and optionally finalizes resources that expired their termination date.
@@ -177,6 +192,15 @@ func (cl *cleaner) doClean(ctx context.Context, c client.Client, obj client.Obje
 		}
 
 		if hasFinalizers {
+			mayFinalize, reason, err := cl.finalizer.MayFinalize(ctx, c, obj)
+			if err != nil {
+				return fmt.Errorf("failed checking whether object %s may be finalized: %w", client.ObjectKeyFromObject(obj), err)
+			}
+
+			if !mayFinalize {
+				return fmt.Errorf("may not finalize object %s: %s", client.ObjectKeyFromObject(obj), reason)
+			}
+
 			return cl.finalizer.Finalize(ctx, c, obj)
 		}
 	}

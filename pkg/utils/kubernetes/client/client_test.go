@@ -195,7 +195,7 @@ var _ = Describe("Cleaner", func() {
 					deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
 					now               = time.Unix(60, 0)
 					sw                = mockclient.NewMockSubResourceClient(ctrl)
-					finalizer         = NewNamespaceFinalizer()
+					finalizer         = NewNamespaceFinalizer(nil)
 					cleaner           = NewCleaner(timeOps, finalizer)
 				)
 

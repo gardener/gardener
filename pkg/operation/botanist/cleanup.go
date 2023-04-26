@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
@@ -249,10 +250,30 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 // CleanShootNamespaces deletes all non-system namespaces in the Shoot cluster.
 // It assumes that all workload resources are cleaned up in previous step(s).
 func (b *Botanist) CleanShootNamespaces(ctx context.Context) error {
+	attrs, err := b.cleanKubernetesResourcesAttributes()
+	if err != nil {
+		return err
+	}
+
 	var (
-		c                 = b.ShootClientSet.Client()
-		namespaceCleaner  = utilclient.NewNamespaceCleaner()
-		namespaceCleanOps = utilclient.NewCleanOps(utilclient.DefaultGoneEnsurer(), namespaceCleaner)
+		c                = b.ShootClientSet.Client()
+		ensurer          = utilclient.DefaultGoneEnsurer()
+		namespaceCleaner = utilclient.NewNamespaceCleaner(func(ctx context.Context, c client.Client, namespace client.Object) (bool, string, error) {
+			for _, attr := range attrs {
+				opts := &utilclient.CleanOptions{}
+				opts.ApplyOptions(attr.cleanOptions)
+
+				if err := ensurer.EnsureGone(ctx, c, attr.listObj, append(opts.ListOptions, client.InNamespace(namespace.GetName()))...); err != nil {
+					if utilclient.AreObjectsRemaining(err) {
+						return false, fmt.Sprintf("objects of kind %T are still remaining", attr.listObj), nil
+					}
+					return false, "", fmt.Errorf("failed ensuring objects of kind %T are gone: %w", attr.listObj, err)
+				}
+			}
+
+			return true, "", nil
+		})
+		namespaceCleanOps = utilclient.NewCleanOps(ensurer, namespaceCleaner)
 
 		namespaceMatchingLabelsSelector = utilclient.ListWith{&NoCleanupPreventionListOption}
 		namespaceMatchingFieldsSelector = utilclient.ListWith{
