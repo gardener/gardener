@@ -181,9 +181,9 @@ func (r *Reconciler) reconcileBackupBucket(
 		return reconcile.Result{}, err
 	}
 
-	// round the secret timestamp because extension.Status.LastOperation.LastUpdateTime
+	// truncate the secret timestamp because extension.Status.LastOperation.LastUpdateTime
 	// is represented in time.RFC3339 format which does not include the Nano precision
-	secretLastUpdateTime = secretLastUpdateTime.Round(time.Second)
+	secretLastUpdateTime = secretLastUpdateTime.Truncate(time.Second)
 
 	if err := r.SeedClient.Get(seedCtx, client.ObjectKeyFromObject(extensionBackupBucket), extensionBackupBucket); err != nil {
 		if !apierrors.IsNotFound(err) {
