@@ -102,6 +102,7 @@ spec:
         {{- end }}
         {{- end }}
         {{- end }}
+        {{- if not .Values.config.server.healthProbes.disable }}
         livenessProbe:
           httpGet:
             path: /healthz
@@ -116,6 +117,7 @@ spec:
             scheme: HTTP
           initialDelaySeconds: 10
           timeoutSeconds: 5
+        {{- end }}
         {{- if .Values.resources }}
         resources:
 {{ toYaml .Values.resources | indent 10 }}

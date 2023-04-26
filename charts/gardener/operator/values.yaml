@@ -41,6 +41,8 @@ config:
     webhooks:
       port: 2750
     healthProbes:
+      # health probes should be disabled for debugging purposes only
+      disable: false
       port: 2751
     metrics:
       port: 2752

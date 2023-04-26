@@ -94,6 +94,7 @@ spec:
         dnsConfig:
 {{ toYaml .Values.global.controller.dnsConfig | indent 10 }}
         {{- end }}
+        {{- if not .Values.global.controller.config.server.healthProbes.disable }}
         livenessProbe:
           httpGet:
             path: /healthz
@@ -108,6 +109,7 @@ spec:
             scheme: HTTP
           initialDelaySeconds: 10
           timeoutSeconds: 5
+        {{- end }}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:

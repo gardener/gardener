@@ -247,3 +247,18 @@ deploy:
         replicaCount: 2
       createNamespace: true
       wait: true
+profiles:
+- name: debug
+  activation:
+  - command: debug
+  patches:
+  - op: add
+    path: /deploy/helm/releases/0/setValueTemplates
+    value:
+      replicaCount: 1
+      config:
+        leaderElection:
+          leaderElect: false
+        server:
+          healthProbes:
+            disable: true

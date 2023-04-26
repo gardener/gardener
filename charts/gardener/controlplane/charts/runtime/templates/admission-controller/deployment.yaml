@@ -78,6 +78,7 @@ spec:
         resources:
 {{ toYaml .Values.global.admission.resources | indent 10 }}
         {{- end }}
+        {{- if not .Values.global.admission.config.server.healthProbes.disable }}
         livenessProbe:
           httpGet:
             path: /healthz
@@ -92,6 +93,7 @@ spec:
             scheme: HTTP
           initialDelaySeconds: 10
           timeoutSeconds: 5
+        {{- end }}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:

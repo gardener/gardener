@@ -138,6 +138,8 @@ config:
   logFormat: json
   server:
     healthProbes:
+      # health probes should be disabled for debugging purposes only
+      disable: false
       port: 2728
     metrics:
       port: 2729
