@@ -263,6 +263,11 @@ func (f *GardenerFramework) HibernateShoot(ctx context.Context, shoot *gardencor
 		return err
 	}
 
+	// Verify no running pods after hibernation
+	if err := f.VerifyNoRunningPods(ctx, shoot); err != nil {
+		return fmt.Errorf("failed to verify no running pods after hibernation: %v", err)
+	}
+
 	log.Info("Shoot was hibernated successfully")
 	return nil
 }
@@ -485,4 +490,30 @@ func setHibernation(shoot *gardencorev1beta1.Shoot, hibernated bool) {
 	shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 		Enabled: &hibernated,
 	}
+}
+
+// VerifyNoRunningPods verifies that no control plane pods are running for a given shoot.
+// If any control plane pods are found to be running, returns an error with their names. Otherwise, returns nil.
+func (f *GardenerFramework) VerifyNoRunningPods(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
+	_, seedClient, err := f.GetSeed(ctx, *shoot.Spec.SeedName)
+	if err != nil {
+		return err
+	}
+
+	shootSeedNamespace := shoot.Status.TechnicalID
+	podList := &metav1.PartialObjectMetadataList{}
+	podList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("PodList"))
+	if err := seedClient.Client().List(ctx, podList, client.InNamespace(shootSeedNamespace)); err != nil {
+		return err
+	}
+
+	if len(podList.Items) > 0 {
+		runningPodNames := []string{}
+		for _, pod := range podList.Items {
+			runningPodNames = append(runningPodNames, pod.Name)
+		}
+		return fmt.Errorf("found pods in namespace %s: %v", shootSeedNamespace, runningPodNames)
+	}
+
+	return nil
 }

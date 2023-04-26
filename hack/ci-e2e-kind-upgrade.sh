@@ -170,6 +170,30 @@ function set_seed_name() {
   esac
 }
 
+function run_pre_upgrade_test() {
+  local test_command
+
+  if [[ "$SHOOT_FAILURE_TOLERANCE_TYPE" == "node" || "$SHOOT_FAILURE_TOLERANCE_TYPE" == "zone" ]]; then
+    test_command="test-pre-upgrade"
+  else
+    test_command="test-non-ha-pre-upgrade"
+  fi
+
+  make "$test_command" GARDENER_PREVIOUS_RELEASE="$GARDENER_PREVIOUS_RELEASE" GARDENER_NEXT_RELEASE="$GARDENER_NEXT_RELEASE"
+}
+
+function run_post_upgrade_test() {
+  local test_command
+
+  if [[ "$SHOOT_FAILURE_TOLERANCE_TYPE" == "node" || "$SHOOT_FAILURE_TOLERANCE_TYPE" == "zone" ]]; then
+    test_command="test-post-upgrade"
+  else
+    test_command="test-non-ha-post-upgrade"
+  fi
+
+  make "$test_command" GARDENER_PREVIOUS_RELEASE="$GARDENER_PREVIOUS_RELEASE" GARDENER_NEXT_RELEASE="$GARDENER_NEXT_RELEASE"
+}
+
 clamp_mss_to_pmtu
 set_gardener_upgrade_version_env_variables
 set_cluster_name
@@ -193,7 +217,7 @@ echo "Installing gardener version '$GARDENER_PREVIOUS_RELEASE'"
 install_previous_release
 
 echo "Running gardener pre-upgrade tests"
-make test-pre-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
+run_pre_upgrade_test
 
 echo "Upgrading gardener version '$GARDENER_PREVIOUS_RELEASE' to '$GARDENER_NEXT_RELEASE'"
 upgrade_to_next_release
@@ -212,6 +236,6 @@ TIMEOUT=1200 ./hack/usage/wait-for.sh seed "$SEED_NAME" GardenletReady Bootstrap
 sleep 60
 
 echo "Running gardener post-upgrade tests"
-make test-post-upgrade GARDENER_PREVIOUS_RELEASE=$GARDENER_PREVIOUS_RELEASE GARDENER_NEXT_RELEASE=$GARDENER_NEXT_RELEASE
+run_post_upgrade_test
 
 gardener_down

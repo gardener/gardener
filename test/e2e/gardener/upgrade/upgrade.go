@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/framework"
 	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
@@ -50,10 +51,6 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 		)
 
 		shootTest.Namespace = projectNamespace
-		// TODO: (@seshachalam-yv): Remove this once next latest version of gardener is released.
-		// Due to recent PR https://github.com/gardener/gardener/pull/6999, by default we are expecting these Extensions "local-ext-seed", "local-ext-shoot".
-		// Excluding these extensions from the shoot spec and only include them in the next latest version of gardener.
-		shootTest.Spec.Extensions = nil
 		f.Shoot = shootTest
 
 		When("Pre-Upgrade (Gardener version:'"+gardenerPreviousVersion+"', Git version:'"+gardenerPreviousGitVersion+"')", Ordered, Label("pre-upgrade"), func() {
@@ -121,4 +118,132 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 			})
 		})
 	})
+
+	// This test will create a non-HA control plane shoot in Gardener version vX.X.X
+	// and then upgrades shoot's control plane to HA once successfully upgraded Gardener version to vY.Y.Y.
+	Context("Shoot::e2e-upgrade-ha", Label("high-availability"), func() {
+		var (
+			parentCtx = context.Background()
+			f         = framework.NewShootCreationFramework(&framework.ShootCreationConfig{GardenerConfig: e2e.DefaultGardenConfig(projectNamespace)})
+			shootTest = e2e.DefaultShoot("e2e-upgrade-ha")
+			err       error
+		)
+
+		shootTest.Namespace = projectNamespace
+		shootTest.Spec.ControlPlane = nil
+		f.Shoot = shootTest
+
+		When("(Gardener version:'"+gardenerPreviousVersion+"', Git version:'"+gardenerPreviousGitVersion+"')", Ordered, Label("pre-upgrade"), func() {
+			var (
+				ctx    context.Context
+				cancel context.CancelFunc
+			)
+
+			BeforeAll(func() {
+				ctx, cancel = context.WithTimeout(parentCtx, 30*time.Minute)
+				DeferCleanup(cancel)
+			})
+
+			It("should create a shoot", func() {
+				Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
+				f.Verify()
+			})
+		})
+
+		When("Post-Upgrade (Gardener version:'"+gardenerCurrentVersion+"', Git version:'"+gardenerCurrentGitVersion+"')", Ordered, Label("post-upgrade"), func() {
+			var (
+				ctx    context.Context
+				cancel context.CancelFunc
+			)
+
+			BeforeAll(func() {
+				ctx, cancel = context.WithTimeout(parentCtx, 60*time.Minute)
+				DeferCleanup(cancel)
+				Expect(f.GetShoot(ctx, shootTest)).To(Succeed())
+				f.ShootFramework, err = f.NewShootFramework(ctx, shootTest)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should be able to upgrade a non-HA shoot which was created in previous gardener release to HA with failure tolerance type '"+os.Getenv("SHOOT_FAILURE_TOLERANCE_TYPE")+"'", func() {
+				highavailability.UpgradeAndVerify(ctx, f.ShootFramework, getFailureToleranceType())
+			})
+
+			It("should be able to delete a shoot which was created in previous gardener release", func() {
+				Expect(f.Shoot.Status.Gardener.Version).Should(Equal(gardenerPreviousVersion))
+				Expect(f.GardenerFramework.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
+			})
+		})
+	})
+
+	Context("Shoot::e2e-upgrade-hib", func() {
+		var (
+			parentCtx = context.Background()
+			f         = framework.NewShootCreationFramework(&framework.ShootCreationConfig{
+				GardenerConfig: e2e.DefaultGardenConfig(projectNamespace),
+			})
+			shootTest = e2e.DefaultShoot("e2e-upgrade-hib")
+			err       error
+		)
+		shootTest.Namespace = projectNamespace
+		f.Shoot = shootTest
+
+		When("Pre-upgrade (Gardener version:'"+gardenerCurrentVersion+"', Git version:'"+gardenerCurrentGitVersion+"')", Ordered, Label("pre-upgrade"), func() {
+			var (
+				ctx    context.Context
+				cancel context.CancelFunc
+			)
+
+			BeforeAll(func() {
+				ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
+				DeferCleanup(cancel)
+			})
+
+			It("should create a shoot", func() {
+				Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
+				f.Verify()
+			})
+
+			It("should hibernate a shoot", func() {
+				Expect(f.GetShoot(ctx, shootTest)).To(Succeed())
+				f.ShootFramework, err = f.NewShootFramework(ctx, shootTest)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(f.HibernateShoot(ctx, f.Shoot)).To(Succeed())
+			})
+		})
+
+		When("Post-upgrade (Gardener version:'"+gardenerCurrentVersion+"', Git version:'"+gardenerCurrentGitVersion+"')", Ordered, Label("post-upgrade"), func() {
+			var (
+				ctx    context.Context
+				cancel context.CancelFunc
+			)
+
+			BeforeAll(func() {
+				ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
+				DeferCleanup(cancel)
+				Expect(f.GetShoot(ctx, shootTest)).To(Succeed())
+			})
+
+			It("should be able to wake up a shoot which was hibernated in previous gardener release", func() {
+				Expect(f.Shoot.Status.Gardener.Version).Should(Equal(gardenerPreviousVersion))
+				Expect(f.WakeUpShoot(ctx, shootTest)).To(Succeed())
+			})
+
+			It("should delete a shoot which was created in previous gardener release", func() {
+				Expect(f.Shoot.Status.Gardener.Version).Should(Equal(gardenerCurrentVersion))
+				Expect(f.DeleteShootAndWaitForDeletion(ctx, shootTest)).To(Succeed())
+			})
+		})
+	})
 })
+
+// getFailureToleranceType returns a failureToleranceType based on env variable SHOOT_FAILURE_TOLERANCE_TYPE value
+func getFailureToleranceType() gardencorev1beta1.FailureToleranceType {
+	var failureToleranceType gardencorev1beta1.FailureToleranceType
+	switch os.Getenv("SHOOT_FAILURE_TOLERANCE_TYPE") {
+	case "zone":
+		failureToleranceType = gardencorev1beta1.FailureToleranceTypeZone
+	case "node":
+		failureToleranceType = gardencorev1beta1.FailureToleranceTypeNode
+	}
+	return failureToleranceType
+}
