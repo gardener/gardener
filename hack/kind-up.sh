@@ -140,7 +140,7 @@ fi
 
 kind create cluster \
   --name "$CLUSTER_NAME" \
-  --image "kindest/node:v1.24.7" \
+  --image "kindest/node:v1.26.3" \
   --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "environment=$ENVIRONMENT" --set "gardener.repositoryRoot"=$(dirname "$0")/..)
 
 # adjust Kind's CRI default OCI runtime spec for new containers to include the cgroup namespace
@@ -235,7 +235,7 @@ kubectl apply -k "$(dirname "$0")/../example/gardener-local/metrics-server"   --
 
 kubectl get nodes -l node-role.kubernetes.io/control-plane -o name |\
   cut -d/ -f2 |\
-  xargs -I {} kubectl taint node {} node-role.kubernetes.io/master:NoSchedule- node-role.kubernetes.io/control-plane:NoSchedule- || true
+  xargs -I {} kubectl taint node {} node-role.kubernetes.io/control-plane:NoSchedule- || true
 
 # Allow multiple shoot worker nodes with calico as shoot CNI: As we run overlay in overlay ip-in-ip needs to be allowed in the workload.
 # Unfortunately, the felix configuration is created on the fly by calico. Hence, we need to poll until kubectl wait for new resources

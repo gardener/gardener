@@ -1,5 +1,5 @@
 environment: skaffold # skaffold|local
-image: kindest/node:v1.24.7
+image: kindest/node:v1.26.3
 
 gardener:
   apiserverRelay:
