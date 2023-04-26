@@ -65,7 +65,6 @@ type istiod struct {
 	values        Values
 
 	managedResourceIstioIngressName string
-	managedResourceIstioSystemName  string
 }
 
 // IstiodValues contains configuration values for the Istiod component.
@@ -118,7 +117,6 @@ func NewIstio(
 		values:        values,
 
 		managedResourceIstioIngressName: values.NamePrefix + managedResourceControlName,
-		managedResourceIstioSystemName:  values.NamePrefix + managedResourceIstioSystemName,
 	}
 }
 
@@ -144,7 +142,7 @@ func (i *istiod) deployIstiod(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, i.client, i.values.Istiod.Namespace, i.managedResourceIstioSystemName, false, renderedIstiodChart.AsSecretData())
+	return managedresources.CreateForSeed(ctx, i.client, i.values.Istiod.Namespace, managedResourceIstioSystemName, false, renderedIstiodChart.AsSecretData())
 }
 
 func (i *istiod) Deploy(ctx context.Context) error {
@@ -329,7 +327,7 @@ func (i *istiod) generateIstiodChart(ignoreMode bool) (*chartrenderer.RenderedCh
 func ManagedResourceNames(istiodEnabled bool, namePrefix string) []string {
 	names := []string{namePrefix + managedResourceControlName}
 	if istiodEnabled {
-		names = append(names, namePrefix+managedResourceIstioSystemName)
+		names = append(names, managedResourceIstioSystemName)
 	}
 	return names
 }

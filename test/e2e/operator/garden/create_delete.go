@@ -94,8 +94,8 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 
 			g.Expect(runtimeClient.List(ctx, managedResourceList, client.InNamespace("istio-system"))).To(Succeed())
 			g.Expect(managedResourceList.Items).To(ConsistOf(
+				healthyManagedResource("istio-system"),
 				healthyManagedResource("virtual-garden-istio"),
-				healthyManagedResource("virtual-garden-istio-system"),
 			))
 		}).WithPolling(2 * time.Second).Should(Succeed())
 

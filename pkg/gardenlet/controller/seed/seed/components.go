@@ -96,11 +96,9 @@ func defaultIstio(
 	// Automatically create ingress gateways for single-zone control planes on multi-zonal seeds
 	if len(seedObj.Spec.Provider.Zones) > 1 {
 		for _, zone := range seedObj.Spec.Provider.Zones {
-			namespace := shared.GetIstioNamespaceForZone(*conf.SNI.Ingress.Namespace, zone)
-
 			if err := shared.AddIstioIngressGateway(
 				istioDeployer,
-				namespace,
+				shared.GetIstioNamespaceForZone(*conf.SNI.Ingress.Namespace, zone),
 				seed.GetZonalLoadBalancerServiceAnnotations(zone),
 				shared.GetIstioZoneLabels(labels, &zone),
 				seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone),
@@ -129,11 +127,9 @@ func defaultIstio(
 		// Automatically create ingress gateways for single-zone control planes on multi-zonal seeds
 		if len(seedObj.Spec.Provider.Zones) > 1 {
 			for _, zone := range seedObj.Spec.Provider.Zones {
-				namespace := shared.GetIstioNamespaceForZone(*handler.SNI.Ingress.Namespace, zone)
-
 				if err := shared.AddIstioIngressGateway(
 					istioDeployer,
-					namespace,
+					shared.GetIstioNamespaceForZone(*handler.SNI.Ingress.Namespace, zone),
 					utils.MergeStringMaps(handler.LoadBalancerService.Annotations, seed.GetZonalLoadBalancerServiceAnnotations(zone)),
 					shared.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
 					seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone),

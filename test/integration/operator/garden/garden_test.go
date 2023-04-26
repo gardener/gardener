@@ -298,8 +298,8 @@ var _ = Describe("Garden controller tests", func() {
 		// this test, so let's fake this here.
 		By("Patch Istio ManagedResources to report healthiness")
 		Eventually(func(g Gomega) {
-			for _, suffix := range []string{"istio", "istio-system"} {
-				mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "virtual-garden-" + suffix, Namespace: "istio-system"}}
+			for _, name := range []string{"istio-system", "virtual-garden-istio"} {
+				mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "istio-system"}}
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed(), "for "+mr.Name)
 
 				patch := client.MergeFrom(mr.DeepCopy())
