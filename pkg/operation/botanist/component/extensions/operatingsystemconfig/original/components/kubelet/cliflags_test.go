@@ -194,5 +194,26 @@ var _ = Describe("CLIFlags", func() {
 				"--v=2",
 			),
 		),
+		Entry(
+			"kubernetes 1.27 w/ containerd, w/o imagePullProgressDeadline",
+			"1.27.0",
+			extensionsv1alpha1.CRINameContainerD,
+			image,
+			components.ConfigurableKubeletCLIFlags{},
+			ConsistOf(
+				"--bootstrap-kubeconfig=/var/lib/kubelet/kubeconfig-bootstrap",
+				"--config=/var/lib/kubelet/config/kubelet",
+				"--kubeconfig=/var/lib/kubelet/kubeconfig-real",
+				"--node-labels=worker.gardener.cloud/kubernetes-version=1.27.0",
+				"--node-labels=containerruntime.worker.gardener.cloud/gvisor=true",
+				"--node-labels=kubernetes.io/arch=amd64",
+				"--node-labels=test=foo",
+				"--node-labels=test2=bar",
+				"--node-labels=worker.gardener.cloud/pool=worker",
+				"--container-runtime-endpoint=unix:///run/containerd/containerd.sock",
+				"--runtime-cgroups=/system.slice/containerd.service",
+				"--v=2",
+			),
+		),
 	)
 })
