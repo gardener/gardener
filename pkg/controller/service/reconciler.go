@@ -29,12 +29,13 @@ import (
 )
 
 var (
-	keyIstioIngressGateway        = client.ObjectKey{Namespace: "istio-ingress", Name: "istio-ingressgateway"}
-	keyIstioIngressGatewayZone0   = client.ObjectKey{Namespace: "istio-ingress--0", Name: "istio-ingressgateway"}
-	keyIstioIngressGatewayZone1   = client.ObjectKey{Namespace: "istio-ingress--1", Name: "istio-ingressgateway"}
-	keyIstioIngressGatewayZone2   = client.ObjectKey{Namespace: "istio-ingress--2", Name: "istio-ingressgateway"}
-	keyNginxIngress               = client.ObjectKey{Namespace: "garden", Name: "nginx-ingress-controller"}
-	keyVirtualGardenKubeAPIServer = client.ObjectKey{Namespace: "garden", Name: "virtual-garden-kube-apiserver"}
+	keyIstioIngressGateway              = client.ObjectKey{Namespace: "istio-ingress", Name: "istio-ingressgateway"}
+	keyIstioIngressGatewayZone0         = client.ObjectKey{Namespace: "istio-ingress--0", Name: "istio-ingressgateway"}
+	keyIstioIngressGatewayZone1         = client.ObjectKey{Namespace: "istio-ingress--1", Name: "istio-ingressgateway"}
+	keyIstioIngressGatewayZone2         = client.ObjectKey{Namespace: "istio-ingress--2", Name: "istio-ingressgateway"}
+	keyNginxIngress                     = client.ObjectKey{Namespace: "garden", Name: "nginx-ingress-controller"}
+	keyVirtualGardenKubeAPIServer       = client.ObjectKey{Namespace: "garden", Name: "virtual-garden-kube-apiserver"}
+	keyVirtualGardenIstioIngressGateway = client.ObjectKey{Namespace: "virtual-garden-istio-ingress", Name: "istio-ingressgateway"}
 )
 
 const (
@@ -98,6 +99,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			ip = r.HostIP
 		case key == keyVirtualGardenKubeAPIServer && servicePort.Name == "kube-apiserver":
 			service.Spec.Ports[i].NodePort = nodePortVirtualGardenKubeAPIServer
+			ip = r.HostIP
+		case key == keyVirtualGardenIstioIngressGateway:
 			ip = r.HostIP
 		}
 	}

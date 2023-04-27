@@ -36,7 +36,6 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
@@ -51,6 +50,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
+	sharedcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
@@ -172,7 +172,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 	istioIngressGateway := []istio.IngressGatewayValues{{Namespace: *r.Config.SNI.Ingress.Namespace}}
 	if len(seed.GetInfo().Spec.Provider.Zones) > 1 {
 		for _, zone := range seed.GetInfo().Spec.Provider.Zones {
-			istioIngressGateway = append(istioIngressGateway, istio.IngressGatewayValues{Namespace: operation.GetIstioNamespaceForZone(*r.Config.SNI.Ingress.Namespace, zone)})
+			istioIngressGateway = append(istioIngressGateway, istio.IngressGatewayValues{Namespace: sharedcomponent.GetIstioNamespaceForZone(*r.Config.SNI.Ingress.Namespace, zone)})
 		}
 	}
 	// Add for each ExposureClass handler in the config an own Ingress Gateway.
@@ -180,7 +180,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 		istioIngressGateway = append(istioIngressGateway, istio.IngressGatewayValues{Namespace: *handler.SNI.Ingress.Namespace})
 		if len(seed.GetInfo().Spec.Provider.Zones) > 1 {
 			for _, zone := range seed.GetInfo().Spec.Provider.Zones {
-				istioIngressGateway = append(istioIngressGateway, istio.IngressGatewayValues{Namespace: operation.GetIstioNamespaceForZone(*handler.SNI.Ingress.Namespace, zone)})
+				istioIngressGateway = append(istioIngressGateway, istio.IngressGatewayValues{Namespace: sharedcomponent.GetIstioNamespaceForZone(*handler.SNI.Ingress.Namespace, zone)})
 			}
 		}
 	}
@@ -204,10 +204,10 @@ func (r *Reconciler) runDeleteSeedFlow(
 		dwdProber            = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProber})
 		systemResources      = seedsystem.New(seedClient, r.GardenNamespace, seedsystem.Values{})
 		vpnAuthzServer       = vpnauthzserver.New(seedClient, r.GardenNamespace, "", kubernetesVersion)
-		istioCRDs            = istio.NewCRD(r.SeedClientSet.ChartApplier(), seedClient)
+		istioCRDs            = istio.NewCRD(r.SeedClientSet.ChartApplier())
 		istio                = istio.NewIstio(seedClient, r.SeedClientSet.ChartRenderer(), istio.Values{
 			Istiod: istio.IstiodValues{
-				Enabled:   true,
+				Enabled:   !seedIsGarden,
 				Namespace: v1beta1constants.IstioSystemNamespace,
 			},
 			IngressGateway: istioIngressGateway,
@@ -273,8 +273,10 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Fn:   component.OpDestroyAndWait(istio).Destroy,
 		})
 		destroyIstioCRDs = g.Add(flow.Task{
-			Name:         "Destroy Istio CRDs",
-			Fn:           component.OpDestroyAndWait(istioCRDs).Destroy,
+			Name: "Destroy Istio CRDs",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return component.OpDestroyAndWait(istioCRDs).Destroy(ctx)
+			}).DoIf(!seedIsGarden),
 			Dependencies: flow.NewTaskIDs(destroyIstio),
 		})
 		destroyFluentOperatorCRDs = g.Add(flow.Task{

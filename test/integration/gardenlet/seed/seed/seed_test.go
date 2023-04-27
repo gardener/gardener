@@ -462,20 +462,24 @@ var _ = Describe("Seed controller tests", func() {
 							g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
 						}).Should(Succeed())
 					} else {
-						// Usually, the gardener-operator would deploy gardener-resource-manager and the related CRD for
-						// ManagedResources and VerticalPodAutoscaler. However, it is not really running, so we have to fake its behaviour here.
-						By("Create CustomResourceDefinition for ManagedResources")
+						// Usually, the gardener-operator deploys and manages the following resources.
+						// However, it is not really running, so we have to fake its behaviour here.
+						By("Create resources managed by gardener-operator")
 						var (
-							applier = kubernetes.NewApplier(testClient, testClient.RESTMapper())
-							mrCRD   = kubernetes.NewManifestReader([]byte(managedResourcesCRD))
-							vpaCRD  = kubernetes.NewManifestReader([]byte(verticalPodAutoscalerCRD))
+							applier              = kubernetes.NewApplier(testClient, testClient.RESTMapper())
+							mrCRD                = kubernetes.NewManifestReader([]byte(managedResourcesCRD))
+							vpaCRD               = kubernetes.NewManifestReader([]byte(verticalPodAutoscalerCRD))
+							istioSystenNamespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "istio-system"}}
 						)
 
 						Expect(applier.ApplyManifest(ctx, mrCRD, kubernetes.DefaultMergeFuncs)).To(Succeed())
 						Expect(applier.ApplyManifest(ctx, vpaCRD, kubernetes.DefaultMergeFuncs)).To(Succeed())
+						Expect(testClient.Create(ctx, istioSystenNamespace)).To(Succeed())
+
 						DeferCleanup(func() {
 							Expect(applier.DeleteManifest(ctx, mrCRD)).To(Succeed())
 							Expect(applier.DeleteManifest(ctx, vpaCRD)).To(Succeed())
+							Expect(testClient.Delete(ctx, istioSystenNamespace)).To(Succeed())
 						})
 					}
 
@@ -503,6 +507,20 @@ var _ = Describe("Seed controller tests", func() {
 
 						return managedResourceList.Items
 					}).Should(ConsistOf(expectedManagedResources))
+
+					expectedIstioManagedResources := []gomegatypes.GomegaMatcher{
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("istio")})}),
+					}
+					if !seedIsGarden {
+						expectedIstioManagedResources = append(expectedIstioManagedResources, MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("istio-system")})}))
+					}
+
+					Eventually(func(g Gomega) []resourcesv1alpha1.ManagedResource {
+						managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
+						g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace("istio-system"))).To(Succeed())
+
+						return managedResourceList.Items
+					}).Should(ConsistOf(expectedIstioManagedResources))
 
 					By("Verify that the fluent operator CRDs have been deployed")
 					expectedFluentOperatorCRDs := []gomegatypes.GomegaMatcher{

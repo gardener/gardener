@@ -122,7 +122,6 @@ func run(ctx context.Context, log logr.Logger, cfg *config.OperatorConfiguration
 	mgr, err := manager.New(restConfig, manager.Options{
 		Logger:                  log,
 		Scheme:                  operatorclient.RuntimeScheme,
-		Namespace:               v1beta1constants.GardenNamespace,
 		GracefulShutdownTimeout: pointer.Duration(5 * time.Second),
 
 		Host:                   cfg.Server.Webhooks.BindAddress,

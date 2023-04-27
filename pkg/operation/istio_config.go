@@ -15,23 +15,15 @@
 package operation
 
 import (
-	"fmt"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/validation"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
+	sharedcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-)
-
-const (
-	alternativeZoneKey = v1beta1constants.GardenRole
-	zoneInfix          = "--zone--"
 )
 
 // IstioServiceName is the currently used name of the istio ingress service, which is responsible for the shoot cluster.
@@ -63,9 +55,9 @@ func (o *Operation) IstioLoadBalancerAnnotations() map[string]string {
 func (o *Operation) IstioLabels() map[string]string {
 	zone := o.singleZoneIfPinned()
 	if exposureClassHandler := o.exposureClassHandler(); exposureClassHandler != nil {
-		return GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(exposureClassHandler.SNI.Ingress.Labels, exposureClassHandler.Name), zone)
+		return sharedcomponent.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(exposureClassHandler.SNI.Ingress.Labels, exposureClassHandler.Name), zone)
 	}
-	return GetIstioZoneLabels(o.sniConfig().Ingress.Labels, zone)
+	return sharedcomponent.GetIstioZoneLabels(o.sniConfig().Ingress.Labels, zone)
 }
 
 func (o *Operation) exposureClassHandler() *gardenletconfig.ExposureClassHandler {
@@ -92,7 +84,7 @@ func (o *Operation) addZonePinningIfRequired(namespace string) string {
 	// via the default multi-zonal istio ingress gateway.
 	zone := o.singleZoneIfPinned()
 	if zone != nil {
-		return GetIstioNamespaceForZone(namespace, *zone)
+		return sharedcomponent.GetIstioNamespaceForZone(namespace, *zone)
 	}
 	return namespace
 }
@@ -109,58 +101,4 @@ func (o *Operation) singleZoneIfPinned() *string {
 		}
 	}
 	return nil
-}
-
-// GetIstioNamespaceForZone returns the namespace to use for a given zone.
-// In case the zone name is too long the first five characters of the hash of the zone are used as zone identifiers.
-func GetIstioNamespaceForZone(defaultNamespace string, zone string) string {
-	const format = "%s--%s"
-	if ns := fmt.Sprintf(format, defaultNamespace, zone); len(ns) <= validation.DNS1035LabelMaxLength {
-		return ns
-	}
-	// Use the first five characters of the hash of the zone
-	hashedZone := utils.ComputeSHA256Hex([]byte(zone))
-	return fmt.Sprintf(format, defaultNamespace, hashedZone[:5])
-}
-
-// GetIstioZoneLabels returns the labels to be used for istio with the mandatory zone label set.
-func GetIstioZoneLabels(labels map[string]string, zone *string) map[string]string {
-	// Use "istio" for the default gateways and v1beta1constants.LabelExposureClassHandlerName for exposure classes
-	zonekey := istio.DefaultZoneKey
-	zoneValue := "ingressgateway"
-	if value, ok := labels[zonekey]; ok {
-		zoneValue = value
-	} else if value, ok := labels[alternativeZoneKey]; ok {
-		zonekey = alternativeZoneKey
-		zoneValue = value
-	}
-	if zone != nil {
-		zoneValue = fmt.Sprintf("%s%s%s", zoneValue, zoneInfix, *zone)
-	}
-	return utils.MergeStringMaps(labels, map[string]string{zonekey: zoneValue})
-}
-
-// IsZonalIstioExtension indicates whether the namespace related to the given labels is a zonal istio extension.
-// It also returns the zone.
-func IsZonalIstioExtension(labels map[string]string) (bool, string) {
-	if v, ok := labels[istio.DefaultZoneKey]; ok {
-		i := strings.Index(v, zoneInfix)
-		if i < 0 {
-			return false, ""
-		}
-		// There should be at least one character before and after the zone infix.
-		return i > 0 && i < len(v)-len(zoneInfix), v[i+len(zoneInfix):]
-	}
-	if _, ok := labels[v1beta1constants.LabelExposureClassHandlerName]; ok {
-		if v, ok := labels[alternativeZoneKey]; ok && strings.HasPrefix(v, v1beta1constants.GardenRoleExposureClassHandler) {
-			i := strings.Index(v, zoneInfix)
-			if i < 0 {
-				return false, ""
-			}
-			// There should be at least v1beta1constants.GardenRoleExposureClassHandler characters before
-			// and one after the zone infix.
-			return i >= len(v1beta1constants.GardenRoleExposureClassHandler) && i < len(v)-len(zoneInfix), v[i+len(zoneInfix):]
-		}
-	}
-	return false, ""
 }

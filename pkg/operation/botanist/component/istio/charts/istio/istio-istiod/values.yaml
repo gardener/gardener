@@ -4,6 +4,7 @@ labels:
   app: istiod
   istio: pilot
 deployNamespace: false
+priorityClassName: gardener-system-critical
 ports:
   https: 10250
 portsNames:

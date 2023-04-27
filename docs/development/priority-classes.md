@@ -21,7 +21,7 @@ When using the `gardener-operator` for managing the garden runtime and virtual c
 
 | Name                              | Priority  | Associated Components (Examples)                                                          |
 |---------------------------------- |-----------|-------------------------------------------------------------------------------------------|
-| `gardener-garden-system-critical` | 999999550 | `gardener-operator`, `gardener-resource-manager`                                          |
+| `gardener-garden-system-critical` | 999999550 | `gardener-operator`, `gardener-resource-manager`, `istio`                                 |
 | `gardener-garden-system-500`      | 999999500 | `virtual-garden-etcd-events`, `virtual-garden-etcd-main`, `virtual-garden-kube-apiserver` |
 | `gardener-garden-system-400`      | 999999400 |                                                                                           |
 | `gardener-garden-system-300`      | 999999300 | `vpa-admission-controller`, `etcd-druid`                                                  |

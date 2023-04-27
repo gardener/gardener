@@ -24,6 +24,8 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -105,4 +107,9 @@ var _ = BeforeSuite(func() {
 	By("Create test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: testScheme})
 	Expect(err).NotTo(HaveOccurred())
+
+	// The Istio-System a fixed namespace that cannot be made individual per test.
+	// Hence, create it here once and keep it, so that it won't interfere with any parallel test execution.
+	By("Create istio-system namespace")
+	Expect(client.IgnoreAlreadyExists(testClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "istio-system"}}))).To(Succeed())
 })

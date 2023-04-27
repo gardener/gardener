@@ -17,6 +17,8 @@ package client
 import (
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
+	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	apiextensionsinstall "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/install"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -43,6 +45,8 @@ func init() {
 			vpaautoscalingv1.AddToScheme,
 			druidv1alpha1.AddToScheme,
 			hvpav1alpha1.AddToScheme,
+			istionetworkingv1beta1.AddToScheme,
+			istionetworkingv1alpha3.AddToScheme,
 		)
 		virtualSchemeBuilder = runtime.NewSchemeBuilder(
 			kubernetesscheme.AddToScheme,

@@ -167,7 +167,7 @@ spec:
           name: istio-ca-root-cert
           defaultMode: 420
           optional: true
-      priorityClassName: gardener-system-critical
+      priorityClassName: {{ .Values.priorityClassName }}
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

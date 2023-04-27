@@ -52,7 +52,6 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
@@ -382,7 +381,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		}
 	}
 
-	istioCRDs := istio.NewCRD(chartApplier, seedClient)
+	istioCRDs := istio.NewCRD(chartApplier)
 	if err := istioCRDs.Deploy(ctx); err != nil {
 		return err
 	}
@@ -821,7 +820,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	// setup for flow graph
 	var dnsRecord component.DeployMigrateWaiter
 
-	istio, err := defaultIstio(seedClient, r.ImageVector, chartRenderer, seed, &r.Config, sniEnabledOrInUse)
+	istio, err := defaultIstio(seedClient, r.ImageVector, chartRenderer, seed, &r.Config, sniEnabledOrInUse, seedIsGarden)
 	if err != nil {
 		return err
 	}
@@ -1155,7 +1154,7 @@ func cleanupOrphanExposureClassHandlerResources(
 
 	zoneSet := sets.New(zones...)
 	for _, namespace := range zonalExposureClassHandlerNamespaces.Items {
-		if ok, zone := operation.IsZonalIstioExtension(namespace.Labels); ok {
+		if ok, zone := sharedcomponent.IsZonalIstioExtension(namespace.Labels); ok {
 			if err := cleanupOrphanIstioNamespace(ctx, log, c, namespace, true, func() bool {
 				if !zoneSet.Has(zone) {
 					return false
@@ -1181,7 +1180,7 @@ func cleanupOrphanExposureClassHandlerResources(
 	}
 
 	for _, namespace := range zonalIstioNamespaces.Items {
-		if ok, zone := operation.IsZonalIstioExtension(namespace.Labels); ok {
+		if ok, zone := sharedcomponent.IsZonalIstioExtension(namespace.Labels); ok {
 			if err := cleanupOrphanIstioNamespace(ctx, log, c, namespace, false, func() bool {
 				return zoneSet.Has(zone)
 			}); err != nil {
@@ -1231,7 +1230,7 @@ func cleanupOrphanIstioNamespace(
 				return nil
 			}
 		} else {
-			_, zone := operation.IsZonalIstioExtension(namespace.Labels)
+			_, zone := sharedcomponent.IsZonalIstioExtension(namespace.Labels)
 			if value, ok := gateway.Spec.Selector[istio.DefaultZoneKey]; ok && strings.HasSuffix(value, zone) {
 				log.Info("Resources of default zonal istio handler cannot be deleted as they are still in use", "zone", zone)
 				return nil

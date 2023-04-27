@@ -41,6 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
@@ -101,6 +102,7 @@ func (r *Reconciler) reconcile(
 	// garden system components
 	vpaCRD := vpa.NewCRD(applier, nil)
 	hvpaCRD := hvpa.NewCRD(applier)
+	istioCRD := istio.NewCRD(r.RuntimeClientSet.ChartApplier())
 	if !hvpaEnabled() {
 		hvpaCRD = component.OpDestroy(hvpaCRD)
 	}
@@ -118,6 +120,10 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 	etcdDruid, err := r.newEtcdDruid()
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	istio, err := r.newIstio(garden)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -156,10 +162,14 @@ func (r *Reconciler) reconcile(
 			Name: "Reconciling custom resource definition for HVPA",
 			Fn:   hvpaCRD.Deploy,
 		})
+		deployIstioCRD = g.Add(flow.Task{
+			Name: "Deploying custom resource definition for Istio",
+			Fn:   istioCRD.Deploy,
+		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
 			Fn:           component.OpWait(gardenerResourceManager).Deploy,
-			Dependencies: flow.NewTaskIDs(deployVPACRD, reconcileHVPACRD),
+			Dependencies: flow.NewTaskIDs(deployVPACRD, reconcileHVPACRD, deployIstioCRD),
 		})
 		deploySystemResources = g.Add(flow.Task{
 			Name:         "Deploying system resources",
@@ -181,11 +191,17 @@ func (r *Reconciler) reconcile(
 			Fn:           etcdDruid.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
+		deployIstio = g.Add(flow.Task{
+			Name:         "Deploying Istio",
+			Fn:           r.deployIstioFunc(istio),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
 		syncPointSystemComponents = flow.NewTaskIDs(
 			deploySystemResources,
 			deployVPA,
 			deployHVPA,
 			deployEtcdDruid,
+			deployIstio,
 		)
 
 		deployEtcds = g.Add(flow.Task{
@@ -342,7 +358,7 @@ func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, 
 	}
 }
 
-func (r *Reconciler) deployKubeAPIServerFunc(ctx context.Context, garden *operatorv1alpha1.Garden, kubeAPIServer kubeapiserver.Interface) func(context.Context) error {
+func (r *Reconciler) deployKubeAPIServerFunc(ctx context.Context, garden *operatorv1alpha1.Garden, kubeAPIServer kubeapiserver.Interface) flow.TaskFn {
 	return func(context.Context) error {
 		var (
 			address                 = gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domain)
@@ -437,4 +453,42 @@ func (r *Reconciler) initializeVirtualClusterClient(secretsManager secretsmanage
 	}
 
 	return clientSet.Client(), nil
+}
+
+func (r *Reconciler) deployIstioFunc(istioDeploy istio.Interface) flow.TaskFn {
+	return func(ctx context.Context) error {
+		if err := istioDeploy.Deploy(ctx); err != nil {
+			return err
+		}
+
+		// Deploy NetworkPolicy allowing kube-apiserver to talk all targets (e.g. etcd) and to receive traffic from outside.
+		// TODO(rfranzke): Remove this in the future when the network policy deployment has been refactored.
+		networkPolicies := []*networkingv1.NetworkPolicy{{ObjectMeta: metav1.ObjectMeta{Name: "istio-allow-all", Namespace: istioDeploy.GetValues().Istiod.Namespace}}}
+		for _, istioIngress := range istioDeploy.GetValues().IngressGateway {
+			networkPolicies = append(networkPolicies, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "istio-allow-all", Namespace: istioIngress.Namespace}})
+		}
+		for _, netPol := range networkPolicies {
+			networkPolicy := netPol
+			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.RuntimeClientSet.Client(), networkPolicy, func() error {
+				networkPolicy.Spec.Egress = []networkingv1.NetworkPolicyEgressRule{{
+					To: []networkingv1.NetworkPolicyPeer{
+						{PodSelector: &metav1.LabelSelector{}, NamespaceSelector: &metav1.LabelSelector{}},
+						{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
+					},
+				}}
+				networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{{
+					From: []networkingv1.NetworkPolicyPeer{
+						{PodSelector: &metav1.LabelSelector{}, NamespaceSelector: &metav1.LabelSelector{}},
+						{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
+					},
+				}}
+				networkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress}
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+
+		return istioDeploy.Wait(ctx)
+	}
 }
