@@ -35,7 +35,6 @@ import (
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
@@ -349,16 +348,16 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToPrivateNetworks(ctx context.Co
 			return err
 		}
 
-		if !v1beta1helper.IsWorkerless(shoot) {
+		if shoot.Spec.Networking != nil {
 			if v := shoot.Spec.Networking.Nodes; v != nil {
 				blockedNetworkPeers = append(blockedNetworkPeers, *v)
 			}
 			if v := shoot.Spec.Networking.Pods; v != nil {
 				blockedNetworkPeers = append(blockedNetworkPeers, *v)
 			}
-		}
-		if v := shoot.Spec.Networking.Services; v != nil {
-			blockedNetworkPeers = append(blockedNetworkPeers, *v)
+			if v := shoot.Spec.Networking.Services; v != nil {
+				blockedNetworkPeers = append(blockedNetworkPeers, *v)
+			}
 		}
 	}
 
@@ -394,16 +393,16 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToShootNetworks(ctx context.Cont
 	}
 
 	var shootNetworks []string
-	if !v1beta1helper.IsWorkerless(shoot) {
+	if shoot.Spec.Networking != nil {
 		if v := shoot.Spec.Networking.Nodes; v != nil {
 			shootNetworks = append(shootNetworks, *v)
 		}
 		if v := shoot.Spec.Networking.Pods; v != nil {
 			shootNetworks = append(shootNetworks, *v)
 		}
-	}
-	if v := shoot.Spec.Networking.Services; v != nil {
-		shootNetworks = append(shootNetworks, *v)
+		if v := shoot.Spec.Networking.Services; v != nil {
+			shootNetworks = append(shootNetworks, *v)
+		}
 	}
 
 	shootNetworkPeers, err := networkPolicyPeersWithExceptions(shootNetworks, r.SeedNetworks.BlockCIDRs...)

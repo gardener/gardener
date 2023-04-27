@@ -155,7 +155,7 @@ func (r *Reconciler) ClusterPredicate() predicate.Predicate {
 				return false
 			}
 
-			// if the shoot has no networking field, nothing to do here
+			// if the shoot has no networking field, return false
 			if shoot.Spec.Networking == nil {
 				return false
 			}
