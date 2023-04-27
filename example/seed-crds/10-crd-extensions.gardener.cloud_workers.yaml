@@ -447,6 +447,11 @@ spec:
                   - name
                   type: object
                 type: array
+              machineDeploymentsLastUpdateTime:
+                description: MachineDeploymentsLastUpdateTime is the timestamp when
+                  the status.MachineDeployments slice was last updated.
+                format: date-time
+                type: string
               observedGeneration:
                 description: ObservedGeneration is the most recent generation observed
                   for this resource.

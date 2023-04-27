@@ -4294,6 +4294,20 @@ DefaultStatus
 the cluster-autoscaler properly.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>machineDeploymentsLastUpdateTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MachineDeploymentsLastUpdateTime is the timestamp when the status.MachineDeployments slice was last updated.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <hr/>

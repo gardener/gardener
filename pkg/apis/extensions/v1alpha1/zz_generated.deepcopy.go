@@ -1760,6 +1760,10 @@ func (in *WorkerStatus) DeepCopyInto(out *WorkerStatus) {
 		*out = make([]MachineDeployment, len(*in))
 		copy(*out, *in)
 	}
+	if in.MachineDeploymentsLastUpdateTime != nil {
+		in, out := &in.MachineDeploymentsLastUpdateTime, &out.MachineDeploymentsLastUpdateTime
+		*out = (*in).DeepCopy()
+	}
 	return
 }
 

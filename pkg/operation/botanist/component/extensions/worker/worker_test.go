@@ -54,8 +54,9 @@ var _ = Describe("Worker", func() {
 		ctrl *gomock.Controller
 		c    client.Client
 
-		mockNow *mocktime.MockNow
-		now     time.Time
+		mockNow   *mocktime.MockNow
+		now       time.Time
+		metav1Now metav1.Time
 
 		ctx = context.TODO()
 		log = logr.Discard()
@@ -151,6 +152,7 @@ var _ = Describe("Worker", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		mockNow = mocktime.NewMockNow(ctrl)
 		now = time.Now()
+		metav1Now = metav1.NewTime(now)
 
 		s := runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
@@ -535,6 +537,110 @@ var _ = Describe("Worker", func() {
 
 			By("Wait")
 			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed(), "worker is ready")
+		})
+	})
+
+	Describe("#WaitUntilWorkerStatusMachineDeploymentsUpdated", func() {
+		It("should return error when no resources are found", func() {
+			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)).To(HaveOccurred())
+		})
+
+		It("should return error when status.machineDeploymentsLastUpdateTime remains nil", func() {
+			obj := w.DeepCopy()
+			Expect(c.Create(ctx, obj)).To(Succeed(), "creating worker succeeds")
+
+			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)).To(HaveOccurred(), "worker status is not updated")
+		})
+
+		It("should return error when status.machineDeploymentsLastUpdateTime is not updated", func() {
+			obj := w.DeepCopy()
+			obj.Status.MachineDeploymentsLastUpdateTime = &metav1Now
+			Expect(c.Create(ctx, obj)).To(Succeed(), "creating worker succeeds")
+
+			// this will populate the machineDeploymentsLastUpdateTime in the worker struct
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)).To(HaveOccurred(), "worker status is not updated")
+		})
+
+		It("should return no error when status.machineDeploymentsLastUpdateTime is added for the first time", func() {
+			defer test.WithVars(
+				&worker.TimeNow, mockNow.Do,
+			)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			By("Deploy")
+			// Deploy should fill internal state with the added timestamp annotation
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+			By("Patch object")
+			patch := client.MergeFrom(w.DeepCopy())
+			// remove operation annotation, add up-to-date timestamp annotation
+			w.ObjectMeta.Annotations = map[string]string{
+				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
+			}
+			// update the MachineDeploymentsLastUpdateTime in the worker status
+			w.Status.MachineDeploymentsLastUpdateTime = &metav1Now
+			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
+
+			By("WaitUntilWorkerStatusMachineDeploymentsUpdated")
+			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)).To(Succeed(), "worker status is updated with latest machine deployments")
+		})
+
+		It("should return no error when status.machineDeploymentsLastUpdateTime is updated", func() {
+			defer test.WithVars(
+				&worker.TimeNow, mockNow.Do,
+			)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			obj := w.DeepCopy()
+			obj.Status.MachineDeploymentsLastUpdateTime = &metav1Now
+			Expect(c.Create(ctx, obj)).To(Succeed(), "creating worker succeeds")
+
+			By("Deploy")
+			// Deploy should fill internal state with the added timestamp annotation
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+			By("Patch object")
+			patch := client.MergeFrom(w.DeepCopy())
+			// remove operation annotation, add up-to-date timestamp annotation
+			w.ObjectMeta.Annotations = map[string]string{
+				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
+			}
+			// update the MachineDeploymentsLastUpdateTime in the worker status
+			lastUpdateTime := metav1.NewTime(metav1Now.Add(1 * time.Second))
+			w.Status.MachineDeploymentsLastUpdateTime = &lastUpdateTime
+			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
+
+			By("WaitUntilWorkerStatusMachineDeploymentsUpdated")
+			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)).To(Succeed(), "worker status is updated with latest machine deployments")
+		})
+
+		// TODO(rishabh-11): Remove this test in a future release when it's ensured that all extensions were upgraded and follow the contract to maintain `MachineDeploymentsLastUpdateTime.
+		It("should return no error when status.machineDeploymentsLastUpdateTime is not maintained and worker is ready", func() {
+			defer test.WithVars(
+				&worker.TimeNow, mockNow.Do,
+			)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			By("Deploy")
+			// Deploy should fill internal state with the added timestamp annotation
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+			By("Patch object")
+			patch := client.MergeFrom(w.DeepCopy())
+			w.Status.LastError = nil
+			// remove operation annotation, add up-to-date timestamp annotation
+			w.ObjectMeta.Annotations = map[string]string{
+				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
+			}
+			w.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State: gardencorev1beta1.LastOperationStateSucceeded,
+			}
+			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
+
+			By("WaitUntilWorkerStatusMachineDeploymentsUpdated")
+			Expect(defaultDepWaiter.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)).To(Succeed(), "worker status is updated with latest machine deployments")
 		})
 	})
 

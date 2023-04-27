@@ -210,6 +210,9 @@ type WorkerStatus struct {
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	MachineDeployments []MachineDeployment `json:"machineDeployments,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	// MachineDeploymentsLastUpdateTime is the timestamp when the status.MachineDeployments slice was last updated.
+	// +optional
+	MachineDeploymentsLastUpdateTime *metav1.Time `json:"machineDeploymentsLastUpdateTime,omitempty"`
 }
 
 // MachineDeployment is a created machine deployment.
