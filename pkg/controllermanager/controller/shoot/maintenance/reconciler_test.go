@@ -525,7 +525,7 @@ var _ = Describe("Shoot Maintenance", func() {
 				Spec: gardencorev1beta1.ShootSpec{
 					Maintenance: &gardencorev1beta1.Maintenance{
 						AutoUpdate: &gardencorev1beta1.MaintenanceAutoUpdate{
-							KubernetesVersion: pointer.Bool(true),
+							KubernetesVersion: true,
 						},
 					},
 					Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.0.0"},
@@ -533,11 +533,11 @@ var _ = Describe("Shoot Maintenance", func() {
 			}
 		})
 		It("should determine that the shoot kubernetes version must be maintained - ForceUpdate to latest patch version", func() {
-			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = pointer.Bool(false)
+			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
 			cloudProfile.Spec.Kubernetes.Versions[4].ExpirationDate = &expirationDateInThePast
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.1"}
 
-			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, *shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
 			}, name)
@@ -547,7 +547,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should determine that the shoot kubernetes version must be maintained - ForceUpdate to latest non-preview patch version", func() {
-			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = pointer.Bool(false)
+			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
 			// expire shoots kubernetes version 1.0.0
 			cloudProfile.Spec.Kubernetes.Versions[5].ExpirationDate = &expirationDateInThePast
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.0"}
@@ -555,7 +555,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			// mark latest version 1.02 as preview
 			cloudProfile.Spec.Kubernetes.Versions[3].Classification = &previewClassification
 
-			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, *shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
 			}, name)
@@ -565,11 +565,11 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should determine that the shoot kubernetes version must be maintained - ForceUpdate to latest qualifying patch version of next minor version", func() {
-			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = pointer.Bool(false)
+			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
 			cloudProfile.Spec.Kubernetes.Versions[3].ExpirationDate = &expirationDateInThePast
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.2"}
 
-			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, *shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
 			}, name)
@@ -579,11 +579,11 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should determine that the shoot kubernetes version must be maintained - ForceUpdate to latest qualifying patch version of next minor version", func() {
-			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = pointer.Bool(true)
+			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
 			cloudProfile.Spec.Kubernetes.Versions[3].ExpirationDate = &expirationDateInThePast
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.2"}
 
-			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, *shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
 			}, name)
@@ -594,7 +594,7 @@ var _ = Describe("Shoot Maintenance", func() {
 
 		// special case when all the patch versions of the consecutive minor versions are expired
 		It("should determine that the shoot kubernetes version must be maintained - ForceUpdate to latest qualifying patch version (is expired) of next minor version.", func() {
-			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = pointer.Bool(false)
+			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
 			// expire version 1.0.2
 			cloudProfile.Spec.Kubernetes.Versions[3].ExpirationDate = &expirationDateInThePast
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.2"}
@@ -604,7 +604,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			cloudProfile.Spec.Kubernetes.Versions[1].ExpirationDate = &expirationDateInThePast
 			cloudProfile.Spec.Kubernetes.Versions[2].ExpirationDate = &expirationDateInThePast
 
-			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, *shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
 			}, name)
@@ -614,7 +614,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should determine that the shoot kubernetes version must be maintained - however the ForceUpdate is impossible (only preview version available)", func() {
-			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = pointer.Bool(false)
+			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
 			cloudProfile.Spec.Kubernetes.Versions[0].Classification = &previewClassification
 			cloudProfile.Spec.Kubernetes.Versions[1].Classification = &previewClassification
 			cloudProfile.Spec.Kubernetes.Versions[2].Classification = &previewClassification
@@ -622,7 +622,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			cloudProfile.Spec.Kubernetes.Versions[3].ExpirationDate = &expirationDateInThePast
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.2"}
 
-			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, *shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
 			}, name)
@@ -631,10 +631,10 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should determine that the shoot kubernetes version must be maintained - MaintenanceAutoUpdate set to true", func() {
-			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = pointer.Bool(true)
+			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.1"}
 
-			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, *shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
 			}, name)
@@ -644,11 +644,11 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should determine that the kubernetes version must NOT to be maintained - ForceUpdate not required & MaintenanceAutoUpdate set to false", func() {
-			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = pointer.Bool(false)
+			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
 			cloudProfile.Spec.Kubernetes.Versions[4].ExpirationDate = &expirationDateInTheFuture
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.1"}
 
-			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, *shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
 			}, name)
@@ -659,10 +659,10 @@ var _ = Describe("Shoot Maintenance", func() {
 
 		It("should determine that the shootKubernetes version must be maintained - cloud profile has no matching kubernetes version defined (the shoots kubernetes version has been deleted from the cloudProfile) -> update to latest kubernetes patch version with same minor", func() {
 			cloudProfile.Spec.Kubernetes.Versions = kubernetesSettings.Versions[:4]
-			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = pointer.Bool(true)
+			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.0"}
 
-			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, *shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
 			}, name)
@@ -673,10 +673,10 @@ var _ = Describe("Shoot Maintenance", func() {
 
 		It("should determine that the shootKubernetes version must be maintained - cloud profile has no matching kubernetes version defined (the shoots kubernetes version has been deleted from the cloudProfile) && isLatest patch version for minor-> update to latest kubernetes patch version for next minor", func() {
 			cloudProfile.Spec.Kubernetes.Versions = kubernetesSettings.Versions[:2]
-			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = pointer.Bool(true)
+			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.2"}
 
-			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, *shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
 			}, name)
@@ -686,11 +686,11 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("do not update major Kubernetes version", func() {
-			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = pointer.Bool(false)
+			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
 			cloudProfile.Spec.Kubernetes.Versions[3].ExpirationDate = &expirationDateInThePast
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.1.2"}
 
-			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, *shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
 			}, name)

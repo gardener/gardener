@@ -122,10 +122,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 		obj.Spec.Maintenance = &Maintenance{}
 	}
 	if obj.Spec.Maintenance.AutoUpdate == nil {
-		obj.Spec.Maintenance.AutoUpdate = &MaintenanceAutoUpdate{}
-	}
-	if obj.Spec.Maintenance.AutoUpdate.KubernetesVersion == nil {
-		obj.Spec.Maintenance.AutoUpdate.KubernetesVersion = pointer.Bool(true)
+		obj.Spec.Maintenance.AutoUpdate = &MaintenanceAutoUpdate{
+			KubernetesVersion: true,
+		}
 	}
 
 	for i, worker := range obj.Spec.Provider.Workers {

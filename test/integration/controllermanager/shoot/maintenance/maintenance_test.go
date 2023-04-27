@@ -176,7 +176,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				},
 				Maintenance: &gardencorev1beta1.Maintenance{
 					AutoUpdate: &gardencorev1beta1.MaintenanceAutoUpdate{
-						KubernetesVersion:   pointer.Bool(false),
+						KubernetesVersion:   false,
 						MachineImageVersion: pointer.Bool(false),
 					},
 					TimeWindow: &gardencorev1beta1.MaintenanceTimeWindow{
@@ -392,7 +392,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			It("Kubernetes version should be updated: auto update enabled", func() {
 				// set test specific shoot settings
 				patch := client.MergeFrom(shoot.DeepCopy())
-				shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = pointer.Bool(true)
+				shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
 				Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
 				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
@@ -471,7 +471,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			It("Kubernetes version should be updated: auto update enabled", func() {
 				// set test specific shoot settings
 				patch := client.MergeFrom(shoot.DeepCopy())
-				shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = pointer.Bool(true)
+				shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
 				shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: pointer.String(testKubernetesVersionLowPatchLowMinor.Version)}
 				Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
@@ -594,7 +594,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			It("Kubernetes version should be updated: auto update enabled", func() {
 				// set test specific shoot settings
 				patch := client.MergeFrom(shoot.DeepCopy())
-				shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = pointer.Bool(true)
+				shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
 				Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
 				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())

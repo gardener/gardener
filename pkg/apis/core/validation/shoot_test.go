@@ -234,7 +234,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					Maintenance: &core.Maintenance{
 						AutoUpdate: &core.MaintenanceAutoUpdate{
-							KubernetesVersion: pointer.Bool(true),
+							KubernetesVersion: true,
 						},
 						TimeWindow: &core.MaintenanceTimeWindow{
 							Begin: "220000+0100",
@@ -3206,7 +3206,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			deletionTimestamp := metav1.NewTime(time.Now())
 			shoot.DeletionTimestamp = &deletionTimestamp
 			newShoot.DeletionTimestamp = &deletionTimestamp
-			newShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = pointer.Bool(false)
+			newShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
 

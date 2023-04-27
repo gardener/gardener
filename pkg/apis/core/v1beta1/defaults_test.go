@@ -437,7 +437,6 @@ var _ = Describe("Defaults", func() {
 
 				Expect(obj.Spec.Maintenance).NotTo(BeNil())
 				Expect(obj.Spec.Maintenance.AutoUpdate).NotTo(BeNil())
-				Expect(obj.Spec.Maintenance.AutoUpdate.KubernetesVersion).NotTo(BeNil())
 			})
 
 			It("should set both KubernetesVersion and MachineImageVersion field for shoot with workers", func() {
@@ -447,7 +446,7 @@ var _ = Describe("Defaults", func() {
 
 				Expect(obj.Spec.Maintenance).NotTo(BeNil())
 				Expect(obj.Spec.Maintenance.AutoUpdate).NotTo(BeNil())
-				Expect(obj.Spec.Maintenance.AutoUpdate.KubernetesVersion).NotTo(BeNil())
+				Expect(obj.Spec.Maintenance.AutoUpdate.KubernetesVersion).To(BeTrue())
 				Expect(obj.Spec.Maintenance.AutoUpdate.MachineImageVersion).NotTo(BeNil())
 			})
 
@@ -459,7 +458,7 @@ var _ = Describe("Defaults", func() {
 
 				Expect(obj.Spec.Maintenance).NotTo(BeNil())
 				Expect(obj.Spec.Maintenance.AutoUpdate).NotTo(BeNil())
-				Expect(obj.Spec.Maintenance.AutoUpdate.KubernetesVersion).NotTo(BeNil())
+				Expect(obj.Spec.Maintenance.AutoUpdate.KubernetesVersion).To(BeTrue())
 				Expect(obj.Spec.Maintenance.AutoUpdate.MachineImageVersion).To(BeNil())
 			})
 		})

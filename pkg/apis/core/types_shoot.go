@@ -977,7 +977,7 @@ type Maintenance struct {
 // MaintenanceAutoUpdate contains information about which constraints should be automatically updated.
 type MaintenanceAutoUpdate struct {
 	// KubernetesVersion indicates whether the patch Kubernetes version may be automatically updated (default: true).
-	KubernetesVersion *bool
+	KubernetesVersion bool
 	// MachineImageVersion indicates whether the machine image version may be automatically updated (default: true).
 	MachineImageVersion *bool
 }
