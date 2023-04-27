@@ -1063,30 +1063,10 @@ func validateMachineTypes(constraints []core.MachineType, machine, oldMachine co
 		return true, nil
 	}
 
-	validValues := []string{}
-
-	var unavailableInAtLeastOneZone bool
-top:
-	for _, r := range regions {
-		if r.Name != region {
-			continue
-		}
-
-		for _, zoneName := range zones {
-			for _, z := range r.Zones {
-				if z.Name != zoneName {
-					continue
-				}
-
-				for _, t := range z.UnavailableMachineTypes {
-					if t == machine.Type {
-						unavailableInAtLeastOneZone = true
-						break top
-					}
-				}
-			}
-		}
-	}
+	var (
+		validValues                 = []string{}
+		unavailableInAtLeastOneZone = isUnavailableInAtleastOneZone(regions, region, zones, machine.Type)
+	)
 
 	for _, t := range constraints {
 		if !pointer.StringEqual(t.Architecture, machine.Architecture) {
@@ -1105,6 +1085,29 @@ top:
 	}
 
 	return false, validValues
+}
+
+func isUnavailableInAtleastOneZone(regions []core.Region, region string, zones []string, machineType string) bool {
+	for _, r := range regions {
+		if r.Name != region {
+			continue
+		}
+
+		for _, zoneName := range zones {
+			for _, z := range r.Zones {
+				if z.Name != zoneName {
+					continue
+				}
+
+				for _, t := range z.UnavailableMachineTypes {
+					if t == machineType {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
 }
 
 func validateKubeletConfig(fldPath *field.Path, machineTypes []core.MachineType, workerMachineType string, kubeletConfig *core.KubeletConfig) field.ErrorList {
