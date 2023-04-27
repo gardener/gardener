@@ -1010,15 +1010,6 @@ spec:
 		}
 
 		istioIngressAutoscaler = func(min *int, max *int) string {
-			minReplicas := 2
-			if min != nil {
-				minReplicas = *min
-			}
-			maxReplicas := 5
-			if max != nil {
-				maxReplicas = *max
-			}
-
 			return `
 apiVersion: autoscaling/v2beta1
 kind: HorizontalPodAutoscaler
@@ -1035,8 +1026,8 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: istio-ingressgateway
-  minReplicas: ` + fmt.Sprintf("%d", minReplicas) + `
-  maxReplicas: ` + fmt.Sprintf("%d", maxReplicas) + `
+  minReplicas: ` + fmt.Sprintf("%d", pointer.IntDeref(min, 2)) + `
+  maxReplicas: ` + fmt.Sprintf("%d", pointer.IntDeref(max, 5)) + `
   metrics:
   - type: Resource
     resource:
@@ -1820,7 +1811,7 @@ metadata:
 automountServiceAccountToken: false
 `
 
-		istioIngressDeployment = func(vpnEnabled bool) string {
+		istioIngressDeployment = func(vpnEnabled bool, replicas *int) string {
 			var additionalLabels string
 			if vpnEnabled {
 				additionalLabels = `
@@ -1841,6 +1832,7 @@ metadata:
     foo: bar
     
 spec:
+  replicas: ` + fmt.Sprintf("%d", pointer.IntDeref(replicas, 2)) + `
   revisionHistoryLimit: 1
   selector:
     matchLabels:
@@ -2280,7 +2272,7 @@ spec:
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_rolebindings_test-ingress.yaml"])).To(Equal(istioIngressRoleBinding))
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_service_test-ingress.yaml"])).To(Equal(istioIngressService(nil)))
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_serviceaccount_test-ingress.yaml"])).To(Equal(istioIngressServiceAccount))
-			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment(true)))
+			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment(true, nil)))
 
 			By("Verify istio-proxy-protocol resources")
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress.yaml"])).To(Equal(istioProxyProtocolEnvoyFilter))
@@ -2401,6 +2393,7 @@ spec:
 			It("should successfully deploy correct autoscaling", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_autoscale_test-ingress.yaml"])).To(Equal(istioIngressAutoscaler(&minReplicas, &maxReplicas)))
+				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment(true, &minReplicas)))
 			})
 		})
 
@@ -2485,7 +2478,7 @@ spec:
 
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_vpn-gateway_test-ingress.yaml"])).To(BeEmpty())
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_vpn-envoy-filter_test-ingress.yaml"])).To(BeEmpty())
-				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment(false)))
+				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment(false, nil)))
 			})
 		})
 
