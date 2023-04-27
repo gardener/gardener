@@ -776,9 +776,28 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 		if worker.Machine.Architecture != nil && !slices.Contains(v1beta1constants.ValidArchitectures, *worker.Machine.Architecture) {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machine", "architecture"), *worker.Machine.Architecture, v1beta1constants.ValidArchitectures))
 		} else {
-			if ok, validMachineTypes := validateMachineTypes(c.cloudProfile.Spec.MachineTypes, worker.Machine, oldWorker.Machine, c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, worker.Zones); !ok {
-				detail := fmt.Sprintf("machine type '%s' does not support CPU architecture '%s' or is unavailable in at least one zone, supported machine types are: %+v", worker.Machine.Type, *worker.Machine.Architecture, validMachineTypes)
-				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "type"), worker.Machine.Type, detail))
+			var (
+				isMachinePresentInCloudprofile, architectureSupported, availableInAllZones, isUsableMachine, supportedMachineTypes = validateMachineTypes(c.cloudProfile.Spec.MachineTypes, worker.Machine, oldWorker.Machine, c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, worker.Zones)
+				detail                                                                                                             = fmt.Sprintf("machine type %q ", worker.Machine.Type)
+			)
+
+			if !isMachinePresentInCloudprofile {
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "type"), worker.Machine.Type, fmt.Sprintf("%sis not supported, supported types are %+v", detail, supportedMachineTypes)))
+				return allErrs
+			}
+
+			if !architectureSupported || !availableInAllZones || !isUsableMachine {
+				if !isUsableMachine {
+					detail += "is unusable, "
+				}
+				if !availableInAllZones {
+					detail += "is unavailable in at least one zone, "
+				}
+				if !architectureSupported {
+					detail += fmt.Sprintf("does not support CPU architecture %q, ", *worker.Machine.Architecture)
+				}
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "type"), worker.Machine.Type, fmt.Sprintf("%ssupported types are %+v", detail, supportedMachineTypes)))
+				return allErrs
 			}
 
 			if ok, validMachineImages := validateMachineImagesConstraints(c.cloudProfile.Spec.MachineImages, worker.Machine, oldWorker.Machine); !ok {
@@ -1058,30 +1077,38 @@ func validateKubernetesVersionConstraints(constraints []core.ExpirableVersion, s
 	return false, defaultToLatestPatchVersion, validValues, nil
 }
 
-func validateMachineTypes(constraints []core.MachineType, machine, oldMachine core.Machine, regions []core.Region, region string, zones []string) (bool, []string) {
+func validateMachineTypes(constraints []core.MachineType, machine, oldMachine core.Machine, regions []core.Region, region string, zones []string) (bool, bool, bool, bool, []string) {
 	if machine.Type == oldMachine.Type && pointer.StringEqual(machine.Architecture, oldMachine.Architecture) {
-		return true, nil
+		return true, true, true, true, nil
 	}
 
-	validValues := []string{}
+	var (
+		isMachinePresentInCloudprofile    = false
+		machinesWithSupportedArchitecture = sets.New[string]()
+		machinesAvailableInAllZones       = sets.New[string]()
+		usableMachines                    = sets.New[string]()
+	)
 
 	for _, t := range constraints {
-		if !pointer.StringEqual(t.Architecture, machine.Architecture) {
-			continue
+		if pointer.StringEqual(t.Architecture, machine.Architecture) {
+			machinesWithSupportedArchitecture.Insert(t.Name)
 		}
-		if t.Usable != nil && !*t.Usable {
-			continue
+		if pointer.BoolDeref(t.Usable, false) {
+			usableMachines.Insert(t.Name)
 		}
-		if isUnavailableInAtleastOneZone(regions, region, zones, t.Name) {
-			continue
+		if !isUnavailableInAtleastOneZone(regions, region, zones, t.Name) {
+			machinesAvailableInAllZones.Insert(t.Name)
 		}
-		validValues = append(validValues, t.Name)
 		if t.Name == machine.Type {
-			return true, nil
+			isMachinePresentInCloudprofile = true
 		}
 	}
 
-	return false, validValues
+	return isMachinePresentInCloudprofile,
+		machinesWithSupportedArchitecture.Has(machine.Type),
+		machinesAvailableInAllZones.Has(machine.Type),
+		usableMachines.Has(machine.Type),
+		machinesWithSupportedArchitecture.Intersection(machinesAvailableInAllZones).Intersection(usableMachines).UnsortedList()
 }
 
 func isUnavailableInAtleastOneZone(regions []core.Region, region string, zones []string, machineType string) bool {

@@ -2440,14 +2440,18 @@ var _ = Describe("validator", func() {
 			})
 
 			Context("machine architecture check", func() {
-				It("should reject due to invalid architecture", func() {
-					shoot.Spec.Provider.Workers[0].Machine.Architecture = pointer.String("foo")
+				BeforeEach(func() {
 					shoot.Spec.Provider.Workers[0].Machine.Image.Version = "1.2.0"
+					shoot.Spec.Provider.Workers[0].Machine.Type = "machine-type-1"
 
 					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				})
+
+				It("should reject due to invalid architecture", func() {
+					shoot.Spec.Provider.Workers[0].Machine.Architecture = pointer.String("foo")
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
@@ -2455,6 +2459,19 @@ var _ = Describe("validator", func() {
 					Expect(err).To(BeForbiddenError())
 					Expect(err).To(MatchError(
 						ContainSubstring("shoots.core.gardener.cloud \"shoot\" is forbidden: [spec.provider.workers[0].machine.architecture: Unsupported value: \"foo\": supported values: \"amd64\", \"arm64\"]"),
+					))
+				})
+
+				It("should reject because the machine in the cloud provider doesn't support the architecture in the Shoot", func() {
+					shoot.Spec.Provider.Workers[0].Machine.Architecture = pointer.String("arm64")
+					shoot.Spec.Provider.Workers[0].Machine.Image.Version = "1.2.0"
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(
+						ContainSubstring("machine type %q does not support CPU architecture %q, supported types are [%s]", shoot.Spec.Provider.Workers[0].Machine.Type, *shoot.Spec.Provider.Workers[0].Machine.Architecture, "machine-type-3"),
 					))
 				})
 			})
@@ -3380,7 +3397,7 @@ var _ = Describe("validator", func() {
 			})
 
 			Context("machine type checks", func() {
-				It("should not reject due to an usable machine type", func() {
+				BeforeEach(func() {
 					shoot.Spec.Provider.Workers = []core.Worker{
 						{
 							Machine: core.Machine{
@@ -3394,6 +3411,10 @@ var _ = Describe("validator", func() {
 					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				})
+
+				It("should not reject due to an usable machine type", func() {
+					shoot.Spec.Provider.Workers[0].Machine.Type = "machine-type-1"
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
@@ -3402,45 +3423,101 @@ var _ = Describe("validator", func() {
 				})
 
 				It("should reject due to a not usable machine type", func() {
-					shoot.Spec.Provider.Workers = []core.Worker{
-						{
-							Machine: core.Machine{
-								Type:         "machine-type-old",
-								Architecture: pointer.String("amd64"),
-							},
-						},
-					}
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					shoot.Spec.Provider.Workers[0].Machine.Type = "machine-type-old"
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("machine type %q is unusable", shoot.Spec.Provider.Workers[0].Machine.Type)))
 				})
 
 				It("should reject due to an invalid machine type", func() {
-					shoot.Spec.Provider.Workers = []core.Worker{
-						{
-							Machine: core.Machine{
-								Type:         "not-allowed",
-								Architecture: pointer.String("amd64"),
-							},
-						},
-					}
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					shoot.Spec.Provider.Workers[0].Machine.Type = "not-present-in-cloudprofile"
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("machine type %q is not supported", shoot.Spec.Provider.Workers[0].Machine.Type)))
+				})
+
+				It("should reject if the machine is unavailable in atleast one zone", func() {
+					unavailableMachine := "unavailable-machine"
+					zone := "some-zone"
+					shoot.Spec.Provider.Workers[0].Machine.Type = unavailableMachine
+					shoot.Spec.Provider.Workers[0].Zones = []string{
+						zone,
+					}
+
+					cloudProfile.Spec.MachineTypes = append(cloudProfile.Spec.MachineTypes,
+						core.MachineType{
+							Name:         unavailableMachine,
+							Architecture: pointer.String("amd64"),
+							Usable:       pointer.Bool(true),
+						},
+					)
+					cloudProfile.Spec.Regions = append(cloudProfile.Spec.Regions,
+						core.Region{
+							Name: shoot.Spec.Region,
+							Zones: []core.AvailabilityZone{
+								{
+									Name: zone,
+									UnavailableMachineTypes: []string{
+										unavailableMachine,
+									},
+								},
+							},
+						},
+					)
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("machine type %q is unavailable in at least one zone", unavailableMachine)))
+				})
+
+				It("should reject if the machine is not usable, is not having the same architecture mentioned in the cloudprofile and is not available in all zones", func() {
+					zone := "some-zone"
+					architecture := "amd64"
+					shoot.Spec.Provider.Workers[0].Machine.Type = "machine-type-1"
+					shoot.Spec.Provider.Workers[0].Machine.Architecture = &architecture
+					shoot.Spec.Provider.Workers[0].Zones = []string{
+						zone,
+					}
+
+					cloudProfile.Spec.MachineTypes = []core.MachineType{
+						{
+							Name:         "machine-type-1",
+							Architecture: pointer.String("arm64"),
+							Usable:       pointer.Bool(false),
+						},
+						{
+							Name:         "machine-type-2",
+							Architecture: pointer.String("amd64"),
+							Usable:       pointer.Bool(true),
+						},
+					}
+					cloudProfile.Spec.Regions = append(cloudProfile.Spec.Regions,
+						core.Region{
+							Name: shoot.Spec.Region,
+							Zones: []core.AvailabilityZone{
+								{
+									Name: zone,
+									UnavailableMachineTypes: []string{
+										"machine-type-1",
+									},
+								},
+							},
+						},
+					)
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("machine type %q is unusable, is unavailable in at least one zone, does not support CPU architecture %q, supported types are [%s]", "machine-type-1", architecture, "machine-type-2")))
 				})
 			})
 
