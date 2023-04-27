@@ -77,7 +77,7 @@ spec:
         resources:
 {{ toYaml .Values.global.scheduler.resources | indent 10 }}
         {{- end }}
-        {{- if not .Values.global.scheduler.config.server.healthProbes.disable }}
+        {{- if .Values.global.scheduler.config.server.healthProbes.enable }}
         livenessProbe:
           httpGet:
             path: /healthz

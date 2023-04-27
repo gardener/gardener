@@ -78,7 +78,7 @@ spec:
         resources:
 {{ toYaml .Values.global.admission.resources | indent 10 }}
         {{- end }}
-        {{- if not .Values.global.admission.config.server.healthProbes.disable }}
+        {{- if .Values.global.admission.config.server.healthProbes.enable }}
         livenessProbe:
           httpGet:
             path: /healthz

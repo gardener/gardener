@@ -91,7 +91,7 @@ spec:
         {{- end }}
         {{- end }}
         {{- end }}
-        {{- if not .Values.config.server.healthProbes.disable }}
+        {{- if .Values.config.server.healthProbes.enable }}
         livenessProbe:
           httpGet:
             path: /healthz

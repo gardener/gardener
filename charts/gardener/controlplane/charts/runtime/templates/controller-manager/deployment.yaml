@@ -94,7 +94,7 @@ spec:
         dnsConfig:
 {{ toYaml .Values.global.controller.dnsConfig | indent 10 }}
         {{- end }}
-        {{- if not .Values.global.controller.config.server.healthProbes.disable }}
+        {{- if .Values.global.controller.config.server.healthProbes.enable }}
         livenessProbe:
           httpGet:
             path: /healthz

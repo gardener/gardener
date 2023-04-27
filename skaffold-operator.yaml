@@ -253,12 +253,8 @@ profiles:
   - command: debug
   patches:
   - op: add
-    path: /deploy/helm/releases/0/setValueTemplates
+    path: /deploy/helm/releases/0/setValues
     value:
       replicaCount: 1
-      config:
-        leaderElection:
-          leaderElect: false
-        server:
-          healthProbes:
-            disable: true
+      config.leaderElection.leaderElect: false
+      config.server.healthProbes.enable: false

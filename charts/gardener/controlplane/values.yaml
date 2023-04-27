@@ -18,7 +18,7 @@ global:
       pullPolicy: IfNotPresent
     livenessProbe:
       # health probes should be disabled for debugging purposes only
-      disable: false
+      enable: true
       initialDelaySeconds: 15
       periodSeconds: 10
       successThreshold: 1
@@ -26,7 +26,7 @@ global:
       timeoutSeconds: 15
     readinessProbe:
       # health probes should be disabled for debugging purposes only
-      disable: false
+      enable: true
       initialDelaySeconds: 15
       periodSeconds: 10
       successThreshold: 1
@@ -324,7 +324,7 @@ global:
               -----END RSA PRIVATE KEY-----
         healthProbes:
           # health probes should be disabled for debugging purposes only
-          disable: false
+          enable: true
           port: 2722
         metrics:
           port: 2723
@@ -451,7 +451,7 @@ global:
       server:
         healthProbes:
           # health probes should be disabled for debugging purposes only
-          disable: false
+          enable: true
           port: 2718
         metrics:
           port: 2719
@@ -498,7 +498,7 @@ global:
       server:
         healthProbes:
           # health probes should be disabled for debugging purposes only
-          disable: false
+          enable: true
           port: 10251
         metrics:
           port: 19251
