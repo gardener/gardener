@@ -459,21 +459,13 @@ func ToNetworks(s *gardencorev1beta1.Shoot, workerless bool) (*Networks, error) 
 		err       error
 	)
 
-	if !workerless {
-		if s.Spec.Networking.Services == nil {
-			return nil, fmt.Errorf("shoot's service cidr is empty")
-		}
-
-		if s.Spec.Networking.Pods == nil {
-			return nil, fmt.Errorf("shoot's pods cidr is empty")
-		}
-	}
-
 	if s.Spec.Networking.Pods != nil {
 		_, pods, err = net.ParseCIDR(*s.Spec.Networking.Pods)
 		if err != nil {
 			return nil, fmt.Errorf("cannot parse shoot's network cidr %w", err)
 		}
+	} else if !workerless {
+		return nil, fmt.Errorf("shoot's pods cidr is empty")
 	}
 
 	if s.Spec.Networking.Services != nil {
@@ -481,8 +473,10 @@ func ToNetworks(s *gardencorev1beta1.Shoot, workerless bool) (*Networks, error) 
 		if err != nil {
 			return nil, fmt.Errorf("cannot parse shoot's network cidr %w", err)
 		}
+	} else if !workerless {
+		return nil, fmt.Errorf("shoot's service cidr is empty")
 	} else {
-		// if serviceCIDR is nil, then the Networks struct is not required
+		// if serviceCIDR is nil, then the Networks struct is not required for workerless
 		return nil, nil
 	}
 
