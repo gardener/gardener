@@ -508,6 +508,20 @@ var _ = Describe("Seed controller tests", func() {
 						return managedResourceList.Items
 					}).Should(ConsistOf(expectedManagedResources))
 
+					expectedIstioManagedResources := []gomegatypes.GomegaMatcher{
+						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("istio")})}),
+					}
+					if !seedIsGarden {
+						expectedIstioManagedResources = append(expectedIstioManagedResources, MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("istio-system")})}))
+					}
+
+					Eventually(func(g Gomega) []resourcesv1alpha1.ManagedResource {
+						managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
+						g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace("istio-system"))).To(Succeed())
+
+						return managedResourceList.Items
+					}).Should(ConsistOf(expectedIstioManagedResources))
+
 					By("Verify that the fluent operator CRDs have been deployed")
 					expectedFluentOperatorCRDs := []gomegatypes.GomegaMatcher{
 						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterfilters.fluentbit.fluent.io")})}),
