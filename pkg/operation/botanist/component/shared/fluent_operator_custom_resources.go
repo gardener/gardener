@@ -25,8 +25,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
-// NewFluentOperatorResources instantiates a new `Fluent Operator Resources` component.
-func NewFluentOperatorResources(
+// NewFluentOperatorCustomResources instantiates a new `Fluent Operator Custom Resources` component.
+func NewFluentOperatorCustomResources(
 	c client.Client,
 	gardenNamespaceName string,
 	runtimeVersion *semver.Version,

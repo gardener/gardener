@@ -33,7 +33,7 @@ import (
 
 const (
 	// CustomResourcesManagedResourceName is the name of the managed resource which deploys the custom resources of the operator.
-	CustomResourcesManagedResourceName = OperatorManagedResourceName + "-resources"
+	CustomResourcesManagedResourceName = OperatorManagedResourceName + "-custom-resources"
 )
 
 // CustomResourcesValues are the values for the custom resources.

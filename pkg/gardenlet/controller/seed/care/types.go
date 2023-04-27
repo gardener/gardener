@@ -31,11 +31,11 @@ var defaultNewSeedObjectFunc = func(ctx context.Context, seed *gardencorev1beta1
 }
 
 // NewHealthCheckFunc is a function used to create a new instance for performing health checks.
-type NewHealthCheckFunc func(*gardencorev1beta1.Seed, client.Client, clock.Clock, *string, bool) HealthCheck
+type NewHealthCheckFunc func(*gardencorev1beta1.Seed, client.Client, clock.Clock, *string, bool, bool) HealthCheck
 
 // defaultNewHealthCheck is the default function to create a new instance for performing health checks.
 var defaultNewHealthCheck NewHealthCheckFunc = func(seed *gardencorev1beta1.Seed, client client.Client, clock clock.Clock, namespace *string, seedIsGarden bool, loggingEnabled bool) HealthCheck {
-	return care.NewHealthForSeed(seed, client, gardenletConfig, clock, namespace, seedIsGarden, loggingEnabled)
+	return care.NewHealthForSeed(seed, client, clock, namespace, seedIsGarden, loggingEnabled)
 }
 
 // HealthCheck is an interface used to perform health checks.

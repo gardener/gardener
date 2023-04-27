@@ -48,8 +48,8 @@ var (
 	lokiPort    = utils.IntStrPtrFromInt(3100)
 )
 
-// FluentOperatorValues are the values for the Fluent Operator.
-type FluentOperatorValues struct {
+// Values keeps values for the Fluent Operator.
+type Values struct {
 	// OperatorImage is the image of the Fluent Operator
 	OperatorImage string
 	// FluentBitImage is the Fluent-bit image
@@ -59,14 +59,14 @@ type FluentOperatorValues struct {
 type fluentOperator struct {
 	client    client.Client
 	namespace string
-	values    FluentOperatorValues
+	values    Values
 }
 
 // NewFluentOperator creates a new instance of Fluent Operator.
 func NewFluentOperator(
 	client client.Client,
 	namespace string,
-	values FluentOperatorValues,
+	values Values,
 ) component.DeployWaiter {
 	return &fluentOperator{
 		client:    client,
@@ -284,7 +284,7 @@ func (f *fluentOperator) getLabels() map[string]string {
 
 func getFluentBitLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelApp:                                         fbName,
+		v1beta1constants.LabelApp:                                         v1beta1constants.DaemonSetNameFluentBit,
 		v1beta1constants.LabelRole:                                        v1beta1constants.LabelLogging,
 		v1beta1constants.GardenRole:                                       v1beta1constants.GardenRoleLogging,
 		v1beta1constants.LabelNetworkPolicyToDNS:                          v1beta1constants.LabelNetworkPolicyAllowed,

@@ -44,7 +44,7 @@ func NewFluentOperator(
 	deployer = fluentoperator.NewFluentOperator(
 		c,
 		gardenNamespaceName,
-		fluentoperator.FluentOperatorValues{
+		fluentoperator.Values{
 			OperatorImage:             operatorImage.String(),
 			OperatorPriorityClassName: priorityClassName,
 		},

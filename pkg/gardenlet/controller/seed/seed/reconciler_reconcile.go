@@ -943,7 +943,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			return err
 		}
 
-		fluentOperatorResources, err := sharedcomponent.NewFluentOperatorResources(
+		fluentOperatorCustomResources, err := sharedcomponent.NewFluentOperatorCustomResources(
 			seedClient,
 			r.GardenNamespace,
 			kubernetesVersion,
@@ -999,8 +999,8 @@ func (r *Reconciler) runReconcileSeedFlow(
 				Fn:   kubeStateMetrics.Deploy,
 			})
 			_ = g.Add(flow.Task{
-				Name: "Deploying Fluent Operator Resources and wait until they become ready",
-				Fn:   component.OpWait(fluentOperatorResources).Deploy,
+				Name: "Deploying Fluent Operator resources and wait until they become ready",
+				Fn:   component.OpWait(fluentOperatorCustomResources).Deploy,
 			})
 			_ = g.Add(flow.Task{
 				Name: "Deploying Fluent Operator",

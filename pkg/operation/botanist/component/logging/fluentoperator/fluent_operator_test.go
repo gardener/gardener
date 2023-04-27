@@ -53,7 +53,7 @@ var _ = Describe("Fluent Operator", func() {
 		namespace         = "some-namespace"
 		image             = "some-image:some-tag"
 		priorityClassName = "some-priority-class"
-		values            = FluentOperatorValues{
+		values            = Values{
 			OperatorImage:             image,
 			OperatorPriorityClassName: priorityClassName,
 		}
@@ -201,6 +201,7 @@ var _ = Describe("Fluent Operator", func() {
 							Name:            name,
 							Image:           image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
+							Args:            []string{"--disable-component-controllers", "fluentd"},
 							Env: []corev1.EnvVar{
 								{
 									Name: "NAMESPACE",
