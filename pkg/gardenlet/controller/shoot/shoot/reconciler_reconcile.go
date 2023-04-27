@@ -624,7 +624,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		waitUntilWorkerReady = g.Add(flow.Task{
 			Name:         "Waiting until shoot worker nodes have been reconciled",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Worker.Wait).SkipIf(skipReadiness),
-			Dependencies: flow.NewTaskIDs(deployWorker, deployManagedResourceForCloudConfigExecutor),
+			Dependencies: flow.NewTaskIDs(deployWorker, waitUntilWorkerStatusUpdate, deployManagedResourceForCloudConfigExecutor),
 		})
 		nginxLBReady = g.Add(flow.Task{
 			Name:         "Waiting until nginx ingress LoadBalancer is ready",
