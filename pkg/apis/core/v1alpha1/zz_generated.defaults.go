@@ -145,7 +145,9 @@ func SetObjectDefaults_Shoot(in *Shoot) {
 	if in.Spec.Kubernetes.VerticalPodAutoscaler != nil {
 		SetDefaults_VerticalPodAutoscaler(in.Spec.Kubernetes.VerticalPodAutoscaler)
 	}
-	SetDefaults_Networking(&in.Spec.Networking)
+	if in.Spec.Networking != nil {
+		SetDefaults_Networking(in.Spec.Networking)
+	}
 	if in.Spec.Maintenance != nil {
 		SetDefaults_Maintenance(in.Spec.Maintenance)
 	}

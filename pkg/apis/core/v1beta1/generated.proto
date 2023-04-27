@@ -1588,6 +1588,7 @@ message MaintenanceAutoUpdate {
   optional bool kubernetesVersion = 1;
 
   // MachineImageVersion indicates whether the machine image version may be automatically updated (default: true).
+  // +optional
   optional bool machineImageVersion = 2;
 }
 
@@ -1625,6 +1626,7 @@ message NamedResourceReference {
 // Networking defines networking parameters for the shoot cluster.
 message Networking {
   // Type identifies the type of the networking plugin. This field is immutable.
+  // +optional
   optional string type = 1;
 
   // ProviderConfig is the configuration passed to network resource.
@@ -1887,6 +1889,7 @@ message Provider {
   // Workers is a list of worker groups.
   // +patchMergeKey=name
   // +patchStrategy=merge
+  // +optional
   repeated Worker workers = 4;
 
   // WorkersSettings contains settings for all workers.
@@ -2628,6 +2631,7 @@ message ShootSpec {
   optional Kubernetes kubernetes = 6;
 
   // Networking contains information about cluster networking such as CNI Plugin type, CIDRs, ...etc.
+  // +optional
   optional Networking networking = 7;
 
   // Maintenance contains information about the time window for maintenance operations and which
@@ -2652,6 +2656,7 @@ message ShootSpec {
   // SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
   // The credentials inside the provider secret will be used to create the shoot in the respective account.
   // This field is immutable.
+  // +optional
   optional string secretBindingName = 13;
 
   // SeedName is the name of the seed cluster that runs the control plane of the Shoot.
