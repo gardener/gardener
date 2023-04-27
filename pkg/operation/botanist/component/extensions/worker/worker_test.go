@@ -577,7 +577,7 @@ var _ = Describe("Worker", func() {
 			patch := client.MergeFrom(w.DeepCopy())
 			// remove operation annotation, add up-to-date timestamp annotation
 			w.ObjectMeta.Annotations = map[string]string{
-				v1beta1constants.GardenerTimestamp: now.UTC().String(),
+				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
 			// update the MachineDeploymentsLastUpdateTime in the worker status
 			w.Status.MachineDeploymentsLastUpdateTime = &metav1Now
@@ -605,7 +605,7 @@ var _ = Describe("Worker", func() {
 			patch := client.MergeFrom(w.DeepCopy())
 			// remove operation annotation, add up-to-date timestamp annotation
 			w.ObjectMeta.Annotations = map[string]string{
-				v1beta1constants.GardenerTimestamp: now.UTC().String(),
+				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
 			// update the MachineDeploymentsLastUpdateTime in the worker status
 			lastUpdateTime := metav1.NewTime(metav1Now.Add(1 * time.Second))
@@ -632,7 +632,7 @@ var _ = Describe("Worker", func() {
 			w.Status.LastError = nil
 			// remove operation annotation, add up-to-date timestamp annotation
 			w.ObjectMeta.Annotations = map[string]string{
-				v1beta1constants.GardenerTimestamp: now.UTC().String(),
+				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
 			w.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,
