@@ -114,7 +114,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		return err
 	}
 
-	if !shoot.IsWorkerless() {
+	if !v1beta1helper.IsWorkerless(shoot) {
 		reasonForImageUpdatePerPool, err = maintainMachineImages(log, maintainedShoot, cloudProfile)
 		if err != nil {
 			// continue execution to allow the kubernetes version update

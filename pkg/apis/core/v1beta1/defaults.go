@@ -149,7 +149,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 
 	// these fields are relevant only for shoot with workers
-	if !obj.IsWorkerless() {
+	if len(obj.Spec.Provider.Workers) > 0 {
 		if obj.Spec.Networking == nil {
 			obj.Spec.Networking = &Networking{}
 		}

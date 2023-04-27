@@ -23,6 +23,7 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 )
 
 const (
@@ -67,7 +68,7 @@ func (c *ShootNodeLocalDNS) Admit(_ context.Context, a admission.Attributes, _ a
 		shoot.Spec.SystemComponents = &core.SystemComponents{}
 	}
 
-	if shoot.Spec.SystemComponents.NodeLocalDNS == nil && !shoot.IsWorkerless() {
+	if shoot.Spec.SystemComponents.NodeLocalDNS == nil && !gardencorehelper.IsWorkerless(shoot) {
 		shoot.Spec.SystemComponents.NodeLocalDNS = &core.NodeLocalDNS{Enabled: true}
 	}
 

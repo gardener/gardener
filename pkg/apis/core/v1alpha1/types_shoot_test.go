@@ -19,7 +19,6 @@ import (
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 
 	. "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 )
@@ -36,33 +35,6 @@ var _ = Describe("Shoot", func() {
 					Fail("protobuf 2 in ServiceAccountConfig is reserved for removed signingKeySecret field")
 				}
 			}
-		})
-	})
-
-	Describe("#IsWorkerless", func() {
-		var shoot *Shoot
-
-		BeforeEach(func() {
-			shoot = &Shoot{
-				Spec: ShootSpec{
-					Provider: Provider{
-						Workers: []Worker{
-							{
-								Name: "worker",
-							},
-						},
-					},
-				},
-			}
-		})
-
-		It("should return false when shoot has workers", func() {
-			Expect(shoot.IsWorkerless()).To(BeFalse())
-		})
-
-		It("should return true when shoot has zero workers", func() {
-			shoot.Spec.Provider.Workers = nil
-			Expect(shoot.IsWorkerless()).To(BeTrue())
 		})
 	})
 })

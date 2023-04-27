@@ -40,6 +40,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
@@ -286,7 +287,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	if a.GetOperation() == admission.Create {
 		allErrs = append(allErrs, validationContext.validateAPIVersionForRawExtensions()...)
 	}
-	allErrs = append(allErrs, validationContext.validateShootNetworks(shoot.IsWorkerless())...)
+	allErrs = append(allErrs, validationContext.validateShootNetworks(gardencorehelper.IsWorkerless(shoot))...)
 	allErrs = append(allErrs, validationContext.validateKubernetes(a)...)
 	allErrs = append(allErrs, validationContext.validateRegion()...)
 	allErrs = append(allErrs, validationContext.validateProvider(a)...)

@@ -376,7 +376,7 @@ func networksAreDisjointed(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta
 		shootServicesNetwork = shoot.Spec.Networking.Services
 
 		errorMessages []string
-		workerless    = shoot.IsWorkerless()
+		workerless    = v1beta1helper.IsWorkerless(shoot)
 	)
 
 	if seed.Spec.Networks.ShootDefaults != nil {

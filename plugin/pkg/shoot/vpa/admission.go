@@ -23,6 +23,7 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 )
 
 const (
@@ -63,7 +64,7 @@ func (c *ShootVPA) Admit(_ context.Context, a admission.Attributes, _ admission.
 		return apierrors.NewInternalError(errors.New("could not convert resource into Shoot object"))
 	}
 
-	if shoot.Spec.Kubernetes.VerticalPodAutoscaler == nil && !shoot.IsWorkerless() {
+	if shoot.Spec.Kubernetes.VerticalPodAutoscaler == nil && !gardencorehelper.IsWorkerless(shoot) {
 		shoot.Spec.Kubernetes.VerticalPodAutoscaler = &core.VerticalPodAutoscaler{Enabled: true}
 	}
 

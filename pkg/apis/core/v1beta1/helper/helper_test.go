@@ -2591,6 +2591,33 @@ var _ = Describe("helper", func() {
 		})
 	})
 
+	Describe("#IsWorkerless", func() {
+		var shoot *gardencorev1beta1.Shoot
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{
+							{
+								Name: "worker",
+							},
+						},
+					},
+				},
+			}
+		})
+
+		It("should return false when shoot has workers", func() {
+			Expect(IsWorkerless(shoot)).To(BeFalse())
+		})
+
+		It("should return true when shoot has zero workers", func() {
+			shoot.Spec.Provider.Workers = nil
+			Expect(IsWorkerless(shoot)).To(BeTrue())
+		})
+	})
+
 	DescribeTable("#ShootEnablesSSHAccess",
 		func(workersSettings *gardencorev1beta1.WorkersSettings, expectedResult bool) {
 			shoot := &gardencorev1beta1.Shoot{
