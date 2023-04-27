@@ -198,7 +198,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 		autoscaler           = clusterautoscaler.NewBootstrapper(seedClient, r.GardenNamespace)
 		kubeAPIServerIngress = kubeapiserverexposure.NewIngress(seedClient, r.GardenNamespace, kubeapiserverexposure.IngressValues{})
 		kubeAPIServerService = kubeapiserverexposure.NewInternalNameService(seedClient, r.GardenNamespace)
-		kubeStateMetrics     = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
 		nginxIngress         = nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{})
 		networkPolicies      = networkpolicies.NewBootstrapper(seedClient, r.GardenNamespace)
 		dwdWeeder            = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleWeeder})
@@ -265,10 +264,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Name: "Destroy kube-apiserver service",
 			Fn:   component.OpDestroyAndWait(kubeAPIServerService).Destroy,
 		})
-		destroyKubeStateMetrics = g.Add(flow.Task{
-			Name: "Destroy kube-state-metrics",
-			Fn:   component.OpDestroyAndWait(kubeStateMetrics).Destroy,
-		})
 		destroyVPNAuthzServer = g.Add(flow.Task{
 			Name: "Destroy VPN authorization server",
 			Fn:   component.OpDestroyAndWait(vpnAuthzServer).Destroy,
@@ -294,7 +289,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyDWDProber,
 			destroyKubeAPIServerIngress,
 			destroyKubeAPIServerService,
-			destroyKubeStateMetrics,
 			destroyVPNAuthzServer,
 			destroyIstio,
 			destroyIstioCRDs,
@@ -325,11 +319,16 @@ func (r *Reconciler) runDeleteSeedFlow(
 	// When the seed is the garden cluster then these components are reconciled by the gardener-operator.
 	if !seedIsGarden {
 		var (
+			kubeStateMetrics      = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
 			etcdDruid             = etcd.NewBootstrapper(seedClient, r.GardenNamespace, nil, r.Config.ETCDConfig, "", nil, "")
 			hvpa                  = hvpa.New(seedClient, r.GardenNamespace, hvpa.Values{})
 			verticalPodAutoscaler = vpa.New(seedClient, r.GardenNamespace, nil, vpa.Values{ClusterType: component.ClusterTypeSeed, RuntimeKubernetesVersion: kubernetesVersion})
 			resourceManager       = resourcemanager.New(seedClient, r.GardenNamespace, nil, resourcemanager.Values{KubernetesVersion: kubernetesVersion})
 
+			destroyKubeStateMetrics = g.Add(flow.Task{
+				Name: "Destroy kube-state-metrics",
+				Fn:   component.OpDestroyAndWait(kubeStateMetrics).Destroy,
+			})
 			destroyEtcdDruid = g.Add(flow.Task{
 				Name: "Destroying etcd druid",
 				Fn:   component.OpDestroyAndWait(etcdDruid).Destroy,
@@ -349,6 +348,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 		)
 
 		syncPointCleanedUp.Insert(
+			destroyKubeStateMetrics,
 			destroyEtcdDruid,
 			destroyHVPA,
 			destroyVPA,

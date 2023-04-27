@@ -393,3 +393,13 @@ func fetchKubeconfigFromSecret(ctx context.Context, c client.Client, key client.
 
 	return kubeconfig, nil
 }
+
+func (r *Reconciler) newKubeStateMetrics() (component.DeployWaiter, error) {
+	return sharedcomponent.NewKubeStateMetrics(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		r.RuntimeVersion,
+		r.ImageVector,
+		v1beta1constants.PriorityClassNameGardenSystem100,
+	)
+}

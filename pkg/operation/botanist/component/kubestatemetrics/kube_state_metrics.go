@@ -90,6 +90,8 @@ type Values struct {
 	ClusterType component.ClusterType
 	// Image is the container image.
 	Image string
+	// PriorityClassName is the name of the priority class.
+	PriorityClassName string
 	// Replicas is the number of replicas.
 	Replicas int32
 }

@@ -26,7 +26,7 @@ When using the `gardener-operator` for managing the garden runtime and virtual c
 | `gardener-garden-system-400`      | 999999400 |                                                                                           |
 | `gardener-garden-system-300`      | 999999300 | `vpa-admission-controller`, `etcd-druid`                                                  |
 | `gardener-garden-system-200`      | 999999200 | `vpa-recommender`, `vpa-updater`, `hvpa-controller`                                       |
-| `gardener-garden-system-100`      | 999999100 |                                                                                           |
+| `gardener-garden-system-100`      | 999999100 | `kube-state-metrics`                                                                      |
 
 ## Seed Clusters
 

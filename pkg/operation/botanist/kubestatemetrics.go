@@ -17,6 +17,7 @@ package botanist
 import (
 	"context"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/utils/images"
@@ -35,9 +36,10 @@ func (b *Botanist) DefaultKubeStateMetrics() (kubestatemetrics.Interface, error)
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
 		kubestatemetrics.Values{
-			ClusterType: component.ClusterTypeShoot,
-			Image:       image.String(),
-			Replicas:    b.Shoot.GetReplicas(1),
+			ClusterType:       component.ClusterTypeShoot,
+			Image:             image.String(),
+			PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane100,
+			Replicas:          b.Shoot.GetReplicas(1),
 		},
 	), nil
 }

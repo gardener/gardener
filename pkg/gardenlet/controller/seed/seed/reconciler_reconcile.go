@@ -829,10 +829,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if err != nil {
 		return err
 	}
-	kubeStateMetrics, err := defaultKubeStateMetrics(seedClient, r.ImageVector, kubernetesVersion, r.GardenNamespace)
-	if err != nil {
-		return err
-	}
 	dwdWeeder, dwdProber, err := defaultDependencyWatchdogs(seedClient, kubernetesVersion, r.ImageVector, seed.GetInfo().Spec.Settings, r.GardenNamespace)
 	if err != nil {
 		return err
@@ -855,7 +851,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		); err != nil {
 			return err
 		}
-
 	}
 
 	if features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster) {
@@ -896,10 +891,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Fn:   clusterautoscaler.NewBootstrapper(seedClient, r.GardenNamespace).Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name: "Deploying kube-state-metrics",
-			Fn:   kubeStateMetrics.Deploy,
-		})
-		_ = g.Add(flow.Task{
 			Name: "Deploying dependency-watchdog-weeder",
 			Fn:   dwdWeeder.Deploy,
 		})
@@ -937,7 +928,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		})
 	}
 
-	// When the seed is the garden cluster then the VPA is reconciled by the gardener-operator
+	// When the seed is the garden cluster then the following components are reconciled by the gardener-operator.
 	if !seedIsGarden {
 		vpa, err := sharedcomponent.NewVerticalPodAutoscaler(
 			seedClient,
@@ -980,6 +971,17 @@ func (r *Reconciler) runReconcileSeedFlow(
 			return err
 		}
 
+		kubeStateMetrics, err := sharedcomponent.NewKubeStateMetrics(
+			seedClient,
+			r.GardenNamespace,
+			kubernetesVersion,
+			r.ImageVector,
+			v1beta1constants.PriorityClassNameSeedSystem600,
+		)
+		if err != nil {
+			return err
+		}
+
 		var (
 			_ = g.Add(flow.Task{
 				Name: "Deploying Kubernetes vertical pod autoscaler",
@@ -992,6 +994,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 			_ = g.Add(flow.Task{
 				Name: "Deploying ETCD Druid",
 				Fn:   etcdDruid.Deploy,
+			})
+			_ = g.Add(flow.Task{
+				Name: "Deploying kube-state-metrics",
+				Fn:   kubeStateMetrics.Deploy,
 			})
 		)
 	}

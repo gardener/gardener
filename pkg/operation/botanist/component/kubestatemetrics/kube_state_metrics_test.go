@@ -32,7 +32,6 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -50,14 +49,14 @@ var _ = Describe("KubeStateMetrics", func() {
 	var (
 		ctx = context.TODO()
 
-		namespace = "some-namespace"
-		values    = Values{}
+		namespace         = "some-namespace"
+		image             = "some-image:some-tag"
+		priorityClassName = "some-priorityclass"
+		values            = Values{}
 
 		c   client.Client
 		sm  secretsmanager.Interface
 		ksm component.DeployWaiter
-
-		image = "some-image:some-tag"
 
 		managedResourceName   string
 		managedResource       *resourcesv1alpha1.ManagedResource
@@ -218,7 +217,6 @@ var _ = Describe("KubeStateMetrics", func() {
 					"component": "kube-state-metrics",
 					"type":      string(clusterType),
 				}
-				priorityClassName = v1beta1constants.PriorityClassNameSeedSystem600
 
 				deploymentLabels             map[string]string
 				podLabels                    map[string]string
@@ -253,7 +251,6 @@ var _ = Describe("KubeStateMetrics", func() {
 			}
 
 			if clusterType == component.ClusterTypeShoot {
-				priorityClassName = v1beta1constants.PriorityClassNameShootControlPlane100
 				deploymentLabels = map[string]string{
 					"component":           "kube-state-metrics",
 					"type":                string(clusterType),
@@ -486,8 +483,9 @@ var _ = Describe("KubeStateMetrics", func() {
 		Context("cluster type seed", func() {
 			BeforeEach(func() {
 				ksm = New(c, namespace, nil, Values{
-					ClusterType: component.ClusterTypeSeed,
-					Image:       image,
+					ClusterType:       component.ClusterTypeSeed,
+					Image:             image,
+					PriorityClassName: priorityClassName,
 				})
 				managedResourceName = "kube-state-metrics"
 			})
@@ -535,8 +533,9 @@ var _ = Describe("KubeStateMetrics", func() {
 		Context("cluster type shoot", func() {
 			BeforeEach(func() {
 				ksm = New(c, namespace, sm, Values{
-					ClusterType: component.ClusterTypeShoot,
-					Image:       image,
+					ClusterType:       component.ClusterTypeShoot,
+					Image:             image,
+					PriorityClassName: priorityClassName,
 				})
 				managedResourceName = "shoot-core-kube-state-metrics"
 			})

@@ -36,7 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
@@ -47,27 +46,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
-
-func defaultKubeStateMetrics(
-	c client.Client,
-	imageVector imagevector.ImageVector,
-	seedVersion *semver.Version,
-	gardenNamespaceName string,
-) (
-	component.DeployWaiter,
-	error,
-) {
-	image, err := imageVector.FindImage(images.ImageNameKubeStateMetrics, imagevector.TargetVersion(seedVersion.String()))
-	if err != nil {
-		return nil, err
-	}
-
-	return kubestatemetrics.New(c, gardenNamespaceName, nil, kubestatemetrics.Values{
-		ClusterType: component.ClusterTypeSeed,
-		Image:       image.String(),
-		Replicas:    1,
-	}), nil
-}
 
 func defaultIstio(
 	seedClient client.Client,
