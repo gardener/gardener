@@ -87,9 +87,10 @@ var (
 )
 
 type cleanAttributes struct {
-	cleanOps     utilclient.CleanOps
-	listObj      client.ObjectList
-	cleanOptions []utilclient.CleanOption
+	cleanOps      utilclient.CleanOps
+	listObj       client.ObjectList
+	cleanOptions  []utilclient.CleanOption
+	clusterScoped bool
 }
 
 func cleanOpts(opts ...utilclient.CleanOption) []utilclient.CleanOption {
@@ -140,8 +141,8 @@ func (b *Botanist) cleanWebhooksAttributes() ([]cleanAttributes, error) {
 	}
 
 	return []cleanAttributes{
-		{ops, &admissionregistrationv1.MutatingWebhookConfigurationList{}, cleanOpts(mutatingWebhookConfigurationCleanOption, cleanOptions)},
-		{ops, &admissionregistrationv1.ValidatingWebhookConfigurationList{}, cleanOpts(validatingWebhookConfigurationCleanOption, cleanOptions)},
+		{ops, &admissionregistrationv1.MutatingWebhookConfigurationList{}, cleanOpts(mutatingWebhookConfigurationCleanOption, cleanOptions), true},
+		{ops, &admissionregistrationv1.ValidatingWebhookConfigurationList{}, cleanOpts(validatingWebhookConfigurationCleanOption, cleanOptions), true},
 	}, nil
 }
 
@@ -160,8 +161,8 @@ func (b *Botanist) cleanExtendedAPIsAttributes() ([]cleanAttributes, error) {
 	}
 
 	return []cleanAttributes{
-		{ops, &apiregistrationv1.APIServiceList{}, cleanOpts(apiServiceCleanOption, cleanOptions)},
-		{ops, &apiextensionsv1.CustomResourceDefinitionList{}, cleanOpts(customResourceDefinitionCleanOption, cleanOptions)},
+		{ops, &apiregistrationv1.APIServiceList{}, cleanOpts(apiServiceCleanOption, cleanOptions), true},
+		{ops, &apiextensionsv1.CustomResourceDefinitionList{}, cleanOpts(customResourceDefinitionCleanOption, cleanOptions), true},
 	}, nil
 }
 
@@ -198,32 +199,32 @@ func (b *Botanist) cleanKubernetesResourcesAttributes() ([]cleanAttributes, erro
 	}
 
 	attrs := []cleanAttributes{
-		{ops, &corev1.ServiceList{}, cleanOpts(serviceCleanOption, cleanOptions)},
-		{ops, &corev1.PersistentVolumeClaimList{}, cleanOpts(persistentVolumeClaimCleanOption, cleanOptions)},
+		{ops, &corev1.ServiceList{}, cleanOpts(serviceCleanOption, cleanOptions), false},
+		{ops, &corev1.PersistentVolumeClaimList{}, cleanOpts(persistentVolumeClaimCleanOption, cleanOptions), false},
 	}
 
 	if metav1.HasAnnotation(b.Shoot.GetInfo().ObjectMeta, v1beta1constants.AnnotationShootSkipCleanup) {
-		attrs = append(attrs, cleanAttributes{ops, &volumesnapshotv1.VolumeSnapshotList{}, cleanOpts(volumeSnapshotContentCleanOption, cleanOptions)})
-		attrs = append(attrs, cleanAttributes{ops, &volumesnapshotv1.VolumeSnapshotContentList{}, cleanOpts(volumeSnapshotContentCleanOption, cleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, &volumesnapshotv1.VolumeSnapshotList{}, cleanOpts(volumeSnapshotContentCleanOption, cleanOptions), false})
+		attrs = append(attrs, cleanAttributes{ops, &volumesnapshotv1.VolumeSnapshotContentList{}, cleanOpts(volumeSnapshotContentCleanOption, cleanOptions), true})
 	} else {
 		cronJobList := client.ObjectList(&batchv1beta1.CronJobList{})
 		if version.ConstraintK8sGreaterEqual121.Check(b.Shoot.KubernetesVersion) {
 			cronJobList = &batchv1.CronJobList{}
 		}
 
-		attrs = append(attrs, cleanAttributes{ops, cronJobList, cleanOpts(cronJobCleanOption, cleanOptions)})
-		attrs = append(attrs, cleanAttributes{ops, &appsv1.DaemonSetList{}, cleanOpts(daemonSetCleanOption, cleanOptions)})
-		attrs = append(attrs, cleanAttributes{ops, &appsv1.DeploymentList{}, cleanOpts(deploymentCleanOption, cleanOptions)})
-		attrs = append(attrs, cleanAttributes{ops, &networkingv1.IngressList{}, cleanOpts(ingressCleanOption, cleanOptions)})
-		attrs = append(attrs, cleanAttributes{ops, &batchv1.JobList{}, cleanOpts(jobCleanOption, cleanOptions)})
-		attrs = append(attrs, cleanAttributes{ops, &corev1.PodList{}, cleanOpts(podCleanOption, cleanOptions)})
-		attrs = append(attrs, cleanAttributes{ops, &appsv1.ReplicaSetList{}, cleanOpts(replicaSetCleanOption, cleanOptions)})
-		attrs = append(attrs, cleanAttributes{ops, &corev1.ReplicationControllerList{}, cleanOpts(replicationControllerCleanOption, cleanOptions)})
-		attrs = append(attrs, cleanAttributes{ops, &appsv1.StatefulSetList{}, cleanOpts(statefulSetCleanOption, cleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, cronJobList, cleanOpts(cronJobCleanOption, cleanOptions), false})
+		attrs = append(attrs, cleanAttributes{ops, &appsv1.DaemonSetList{}, cleanOpts(daemonSetCleanOption, cleanOptions), false})
+		attrs = append(attrs, cleanAttributes{ops, &appsv1.DeploymentList{}, cleanOpts(deploymentCleanOption, cleanOptions), false})
+		attrs = append(attrs, cleanAttributes{ops, &networkingv1.IngressList{}, cleanOpts(ingressCleanOption, cleanOptions), false})
+		attrs = append(attrs, cleanAttributes{ops, &batchv1.JobList{}, cleanOpts(jobCleanOption, cleanOptions), false})
+		attrs = append(attrs, cleanAttributes{ops, &corev1.PodList{}, cleanOpts(podCleanOption, cleanOptions), false})
+		attrs = append(attrs, cleanAttributes{ops, &appsv1.ReplicaSetList{}, cleanOpts(replicaSetCleanOption, cleanOptions), false})
+		attrs = append(attrs, cleanAttributes{ops, &corev1.ReplicationControllerList{}, cleanOpts(replicationControllerCleanOption, cleanOptions), false})
+		attrs = append(attrs, cleanAttributes{ops, &appsv1.StatefulSetList{}, cleanOpts(statefulSetCleanOption, cleanOptions), false})
 		// Cleaning up VolumeSnapshots can take a longer time if many snapshots were taken.
 		// Hence, we only finalize these objects after 1h.
-		attrs = append(attrs, cleanAttributes{ops, &volumesnapshotv1.VolumeSnapshotList{}, cleanOpts(volumeSnapshotCleanOption, snapshotCleanOptions)})
-		attrs = append(attrs, cleanAttributes{snapshotContentOps, &volumesnapshotv1.VolumeSnapshotContentList{}, cleanOpts(volumeSnapshotContentCleanOption, snapshotCleanOptions)})
+		attrs = append(attrs, cleanAttributes{ops, &volumesnapshotv1.VolumeSnapshotList{}, cleanOpts(volumeSnapshotCleanOption, snapshotCleanOptions), false})
+		attrs = append(attrs, cleanAttributes{snapshotContentOps, &volumesnapshotv1.VolumeSnapshotContentList{}, cleanOpts(volumeSnapshotContentCleanOption, snapshotCleanOptions), true})
 	}
 
 	return attrs, nil
@@ -262,6 +263,11 @@ func (b *Botanist) CleanShootNamespaces(ctx context.Context) error {
 			for _, attr := range attrs {
 				opts := &utilclient.CleanOptions{}
 				opts.ApplyOptions(attr.cleanOptions)
+
+				// we do not care about cluster-scoped resources when cleaning and finalizing namespaces
+				if attr.clusterScoped {
+					continue
+				}
 
 				if err := ensurer.EnsureGone(ctx, c, attr.listObj, append(opts.ListOptions, client.InNamespace(namespace.GetName()))...); err != nil {
 					if utilclient.AreObjectsRemaining(err) {
