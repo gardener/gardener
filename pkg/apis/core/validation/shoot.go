@@ -629,7 +629,7 @@ func validateNetworkingUpdate(newNetworking, oldNetworking *core.Networking, fld
 			return allErrs
 		}
 	} else {
-		// if we old networking is nil, we cannot validate immutability anyway, so exit early
+		// if the old networking is nil, we cannot validate immutability anyway, so exit early
 		return allErrs
 	}
 
@@ -816,23 +816,6 @@ func validateKubernetesForWorkerlessShoot(kubernetes core.Kubernetes, fldPath *f
 
 	if kubernetes.Kubelet != nil {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubelet"), workerlessErrorMsg))
-	}
-
-	if kcm := kubernetes.KubeControllerManager; kcm != nil {
-		kcmPath := fldPath.Child("kubeControllerManager")
-
-		if kcm.NodeCIDRMaskSize != nil {
-			allErrs = append(allErrs, field.Forbidden(kcmPath.Child("nodeCIDRMaskSize"), workerlessErrorMsg))
-		}
-		if kcm.HorizontalPodAutoscalerConfig != nil {
-			allErrs = append(allErrs, field.Forbidden(kcmPath.Child("horizontalPodAutoscaler"), workerlessErrorMsg))
-		}
-		if kcm.PodEvictionTimeout != nil {
-			allErrs = append(allErrs, field.Forbidden(kcmPath.Child("podEvictionTimeout"), workerlessErrorMsg))
-		}
-		if kcm.NodeMonitorGracePeriod != nil {
-			allErrs = append(allErrs, field.Forbidden(kcmPath.Child("nodeMonitorGracePeriod"), workerlessErrorMsg))
-		}
 	}
 
 	if kubernetes.ClusterAutoscaler != nil {
@@ -1217,6 +1200,19 @@ func validateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networ
 			if hpa.CPUInitializationPeriod != nil && hpa.CPUInitializationPeriod.Duration < 1*time.Second {
 				allErrs = append(allErrs, field.Invalid(hpaPath.Child("cpuInitializationPeriod"), *hpa.CPUInitializationPeriod, "cpu initialization period must not be less than a second"))
 			}
+		}
+	} else {
+		if kcm.NodeCIDRMaskSize != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("nodeCIDRMaskSize"), workerlessErrorMsg))
+		}
+		if kcm.HorizontalPodAutoscalerConfig != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("horizontalPodAutoscaler"), workerlessErrorMsg))
+		}
+		if kcm.PodEvictionTimeout != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("podEvictionTimeout"), workerlessErrorMsg))
+		}
+		if kcm.NodeMonitorGracePeriod != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("nodeMonitorGracePeriod"), workerlessErrorMsg))
 		}
 	}
 

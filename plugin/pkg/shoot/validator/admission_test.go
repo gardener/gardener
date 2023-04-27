@@ -866,6 +866,22 @@ var _ = Describe("validator", func() {
 				Expect(err.Error()).To(ContainSubstring("provider type in shoot must match provider type of referenced SecretBinding: %q", secretBinding.Provider.Type))
 			})
 
+			It("should not error if and secret binding is nil", func() {
+				shoot.Spec.Provider.Type = "aws"
+				shoot.Spec.SecretBindingName = nil
+				cloudProfile.Spec.Type = "aws"
+
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
 			It("should pass because no seed has to be specified (however can be). The scheduler sets the seed instead.", func() {
 				shoot.Spec.SeedName = nil
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())

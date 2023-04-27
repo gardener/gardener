@@ -126,8 +126,7 @@ var _ = Describe("ShootNodeLocalDNSEnabledByDefault", func() {
 		})
 
 		It("should not enable NodeLocalDNS for a workerless Shoot", func() {
-			expectedShoot.Spec.SystemComponents = &core.SystemComponents{}
-			expectedShoot.Spec.SystemComponents.NodeLocalDNS = nil
+			expectedShoot.Spec.SystemComponents = nil
 
 			attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 			Expect(plugin.Admit(ctx, attrs, nil)).To(Succeed())

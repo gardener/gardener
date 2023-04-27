@@ -64,12 +64,14 @@ func (c *ShootNodeLocalDNS) Admit(_ context.Context, a admission.Attributes, _ a
 		return apierrors.NewInternalError(errors.New("could not convert resource into Shoot object"))
 	}
 
-	if shoot.Spec.SystemComponents == nil {
-		shoot.Spec.SystemComponents = &core.SystemComponents{}
-	}
+	if !gardencorehelper.IsWorkerless(shoot) {
+		if shoot.Spec.SystemComponents == nil {
+			shoot.Spec.SystemComponents = &core.SystemComponents{}
+		}
 
-	if shoot.Spec.SystemComponents.NodeLocalDNS == nil && !gardencorehelper.IsWorkerless(shoot) {
-		shoot.Spec.SystemComponents.NodeLocalDNS = &core.NodeLocalDNS{Enabled: true}
+		if shoot.Spec.SystemComponents.NodeLocalDNS == nil {
+			shoot.Spec.SystemComponents.NodeLocalDNS = &core.NodeLocalDNS{Enabled: true}
+		}
 	}
 
 	return nil

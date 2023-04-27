@@ -238,7 +238,7 @@ var _ = Describe("ManagedSeed", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.shoot.name"),
-					"Detail": ContainSubstring("shoot workers can not be empty for managed seeds"),
+					"Detail": ContainSubstring("workerless shoot cannot be used to create managed seed"),
 				})),
 			))
 		})

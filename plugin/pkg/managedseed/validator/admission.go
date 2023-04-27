@@ -219,7 +219,7 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, o admis
 		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "shoot VPA has to be enabled for managed seeds")))
 	}
 	if gardencorehelper.IsWorkerless(shoot) {
-		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "shoot workers can not be empty for managed seeds")))
+		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, "workerless shoot cannot be used to create managed seed")))
 	}
 
 	// Ensure shoot is not already registered as seed
