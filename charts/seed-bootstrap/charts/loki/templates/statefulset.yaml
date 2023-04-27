@@ -44,9 +44,9 @@ spec:
       priorityClassName: {{ .Values.priorityClassName }}
       initContainers:
       - command:
-        - bash
-        - -c
-        - tune2fs -O large_dir $(mount | gawk '{if($3=="/data") {print $1}}')
+          - bash
+          - -c
+          - /loki-init.sh || true
         image: {{ index .Values.global.images "tune2fs" }}
         name: init-large-dir
         securityContext:
@@ -57,6 +57,9 @@ spec:
         volumeMounts:
         - mountPath: /data
           name: loki
+        - name: config
+          mountPath: /loki-init.sh
+          subPath: loki-init.sh
       containers:
 {{- if .Values.rbacSidecarEnabled }}
         - name: kube-rbac-proxy
@@ -152,7 +155,7 @@ spec:
             {{- toYaml .Values.resources.curator | nindent 12 }}
           volumeMounts:
             - name: config
-              mountPath: /etc/loki
+              mountPath: /etc/loki              
             - name: loki
               mountPath: "/data"
           securityContext:
@@ -162,6 +165,7 @@ spec:
         - name: config
           configMap:
             name: {{ include "loki.config.name" . }}
+            defaultMode: 0520
 {{- if .Values.rbacSidecarEnabled }}
         - name: kubeconfig
           projected:
