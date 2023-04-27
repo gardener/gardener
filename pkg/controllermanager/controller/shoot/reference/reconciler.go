@@ -124,13 +124,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 func (r *Reconciler) handleReferencedSecrets(ctx context.Context, log logr.Logger, c client.Client, shoot *gardencorev1beta1.Shoot) (bool, error) {
 	var (
-		fns            []flow.TaskFn
-		added          = uint32(0)
-		dnsSecretNames = secretNamesForDNSProviders(shoot)
+		fns         []flow.TaskFn
+		added       = uint32(0)
+		secretNames = append(
+			secretNamesForDNSProviders(shoot),
+			namesForReferencedResources(shoot, "Secret")...,
+		)
 	)
 
-	for _, dnsSecretName := range dnsSecretNames {
-		name := dnsSecretName
+	for _, secretName := range secretNames {
+		name := secretName
 		fns = append(fns, func(ctx context.Context) error {
 			secret := &corev1.Secret{}
 			s := shoot
@@ -155,29 +158,44 @@ func (r *Reconciler) handleReferencedSecrets(ctx context.Context, log logr.Logge
 			return nil
 		})
 	}
-	err := flow.Parallel(fns...)(ctx)
 
-	return added != 0, err
+	return added != 0, flow.Parallel(fns...)(ctx)
 }
 
 func (r *Reconciler) handleReferencedConfigMap(ctx context.Context, log logr.Logger, c client.Client, shoot *gardencorev1beta1.Shoot) (bool, error) {
+	var (
+		fns            []flow.TaskFn
+		added          = uint32(0)
+		configMapNames = namesForReferencedResources(shoot, "ConfigMap")
+	)
+
 	if configMapRef := getAuditPolicyConfigMapRef(shoot.Spec.Kubernetes.KubeAPIServer); configMapRef != nil {
-		configMap := &corev1.ConfigMap{}
-		if err := c.Get(ctx, kubernetesutils.Key(shoot.Namespace, configMapRef.Name), configMap); err != nil {
-			return false, err
-		}
-
-		if !controllerutil.ContainsFinalizer(configMap, FinalizerName) {
-			log.Info("Adding finalizer to ConfigMap", "configMap", client.ObjectKeyFromObject(configMap))
-			if err := controllerutils.AddFinalizers(ctx, r.Client, configMap, FinalizerName); err != nil {
-				return true, fmt.Errorf("failed to add finalizer to ConfigMap: %w", err)
-			}
-		}
-
-		return true, nil
+		configMapNames = append(configMapNames, configMapRef.Name)
 	}
 
-	return false, nil
+	for _, configMapName := range configMapNames {
+		name := configMapName
+		fns = append(fns, func(ctx context.Context) error {
+			configMap := &corev1.ConfigMap{}
+			s := shoot
+			if err := c.Get(ctx, kubernetesutils.Key(s.Namespace, name), configMap); err != nil {
+				return err
+			}
+
+			atomic.StoreUint32(&added, 1)
+
+			if !controllerutil.ContainsFinalizer(configMap, FinalizerName) {
+				log.Info("Adding finalizer to ConfigMap", "configMap", client.ObjectKeyFromObject(configMap))
+				if err := controllerutils.AddFinalizers(ctx, r.Client, configMap, FinalizerName); err != nil {
+					return fmt.Errorf("failed to add finalizer to ConfigMap: %w", err)
+				}
+			}
+
+			return nil
+		})
+	}
+
+	return added != 0, flow.Parallel(fns...)(ctx)
 }
 
 func (r *Reconciler) releaseUnreferencedSecrets(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
@@ -253,6 +271,7 @@ func (r *Reconciler) getUnreferencedSecrets(ctx context.Context, shoot *gardenco
 			continue
 		}
 		referencedSecrets.Insert(secretNamesForDNSProviders(&s)...)
+		referencedSecrets.Insert(namesForReferencedResources(&s, "Secret")...)
 	}
 
 	var secretsToRelease []corev1.Secret
@@ -297,6 +316,7 @@ func (r *Reconciler) getUnreferencedConfigMaps(ctx context.Context, shoot *garde
 		if configMapRef := getAuditPolicyConfigMapRef(s.Spec.Kubernetes.KubeAPIServer); configMapRef != nil {
 			referencedConfigMaps.Insert(configMapRef.Name)
 		}
+		referencedConfigMaps.Insert(namesForReferencedResources(&s, "ConfigMap")...)
 	}
 
 	var configMapsToRelease []corev1.ConfigMap
@@ -325,6 +345,16 @@ func secretNamesForDNSProviders(shoot *gardencorev1beta1.Shoot) []string {
 		names = append(names, *provider.SecretName)
 	}
 
+	return names
+}
+
+func namesForReferencedResources(shoot *gardencorev1beta1.Shoot, kind string) []string {
+	var names []string
+	for _, ref := range shoot.Spec.Resources {
+		if ref.ResourceRef.APIVersion == "v1" && ref.ResourceRef.Kind == kind {
+			names = append(names, ref.ResourceRef.Name)
+		}
+	}
 	return names
 }
 
