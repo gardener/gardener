@@ -621,9 +621,6 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 	)
 
 	if !k.values.IsWorkerless {
-		if v := k.values.Config.PodEvictionTimeout; v != nil {
-			podEvictionTimeout = *v
-		}
 		if v := k.values.Config.NodeMonitorGracePeriod; v != nil {
 			nodeMonitorGracePeriod = *v
 		}
@@ -647,7 +644,17 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 			fmt.Sprintf("--horizontal-pod-autoscaler-tolerance=%v", *defaultHorizontalPodAutoscalerConfig.Tolerance),
 			"--leader-elect=true",
 			fmt.Sprintf("--node-monitor-grace-period=%s", nodeMonitorGracePeriod.Duration),
-			fmt.Sprintf("--pod-eviction-timeout=%s", podEvictionTimeout.Duration),
+		)
+
+		if versionutils.ConstraintK8sLess127.Check(k.values.TargetVersion) {
+			if v := k.values.Config.PodEvictionTimeout; v != nil {
+				podEvictionTimeout = *v
+			}
+
+			command = append(command, fmt.Sprintf("--pod-eviction-timeout=%s", podEvictionTimeout.Duration))
+		}
+
+		command = append(command,
 			fmt.Sprintf("--concurrent-deployment-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.Deployment, defaultControllerWorkersDeployment)),
 			fmt.Sprintf("--concurrent-replicaset-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.ReplicaSet, defaultControllerWorkersReplicaSet)),
 			fmt.Sprintf("--concurrent-statefulset-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.StatefulSet, defaultControllerWorkersStatefulSet)),
