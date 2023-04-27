@@ -66,8 +66,6 @@ var _ = Describe("validator", func() {
 			servicesCIDR = "100.64.0.0/13"
 			nodesCIDR    = "10.250.0.0/16"
 
-			falseVar = false
-
 			seedName      = "seed"
 			namespaceName = "garden-my-project"
 			projectName   = "my-project"
@@ -145,13 +143,14 @@ var _ = Describe("validator", func() {
 							GPU:          resource.MustParse("0"),
 							Memory:       resource.MustParse("100Gi"),
 							Architecture: pointer.String("amd64"),
+							Usable:       pointer.Bool(true),
 						},
 						{
 							Name:         "machine-type-old",
 							CPU:          resource.MustParse("2"),
 							GPU:          resource.MustParse("0"),
 							Memory:       resource.MustParse("100Gi"),
-							Usable:       &falseVar,
+							Usable:       pointer.Bool(false),
 							Architecture: pointer.String("amd64"),
 						},
 						{
@@ -164,6 +163,7 @@ var _ = Describe("validator", func() {
 								MinSize: &minVolSizeMachine,
 							},
 							Architecture: pointer.String("amd64"),
+							Usable:       pointer.Bool(true),
 						},
 						{
 							Name:         "machine-type-3",
@@ -171,6 +171,7 @@ var _ = Describe("validator", func() {
 							GPU:          resource.MustParse("0"),
 							Memory:       resource.MustParse("100Gi"),
 							Architecture: pointer.String("arm64"),
+							Usable:       pointer.Bool(true),
 						},
 					},
 					VolumeTypes: []core.VolumeType{
@@ -2202,6 +2203,7 @@ var _ = Describe("validator", func() {
 						GPU:          resource.MustParse("0"),
 						Memory:       resource.MustParse("5Gi"),
 						Architecture: pointer.String("amd64"),
+						Usable:       pointer.Bool(true),
 					}
 
 					kubeletConfig = &core.KubeletConfig{
@@ -2867,6 +2869,7 @@ var _ = Describe("validator", func() {
 									},
 								},
 								Machine: core.Machine{
+									Type: "machine-type-1",
 									Image: &core.ShootMachineImage{
 										Name:    "cr-image-name",
 										Version: "1.2.3",
@@ -2927,6 +2930,7 @@ var _ = Describe("validator", func() {
 									},
 								},
 								Machine: core.Machine{
+									Type: "machine-type-1",
 									Image: &core.ShootMachineImage{
 										Name:    "cr-image-name",
 										Version: "1.2.3",
