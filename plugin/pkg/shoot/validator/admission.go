@@ -1063,10 +1063,7 @@ func validateMachineTypes(constraints []core.MachineType, machine, oldMachine co
 		return true, nil
 	}
 
-	var (
-		validValues                 = []string{}
-		unavailableInAtLeastOneZone = isUnavailableInAtleastOneZone(regions, region, zones, machine.Type)
-	)
+	validValues := []string{}
 
 	for _, t := range constraints {
 		if !pointer.StringEqual(t.Architecture, machine.Architecture) {
@@ -1075,7 +1072,7 @@ func validateMachineTypes(constraints []core.MachineType, machine, oldMachine co
 		if t.Usable != nil && !*t.Usable {
 			continue
 		}
-		if unavailableInAtLeastOneZone {
+		if isUnavailableInAtleastOneZone(regions, region, zones, t.Name) {
 			continue
 		}
 		validValues = append(validValues, t.Name)
