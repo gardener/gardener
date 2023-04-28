@@ -910,25 +910,21 @@ var _ = Describe("helper", func() {
 	)
 
 	Describe("#FindMachineImageVersion", func() {
-		var cloudProfile *gardencorev1beta1.CloudProfile
+		var machineImages []gardencorev1beta1.MachineImage
 
 		BeforeEach(func() {
-			cloudProfile = &gardencorev1beta1.CloudProfile{
-				Spec: gardencorev1beta1.CloudProfileSpec{
-					MachineImages: []gardencorev1beta1.MachineImage{
+			machineImages = []gardencorev1beta1.MachineImage{
+				{
+					Name: "coreos",
+					Versions: []gardencorev1beta1.MachineImageVersion{
 						{
-							Name: "coreos",
-							Versions: []gardencorev1beta1.MachineImageVersion{
-								{
-									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-										Version: "0.0.2",
-									},
-								},
-								{
-									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-										Version: "0.0.3",
-									},
-								},
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version: "0.0.2",
+							},
+						},
+						{
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version: "0.0.3",
 							},
 						},
 					},
@@ -943,20 +939,20 @@ var _ = Describe("helper", func() {
 				},
 			}
 
-			found, actual := FindMachineImageVersion(cloudProfile, "coreos", "0.0.3")
-			Expect(found).To(BeTrue())
+			actual, ok := FindMachineImageVersion(machineImages, "coreos", "0.0.3")
+			Expect(ok).To(BeTrue())
 			Expect(actual).To(Equal(expected))
 		})
 
 		It("should return false when machine image with the given name does not exist", func() {
-			found, actual := FindMachineImageVersion(cloudProfile, "foo", "0.0.3")
-			Expect(found).To(BeFalse())
+			actual, ok := FindMachineImageVersion(machineImages, "foo", "0.0.3")
+			Expect(ok).To(BeFalse())
 			Expect(actual).To(Equal(gardencorev1beta1.MachineImageVersion{}))
 		})
 
 		It("should return false when machine image version with the given version does not exist", func() {
-			found, actual := FindMachineImageVersion(cloudProfile, "coreos", "0.0.4")
-			Expect(found).To(BeFalse())
+			actual, ok := FindMachineImageVersion(machineImages, "coreos", "0.0.4")
+			Expect(ok).To(BeFalse())
 			Expect(actual).To(Equal(gardencorev1beta1.MachineImageVersion{}))
 		})
 	})

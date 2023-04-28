@@ -46,8 +46,8 @@ func waitMachineImageVersionToBeExpiredInCloudProfile(cloudProfileName, imageNam
 		cloudProfile := &gardencorev1beta1.CloudProfile{}
 		g.Expect(mgrClient.Get(ctx, client.ObjectKey{Name: cloudProfileName}, cloudProfile)).To(Succeed())
 
-		found, machineImageVersion := v1beta1helper.FindMachineImageVersion(cloudProfile, imageName, imageVersion)
-		g.Expect(found).To(BeTrue())
+		machineImageVersion, ok := v1beta1helper.FindMachineImageVersion(cloudProfile.Spec.MachineImages, imageName, imageVersion)
+		g.Expect(ok).To(BeTrue())
 		g.Expect(machineImageVersion.Classification).To(PointTo(Equal(gardencorev1beta1.ClassificationDeprecated)))
 		g.Expect(machineImageVersion.ExpirationDate).NotTo(BeNil())
 		g.Expect(machineImageVersion.ExpirationDate.UTC()).To(Equal(expirationDate.UTC()))
