@@ -29,19 +29,18 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controller/networkpolicy/helper"
+	"github.com/gardener/gardener/pkg/controller/networkpolicy/hostnameresolver"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
 	corednsconstants "github.com/gardener/gardener/pkg/operation/botanist/component/coredns/constants"
 	nodelocaldnsconstants "github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns/constants"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -51,12 +50,24 @@ import (
 
 // Reconciler implements the reconcile.Reconcile interface for namespace reconciliation.
 type Reconciler struct {
-	GardenClient   client.Client
-	RuntimeClient  client.Client
-	Config         config.NetworkPolicyControllerConfiguration
-	Resolver       hostnameresolver.HostResolver
-	ResolverUpdate <-chan event.GenericEvent
-	SeedNetworks   gardencore.SeedNetworks
+	RuntimeClient    client.Client
+	ConcurrentSyncs  *int
+	WatchRegisterers []func(controller.Controller) error
+	Resolver         hostnameresolver.HostResolver
+	ResolverUpdate   <-chan event.GenericEvent
+	RuntimeNetworks  RuntimeNetworkConfig
+}
+
+// RuntimeNetworkConfig is the configuration of the networks for the runtime cluster.
+type RuntimeNetworkConfig struct {
+	// Nodes is the CIDR of the node network.
+	Nodes *string
+	// Pods is the CIDR of the pod network.
+	Pods string
+	// Services is the CIDR of the service network.
+	Services string
+	// BlockCIDRs is a list of network addresses that should be blocked.
+	BlockCIDRs []string
 }
 
 // Reconcile reconciles namespace in order to create some central network policies.
@@ -292,7 +303,7 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToPublicNetworks(ctx context.Con
 							private12BitBlock().String(),
 							private16BitBlock().String(),
 							carrierGradeNATBlock().String(),
-						}, r.SeedNetworks.BlockCIDRs...),
+						}, r.RuntimeNetworks.BlockCIDRs...),
 					},
 				}},
 			}},
@@ -315,7 +326,7 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToBlockedCIDRs(ctx context.Conte
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 		}
 
-		for _, cidr := range r.SeedNetworks.BlockCIDRs {
+		for _, cidr := range r.RuntimeNetworks.BlockCIDRs {
 			policy.Spec.Egress = append(policy.Spec.Egress, networkingv1.NetworkPolicyEgressRule{
 				To: []networkingv1.NetworkPolicyPeer{{
 					IPBlock: &networkingv1.IPBlock{
@@ -329,11 +340,11 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToBlockedCIDRs(ctx context.Conte
 
 func (r *Reconciler) reconcileNetworkPolicyAllowToPrivateNetworks(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
 	blockedNetworkPeers := append([]string{
-		r.SeedNetworks.Pods,
-		r.SeedNetworks.Services,
-	}, r.SeedNetworks.BlockCIDRs...)
+		r.RuntimeNetworks.Pods,
+		r.RuntimeNetworks.Services,
+	}, r.RuntimeNetworks.BlockCIDRs...)
 
-	if v := r.SeedNetworks.Nodes; v != nil {
+	if v := r.RuntimeNetworks.Nodes; v != nil {
 		blockedNetworkPeers = append(blockedNetworkPeers, *v)
 	}
 
@@ -405,7 +416,7 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToShootNetworks(ctx context.Cont
 		}
 	}
 
-	shootNetworkPeers, err := networkPolicyPeersWithExceptions(shootNetworks, r.SeedNetworks.BlockCIDRs...)
+	shootNetworkPeers, err := networkPolicyPeersWithExceptions(shootNetworks, r.RuntimeNetworks.BlockCIDRs...)
 	if err != nil {
 		return err
 	}
@@ -426,12 +437,12 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToShootNetworks(ctx context.Cont
 }
 
 func (r *Reconciler) reconcileNetworkPolicyAllowToDNS(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
-	_, seedServiceCIDR, err := net.ParseCIDR(r.SeedNetworks.Services)
+	_, runtimeServiceCIDR, err := net.ParseCIDR(r.RuntimeNetworks.Services)
 	if err != nil {
 		return err
 	}
 
-	seedDNSServerAddress, err := common.ComputeOffsetIP(seedServiceCIDR, 10)
+	runtimeDNSServerAddress, err := common.ComputeOffsetIP(runtimeServiceCIDR, 10)
 	if err != nil {
 		return fmt.Errorf("cannot calculate CoreDNS ClusterIP: %w", err)
 	}
@@ -477,7 +488,7 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToDNS(ctx context.Context, log l
 					// required for node local dns feature, allows egress traffic to CoreDNS
 					{
 						IPBlock: &networkingv1.IPBlock{
-							CIDR: fmt.Sprintf("%s/32", seedDNSServerAddress),
+							CIDR: fmt.Sprintf("%s/32", runtimeDNSServerAddress),
 						},
 					},
 					// required for node local dns feature, allows egress traffic to node local dns cache

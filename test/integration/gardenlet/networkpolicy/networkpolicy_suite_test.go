@@ -39,10 +39,10 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controller/networkpolicy/hostnameresolver"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -129,16 +129,23 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Register controller")
-	Expect((&networkpolicy.Reconciler{
-		Config:   config.NetworkPolicyControllerConfiguration{ConcurrentSyncs: pointer.Int(5)},
-		Resolver: hostnameresolver.NewNoOpProvider(),
-		SeedNetworks: gardencore.SeedNetworks{
-			Pods:       "10.0.0.0/16",
-			Services:   "10.1.0.0/16",
-			Nodes:      pointer.String("10.2.0.0/16"),
-			BlockCIDRs: []string{blockedCIDR},
+	Expect(networkpolicy.AddToManager(mgr, mgr, config.GardenletConfiguration{
+		Controllers: &config.GardenletControllerConfiguration{
+			NetworkPolicy: &config.NetworkPolicyControllerConfiguration{ConcurrentSyncs: pointer.Int(5)},
 		},
-	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
+		SeedConfig: &config.SeedConfig{
+			SeedTemplate: gardencore.SeedTemplate{
+				Spec: gardencore.SeedSpec{
+					Networks: gardencore.SeedNetworks{
+						Pods:       "10.0.0.0/16",
+						Services:   "10.1.0.0/16",
+						Nodes:      pointer.String("10.2.0.0/16"),
+						BlockCIDRs: []string{blockedCIDR},
+					},
+				},
+			},
+		},
+	}, hostnameresolver.NewNoOpProvider())).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

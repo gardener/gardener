@@ -23,7 +23,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	. "github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
+	. "github.com/gardener/gardener/pkg/controller/networkpolicy/helper"
 )
 
 var _ = Describe("helper", func() {
