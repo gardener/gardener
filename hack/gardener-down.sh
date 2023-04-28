@@ -23,6 +23,7 @@ kubectl delete seed \
   local \
   local2 \
   local-ha-single-zone \
+  local2-ha-single-zone \
   local-ha-multi-zone \
   --ignore-not-found \
   --wait \
@@ -39,6 +40,7 @@ kubectl delete ns \
   seed-local \
   seed-local2 \
   seed-local-ha-single-zone \
+  seed-local2-ha-single-zone \
   seed-local-ha-multi-zone \
   --ignore-not-found
 

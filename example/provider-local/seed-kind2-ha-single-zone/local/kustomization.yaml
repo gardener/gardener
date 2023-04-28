@@ -3,15 +3,15 @@ kind: Kustomization
 
 resources:
 - ../base
-- ../../seed-kind/local
+- ../../seed-kind-ha-single-zone/local
 
 patchesStrategicMerge:
-  - delete-secret-seed-local.yaml
+  - delete-secret-seed-local-ha-single-zone.yaml
 
 patchesJson6902:
 - target:
     group: core.gardener.cloud
     version: v1beta1
     kind: Seed
-    name: local
+    name: local-ha-single-zone
   path: patch-seed.yaml
