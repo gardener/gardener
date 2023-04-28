@@ -660,11 +660,9 @@ func (c *validationContext) validateShootNetworks(workerless bool) field.ErrorLi
 	)
 
 	if c.seed != nil {
-		// if the shoot is workerless and doesn't have networking field set yet, but the seed has
-		// shootDefaults set for serviceCIDR, then default networking field
-		if workerless &&
-			c.seed.Spec.Networks.ShootDefaults != nil &&
-			c.seed.Spec.Networks.ShootDefaults.Services != nil {
+		// if the shoot is workerless and doesn't have networking field set yet, then
+		// set shoot IPFamilies of seed IPFamilies type.
+		if workerless {
 			if c.shoot.Spec.Networking == nil {
 				c.shoot.Spec.Networking = &core.Networking{}
 			}
@@ -689,7 +687,7 @@ func (c *validationContext) validateShootNetworks(workerless bool) field.ErrorLi
 		if c.shoot.Spec.Networking.Services == nil {
 			if c.seed.Spec.Networks.ShootDefaults != nil {
 				c.shoot.Spec.Networking.Services = c.seed.Spec.Networks.ShootDefaults.Services
-			} else if !workerless {
+			} else {
 				allErrs = append(allErrs, field.Required(path.Child("services"), "services is required"))
 			}
 		}

@@ -1616,7 +1616,7 @@ var _ = Describe("validator", func() {
 					Expect(err).To(BeForbiddenError())
 				})
 
-				It("should not reject because shoot services network is nil (workerless Shoot)", func() {
+				It("should reject because shoot services network is nil (workerless Shoot)", func() {
 					shoot.Spec.Provider.Workers = nil
 					shoot.Spec.Networking.Services = nil
 
@@ -1628,7 +1628,9 @@ var _ = Describe("validator", func() {
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
-					Expect(err).NotTo(HaveOccurred())
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError(ContainSubstring("services is required spec.networking.services")))
+
 				})
 
 				It("should default shoot networks if seed provides ShootDefaults", func() {
@@ -1673,22 +1675,6 @@ var _ = Describe("validator", func() {
 					Expect(shoot.Spec.Networking.IPFamilies).To(Equal(seed.Spec.Networks.IPFamilies))
 					Expect(shoot.Spec.Networking.Pods).To(BeNil())
 					Expect(shoot.Spec.Networking.Services).To(Equal(&servicesCIDR))
-				})
-
-				It("should not default networking if seed doesn't provide ShootDefaults (workerlessShoot)", func() {
-					shoot.Spec.Provider.Workers = nil
-					shoot.Spec.Networking = nil
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-
-					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(shoot.Spec.Networking).To(BeNil())
 				})
 
 				It("should reject because the shoot node and the seed node networks intersect", func() {

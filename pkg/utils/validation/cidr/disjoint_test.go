@@ -134,7 +134,7 @@ var _ = Describe("utils", func() {
 			))
 		})
 
-		It("should not fail due to missing fields (workerless Shoots)", func() {
+		It("should fail due to missing fields (workerless Shoots)", func() {
 			errorList := ValidateNetworkDisjointedness(
 				field.NewPath(""),
 				nil,
@@ -146,7 +146,12 @@ var _ = Describe("utils", func() {
 				true,
 			)
 
-			Expect(errorList).To(BeEmpty())
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("[].services"),
+				})),
+			))
 		})
 
 		It("should fail due to default vpn range overlap in pod cidr", func() {
@@ -494,7 +499,7 @@ var _ = Describe("utils", func() {
 			))
 		})
 
-		It("should not fail due to missing fields (workerless Shoot)", func() {
+		It("should fail due to missing fields (workerless Shoot)", func() {
 			errorList := ValidateShootNetworkDisjointedness(
 				field.NewPath(""),
 				nil,
@@ -503,7 +508,10 @@ var _ = Describe("utils", func() {
 				true,
 			)
 
-			Expect(errorList).To(BeEmpty())
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("[].services"),
+			}))))
 		})
 
 		It("should fail due to disjointedness of node, service and pod networks", func() {
