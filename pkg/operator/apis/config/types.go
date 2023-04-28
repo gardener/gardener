@@ -54,6 +54,8 @@ type OperatorConfiguration struct {
 type ControllerConfiguration struct {
 	// Garden is the configuration for the garden controller.
 	Garden GardenControllerConfig
+	// NetworkPolicy is the configuration for the NetworkPolicy controller.
+	NetworkPolicy NetworkPolicyControllerConfiguration
 }
 
 // GardenControllerConfig is the configuration for the garden controller.
@@ -65,6 +67,12 @@ type GardenControllerConfig struct {
 	// ETCDConfig contains an optional configuration for the
 	// backup compaction feature of ETCD backup-restore functionality.
 	ETCDConfig *gardenletconfig.ETCDConfig
+}
+
+// NetworkPolicyControllerConfiguration defines the configuration of the NetworkPolicy controller.
+type NetworkPolicyControllerConfiguration struct {
+	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
+	ConcurrentSyncs *int
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

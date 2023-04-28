@@ -77,6 +77,12 @@ config.yaml: |
       etcdConfig:
 {{ toYaml .Values.config.controllers.garden.etcdConfig | indent 8 }}
       {{- end }}
+    {{- if .Values.config.controllers.networkPolicy }}
+    networkPolicy:
+      {{- if .Values.config.controllers.networkPolicy.concurrentSyncs }}
+      concurrentSyncs: {{ .Values.config.controllers.networkPolicy.concurrentSyncs }}
+      {{- end }}
+    {{- end }}
 {{- end -}}
 
 {{- define "operator.config.name" -}}

@@ -260,6 +260,13 @@ This range is used by the API server to compute the cluster IPs of `Service`s.
 
 The controller maintains the `Reconciled` condition which indicates the status of an operation.
 
+#### [`NetworkPolicy` Controller Registrar](../../pkg/controller/networkpolicy)
+
+This controller registers the same `NetworkPolicy` controller which is also used in `gardenlet`, please read it up [here](gardenlet.md#networkpolicy-controllerpkggardenletcontrollernetworkpolicy) for more details.
+
+The registration happens as soon as the `Garden` resource is created.
+It contains the networking information of the garden runtime cluster which is required configuration for the `NetworkPolicy` controller.
+
 ### Webhooks
 
 As of today, the `gardener-operator` only has one webhook handler which is now described in more detail.
