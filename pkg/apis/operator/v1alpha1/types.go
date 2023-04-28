@@ -63,11 +63,33 @@ type GardenSpec struct {
 
 // RuntimeCluster contains configuration for the runtime cluster.
 type RuntimeCluster struct {
+	// Networking defines the networking configuration of the runtime cluster.
+	Networking RuntimeNetworking `json:"networking"`
 	// Provider defines the provider-specific information for this cluster.
 	Provider Provider `json:"provider"`
 	// Settings contains certain settings for this cluster.
 	// +optional
 	Settings *Settings `json:"settings,omitempty"`
+}
+
+// RuntimeNetworking defines the networking configuration of the runtime cluster.
+type RuntimeNetworking struct {
+	// Nodes is the CIDR of the node network. This field is immutable.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +optional
+	Nodes *string `json:"nodes,omitempty"`
+	// Pods is the CIDR of the pod network. This field is immutable.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	Pods string `json:"pods"`
+	// Services is the CIDR of the service network. This field is immutable.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	Services string `json:"services"`
+	// BlockCIDRs is a list of network addresses that should be blocked.
+	// +optional
+	BlockCIDRs []string `json:"blockCIDRs,omitempty"`
 }
 
 // Provider defines the provider-specific information for this cluster.

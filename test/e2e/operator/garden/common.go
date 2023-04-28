@@ -75,6 +75,10 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 		},
 		Spec: operatorv1alpha1.GardenSpec{
 			RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+				Networking: operatorv1alpha1.RuntimeNetworking{
+					Pods:     "10.1.0.0/16",
+					Services: "10.2.0.0/16",
+				},
 				Provider: operatorv1alpha1.Provider{
 					Zones: []string{"0", "1", "2"},
 				},

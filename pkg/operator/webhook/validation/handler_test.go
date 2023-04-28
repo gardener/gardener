@@ -46,6 +46,12 @@ var _ = Describe("Handler", func() {
 		handler = &Handler{Logger: log, RuntimeClient: fakeClient}
 		garden = &operatorv1alpha1.Garden{
 			Spec: operatorv1alpha1.GardenSpec{
+				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+					Networking: operatorv1alpha1.RuntimeNetworking{
+						Pods:     "10.1.0.0/16",
+						Services: "10.2.0.0/16",
+					},
+				},
 				VirtualCluster: operatorv1alpha1.VirtualCluster{
 					DNS: operatorv1alpha1.DNS{
 						Domain: "virtual-garden.local.gardener.cloud",

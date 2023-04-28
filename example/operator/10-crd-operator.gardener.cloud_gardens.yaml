@@ -50,6 +50,44 @@ spec:
                 description: RuntimeCluster contains configuration for the runtime
                   cluster.
                 properties:
+                  networking:
+                    description: Networking defines the networking configuration of
+                      the runtime cluster.
+                    properties:
+                      blockCIDRs:
+                        description: BlockCIDRs is a list of network addresses that
+                          should be blocked.
+                        items:
+                          type: string
+                        type: array
+                      nodes:
+                        description: Nodes is the CIDR of the node network. This field
+                          is immutable.
+                        minLength: 1
+                        type: string
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                      pods:
+                        description: Pods is the CIDR of the pod network. This field
+                          is immutable.
+                        minLength: 1
+                        type: string
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                      services:
+                        description: Services is the CIDR of the service network.
+                          This field is immutable.
+                        minLength: 1
+                        type: string
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                    required:
+                    - pods
+                    - services
+                    type: object
                   provider:
                     description: Provider defines the provider-specific information
                       for this cluster.
@@ -112,6 +150,7 @@ spec:
                         type: object
                     type: object
                 required:
+                - networking
                 - provider
                 type: object
               virtualCluster:

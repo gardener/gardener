@@ -36,6 +36,12 @@ var _ = Describe("Validation Tests", func() {
 					Name: "garden",
 				},
 				Spec: operatorv1alpha1.GardenSpec{
+					RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+						Networking: operatorv1alpha1.RuntimeNetworking{
+							Pods:     "10.1.0.0/16",
+							Services: "10.2.0.0/16",
+						},
+					},
 					VirtualCluster: operatorv1alpha1.VirtualCluster{
 						DNS: operatorv1alpha1.DNS{
 							Domain: "foo.bar.com",
@@ -44,7 +50,7 @@ var _ = Describe("Validation Tests", func() {
 							Version: "1.26.3",
 						},
 						Networking: operatorv1alpha1.Networking{
-							Services: "10.1.0.0/16",
+							Services: "10.4.0.0/16",
 						},
 					},
 				},
@@ -710,6 +716,33 @@ var _ = Describe("Validation Tests", func() {
 			Context("networking", func() {
 				It("should complain about an invalid service CIDR", func() {
 					garden.Spec.VirtualCluster.Networking.Services = "not-parseable-cidr"
+
+					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.virtualCluster.networking.services"),
+					}))))
+				})
+
+				It("should complain when pod network of runtime cluster intersects with service network of virtual cluster", func() {
+					garden.Spec.RuntimeCluster.Networking.Pods = garden.Spec.VirtualCluster.Networking.Services
+
+					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.virtualCluster.networking.services"),
+					}))))
+				})
+
+				It("should complain when service network of runtime cluster intersects with service network of virtual cluster", func() {
+					garden.Spec.RuntimeCluster.Networking.Services = garden.Spec.VirtualCluster.Networking.Services
+
+					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.virtualCluster.networking.services"),
+					}))))
+				})
+
+				It("should complain when node network of runtime cluster intersects with service network of virtual cluster", func() {
+					garden.Spec.RuntimeCluster.Networking.Nodes = &garden.Spec.VirtualCluster.Networking.Services
 
 					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),

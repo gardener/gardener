@@ -14,6 +14,11 @@ metadata:
   name: garden
 spec:
   runtimeCluster:
+    networking:
+      nodes: 172.18.0.0/16
+      # Those CIDRs must match those specified in the kind Cluster configuration.
+      pods: 10.1.0.0/16
+      services: 10.2.0.0/16
     provider:
       zones:
       - "0"

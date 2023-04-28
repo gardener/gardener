@@ -81,7 +81,7 @@ The credentials rotation works in the same way as it does for `Shoot` resources,
 
 For certificate authorities, `gardener-operator` generates one which is automatically rotated roughly each month (`ca-garden-runtime`) and several CAs which are **NOT** automatically rotated but only on demand.
 
-**🚨 Hence, it is the responsibility of the operator to regularly perform the credentials rotation.**
+**🚨 Hence, it is the responsibility of the (human) operator to regularly perform the credentials rotation.**
 
 Please refer to [this document](../usage/shoot_credentials_rotation.md#gardener-provided-credentials) for more details. As of today, `gardener-operator` only creates the following types of credentials (i.e., some sections of the document don't apply for `Garden`s and can be ignored):
 
