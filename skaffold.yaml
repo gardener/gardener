@@ -493,17 +493,11 @@ profiles:
 - name: extensions
   patches:
   - op: add
-    path: /deploy/helm/releases/0/setValueTemplates
+    path: /deploy/helm/releases/0/setValues
     value:
-      global:
-        apiserver:
-          clusterIdentity: gardener-extensions
-        scheduler:
-          config:
-            schedulers:
-              shoot:
-                candidateDeterminationStrategy: MinimalDistance
-                concurrentSyncs: 5
+      global.apiserver.clusterIdentity: gardener-extensions
+      global.scheduler.config.schedulers.shoot.candidateDeterminationStrategy: MinimalDistance
+      global.scheduler.config.schedulers.shoot.concurrentSyncs: 5
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
     value: example/provider-extensions/garden/controlplane/values.yaml
@@ -516,6 +510,24 @@ profiles:
     value:
       global.admission.service.clusterIP: fd00:10:2::1000
       global.apiserver.featureGates.IPv6SingleStack: true
+- name: debug
+  activation:
+  - command: debug
+  patches:
+  - op: add
+    path: /deploy/helm/releases/0/setValues
+    value:
+      global.apiserver.replicaCount: 1
+      global.apiserver.livenessProbe.enable: false
+      global.apiserver.readinessProbe.enable: false
+      global.admission.replicaCount: 1
+      global.admission.config.server.healthProbes.enable: false
+      global.controller.replicaCount: 1
+      global.controller.config.leaderElection.leaderElect: false
+      global.controller.config.server.healthProbes.enable: false
+      global.scheduler.replicaCount: 1
+      global.scheduler.config.leaderElection.leaderElect: false
+      global.scheduler.config.server.healthProbes.enable: false
 ---
 apiVersion: skaffold/v4beta3
 kind: Config
@@ -1146,7 +1158,6 @@ profiles:
     - bash
     - -ec
     - TIMEOUT=1200 hack/usage/wait-for.sh seed local-ha-multi-zone GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
-
 - name: ipv6
   activation:
   - env: IPFAMILY=ipv6
@@ -1154,3 +1165,13 @@ profiles:
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
     value: example/gardener-local/gardenlet/values-ipv6.yaml
+- name: debug
+  activation:
+  - command: debug
+  patches:
+  - op: add
+    path: /deploy/helm/releases/0/setValues
+    value:
+      replicaCount: 1
+      config.leaderElection.leaderElect: false
+      config.server.healthProbes.enable: false

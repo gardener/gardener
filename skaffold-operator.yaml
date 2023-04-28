@@ -249,3 +249,14 @@ deploy:
         replicaCount: 2
       createNamespace: true
       wait: true
+profiles:
+- name: debug
+  activation:
+  - command: debug
+  patches:
+  - op: add
+    path: /deploy/helm/releases/0/setValues
+    value:
+      replicaCount: 1
+      config.leaderElection.leaderElect: false
+      config.server.healthProbes.enable: false

@@ -270,6 +270,7 @@ spec:
         - --log-level={{ .Values.global.apiserver.logLevel | default "info"  }}
         - --log-format={{ .Values.global.apiserver.logFormat | default "json"  }}
         - --v={{ .Values.global.apiserver.logVerbosity | default "2"  }}
+        {{- if .Values.global.apiserver.livenessProbe.enable }}
         livenessProbe:
           httpGet:
             scheme: HTTPS
@@ -280,6 +281,8 @@ spec:
           successThreshold: {{ .Values.global.apiserver.livenessProbe.successThreshold }}
           failureThreshold: {{ .Values.global.apiserver.livenessProbe.failureThreshold }}
           timeoutSeconds: {{ .Values.global.apiserver.livenessProbe.timeoutSeconds }}
+        {{- end }}
+        {{- if .Values.global.apiserver.readinessProbe.enable }}
         readinessProbe:
           httpGet:
             scheme: HTTPS
@@ -290,6 +293,7 @@ spec:
           successThreshold: {{ .Values.global.apiserver.readinessProbe.successThreshold }}
           failureThreshold: {{ .Values.global.apiserver.readinessProbe.failureThreshold }}
           timeoutSeconds: {{ .Values.global.apiserver.readinessProbe.timeoutSeconds }}
+        {{- end }}
         {{- if .Values.global.apiserver.resources }}
         resources:
 {{ toYaml .Values.global.apiserver.resources | indent 10 }}
