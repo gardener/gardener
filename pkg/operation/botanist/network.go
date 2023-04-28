@@ -17,12 +17,18 @@ package botanist
 import (
 	"context"
 
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/extensions/network"
 )
 
 // DefaultNetwork creates the default deployer for the Network custom resource.
 func (b *Botanist) DefaultNetwork() component.DeployMigrateWaiter {
+	var ipFamilies []extensionsv1alpha1.IPFamily
+	for _, ipFamily := range b.Shoot.GetInfo().Spec.Networking.IPFamilies {
+		ipFamilies = append(ipFamilies, extensionsv1alpha1.IPFamily(ipFamily))
+	}
+
 	return network.New(
 		b.Logger,
 		b.SeedClientSet.Client(),
@@ -30,6 +36,7 @@ func (b *Botanist) DefaultNetwork() component.DeployMigrateWaiter {
 			Namespace:      b.Shoot.SeedNamespace,
 			Name:           b.Shoot.GetInfo().Name,
 			Type:           *b.Shoot.GetInfo().Spec.Networking.Type,
+			IPFamilies:     ipFamilies,
 			ProviderConfig: b.Shoot.GetInfo().Spec.Networking.ProviderConfig,
 			PodCIDR:        b.Shoot.Networks.Pods,
 			ServiceCIDR:    b.Shoot.Networks.Services,
