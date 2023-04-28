@@ -55,6 +55,7 @@ spec:
         projected-token-mount.resources.gardener.cloud/skip: "true"
         seccompprofile.resources.gardener.cloud/skip: "true"
         topology-spread-constraints.resources.gardener.cloud/skip: "true"
+        networking.resources.gardener.cloud/to-virtual-garden-etcd-main-client-tcp-8080: allowed
         {{- if .Values.podLabels }}
 {{ toYaml .Values.podLabels | indent 8 }}
         {{- end }}

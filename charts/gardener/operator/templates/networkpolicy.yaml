@@ -1,0 +1,36 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-everything-for-gardener-operator
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: gardener
+    role: operator
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  podSelector:
+    matchLabels:
+      app: gardener
+      role: operator
+      release: {{ .Release.Name }}
+  ingress:
+  - from:
+    - namespaceSelector: {}
+      podSelector: {}
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    - ipBlock:
+        cidr: ::/0
+  egress:
+  - to:
+    - namespaceSelector: {}
+      podSelector: {}
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    - ipBlock:
+        cidr: ::/0
+  policyTypes:
+  - Ingress
+  - Egress
