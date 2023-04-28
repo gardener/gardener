@@ -84,12 +84,12 @@ var _ = Describe("shoot", func() {
 				})))
 			})
 
-			It("returns nil if serviceCIDR is nil (workerless Shoot)", func() {
+			It("returns err if serviceCIDR is nil (workerless Shoot)", func() {
 				shoot.Spec.Networking.Pods = nil
 				shoot.Spec.Networking.Services = nil
 				result, err := ToNetworks(shoot, true)
 
-				Expect(err).ToNot(HaveOccurred())
+				Expect(err).To(HaveOccurred())
 				Expect(result).To(BeNil())
 			})
 

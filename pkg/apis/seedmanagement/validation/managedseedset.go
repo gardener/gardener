@@ -214,7 +214,7 @@ func validateIfWorkerless(spec *gardencore.ShootSpec, fldPath *field.Path) field
 	allErrs := field.ErrorList{}
 
 	if len(spec.Provider.Workers) == 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "workers"), spec.Provider.Workers, "workers cannot be empty in the Shoot template for a managedseedset"))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "workers"), spec.Provider.Workers, "workers cannot be empty in the Shoot template for a ManagedSeedSet"))
 	}
 
 	return allErrs

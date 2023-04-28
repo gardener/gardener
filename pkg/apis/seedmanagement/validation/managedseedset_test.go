@@ -331,7 +331,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.shootTemplate.spec.provider.workers"),
-					"Detail": ContainSubstring("workers cannot be empty in the Shoot template for a managedseedset"),
+					"Detail": ContainSubstring("workers cannot be empty in the Shoot template for a ManagedSeedSet"),
 				})),
 			))
 		})

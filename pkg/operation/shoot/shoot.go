@@ -473,11 +473,8 @@ func ToNetworks(s *gardencorev1beta1.Shoot, workerless bool) (*Networks, error) 
 		if err != nil {
 			return nil, fmt.Errorf("cannot parse shoot's network cidr %w", err)
 		}
-	} else if !workerless {
-		return nil, fmt.Errorf("shoot's service cidr is empty")
 	} else {
-		// if serviceCIDR is nil, then the Networks struct is not required for workerless
-		return nil, nil
+		return nil, fmt.Errorf("shoot's service cidr is empty")
 	}
 
 	apiserver, err := common.ComputeOffsetIP(svc, 1)
