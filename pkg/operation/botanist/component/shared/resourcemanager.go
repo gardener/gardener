@@ -27,6 +27,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/images"
@@ -47,8 +48,6 @@ func NewGardenerResourceManager(
 	defaultSeccompProfileEnabled bool,
 	endpointSliceHintsEnabled bool,
 	fullNetworkPoliciesEnabled bool,
-	networkPolicyControllerIncludesGardenNamespace bool,
-	networkPolicyControllerIngressControllerSelector *resourcemanagerv1alpha1.IngressControllerSelector,
 	zones []string,
 ) (
 	component.DeployWaiter,
@@ -66,17 +65,23 @@ func NewGardenerResourceManager(
 	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
 	return resourcemanager.New(c, gardenNamespaceName, secretsManager, resourcemanager.Values{
-		ConcurrentSyncs:                                  pointer.Int(20),
-		DefaultSeccompProfileEnabled:                     defaultSeccompProfileEnabled,
-		EndpointSliceHintsEnabled:                        endpointSliceHintsEnabled,
-		FullNetworkPolicies:                              fullNetworkPoliciesEnabled,
-		NetworkPolicyControllerIncludesGardenNamespace:   networkPolicyControllerIncludesGardenNamespace,
-		NetworkPolicyControllerIngressControllerSelector: networkPolicyControllerIngressControllerSelector,
-		HealthSyncPeriod:                                 &metav1.Duration{Duration: time.Minute},
-		Image:                                            image.String(),
-		LogLevel:                                         logLevel,
-		LogFormat:                                        logFormat,
-		MaxConcurrentTokenInvalidatorWorkers:             pointer.Int(5),
+		ConcurrentSyncs:                                pointer.Int(20),
+		DefaultSeccompProfileEnabled:                   defaultSeccompProfileEnabled,
+		EndpointSliceHintsEnabled:                      endpointSliceHintsEnabled,
+		FullNetworkPolicies:                            fullNetworkPoliciesEnabled,
+		NetworkPolicyControllerIncludesGardenNamespace: true,
+		NetworkPolicyControllerIngressControllerSelector: &resourcemanagerv1alpha1.IngressControllerSelector{
+			Namespace: v1beta1constants.GardenNamespace,
+			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{
+				v1beta1constants.LabelApp:      nginxingress.LabelAppValue,
+				nginxingress.LabelKeyComponent: nginxingress.LabelValueController,
+			}},
+		},
+		HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
+		Image:                                image.String(),
+		LogLevel:                             logLevel,
+		LogFormat:                            logFormat,
+		MaxConcurrentTokenInvalidatorWorkers: pointer.Int(5),
 		// TODO(timuthy): Remove PodTopologySpreadConstraints webhook once for all seeds the
 		//  MatchLabelKeysInPodTopologySpread feature gate is beta and enabled by default (probably 1.26+).
 		PodTopologySpreadConstraintsEnabled: true,
