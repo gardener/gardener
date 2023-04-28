@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/uuid"
@@ -60,7 +61,10 @@ const (
 )
 
 var (
-	testRunID string
+	testRunID  string
+	testCancel context.CancelFunc
+
+	gardenNamespace *corev1.Namespace
 
 	ctx = context.Background()
 	log logr.Logger
@@ -110,6 +114,25 @@ var _ = BeforeSuite(func() {
 
 	testRunID = utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 	log.Info("Using test run ID for test", "testRunID", testRunID)
+
+	By("Create garden namespace")
+	gardenNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "garden",
+			Labels: map[string]string{
+				testID: testRunID,
+			},
+		},
+	}
+
+	By("Create garden namespace")
+	Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
+	log.Info("Created garden namespace for test", "namespaceName", gardenNamespace.Name)
+
+	DeferCleanup(func() {
+		By("Delete garden namespace")
+		Expect(testClient.Delete(ctx, gardenNamespace)).To(Succeed())
+	})
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{

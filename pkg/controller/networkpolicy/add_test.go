@@ -99,8 +99,8 @@ var _ = Describe("Add", func() {
 
 			gardenNamespace = &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:   "garden-1238as",
-					Labels: map[string]string{v1beta1constants.LabelRole: v1beta1constants.GardenNamespace},
+					Name:   "garden",
+					Labels: map[string]string{"kubernetes.io/metadata.name": "garden"},
 				},
 			}
 			istioSystemNamespace = &corev1.Namespace{

@@ -164,7 +164,7 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 			name:          "deny-all",
 			reconcileFunc: r.reconcileNetworkPolicyDenyAll,
 			namespaceSelectors: extendLabelSelectorsIfFeatureGateEnabled([]labels.Selector{
-				labels.SelectorFromSet(labels.Set{v1beta1constants.LabelRole: v1beta1constants.GardenNamespace}),
+				labels.SelectorFromSet(labels.Set{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}),
@@ -179,7 +179,7 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 				return r.reconcileNetworkPolicyAllowToAPIServer(ctx, log, networkPolicy, v1beta1constants.LabelNetworkPolicyToSeedAPIServer)
 			},
 			namespaceSelectors: []labels.Selector{
-				labels.SelectorFromSet(labels.Set{v1beta1constants.LabelRole: v1beta1constants.GardenNamespace}),
+				labels.SelectorFromSet(labels.Set{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
 			},
@@ -190,7 +190,7 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 				return r.reconcileNetworkPolicyAllowToAPIServer(ctx, log, networkPolicy, v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer)
 			},
 			namespaceSelectors: extendLabelSelectorsIfFeatureGateEnabled([]labels.Selector{
-				labels.SelectorFromSet(labels.Set{v1beta1constants.LabelRole: v1beta1constants.GardenNamespace}),
+				labels.SelectorFromSet(labels.Set{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
 			}),
@@ -199,7 +199,7 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 			name:          "allow-to-public-networks",
 			reconcileFunc: r.reconcileNetworkPolicyAllowToPublicNetworks,
 			namespaceSelectors: extendLabelSelectorsIfFeatureGateEnabled([]labels.Selector{
-				labels.SelectorFromSet(labels.Set{v1beta1constants.LabelRole: v1beta1constants.GardenNamespace}),
+				labels.SelectorFromSet(labels.Set{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
 			}),
 		},
@@ -207,7 +207,7 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 			name:          "allow-to-private-networks",
 			reconcileFunc: r.reconcileNetworkPolicyAllowToPrivateNetworks,
 			namespaceSelectors: extendLabelSelectorsIfFeatureGateEnabled([]labels.Selector{
-				labels.SelectorFromSet(labels.Set{v1beta1constants.LabelRole: v1beta1constants.GardenNamespace}),
+				labels.SelectorFromSet(labels.Set{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
 			}),
 		},
@@ -215,7 +215,7 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 			name:          "allow-to-blocked-cidrs",
 			reconcileFunc: r.reconcileNetworkPolicyAllowToBlockedCIDRs,
 			namespaceSelectors: extendLabelSelectorsIfFeatureGateEnabled([]labels.Selector{
-				labels.SelectorFromSet(labels.Set{v1beta1constants.LabelRole: v1beta1constants.GardenNamespace}),
+				labels.SelectorFromSet(labels.Set{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
 			}),
 		},
@@ -230,7 +230,7 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 			name:          "allow-to-dns",
 			reconcileFunc: r.reconcileNetworkPolicyAllowToDNS,
 			namespaceSelectors: extendLabelSelectorsIfFeatureGateEnabled([]labels.Selector{
-				labels.SelectorFromSet(labels.Set{v1beta1constants.LabelRole: v1beta1constants.GardenNamespace}),
+				labels.SelectorFromSet(labels.Set{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}),
@@ -460,7 +460,7 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToDNS(ctx context.Context, log l
 					{
 						NamespaceSelector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
-								v1beta1constants.LabelRole: metav1.NamespaceSystem,
+								corev1.LabelMetadataName: metav1.NamespaceSystem,
 							},
 						},
 						PodSelector: &metav1.LabelSelector{
@@ -474,7 +474,7 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToDNS(ctx context.Context, log l
 					{
 						NamespaceSelector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
-								v1beta1constants.LabelRole: metav1.NamespaceSystem,
+								corev1.LabelMetadataName: metav1.NamespaceSystem,
 							},
 						},
 						PodSelector: &metav1.LabelSelector{

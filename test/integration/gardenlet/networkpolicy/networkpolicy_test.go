@@ -37,7 +37,6 @@ import (
 
 var _ = Describe("NetworkPolicy controller tests", func() {
 	var (
-		gardenNamespace             *corev1.Namespace
 		istioSystemNamespace        *corev1.Namespace
 		istioIngressNamespace       *corev1.Namespace
 		istioExposureClassNamespace *corev1.Namespace
@@ -48,15 +47,6 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 	)
 
 	BeforeEach(func() {
-		gardenNamespace = &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "garden-",
-				Labels: map[string]string{
-					testID: testRunID,
-					"role": v1beta1constants.GardenNamespace,
-				},
-			},
-		}
 		istioSystemNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "istio-system-",
@@ -129,15 +119,6 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 	})
 
 	JustBeforeEach(func() {
-		By("Create garden namespace")
-		Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
-		log.Info("Created garden namespace for test", "namespaceName", gardenNamespace.Name)
-
-		DeferCleanup(func() {
-			By("Delete garden namespace")
-			Expect(testClient.Delete(ctx, gardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
-		})
-
 		By("Create istio-system namespace")
 		Expect(testClient.Create(ctx, istioSystemNamespace)).To(Succeed())
 		log.Info("Created istio-system namespace for test", "namespaceName", istioSystemNamespace.Name)
@@ -520,7 +501,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 							{
 								NamespaceSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
-										"role": "kube-system",
+										"kubernetes.io/metadata.name": "kube-system",
 									},
 								},
 								PodSelector: &metav1.LabelSelector{
@@ -534,7 +515,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 							{
 								NamespaceSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
-										"role": "kube-system",
+										"kubernetes.io/metadata.name": "kube-system",
 									},
 								},
 								PodSelector: &metav1.LabelSelector{
