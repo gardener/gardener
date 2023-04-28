@@ -2587,7 +2587,8 @@ var _ = Describe("validator", func() {
 						Expect(err).To(BeForbiddenError())
 					})
 
-					It("should reject due to a machine image that does not match the kubeletVersionConstraint constraint when the control plane K8s version does not match", func() {
+					It("should reject due to a machine image that does not match the kubeletVersionConstraint when the control plane K8s version does not match", func() {
+						cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: "1.26.0"})
 						cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages,
 							core.MachineImage{
 								Name: "constraint-image-name",
@@ -2626,10 +2627,11 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(BeForbiddenError())
-						Expect(err.Error()).To(ContainSubstring("does not support CPU architecture 'amd64', is expired or does not match kubelet version constraint"))
+						Expect(err.Error()).To(ContainSubstring("machine image 'constraint-image-name@1.2.3' does not support kubelet version '1.26.0', supported kubelet versions by this machine image version: '< 1.26'"))
 					})
 
 					It("should reject due to a machine image that does not match the kubeletVersionConstraint when the worker K8s version does not match", func() {
+						cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: "1.25.0"}, core.ExpirableVersion{Version: "1.26.0"})
 						cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages,
 							core.MachineImage{
 								Name: "constraint-image-name",
@@ -2671,7 +2673,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(BeForbiddenError())
-						Expect(err.Error()).To(ContainSubstring("does not support CPU architecture 'amd64', is expired or does not match kubelet version constraint"))
+						Expect(err.Error()).To(ContainSubstring("machine image 'constraint-image-name@1.2.3' does not support kubelet version '1.25.0', supported kubelet versions by this machine image version: '>= 1.26'"))
 					})
 
 					It("should default version to latest non-preview version as shoot does not specify one", func() {
@@ -2994,6 +2996,99 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(HaveOccurred())
+					})
+
+					It("should reject due to a machine image that does not match the kubeletVersionConstraint when the control plane K8s version does not match", func() {
+						cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: "1.25.0"}, core.ExpirableVersion{Version: "1.26.0"})
+						cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages,
+							core.MachineImage{
+								Name: "constraint-image-name",
+								Versions: []core.MachineImageVersion{
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version: "1.2.3",
+										},
+										KubeletVersionConstraint: pointer.String("< 1.26"),
+										Architectures:            []string{"amd64"},
+									},
+								},
+							},
+						)
+
+						shoot.Spec.Kubernetes.Version = "1.25.0"
+						shoot.Spec.Provider.Workers = []core.Worker{
+							{
+								Machine: core.Machine{
+									Type: "machine-type-1",
+									Image: &core.ShootMachineImage{
+										Name:    "constraint-image-name",
+										Version: "1.2.3",
+									},
+									Architecture: pointer.String("amd64"),
+								},
+							},
+						}
+						newShoot := shoot.DeepCopy()
+						newShoot.Spec.Kubernetes.Version = "1.26.0"
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+
+						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).To(BeForbiddenError())
+						Expect(err.Error()).To(ContainSubstring("machine image 'constraint-image-name@1.2.3' does not support kubelet version '1.26.0', supported kubelet versions by this machine image version: '< 1.26'"))
+					})
+
+					It("should reject due to a machine image that does not match the kubeletVersionConstraint when the worker K8s version does not match", func() {
+						cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: "1.24.0"}, core.ExpirableVersion{Version: "1.25.0"}, core.ExpirableVersion{Version: "1.26.0"})
+						cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages,
+							core.MachineImage{
+								Name: "constraint-image-name",
+								Versions: []core.MachineImageVersion{
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version: "1.2.3",
+										},
+										KubeletVersionConstraint: pointer.String(">= 1.26"),
+										Architectures:            []string{"amd64"},
+									},
+								},
+							},
+						)
+
+						shoot.Spec.Kubernetes.Version = "1.26.0"
+						shoot.Spec.Provider.Workers = []core.Worker{
+							{
+								Machine: core.Machine{
+									Type: "machine-type-1",
+									Image: &core.ShootMachineImage{
+										Name:    "constraint-image-name",
+										Version: "1.2.3",
+									},
+									Architecture: pointer.String("amd64"),
+								},
+								Kubernetes: &core.WorkerKubernetes{
+									Version: pointer.String("1.24.0"),
+								},
+							},
+						}
+						newShoot := shoot.DeepCopy()
+						newShoot.Spec.Provider.Workers[0].Kubernetes.Version = pointer.String("1.25.0")
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+
+						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).To(BeForbiddenError())
+						Expect(err.Error()).To(ContainSubstring("machine image 'constraint-image-name@1.2.3' does not support kubelet version '1.25.0', supported kubelet versions by this machine image version: '>= 1.26'"))
 					})
 
 					It("should keep machine image of the old shoot (unset in new shoot)", func() {
