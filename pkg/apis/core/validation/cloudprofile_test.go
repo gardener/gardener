@@ -617,7 +617,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					}))))
 				})
 
-				It("should allow valid kubeletVersionConstraint constraint for machine image versions", func() {
+				It("should allow valid kubeletVersionConstraint for machine image versions", func() {
 					cloudProfile.Spec.MachineImages = []core.MachineImage{
 						{
 							Name: "some-machineimage",
@@ -644,7 +644,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					Expect(errorList).To(BeEmpty())
 				})
 
-				It("should forbid invalid kubeletVersionConstraint constraint for machine image versions", func() {
+				It("should forbid invalid kubeletVersionConstraint for machine image versions", func() {
 					cloudProfile.Spec.MachineImages = []core.MachineImage{
 						{
 							Name: "some-machineimage",
