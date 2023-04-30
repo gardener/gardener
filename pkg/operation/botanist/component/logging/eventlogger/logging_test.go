@@ -33,6 +33,7 @@ var _ = Describe("Logging", func() {
     Match               kubernetes.*event-logger*event-logger*
     Operation           lift
     Nested_under        log
+    Log_Level           error
 
 [FILTER]
     Name                record_modifier
