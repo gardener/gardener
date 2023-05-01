@@ -119,7 +119,7 @@ spec:
     #     maxTokenExpiration: 45d
     #   logging:
     #     verbosity: 2
-    #     httpAccessLogs: 3
+    #     httpAccessVerbosity: 3
     #   defaultNotReadyTolerationSeconds: 300
     #   defaultUnreachableTolerationSeconds: 300
     #   sni:
