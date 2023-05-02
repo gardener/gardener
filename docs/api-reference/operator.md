@@ -1280,6 +1280,51 @@ map[string]string
 </tr>
 </tbody>
 </table>
+<h3 id="operator.gardener.cloud/v1alpha1.SettingNodeToleration">SettingNodeToleration
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Settings">Settings</a>)
+</p>
+<p>
+<p>SettingNodeToleration contains information about node toleration options.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>defaultNotReadyTolerationSeconds</code></br>
+<em>
+int64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DefaultNotReadyTolerationSeconds specifies the seconds for the <code>node.kubernetes.io/not-ready</code> toleration that
+should be added to pods not already tolerating this taint.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>defaultUnreachableTolerationSeconds</code></br>
+<em>
+int64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DefaultUnreachableTolerationSeconds specifies the seconds for the <code>node.kubernetes.io/unreachable</code> toleration that
+should be added to pods not already tolerating this taint.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.SettingTopologyAwareRouting">SettingTopologyAwareRouting
 </h3>
 <p>
@@ -1379,6 +1424,20 @@ SettingLoadBalancerServices
 <em>(Optional)</em>
 <p>LoadBalancerServices controls certain settings for services of type load balancer that are created in the runtime
 cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>nodeToleration</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.SettingNodeToleration">
+SettingNodeToleration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NodeToleration contains optional settings for default tolerations.</p>
 </td>
 </tr>
 <tr>

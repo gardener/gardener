@@ -29,6 +29,9 @@ spec:
     # loadBalancerServices:
     #   annotations:
     #     foo: bar
+    # nodeToleration:
+    #   defaultNotReadyTolerationSeconds: 60
+    #   defaultUnreachableTolerationSeconds: 60
       verticalPodAutoscaler:
         enabled: true
       topologyAwareRouting:

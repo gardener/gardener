@@ -51,6 +51,12 @@ import (
 const namePrefix = "virtual-garden-"
 
 func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+	var defaultNotReadyTolerationSeconds, defaultUnreachableTolerationSeconds *int64
+	if garden.Spec.RuntimeCluster.Settings != nil && garden.Spec.RuntimeCluster.Settings.NodeToleration != nil {
+		defaultNotReadyTolerationSeconds = garden.Spec.RuntimeCluster.Settings.NodeToleration.DefaultNotReadyTolerationSeconds
+		defaultUnreachableTolerationSeconds = garden.Spec.RuntimeCluster.Settings.NodeToleration.DefaultUnreachableTolerationSeconds
+	}
+
 	return sharedcomponent.NewGardenerResourceManager(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
@@ -60,9 +66,8 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 		r.Config.LogLevel, r.Config.LogFormat,
 		operatorv1alpha1.SecretNameCARuntime,
 		v1beta1constants.PriorityClassNameGardenSystemCritical,
-		// TODO(timuthy): Consider to make this configurable
-		pointer.Int64(60),
-		pointer.Int64(60),
+		defaultNotReadyTolerationSeconds,
+		defaultUnreachableTolerationSeconds,
 		features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
 		helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 		features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster),
