@@ -85,11 +85,9 @@ var _ = Describe("Fluent Operator", func() {
 				Name:      name,
 				Namespace: namespace,
 				Labels: map[string]string{
-					v1beta1constants.LabelApp:                             name,
-					v1beta1constants.LabelRole:                            v1beta1constants.LabelLogging,
-					v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleLogging,
-					v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
-					v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+					v1beta1constants.LabelApp:   name,
+					v1beta1constants.LabelRole:  v1beta1constants.LabelLogging,
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging,
 				},
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
@@ -98,11 +96,9 @@ var _ = Describe("Fluent Operator", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:logging:fluent-operator",
 				Labels: map[string]string{
-					v1beta1constants.LabelApp:                             name,
-					v1beta1constants.LabelRole:                            v1beta1constants.LabelLogging,
-					v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleLogging,
-					v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
-					v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+					v1beta1constants.LabelApp:   name,
+					v1beta1constants.LabelRole:  v1beta1constants.LabelLogging,
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging,
 				},
 			},
 			Rules: []rbacv1.PolicyRule{
@@ -142,11 +138,9 @@ var _ = Describe("Fluent Operator", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "fluent-operator",
 				Labels: map[string]string{
-					v1beta1constants.LabelApp:                             "fluent-operator",
-					v1beta1constants.LabelRole:                            v1beta1constants.LabelLogging,
-					v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleLogging,
-					v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
-					v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+					v1beta1constants.LabelApp:   name,
+					v1beta1constants.LabelRole:  v1beta1constants.LabelLogging,
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging,
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -165,11 +159,10 @@ var _ = Describe("Fluent Operator", func() {
 				Name:      "fluent-operator",
 				Namespace: namespace,
 				Labels: map[string]string{
-					v1beta1constants.LabelApp:                             name,
-					v1beta1constants.LabelRole:                            v1beta1constants.LabelLogging,
-					v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleLogging,
-					v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
-					v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+					v1beta1constants.LabelApp:                    name,
+					v1beta1constants.LabelRole:                   v1beta1constants.LabelLogging,
+					v1beta1constants.GardenRole:                  v1beta1constants.GardenRoleLogging,
+					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
 				},
 			},
 			Spec: appsv1.DeploymentSpec{
@@ -177,11 +170,9 @@ var _ = Describe("Fluent Operator", func() {
 				Replicas:             pointer.Int32(1),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
-						v1beta1constants.LabelApp:                             name,
-						v1beta1constants.LabelRole:                            v1beta1constants.LabelLogging,
-						v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleLogging,
-						v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelApp:   name,
+						v1beta1constants.LabelRole:  v1beta1constants.LabelLogging,
+						v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging,
 					},
 				},
 				Template: corev1.PodTemplateSpec{

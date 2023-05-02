@@ -44,7 +44,6 @@ func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
 						Nest: &fluentbitv1alpha2filter.Nest{
 							Operation:   "lift",
 							NestedUnder: "log",
-							
 						},
 					},
 					{

@@ -24,13 +24,16 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
@@ -145,7 +148,9 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      v1beta1constants.DeploymentNameFluentOperator,
 				Namespace: f.namespace,
-				Labels:    f.getLabels(),
+				Labels: utils.MergeStringMaps(f.getLabels(), map[string]string{
+					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
+				}),
 			},
 			Spec: appsv1.DeploymentSpec{
 				RevisionHistoryLimit: pointer.Int32(2),
@@ -155,7 +160,10 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: f.getLabels(),
+						Labels: utils.MergeStringMaps(f.getLabels(), map[string]string{
+							v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+						}),
 					},
 					Spec: corev1.PodSpec{
 						ServiceAccountName: serviceAccount.Name,
@@ -222,15 +230,15 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 		}
 	)
 
-	resources := []client.Object{
+	utilruntime.Must(references.InjectAnnotations(deployment))
+
+	serializedResources, err := registry.AddAllAndSerialize(
 		serviceAccount,
 		clusterRole,
 		clusterRoleBinding,
 		deployment,
 		vpa,
-	}
-
-	serializedResources, err := registry.AddAllAndSerialize(resources...)
+	)
 	if err != nil {
 		return err
 	}
@@ -274,11 +282,9 @@ func (f *fluentOperator) computeEnv() []corev1.EnvVar {
 
 func (f *fluentOperator) getLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelApp:                             name,
-		v1beta1constants.LabelRole:                            v1beta1constants.LabelLogging,
-		v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleLogging,
-		v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelApp:   name,
+		v1beta1constants.LabelRole:  v1beta1constants.LabelLogging,
+		v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging,
 	}
 }
 

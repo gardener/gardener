@@ -78,7 +78,7 @@ func (c *customResources) Deploy(ctx context.Context) error {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-		config = &corev1.ConfigMap{
+		configMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      v1beta1constants.DaemonSetNameFluentBit + "-lua-config",
 				Namespace: c.namespace,
@@ -139,9 +139,9 @@ end`,
 		}
 	)
 
-	utilruntime.Must(kubernetesutils.MakeUnique(config))
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
-	resources := []client.Object{config}
+	resources := []client.Object{configMap}
 
 	fluentBit := customresources.GetFluentBit(getFluentBitLabels(), v1beta1constants.DaemonSetNameFluentBit, c.namespace, c.values.FluentBitImage, c.values.FluentBitInitImage, c.values.FluentBitPriorityClass)
 	resources = append(resources, fluentBit)
@@ -153,7 +153,7 @@ end`,
 		resources = append(resources, clusterInput)
 	}
 
-	for _, clusterFilter := range customresources.GetClusterFilters(config.Name, getCustomResourcesLabels()) {
+	for _, clusterFilter := range customresources.GetClusterFilters(configMap.Name, getCustomResourcesLabels()) {
 		resources = append(resources, clusterFilter)
 	}
 

@@ -999,7 +999,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 				Fn:   kubeStateMetrics.Deploy,
 			})
 			_ = g.Add(flow.Task{
-				Name: "Deploying Fluent Operator resources and wait until they become ready",
+				Name: "Deploying Fluent Operator resources",
 				Fn:   component.OpWait(fluentOperatorCustomResources).Deploy,
 			})
 			_ = g.Add(flow.Task{
