@@ -157,6 +157,17 @@ spec:
 {{- if .Values.additionalVolumeMounts }}
 {{ toYaml .Values.additionalVolumeMounts | indent 8 }}
 {{- end }}
+{{- if .Values.nodeToleration }}
+      tolerations:
+      - effect: NoExecute
+        key: node.kubernetes.io/not-ready
+        operator: Exists
+        tolerationSeconds: {{ required ".Values.nodeToleration.defaultNotReadyTolerationSeconds is required" .Values.nodeToleration.defaultNotReadyTolerationSeconds }}
+      - effect: NoExecute
+        key: node.kubernetes.io/unreachable
+        operator: Exists
+        tolerationSeconds: {{ required ".Values.nodeToleration.defaultNotReadyTolerationSeconds is required" .Values.nodeToleration.defaultUnreachableTolerationSeconds }}
+{{- end }}
       volumes:
       - name: kube-api-access-gardener
         projected:
