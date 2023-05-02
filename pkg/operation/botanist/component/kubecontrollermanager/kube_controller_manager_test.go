@@ -80,6 +80,7 @@ var _ = Describe("KubeControllerManager", func() {
 		hvpaConfigDisabled            = &HVPAConfig{Enabled: false}
 		hvpaConfigEnabled             = &HVPAConfig{Enabled: true}
 		hvpaConfigEnabledScaleDownOff = &HVPAConfig{Enabled: true, ScaleDownUpdateMode: pointer.String(hvpav1alpha1.UpdateModeOff)}
+		isWorkerless                  = false
 
 		hpaConfig = gardencorev1beta1.HorizontalPodAutoscalerConfig{
 			CPUInitializationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
@@ -140,6 +141,7 @@ var _ = Describe("KubeControllerManager", func() {
 					semverVersion,
 					image,
 					&kcmConfig,
+					isWorkerless,
 					podCIDR,
 					serviceCIDR,
 					hvpaConfigDisabled,
@@ -506,7 +508,7 @@ var _ = Describe("KubeControllerManager", func() {
 											Name:            "kube-controller-manager",
 											Image:           image,
 											ImagePullPolicy: corev1.PullIfNotPresent,
-											Command:         commandForKubernetesVersion(version, 10257, config.NodeCIDRMaskSize, config.PodEvictionTimeout, config.NodeMonitorGracePeriod, namespace, serviceCIDR, podCIDR, getHorizontalPodAutoscalerConfig(config.HorizontalPodAutoscalerConfig), kubernetesutils.FeatureGatesToCommandLineParameter(config.FeatureGates)),
+											Command:         commandForKubernetesVersion(version, 10257, config.NodeCIDRMaskSize, config.PodEvictionTimeout, config.NodeMonitorGracePeriod, namespace, isWorkerless, serviceCIDR, podCIDR, getHorizontalPodAutoscalerConfig(config.HorizontalPodAutoscalerConfig), kubernetesutils.FeatureGatesToCommandLineParameter(config.FeatureGates)),
 											LivenessProbe: &corev1.Probe{
 												ProbeHandler: corev1.ProbeHandler{
 													HTTPGet: &corev1.HTTPGetAction{
@@ -668,6 +670,7 @@ subjects:
 
 			DescribeTable("success tests for various kubernetes versions",
 				func(version string, config *gardencorev1beta1.KubeControllerManagerConfig, hvpaConfig *HVPAConfig) {
+					isWorkerless = false
 					semverVersion, err := semver.NewVersion(version)
 					Expect(err).NotTo(HaveOccurred())
 
@@ -679,6 +682,7 @@ subjects:
 						semverVersion,
 						image,
 						config,
+						isWorkerless,
 						podCIDR,
 						serviceCIDR,
 						hvpaConfig,
@@ -817,6 +821,7 @@ subjects:
 				nil,
 				"",
 				nil,
+				isWorkerless,
 				nil,
 				nil,
 				nil,
@@ -874,6 +879,7 @@ func commandForKubernetesVersion(
 	podEvictionTimeout *metav1.Duration,
 	nodeMonitorGracePeriod *metav1.Duration,
 	clusterName string,
+	isWorkerless bool,
 	serviceNetwork, podNetwork *net.IPNet,
 	horizontalPodAutoscalerConfig *gardencorev1beta1.HorizontalPodAutoscalerConfig,
 	featureGateFlags string,
@@ -882,7 +888,6 @@ func commandForKubernetesVersion(
 
 	command = append(command,
 		"/usr/local/bin/kube-controller-manager",
-		"--allocate-node-cidrs=true",
 		"--attach-detach-reconcile-sync-period=1m0s",
 		"--controllers=*,bootstrapsigner,tokencleaner",
 		"--authentication-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
@@ -890,13 +895,20 @@ func commandForKubernetesVersion(
 		"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 	)
 
+	if !isWorkerless {
+		command = append(command,
+			"--allocate-node-cidrs=true",
+			fmt.Sprintf("--cluster-cidr=%s", podNetwork.String()),
+		)
+	}
+
 	if nodeCIDRMaskSize != nil {
 		command = append(command, fmt.Sprintf("--node-cidr-mask-size=%d", *nodeCIDRMaskSize))
 	}
 
 	command = append(command,
-		fmt.Sprintf("--cluster-cidr=%s", podNetwork.String()),
 		fmt.Sprintf("--cluster-name=%s", clusterName),
+		fmt.Sprintf("--service-cluster-ip-range=%s", serviceNetwork.String()),
 		"--cluster-signing-kube-apiserver-client-cert-file=/srv/kubernetes/ca-client/ca.crt",
 		"--cluster-signing-kube-apiserver-client-key-file=/srv/kubernetes/ca-client/ca.key",
 		"--cluster-signing-kubelet-client-cert-file=/srv/kubernetes/ca-client/ca.crt",
@@ -942,7 +954,6 @@ func commandForKubernetesVersion(
 		fmt.Sprintf("--pod-eviction-timeout=%s", podEvictionTimeoutSetting),
 		"--root-ca-file=/srv/kubernetes/ca/bundle.crt",
 		"--service-account-private-key-file=/srv/kubernetes/service-account-key/id_rsa",
-		fmt.Sprintf("--service-cluster-ip-range=%s", serviceNetwork.String()),
 		fmt.Sprintf("--secure-port=%d", port),
 	)
 
