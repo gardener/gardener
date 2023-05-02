@@ -102,6 +102,7 @@ func (r *Reconciler) delete(
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+	virtualGardenGardenerAccess := r.newGardenerAccess(secretsManager, garden.Spec.VirtualCluster.DNS.Domain)
 
 	// observability components
 	kubeStateMetrics, err := r.newKubeStateMetrics()
@@ -115,6 +116,10 @@ func (r *Reconciler) delete(
 		_ = g.Add(flow.Task{
 			Name: "Destroying Kube State Metrics",
 			Fn:   component.OpDestroyAndWait(kubeStateMetrics).Destroy,
+		})
+		destroyVirtualGardenGardenerAccess = g.Add(flow.Task{
+			Name: "Destroying Gardener virtual garden access resources",
+			Fn:   virtualGardenGardenerAccess.Destroy,
 		})
 		destroyVirtualGardenGardenerResourceManager = g.Add(flow.Task{
 			Name: "Destroying virtual-garden-gardener-resource-manager",
@@ -137,6 +142,7 @@ func (r *Reconciler) delete(
 			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer),
 		})
 		syncPointVirtualGardenControlPlaneDestroyed = flow.NewTaskIDs(
+			destroyVirtualGardenGardenerAccess,
 			destroyVirtualGardenGardenerResourceManager,
 			destroyKubeAPIServerService,
 			destroyEtcd,
@@ -250,7 +256,7 @@ func (r *Reconciler) checkIfManagedResourcesExist() func(context.Context) error 
 
 		return &reconcilerutils.RequeueAfterError{
 			RequeueAfter: 5 * time.Second,
-			Cause:        errors.New("At least one ManagedResource still exists"),
+			Cause:        errors.New("at least one ManagedResource still exists"),
 		}
 	}
 }

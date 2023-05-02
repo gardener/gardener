@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/test/e2e/operator/garden/internal/rotation"
-	gardenaccess "github.com/gardener/gardener/test/utils/gardens"
 	rotationutils "github.com/gardener/gardener/test/utils/rotation"
 )
 
@@ -83,7 +82,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 
 			// advanced verifiers testing things from the user's perspective
 			&rotationutils.SecretEncryptionVerifier{NewTargetClientFunc: func() (kubernetes.Interface, error) {
-				return gardenaccess.CreateVirtualClusterClientFromStaticTokenKubeconfig(ctx, runtimeClient, namespace)
+				return kubernetes.NewClientFromSecret(ctx, runtimeClient, namespace, "gardener", kubernetes.WithDisabledCachedClient())
 			}},
 		}
 

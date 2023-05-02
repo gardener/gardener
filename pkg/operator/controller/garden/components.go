@@ -40,12 +40,14 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/gardeneraccess"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardensystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	sharedcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/shared"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -360,7 +362,7 @@ func (r *Reconciler) newKubeAPIServer(
 		kubeapiserver.VPNConfig{Enabled: false},
 		v1beta1constants.PriorityClassNameGardenSystem500,
 		true,
-		pointer.Bool(true),
+		pointer.Bool(false),
 		auditWebhookConfig,
 		authenticationWebhookConfig,
 		authorizationWebhookConfig,
@@ -484,5 +486,17 @@ func (r *Reconciler) newIstio(garden *operatorv1alpha1.Garden) (istio.Interface,
 		false,
 		false,
 		garden.Spec.RuntimeCluster.Provider.Zones,
+	)
+}
+
+func (r *Reconciler) newGardenerAccess(secretsManager secretsmanager.Interface, domain string) component.Deployer {
+	return gardeneraccess.New(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		secretsManager,
+		gardeneraccess.Values{
+			ServerInCluster:    fmt.Sprintf("%s%s.%s.svc.cluster.local", namePrefix, v1beta1constants.DeploymentNameKubeAPIServer, r.GardenNamespace),
+			ServerOutOfCluster: gardenerutils.GetAPIServerDomain(domain),
+		},
 	)
 }

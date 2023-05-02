@@ -31,11 +31,11 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	. "github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	gardenaccess "github.com/gardener/gardener/test/utils/gardens"
 )
 
 var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
@@ -90,6 +90,8 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				healthyManagedResource("vpa"),
 				healthyManagedResource("etcd-druid"),
 				healthyManagedResource("kube-state-metrics"),
+				healthyManagedResource("shoot-core-gardener-resource-manager"),
+				healthyManagedResource("shoot-core-gardeneraccess"),
 			))
 
 			g.Expect(runtimeClient.List(ctx, managedResourceList, client.InNamespace("istio-system"))).To(Succeed())
@@ -99,9 +101,9 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			))
 		}).WithPolling(2 * time.Second).Should(Succeed())
 
-		By("Verify virtual cluster access using static token kubeconfig")
+		By("Verify virtual cluster access using token-request kubeconfig")
 		Eventually(func(g Gomega) {
-			virtualClusterClient, err := gardenaccess.CreateVirtualClusterClientFromStaticTokenKubeconfig(ctx, runtimeClient, namespace)
+			virtualClusterClient, err := kubernetes.NewClientFromSecret(ctx, runtimeClient, namespace, "gardener", kubernetes.WithDisabledCachedClient())
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(virtualClusterClient.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
 		}).Should(Succeed())

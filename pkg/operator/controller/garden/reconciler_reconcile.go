@@ -50,6 +50,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
+	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
@@ -148,6 +149,7 @@ func (r *Reconciler) reconcile(
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+	virtualGardenGardenerAccess := r.newGardenerAccess(secretsManager, garden.Spec.VirtualCluster.DNS.Domain)
 
 	// observability components
 	kubeStateMetrics, err := r.newKubeStateMetrics()
@@ -254,14 +256,29 @@ func (r *Reconciler) reconcile(
 			Fn:           virtualGardenGardenerResourceManager.Wait,
 			Dependencies: flow.NewTaskIDs(deployVirtualGardenGardenerResourceManager),
 		})
+		deployVirtualGardenGardenerAccess = g.Add(flow.Task{
+			Name:         "Deploying Gardener virtual garden access resources",
+			Fn:           virtualGardenGardenerAccess.Deploy,
+			Dependencies: flow.NewTaskIDs(waitUntilVirtualGardenGardenerResourceManagerIsReady),
+		})
+		renewVirtualClusterAccess = g.Add(flow.Task{
+			Name: "Renewing virtual garden access secrets after creation of new ServiceAccount signing key",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return tokenrequest.RenewAccessSecrets(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace)
+			}).
+				RetryUntilTimeout(5*time.Second, 30*time.Second).
+				DoIf(helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationPreparing),
+			Dependencies: flow.NewTaskIDs(deployVirtualGardenGardenerAccess),
+		})
 		initializeVirtualClusterClient = g.Add(flow.Task{
 			Name: "Initializing connection to virtual garden cluster",
-			Fn: func(ctx context.Context) error {
+			Fn: flow.TaskFn(func(ctx context.Context) error {
 				var err error
-				virtualClusterClient, err = r.initializeVirtualClusterClient(secretsManager)
+				virtualClusterClient, err = r.initializeVirtualClusterClient(ctx)
 				return err
-			},
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
+			}).
+				RetryUntilTimeout(time.Second, 30*time.Second),
+			Dependencies: flow.NewTaskIDs(deployVirtualGardenGardenerAccess, renewVirtualClusterAccess),
 		})
 		rewriteSecretsAddLabel = g.Add(flow.Task{
 			Name: "Labeling secrets to encrypt them with new ETCD encryption key",
@@ -287,6 +304,24 @@ func (r *Reconciler) reconcile(
 			}).
 				RetryUntilTimeout(30*time.Second, 10*time.Minute).
 				DoIf(helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationCompleting),
+			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Creating new ServiceAccount secrets after creation of new signing key",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return secretsrotation.CreateNewServiceAccountSecrets(ctx, log, virtualClusterClient, secretsManager)
+			}).
+				RetryUntilTimeout(30*time.Second, 10*time.Minute).
+				DoIf(helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationPreparing),
+			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deleting old ServiceAccount secrets after rotation of signing key",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return secretsrotation.DeleteOldServiceAccountSecrets(ctx, log, virtualClusterClient, garden.Status.Credentials.Rotation.ServiceAccountKey.LastInitiationFinishedTime.Time)
+			}).
+				RetryUntilTimeout(30*time.Second, 10*time.Minute).
+				DoIf(helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationCompleting),
 			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient),
 		})
 
@@ -426,18 +461,28 @@ func (r *Reconciler) snapshotETCDFunc(secretsManager secretsmanager.Interface, e
 // NewClientFromSecretObject is an alias for kubernetes.NewClientFromSecretObject.
 var NewClientFromSecretObject = kubernetes.NewClientFromSecretObject
 
-// For convenience, this function reuses/misuses the static token kubeconfig which is unconditionally enabled as of now.
-// TODO: Replace this with a shoot-access token once gardener-operator deploys a gardener-resource-manager responsible
-// for the virtual cluster with an enabled token-requestor controller. The goal is to make it work similar as for
-// shoots.
-func (r *Reconciler) initializeVirtualClusterClient(secretsManager secretsmanager.Interface) (client.Client, error) {
-	userKubeconfigSecret, found := secretsManager.Get(kubeapiserver.SecretNameUserKubeconfig)
-	if !found {
-		return nil, fmt.Errorf("secret %q not found", kubeapiserver.SecretNameUserKubeconfig)
+func (r *Reconciler) initializeVirtualClusterClient(ctx context.Context) (client.Client, error) {
+	virtualGardenAccessSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Name:      v1beta1constants.SecretNameGardenerInternal,
+		Namespace: r.GardenNamespace,
+	}}
+
+	if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKeyFromObject(virtualGardenAccessSecret), virtualGardenAccessSecret); err != nil {
+		return nil, err
+	}
+
+	// Kubeconfig secrets are created with empty authinfo and it's expected that gardener-resource-manager eventually
+	// populates a token, so let's check whether the read secret already contains authinfo
+	tokenPopulated, err := tokenrequest.IsTokenPopulated(virtualGardenAccessSecret)
+	if err != nil {
+		return nil, err
+	}
+	if !tokenPopulated {
+		return nil, fmt.Errorf("token for virtual garden kubeconfig was not populated yet")
 	}
 
 	clientSet, err := NewClientFromSecretObject(
-		userKubeconfigSecret,
+		virtualGardenAccessSecret,
 		kubernetes.WithClientConnectionOptions(r.Config.VirtualClientConnection),
 		kubernetes.WithClientOptions(client.Options{Scheme: operatorclient.VirtualScheme}),
 		kubernetes.WithDisabledCachedClient(),

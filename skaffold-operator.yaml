@@ -68,6 +68,7 @@ build:
         - pkg/operation/botanist/component/coredns/constants
         - pkg/operation/botanist/component/etcd
         - pkg/operation/botanist/component/etcd/constants
+        - pkg/operation/botanist/component/gardeneraccess
         - pkg/operation/botanist/component/gardensystem
         - pkg/operation/botanist/component/hvpa
         - pkg/operation/botanist/component/istio
@@ -118,6 +119,7 @@ build:
         - pkg/utils/flow
         - pkg/utils/gardener
         - pkg/utils/gardener/secretsrotation
+        - pkg/utils/gardener/tokenrequest
         - pkg/utils/images
         - pkg/utils/imagevector
         - pkg/utils/kubernetes

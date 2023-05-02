@@ -82,4 +82,103 @@ var _ = Describe("Secrets", func() {
 			Expect(secret3.Annotations).NotTo(HaveKey("serviceaccount.resources.gardener.cloud/token-renew-timestamp"))
 		})
 	})
+
+	Describe("#IsTokenPopulated", func() {
+		var (
+			kubeconfigWithToken = `apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: AAAA
+    server: https://foobar
+  name: garden
+contexts:
+- context:
+    cluster: garden
+    user: garden
+  name: garden
+current-context: garden
+kind: Config
+preferences: {}
+users:
+- name: garden
+  user:
+    token: bar
+`
+			kubeconfigWithoutToken = `apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: AAAA
+    server: https://foobar
+  name: garden
+contexts:
+- context:
+    cluster: garden
+    user: garden
+  name: garden
+current-context: garden
+kind: Config
+preferences: {}
+users:
+- name: garden
+  user:
+    token: ""
+`
+			kubeconfigWrongContext = `apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: AAAA
+    server: https://foobar
+  name: garden
+contexts:
+- context:
+    cluster: garden
+    user: garden
+  name: garden
+current-context: foo
+kind: Config
+preferences: {}
+users:
+- name: garden
+  user:
+    token: bar
+`
+			kubeconfigNoUser = `apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: AAAA
+    server: https://foobar
+  name: garden
+contexts:
+- context:
+    cluster: garden
+    user: garden
+  name: garden
+- context:
+  cluster: garden
+  user: foo
+name: foo
+current-context: foo
+kind: Config
+preferences: {}
+users:
+- name: garden
+  user:
+    token: bar
+`
+		)
+		DescribeTable("#IsTokenPopulated",
+			func(kubeconfig string, result bool) {
+				secret := corev1.Secret{
+					Data: map[string][]byte{"kubeconfig": []byte(kubeconfig)},
+				}
+				populated, err := IsTokenPopulated(&secret)
+				Expect(err).To(Succeed())
+				Expect(populated).To(Equal(result))
+			},
+			Entry("kubeconfig with token should return true", kubeconfigWithToken, true),
+			Entry("kubeconfig without token should return false", kubeconfigWithoutToken, false),
+			Entry("kubeconfig with wrong context should return false", kubeconfigWrongContext, false),
+			Entry("kubeconfig without user should return false", kubeconfigNoUser, false),
+		)
+	})
 })

@@ -18,9 +18,12 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
@@ -48,4 +51,31 @@ func RenewAccessSecrets(ctx context.Context, c client.Client, namespace string) 
 	}
 
 	return flow.Parallel(fns...)(ctx)
+}
+
+// IsTokenPopulated checks if a `kubeconfig` secret already contains a token.
+func IsTokenPopulated(secret *corev1.Secret) (bool, error) {
+	kubeconfig := &clientcmdv1.Config{}
+	if _, _, err := clientcmdlatest.Codec.Decode(secret.Data[kubernetes.KubeConfig], nil, kubeconfig); err != nil {
+		return false, err
+	}
+
+	var userName string
+	for _, namedContext := range kubeconfig.Contexts {
+		if namedContext.Name == kubeconfig.CurrentContext {
+			userName = namedContext.Context.AuthInfo
+			break
+		}
+	}
+
+	for _, users := range kubeconfig.AuthInfos {
+		if users.Name == userName {
+			if len(users.AuthInfo.Token) > 0 {
+				return true, nil
+			}
+			return false, nil
+		}
+	}
+
+	return false, nil
 }
