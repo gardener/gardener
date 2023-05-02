@@ -58,7 +58,7 @@ var _ = Describe("ExposureClass controller test", func() {
 			Spec: gardencorev1beta1.ShootSpec{
 				ExposureClassName: pointer.String(exposureClass.Name),
 				CloudProfileName:  "test-cloudprofile",
-				SecretBindingName: "my-provider-account",
+				SecretBindingName: pointer.String("my-provider-account"),
 				Region:            "foo-region",
 				Provider: gardencorev1beta1.Provider{
 					Type: "test-provider",
@@ -72,7 +72,7 @@ var _ = Describe("ExposureClass controller test", func() {
 					},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.21.1"},
-				Networking: gardencorev1beta1.Networking{Type: "foo-networking"},
+				Networking: &gardencorev1beta1.Networking{Type: pointer.String("foo-networking")},
 			},
 		}
 	})

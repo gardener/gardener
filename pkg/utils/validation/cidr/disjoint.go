@@ -23,7 +23,7 @@ import (
 )
 
 // ValidateNetworkDisjointedness validates that the given <seedNetworks> and <k8sNetworks> are disjoint.
-func ValidateNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, shootServices, seedNodes *string, seedPods, seedServices string) field.ErrorList {
+func ValidateNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, shootServices, seedNodes *string, seedPods, seedServices string, workerless bool) field.ErrorList {
 	var (
 		allErrs = field.ErrorList{}
 
@@ -72,7 +72,7 @@ func ValidateNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, s
 		if NetworksIntersect(v1beta1constants.DefaultVPNRange, *shootPods) {
 			allErrs = append(allErrs, field.Invalid(pathPods, *shootPods, fmt.Sprintf("shoot pod network intersects with default vpn network (%s)", v1beta1constants.DefaultVPNRange)))
 		}
-	} else {
+	} else if !workerless {
 		allErrs = append(allErrs, field.Required(pathPods, "pods is required"))
 	}
 
@@ -80,7 +80,7 @@ func ValidateNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, s
 }
 
 // ValidateShootNetworkDisjointedness validates that the given shoot network is disjoint.
-func ValidateShootNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, shootServices *string) field.ErrorList {
+func ValidateShootNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, shootServices *string, workerless bool) field.ErrorList {
 	var (
 		allErrs = field.ErrorList{}
 
@@ -107,10 +107,14 @@ func ValidateShootNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPo
 		if shootNodes != nil && NetworksIntersect(*shootServices, *shootNodes) {
 			allErrs = append(allErrs, field.Invalid(pathServices, *shootServices, "shoot service network intersects with shoot node network"))
 		}
-		allErrs = append(allErrs, field.Required(pathPods, "shoot pod network is required"))
+		if !workerless {
+			allErrs = append(allErrs, field.Required(pathPods, "shoot pod network is required"))
+		}
 	} else {
+		if !workerless {
+			allErrs = append(allErrs, field.Required(pathPods, "shoot pod network is required"))
+		}
 		allErrs = append(allErrs, field.Required(pathServices, "shoot service network is required"))
-		allErrs = append(allErrs, field.Required(pathPods, "shoot pod network is required"))
 	}
 
 	return allErrs

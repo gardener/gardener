@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/clock/testing"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -92,7 +93,7 @@ var _ = Describe("Reconciler", func() {
 		}
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: partialObjectMetadata.ObjectMeta,
-			Spec:       gardencorev1beta1.ShootSpec{SecretBindingName: secretBindingName},
+			Spec:       gardencorev1beta1.ShootSpec{SecretBindingName: pointer.String(secretBindingName)},
 		}
 		quotaMeta = &metav1.PartialObjectMetadata{
 			ObjectMeta: metav1.ObjectMeta{Namespace: namespaceName, Name: quotaName},
@@ -321,6 +322,30 @@ var _ = Describe("Reconciler", func() {
 						return nil
 					})
 					k8sGardenRuntimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(namespaceName))
+					k8sGardenRuntimeClient.EXPECT().List(gomock.Any(), partialQuotaMetaList, client.InNamespace(namespaceName))
+
+					expectStaleMarking(k8sGardenRuntimeClient, mockStatusWriter, project, nil, nil, fakeClock)
+
+					_, result := reconciler.Reconcile(ctx, request)
+					Expect(result).To(Succeed())
+				})
+
+				It("has secrets that are unused (secret binding is nil for shoot)", func() {
+					shoot.Spec.SecretBindingName = nil
+					k8sGardenRuntimeClient.EXPECT().List(gomock.Any(), partialShootMetaList, client.InNamespace(namespaceName), client.Limit(1))
+					k8sGardenRuntimeClient.EXPECT().List(gomock.Any(), partialBackupEntryMetaList, client.InNamespace(namespaceName), client.Limit(1))
+					k8sGardenRuntimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName)).DoAndReturn(func(ctx context.Context, list *corev1.SecretList, opts ...client.ListOption) error {
+						(&corev1.SecretList{Items: []corev1.Secret{*secret}}).DeepCopyInto(list)
+						return nil
+					})
+					k8sGardenRuntimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBindingList{})).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.SecretBindingList, opts ...client.ListOption) error {
+						(&gardencorev1beta1.SecretBindingList{Items: []gardencorev1beta1.SecretBinding{*secretBinding}}).DeepCopyInto(list)
+						return nil
+					})
+					k8sGardenRuntimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(namespaceName)).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.ShootList, opts ...client.ListOption) error {
+						(&gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{*shoot}}).DeepCopyInto(list)
+						return nil
+					})
 					k8sGardenRuntimeClient.EXPECT().List(gomock.Any(), partialQuotaMetaList, client.InNamespace(namespaceName))
 
 					expectStaleMarking(k8sGardenRuntimeClient, mockStatusWriter, project, nil, nil, fakeClock)

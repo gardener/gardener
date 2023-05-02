@@ -4047,7 +4047,7 @@ func Convert_core_Maintenance_To_v1beta1_Maintenance(in *core.Maintenance, out *
 
 func autoConvert_v1beta1_MaintenanceAutoUpdate_To_core_MaintenanceAutoUpdate(in *MaintenanceAutoUpdate, out *core.MaintenanceAutoUpdate, s conversion.Scope) error {
 	out.KubernetesVersion = in.KubernetesVersion
-	out.MachineImageVersion = in.MachineImageVersion
+	out.MachineImageVersion = (*bool)(unsafe.Pointer(in.MachineImageVersion))
 	return nil
 }
 
@@ -4058,7 +4058,7 @@ func Convert_v1beta1_MaintenanceAutoUpdate_To_core_MaintenanceAutoUpdate(in *Mai
 
 func autoConvert_core_MaintenanceAutoUpdate_To_v1beta1_MaintenanceAutoUpdate(in *core.MaintenanceAutoUpdate, out *MaintenanceAutoUpdate, s conversion.Scope) error {
 	out.KubernetesVersion = in.KubernetesVersion
-	out.MachineImageVersion = in.MachineImageVersion
+	out.MachineImageVersion = (*bool)(unsafe.Pointer(in.MachineImageVersion))
 	return nil
 }
 
@@ -4132,7 +4132,7 @@ func Convert_core_NamedResourceReference_To_v1beta1_NamedResourceReference(in *c
 }
 
 func autoConvert_v1beta1_Networking_To_core_Networking(in *Networking, out *core.Networking, s conversion.Scope) error {
-	out.Type = in.Type
+	out.Type = (*string)(unsafe.Pointer(in.Type))
 	out.ProviderConfig = (*runtime.RawExtension)(unsafe.Pointer(in.ProviderConfig))
 	out.Pods = (*string)(unsafe.Pointer(in.Pods))
 	out.Nodes = (*string)(unsafe.Pointer(in.Nodes))
@@ -4147,7 +4147,7 @@ func Convert_v1beta1_Networking_To_core_Networking(in *Networking, out *core.Net
 }
 
 func autoConvert_core_Networking_To_v1beta1_Networking(in *core.Networking, out *Networking, s conversion.Scope) error {
-	out.Type = in.Type
+	out.Type = (*string)(unsafe.Pointer(in.Type))
 	out.ProviderConfig = (*runtime.RawExtension)(unsafe.Pointer(in.ProviderConfig))
 	out.Pods = (*string)(unsafe.Pointer(in.Pods))
 	out.Nodes = (*string)(unsafe.Pointer(in.Nodes))
@@ -5739,9 +5739,7 @@ func autoConvert_v1beta1_ShootSpec_To_core_ShootSpec(in *ShootSpec, out *core.Sh
 	if err := Convert_v1beta1_Kubernetes_To_core_Kubernetes(&in.Kubernetes, &out.Kubernetes, s); err != nil {
 		return err
 	}
-	if err := Convert_v1beta1_Networking_To_core_Networking(&in.Networking, &out.Networking, s); err != nil {
-		return err
-	}
+	out.Networking = (*core.Networking)(unsafe.Pointer(in.Networking))
 	out.Maintenance = (*core.Maintenance)(unsafe.Pointer(in.Maintenance))
 	out.Monitoring = (*core.Monitoring)(unsafe.Pointer(in.Monitoring))
 	if err := Convert_v1beta1_Provider_To_core_Provider(&in.Provider, &out.Provider, s); err != nil {
@@ -5749,7 +5747,7 @@ func autoConvert_v1beta1_ShootSpec_To_core_ShootSpec(in *ShootSpec, out *core.Sh
 	}
 	out.Purpose = (*core.ShootPurpose)(unsafe.Pointer(in.Purpose))
 	out.Region = in.Region
-	out.SecretBindingName = in.SecretBindingName
+	out.SecretBindingName = (*string)(unsafe.Pointer(in.SecretBindingName))
 	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))
 	out.SeedSelector = (*core.SeedSelector)(unsafe.Pointer(in.SeedSelector))
 	out.Resources = *(*[]core.NamedResourceReference)(unsafe.Pointer(&in.Resources))
@@ -5774,9 +5772,7 @@ func autoConvert_core_ShootSpec_To_v1beta1_ShootSpec(in *core.ShootSpec, out *Sh
 	if err := Convert_core_Kubernetes_To_v1beta1_Kubernetes(&in.Kubernetes, &out.Kubernetes, s); err != nil {
 		return err
 	}
-	if err := Convert_core_Networking_To_v1beta1_Networking(&in.Networking, &out.Networking, s); err != nil {
-		return err
-	}
+	out.Networking = (*Networking)(unsafe.Pointer(in.Networking))
 	out.Maintenance = (*Maintenance)(unsafe.Pointer(in.Maintenance))
 	out.Monitoring = (*Monitoring)(unsafe.Pointer(in.Monitoring))
 	if err := Convert_core_Provider_To_v1beta1_Provider(&in.Provider, &out.Provider, s); err != nil {
@@ -5784,7 +5780,7 @@ func autoConvert_core_ShootSpec_To_v1beta1_ShootSpec(in *core.ShootSpec, out *Sh
 	}
 	out.Purpose = (*ShootPurpose)(unsafe.Pointer(in.Purpose))
 	out.Region = in.Region
-	out.SecretBindingName = in.SecretBindingName
+	out.SecretBindingName = (*string)(unsafe.Pointer(in.SecretBindingName))
 	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))
 	out.SeedSelector = (*SeedSelector)(unsafe.Pointer(in.SeedSelector))
 	out.Resources = *(*[]NamedResourceReference)(unsafe.Pointer(&in.Resources))

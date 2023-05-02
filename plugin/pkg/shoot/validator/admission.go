@@ -40,6 +40,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
@@ -246,8 +247,8 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	}
 
 	var secretBinding *core.SecretBinding
-	if a.GetOperation() == admission.Create {
-		secretBinding, err = v.secretBindingLister.SecretBindings(shoot.Namespace).Get(shoot.Spec.SecretBindingName)
+	if a.GetOperation() == admission.Create && shoot.Spec.SecretBindingName != nil {
+		secretBinding, err = v.secretBindingLister.SecretBindings(shoot.Namespace).Get(*shoot.Spec.SecretBindingName)
 		if err != nil {
 			return apierrors.NewInternalError(fmt.Errorf("could not find referenced secret binding: %+v", err.Error()))
 		}
@@ -286,7 +287,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	if a.GetOperation() == admission.Create {
 		allErrs = append(allErrs, validationContext.validateAPIVersionForRawExtensions()...)
 	}
-	allErrs = append(allErrs, validationContext.validateShootNetworks()...)
+	allErrs = append(allErrs, validationContext.validateShootNetworks(gardencorehelper.IsWorkerless(shoot))...)
 	allErrs = append(allErrs, validationContext.validateKubernetes(a)...)
 	allErrs = append(allErrs, validationContext.validateRegion()...)
 	allErrs = append(allErrs, validationContext.validateProvider(a)...)
@@ -652,14 +653,14 @@ func (c *validationContext) addMetadataAnnotations(a admission.Attributes) {
 	}
 }
 
-func (c *validationContext) validateShootNetworks() field.ErrorList {
+func (c *validationContext) validateShootNetworks(workerless bool) field.ErrorList {
 	var (
 		allErrs field.ErrorList
 		path    = field.NewPath("spec", "networking")
 	)
 
 	if c.seed != nil {
-		if c.shoot.Spec.Networking.Pods == nil {
+		if c.shoot.Spec.Networking.Pods == nil && !workerless {
 			if c.seed.Spec.Networks.ShootDefaults != nil {
 				c.shoot.Spec.Networking.Pods = c.seed.Spec.Networks.ShootDefaults.Pods
 			} else {
@@ -674,6 +675,7 @@ func (c *validationContext) validateShootNetworks() field.ErrorList {
 				allErrs = append(allErrs, field.Required(path.Child("services"), "services is required"))
 			}
 		}
+
 		if c.shoot.DeletionTimestamp == nil {
 			// validate network disjointedness within shoot network
 			allErrs = append(allErrs, cidrvalidation.ValidateShootNetworkDisjointedness(
@@ -681,6 +683,7 @@ func (c *validationContext) validateShootNetworks() field.ErrorList {
 				c.shoot.Spec.Networking.Nodes,
 				c.shoot.Spec.Networking.Pods,
 				c.shoot.Spec.Networking.Services,
+				workerless,
 			)...)
 		}
 
@@ -694,6 +697,7 @@ func (c *validationContext) validateShootNetworks() field.ErrorList {
 				c.seed.Spec.Networks.Nodes,
 				c.seed.Spec.Networks.Pods,
 				c.seed.Spec.Networks.Services,
+				workerless,
 			)...)
 		}
 	}
@@ -742,7 +746,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 		return allErrs
 	}
 
-	if a.GetOperation() == admission.Create {
+	if a.GetOperation() == admission.Create && c.secretBinding != nil {
 		if !helper.SecretBindingHasType(c.secretBinding, c.shoot.Spec.Provider.Type) {
 			var secretBindingProviderType string
 			if c.secretBinding.Provider != nil {
@@ -845,8 +849,10 @@ func (c *validationContext) validateAPIVersionForRawExtensions() field.ErrorList
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "controlPlaneConfig"), gvk, internalVersionErrorMsg))
 	}
 
-	if ok, gvk := usesInternalVersion(c.shoot.Spec.Networking.ProviderConfig); ok {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "networking", "providerConfig"), gvk, internalVersionErrorMsg))
+	if c.shoot.Spec.Networking != nil {
+		if ok, gvk := usesInternalVersion(c.shoot.Spec.Networking.ProviderConfig); ok {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "networking", "providerConfig"), gvk, internalVersionErrorMsg))
+		}
 	}
 
 	for i, worker := range c.shoot.Spec.Provider.Workers {

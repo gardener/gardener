@@ -144,8 +144,8 @@ var _ = Describe("Namespaces", func() {
 					Provider: gardencorev1beta1.Provider{
 						Type: shootProviderType,
 					},
-					Networking: gardencorev1beta1.Networking{
-						Type: networkingProviderType,
+					Networking: &gardencorev1beta1.Networking{
+						Type: pointer.String(networkingProviderType),
 					},
 				},
 				Status: gardencorev1beta1.ShootStatus{

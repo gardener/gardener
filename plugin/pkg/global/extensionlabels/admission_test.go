@@ -213,7 +213,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 					Namespace: "test-namespace",
 				},
 				Spec: core.ShootSpec{
-					Networking: core.Networking{Type: networkingType},
+					Networking: &core.Networking{Type: pointer.String(networkingType)},
 					DNS: &core.DNS{
 						Providers: []core.DNSProvider{
 							{Type: &dnsProviderType1},
@@ -284,6 +284,52 @@ var _ = Describe("ExtensionLabels tests", func() {
 			}
 			for _, crType := range []string{crType1, crType2} {
 				expectedLabels["containerruntime.extensions.gardener.cloud/"+crType] = "true"
+			}
+			for _, dnsProviderType := range []string{dnsProviderType1, dnsProviderType2} {
+				expectedLabels["dnsrecord.extensions.gardener.cloud/"+dnsProviderType] = "true"
+			}
+
+			Expect(shoot.ObjectMeta.Labels).To(Equal(expectedLabels))
+		})
+
+		It("should add all the correct labels on creation (workerless Shoot)", func() {
+			shoot = &core.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-shoot",
+					Namespace: "test-namespace",
+				},
+				Spec: core.ShootSpec{
+					DNS: &core.DNS{
+						Providers: []core.DNSProvider{
+							{Type: &dnsProviderType1},
+							{Type: &dnsProviderType2},
+						},
+					},
+					Provider: core.Provider{
+						Type: providerType,
+					},
+					Extensions: []core.Extension{
+						{
+							Type:     extensionType2,
+							Disabled: pointer.Bool(true),
+						},
+						{
+							Type: extensionType3,
+						},
+					},
+				},
+			}
+
+			attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("Shoot").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+			err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+
+			expectedLabels := make(map[string]string)
+
+			expectedLabels["provider.extensions.gardener.cloud/"+providerType] = "true"
+			for _, extensionType := range []string{extensionType1, extensionType3} {
+				expectedLabels["extensions.extensions.gardener.cloud/"+extensionType] = "true"
 			}
 			for _, dnsProviderType := range []string{dnsProviderType1, dnsProviderType2} {
 				expectedLabels["dnsrecord.extensions.gardener.cloud/"+dnsProviderType] = "true"

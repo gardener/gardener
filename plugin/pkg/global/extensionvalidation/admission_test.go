@@ -295,8 +295,8 @@ var _ = Describe("ExtensionValidator", func() {
 					{Type: "foo1"},
 					{Type: "foo2"},
 				},
-				Networking: core.Networking{
-					Type: "foo3",
+				Networking: &core.Networking{
+					Type: pointer.String("foo3"),
 				},
 				Provider: core.Provider{
 					Type: "foo4",
@@ -330,7 +330,7 @@ var _ = Describe("ExtensionValidator", func() {
 				{extensionsv1alpha1.ExtensionResource, shoot.Spec.Extensions[0].Type},
 				{extensionsv1alpha1.ExtensionResource, shoot.Spec.Extensions[1].Type},
 				{extensionsv1alpha1.InfrastructureResource, shoot.Spec.Provider.Type},
-				{extensionsv1alpha1.NetworkResource, shoot.Spec.Networking.Type},
+				{extensionsv1alpha1.NetworkResource, *shoot.Spec.Networking.Type},
 				{extensionsv1alpha1.OperatingSystemConfigResource, shoot.Spec.Provider.Workers[0].Machine.Image.Name},
 				{extensionsv1alpha1.OperatingSystemConfigResource, shoot.Spec.Provider.Workers[1].Machine.Image.Name},
 				{extensionsv1alpha1.WorkerResource, shoot.Spec.Provider.Type},

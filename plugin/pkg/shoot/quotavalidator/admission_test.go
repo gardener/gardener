@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -196,7 +197,7 @@ var _ = Describe("quotavalidator", func() {
 				},
 				Spec: core.ShootSpec{
 					CloudProfileName:  "profile",
-					SecretBindingName: "test-binding",
+					SecretBindingName: pointer.String("test-binding"),
 					Provider: core.Provider{
 						Workers: workersBase,
 					},

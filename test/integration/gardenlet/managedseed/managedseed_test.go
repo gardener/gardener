@@ -163,8 +163,8 @@ var _ = Describe("ManagedSeed controller test", func() {
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.20.1",
 				},
-				Networking: gardencorev1beta1.Networking{
-					Type: "foo",
+				Networking: &gardencorev1beta1.Networking{
+					Type: pointer.String("foo"),
 				},
 				DNS: &gardencorev1beta1.DNS{
 					Domain: pointer.String("replica-name.example.com"),
@@ -266,7 +266,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 		})
 
 		By("Create Shoot")
-		shoot.Spec.SecretBindingName = shootSecretBinding.Name
+		shoot.Spec.SecretBindingName = pointer.String(shootSecretBinding.Name)
 		Expect(testClient.Create(ctx, shoot)).To(Succeed())
 		log.Info("Created Shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
 

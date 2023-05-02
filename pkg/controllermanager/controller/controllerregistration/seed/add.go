@@ -231,7 +231,7 @@ func (r *Reconciler) ShootPredicate() predicate.Predicate {
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.Provider.Workers, shoot.Spec.Provider.Workers) ||
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.Extensions, shoot.Spec.Extensions) ||
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.DNS, shoot.Spec.DNS) ||
-				oldShoot.Spec.Networking.Type != shoot.Spec.Networking.Type ||
+				shootNetworkingTypeHasChanged(oldShoot.Spec.Networking, shoot.Spec.Networking) ||
 				oldShoot.Spec.Provider.Type != shoot.Spec.Provider.Type
 		},
 
@@ -359,4 +359,19 @@ func (r *Reconciler) MapControllerDeploymentToAllSeeds(ctx context.Context, log 
 	}
 
 	return nil
+}
+
+func shootNetworkingTypeHasChanged(old, new *gardencorev1beta1.Networking) bool {
+	if old == nil && new == nil {
+		return false
+	}
+	if old == nil && new != nil {
+		// if new is non-nil then return true if new has a type set
+		return new.Type != nil
+	}
+	if old != nil && new == nil {
+		// if old was non-nil and had a type set, return true
+		return old.Type != nil
+	}
+	return !pointer.StringEqual(old.Type, new.Type)
 }

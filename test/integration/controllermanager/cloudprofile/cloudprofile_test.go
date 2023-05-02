@@ -19,6 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -68,7 +69,7 @@ var _ = Describe("CloudProfile controller tests", func() {
 				Namespace:    testNamespace.Name,
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: "my-provider-account",
+				SecretBindingName: pointer.String("my-provider-account"),
 				Region:            "foo-region",
 				Provider: gardencorev1beta1.Provider{
 					Type: cloudProfile.Spec.Type,
@@ -82,7 +83,7 @@ var _ = Describe("CloudProfile controller tests", func() {
 					},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.21.1"},
-				Networking: gardencorev1beta1.Networking{Type: "foo-networking"},
+				Networking: &gardencorev1beta1.Networking{Type: pointer.String("foo-networking")},
 			},
 		}
 	})

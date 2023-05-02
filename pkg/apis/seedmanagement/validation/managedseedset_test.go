@@ -56,8 +56,8 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 				Kubernetes: core.Kubernetes{
 					Version: "1.18.14",
 				},
-				Networking: core.Networking{
-					Type:  "foo",
+				Networking: &core.Networking{
+					Type:  pointer.String("foo"),
 					Nodes: pointer.String("10.181.0.0/18"),
 				},
 				Provider: core.Provider{
@@ -75,7 +75,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 					},
 				},
 				Region:            "some-region",
-				SecretBindingName: "shoot-operator-foo",
+				SecretBindingName: pointer.String("shoot-operator-foo"),
 			},
 		}
 
@@ -316,6 +316,22 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.shootTemplate.spec.provider.type"),
+				})),
+			))
+		})
+
+		It("should forbid workerless Shoot in shootTemplate", func() {
+			shootCopy := shoot.DeepCopy()
+			shootCopy.Spec.Provider.Workers = []core.Worker{}
+			managedSeedSet.Spec.ShootTemplate.Spec = shootCopy.Spec
+
+			errorList := ValidateManagedSeedSet(managedSeedSet)
+
+			Expect(errorList).To(ContainElement(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.shootTemplate.spec.provider.workers"),
+					"Detail": ContainSubstring("workers cannot be empty in the Shoot template for a ManagedSeedSet"),
 				})),
 			))
 		})

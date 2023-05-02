@@ -387,14 +387,14 @@ func createShoot(providerType, cloudProfile, region string, dnsDomain *string, c
 					},
 				},
 			},
-			Networking: gardencorev1beta1.Networking{
+			Networking: &gardencorev1beta1.Networking{
 				Pods:     pointer.String("10.3.0.0/16"),
 				Services: pointer.String("10.4.0.0/16"),
 				Nodes:    pointer.String("10.5.0.0/16"),
-				Type:     "some-type",
+				Type:     pointer.String("some-type"),
 			},
 			Kubernetes:        gardencorev1beta1.Kubernetes{Version: "1.21.1"},
-			SecretBindingName: testSecretBinding.Name,
+			SecretBindingName: pointer.String(testSecretBinding.Name),
 			DNS:               &gardencorev1beta1.DNS{Domain: dnsDomain},
 		},
 	}

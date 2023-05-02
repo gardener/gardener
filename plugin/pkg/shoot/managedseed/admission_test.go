@@ -78,8 +78,8 @@ var _ = Describe("ManagedSeed", func() {
 							Enabled: true,
 						},
 					},
-					Networking: core.Networking{
-						Type:  "foo",
+					Networking: &core.Networking{
+						Type:  pointer.String("foo"),
 						Nodes: pointer.String("10.181.0.0/18"),
 					},
 					Provider: core.Provider{

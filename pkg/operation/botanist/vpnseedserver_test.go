@@ -79,7 +79,7 @@ var _ = Describe("VPNSeedServer", func() {
 			}
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
-					Networking: gardencorev1beta1.Networking{
+					Networking: &gardencorev1beta1.Networking{
 						Nodes: pointer.String("10.0.0.0/24"),
 					},
 				},

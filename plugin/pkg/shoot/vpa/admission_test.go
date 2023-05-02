@@ -103,8 +103,28 @@ var _ = Describe("ShootVPAEnabledByDefault", func() {
 			Expect(shoot).To(Equal(expectedShoot))
 		})
 
-		It("should enable VPA if not explicitly disabled", func() {
+		It("should enable VPA if not explicitly disabled for a Shoot with workers", func() {
+			shoot = &core.Shoot{
+				Spec: core.ShootSpec{
+					Provider: core.Provider{
+						Workers: []core.Worker{
+							{
+								Name: "worker",
+							},
+						},
+					},
+				},
+			}
+			expectedShoot = shoot.DeepCopy()
 			expectedShoot.Spec.Kubernetes.VerticalPodAutoscaler = &core.VerticalPodAutoscaler{Enabled: true}
+
+			attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+			Expect(plugin.Admit(ctx, attrs, nil)).To(Succeed())
+			Expect(shoot).To(Equal(expectedShoot))
+		})
+
+		It("should not enable VPA for a workerless Shoot", func() {
+			expectedShoot.Spec.Kubernetes.VerticalPodAutoscaler = nil
 
 			attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 			Expect(plugin.Admit(ctx, attrs, nil)).To(Succeed())

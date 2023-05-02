@@ -494,6 +494,11 @@ func IsMultiZonalShootControlPlane(shoot *core.Shoot) bool {
 	return shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil && shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type == core.FailureToleranceTypeZone
 }
 
+// IsWorkerless checks if the shoot has zero workers.
+func IsWorkerless(shoot *core.Shoot) bool {
+	return len(shoot.Spec.Provider.Workers) == 0
+}
+
 // DeterminePrimaryIPFamily determines the primary IP family out of a specified list of IP families.
 func DeterminePrimaryIPFamily(ipFamilies []core.IPFamily) core.IPFamily {
 	if len(ipFamilies) == 0 {

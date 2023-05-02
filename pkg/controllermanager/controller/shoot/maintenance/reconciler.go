@@ -103,21 +103,25 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	log.Info("Maintaining Shoot")
 
 	var (
-		maintainedShoot = shoot.DeepCopy()
-		operations      []string
+		maintainedShoot             = shoot.DeepCopy()
+		operations                  []string
+		reasonForImageUpdatePerPool []string
+		err                         error
 	)
 
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
-	if err := r.Client.Get(ctx, kubernetesutils.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
+	if err = r.Client.Get(ctx, kubernetesutils.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
 		return err
 	}
 
-	reasonForImageUpdatePerPool, err := maintainMachineImages(log, maintainedShoot, cloudProfile)
-	if err != nil {
-		// continue execution to allow the kubernetes version update
-		log.Error(err, "Failed to maintain Shoot machine images")
+	if !v1beta1helper.IsWorkerless(shoot) {
+		reasonForImageUpdatePerPool, err = maintainMachineImages(log, maintainedShoot, cloudProfile)
+		if err != nil {
+			// continue execution to allow the kubernetes version update
+			log.Error(err, "Failed to maintain Shoot machine images")
+		}
+		operations = append(operations, reasonForImageUpdatePerPool...)
 	}
-	operations = append(operations, reasonForImageUpdatePerPool...)
 
 	reasonForKubernetesUpdate, err := maintainKubernetesVersion(log, maintainedShoot.Spec.Kubernetes.Version, maintainedShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 		maintainedShoot.Spec.Kubernetes.Version = v
@@ -310,7 +314,7 @@ func maintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, clou
 		filteredMachineImageVersionsFromCloudProfile := filterForArchitecture(&machineImageFromCloudProfile, worker.Machine.Architecture)
 		filteredMachineImageVersionsFromCloudProfile = filterForCRI(filteredMachineImageVersionsFromCloudProfile, worker.CRI)
 		filteredMachineImageVersionsFromCloudProfile = filterForKubeleteVersionConstraint(filteredMachineImageVersionsFromCloudProfile, kubeletVersion)
-		shouldBeUpdated, reason, updatedMachineImage, err := shouldMachineImageBeUpdated(workerLog, shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion, filteredMachineImageVersionsFromCloudProfile, workerImage)
+		shouldBeUpdated, reason, updatedMachineImage, err := shouldMachineImageBeUpdated(workerLog, *shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion, filteredMachineImageVersionsFromCloudProfile, workerImage)
 		if err != nil {
 			return nil, err
 		}

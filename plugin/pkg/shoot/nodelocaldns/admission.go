@@ -23,6 +23,7 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 )
 
 const (
@@ -63,12 +64,14 @@ func (c *ShootNodeLocalDNS) Admit(_ context.Context, a admission.Attributes, _ a
 		return apierrors.NewInternalError(errors.New("could not convert resource into Shoot object"))
 	}
 
-	if shoot.Spec.SystemComponents == nil {
-		shoot.Spec.SystemComponents = &core.SystemComponents{}
-	}
+	if !gardencorehelper.IsWorkerless(shoot) {
+		if shoot.Spec.SystemComponents == nil {
+			shoot.Spec.SystemComponents = &core.SystemComponents{}
+		}
 
-	if shoot.Spec.SystemComponents.NodeLocalDNS == nil {
-		shoot.Spec.SystemComponents.NodeLocalDNS = &core.NodeLocalDNS{Enabled: true}
+		if shoot.Spec.SystemComponents.NodeLocalDNS == nil {
+			shoot.Spec.SystemComponents.NodeLocalDNS = &core.NodeLocalDNS{Enabled: true}
+		}
 	}
 
 	return nil

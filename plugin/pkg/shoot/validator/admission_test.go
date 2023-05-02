@@ -203,9 +203,10 @@ var _ = Describe("validator", func() {
 				Spec: core.SeedSpec{
 					Backup: &core.SeedBackup{},
 					Networks: core.SeedNetworks{
-						Pods:     seedPodsCIDR,
-						Services: seedServicesCIDR,
-						Nodes:    &seedNodesCIDR,
+						Pods:       seedPodsCIDR,
+						Services:   seedServicesCIDR,
+						Nodes:      &seedNodesCIDR,
+						IPFamilies: []core.IPFamily{core.IPFamilyIPv4},
 					},
 					SecretRef: &corev1.SecretReference{
 						Name:      seedSecret.Name,
@@ -230,7 +231,7 @@ var _ = Describe("validator", func() {
 				Spec: core.ShootSpec{
 					CloudProfileName:  "profile",
 					Region:            "europe",
-					SecretBindingName: "my-secret",
+					SecretBindingName: pointer.String("my-secret"),
 					SeedName:          &seedName,
 					DNS: &core.DNS{
 						Domain: pointer.String(fmt.Sprintf("shoot.%s", baseDomain)),
@@ -243,10 +244,13 @@ var _ = Describe("validator", func() {
 					Kubernetes: core.Kubernetes{
 						Version: "1.6.4",
 					},
-					Networking: core.Networking{
+					Networking: &core.Networking{
 						Nodes:    &nodesCIDR,
 						Pods:     &podsCIDR,
 						Services: &servicesCIDR,
+						IPFamilies: []core.IPFamily{
+							core.IPFamilyIPv4,
+						},
 					},
 					Provider: core.Provider{
 						Type: "unknown",
@@ -860,6 +864,22 @@ var _ = Describe("validator", func() {
 
 				Expect(err).To(BeForbiddenError())
 				Expect(err.Error()).To(ContainSubstring("provider type in shoot must match provider type of referenced SecretBinding: %q", secretBinding.Provider.Type))
+			})
+
+			It("should not error if and secret binding is nil", func() {
+				shoot.Spec.Provider.Type = "aws"
+				shoot.Spec.SecretBindingName = nil
+				cloudProfile.Spec.Type = "aws"
+
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should pass because no seed has to be specified (however can be). The scheduler sets the seed instead.", func() {
@@ -1567,6 +1587,21 @@ var _ = Describe("validator", func() {
 					Expect(err).To(BeForbiddenError())
 				})
 
+				It("should not reject because shoot pods network is nil (workerless Shoot)", func() {
+					shoot.Spec.Provider.Workers = nil
+					shoot.Spec.Networking.Pods = nil
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+				})
+
 				It("should reject because shoot services network is missing", func() {
 					shoot.Spec.Networking.Services = nil
 
@@ -1579,6 +1614,24 @@ var _ = Describe("validator", func() {
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("services is required spec.networking.services")))
+				})
+
+				It("should reject because shoot services network is nil (workerless Shoot)", func() {
+					shoot.Spec.Provider.Workers = nil
+					shoot.Spec.Networking.Services = nil
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError(ContainSubstring("services is required spec.networking.services")))
+
 				})
 
 				It("should default shoot networks if seed provides ShootDefaults", func() {

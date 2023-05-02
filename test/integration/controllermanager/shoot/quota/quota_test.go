@@ -94,7 +94,7 @@ var _ = Describe("Shoot Quota controller tests", func() {
 				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: secretBinding.Name,
+				SecretBindingName: pointer.String(secretBinding.Name),
 				CloudProfileName:  "cloudprofile1",
 				Region:            "europe-central-1",
 				Provider: gardencorev1beta1.Provider{
@@ -116,8 +116,8 @@ var _ = Describe("Shoot Quota controller tests", func() {
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.20.1",
 				},
-				Networking: gardencorev1beta1.Networking{
-					Type: "foo-networking",
+				Networking: &gardencorev1beta1.Networking{
+					Type: pointer.String("foo-networking"),
 				},
 			},
 		}

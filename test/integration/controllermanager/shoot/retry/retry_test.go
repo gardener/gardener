@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -32,7 +33,7 @@ var _ = Describe("Shoot retry controller tests", func() {
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{GenerateName: "test-", Namespace: testNamespace.Name},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: "my-provider-account",
+				SecretBindingName: pointer.String("my-provider-account"),
 				CloudProfileName:  "cloudprofile1",
 				Region:            "europe-central-1",
 				Provider: gardencorev1beta1.Provider{
@@ -51,8 +52,8 @@ var _ = Describe("Shoot retry controller tests", func() {
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.20.1",
 				},
-				Networking: gardencorev1beta1.Networking{
-					Type: "foo-networking",
+				Networking: &gardencorev1beta1.Networking{
+					Type: pointer.String("foo-networking"),
 				},
 			},
 		}

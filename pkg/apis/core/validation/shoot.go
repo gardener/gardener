@@ -37,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/strings/slices"
 
@@ -123,6 +124,8 @@ var (
 		"PS512",
 		"none",
 	)
+
+	workerlessErrorMsg = "this field should not be set for workerless Shoot clusters"
 )
 
 // ValidateShoot validates a Shoot object.
@@ -170,7 +173,7 @@ func ValidateShootTemplateUpdate(newShootTemplate, oldShootTemplate *core.ShootT
 
 	allErrs = append(allErrs, ValidateShootSpecUpdate(&newShootTemplate.Spec, &oldShootTemplate.Spec, newShootTemplate.ObjectMeta, fldPath.Child("spec"))...)
 
-	if oldShootTemplate.Spec.Networking.Nodes != nil {
+	if oldShootTemplate.Spec.Networking != nil && oldShootTemplate.Spec.Networking.Nodes != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newShootTemplate.Spec.Networking.Nodes, oldShootTemplate.Spec.Networking.Nodes, fldPath.Child("spec", "networking", "nodes"))...)
 	}
 
@@ -207,18 +210,21 @@ func validateShootKubeconfigRotation(newMeta, oldMeta metav1.ObjectMeta, fldPath
 
 // ValidateShootSpec validates the specification of a Shoot object.
 func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *field.Path, inTemplate bool) field.ErrorList {
-	allErrs := field.ErrorList{}
+	var (
+		allErrs    = field.ErrorList{}
+		workerless = len(spec.Provider.Workers) == 0
+	)
 
-	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Kubernetes, spec.Purpose, fldPath.Child("addons"))...)
+	allErrs = append(allErrs, validateProvider(spec.Provider, spec.Kubernetes, spec.Networking, workerless, fldPath.Child("provider"), inTemplate)...)
+	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Kubernetes, spec.Purpose, workerless, fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, validateResources(spec.Resources, fldPath.Child("resources"))...)
-	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, isDockerConfigured(spec.Provider.Workers), fldPath.Child("kubernetes"))...)
-	allErrs = append(allErrs, validateNetworking(spec.Networking, fldPath.Child("networking"))...)
-	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"))...)
+	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, isDockerConfigured(spec.Provider.Workers), workerless, fldPath.Child("kubernetes"))...)
+	allErrs = append(allErrs, validateNetworking(spec.Networking, workerless, fldPath.Child("networking"))...)
+	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"), workerless)...)
 	allErrs = append(allErrs, validateMonitoring(spec.Monitoring, fldPath.Child("monitoring"))...)
 	allErrs = append(allErrs, ValidateHibernation(meta.Annotations, spec.Hibernation, fldPath.Child("hibernation"))...)
-	allErrs = append(allErrs, validateProvider(spec.Provider, spec.Kubernetes, spec.Networking, fldPath.Child("provider"), inTemplate)...)
 
 	if len(spec.Region) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("region"), "must specify a region"))
@@ -226,7 +232,9 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	if len(spec.CloudProfileName) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("cloudProfileName"), "must specify a cloud profile"))
 	}
-	if len(spec.SecretBindingName) == 0 {
+	if spec.SecretBindingName != nil && workerless {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretBindingName"), workerlessErrorMsg))
+	} else if len(pointer.StringDeref(spec.SecretBindingName, "")) == 0 && !workerless {
 		allErrs = append(allErrs, field.Required(fldPath.Child("secretBindingName"), "must specify a name"))
 	}
 	if spec.SeedName != nil && len(*spec.SeedName) == 0 {
@@ -246,7 +254,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 		}
 	}
 	allErrs = append(allErrs, ValidateTolerations(spec.Tolerations, fldPath.Child("tolerations"))...)
-	allErrs = append(allErrs, ValidateSystemComponents(spec.SystemComponents, fldPath.Child("systemComponents"))...)
+	allErrs = append(allErrs, ValidateSystemComponents(spec.SystemComponents, fldPath.Child("systemComponents"), workerless)...)
 
 	return allErrs
 }
@@ -280,6 +288,12 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	allErrs = append(allErrs, ValidateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
 
 	allErrs = append(allErrs, validateKubeControllerManagerUpdate(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
+
+	if err := validateWorkerUpdate(len(newSpec.Provider.Workers) > 0, len(oldSpec.Provider.Workers) > 0, fldPath.Child("provider", "workers")); err != nil {
+		allErrs = append(allErrs, err)
+		return allErrs
+	}
+
 	allErrs = append(allErrs, ValidateProviderUpdate(&newSpec.Provider, &oldSpec.Provider, fldPath.Child("provider"))...)
 
 	for i, newWorker := range newSpec.Provider.Workers {
@@ -308,6 +322,17 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	allErrs = append(allErrs, validateNetworkingUpdate(newSpec.Networking, oldSpec.Networking, fldPath.Child("networking"))...)
 
 	return allErrs
+}
+
+func validateWorkerUpdate(newHasWorkers, oldHasWorkers bool, fldPath *field.Path) *field.Error {
+	if oldHasWorkers && !newHasWorkers {
+		return field.Forbidden(fldPath, "cannot switch from a Shoot with workers to a workerless Shoot")
+	}
+	if !oldHasWorkers && newHasWorkers {
+		return field.Forbidden(fldPath, "cannot switch from a workerless Shoot to a Shoot with workers")
+	}
+
+	return nil
 }
 
 // ValidateProviderUpdate validates the specification of a Provider object.
@@ -385,8 +410,13 @@ func validateAdvertisedURL(URL string, fldPath *field.Path) field.ErrorList {
 	return allErrors
 }
 
-func validateAddons(addons *core.Addons, kubernetes core.Kubernetes, purpose *core.ShootPurpose, fldPath *field.Path) field.ErrorList {
+func validateAddons(addons *core.Addons, kubernetes core.Kubernetes, purpose *core.ShootPurpose, workerless bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	if workerless && addons != nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "addons cannot be enabled for Workerless Shoot clusters"))
+		return allErrs
+	}
 
 	versionGreaterOrEqual122, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.22")
 	if (helper.NginxIngressEnabled(addons) || helper.KubernetesDashboardEnabled(addons)) && versionGreaterOrEqual122 && (purpose != nil && *purpose != core.ShootPurposeEvaluation) {
@@ -590,8 +620,18 @@ func ValidateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field
 	return allErrs
 }
 
-func validateNetworkingUpdate(newNetworking, oldNetworking core.Networking, fldPath *field.Path) field.ErrorList {
+func validateNetworkingUpdate(newNetworking, oldNetworking *core.Networking, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	if oldNetworking != nil {
+		if newNetworking == nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath, "networking cannot be set to nil if it's already set"))
+			return allErrs
+		}
+	} else {
+		// if the old networking is nil, we cannot validate immutability anyway, so exit early
+		return allErrs
+	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.Type, oldNetworking.Type, fldPath.Child("type"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.IPFamilies, oldNetworking.IPFamilies, fldPath.Child("ipFamilies"))...)
@@ -725,7 +765,7 @@ func validateResources(resources []core.NamedResourceReference, fldPath *field.P
 	return allErrs
 }
 
-func validateKubernetes(kubernetes core.Kubernetes, networking core.Networking, dockerConfigured bool, fldPath *field.Path) field.ErrorList {
+func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking, dockerConfigured, workerless bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(kubernetes.Version) == 0 {
@@ -734,23 +774,60 @@ func validateKubernetes(kubernetes core.Kubernetes, networking core.Networking, 
 	}
 
 	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, false, fldPath.Child("kubeAPIServer"))...)
-	allErrs = append(allErrs, validateKubeControllerManager(kubernetes.KubeControllerManager, networking, kubernetes.Version, fldPath.Child("kubeControllerManager"))...)
-	allErrs = append(allErrs, validateKubeScheduler(kubernetes.KubeScheduler, kubernetes.Version, fldPath.Child("kubeScheduler"))...)
-	allErrs = append(allErrs, validateKubeProxy(kubernetes.KubeProxy, kubernetes.Version, fldPath.Child("kubeProxy"))...)
+	allErrs = append(allErrs, validateKubeControllerManager(kubernetes.KubeControllerManager, networking, kubernetes.Version, workerless, fldPath.Child("kubeControllerManager"))...)
+
+	if workerless {
+		allErrs = append(allErrs, validateKubernetesForWorkerlessShoot(kubernetes, fldPath)...)
+	} else {
+		allErrs = append(allErrs, validateKubeScheduler(kubernetes.KubeScheduler, kubernetes.Version, fldPath.Child("kubeScheduler"))...)
+		allErrs = append(allErrs, validateKubeProxy(kubernetes.KubeProxy, kubernetes.Version, fldPath.Child("kubeProxy"))...)
+
+		if kubernetes.Kubelet != nil {
+			allErrs = append(allErrs, ValidateKubeletConfig(*kubernetes.Kubelet, kubernetes.Version, dockerConfigured, fldPath.Child("kubelet"))...)
+		}
+
+		if clusterAutoscaler := kubernetes.ClusterAutoscaler; clusterAutoscaler != nil {
+			allErrs = append(allErrs, ValidateClusterAutoscaler(*clusterAutoscaler, kubernetes.Version, fldPath.Child("clusterAutoscaler"))...)
+		}
+
+		if verticalPodAutoscaler := kubernetes.VerticalPodAutoscaler; verticalPodAutoscaler != nil {
+			allErrs = append(allErrs, ValidateVerticalPodAutoscaler(*verticalPodAutoscaler, fldPath.Child("verticalPodAutoscaler"))...)
+		}
+
+		k8sGreaterEqual125, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.25")
+		if k8sGreaterEqual125 && kubernetes.AllowPrivilegedContainers != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("allowPrivilegedContainers"), "for Kubernetes versions >= 1.25, allowPrivilegedContainers field should not be set, please see https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#speckubernetesallowprivilegedcontainers-in-the-shoot-spec"))
+		}
+	}
+
+	return allErrs
+}
+
+func validateKubernetesForWorkerlessShoot(kubernetes core.Kubernetes, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if kubernetes.KubeScheduler != nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeScheduler"), workerlessErrorMsg))
+	}
+
+	if kubernetes.KubeProxy != nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeProxy"), workerlessErrorMsg))
+	}
+
 	if kubernetes.Kubelet != nil {
-		allErrs = append(allErrs, ValidateKubeletConfig(*kubernetes.Kubelet, kubernetes.Version, dockerConfigured, fldPath.Child("kubelet"))...)
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubelet"), workerlessErrorMsg))
 	}
 
-	if clusterAutoscaler := kubernetes.ClusterAutoscaler; clusterAutoscaler != nil {
-		allErrs = append(allErrs, ValidateClusterAutoscaler(*clusterAutoscaler, kubernetes.Version, fldPath.Child("clusterAutoscaler"))...)
-	}
-	if verticalPodAutoscaler := kubernetes.VerticalPodAutoscaler; verticalPodAutoscaler != nil {
-		allErrs = append(allErrs, ValidateVerticalPodAutoscaler(*verticalPodAutoscaler, fldPath.Child("verticalPodAutoscaler"))...)
+	if kubernetes.ClusterAutoscaler != nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("clusterAutoScaler"), workerlessErrorMsg))
 	}
 
-	k8sGreaterEqual125, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.25")
-	if k8sGreaterEqual125 && kubernetes.AllowPrivilegedContainers != nil {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("allowPrivilegedContainers"), "for Kubernetes versions >= 1.25, allowPrivilegedContainers field should not be set, please see https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#speckubernetesallowprivilegedcontainers-in-the-shoot-spec"))
+	if kubernetes.VerticalPodAutoscaler != nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("verticalPodAutoScaler"), workerlessErrorMsg))
+	}
+
+	if kubernetes.AllowPrivilegedContainers != nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("allowPrivilegedContainers"), workerlessErrorMsg))
 	}
 
 	return allErrs
@@ -760,11 +837,36 @@ func fieldNilOrEmptyString(field *string) bool {
 	return field == nil || len(*field) == 0
 }
 
-func validateNetworking(networking core.Networking, fldPath *field.Path) field.ErrorList {
+func validateNetworking(networking *core.Networking, workerless bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if len(networking.Type) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "networking type must be provided"))
+	if workerless {
+		// Nothing to be validated here, exit
+		if networking == nil {
+			return allErrs
+		}
+
+		if networking.Type != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("type"), workerlessErrorMsg))
+		}
+		if networking.ProviderConfig != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("providerConfig"), workerlessErrorMsg))
+		}
+		if networking.Pods != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("pods"), workerlessErrorMsg))
+		}
+		if networking.Nodes != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("nodes"), workerlessErrorMsg))
+		}
+	} else {
+		if networking == nil {
+			allErrs = append(allErrs, field.Required(fldPath, "networking should not be nil for a Shoot with workers"))
+			return allErrs
+		}
+
+		if len(pointer.StringDeref(networking.Type, "")) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("type"), "networking type must be provided"))
+		}
 	}
 
 	if errs := ValidateIPFamilies(networking.IPFamilies, fldPath.Child("ipFamilies")); len(errs) > 0 {
@@ -1056,11 +1158,15 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 	return allErrs
 }
 
-func validateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networking core.Networking, version string, fldPath *field.Path) field.ErrorList {
+func validateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networking *core.Networking, version string, workerless bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if kcm != nil {
-		if maskSize := kcm.NodeCIDRMaskSize; maskSize != nil {
+	if kcm == nil {
+		return nil
+	}
+
+	if !workerless {
+		if maskSize := kcm.NodeCIDRMaskSize; maskSize != nil && networking != nil {
 			if core.IsIPv4SingleStack(networking.IPFamilies) {
 				if *maskSize < 16 || *maskSize > 28 {
 					allErrs = append(allErrs, field.Invalid(fldPath.Child("nodeCIDRMaskSize"), *maskSize, "nodeCIDRMaskSize must be between 16 and 28"))
@@ -1095,9 +1201,22 @@ func validateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networ
 				allErrs = append(allErrs, field.Invalid(hpaPath.Child("cpuInitializationPeriod"), *hpa.CPUInitializationPeriod, "cpu initialization period must not be less than a second"))
 			}
 		}
-
-		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kcm.FeatureGates, version, fldPath.Child("featureGates"))...)
+	} else {
+		if kcm.NodeCIDRMaskSize != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("nodeCIDRMaskSize"), workerlessErrorMsg))
+		}
+		if kcm.HorizontalPodAutoscalerConfig != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("horizontalPodAutoscaler"), workerlessErrorMsg))
+		}
+		if kcm.PodEvictionTimeout != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("podEvictionTimeout"), workerlessErrorMsg))
+		}
+		if kcm.NodeMonitorGracePeriod != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("nodeMonitorGracePeriod"), workerlessErrorMsg))
+		}
 	}
+
+	allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kcm.FeatureGates, version, fldPath.Child("featureGates"))...)
 
 	return allErrs
 }
@@ -1156,11 +1275,17 @@ func validateAlerting(alerting *core.Alerting, fldPath *field.Path) field.ErrorL
 	return allErrs
 }
 
-func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path) field.ErrorList {
+func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path, workerless bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if maintenance == nil {
 		return allErrs
+	}
+
+	if maintenance.AutoUpdate != nil {
+		if workerless && maintenance.AutoUpdate.MachineImageVersion != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("autoUpdate", "machineImageVersion"), workerlessErrorMsg))
+		}
 	}
 
 	if maintenance.TimeWindow != nil {
@@ -1183,34 +1308,51 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path) fie
 	return allErrs
 }
 
-func validateProvider(provider core.Provider, kubernetes core.Kubernetes, networking core.Networking, fldPath *field.Path, inTemplate bool) field.ErrorList {
-	allErrs := field.ErrorList{}
+func validateProvider(provider core.Provider, kubernetes core.Kubernetes, networking *core.Networking, workerless bool, fldPath *field.Path, inTemplate bool) field.ErrorList {
+	var (
+		allErrs = field.ErrorList{}
+		maxPod  int32
+	)
 
 	if len(provider.Type) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "must specify a provider type"))
 	}
 
-	var maxPod int32
-	if kubernetes.Kubelet != nil && kubernetes.Kubelet.MaxPods != nil {
-		maxPod = *kubernetes.Kubelet.MaxPods
-	}
-
-	for i, worker := range provider.Workers {
-		allErrs = append(allErrs, ValidateWorker(worker, kubernetes, fldPath.Child("workers").Index(i), inTemplate)...)
-
-		if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil && worker.Kubernetes.Kubelet.MaxPods != nil && *worker.Kubernetes.Kubelet.MaxPods > maxPod {
-			maxPod = *worker.Kubernetes.Kubelet.MaxPods
+	if workerless {
+		if !utilfeature.DefaultFeatureGate.Enabled(features.WorkerlessShoots) {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("workers"), "must provide at least one worker pool when WorkerlessShoots feature gate is disabled"))
 		}
+		if provider.InfrastructureConfig != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("infrastructureConfig"), workerlessErrorMsg))
+		}
+		if provider.ControlPlaneConfig != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("controlPlaneConfig"), workerlessErrorMsg))
+		}
+		if provider.WorkersSettings != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("workersSettings"), workerlessErrorMsg))
+		}
+	} else {
+		if kubernetes.Kubelet != nil && kubernetes.Kubelet.MaxPods != nil {
+			maxPod = *kubernetes.Kubelet.MaxPods
+		}
+
+		for i, worker := range provider.Workers {
+			allErrs = append(allErrs, ValidateWorker(worker, kubernetes, fldPath.Child("workers").Index(i), inTemplate)...)
+
+			if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil && worker.Kubernetes.Kubelet.MaxPods != nil && *worker.Kubernetes.Kubelet.MaxPods > maxPod {
+				maxPod = *worker.Kubernetes.Kubelet.MaxPods
+			}
+		}
+
+		allErrs = append(allErrs, ValidateWorkers(provider.Workers, fldPath.Child("workers"))...)
 	}
 
-	allErrs = append(allErrs, ValidateWorkers(provider.Workers, fldPath.Child("workers"))...)
-
-	if kubernetes.KubeControllerManager != nil && kubernetes.KubeControllerManager.NodeCIDRMaskSize != nil {
+	if kubernetes.KubeControllerManager != nil && kubernetes.KubeControllerManager.NodeCIDRMaskSize != nil && networking != nil {
 		if maxPod == 0 {
 			// default maxPod setting on kubelet
 			maxPod = 110
 		}
-		allErrs = append(allErrs, ValidateNodeCIDRMaskWithMaxPod(maxPod, *kubernetes.KubeControllerManager.NodeCIDRMaskSize, networking)...)
+		allErrs = append(allErrs, ValidateNodeCIDRMaskWithMaxPod(maxPod, *kubernetes.KubeControllerManager.NodeCIDRMaskSize, *networking)...)
 	}
 
 	return allErrs
@@ -1853,10 +1995,13 @@ func ValidateArchitecture(arch *string, fldPath *field.Path) field.ErrorList {
 }
 
 // ValidateSystemComponents validates the given system components.
-func ValidateSystemComponents(systemComponents *core.SystemComponents, fldPath *field.Path) field.ErrorList {
+func ValidateSystemComponents(systemComponents *core.SystemComponents, fldPath *field.Path, workerless bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if systemComponents == nil {
+		return allErrs
+	} else if workerless {
+		allErrs = append(allErrs, field.Forbidden(fldPath, workerlessErrorMsg))
 		return allErrs
 	}
 

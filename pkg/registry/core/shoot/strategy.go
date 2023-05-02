@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/api/core/shoot"
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/features"
@@ -159,7 +160,9 @@ func (shootStrategy) Validate(ctx context.Context, obj runtime.Object) field.Err
 	shoot := obj.(*core.Shoot)
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, validation.ValidateShoot(shoot)...)
-	allErrs = append(allErrs, validation.ValidateTotalNodeCountWithPodCIDR(shoot)...)
+	if !gardencorehelper.IsWorkerless(shoot) && shoot.Spec.Networking != nil {
+		allErrs = append(allErrs, validation.ValidateTotalNodeCountWithPodCIDR(shoot)...)
+	}
 	return allErrs
 }
 

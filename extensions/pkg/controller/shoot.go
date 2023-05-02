@@ -35,7 +35,7 @@ func (f ChartRendererFactoryFunc) NewChartRendererForShoot(version string) (char
 
 // GetPodNetwork returns the pod network CIDR of the given Shoot.
 func GetPodNetwork(cluster *Cluster) string {
-	if cluster.Shoot.Spec.Networking.Pods != nil {
+	if cluster.Shoot.Spec.Networking != nil && cluster.Shoot.Spec.Networking.Pods != nil {
 		return *cluster.Shoot.Spec.Networking.Pods
 	}
 	return ""
@@ -43,7 +43,7 @@ func GetPodNetwork(cluster *Cluster) string {
 
 // GetServiceNetwork returns the service network CIDR of the given Shoot.
 func GetServiceNetwork(cluster *Cluster) string {
-	if cluster.Shoot.Spec.Networking.Services != nil {
+	if cluster.Shoot.Spec.Networking != nil && cluster.Shoot.Spec.Networking.Services != nil {
 		return *cluster.Shoot.Spec.Networking.Services
 	}
 	return ""

@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
@@ -152,6 +153,16 @@ func (r *Reconciler) ClusterPredicate() predicate.Predicate {
 			oldShoot, err := extensions.ShootFromCluster(oldCluster)
 			if err != nil {
 				return false
+			}
+
+			// if the shoot has no networking field, return false
+			if shoot.Spec.Networking == nil {
+				return false
+			}
+
+			if v1beta1helper.IsWorkerless(shoot) {
+				// if the shoot has networking field set and the old shoot has nil, then we cannot compare services, so return true right away
+				return oldShoot.Spec.Networking == nil || !pointer.StringEqual(shoot.Spec.Networking.Services, oldShoot.Spec.Networking.Services)
 			}
 
 			return !pointer.StringEqual(shoot.Spec.Networking.Pods, oldShoot.Spec.Networking.Pods) ||

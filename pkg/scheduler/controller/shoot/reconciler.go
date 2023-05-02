@@ -263,9 +263,11 @@ func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []gardencorev1be
 	)
 
 	for _, seed := range seedList {
-		if disjointed, err := networksAreDisjointed(&seed, shoot); !disjointed {
-			candidateErrors[seed.Name] = err
-			continue
+		if shoot.Spec.Networking != nil {
+			if disjointed, err := networksAreDisjointed(&seed, shoot); !disjointed {
+				candidateErrors[seed.Name] = err
+				continue
+			}
 		}
 
 		if !v1beta1helper.TaintsAreTolerated(seed.Spec.Taints, shoot.Spec.Tolerations) {
@@ -374,10 +376,11 @@ func networksAreDisjointed(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta
 		shootServicesNetwork = shoot.Spec.Networking.Services
 
 		errorMessages []string
+		workerless    = v1beta1helper.IsWorkerless(shoot)
 	)
 
 	if seed.Spec.Networks.ShootDefaults != nil {
-		if shootPodsNetwork == nil {
+		if shootPodsNetwork == nil && !workerless {
 			shootPodsNetwork = seed.Spec.Networks.ShootDefaults.Pods
 		}
 		if shootServicesNetwork == nil {
@@ -393,6 +396,7 @@ func networksAreDisjointed(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta
 		seed.Spec.Networks.Nodes,
 		seed.Spec.Networks.Pods,
 		seed.Spec.Networks.Services,
+		workerless,
 	) {
 		errorMessages = append(errorMessages, e.ErrorBody())
 	}

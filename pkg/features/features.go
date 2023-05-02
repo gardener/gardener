@@ -93,6 +93,11 @@ const (
 	// owner: @rfranzke
 	// alpha: v1.66.0
 	FullNetworkPoliciesInRuntimeCluster featuregate.Feature = "FullNetworkPoliciesInRuntimeCluster"
+
+	// WorkerlessShoots allows creation of Shoot clusters with no worker pools.
+	// owner: @acumino @ary1992 @shafeeqes
+	// alpha: v1.70.0
+	WorkerlessShoots featuregate.Feature = "WorkerlessShoots"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -130,6 +135,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	IPv6SingleStack:                     {Default: false, PreRelease: featuregate.Alpha},
 	MutableShootSpecNetworkingNodes:     {Default: false, PreRelease: featuregate.Alpha},
 	FullNetworkPoliciesInRuntimeCluster: {Default: false, PreRelease: featuregate.Alpha},
+	WorkerlessShoots:                    {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

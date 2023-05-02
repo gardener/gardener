@@ -1547,6 +1547,7 @@ Networking
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Networking contains information about cluster networking such as CNI Plugin type, CIDRs, &hellip;etc.</p>
 </td>
 </tr>
@@ -1625,6 +1626,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
 The credentials inside the provider secret will be used to create the shoot in the respective account.
 This field is immutable.</p>
@@ -7080,6 +7082,7 @@ bool
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>MachineImageVersion indicates whether the machine image version may be automatically updated (default: true).</p>
 </td>
 </tr>
@@ -7230,6 +7233,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Type identifies the type of the networking plugin. This field is immutable.</p>
 </td>
 </tr>
@@ -8026,6 +8030,7 @@ definition in the documentation of your provider extension.</p>
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Workers is a list of worker groups.</p>
 </td>
 </tr>
@@ -10605,6 +10610,7 @@ Networking
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Networking contains information about cluster networking such as CNI Plugin type, CIDRs, &hellip;etc.</p>
 </td>
 </tr>
@@ -10683,6 +10689,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
 The credentials inside the provider secret will be used to create the shoot in the respective account.
 This field is immutable.</p>
@@ -11230,6 +11237,7 @@ Networking
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Networking contains information about cluster networking such as CNI Plugin type, CIDRs, &hellip;etc.</p>
 </td>
 </tr>
@@ -11308,6 +11316,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
 The credentials inside the provider secret will be used to create the shoot in the respective account.
 This field is immutable.</p>

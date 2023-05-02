@@ -240,7 +240,11 @@ var _ = Describe("Add", func() {
 
 		BeforeEach(func() {
 			p = reconciler.ShootPredicate()
-			shoot = &gardencorev1beta1.Shoot{}
+			shoot = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{},
+				},
+			}
 		})
 
 		Describe("#Create", func() {
@@ -291,9 +295,43 @@ var _ = Describe("Add", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
 			})
 
-			It("should return true because networking type changed", func() {
+			It("should return false because both old and new networking fields are nil", func() {
+				shoot.Spec.Networking = nil
 				oldShoot := shoot.DeepCopy()
-				shoot.Spec.Networking.Type = "foo"
+				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeFalse())
+			})
+
+			It("should return false because old networking field was nil and new doesn't have type", func() {
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.Networking = nil
+				shoot.Spec.Networking.Type = nil
+				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeFalse())
+			})
+
+			It("should return true because old networking field was nil and new has type", func() {
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.Networking = nil
+				shoot.Spec.Networking.Type = pointer.String("type")
+				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
+			})
+
+			It("should return true because old networking field was non-nil and had type set and new is nil", func() {
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.Networking.Type = pointer.String("type")
+				shoot.Spec.Networking = nil
+				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
+			})
+
+			It("should return false because old networking field was non-nil but had no type set and new is nil", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Spec.Networking = nil
+				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeFalse())
+			})
+
+			It("should return true because networking type is changed", func() {
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.Networking.Type = pointer.String("foo")
+				shoot.Spec.Networking.Type = pointer.String("bar")
 				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
 			})
 

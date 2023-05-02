@@ -90,11 +90,6 @@ func SetDefaults_SeedSettingDependencyWatchdog(obj *SeedSettingDependencyWatchdo
 
 // SetDefaults_Shoot sets default values for Shoot objects.
 func SetDefaults_Shoot(obj *Shoot) {
-	// Errors are ignored here because we cannot do anything meaningful with them - variables will default to `false`.
-	k8sLess125, _ := versionutils.CheckVersionMeetsConstraint(obj.Spec.Kubernetes.Version, "< 1.25")
-	if obj.Spec.Kubernetes.AllowPrivilegedContainers == nil && k8sLess125 && !isPSPDisabled(obj) {
-		obj.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
-	}
 	if obj.Spec.Kubernetes.KubeAPIServer == nil {
 		obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{}
 	}
@@ -129,31 +124,6 @@ func SetDefaults_Shoot(obj *Shoot) {
 	if obj.Spec.Kubernetes.KubeControllerManager == nil {
 		obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{}
 	}
-	if obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
-		obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = calculateDefaultNodeCIDRMaskSize(&obj.Spec)
-	}
-	if obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod == nil {
-		obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod = &metav1.Duration{Duration: 2 * time.Minute}
-	}
-
-	if obj.Spec.Kubernetes.KubeScheduler == nil {
-		obj.Spec.Kubernetes.KubeScheduler = &KubeSchedulerConfig{}
-	}
-	if obj.Spec.Kubernetes.KubeScheduler.Profile == nil {
-		defaultProfile := SchedulingProfileBalanced
-		obj.Spec.Kubernetes.KubeScheduler.Profile = &defaultProfile
-	}
-
-	if obj.Spec.Kubernetes.KubeProxy == nil {
-		obj.Spec.Kubernetes.KubeProxy = &KubeProxyConfig{}
-	}
-	if obj.Spec.Kubernetes.KubeProxy.Mode == nil {
-		defaultProxyMode := ProxyModeIPTables
-		obj.Spec.Kubernetes.KubeProxy.Mode = &defaultProxyMode
-	}
-	if obj.Spec.Kubernetes.KubeProxy.Enabled == nil {
-		obj.Spec.Kubernetes.KubeProxy.Enabled = pointer.Bool(true)
-	}
 
 	if obj.Spec.Kubernetes.EnableStaticTokenKubeconfig == nil {
 		// Error is ignored here because we cannot do anything meaningful with it - variable will default to "false".
@@ -162,17 +132,6 @@ func SetDefaults_Shoot(obj *Shoot) {
 		} else {
 			obj.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(false)
 		}
-	}
-
-	if obj.Spec.Addons == nil {
-		obj.Spec.Addons = &Addons{}
-	}
-	if obj.Spec.Addons.KubernetesDashboard == nil {
-		obj.Spec.Addons.KubernetesDashboard = &KubernetesDashboard{}
-	}
-	if obj.Spec.Addons.KubernetesDashboard.AuthenticationMode == nil {
-		defaultAuthMode := KubernetesDashboardAuthModeToken
-		obj.Spec.Addons.KubernetesDashboard.AuthenticationMode = &defaultAuthMode
 	}
 
 	if obj.Spec.Purpose == nil {
@@ -187,45 +146,17 @@ func SetDefaults_Shoot(obj *Shoot) {
 		addTolerations(&obj.Spec.Tolerations, Toleration{Key: SeedTaintProtected})
 	}
 
-	if obj.Spec.Kubernetes.Kubelet == nil {
-		obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-	}
-	if obj.Spec.Kubernetes.Kubelet.FailSwapOn == nil {
-		obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(true)
-	}
-	if obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent == nil {
-		obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent = pointer.Int32(50)
-	}
-	if obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent == nil {
-		obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent = pointer.Int32(40)
-	}
-	if obj.Spec.Kubernetes.Kubelet.SerializeImagePulls == nil {
-		obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = pointer.Bool(true)
-	}
-
-	var (
-		kubeReservedMemory = resource.MustParse("1Gi")
-		kubeReservedCPU    = resource.MustParse("80m")
-		kubeReservedPID    = resource.MustParse("20k")
-	)
-
-	if obj.Spec.Kubernetes.Kubelet.KubeReserved == nil {
-		obj.Spec.Kubernetes.Kubelet.KubeReserved = &KubeletConfigReserved{Memory: &kubeReservedMemory, CPU: &kubeReservedCPU}
-		obj.Spec.Kubernetes.Kubelet.KubeReserved.PID = &kubeReservedPID
-	} else {
-		if obj.Spec.Kubernetes.Kubelet.KubeReserved.Memory == nil {
-			obj.Spec.Kubernetes.Kubelet.KubeReserved.Memory = &kubeReservedMemory
-		}
-		if obj.Spec.Kubernetes.Kubelet.KubeReserved.CPU == nil {
-			obj.Spec.Kubernetes.Kubelet.KubeReserved.CPU = &kubeReservedCPU
-		}
-		if obj.Spec.Kubernetes.Kubelet.KubeReserved.PID == nil {
-			obj.Spec.Kubernetes.Kubelet.KubeReserved.PID = &kubeReservedPID
-		}
-	}
-
 	if obj.Spec.Maintenance == nil {
 		obj.Spec.Maintenance = &Maintenance{}
+	}
+	if obj.Spec.Maintenance.AutoUpdate == nil {
+		obj.Spec.Maintenance.AutoUpdate = &MaintenanceAutoUpdate{
+			KubernetesVersion: true,
+		}
+	}
+
+	if obj.Spec.Networking == nil {
+		obj.Spec.Networking = &Networking{}
 	}
 
 	for i, worker := range obj.Spec.Provider.Workers {
@@ -249,24 +180,111 @@ func SetDefaults_Shoot(obj *Shoot) {
 		}
 	}
 
-	if obj.Spec.Provider.WorkersSettings == nil {
-		obj.Spec.Provider.WorkersSettings = &WorkersSettings{}
-	}
-	if obj.Spec.Provider.WorkersSettings.SSHAccess == nil {
-		obj.Spec.Provider.WorkersSettings.SSHAccess = &SSHAccess{Enabled: true}
-	}
+	// these fields are relevant only for shoot with workers
+	if len(obj.Spec.Provider.Workers) > 0 {
+		// Errors are ignored here because we cannot do anything meaningful with them - variables will default to `false`.
+		k8sLess125, _ := versionutils.CheckVersionMeetsConstraint(obj.Spec.Kubernetes.Version, "< 1.25")
+		if obj.Spec.Kubernetes.AllowPrivilegedContainers == nil && k8sLess125 && !isPSPDisabled(obj) {
+			obj.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
+		}
 
-	if obj.Spec.SystemComponents == nil {
-		obj.Spec.SystemComponents = &SystemComponents{}
-	}
-	if obj.Spec.SystemComponents.CoreDNS == nil {
-		obj.Spec.SystemComponents.CoreDNS = &CoreDNS{}
-	}
-	if obj.Spec.SystemComponents.CoreDNS.Autoscaling == nil {
-		obj.Spec.SystemComponents.CoreDNS.Autoscaling = &CoreDNSAutoscaling{}
-	}
-	if obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode != CoreDNSAutoscalingModeHorizontal && obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode != CoreDNSAutoscalingModeClusterProportional {
-		obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode = CoreDNSAutoscalingModeHorizontal
+		if obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
+			obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = calculateDefaultNodeCIDRMaskSize(&obj.Spec)
+		}
+		if obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod == nil {
+			obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod = &metav1.Duration{Duration: 2 * time.Minute}
+		}
+
+		if obj.Spec.Kubernetes.KubeScheduler == nil {
+			obj.Spec.Kubernetes.KubeScheduler = &KubeSchedulerConfig{}
+		}
+		if obj.Spec.Kubernetes.KubeScheduler.Profile == nil {
+			defaultProfile := SchedulingProfileBalanced
+			obj.Spec.Kubernetes.KubeScheduler.Profile = &defaultProfile
+		}
+
+		if obj.Spec.Kubernetes.KubeProxy == nil {
+			obj.Spec.Kubernetes.KubeProxy = &KubeProxyConfig{}
+		}
+		if obj.Spec.Kubernetes.KubeProxy.Mode == nil {
+			defaultProxyMode := ProxyModeIPTables
+			obj.Spec.Kubernetes.KubeProxy.Mode = &defaultProxyMode
+		}
+		if obj.Spec.Kubernetes.KubeProxy.Enabled == nil {
+			obj.Spec.Kubernetes.KubeProxy.Enabled = pointer.Bool(true)
+		}
+
+		if obj.Spec.Addons == nil {
+			obj.Spec.Addons = &Addons{}
+		}
+		if obj.Spec.Addons.KubernetesDashboard == nil {
+			obj.Spec.Addons.KubernetesDashboard = &KubernetesDashboard{}
+		}
+		if obj.Spec.Addons.KubernetesDashboard.AuthenticationMode == nil {
+			defaultAuthMode := KubernetesDashboardAuthModeToken
+			obj.Spec.Addons.KubernetesDashboard.AuthenticationMode = &defaultAuthMode
+		}
+
+		if obj.Spec.Kubernetes.Kubelet == nil {
+			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
+		}
+		if obj.Spec.Kubernetes.Kubelet.FailSwapOn == nil {
+			obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(true)
+		}
+		if obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent == nil {
+			obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent = pointer.Int32(50)
+		}
+		if obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent == nil {
+			obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent = pointer.Int32(40)
+		}
+		if obj.Spec.Kubernetes.Kubelet.SerializeImagePulls == nil {
+			obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = pointer.Bool(true)
+		}
+
+		var (
+			kubeReservedMemory = resource.MustParse("1Gi")
+			kubeReservedCPU    = resource.MustParse("80m")
+			kubeReservedPID    = resource.MustParse("20k")
+		)
+
+		if obj.Spec.Kubernetes.Kubelet.KubeReserved == nil {
+			obj.Spec.Kubernetes.Kubelet.KubeReserved = &KubeletConfigReserved{Memory: &kubeReservedMemory, CPU: &kubeReservedCPU}
+			obj.Spec.Kubernetes.Kubelet.KubeReserved.PID = &kubeReservedPID
+		} else {
+			if obj.Spec.Kubernetes.Kubelet.KubeReserved.Memory == nil {
+				obj.Spec.Kubernetes.Kubelet.KubeReserved.Memory = &kubeReservedMemory
+			}
+			if obj.Spec.Kubernetes.Kubelet.KubeReserved.CPU == nil {
+				obj.Spec.Kubernetes.Kubelet.KubeReserved.CPU = &kubeReservedCPU
+			}
+			if obj.Spec.Kubernetes.Kubelet.KubeReserved.PID == nil {
+				obj.Spec.Kubernetes.Kubelet.KubeReserved.PID = &kubeReservedPID
+			}
+		}
+
+		if obj.Spec.Maintenance.AutoUpdate.MachineImageVersion == nil {
+			obj.Spec.Maintenance.AutoUpdate.MachineImageVersion = pointer.Bool(true)
+		}
+
+		if obj.Spec.Provider.WorkersSettings == nil {
+			obj.Spec.Provider.WorkersSettings = &WorkersSettings{}
+		}
+		if obj.Spec.Provider.WorkersSettings.SSHAccess == nil {
+			obj.Spec.Provider.WorkersSettings.SSHAccess = &SSHAccess{Enabled: true}
+		}
+
+		if obj.Spec.SystemComponents == nil {
+			obj.Spec.SystemComponents = &SystemComponents{}
+		}
+		if obj.Spec.SystemComponents.CoreDNS == nil {
+			obj.Spec.SystemComponents.CoreDNS = &CoreDNS{}
+		}
+		if obj.Spec.SystemComponents.CoreDNS.Autoscaling == nil {
+			obj.Spec.SystemComponents.CoreDNS.Autoscaling = &CoreDNSAutoscaling{}
+		}
+		if obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode != CoreDNSAutoscalingModeHorizontal && obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode != CoreDNSAutoscalingModeClusterProportional {
+			obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode = CoreDNSAutoscalingModeHorizontal
+		}
 	}
 }
 
@@ -279,13 +297,6 @@ func SetDefaults_Networking(obj *Networking) {
 
 // SetDefaults_Maintenance sets default values for Maintenance objects.
 func SetDefaults_Maintenance(obj *Maintenance) {
-	if obj.AutoUpdate == nil {
-		obj.AutoUpdate = &MaintenanceAutoUpdate{
-			KubernetesVersion:   true,
-			MachineImageVersion: true,
-		}
-	}
-
 	if obj.TimeWindow == nil {
 		mt := timewindow.RandomMaintenanceTimeWindow()
 		obj.TimeWindow = &MaintenanceTimeWindow{

@@ -4838,13 +4838,12 @@ func schema_pkg_apis_core_v1alpha1_MaintenanceAutoUpdate(ref common.ReferenceCal
 					"machineImageVersion": {
 						SchemaProps: spec.SchemaProps{
 							Description: "MachineImageVersion indicates whether the machine image version may be automatically updated (default: true).",
-							Default:     false,
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
 					},
 				},
-				Required: []string{"kubernetesVersion", "machineImageVersion"},
+				Required: []string{"kubernetesVersion"},
 			},
 		},
 	}
@@ -4942,7 +4941,6 @@ func schema_pkg_apis_core_v1alpha1_Networking(ref common.ReferenceCallback) comm
 					"type": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Type identifies the type of the networking plugin. This field is immutable.",
-							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -4990,7 +4988,6 @@ func schema_pkg_apis_core_v1alpha1_Networking(ref common.ReferenceCallback) comm
 						},
 					},
 				},
-				Required: []string{"type"},
 			},
 		},
 		Dependencies: []string{
@@ -5630,7 +5627,7 @@ func schema_pkg_apis_core_v1alpha1_Provider(ref common.ReferenceCallback) common
 						},
 					},
 				},
-				Required: []string{"type", "workers"},
+				Required: []string{"type"},
 			},
 		},
 		Dependencies: []string{
@@ -7607,7 +7604,6 @@ func schema_pkg_apis_core_v1alpha1_ShootSpec(ref common.ReferenceCallback) commo
 					"networking": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Networking contains information about cluster networking such as CNI Plugin type, CIDRs, ...etc.",
-							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Networking"),
 						},
 					},
@@ -7648,7 +7644,6 @@ func schema_pkg_apis_core_v1alpha1_ShootSpec(ref common.ReferenceCallback) commo
 					"secretBindingName": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret. The credentials inside the provider secret will be used to create the shoot in the respective account. This field is immutable.",
-							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -7720,7 +7715,7 @@ func schema_pkg_apis_core_v1alpha1_ShootSpec(ref common.ReferenceCallback) commo
 						},
 					},
 				},
-				Required: []string{"cloudProfileName", "kubernetes", "networking", "provider", "region", "secretBindingName"},
+				Required: []string{"cloudProfileName", "kubernetes", "provider", "region"},
 			},
 		},
 		Dependencies: []string{
@@ -12597,13 +12592,12 @@ func schema_pkg_apis_core_v1beta1_MaintenanceAutoUpdate(ref common.ReferenceCall
 					"machineImageVersion": {
 						SchemaProps: spec.SchemaProps{
 							Description: "MachineImageVersion indicates whether the machine image version may be automatically updated (default: true).",
-							Default:     false,
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
 					},
 				},
-				Required: []string{"kubernetesVersion", "machineImageVersion"},
+				Required: []string{"kubernetesVersion"},
 			},
 		},
 	}
@@ -12701,7 +12695,6 @@ func schema_pkg_apis_core_v1beta1_Networking(ref common.ReferenceCallback) commo
 					"type": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Type identifies the type of the networking plugin. This field is immutable.",
-							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -12749,7 +12742,6 @@ func schema_pkg_apis_core_v1beta1_Networking(ref common.ReferenceCallback) commo
 						},
 					},
 				},
-				Required: []string{"type"},
 			},
 		},
 		Dependencies: []string{
@@ -13389,7 +13381,7 @@ func schema_pkg_apis_core_v1beta1_Provider(ref common.ReferenceCallback) common.
 						},
 					},
 				},
-				Required: []string{"type", "workers"},
+				Required: []string{"type"},
 			},
 		},
 		Dependencies: []string{
@@ -15425,7 +15417,6 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					"networking": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Networking contains information about cluster networking such as CNI Plugin type, CIDRs, ...etc.",
-							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Networking"),
 						},
 					},
@@ -15466,7 +15457,6 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					"secretBindingName": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret. The credentials inside the provider secret will be used to create the shoot in the respective account. This field is immutable.",
-							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -15538,7 +15528,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 						},
 					},
 				},
-				Required: []string{"cloudProfileName", "kubernetes", "networking", "provider", "region", "secretBindingName"},
+				Required: []string{"cloudProfileName", "kubernetes", "provider", "region"},
 			},
 		},
 		Dependencies: []string{

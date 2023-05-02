@@ -81,6 +81,7 @@ type Shoot struct {
 	ExternalDomain        *gardenerutils.Domain
 
 	Purpose                                 gardencorev1beta1.ShootPurpose
+	IsWorkerless                            bool
 	WantsClusterAutoscaler                  bool
 	WantsVerticalPodAutoscaler              bool
 	WantsAlertmanager                       bool

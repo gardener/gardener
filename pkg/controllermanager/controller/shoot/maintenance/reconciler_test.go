@@ -164,7 +164,7 @@ var _ = Describe("Shoot Maintenance", func() {
 					},
 					Maintenance: &gardencorev1beta1.Maintenance{
 						AutoUpdate: &gardencorev1beta1.MaintenanceAutoUpdate{
-							MachineImageVersion: true,
+							MachineImageVersion: pointer.Bool(true),
 						},
 					},
 					Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
@@ -182,7 +182,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should determine that the shoot worker machine images must be maintained - ForceUpdate (expiration in the past & expired status)", func() {
-			shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = false
+			shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = pointer.Bool(false)
 			cloudProfile.Spec.MachineImages[0].Versions[0].ExpirationDate = &expirationDateInThePast
 
 			_, err := maintainMachineImages(log, shoot, cloudProfile)
@@ -273,7 +273,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should determine that the shoot worker machine images must NOT to be maintained - ForceUpdate not required & MaintenanceAutoUpdate set to false", func() {
-			shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = false
+			shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = pointer.Bool(false)
 
 			expected := shoot.Spec.Provider.Workers[0].Machine.Image.DeepCopy()
 			_, err := maintainMachineImages(log, shoot, cloudProfile)

@@ -58,7 +58,7 @@ var _ = Describe("Bastion controller tests", func() {
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: kubernetesutils.ObjectMetaFromKey(objectKey),
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: "my-provider-account",
+				SecretBindingName: pointer.String("my-provider-account"),
 				CloudProfileName:  "test-cloudprofile",
 				Region:            "foo-region",
 				Provider: gardencorev1beta1.Provider{
@@ -77,8 +77,8 @@ var _ = Describe("Bastion controller tests", func() {
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.21.1",
 				},
-				Networking: gardencorev1beta1.Networking{
-					Type: "foo-networking",
+				Networking: &gardencorev1beta1.Networking{
+					Type: pointer.String("foo-networking"),
 				},
 				SeedName: &seedName,
 			},

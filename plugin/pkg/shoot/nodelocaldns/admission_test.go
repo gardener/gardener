@@ -104,9 +104,29 @@ var _ = Describe("ShootNodeLocalDNSEnabledByDefault", func() {
 			Expect(shoot).To(Equal(expectedShoot))
 		})
 
-		It("should enable NodeLocalDNS if not explicitly disabled", func() {
+		It("should enable NodeLocalDNS if not explicitly disabled for a Shoot with workers", func() {
+			shoot = &core.Shoot{
+				Spec: core.ShootSpec{
+					Provider: core.Provider{
+						Workers: []core.Worker{
+							{
+								Name: "worker",
+							},
+						},
+					},
+				},
+			}
+			expectedShoot = shoot.DeepCopy()
 			expectedShoot.Spec.SystemComponents = &core.SystemComponents{}
 			expectedShoot.Spec.SystemComponents.NodeLocalDNS = &core.NodeLocalDNS{Enabled: true}
+
+			attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+			Expect(plugin.Admit(ctx, attrs, nil)).To(Succeed())
+			Expect(shoot).To(Equal(expectedShoot))
+		})
+
+		It("should not enable NodeLocalDNS for a workerless Shoot", func() {
+			expectedShoot.Spec.SystemComponents = nil
 
 			attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 			Expect(plugin.Admit(ctx, attrs, nil)).To(Succeed())

@@ -140,6 +140,9 @@ var _ = Describe("Infrastructure", func() {
 					Name:      name,
 					Namespace: namespace,
 				},
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{},
+				},
 			}
 		)
 

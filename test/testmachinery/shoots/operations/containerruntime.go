@@ -22,6 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/test/framework"
@@ -37,7 +38,7 @@ var _ = Describe("Shoot container runtime testing", func() {
 			workerImage = worker.Machine.Image
 		)
 
-		if len(shoot.Spec.Provider.Workers) == 0 {
+		if v1beta1helper.IsWorkerless(shoot) {
 			Skip("at least one worker pool is required in the test shoot")
 		}
 

@@ -281,9 +281,11 @@ func (e *ExtensionValidator) validateShoot(kindToTypesMap map[string]sets.Set[st
 			{extensionsv1alpha1.ControlPlaneResource, spec.Provider.Type, providerTypeMsg},
 			{extensionsv1alpha1.InfrastructureResource, spec.Provider.Type, providerTypeMsg},
 			{extensionsv1alpha1.WorkerResource, spec.Provider.Type, providerTypeMsg},
-			{extensionsv1alpha1.NetworkResource, spec.Networking.Type, fmt.Sprintf("%s networking type: %s", message, field.NewPath("spec", "networking", "type"))},
 		}
 	)
+	if spec.Networking != nil && spec.Networking.Type != nil {
+		requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.NetworkResource, *spec.Networking.Type, fmt.Sprintf("%s networking type: %s", message, field.NewPath("spec", "networking", "type"))})
+	}
 
 	if spec.DNS != nil {
 		for i, provider := range spec.DNS.Providers {

@@ -59,9 +59,9 @@ var _ = Describe("handler", func() {
 		projectsSizeLimit, _ = resource.ParseQuantity("0M")
 		secretSizeLimit, _   = resource.ParseQuantity("1Mi")
 		// size of shoot w/ namespace, name, w/o spec
-		shootsv1beta1SizeLimit, _ = resource.ParseQuantity("405")
+		shootsv1beta1SizeLimit, _ = resource.ParseQuantity("342")
 		// size of shoot w/ namespace, name, w/o spec -1 byte
-		shootsv1alpha1SizeLimit, _ = resource.ParseQuantity("405")
+		shootsv1alpha1SizeLimit, _ = resource.ParseQuantity("342")
 
 		restrictedUserName                  = "restrictedUser"
 		unrestrictedUserName                = "unrestrictedUser"

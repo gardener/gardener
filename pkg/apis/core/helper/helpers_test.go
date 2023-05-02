@@ -864,6 +864,33 @@ var _ = Describe("helper", func() {
 		})
 	})
 
+	Describe("#IsWorkerless", func() {
+		var shoot *core.Shoot
+
+		BeforeEach(func() {
+			shoot = &core.Shoot{
+				Spec: core.ShootSpec{
+					Provider: core.Provider{
+						Workers: []core.Worker{
+							{
+								Name: "worker",
+							},
+						},
+					},
+				},
+			}
+		})
+
+		It("should return false when shoot has workers", func() {
+			Expect(IsWorkerless(shoot)).To(BeFalse())
+		})
+
+		It("should return true when shoot has zero workers", func() {
+			shoot.Spec.Provider.Workers = nil
+			Expect(IsWorkerless(shoot)).To(BeTrue())
+		})
+	})
+
 	Describe("#DeterminePrimaryIPFamily", func() {
 		It("should return IPv4 for empty ipFamilies", func() {
 			Expect(DeterminePrimaryIPFamily(nil)).To(Equal(core.IPFamilyIPv4))

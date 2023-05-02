@@ -99,7 +99,7 @@ var _ = Describe("ManagedSeed", func() {
 							Enabled: true,
 						},
 					},
-					Networking: core.Networking{
+					Networking: &core.Networking{
 						Pods:     pointer.String("100.96.0.0/11"),
 						Nodes:    pointer.String("10.250.0.0/16"),
 						Services: pointer.String("100.64.0.0/13"),
@@ -225,6 +225,20 @@ var _ = Describe("ManagedSeed", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.shoot.name"),
+				})),
+			))
+		})
+
+		It("should forbid the ManagedSeed if the Shoot does not have any worker", func() {
+			shoot.Spec.Provider.Workers = []core.Worker{}
+
+			err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
+			Expect(err).To(BeInvalidError())
+			Expect(getErrorList(err)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.shoot.name"),
+					"Detail": ContainSubstring("workerless shoot cannot be used to create managed seed"),
 				})),
 			))
 		})

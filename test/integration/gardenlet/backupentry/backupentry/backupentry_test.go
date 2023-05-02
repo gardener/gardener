@@ -175,7 +175,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 				UID:       "foo",
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: "test-sb",
+				SecretBindingName: pointer.String("test-sb"),
 				CloudProfileName:  "test-cloudprofile",
 				Region:            "foo-region",
 				Provider: gardencorev1beta1.Provider{
@@ -194,8 +194,8 @@ var _ = Describe("BackupEntry controller tests", func() {
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.21.1",
 				},
-				Networking: gardencorev1beta1.Networking{
-					Type: "foo-networking",
+				Networking: &gardencorev1beta1.Networking{
+					Type: pointer.String("foo-networking"),
 				},
 			},
 		}
