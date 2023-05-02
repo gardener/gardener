@@ -125,8 +125,8 @@ func NewKubeAPIServer(
 	)
 
 	if apiServerConfig != nil {
-		enabledAdmissionPlugins = computeEnabledKubeAPIServerAdmissionPlugins(enabledAdmissionPlugins, apiServerConfig.AdmissionPlugins)
-		disabledAdmissionPlugins = computeDisabledKubeAPIServerAdmissionPlugins(apiServerConfig.AdmissionPlugins)
+		enabledAdmissionPlugins = computeEnabledKubeAPIServerAdmissionPlugins(enabledAdmissionPlugins, apiServerConfig.AdmissionPlugins, isNodeless)
+		disabledAdmissionPlugins = computeDisabledKubeAPIServerAdmissionPlugins(apiServerConfig.AdmissionPlugins, isNodeless)
 
 		enabledAdmissionPlugins, err = ensureAdmissionPluginConfig(enabledAdmissionPlugins)
 		if err != nil {
@@ -400,7 +400,7 @@ func convertToAdmissionPluginConfigs(plugins []gardencorev1beta1.AdmissionPlugin
 	return out, nil
 }
 
-func computeEnabledKubeAPIServerAdmissionPlugins(defaultPlugins, configuredPlugins []gardencorev1beta1.AdmissionPlugin) []gardencorev1beta1.AdmissionPlugin {
+func computeEnabledKubeAPIServerAdmissionPlugins(defaultPlugins, configuredPlugins []gardencorev1beta1.AdmissionPlugin, isNodeless bool) []gardencorev1beta1.AdmissionPlugin {
 	for _, plugin := range configuredPlugins {
 		pluginOverwritesDefault := false
 
@@ -419,6 +419,10 @@ func computeEnabledKubeAPIServerAdmissionPlugins(defaultPlugins, configuredPlugi
 
 	var admissionPlugins []gardencorev1beta1.AdmissionPlugin
 	for _, defaultPlugin := range defaultPlugins {
+		// if it's a nodeless cluster, we don't add the PodSecurityPolicy plugin, because the API is disabled already
+		if isNodeless && defaultPlugin.Name == "PodSecurityPolicy" {
+			continue
+		}
 		if !pointer.BoolDeref(defaultPlugin.Disabled, false) {
 			admissionPlugins = append(admissionPlugins, defaultPlugin)
 		}
@@ -426,7 +430,7 @@ func computeEnabledKubeAPIServerAdmissionPlugins(defaultPlugins, configuredPlugi
 	return admissionPlugins
 }
 
-func computeDisabledKubeAPIServerAdmissionPlugins(configuredPlugins []gardencorev1beta1.AdmissionPlugin) []gardencorev1beta1.AdmissionPlugin {
+func computeDisabledKubeAPIServerAdmissionPlugins(configuredPlugins []gardencorev1beta1.AdmissionPlugin, isNodeless bool) []gardencorev1beta1.AdmissionPlugin {
 	var disabledAdmissionPlugins []gardencorev1beta1.AdmissionPlugin
 
 	for _, plugin := range configuredPlugins {

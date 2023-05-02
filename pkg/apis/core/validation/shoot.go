@@ -997,7 +997,8 @@ func validateKubernetesVersionUpdate125(new, old *core.Shoot) field.ErrorList {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "kubernetes", "version"), old.Spec.Kubernetes.Version, "Invalid old kubernetes version"))
 	}
 
-	if newShootVersionGreaterEqual125 && oldShootVersionLess125 {
+	// if the shoot is workerless, continue. we have disabled the policy/v1beta1/podsecuritypolicies API already.
+	if !helper.IsWorkerless(new) && newShootVersionGreaterEqual125 && oldShootVersionLess125 {
 		pspDisabledInNewSpec := isPSPDisabled(new.Spec.Kubernetes.KubeAPIServer)
 		pspDisabledInOldSpec := isPSPDisabled(old.Spec.Kubernetes.KubeAPIServer)
 		if !pspDisabledInNewSpec || !pspDisabledInOldSpec {

@@ -1348,6 +1348,11 @@ func MutateShootETCDEncryptionKeyRotation(shoot *gardencorev1beta1.Shoot, f func
 
 // IsPSPDisabled returns true if the PodSecurityPolicy plugin is explicitly disabled in the ShootSpec or the cluster version is >= 1.25.
 func IsPSPDisabled(shoot *gardencorev1beta1.Shoot) bool {
+	// we have disabled the policy/v1beta1/podsecuritypolicies API for workerless Shoots
+	if IsWorkerless(shoot) {
+		return true
+	}
+
 	if versionutils.ConstraintK8sGreaterEqual125.Check(semver.MustParse(shoot.Spec.Kubernetes.Version)) {
 		return true
 	}

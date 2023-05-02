@@ -152,7 +152,7 @@ func completionWarning(credentials string, recommendedCompletionInterval time.Du
 }
 
 func getWarningsForPSPAdmissionPlugin(shoot *core.Shoot) string {
-	if shoot.Spec.Kubernetes.KubeAPIServer != nil {
+	if !helper.IsWorkerless(shoot) && shoot.Spec.Kubernetes.KubeAPIServer != nil {
 		for _, plugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
 			if plugin.Name == "PodSecurityPolicy" && pointer.BoolDeref(plugin.Disabled, false) {
 				return ""

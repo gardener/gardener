@@ -204,7 +204,7 @@ var _ = Describe("KubeAPIServer", func() {
 			})
 
 			DescribeTable("should have the expected admission plugins config",
-				func(configuredPlugins []gardencorev1beta1.AdmissionPlugin, expectedPlugins []kubeapiserver.AdmissionPluginConfig) {
+				func(configuredPlugins []gardencorev1beta1.AdmissionPlugin, expectedPlugins []kubeapiserver.AdmissionPluginConfig, isNodeless bool) {
 					apiServerConfig.AdmissionPlugins = configuredPlugins
 
 					kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, auditConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isNodeless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
@@ -228,6 +228,24 @@ var _ = Describe("KubeAPIServer", func() {
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "MutatingAdmissionWebhook"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ValidatingAdmissionWebhook"}},
 					},
+					false,
+				),
+				Entry("exclude PodSecurityPolicy from default plugins (nodeless)",
+					nil,
+					[]kubeapiserver.AdmissionPluginConfig{
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ServiceAccount"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NodeRestriction"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultStorageClass"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultTolerationSeconds"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ResourceQuota"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "StorageObjectInUseProtection"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "MutatingAdmissionWebhook"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ValidatingAdmissionWebhook"}},
+					},
+					true,
 				),
 				Entry("default plugins with overrides",
 					[]gardencorev1beta1.AdmissionPlugin{
@@ -247,6 +265,7 @@ var _ = Describe("KubeAPIServer", func() {
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "MutatingAdmissionWebhook"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ValidatingAdmissionWebhook"}},
 					},
+					false,
 				),
 				Entry("default plugins with overrides and other plugins",
 					[]gardencorev1beta1.AdmissionPlugin{
@@ -272,6 +291,7 @@ var _ = Describe("KubeAPIServer", func() {
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Bar"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}}},
 					},
+					false,
 				),
 				Entry("default plugins with overrides and skipping configured plugins if disabled",
 					[]gardencorev1beta1.AdmissionPlugin{
@@ -295,6 +315,7 @@ var _ = Describe("KubeAPIServer", func() {
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ValidatingAdmissionWebhook"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Foo"}},
 					},
+					false,
 				),
 				Entry("default plugins with overrides and skipping default plugins if disabled",
 					[]gardencorev1beta1.AdmissionPlugin{
@@ -321,6 +342,34 @@ var _ = Describe("KubeAPIServer", func() {
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Bar"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}}},
 					},
+					false,
+				),
+				Entry("default plugins with overrides and skipping disabled plugins for Nodeless even if enabled in the config",
+					[]gardencorev1beta1.AdmissionPlugin{
+						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}},
+						{Name: "PodSecurityPolicy", Disabled: pointer.Bool(true)},
+						{Name: "ResourceQuota", Disabled: pointer.Bool(true)},
+						{Name: "Foo"},
+						{Name: "Bar"},
+						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}},
+						{Name: "ServiceAccount", Disabled: pointer.Bool(false)},
+					},
+					[]kubeapiserver.AdmissionPluginConfig{
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ServiceAccount", Disabled: pointer.Bool(false)}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NodeRestriction"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultStorageClass"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "DefaultTolerationSeconds"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "StorageObjectInUseProtection"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "MutatingAdmissionWebhook"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ValidatingAdmissionWebhook"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Foo"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Bar"}},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}}},
+					},
+					true,
 				),
 			)
 

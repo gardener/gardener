@@ -568,6 +568,10 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 			"storage.k8s.io/v1/csinodes":     false,
 		}
 
+		if version.ConstraintK8sLess125.Check(k.values.Version) {
+			disableAPIs["policy/v1beta1/podsecuritypolicies"] = false
+		}
+
 		k.values.RuntimeConfig = utils.MergeStringMaps(k.values.RuntimeConfig, disableAPIs)
 	}
 

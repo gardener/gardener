@@ -2468,6 +2468,13 @@ var _ = Describe("helper", func() {
 						Version:       "1.24.0",
 						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
 					},
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{
+							{
+								Name: "worker",
+							},
+						},
+					},
 				},
 			}
 		})
@@ -2513,6 +2520,12 @@ var _ = Describe("helper", func() {
 			shoot.Spec.Kubernetes.KubeAPIServer = nil
 
 			Expect(IsPSPDisabled(shoot)).To(BeFalse())
+		})
+
+		It("should return for workerless Shoots", func() {
+			shoot.Spec.Provider.Workers = nil
+
+			Expect(IsPSPDisabled(shoot)).To(BeTrue())
 		})
 	})
 
