@@ -244,7 +244,8 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 								VolumeMounts: []corev1.VolumeMount{
 									{
 										Name:      "log",
-										MountPath: "/var/log",
+										MountPath: "/var/log/journal",
+										ReadOnly:  true,
 									},
 									{
 										Name:      "localtime",
@@ -287,7 +288,7 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 								Name: "log",
 								VolumeSource: corev1.VolumeSource{
 									HostPath: &corev1.HostPathVolumeSource{
-										Path: "/var/log/",
+										Path: "/var/log/journal",
 									},
 								},
 							},

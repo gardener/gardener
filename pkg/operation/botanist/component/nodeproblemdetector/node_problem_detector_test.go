@@ -291,8 +291,9 @@ spec:
         securityContext:
           privileged: true
         volumeMounts:
-        - mountPath: /var/log
+        - mountPath: /var/log/journal
           name: log
+          readOnly: true
         - mountPath: /etc/localtime
           name: localtime
           readOnly: true
@@ -313,7 +314,7 @@ spec:
         operator: Exists
       volumes:
       - hostPath:
-          path: /var/log/
+          path: /var/log/journal
         name: log
       - hostPath:
           path: /etc/localtime
