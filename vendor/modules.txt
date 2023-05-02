@@ -86,15 +86,6 @@ github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/input
 github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/output
 github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/params
 github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/parser
-github.com/fluent/fluent-operator/v2/apis/fluentd/v1alpha1
-github.com/fluent/fluent-operator/v2/apis/fluentd/v1alpha1/plugins
-github.com/fluent/fluent-operator/v2/apis/fluentd/v1alpha1/plugins/common
-github.com/fluent/fluent-operator/v2/apis/fluentd/v1alpha1/plugins/custom
-github.com/fluent/fluent-operator/v2/apis/fluentd/v1alpha1/plugins/filter
-github.com/fluent/fluent-operator/v2/apis/fluentd/v1alpha1/plugins/input
-github.com/fluent/fluent-operator/v2/apis/fluentd/v1alpha1/plugins/output
-github.com/fluent/fluent-operator/v2/apis/fluentd/v1alpha1/plugins/params
-github.com/fluent/fluent-operator/v2/pkg/fluentd/router
 github.com/fluent/fluent-operator/v2/pkg/utils
 # github.com/frankban/quicktest v1.14.4
 ## explicit; go 1.13

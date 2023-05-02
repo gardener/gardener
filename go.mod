@@ -8,6 +8,7 @@ require (
 	github.com/ahmetb/gen-crd-api-reference-docs v0.3.0
 	github.com/bronze1man/yaml2json v0.0.0-20211227013850-8972abeaea25
 	github.com/coreos/go-systemd/v22 v22.3.2
+	github.com/fluent/fluent-operator/v2 v2.2.0
 	github.com/gardener/dependency-watchdog v1.0.0
 	github.com/gardener/etcd-druid v0.15.3
 	github.com/gardener/hvpa-controller/api v0.5.0
@@ -24,7 +25,6 @@ require (
 	github.com/mitchellh/hashstructure/v2 v2.0.2
 	github.com/onsi/ginkgo/v2 v2.9.2
 	github.com/onsi/gomega v1.27.6
-	github.com/fluent/fluent-operator/v2 v2.2.0
 	github.com/prometheus/client_golang v1.14.0
 	github.com/robfig/cron v1.2.0
 	github.com/spf13/cobra v1.6.1
