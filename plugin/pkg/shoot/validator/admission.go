@@ -660,22 +660,6 @@ func (c *validationContext) validateShootNetworks(workerless bool) field.ErrorLi
 	)
 
 	if c.seed != nil {
-		// if the shoot is workerless and doesn't have networking field set yet, then
-		// set shoot IPFamilies of seed IPFamilies type.
-		if workerless {
-			if c.shoot.Spec.Networking == nil {
-				c.shoot.Spec.Networking = &core.Networking{}
-			}
-
-			if len(c.shoot.Spec.Networking.IPFamilies) == 0 {
-				c.shoot.Spec.Networking.IPFamilies = c.seed.Spec.Networks.IPFamilies
-			}
-		}
-
-		if c.shoot.Spec.Networking == nil {
-			return allErrs
-		}
-
 		if c.shoot.Spec.Networking.Pods == nil && !workerless {
 			if c.seed.Spec.Networks.ShootDefaults != nil {
 				c.shoot.Spec.Networking.Pods = c.seed.Spec.Networks.ShootDefaults.Pods
@@ -691,6 +675,7 @@ func (c *validationContext) validateShootNetworks(workerless bool) field.ErrorLi
 				allErrs = append(allErrs, field.Required(path.Child("services"), "services is required"))
 			}
 		}
+
 		if c.shoot.DeletionTimestamp == nil {
 			// validate network disjointedness within shoot network
 			allErrs = append(allErrs, cidrvalidation.ValidateShootNetworkDisjointedness(

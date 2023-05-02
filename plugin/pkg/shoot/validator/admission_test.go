@@ -1614,6 +1614,7 @@ var _ = Describe("validator", func() {
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("services is required spec.networking.services")))
 				})
 
 				It("should reject because shoot services network is nil (workerless Shoot)", func() {
@@ -1651,29 +1652,6 @@ var _ = Describe("validator", func() {
 
 					Expect(err).NotTo(HaveOccurred())
 					Expect(shoot.Spec.Networking.Pods).To(Equal(&podsCIDR))
-					Expect(shoot.Spec.Networking.Services).To(Equal(&servicesCIDR))
-				})
-
-				It("should default networking field and relevant shoot networks if seed provides ShootDefaults (workerlessShoot)", func() {
-					seed.Spec.Networks.ShootDefaults = &core.ShootNetworks{
-						Pods:     &podsCIDR,
-						Services: &servicesCIDR,
-					}
-					shoot.Spec.Provider.Workers = nil
-					shoot.Spec.Networking = nil
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-
-					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(shoot.Spec.Networking).NotTo(BeNil())
-					Expect(shoot.Spec.Networking.IPFamilies).To(Equal(seed.Spec.Networks.IPFamilies))
-					Expect(shoot.Spec.Networking.Pods).To(BeNil())
 					Expect(shoot.Spec.Networking.Services).To(Equal(&servicesCIDR))
 				})
 

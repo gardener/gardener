@@ -155,6 +155,10 @@ func SetDefaults_Shoot(obj *Shoot) {
 		}
 	}
 
+	if obj.Spec.Networking == nil {
+		obj.Spec.Networking = &Networking{}
+	}
+
 	for i, worker := range obj.Spec.Provider.Workers {
 		kubernetesVersion := obj.Spec.Kubernetes.Version
 		if worker.Kubernetes != nil && worker.Kubernetes.Version != nil {
@@ -178,10 +182,6 @@ func SetDefaults_Shoot(obj *Shoot) {
 
 	// these fields are relevant only for shoot with workers
 	if len(obj.Spec.Provider.Workers) > 0 {
-		if obj.Spec.Networking == nil {
-			obj.Spec.Networking = &Networking{}
-		}
-
 		// Errors are ignored here because we cannot do anything meaningful with them - variables will default to `false`.
 		k8sLess125, _ := versionutils.CheckVersionMeetsConstraint(obj.Spec.Kubernetes.Version, "< 1.25")
 		if obj.Spec.Kubernetes.AllowPrivilegedContainers == nil && k8sLess125 && !isPSPDisabled(obj) {

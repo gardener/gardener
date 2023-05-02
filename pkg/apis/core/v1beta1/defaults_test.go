@@ -376,23 +376,13 @@ var _ = Describe("Defaults", func() {
 		})
 
 		Describe("Networking", func() {
-			It("should set the networking field for shoot with workers", func() {
-				obj.Spec.Provider.Workers = []Worker{Worker{}}
+			It("should set the networking field", func() {
 				SetObjectDefaults_Shoot(obj)
 
 				Expect(obj.Spec.Networking).NotTo(BeNil())
 			})
 
-			It("should not set the networking field for Workerless shoot", func() {
-				obj.Spec.Provider.Workers = nil
-				SetObjectDefaults_Shoot(obj)
-
-				Expect(obj.Spec.Networking).To(BeNil())
-			})
-
-			It("should default ipFamilies setting to IPv4 single-stack for shoot with workers", func() {
-				obj.Spec.Provider.Workers = []Worker{Worker{}}
-
+			It("should default ipFamilies setting to IPv4 single-stack", func() {
 				SetObjectDefaults_Shoot(obj)
 
 				Expect(obj.Spec.Networking).NotTo(BeNil())
