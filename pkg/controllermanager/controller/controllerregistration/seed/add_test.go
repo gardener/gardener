@@ -295,21 +295,30 @@ var _ = Describe("Add", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
 			})
 
-			It("should return false because networking field was nil", func() {
+			It("should return false because both old and new networking fields are nil", func() {
+				shoot.Spec.Networking = nil
+				oldShoot := shoot.DeepCopy()
+				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeFalse())
+			})
+
+			It("should return false because old networking field was nil and new doesn't have type", func() {
 				oldShoot := shoot.DeepCopy()
 				oldShoot.Spec.Networking = nil
+				shoot.Spec.Networking.Type = nil
 				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeFalse())
 			})
 
-			It("should return false because networking field is nil", func() {
+			It("should return true because old networking field was nil and new has type", func() {
 				oldShoot := shoot.DeepCopy()
-				shoot.Spec.Networking = nil
-				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeFalse())
+				oldShoot.Spec.Networking = nil
+				shoot.Spec.Networking.Type = pointer.String("type")
+				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
 			})
 
-			It("should return true because networking type changed", func() {
+			It("should return true because networking type is changed", func() {
 				oldShoot := shoot.DeepCopy()
-				shoot.Spec.Networking.Type = pointer.String("foo")
+				oldShoot.Spec.Networking.Type = pointer.String("foo")
+				shoot.Spec.Networking.Type = pointer.String("bar")
 				Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
 			})
 

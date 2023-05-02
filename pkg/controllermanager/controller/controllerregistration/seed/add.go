@@ -362,8 +362,15 @@ func (r *Reconciler) MapControllerDeploymentToAllSeeds(ctx context.Context, log 
 }
 
 func shootNetworkingTypeHasChanged(old, new *gardencorev1beta1.Networking) bool {
-	if old == nil || new == nil {
+	if old == nil && new == nil {
 		return false
+	}
+	if old == nil && new != nil {
+		// if new is non-nil then return true if new has a type set
+		return new.Type != nil
+	}
+	if old != nil && new == nil {
+		return true
 	}
 	return !pointer.StringEqual(old.Type, new.Type)
 }
