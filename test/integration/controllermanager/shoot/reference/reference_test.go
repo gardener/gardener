@@ -17,6 +17,7 @@ package reference_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -29,7 +30,9 @@ var _ = Describe("Shoot Reference controller tests", func() {
 	var (
 		secret1    *corev1.Secret
 		secret2    *corev1.Secret
+		secret3    *corev1.Secret
 		configMap1 *corev1.ConfigMap
+		configMap2 *corev1.ConfigMap
 		shoot      *gardencorev1beta1.Shoot
 	)
 
@@ -43,6 +46,7 @@ var _ = Describe("Shoot Reference controller tests", func() {
 		}
 
 		secret2 = secret1.DeepCopy()
+		secret3 = secret1.DeepCopy()
 
 		configMap1 = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -51,6 +55,7 @@ var _ = Describe("Shoot Reference controller tests", func() {
 				Labels:       map[string]string{testID: testRunID},
 			},
 		}
+		configMap2 = configMap1.DeepCopy()
 
 		By("Create Secret1")
 		Expect(testClient.Create(ctx, secret1)).To(Succeed())
@@ -60,19 +65,30 @@ var _ = Describe("Shoot Reference controller tests", func() {
 		Expect(testClient.Create(ctx, secret2)).To(Succeed())
 		log.Info("Created Secret for test", "secret", client.ObjectKeyFromObject(secret2))
 
-		By("Create ConfigMap")
+		By("Create Secret3")
+		Expect(testClient.Create(ctx, secret3)).To(Succeed())
+		log.Info("Created Secret for test", "secret", client.ObjectKeyFromObject(secret3))
+
+		By("Create ConfigMap1")
 		Expect(testClient.Create(ctx, configMap1)).To(Succeed())
 		log.Info("Created ConfigMap for test", "configMap", client.ObjectKeyFromObject(configMap1))
+
+		By("Create ConfigMap2")
+		Expect(testClient.Create(ctx, configMap2)).To(Succeed())
+		log.Info("Created ConfigMap for test", "configMap", client.ObjectKeyFromObject(configMap2))
 
 		DeferCleanup(func() {
 			By("Delete Secret1")
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, secret1))).To(Succeed())
-
 			By("Delete Secret2")
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, secret2))).To(Succeed())
+			By("Delete Secret3")
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, secret3))).To(Succeed())
 
-			By("Delete ConfigMap")
+			By("Delete ConfigMap1")
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, configMap1))).To(Succeed())
+			By("Delete ConfigMap2")
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, configMap2))).To(Succeed())
 		})
 
 		shoot = &gardencorev1beta1.Shoot{
@@ -120,6 +136,24 @@ var _ = Describe("Shoot Reference controller tests", func() {
 				Networking: gardencorev1beta1.Networking{
 					Type: "foo-networking",
 				},
+				Resources: []gardencorev1beta1.NamedResourceReference{
+					{
+						Name: "foo",
+						ResourceRef: autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       secret3.Name,
+						},
+					},
+					{
+						Name: "bar",
+						ResourceRef: autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       configMap2.Name,
+						},
+					},
+				},
 			},
 		}
 	})
@@ -139,6 +173,7 @@ var _ = Describe("Shoot Reference controller tests", func() {
 		BeforeEach(func() {
 			shoot.Spec.DNS.Providers = nil
 			shoot.Spec.Kubernetes.KubeAPIServer = nil
+			shoot.Spec.Resources = nil
 		})
 
 		It("should not add the finalizer to the shoot", func() {
@@ -158,7 +193,7 @@ var _ = Describe("Shoot Reference controller tests", func() {
 		})
 
 		It("should add finalizers to the referenced secrets and configmaps", func() {
-			for _, obj := range []client.Object{secret1, secret2, configMap1} {
+			for _, obj := range []client.Object{secret1, secret2, secret3, configMap1, configMap2} {
 				Eventually(func(g Gomega) []string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
 					return obj.GetFinalizers()
@@ -170,9 +205,10 @@ var _ = Describe("Shoot Reference controller tests", func() {
 			patch := client.MergeFrom(shoot.DeepCopy())
 			shoot.Spec.DNS.Providers = nil
 			shoot.Spec.Kubernetes.KubeAPIServer = nil
+			shoot.Spec.Resources = nil
 			Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
-			for _, obj := range []client.Object{secret1, secret2, configMap1} {
+			for _, obj := range []client.Object{secret1, secret2, secret3, configMap1, configMap2} {
 				Eventually(func(g Gomega) []string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
 					return obj.GetFinalizers()
