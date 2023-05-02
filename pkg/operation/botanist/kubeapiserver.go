@@ -78,7 +78,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 			HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
 		},
 		v1beta1constants.PriorityClassNameShootControlPlane500,
-		false,
+		b.Shoot.IsWorkerless,
 		b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig,
 		nil,
 		nil,
