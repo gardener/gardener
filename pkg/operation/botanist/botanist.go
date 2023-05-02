@@ -88,9 +88,6 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	}
 
 	// extension components
-	o.Shoot.Components.Extensions.ContainerRuntime = b.DefaultContainerRuntime()
-	o.Shoot.Components.Extensions.ControlPlane = b.DefaultControlPlane(extensionsv1alpha1.Normal)
-	o.Shoot.Components.Extensions.ControlPlaneExposure = b.DefaultControlPlane(extensionsv1alpha1.Exposure)
 	o.Shoot.Components.Extensions.ExternalDNSRecord = b.DefaultExternalDNSRecord()
 	o.Shoot.Components.Extensions.InternalDNSRecord = b.DefaultInternalDNSRecord()
 	o.Shoot.Components.Extensions.IngressDNSRecord = b.DefaultIngressDNSRecord()
@@ -102,13 +99,18 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
-	o.Shoot.Components.Extensions.Infrastructure = b.DefaultInfrastructure()
-	o.Shoot.Components.Extensions.Network = b.DefaultNetwork()
-	o.Shoot.Components.Extensions.OperatingSystemConfig, err = b.DefaultOperatingSystemConfig()
-	if err != nil {
-		return nil, err
+	if !o.Shoot.IsWorkerless {
+		o.Shoot.Components.Extensions.ContainerRuntime = b.DefaultContainerRuntime()
+		o.Shoot.Components.Extensions.ControlPlane = b.DefaultControlPlane(extensionsv1alpha1.Normal)
+		o.Shoot.Components.Extensions.ControlPlaneExposure = b.DefaultControlPlane(extensionsv1alpha1.Exposure)
+		o.Shoot.Components.Extensions.Infrastructure = b.DefaultInfrastructure()
+		o.Shoot.Components.Extensions.Network = b.DefaultNetwork()
+		o.Shoot.Components.Extensions.OperatingSystemConfig, err = b.DefaultOperatingSystemConfig()
+		if err != nil {
+			return nil, err
+		}
+		o.Shoot.Components.Extensions.Worker = b.DefaultWorker()
 	}
-	o.Shoot.Components.Extensions.Worker = b.DefaultWorker()
 
 	sniPhase, err := b.SNIPhase(ctx)
 	if err != nil {
