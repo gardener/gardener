@@ -468,7 +468,7 @@ var _ = Describe("KubeControllerManager", func() {
 				}
 
 				replicas      int32 = 1
-				deploymentFor       = func(version string, config *gardencorev1beta1.KubeControllerManagerConfig) *appsv1.Deployment {
+				deploymentFor       = func(version string, config *gardencorev1beta1.KubeControllerManagerConfig, isWorkerless bool) *appsv1.Deployment {
 					deploy := &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      v1beta1constants.DeploymentNameKubeControllerManager,
@@ -546,10 +546,6 @@ var _ = Describe("KubeControllerManager", func() {
 													MountPath: "/srv/kubernetes/ca-client",
 												},
 												{
-													Name:      "ca-kubelet",
-													MountPath: "/srv/kubernetes/ca-kubelet",
-												},
-												{
 													Name:      "service-account-key",
 													MountPath: "/srv/kubernetes/service-account-key",
 												},
@@ -578,14 +574,6 @@ var _ = Describe("KubeControllerManager", func() {
 											},
 										},
 										{
-											Name: "ca-kubelet",
-											VolumeSource: corev1.VolumeSource{
-												Secret: &corev1.SecretVolumeSource{
-													SecretName: "ca-kubelet-current",
-												},
-											},
-										},
-										{
 											Name: "service-account-key",
 											VolumeSource: corev1.VolumeSource{
 												Secret: &corev1.SecretVolumeSource{
@@ -605,6 +593,22 @@ var _ = Describe("KubeControllerManager", func() {
 								},
 							},
 						},
+					}
+
+					if !isWorkerless {
+						deploy.Spec.Template.Spec.Containers[0].VolumeMounts = append(deploy.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+							Name:      "ca-kubelet",
+							MountPath: "/srv/kubernetes/ca-kubelet",
+						})
+
+						deploy.Spec.Template.Spec.Volumes = append(deploy.Spec.Template.Spec.Volumes, corev1.Volume{
+							Name: "ca-kubelet",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: "ca-kubelet-current",
+								},
+							},
+						})
 					}
 
 					Expect(gardenerutils.InjectGenericKubeconfig(deploy, genericTokenKubeconfigSecretName, secret.Name)).To(Succeed())
@@ -668,7 +672,7 @@ subjects:
 				configWithNodeMonitorGracePeriod = &gardencorev1beta1.KubeControllerManagerConfig{NodeMonitorGracePeriod: &nodeMonitorGracePeriod}
 			)
 
-			DescribeTable("success tests for various kubernetes versions",
+			DescribeTable("success tests for various kubernetes versions(shoots with workers)",
 				func(version string, config *gardencorev1beta1.KubeControllerManagerConfig, hvpaConfig *HVPAConfig) {
 					isWorkerless = false
 					semverVersion, err := semver.NewVersion(version)
@@ -709,7 +713,121 @@ subjects:
 						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
 							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-								Expect(obj).To(DeepEqual(deploymentFor(version, config)))
+								Expect(obj).To(DeepEqual(deploymentFor(version, config, isWorkerless)))
+							}),
+						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, pdbName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).
+							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+								Expect(obj).To(DeepEqual(pdb))
+							}),
+					)
+
+					if hvpaConfig.Enabled {
+						gomock.InOrder(
+							c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace}}),
+							c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
+							c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).
+								Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+									Expect(obj).To(DeepEqual(hvpaFor(hvpaConfig)))
+								}),
+						)
+					} else {
+						gomock.InOrder(
+							c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: namespace}}),
+							c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, vpaName), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
+							c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).
+								Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+									Expect(obj).To(DeepEqual(vpa))
+								}),
+						)
+					}
+
+					gomock.InOrder(
+						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).
+							Do(func(ctx context.Context, obj client.Object, _ ...client.UpdateOption) {
+								Expect(obj).To(DeepEqual(managedResourceSecret))
+							}),
+						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
+							Do(func(ctx context.Context, obj client.Object, _ ...client.UpdateOption) {
+								Expect(obj).To(DeepEqual(managedResource))
+							}),
+					)
+
+					Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
+				},
+
+				Entry("kubernetes 1.22 w/o config", "1.22.0", emptyConfig, hvpaConfigDisabled),
+				Entry("kubernetes 1.22 with HVPA", "1.22.0", emptyConfig, hvpaConfigEnabled),
+				Entry("kubernetes 1.22 with HVPA and custom scale-down update mode", "1.22.0", emptyConfig, hvpaConfigEnabledScaleDownOff),
+				Entry("kubernetes 1.22 with non-default autoscaler config", "1.22.0", configWithAutoscalerConfig, hvpaConfigDisabled),
+				Entry("kubernetes 1.22 with feature flags", "1.22.0", configWithFeatureFlags, hvpaConfigDisabled),
+				Entry("kubernetes 1.22 with NodeCIDRMaskSize", "1.22.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
+				Entry("kubernetes 1.22 with PodEvictionTimeout", "1.22.0", configWithPodEvictionTimeout, hvpaConfigDisabled),
+				Entry("kubernetes 1.22 with NodeMonitorGradePeriod", "1.22.0", configWithNodeMonitorGracePeriod, hvpaConfigDisabled),
+
+				Entry("kubernetes 1.21 w/o config", "1.21.0", emptyConfig, hvpaConfigDisabled),
+				Entry("kubernetes 1.21 with HVPA", "1.21.0", emptyConfig, hvpaConfigEnabled),
+				Entry("kubernetes 1.21 with HVPA and custom scale-down update mode", "1.21.0", emptyConfig, hvpaConfigEnabledScaleDownOff),
+				Entry("kubernetes 1.21 with non-default autoscaler config", "1.21.0", configWithAutoscalerConfig, hvpaConfigDisabled),
+				Entry("kubernetes 1.21 with feature flags", "1.21.0", configWithFeatureFlags, hvpaConfigDisabled),
+				Entry("kubernetes 1.21 with NodeCIDRMaskSize", "1.21.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
+				Entry("kubernetes 1.21 with PodEvictionTimeout", "1.21.0", configWithPodEvictionTimeout, hvpaConfigDisabled),
+				Entry("kubernetes 1.21 with NodeMonitorGradePeriod", "1.21.0", configWithNodeMonitorGracePeriod, hvpaConfigDisabled),
+
+				Entry("kubernetes 1.20 w/o config", "1.20.0", emptyConfig, hvpaConfigDisabled),
+				Entry("kubernetes 1.20 with HVPA", "1.20.0", emptyConfig, hvpaConfigEnabled),
+				Entry("kubernetes 1.20 with HVPA and custom scale-down update mode", "1.20.0", emptyConfig, hvpaConfigEnabledScaleDownOff),
+				Entry("kubernetes 1.20 with non-default autoscaler config", "1.20.0", configWithAutoscalerConfig, hvpaConfigDisabled),
+				Entry("kubernetes 1.20 with feature flags", "1.20.0", configWithFeatureFlags, hvpaConfigDisabled),
+				Entry("kubernetes 1.20 with NodeCIDRMaskSize", "1.20.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
+				Entry("kubernetes 1.20 with PodEvictionTimeout", "1.20.0", configWithPodEvictionTimeout, hvpaConfigDisabled),
+				Entry("kubernetes 1.20 with NodeMonitorGradePeriod", "1.20.0", configWithNodeMonitorGracePeriod, hvpaConfigDisabled),
+			)
+
+			DescribeTable("success tests for various kubernetes versions(workerless shoot)",
+				func(version string, config *gardencorev1beta1.KubeControllerManagerConfig, hvpaConfig *HVPAConfig) {
+					isWorkerless = true
+					semverVersion, err := semver.NewVersion(version)
+					Expect(err).NotTo(HaveOccurred())
+
+					kubeControllerManager = New(
+						testLogger,
+						fakeInterface,
+						namespace,
+						sm,
+						semverVersion,
+						image,
+						config,
+						isWorkerless,
+						podCIDR,
+						serviceCIDR,
+						hvpaConfig,
+						runtimeKubernetesVersion,
+					)
+
+					kubeControllerManager.SetReplicaCount(replicas)
+
+					if hvpaConfig.Enabled {
+						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+					}
+
+					gomock.InOrder(
+						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
+							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+								Expect(obj).To(DeepEqual(serviceFor(version)))
+							}),
+						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+								Expect(obj).To(DeepEqual(secret))
+							}),
+						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
+							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+								Expect(obj).To(DeepEqual(deploymentFor(version, config, isWorkerless)))
 							}),
 						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, pdbName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).
@@ -886,56 +1004,6 @@ func commandForKubernetesVersion(
 ) []string {
 	var command []string
 
-	command = append(command,
-		"/usr/local/bin/kube-controller-manager",
-		"--attach-detach-reconcile-sync-period=1m0s",
-		"--controllers=*,bootstrapsigner,tokencleaner",
-		"--authentication-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
-		"--authorization-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
-		"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
-	)
-
-	if !isWorkerless {
-		command = append(command,
-			"--allocate-node-cidrs=true",
-			fmt.Sprintf("--cluster-cidr=%s", podNetwork.String()),
-		)
-	}
-
-	if nodeCIDRMaskSize != nil {
-		command = append(command, fmt.Sprintf("--node-cidr-mask-size=%d", *nodeCIDRMaskSize))
-	}
-
-	command = append(command,
-		fmt.Sprintf("--cluster-name=%s", clusterName),
-		fmt.Sprintf("--service-cluster-ip-range=%s", serviceNetwork.String()),
-		"--cluster-signing-kube-apiserver-client-cert-file=/srv/kubernetes/ca-client/ca.crt",
-		"--cluster-signing-kube-apiserver-client-key-file=/srv/kubernetes/ca-client/ca.key",
-		"--cluster-signing-kubelet-client-cert-file=/srv/kubernetes/ca-client/ca.crt",
-		"--cluster-signing-kubelet-client-key-file=/srv/kubernetes/ca-client/ca.key",
-		"--cluster-signing-kubelet-serving-cert-file=/srv/kubernetes/ca-kubelet/ca.crt",
-		"--cluster-signing-kubelet-serving-key-file=/srv/kubernetes/ca-kubelet/ca.key",
-		"--cluster-signing-legacy-unknown-cert-file=/srv/kubernetes/ca-client/ca.crt",
-		"--cluster-signing-legacy-unknown-key-file=/srv/kubernetes/ca-client/ca.key",
-	)
-
-	command = append(command,
-		"--cluster-signing-duration=720h",
-		"--concurrent-deployment-syncs=50",
-		"--concurrent-endpoint-syncs=15",
-		"--concurrent-gc-syncs=30",
-		"--concurrent-namespace-syncs=50",
-		"--concurrent-replicaset-syncs=50",
-		"--concurrent-resource-quota-syncs=15",
-		"--concurrent-service-endpoint-syncs=15",
-		"--concurrent-statefulset-syncs=15",
-		"--concurrent-serviceaccount-token-syncs=15",
-	)
-
-	if len(featureGateFlags) > 0 {
-		command = append(command, featureGateFlags)
-	}
-
 	podEvictionTimeoutSetting := "2m0s"
 	if podEvictionTimeout != nil {
 		podEvictionTimeoutSetting = podEvictionTimeout.Duration.String()
@@ -947,25 +1015,84 @@ func commandForKubernetesVersion(
 	}
 
 	command = append(command,
-		fmt.Sprintf("--horizontal-pod-autoscaler-sync-period=%s", horizontalPodAutoscalerConfig.SyncPeriod.Duration.String()),
-		fmt.Sprintf("--horizontal-pod-autoscaler-tolerance=%v", *horizontalPodAutoscalerConfig.Tolerance),
-		"--leader-elect=true",
-		fmt.Sprintf("--node-monitor-grace-period=%s", nodeMonitorGracePeriodSetting),
-		fmt.Sprintf("--pod-eviction-timeout=%s", podEvictionTimeoutSetting),
-		"--root-ca-file=/srv/kubernetes/ca/bundle.crt",
-		"--service-account-private-key-file=/srv/kubernetes/service-account-key/id_rsa",
-		fmt.Sprintf("--secure-port=%d", port),
+		"/usr/local/bin/kube-controller-manager",
+		"--attach-detach-reconcile-sync-period=1m0s",
+		"--authentication-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+		"--authorization-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+		"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 	)
+
+	if !isWorkerless {
+		if nodeCIDRMaskSize != nil {
+			command = append(command, fmt.Sprintf("--node-cidr-mask-size=%d", *nodeCIDRMaskSize))
+		}
+
+		command = append(command,
+			"--allocate-node-cidrs=true",
+			"--controllers=*,bootstrapsigner,tokencleaner",
+			fmt.Sprintf("--cluster-cidr=%s", podNetwork.String()),
+			"--cluster-signing-kubelet-client-cert-file=/srv/kubernetes/ca-client/ca.crt",
+			"--cluster-signing-kubelet-client-key-file=/srv/kubernetes/ca-client/ca.key",
+			"--cluster-signing-kubelet-serving-cert-file=/srv/kubernetes/ca-kubelet/ca.crt",
+			"--cluster-signing-kubelet-serving-key-file=/srv/kubernetes/ca-kubelet/ca.key",
+			fmt.Sprintf("--horizontal-pod-autoscaler-downscale-stabilization=%s", horizontalPodAutoscalerConfig.DownscaleStabilization.Duration.String()),
+			fmt.Sprintf("--horizontal-pod-autoscaler-initial-readiness-delay=%s", horizontalPodAutoscalerConfig.InitialReadinessDelay.Duration.String()),
+			fmt.Sprintf("--horizontal-pod-autoscaler-cpu-initialization-period=%s", horizontalPodAutoscalerConfig.CPUInitializationPeriod.Duration.String()),
+			fmt.Sprintf("--horizontal-pod-autoscaler-sync-period=%s", horizontalPodAutoscalerConfig.SyncPeriod.Duration.String()),
+			fmt.Sprintf("--horizontal-pod-autoscaler-tolerance=%v", *horizontalPodAutoscalerConfig.Tolerance),
+			"--leader-elect=true",
+			fmt.Sprintf("--node-monitor-grace-period=%s", nodeMonitorGracePeriodSetting),
+			fmt.Sprintf("--pod-eviction-timeout=%s", podEvictionTimeoutSetting),
+			"--concurrent-deployment-syncs=50",
+			"--concurrent-replicaset-syncs=50",
+			"--concurrent-statefulset-syncs=15",
+		)
+	} else {
+		command = append(command,
+			"--controllers=namespace,serviceaccount,serviceaccount-token,clusterrole-aggregation,garbagecollector,csrapproving,csrcleaner,csrsigning,bootstrapsigner,tokencleaner,resourcequota",
+		)
+	}
+
+	command = append(command,
+		fmt.Sprintf("--cluster-name=%s", clusterName),
+		"--cluster-signing-kube-apiserver-client-cert-file=/srv/kubernetes/ca-client/ca.crt",
+		"--cluster-signing-kube-apiserver-client-key-file=/srv/kubernetes/ca-client/ca.key",
+		"--cluster-signing-legacy-unknown-cert-file=/srv/kubernetes/ca-client/ca.crt",
+		"--cluster-signing-legacy-unknown-key-file=/srv/kubernetes/ca-client/ca.key",
+	)
+
+	command = append(command,
+		"--cluster-signing-duration=720h",
+		"--concurrent-endpoint-syncs=15",
+		"--concurrent-gc-syncs=30",
+		"--concurrent-namespace-syncs=50",
+		"--concurrent-resource-quota-syncs=15",
+		"--concurrent-service-endpoint-syncs=15",
+		"--concurrent-serviceaccount-token-syncs=15",
+	)
+
+	if len(featureGateFlags) > 0 {
+		command = append(command, featureGateFlags)
+	}
 
 	if versionutils.ConstraintK8sLess124.Check(semver.MustParse(version)) {
 		command = append(command, "--port=0")
 	}
 
 	command = append(command,
+		"--root-ca-file=/srv/kubernetes/ca/bundle.crt",
+		"--service-account-private-key-file=/srv/kubernetes/service-account-key/id_rsa",
+		fmt.Sprintf("--secure-port=%d", port),
+	)
+
+	if serviceNetwork != nil {
+		command = append(command,
+			fmt.Sprintf("--service-cluster-ip-range=%s", serviceNetwork.String()),
+		)
+	}
+
+	command = append(command,
 		"--profiling=false",
-		fmt.Sprintf("--horizontal-pod-autoscaler-downscale-stabilization=%s", horizontalPodAutoscalerConfig.DownscaleStabilization.Duration.String()),
-		fmt.Sprintf("--horizontal-pod-autoscaler-initial-readiness-delay=%s", horizontalPodAutoscalerConfig.InitialReadinessDelay.Duration.String()),
-		fmt.Sprintf("--horizontal-pod-autoscaler-cpu-initialization-period=%s", horizontalPodAutoscalerConfig.CPUInitializationPeriod.Duration.String()),
 		"--tls-cert-file=/var/lib/kube-controller-manager-server/tls.crt",
 		"--tls-private-key-file=/var/lib/kube-controller-manager-server/tls.key",
 	)

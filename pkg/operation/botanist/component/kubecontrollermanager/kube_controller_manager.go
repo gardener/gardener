@@ -171,9 +171,12 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAClient)
 	}
 
-	secretCAKubelet, found := k.secretsManager.Get(v1beta1constants.SecretNameCAKubelet, secretsmanager.Current)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAKubelet)
+	secretCAKubelet := &corev1.Secret{}
+	if !k.isWorkerless {
+		secretCAKubelet, found = k.secretsManager.Get(v1beta1constants.SecretNameCAKubelet, secretsmanager.Current)
+		if !found {
+			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAKubelet)
+		}
 	}
 
 	genericTokenKubeconfigSecret, found := k.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
@@ -318,10 +321,6 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 								MountPath: volumeMountPathCAClient,
 							},
 							{
-								Name:      volumeNameCAKubelet,
-								MountPath: volumeMountPathCAKubelet,
-							},
-							{
 								Name:      volumeNameServiceAccountKey,
 								MountPath: volumeMountPathServiceAccountKey,
 							},
@@ -350,14 +349,6 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						},
 					},
 					{
-						Name: volumeNameCAKubelet,
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName: secretCAKubelet.Name,
-							},
-						},
-					},
-					{
 						Name: volumeNameServiceAccountKey,
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
@@ -375,6 +366,22 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 					},
 				},
 			},
+		}
+
+		if !k.isWorkerless {
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+				Name:      volumeNameCAKubelet,
+				MountPath: volumeMountPathCAKubelet,
+			})
+
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+				Name: volumeNameCAKubelet,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: secretCAKubelet.Name,
+					},
+				},
+			})
 		}
 
 		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, shootAccessSecret.Secret.Name))
@@ -563,7 +570,6 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 	command = append(command,
 		"/usr/local/bin/kube-controller-manager",
 		"--attach-detach-reconcile-sync-period=1m0s",
-		"--controllers=*,bootstrapsigner,tokencleaner",
 		"--authentication-kubeconfig="+gardenerutils.PathGenericKubeconfig,
 		"--authorization-kubeconfig="+gardenerutils.PathGenericKubeconfig,
 		"--kubeconfig="+gardenerutils.PathGenericKubeconfig,
@@ -582,6 +588,7 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 
 		command = append(command,
 			"--allocate-node-cidrs=true",
+			"--controllers=*,bootstrapsigner,tokencleaner",
 			fmt.Sprintf("--cluster-cidr=%s", k.podNetwork.String()),
 			fmt.Sprintf("--cluster-signing-kubelet-client-cert-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyCertificateCA),
 			fmt.Sprintf("--cluster-signing-kubelet-client-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
@@ -598,7 +605,13 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		)
 
 		command = append(command,
-			fmt.Sprintf("--service-cluster-ip-range=%s", k.serviceNetwork.String()),
+			"--concurrent-deployment-syncs=50",
+			"--concurrent-replicaset-syncs=50",
+			"--concurrent-statefulset-syncs=15",
+		)
+	} else {
+		command = append(command,
+			"--controllers=namespace,serviceaccount,serviceaccount-token,clusterrole-aggregation,garbagecollector,csrapproving,csrcleaner,csrsigning,bootstrapsigner,tokencleaner,resourcequota",
 		)
 	}
 
@@ -612,14 +625,11 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 
 	command = append(command,
 		"--cluster-signing-duration=720h",
-		"--concurrent-deployment-syncs=50",
 		"--concurrent-endpoint-syncs=15",
 		"--concurrent-gc-syncs=30",
 		"--concurrent-namespace-syncs=50",
-		"--concurrent-replicaset-syncs=50",
 		"--concurrent-resource-quota-syncs=15",
 		"--concurrent-service-endpoint-syncs=15",
-		"--concurrent-statefulset-syncs=15",
 		"--concurrent-serviceaccount-token-syncs=15",
 	)
 
