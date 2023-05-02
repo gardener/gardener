@@ -66,10 +66,19 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		return nil, err
 	}
 
+	var defaultNotReadyTolerationSeconds, defaultUnreachableTolerationSeconds *int64
+	if b.Config != nil && b.Config.NodeToleration != nil {
+		nodeToleration := b.Config.NodeToleration
+		defaultNotReadyTolerationSeconds = nodeToleration.DefaultNotReadyTolerationSeconds
+		defaultUnreachableTolerationSeconds = nodeToleration.DefaultUnreachableTolerationSeconds
+	}
+
 	cfg := resourcemanager.Values{
 		AlwaysUpdate:                         pointer.Bool(true),
 		ClusterIdentity:                      b.Seed.GetInfo().Status.ClusterIdentity,
 		ConcurrentSyncs:                      pointer.Int(20),
+		DefaultNotReadyToleration:            defaultNotReadyTolerationSeconds,
+		DefaultUnreachableToleration:         defaultUnreachableTolerationSeconds,
 		HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
 		Image:                                image.String(),
 		LogLevel:                             logger.InfoLevel,
