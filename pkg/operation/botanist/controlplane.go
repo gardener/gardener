@@ -73,36 +73,37 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		ctxWithTimeOut, cancel := context.WithTimeout(ctx, 10*time.Minute)
 		defer cancel()
 
-		// If a shoot is hibernated we only want to scale down the entire control plane if no nodes exist anymore. The node-lifecycle-controller
-		// inside KCM is responsible for deleting Node objects of terminated/non-existing VMs, so let's wait for that before scaling down.
-		if err := b.WaitUntilNodesDeleted(ctxWithTimeOut); err != nil {
-			return err
-		}
+		if !b.Shoot.IsWorkerless {
+			// If a shoot is hibernated we only want to scale down the entire control plane if no nodes exist anymore. The node-lifecycle-controller
+			// inside KCM is responsible for deleting Node objects of terminated/non-existing VMs, so let's wait for that before scaling down.
+			if err := b.WaitUntilNodesDeleted(ctxWithTimeOut); err != nil {
+				return err
+			}
 
-		// Also wait for all Pods to reflect the correct state before scaling down the control plane.
-		// KCM should remove all Pods in the cluster that are bound to Nodes that no longer exist and
-		// therefore there should be no Pods with state `Running` anymore.
-		if err := b.WaitUntilNoPodRunning(ctxWithTimeOut); err != nil {
-			return err
-		}
+			// Also wait for all Pods to reflect the correct state before scaling down the control plane.
+			// KCM should remove all Pods in the cluster that are bound to Nodes that no longer exist and
+			// therefore there should be no Pods with state `Running` anymore.
+			if err := b.WaitUntilNoPodRunning(ctxWithTimeOut); err != nil {
+				return err
+			}
+			// Also wait for all Endpoints to not contain any IPs from the Shoot's PodCIDR.
+			// This is to make sure that the Endpoints objects also reflect the correct state of the hibernated cluster.
+			// Otherwise this could cause timeouts in user-defined webhooks for CREATE Pods or Nodes on wakeup.
+			if err := b.WaitUntilEndpointsDoNotContainPodIPs(ctxWithTimeOut); err != nil {
+				return err
+			}
 
-		// Also wait for all Endpoints to not contain any IPs from the Shoot's PodCIDR.
-		// This is to make sure that the Endpoints objects also reflect the correct state of the hibernated cluster.
-		// Otherwise this could cause timeouts in user-defined webhooks for CREATE Pods or Nodes on wakeup.
-		if err := b.WaitUntilEndpointsDoNotContainPodIPs(ctxWithTimeOut); err != nil {
-			return err
-		}
-
-		// TODO: check if we can remove this mitigation once there is a garbage collection for VolumeAttachments (ref https://github.com/kubernetes/kubernetes/issues/77324)
-		// Currently on hibernation Machines are forcefully deleted and machine-controller-manager does not wait volumes to be detached.
-		// In this case kube-controller-manager cannot delete the corresponding VolumeAttachment objects and they are orphaned.
-		// Such orphaned VolumeAttachments then prevent/block PV deletion. For more details see https://github.com/gardener/gardener-extension-provider-gcp/issues/172.
-		// As the Nodes are already deleted, we can delete all VolumeAttachments.
-		// Note: if custom csi-drivers are installed in the cluster (controllers running on the shoot itself), the VolumeAttachments will
-		// probably not be finalized, because the controller pods are drained like all the other pods, so we still need to cleanup
-		// VolumeAttachments of those csi-drivers.
-		if err := CleanVolumeAttachments(ctxWithTimeOut, b.ShootClientSet.Client()); err != nil {
-			return err
+			// TODO: check if we can remove this mitigation once there is a garbage collection for VolumeAttachments (ref https://github.com/kubernetes/kubernetes/issues/77324)
+			// Currently on hibernation Machines are forcefully deleted and machine-controller-manager does not wait volumes to be detached.
+			// In this case kube-controller-manager cannot delete the corresponding VolumeAttachment objects and they are orphaned.
+			// Such orphaned VolumeAttachments then prevent/block PV deletion. For more details see https://github.com/gardener/gardener-extension-provider-gcp/issues/172.
+			// As the Nodes are already deleted, we can delete all VolumeAttachments.
+			// Note: if custom csi-drivers are installed in the cluster (controllers running on the shoot itself), the VolumeAttachments will
+			// probably not be finalized, because the controller pods are drained like all the other pods, so we still need to cleanup
+			// VolumeAttachments of those csi-drivers.
+			if err := CleanVolumeAttachments(ctxWithTimeOut, b.ShootClientSet.Client()); err != nil {
+				return err
+			}
 		}
 	}
 
