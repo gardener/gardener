@@ -136,8 +136,7 @@ func (r *Reconciler) handleReferencedSecrets(ctx context.Context, log logr.Logge
 		name := secretName
 		fns = append(fns, func(ctx context.Context) error {
 			secret := &corev1.Secret{}
-			s := shoot
-			if err := c.Get(ctx, kubernetesutils.Key(s.Namespace, name), secret); err != nil {
+			if err := c.Get(ctx, kubernetesutils.Key(shoot.Namespace, name), secret); err != nil {
 				return err
 			}
 
@@ -177,8 +176,7 @@ func (r *Reconciler) handleReferencedConfigMap(ctx context.Context, log logr.Log
 		name := configMapName
 		fns = append(fns, func(ctx context.Context) error {
 			configMap := &corev1.ConfigMap{}
-			s := shoot
-			if err := c.Get(ctx, kubernetesutils.Key(s.Namespace, name), configMap); err != nil {
+			if err := c.Get(ctx, kubernetesutils.Key(shoot.Namespace, name), configMap); err != nil {
 				return err
 			}
 
