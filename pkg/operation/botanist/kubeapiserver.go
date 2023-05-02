@@ -39,6 +39,22 @@ import (
 
 // DefaultKubeAPIServer returns a deployer for the kube-apiserver.
 func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Interface, error) {
+	var (
+		pods, services string
+		nodes          *string
+	)
+	if b.Shoot.Networks != nil {
+		if b.Shoot.Networks.Pods != nil {
+			pods = b.Shoot.Networks.Pods.String()
+		}
+		if b.Shoot.Networks.Services != nil {
+			services = b.Shoot.Networks.Services.String()
+		}
+	}
+	if b.Shoot.GetInfo().Spec.Networking != nil {
+		nodes = b.Shoot.GetInfo().Spec.Networking.Nodes
+	}
+
 	return shared.NewKubeAPIServer(
 		ctx,
 		b.SeedClientSet,
@@ -52,11 +68,11 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		"",
 		b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer,
 		b.computeKubeAPIServerAutoscalingConfig(),
-		b.Shoot.Networks.Services.String(),
+		services,
 		kubeapiserver.VPNConfig{
 			Enabled:                              true,
-			PodNetworkCIDR:                       b.Shoot.Networks.Pods.String(),
-			NodeNetworkCIDR:                      b.Shoot.GetInfo().Spec.Networking.Nodes,
+			PodNetworkCIDR:                       pods,
+			NodeNetworkCIDR:                      nodes,
 			HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
 			HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
 			HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
@@ -186,14 +202,16 @@ func resourcesRequirementsForKubeAPIServer(nodeCount int32, scalingClass string)
 
 func (b *Botanist) computeKubeAPIServerServerCertificateConfig() kubeapiserver.ServerCertificateConfig {
 	var (
-		ipAddresses = []net.IP{
-			b.Shoot.Networks.APIServer,
-		}
-		dnsNames = []string{
+		ipAddresses = []net.IP{}
+		dnsNames    = []string{
 			gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 			b.Shoot.GetInfo().Status.TechnicalID,
 		}
 	)
+
+	if b.Shoot.Networks != nil {
+		ipAddresses = append(ipAddresses, b.Shoot.Networks.APIServer)
+	}
 
 	if b.Shoot.ExternalClusterDomain != nil {
 		dnsNames = append(dnsNames, *(b.Shoot.GetInfo().Spec.DNS.Domain), gardenerutils.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain))
