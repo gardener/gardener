@@ -25,6 +25,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -124,10 +125,6 @@ func (r *Reconciler) delete(
 			Fn: flow.Parallel(
 				component.OpDestroyAndWait(etcdMain).Destroy,
 				component.OpDestroyAndWait(etcdEvents).Destroy,
-				// TODO(rfranzke): Remove this in the future when the network policy deployment has been refactored.
-				func(ctx context.Context) error {
-					return kubernetesutils.DeleteObject(ctx, r.RuntimeClientSet.Client(), &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "etcd-to-world", Namespace: r.GardenNamespace}})
-				},
 			),
 			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer),
 		})
@@ -204,6 +201,21 @@ func (r *Reconciler) delete(
 		ProgressReporter: r.reportProgress(log, garden),
 	}); err != nil {
 		return reconcilerutils.ReconcileErr(flow.Errors(err))
+	}
+
+	// TODO(rfranzke): Remove this block in a future version (after v1.72 is released).
+	{
+		objects := []client.Object{
+			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "etcd-to-world", Namespace: r.GardenNamespace}},
+			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-allow-all", Namespace: r.GardenNamespace}},
+			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "istio-allow-all", Namespace: istio.GetValues().Istiod.Namespace}},
+		}
+		for _, istioIngress := range istio.GetValues().IngressGateway {
+			objects = append(objects, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "istio-allow-all", Namespace: istioIngress.Namespace}})
+		}
+		if err := kubernetesutils.DeleteObjects(ctx, r.RuntimeClientSet.Client(), objects...); err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	if controllerutil.ContainsFinalizer(garden, finalizerName) {

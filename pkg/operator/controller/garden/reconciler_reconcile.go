@@ -49,6 +49,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
@@ -193,7 +194,7 @@ func (r *Reconciler) reconcile(
 		})
 		deployIstio = g.Add(flow.Task{
 			Name:         "Deploying Istio",
-			Fn:           r.deployIstioFunc(istio),
+			Fn:           component.OpWait(istio).Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		syncPointSystemComponents = flow.NewTaskIDs(
@@ -280,6 +281,21 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, flow.Errors(err)
 	}
 
+	// TODO(rfranzke): Remove this block in a future version (after v1.72 is released).
+	{
+		objects := []client.Object{
+			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "etcd-to-world", Namespace: r.GardenNamespace}},
+			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-allow-all", Namespace: r.GardenNamespace}},
+			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "istio-allow-all", Namespace: istio.GetValues().Istiod.Namespace}},
+		}
+		for _, istioIngress := range istio.GetValues().IngressGateway {
+			objects = append(objects, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "istio-allow-all", Namespace: istioIngress.Namespace}})
+		}
+		if err := kubernetesutils.DeleteObjects(ctx, r.RuntimeClientSet.Client(), objects...); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
 	return reconcile.Result{}, secretsManager.Cleanup(ctx)
 }
 
@@ -331,29 +347,6 @@ func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, 
 			}
 		}
 
-		// Deploy NetworkPolicy allowing ETCD to talk to the runtime cluster's API server.
-		// TODO(rfranzke): Remove this in the future when the network policy deployment has been refactored.
-		networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "etcd-to-world", Namespace: r.GardenNamespace}}
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.RuntimeClientSet.Client(), networkPolicy, func() error {
-			networkPolicy.Spec.Egress = []networkingv1.NetworkPolicyEgressRule{{
-				To: []networkingv1.NetworkPolicyPeer{
-					{PodSelector: &metav1.LabelSelector{}, NamespaceSelector: &metav1.LabelSelector{}},
-					{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
-				},
-			}}
-			networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{{
-				From: []networkingv1.NetworkPolicyPeer{
-					{PodSelector: &metav1.LabelSelector{}, NamespaceSelector: &metav1.LabelSelector{}},
-					{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
-				},
-			}}
-			networkPolicy.Spec.PodSelector = metav1.LabelSelector{MatchLabels: etcd.GetLabels()}
-			networkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress}
-			return nil
-		}); err != nil {
-			return err
-		}
-
 		return flow.Parallel(etcdMain.Deploy, etcdEvents.Deploy)(ctx)
 	}
 }
@@ -381,29 +374,6 @@ func (r *Reconciler) deployKubeAPIServerFunc(ctx context.Context, garden *operat
 					DomainPatterns: apiServer.SNI.DomainPatterns,
 				})
 			}
-		}
-
-		// Deploy NetworkPolicy allowing kube-apiserver to talk all targets (e.g. etcd) and to receive traffic from outside.
-		// TODO(rfranzke): Remove this in the future when the network policy deployment has been refactored.
-		networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-allow-all", Namespace: r.GardenNamespace}}
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.RuntimeClientSet.Client(), networkPolicy, func() error {
-			networkPolicy.Spec.Egress = []networkingv1.NetworkPolicyEgressRule{{
-				To: []networkingv1.NetworkPolicyPeer{
-					{PodSelector: &metav1.LabelSelector{}, NamespaceSelector: &metav1.LabelSelector{}},
-					{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
-				},
-			}}
-			networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{{
-				From: []networkingv1.NetworkPolicyPeer{
-					{PodSelector: &metav1.LabelSelector{}, NamespaceSelector: &metav1.LabelSelector{}},
-					{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
-				},
-			}}
-			networkPolicy.Spec.PodSelector = metav1.LabelSelector{MatchLabels: kubeapiserver.GetLabels()}
-			networkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress}
-			return nil
-		}); err != nil {
-			return err
 		}
 
 		return shared.DeployKubeAPIServer(
@@ -453,42 +423,4 @@ func (r *Reconciler) initializeVirtualClusterClient(secretsManager secretsmanage
 	}
 
 	return clientSet.Client(), nil
-}
-
-func (r *Reconciler) deployIstioFunc(istioDeploy istio.Interface) flow.TaskFn {
-	return func(ctx context.Context) error {
-		if err := istioDeploy.Deploy(ctx); err != nil {
-			return err
-		}
-
-		// Deploy NetworkPolicy allowing kube-apiserver to talk all targets (e.g. etcd) and to receive traffic from outside.
-		// TODO(rfranzke): Remove this in the future when the network policy deployment has been refactored.
-		networkPolicies := []*networkingv1.NetworkPolicy{{ObjectMeta: metav1.ObjectMeta{Name: "istio-allow-all", Namespace: istioDeploy.GetValues().Istiod.Namespace}}}
-		for _, istioIngress := range istioDeploy.GetValues().IngressGateway {
-			networkPolicies = append(networkPolicies, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "istio-allow-all", Namespace: istioIngress.Namespace}})
-		}
-		for _, netPol := range networkPolicies {
-			networkPolicy := netPol
-			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.RuntimeClientSet.Client(), networkPolicy, func() error {
-				networkPolicy.Spec.Egress = []networkingv1.NetworkPolicyEgressRule{{
-					To: []networkingv1.NetworkPolicyPeer{
-						{PodSelector: &metav1.LabelSelector{}, NamespaceSelector: &metav1.LabelSelector{}},
-						{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
-					},
-				}}
-				networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{{
-					From: []networkingv1.NetworkPolicyPeer{
-						{PodSelector: &metav1.LabelSelector{}, NamespaceSelector: &metav1.LabelSelector{}},
-						{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
-					},
-				}}
-				networkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress}
-				return nil
-			}); err != nil {
-				return err
-			}
-		}
-
-		return istioDeploy.Wait(ctx)
-	}
 }
