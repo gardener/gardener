@@ -558,6 +558,19 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, "--requestheader-group-headers=X-Remote-Group")
 	out = append(out, "--requestheader-username-headers=X-Remote-User")
 
+	if k.values.IsNodeless {
+		disableAPIs := map[string]bool{
+			"autoscaling/v2":                 false,
+			"batch/v1":                       false,
+			"apps/v1":                        false,
+			"policy/v1/poddisruptionbudgets": false,
+			"storage.k8s.io/v1/csidrivers":   false,
+			"storage.k8s.io/v1/csinodes":     false,
+		}
+
+		k.values.RuntimeConfig = utils.MergeStringMaps(k.values.RuntimeConfig, disableAPIs)
+	}
+
 	if k.values.RuntimeConfig != nil {
 		out = append(out, kubernetesutils.MapStringBoolToCommandLineParameter(k.values.RuntimeConfig, "--runtime-config="))
 	}

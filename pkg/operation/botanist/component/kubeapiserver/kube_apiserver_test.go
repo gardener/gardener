@@ -2549,6 +2549,7 @@ rules:
 						"--requestheader-extra-headers-prefix=X-Remote-Extra-",
 						"--requestheader-group-headers=X-Remote-Group",
 						"--requestheader-username-headers=X-Remote-User",
+						"--runtime-config=apps/v1=false,autoscaling/v2=false,batch/v1=false,policy/v1/poddisruptionbudgets=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
 						"--secure-port=443",
 						"--service-cluster-ip-range="+serviceNetworkCIDR,
 						"--service-account-issuer="+serviceAccountIssuer,
@@ -3098,7 +3099,7 @@ rules:
 				It("should configure the runtime config if provided", func() {
 					runtimeConfig := map[string]bool{"foo": true, "bar": false}
 
-					kapi = New(kubernetesInterface, namespace, sm, Values{RuntimeConfig: runtimeConfig, Images: images, RuntimeVersion: runtimeVersion, Version: version})
+					kapi = New(kubernetesInterface, namespace, sm, Values{RuntimeConfig: runtimeConfig, Images: images, RuntimeVersion: runtimeVersion, Version: version, IsNodeless: false})
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
@@ -3106,10 +3107,22 @@ rules:
 					))
 				})
 
-				It("should not configure the runtime config if not provided", func() {
+				It("should not configure the runtime config if not provided when shoot has workers", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, RuntimeVersion: runtimeVersion, Version: version, IsNodeless: false})
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElement(ContainSubstring("--runtime-config=")))
+				})
+
+				It("should disable apis in case of workerless shoot", func() {
+					runtimeConfig := map[string]bool{"apps/v1": true, "bar": false}
+
+					kapi = New(kubernetesInterface, namespace, sm, Values{RuntimeConfig: runtimeConfig, Images: images, RuntimeVersion: runtimeVersion, Version: version, IsNodeless: true})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
+						"--runtime-config=apps/v1=false,autoscaling/v2=false,bar=false,batch/v1=false,policy/v1/poddisruptionbudgets=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
+					))
 				})
 
 				It("should configure the watch cache settings if provided", func() {

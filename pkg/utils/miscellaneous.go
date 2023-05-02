@@ -69,11 +69,11 @@ func MergeMaps(a, b map[string]interface{}) map[string]interface{} {
 
 // MergeStringMaps merges the content of the newMaps with the oldMap. If a key already exists then
 // it gets overwritten by the last value with the same key.
-func MergeStringMaps(oldMap map[string]string, newMaps ...map[string]string) map[string]string {
-	var out map[string]string
+func MergeStringMaps[T any](oldMap map[string]T, newMaps ...map[string]T) map[string]T {
+	var out map[string]T
 
 	if oldMap != nil {
-		out = make(map[string]string)
+		out = make(map[string]T)
 	}
 	for k, v := range oldMap {
 		out[k] = v
@@ -81,7 +81,7 @@ func MergeStringMaps(oldMap map[string]string, newMaps ...map[string]string) map
 
 	for _, newMap := range newMaps {
 		if newMap != nil && out == nil {
-			out = make(map[string]string)
+			out = make(map[string]T)
 		}
 
 		for k, v := range newMap {
