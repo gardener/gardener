@@ -119,10 +119,6 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 
 	// control plane components
 
-	o.Shoot.Components.ControlPlane.ClusterAutoscaler, err = b.DefaultClusterAutoscaler()
-	if err != nil {
-		return nil, err
-	}
 	o.Shoot.Components.ControlPlane.EtcdCopyBackupsTask = b.DefaultEtcdCopyBackupsTask()
 	o.Shoot.Components.ControlPlane.EtcdMain, err = b.DefaultEtcd(v1beta1constants.ETCDRoleMain, etcd.ClassImportant)
 	if err != nil {
@@ -143,10 +139,6 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
-	o.Shoot.Components.ControlPlane.KubeScheduler, err = b.DefaultKubeScheduler()
-	if err != nil {
-		return nil, err
-	}
 	o.Shoot.Components.ControlPlane.KubeControllerManager, err = b.DefaultKubeControllerManager()
 	if err != nil {
 		return nil, err
@@ -159,46 +151,59 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
-	o.Shoot.Components.ControlPlane.VerticalPodAutoscaler, err = b.DefaultVerticalPodAutoscaler()
-	if err != nil {
-		return nil, err
-	}
-	o.Shoot.Components.ControlPlane.VPNSeedServer, err = b.DefaultVPNSeedServer()
-	if err != nil {
-		return nil, err
+	if !o.Shoot.IsWorkerless {
+		o.Shoot.Components.ControlPlane.ClusterAutoscaler, err = b.DefaultClusterAutoscaler()
+		if err != nil {
+			return nil, err
+		}
+		o.Shoot.Components.ControlPlane.KubeScheduler, err = b.DefaultKubeScheduler()
+		if err != nil {
+			return nil, err
+		}
+		o.Shoot.Components.ControlPlane.VerticalPodAutoscaler, err = b.DefaultVerticalPodAutoscaler()
+		if err != nil {
+			return nil, err
+		}
+		o.Shoot.Components.ControlPlane.VPNSeedServer, err = b.DefaultVPNSeedServer()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// system components
-	o.Shoot.Components.SystemComponents.APIServerProxy, err = b.DefaultAPIServerProxy()
-	if err != nil {
-		return nil, err
-	}
-	o.Shoot.Components.SystemComponents.ClusterIdentity = b.DefaultClusterIdentity()
 	o.Shoot.Components.SystemComponents.Namespaces = b.DefaultShootNamespaces()
-	o.Shoot.Components.SystemComponents.CoreDNS, err = b.DefaultCoreDNS()
-	if err != nil {
-		return nil, err
-	}
-	o.Shoot.Components.SystemComponents.NodeLocalDNS, err = b.DefaultNodeLocalDNS()
-	if err != nil {
-		return nil, err
-	}
-	o.Shoot.Components.SystemComponents.MetricsServer, err = b.DefaultMetricsServer()
-	if err != nil {
-		return nil, err
-	}
-	o.Shoot.Components.SystemComponents.Resources = b.DefaultShootSystem()
-	o.Shoot.Components.SystemComponents.VPNShoot, err = b.DefaultVPNShoot()
-	if err != nil {
-		return nil, err
-	}
-	o.Shoot.Components.SystemComponents.NodeProblemDetector, err = b.DefaultNodeProblemDetector()
-	if err != nil {
-		return nil, err
-	}
-	o.Shoot.Components.SystemComponents.KubeProxy, err = b.DefaultKubeProxy()
-	if err != nil {
-		return nil, err
+	o.Shoot.Components.SystemComponents.ClusterIdentity = b.DefaultClusterIdentity()
+
+	if !o.Shoot.IsWorkerless {
+		o.Shoot.Components.SystemComponents.APIServerProxy, err = b.DefaultAPIServerProxy()
+		if err != nil {
+			return nil, err
+		}
+		o.Shoot.Components.SystemComponents.CoreDNS, err = b.DefaultCoreDNS()
+		if err != nil {
+			return nil, err
+		}
+		o.Shoot.Components.SystemComponents.NodeLocalDNS, err = b.DefaultNodeLocalDNS()
+		if err != nil {
+			return nil, err
+		}
+		o.Shoot.Components.SystemComponents.MetricsServer, err = b.DefaultMetricsServer()
+		if err != nil {
+			return nil, err
+		}
+		o.Shoot.Components.SystemComponents.Resources = b.DefaultShootSystem()
+		o.Shoot.Components.SystemComponents.VPNShoot, err = b.DefaultVPNShoot()
+		if err != nil {
+			return nil, err
+		}
+		o.Shoot.Components.SystemComponents.NodeProblemDetector, err = b.DefaultNodeProblemDetector()
+		if err != nil {
+			return nil, err
+		}
+		o.Shoot.Components.SystemComponents.KubeProxy, err = b.DefaultKubeProxy()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// other components
@@ -219,13 +224,15 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	}
 
 	// Addons
-	o.Shoot.Components.Addons.KubernetesDashboard, err = b.DefaultKubernetesDashboard()
-	if err != nil {
-		return nil, err
-	}
-	o.Shoot.Components.Addons.NginxIngress, err = b.DefaultNginxIngress()
-	if err != nil {
-		return nil, err
+	if !o.Shoot.IsWorkerless {
+		o.Shoot.Components.Addons.KubernetesDashboard, err = b.DefaultKubernetesDashboard()
+		if err != nil {
+			return nil, err
+		}
+		o.Shoot.Components.Addons.NginxIngress, err = b.DefaultNginxIngress()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return b, nil
