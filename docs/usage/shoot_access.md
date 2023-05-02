@@ -2,31 +2,6 @@
 
 After creation of a shoot cluster, end-users require a `kubeconfig` to access it. There are several options available to get to such `kubeconfig`.
 
-## Static Token kubeconfig
-
-This `kubeconfig` contains a [static token](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#static-token-file) and provides `cluster-admin` privileges.
-It is created by default and persisted in the `<shoot-name>.kubeconfig` secret in the project namespace in the garden cluster.
-
-```yaml
-apiVersion: core.gardener.cloud/v1beta1
-kind: Shoot
-...
-spec:
-  kubernetes:
-    enableStaticTokenKubeconfig: true
-...
-```
-
-It is **not** the recommended method to access the shoot cluster, as the static token `kubeconfig` has some security flaws associated with it:
-- The static token in the `kubeconfig` doesn't have any expiration date. Read [this document](shoot_credentials_rotation.md#kubeconfig) to learn how to rotate the static token.
-- The static token doesn't have any user identity associated with it. The user in that token will always be `system:cluster-admin`, irrespective of the person accessing the cluster. Hence, it is impossible to audit the events in cluster.
-
-When `enableStaticTokenKubeconfig` field is not explicitly set in the Shoot spec:
-- for Shoot clusters using Kubernetes version < 1.26 the field is defaulted to `true`.
-- for Shoot clusters using Kubernetes version >= 1.26 the field is defaulted to `false`.
-
-> **Note:** Starting with Kubernetes 1.27, the `enableStaticTokenKubeconfig` field will be locked to `false`. The [`shoots/adminkubeconfig` subresource](#shootsadminkubeconfig-subresource) should be used instead.
-
 ## `shoots/adminkubeconfig` Subresource
 
 The [`shoots/adminkubeconfig`](../proposals/16-adminkubeconfig-subresource.md) subresource allows users to dynamically generate temporary `kubeconfig`s that can be used to access shoot cluster with `cluster-admin` privileges. The credentials associated with this `kubeconfig` are client certificates which have a very short validity and must be renewed before they expire (by calling the subresource endpoint again).
@@ -79,3 +54,30 @@ If you want to use the same OIDC configuration for all your shoots by default, t
 Shoots have to "opt-in" for such defaulting by using the `oidc=enable` label.
 
 For further information on `(Cluster)OpenIDConnectPreset`, refer to [ClusterOpenIDConnectPreset and OpenIDConnectPreset](openidconnect-presets.md).
+
+## Static Token kubeconfig
+
+> **Note:** Static token kubeconfig is deprekated for Shoot clusters using Kubernetes version >= 1.27
+
+This `kubeconfig` contains a [static token](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#static-token-file) and provides `cluster-admin` privileges.
+It is created by default and persisted in the `<shoot-name>.kubeconfig` secret in the project namespace in the garden cluster.
+
+```yaml
+apiVersion: core.gardener.cloud/v1beta1
+kind: Shoot
+...
+spec:
+  kubernetes:
+    enableStaticTokenKubeconfig: true
+...
+```
+
+It is **not** the recommended method to access the shoot cluster, as the static token `kubeconfig` has some security flaws associated with it:
+- The static token in the `kubeconfig` doesn't have any expiration date. Read [this document](shoot_credentials_rotation.md#kubeconfig) to learn how to rotate the static token.
+- The static token doesn't have any user identity associated with it. The user in that token will always be `system:cluster-admin`, irrespective of the person accessing the cluster. Hence, it is impossible to audit the events in cluster.
+
+When `enableStaticTokenKubeconfig` field is not explicitly set in the Shoot spec:
+- for Shoot clusters using Kubernetes version < 1.26 the field is defaulted to `true`.
+- for Shoot clusters using Kubernetes version >= 1.26 the field is defaulted to `false`.
+
+> **Note:** Starting with Kubernetes 1.27, the `enableStaticTokenKubeconfig` field will be locked to `false`. The [`shoots/adminkubeconfig` subresource](#shootsadminkubeconfig-subresource) should be used instead.
