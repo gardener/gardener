@@ -365,7 +365,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[2], "CoreOs", "1.1.1")
 		})
 
-		It("should determine that the shoot worker machine images must not be maintained - found no machineImageVersion with matching kubeletVersionConstraint constraint (control plane K8s version)", func() {
+		It("should determine that the shoot worker machine images must not be maintained - found no machineImageVersion with matching kubeletVersionConstraint (control plane K8s version)", func() {
 			cloudProfile.Spec.MachineImages[0].Versions[1].KubeletVersionConstraint = pointer.String("< 1.26")
 			shoot.Spec.Kubernetes.Version = "1.26.0"
 
@@ -375,7 +375,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(expected))
 		})
 
-		It("should determine that the shoot worker machine images must be maintained - found machineImageVersion with matching kubeletVersionConstraint constraint (control plane K8s version)", func() {
+		It("should determine that the shoot worker machine images must be maintained - found machineImageVersion with matching kubeletVersionConstraint (control plane K8s version)", func() {
 			cloudProfile.Spec.MachineImages[0].Versions[1].KubeletVersionConstraint = pointer.String("< 1.26")
 			shoot.Spec.Kubernetes.Version = "1.25.1"
 
@@ -384,7 +384,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", "1.1.1")
 		})
 
-		It("should determine that the shoot worker machine images must not be maintained - found no machineImageVersion with matching kubeletVersionConstraint constraint (worker K8s version)", func() {
+		It("should determine that the shoot worker machine images must not be maintained - found no machineImageVersion with matching kubeletVersionConstraint (worker K8s version)", func() {
 			cloudProfile.Spec.MachineImages[0].Versions[1].KubeletVersionConstraint = pointer.String(">= 1.26")
 			shoot.Spec.Kubernetes.Version = "1.26.0"
 			shoot.Spec.Provider.Workers[0].Kubernetes = &gardencorev1beta1.WorkerKubernetes{
@@ -397,7 +397,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(expected))
 		})
 
-		It("should determine that the shoot worker machine images must be maintained - found machineImageVersion with matching kubeletVersionConstraint constraint (worker K8s version)", func() {
+		It("should determine that the shoot worker machine images must be maintained - found machineImageVersion with matching kubeletVersionConstraint (worker K8s version)", func() {
 			assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", "1.0.0")
 			cloudProfile.Spec.MachineImages[0].Versions[1].KubeletVersionConstraint = pointer.String(">= 1.26")
 			shoot.Spec.Kubernetes.Version = "1.27.0"

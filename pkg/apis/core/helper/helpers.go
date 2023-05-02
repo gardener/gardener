@@ -213,6 +213,22 @@ func SeedSettingTopologyAwareRoutingEnabled(settings *core.SeedSettings) bool {
 	return settings != nil && settings.TopologyAwareRouting != nil && settings.TopologyAwareRouting.Enabled
 }
 
+// FindMachineImageVersion finds the machine image version in the <cloudProfile> for the given <name> and <version>.
+// In case no machine image version can be found with the given <name> or <version>, false is being returned.
+func FindMachineImageVersion(machineImages []core.MachineImage, name, version string) (core.MachineImageVersion, bool) {
+	for _, image := range machineImages {
+		if image.Name == name {
+			for _, imageVersion := range image.Versions {
+				if imageVersion.Version == version {
+					return imageVersion, true
+				}
+			}
+		}
+	}
+
+	return core.MachineImageVersion{}, false
+}
+
 // ShootUsesUnmanagedDNS returns true if the shoot's DNS section is marked as 'unmanaged'.
 func ShootUsesUnmanagedDNS(shoot *core.Shoot) bool {
 	if shoot.Spec.DNS == nil {
