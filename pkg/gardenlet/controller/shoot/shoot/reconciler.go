@@ -537,7 +537,9 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		startRotationCA(shoot, &now)
 		startRotationServiceAccountKey(shoot, &now)
 		startRotationKubeconfig(shoot, &now)
-		startRotationSSHKeypair(shoot, &now)
+		if v1beta1helper.ShootEnablesSSHAccess(shoot) {
+			startRotationSSHKeypair(shoot, &now)
+		}
 		startRotationObservability(shoot, &now)
 		startRotationETCDEncryptionKey(shoot, &now)
 	case v1beta1constants.OperationRotateCredentialsComplete:
@@ -559,7 +561,9 @@ func (r *Reconciler) updateShootStatusOperationStart(
 
 	case v1beta1constants.ShootOperationRotateSSHKeypair:
 		mustRemoveOperationAnnotation = true
-		startRotationSSHKeypair(shoot, &now)
+		if v1beta1helper.ShootEnablesSSHAccess(shoot) {
+			startRotationSSHKeypair(shoot, &now)
+		}
 
 	case v1beta1constants.ShootOperationRotateObservabilityCredentials:
 		mustRemoveOperationAnnotation = true

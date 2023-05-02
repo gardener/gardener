@@ -110,6 +110,13 @@ var _ = Describe("operatingsystemconfig", func() {
 			},
 		})
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+			Spec: gardencorev1beta1.ShootSpec{
+				Provider: gardencorev1beta1.Provider{
+					Workers: []gardencorev1beta1.Worker{
+						{Name: "foo"},
+					},
+				},
+			},
 			Status: gardencorev1beta1.ShootStatus{
 				TechnicalID: "shoot--garden-testing",
 			},
@@ -164,13 +171,13 @@ var _ = Describe("operatingsystemconfig", func() {
 				operatingSystemConfig.EXPECT().SetAPIServerURL(fmt.Sprintf("https://api.%s", shootDomain))
 				operatingSystemConfig.EXPECT().SetSSHPublicKeys(gomock.AssignableToTypeOf([]string{}))
 
-				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-					Status: gardencorev1beta1.ShootStatus{
-						LastOperation: &gardencorev1beta1.LastOperation{
-							Type: gardencorev1beta1.LastOperationTypeRestore,
-						},
+				shoot := botanist.Shoot.GetInfo()
+				shoot.Status = gardencorev1beta1.ShootStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						Type: gardencorev1beta1.LastOperationTypeRestore,
 					},
-				})
+				}
+				botanist.Shoot.SetInfo(shoot)
 
 				operatingSystemConfig.EXPECT().SetCABundle(nil)
 			})

@@ -1389,7 +1389,8 @@ func IsWorkerless(shoot *gardencorev1beta1.Shoot) bool {
 
 // ShootEnablesSSHAccess returns true if ssh access to worker nodes should be allowed for the given shoot.
 func ShootEnablesSSHAccess(shoot *gardencorev1beta1.Shoot) bool {
-	return shoot.Spec.Provider.WorkersSettings == nil || shoot.Spec.Provider.WorkersSettings.SSHAccess == nil || shoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled
+	return !IsWorkerless(shoot) &&
+		(shoot.Spec.Provider.WorkersSettings == nil || shoot.Spec.Provider.WorkersSettings.SSHAccess == nil || shoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled)
 }
 
 // GetFailureToleranceType determines the failure tolerance type of the given shoot.
