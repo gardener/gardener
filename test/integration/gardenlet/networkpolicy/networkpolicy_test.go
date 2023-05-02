@@ -30,6 +30,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	networkpolicyhelper "github.com/gardener/gardener/pkg/controller/networkpolicy/helper"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -597,6 +598,67 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace.Name, Name: networkPolicyName}, networkPolicy)).To(Succeed())
 				return networkPolicy.ResourceVersion
 			}).Should(Equal(beforeShootNetworkPolicy.ResourceVersion))
+		})
+	})
+
+	Context("seed gets registered as garden", func() {
+		var garden *operatorv1alpha1.Garden
+
+		BeforeEach(func() {
+			garden = &operatorv1alpha1.Garden{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "garden-",
+					Labels: map[string]string{
+						testID: testRunID,
+					},
+				},
+				Spec: operatorv1alpha1.GardenSpec{
+					RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+						Networking: operatorv1alpha1.RuntimeNetworking{
+							Pods:     "10.1.0.0/16",
+							Services: "10.2.0.0/16",
+						},
+					},
+					VirtualCluster: operatorv1alpha1.VirtualCluster{
+						DNS: operatorv1alpha1.DNS{
+							Domain: "virtual-garden.local.gardener.cloud",
+						},
+						Kubernetes: operatorv1alpha1.Kubernetes{
+							Version: "1.26.3",
+						},
+						Maintenance: operatorv1alpha1.Maintenance{
+							TimeWindow: gardencorev1beta1.MaintenanceTimeWindow{
+								Begin: "220000+0100",
+								End:   "230000+0100",
+							},
+						},
+						Networking: operatorv1alpha1.Networking{
+							Services: "100.64.0.0/13",
+						},
+					},
+				},
+			}
+		})
+
+		It("should not call the cancel function", func() {
+			Consistently(func() <-chan struct{} {
+				return testContext.Done()
+			}).ShouldNot(BeClosed())
+		})
+
+		It("should call the cancel function", func() {
+			By("Create Garden")
+			Expect(testClient.Create(ctx, garden)).To(Succeed())
+			log.Info("Created Garden for test", "garden", garden.Name)
+
+			DeferCleanup(func() {
+				By("Delete Garden")
+				Expect(client.IgnoreNotFound(testClient.Delete(ctx, garden))).To(Succeed())
+			})
+
+			Eventually(func() <-chan struct{} {
+				return testContext.Done()
+			}).Should(BeClosed())
 		})
 	})
 })

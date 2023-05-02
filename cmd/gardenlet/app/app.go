@@ -423,6 +423,7 @@ func (g *garden) Start(ctx context.Context) error {
 	if err := controller.AddToManager(
 		ctx,
 		g.mgr,
+		g.cancel,
 		gardenCluster,
 		g.mgr,
 		shootClientMap,

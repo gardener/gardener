@@ -18,6 +18,7 @@ import (
 	"context"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -39,6 +40,7 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy/hostnameresolver"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
@@ -47,6 +49,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 func TestNetworkPolicy(t *testing.T) {
@@ -61,9 +64,10 @@ const (
 )
 
 var (
-	testRunID  string
-	testCancel context.CancelFunc
+	testRunID string
 
+	testContext     context.Context
+	testCancel      context.CancelFunc
 	gardenNamespace *corev1.Namespace
 
 	ctx = context.Background()
@@ -82,7 +86,10 @@ var _ = BeforeSuite(func() {
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		Environment: &envtest.Environment{
 			CRDInstallOptions: envtest.CRDInstallOptions{
-				Paths: []string{filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_clusters.yaml")},
+				Paths: []string{
+					filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_clusters.yaml"),
+					filepath.Join("..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml"),
+				},
 			},
 			ErrorIfCRDPathMissing: true,
 		},
@@ -105,6 +112,7 @@ var _ = BeforeSuite(func() {
 	testSchemeBuilder := runtime.NewSchemeBuilder(
 		kubernetes.AddGardenSchemeToScheme,
 		extensionsv1alpha1.AddToScheme,
+		operatorv1alpha1.AddToScheme,
 	)
 	testScheme := runtime.NewScheme()
 	Expect(testSchemeBuilder.AddToScheme(testScheme)).To(Succeed())
@@ -152,7 +160,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Register controller")
-	Expect(networkpolicy.AddToManager(mgr, mgr, config.GardenletConfiguration{
+	DeferCleanup(test.WithVar(&networkpolicy.SeedIsGardenCheckInterval, 500*time.Millisecond))
+	testContext, testCancel = context.WithCancel(ctx)
+	Expect(networkpolicy.AddToManager(ctx, mgr, testCancel, mgr, config.GardenletConfiguration{
 		Controllers: &config.GardenletControllerConfiguration{
 			NetworkPolicy: &config.NetworkPolicyControllerConfiguration{ConcurrentSyncs: pointer.Int(5)},
 		},

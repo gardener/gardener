@@ -15,6 +15,11 @@
 package networkpolicy
 
 import (
+	"context"
+	"fmt"
+	"time"
+
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -30,15 +35,30 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
+
+// SeedIsGardenCheckInterval is the interval how often it should be checked whether the seed cluster has been registered
+// as garden cluster.
+var SeedIsGardenCheckInterval = time.Minute
 
 // AddToManager adds all Seed controllers to the given manager.
 func AddToManager(
+	ctx context.Context,
 	mgr manager.Manager,
+	gardenletCancel context.CancelFunc,
 	seedCluster cluster.Cluster,
 	cfg config.GardenletConfiguration,
 	resolver hostnameresolver.HostResolver,
 ) error {
+	seedIsGarden, err := gardenerutils.SeedIsGarden(ctx, seedCluster.GetAPIReader())
+	if err != nil {
+		return fmt.Errorf("failed checking whether the seed is the garden cluster: %w", err)
+	}
+	if seedIsGarden {
+		return nil // When the seed is the garden cluster at the same time, the gardener-operator runs this controller.
+	}
+
 	reconciler := &networkpolicy.Reconciler{
 		ConcurrentSyncs: cfg.Controllers.NetworkPolicy.ConcurrentSyncs,
 		Resolver:        resolver,
@@ -58,7 +78,32 @@ func AddToManager(
 		)
 	})
 
-	return reconciler.AddToManager(mgr, seedCluster)
+	if err := reconciler.AddToManager(mgr, seedCluster); err != nil {
+		return err
+	}
+
+	// At this point, the seed is not the garden cluster at the same time. However, this could change during the runtime
+	// of gardenlet. If so, gardener-operator will take over responsiblity of the NetworkPolicy management and will run
+	// this controller. Since there is no way to stop a controller after it started, we cancel the manager context in
+	// case the seed is registered as garden during runtime. This way, gardenlet will restart and not add the controller
+	// again.
+	return mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
+		wait.Until(func() {
+			seedIsGarden, err = gardenerutils.SeedIsGarden(ctx, seedCluster.GetClient())
+			if err != nil {
+				mgr.GetLogger().Error(err, "Failed checking whether the seed cluster is the garden cluster at the same time")
+				return
+			}
+			if !seedIsGarden {
+				return
+			}
+
+			mgr.GetLogger().Info("Terminating gardenlet since seed cluster has been registered as garden cluster. " +
+				"This effectively stops the NetworkPolicy controller (gardener-operator takes over now).")
+			gardenletCancel()
+		}, SeedIsGardenCheckInterval, ctx.Done())
+		return nil
+	}))
 }
 
 // ClusterPredicate is a predicate which returns 'true' when the network CIDRs of a shoot cluster change.

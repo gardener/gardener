@@ -182,14 +182,14 @@ var _ = Describe("utils", func() {
 	Describe("#SeedIsGarden", func() {
 		var (
 			ctx        context.Context
-			mockClient *mockclient.MockClient
+			mockReader *mockclient.MockReader
 			ctrl       *gomock.Controller
 		)
 
 		BeforeEach(func() {
 			ctx = context.Background()
 			ctrl = gomock.NewController(GinkgoT())
-			mockClient = mockclient.NewMockClient(ctrl)
+			mockReader = mockclient.NewMockReader(ctrl)
 		})
 
 		AfterEach(func() {
@@ -197,25 +197,25 @@ var _ = Describe("utils", func() {
 		})
 
 		It("should return that seed is a garden cluster", func() {
-			mockClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.Limit(1)).DoAndReturn(
+			mockReader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.Limit(1)).DoAndReturn(
 				func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
 					list.Items = []metav1.PartialObjectMetadata{{}}
 					return nil
 				})
-			Expect(SeedIsGarden(ctx, mockClient)).To(BeTrue())
+			Expect(SeedIsGarden(ctx, mockReader)).To(BeTrue())
 		})
 
 		It("should return that seed is a not a garden cluster because no garden object found", func() {
-			mockClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.Limit(1))
-			Expect(SeedIsGarden(ctx, mockClient)).To(BeFalse())
+			mockReader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.Limit(1))
+			Expect(SeedIsGarden(ctx, mockReader)).To(BeFalse())
 		})
 
 		It("should return that seed is a not a garden cluster because of a no match error", func() {
-			mockClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.Limit(1)).DoAndReturn(
+			mockReader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.Limit(1)).DoAndReturn(
 				func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
 					return &meta.NoResourceMatchError{}
 				})
-			Expect(SeedIsGarden(ctx, mockClient)).To(BeFalse())
+			Expect(SeedIsGarden(ctx, mockReader)).To(BeFalse())
 		})
 	})
 })

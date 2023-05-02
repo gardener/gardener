@@ -49,6 +49,7 @@ import (
 func AddToManager(
 	ctx context.Context,
 	mgr manager.Manager,
+	gardenletCancel context.CancelFunc,
 	gardenCluster cluster.Cluster,
 	seedCluster cluster.Cluster,
 	shootClientMap clientmap.ClientMap,
@@ -129,7 +130,7 @@ func AddToManager(
 		return fmt.Errorf("failed adding ManagedSeed controller: %w", err)
 	}
 
-	if err := networkpolicy.AddToManager(mgr, seedCluster, *cfg, nil); err != nil {
+	if err := networkpolicy.AddToManager(ctx, mgr, gardenletCancel, seedCluster, *cfg, nil); err != nil {
 		return fmt.Errorf("failed adding NetworkPolicy controller: %w", err)
 	}
 
