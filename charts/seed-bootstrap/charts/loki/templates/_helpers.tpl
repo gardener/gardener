@@ -49,6 +49,18 @@ curator.yaml: |-
     MinFreePercentages: 10
     TargetFreePercentages: 15
     PageSizeForDeletionPercentages: 1
+loki-init.sh: |-
+  #!/bin/bash
+  set -o errexit
+  
+  function error() {
+      exit_code=$?
+      echo "${BASH_COMMAND} failed, exit code $exit_code"
+  }
+  
+  trap error ERR
+  
+  tune2fs -O large_dir $(mount | gawk '{if($3=="/data") {print $1}}')    
 {{- end -}}
 
 {{- define "loki.config.name" -}}
