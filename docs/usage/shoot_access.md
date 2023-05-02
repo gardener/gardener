@@ -55,7 +55,7 @@ Shoots have to "opt-in" for such defaulting by using the `oidc=enable` label.
 
 For further information on `(Cluster)OpenIDConnectPreset`, refer to [ClusterOpenIDConnectPreset and OpenIDConnectPreset](openidconnect-presets.md).
 
-## Static Token kubeconfig
+## Static Token kubeconfig (deprecated)
 
 > **Note:** Static token kubeconfig is deprecated for Shoot clusters using Kubernetes version >= 1.27
 
