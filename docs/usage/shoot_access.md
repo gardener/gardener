@@ -55,9 +55,9 @@ Shoots have to "opt-in" for such defaulting by using the `oidc=enable` label.
 
 For further information on `(Cluster)OpenIDConnectPreset`, refer to [ClusterOpenIDConnectPreset and OpenIDConnectPreset](openidconnect-presets.md).
 
-## Static Token kubeconfig (deprecated)
+## Static Token kubeconfig 
 
-> **Note:** Static token kubeconfig is deprecated for Shoot clusters using Kubernetes version >= 1.27. The [`shoots/adminkubeconfig` subresource](#shootsadminkubeconfig-subresource) should be used instead.
+> **Note:** Static token kubeconfig is not available for Shoot clusters created with Kubernetes version >= 1.27. The [`shoots/adminkubeconfig` subresource](#shootsadminkubeconfig-subresource) should be used instead.
 
 This `kubeconfig` contains a [static token](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#static-token-file) and provides `cluster-admin` privileges.
 It is created by default and persisted in the `<shoot-name>.kubeconfig` secret in the project namespace in the garden cluster.
