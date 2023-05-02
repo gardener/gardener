@@ -28,6 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -45,7 +46,11 @@ func TestHighAvailabilityConfig(t *testing.T) {
 	RunSpecs(t, "Test Integration ResourceManager HighAvailabilityConfig Suite")
 }
 
-const testIDPrefix = "high-availability-config-webhook-test"
+const (
+	testIDPrefix                        = "high-availability-config-webhook-test"
+	defaultNotReadyTolerationSeconds    = 60
+	defaultUnreachableTolerationSeconds = 120
+)
 
 var (
 	ctx = context.Background()
@@ -110,7 +115,9 @@ var _ = BeforeSuite(func() {
 		Logger:       log,
 		TargetClient: testClient,
 		// Use the same version as the envtest package
-		TargetVersion: semver.MustParse("1.26.0"),
+		TargetVersion:                       semver.MustParse("1.26.0"),
+		DefaultNotReadyTolerationSeconds:    pointer.Int64(defaultNotReadyTolerationSeconds),
+		DefaultUnreachableTolerationSeconds: pointer.Int64(defaultUnreachableTolerationSeconds),
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("Start manager")

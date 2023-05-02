@@ -76,9 +76,11 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 
 	if cfg.Webhooks.HighAvailabilityConfig.Enabled {
 		if err := (&highavailabilityconfig.Handler{
-			Logger:        mgr.GetLogger().WithName("webhook").WithName(highavailabilityconfig.HandlerName),
-			TargetClient:  targetCluster.GetClient(),
-			TargetVersion: targetVersion,
+			Logger:                              mgr.GetLogger().WithName("webhook").WithName(highavailabilityconfig.HandlerName),
+			TargetClient:                        targetCluster.GetClient(),
+			TargetVersion:                       targetVersion,
+			DefaultNotReadyTolerationSeconds:    cfg.Webhooks.HighAvailabilityConfig.DefaultNotReadyTolerationSeconds,
+			DefaultUnreachableTolerationSeconds: cfg.Webhooks.HighAvailabilityConfig.DefaultUnreachableTolerationSeconds,
 		}).AddToManager(mgr); err != nil {
 			return fmt.Errorf("failed adding %s webhook handler: %w", highavailabilityconfig.HandlerName, err)
 		}

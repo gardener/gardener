@@ -57,6 +57,9 @@ type Handler struct {
 	TargetClient  client.Reader
 	TargetVersion *semver.Version
 
+	DefaultNotReadyTolerationSeconds    *int64
+	DefaultUnreachableTolerationSeconds *int64
+
 	decoder *admission.Decoder
 }
 
@@ -177,6 +180,10 @@ func (h *Handler) handleDeployment(
 		&deployment.Spec.Template,
 	)
 
+	h.mutatePodTolerationSeconds(
+		&deployment.Spec.Template,
+	)
+
 	return deployment, nil
 }
 
@@ -222,6 +229,10 @@ func (h *Handler) handleStatefulSet(
 		isHorizontallyScaled,
 		statefulSet.Spec.Replicas,
 		maxReplicas,
+		&statefulSet.Spec.Template,
+	)
+
+	h.mutatePodTolerationSeconds(
 		&statefulSet.Spec.Template,
 	)
 
@@ -457,6 +468,45 @@ func (h *Handler) mutateTopologySpreadConstraints(
 		}
 
 		podTemplateSpec.Spec.TopologySpreadConstraints = append(filteredConstraints, constraints...)
+	}
+}
+
+func (h *Handler) mutatePodTolerationSeconds(podTemplateSpec *corev1.PodTemplateSpec) {
+	var (
+		toleratesNodeNotReady    bool
+		toleratesNodeUnreachable bool
+	)
+
+	// Check if toleration is already specific in podTemplate.
+	for _, toleration := range podTemplateSpec.Spec.Tolerations {
+		if len(toleration.Effect) > 0 && toleration.Effect != corev1.TaintEffectNoExecute {
+			continue
+		}
+
+		switch toleration.Key {
+		case corev1.TaintNodeNotReady:
+			toleratesNodeNotReady = true
+		case corev1.TaintNodeUnreachable:
+			toleratesNodeUnreachable = true
+		}
+	}
+
+	if !toleratesNodeNotReady && h.DefaultNotReadyTolerationSeconds != nil {
+		podTemplateSpec.Spec.Tolerations = append(podTemplateSpec.Spec.Tolerations, corev1.Toleration{
+			Key:               corev1.TaintNodeNotReady,
+			Operator:          corev1.TolerationOpExists,
+			Effect:            corev1.TaintEffectNoExecute,
+			TolerationSeconds: h.DefaultNotReadyTolerationSeconds,
+		})
+	}
+
+	if !toleratesNodeUnreachable && h.DefaultUnreachableTolerationSeconds != nil {
+		podTemplateSpec.Spec.Tolerations = append(podTemplateSpec.Spec.Tolerations, corev1.Toleration{
+			Key:               corev1.TaintNodeUnreachable,
+			Operator:          corev1.TolerationOpExists,
+			Effect:            corev1.TaintEffectNoExecute,
+			TolerationSeconds: h.DefaultUnreachableTolerationSeconds,
+		})
 	}
 }
 

@@ -373,6 +373,31 @@ var _ = Describe("Validation", func() {
 					))
 				})
 			})
+
+			Context("high availability config", func() {
+				It("should succeed with valid toleration options", func() {
+					conf.Webhooks.HighAvailabilityConfig.DefaultNotReadyTolerationSeconds = pointer.Int64(60)
+					conf.Webhooks.HighAvailabilityConfig.DefaultUnreachableTolerationSeconds = pointer.Int64(120)
+
+					Expect(ValidateResourceManagerConfiguration(conf)).To(BeEmpty())
+				})
+
+				It("should fail with invalid toleration options", func() {
+					conf.Webhooks.HighAvailabilityConfig.DefaultNotReadyTolerationSeconds = pointer.Int64(-1)
+					conf.Webhooks.HighAvailabilityConfig.DefaultUnreachableTolerationSeconds = pointer.Int64(-2)
+
+					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("webhooks.highAvailabilityConfig.defaultNotReadyTolerationSeconds"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("webhooks.highAvailabilityConfig.defaultUnreachableTolerationSeconds"),
+						})),
+					))
+				})
+			})
 		})
 	})
 })
