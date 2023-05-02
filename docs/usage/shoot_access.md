@@ -57,7 +57,7 @@ For further information on `(Cluster)OpenIDConnectPreset`, refer to [ClusterOpen
 
 ## Static Token kubeconfig
 
-> **Note:** Static token kubeconfig is deprekated for Shoot clusters using Kubernetes version >= 1.27
+> **Note:** Static token kubeconfig is deprecated for Shoot clusters using Kubernetes version >= 1.27
 
 This `kubeconfig` contains a [static token](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#static-token-file) and provides `cluster-admin` privileges.
 It is created by default and persisted in the `<shoot-name>.kubeconfig` secret in the project namespace in the garden cluster.
