@@ -370,7 +370,8 @@ func shootNetworkingTypeHasChanged(old, new *gardencorev1beta1.Networking) bool 
 		return new.Type != nil
 	}
 	if old != nil && new == nil {
-		return true
+		// if old was non-nil and had a type set, return true
+		return old.Type != nil
 	}
 	return !pointer.StringEqual(old.Type, new.Type)
 }
