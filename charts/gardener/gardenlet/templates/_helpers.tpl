@@ -302,6 +302,10 @@ config.yaml: |
   exposureClassHandlers:
 {{ toYaml .Values.config.exposureClassHandlers | indent 2 }}
   {{- end }}
+  {{- if .Values.nodeToleration }}
+  nodeToleration:
+{{ toYaml .Values.nodeToleration | indent 4}}
+  {{- end}}
 {{- end -}}
 
 {{- define "gardenlet.config.name" -}}

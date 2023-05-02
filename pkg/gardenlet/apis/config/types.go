@@ -71,6 +71,8 @@ type GardenletConfiguration struct {
 	ExposureClassHandlers []ExposureClassHandler
 	// MonitoringConfig is optional and adds additional settings for the monitoring stack.
 	Monitoring *MonitoringConfig
+	// NodeToleration contains optional settings for default tolerations.
+	NodeToleration *NodeToleration
 }
 
 // GardenClientConnection specifies the kubeconfig file and the client connection settings
@@ -557,4 +559,14 @@ type RemoteWriteMonitoringConfig struct {
 	Keep []string
 	// QueueConfig contains the queue_config for prometheus remote write.
 	QueueConfig *string
+}
+
+// NodeToleration contains information about node toleration options.
+type NodeToleration struct {
+	// DefaultNotReadyTolerationSeconds specifies the seconds for the `node.kubernetes.io/not-ready` toleration that
+	// should be added to pods not already tolerating this taint.
+	DefaultNotReadyTolerationSeconds *int64
+	// DefaultUnreachableTolerationSeconds specifies the seconds for the `node.kubernetes.io/unreachable` toleration that
+	// should be added to pods not already tolerating this taint.
+	DefaultUnreachableTolerationSeconds *int64
 }

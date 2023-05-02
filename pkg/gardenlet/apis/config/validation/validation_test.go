@@ -577,6 +577,52 @@ var _ = Describe("GardenletConfiguration", func() {
 				})
 			})
 		})
+
+		Context("nodeToleration", func() {
+			It("should pass with unset toleration options", func() {
+				cfg.NodeToleration = nil
+
+				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
+			})
+
+			It("should pass with unset toleration seconds", func() {
+				cfg.NodeToleration = &config.NodeToleration{
+					DefaultNotReadyTolerationSeconds:    nil,
+					DefaultUnreachableTolerationSeconds: nil,
+				}
+
+				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
+			})
+
+			It("should pass with valid toleration options", func() {
+				cfg.NodeToleration = &config.NodeToleration{
+					DefaultNotReadyTolerationSeconds:    pointer.Int64(60),
+					DefaultUnreachableTolerationSeconds: pointer.Int64(120),
+				}
+
+				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
+			})
+
+			It("should fail with invalid toleration options", func() {
+				cfg.NodeToleration = &config.NodeToleration{
+					DefaultNotReadyTolerationSeconds:    pointer.Int64(-1),
+					DefaultUnreachableTolerationSeconds: pointer.Int64(-2),
+				}
+
+				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("nodeToleration.defaultNotReadyTolerationSeconds"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("nodeToleration.defaultUnreachableTolerationSeconds"),
+					}))),
+				)
+			})
+		})
 	})
 
 	Describe("#ValidateGardenletConfigurationUpdate", func() {

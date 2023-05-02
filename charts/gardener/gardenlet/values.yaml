@@ -201,3 +201,6 @@ config:
 #         max_backoff: 60s
 #     externalLabels: # add additional labels to metrics to identify it on the central instance
 #       additional: label
+# nodeToleration:
+#   defaultNotReadyTolerationSeconds: 60
+#   defaultUnreachableTolerationSeconds: 60

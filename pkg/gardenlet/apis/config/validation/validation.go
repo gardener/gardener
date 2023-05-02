@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/pointer"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
@@ -131,6 +132,13 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 				allErrs = append(allErrs, field.Invalid(handlerPath.Child("sni", "ingress", "serviceExternalIP"), handler.SNI.Ingress.ServiceExternalIP, "external service ip is invalid"))
 			}
 		}
+	}
+
+	if nodeTolerationCfg := cfg.NodeToleration; nodeTolerationCfg != nil {
+		nodeTolerationConfigPath := fldPath.Child("nodeToleration")
+
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(pointer.Int64Deref(nodeTolerationCfg.DefaultNotReadyTolerationSeconds, 0), nodeTolerationConfigPath.Child("defaultNotReadyTolerationSeconds"))...)
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(pointer.Int64Deref(nodeTolerationCfg.DefaultUnreachableTolerationSeconds, 0), nodeTolerationConfigPath.Child("defaultUnreachableTolerationSeconds"))...)
 	}
 
 	return allErrs
