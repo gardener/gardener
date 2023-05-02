@@ -42,7 +42,11 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 	var (
 		pods, services string
 		nodes          *string
+		vpnConfig      = kubeapiserver.VPNConfig{
+			Enabled: false,
+		}
 	)
+
 	if b.Shoot.Networks != nil {
 		if b.Shoot.Networks.Pods != nil {
 			pods = b.Shoot.Networks.Pods.String()
@@ -53,6 +57,15 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 	}
 	if b.Shoot.GetInfo().Spec.Networking != nil {
 		nodes = b.Shoot.GetInfo().Spec.Networking.Nodes
+	}
+
+	if !b.Shoot.IsWorkerless {
+		vpnConfig.Enabled = true
+		vpnConfig.PodNetworkCIDR = pods
+		vpnConfig.NodeNetworkCIDR = nodes
+		vpnConfig.HighAvailabilityEnabled = b.Shoot.VPNHighAvailabilityEnabled
+		vpnConfig.HighAvailabilityNumberOfSeedServers = b.Shoot.VPNHighAvailabilityNumberOfSeedServers
+		vpnConfig.HighAvailabilityNumberOfShootClients = b.Shoot.VPNHighAvailabilityNumberOfShootClients
 	}
 
 	return shared.NewKubeAPIServer(
@@ -69,14 +82,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer,
 		b.computeKubeAPIServerAutoscalingConfig(),
 		services,
-		kubeapiserver.VPNConfig{
-			Enabled:                              true,
-			PodNetworkCIDR:                       pods,
-			NodeNetworkCIDR:                      nodes,
-			HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
-			HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
-			HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
-		},
+		vpnConfig,
 		v1beta1constants.PriorityClassNameShootControlPlane500,
 		b.Shoot.IsWorkerless,
 		b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig,
