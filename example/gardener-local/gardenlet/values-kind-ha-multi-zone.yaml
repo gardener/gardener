@@ -16,3 +16,7 @@ config:
       settings:
         topologyAwareRouting:
           enabled: true
+nodeToleration:
+  defaultNotReadyTolerationSeconds: 60
+  defaultUnreachableTolerationSeconds: 60
+
