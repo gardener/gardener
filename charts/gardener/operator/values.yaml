@@ -20,6 +20,9 @@ env: []
 #  Please find documentation in docs/deployment/image_vector.md
 # componentImageVectorOverwrites: |
 #  Please find documentation in docs/deployment/image_vector.md
+# nodeToleration:
+#   defaultNotReadyTolerationSeconds: 60
+#   defaultUnreachableTolerationSeconds: 60
 config:
   runtimeClientConnection:
     qps: 100
