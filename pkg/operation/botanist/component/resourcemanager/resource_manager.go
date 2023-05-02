@@ -761,6 +761,24 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 		return err
 	}
 
+	var defaultTolerations []corev1.Toleration
+	if r.values.DefaultNotReadyToleration != nil {
+		defaultTolerations = append(defaultTolerations, corev1.Toleration{
+			Key:               corev1.TaintNodeNotReady,
+			Operator:          corev1.TolerationOpExists,
+			Effect:            corev1.TaintEffectNoExecute,
+			TolerationSeconds: r.values.DefaultNotReadyToleration,
+		})
+	}
+	if r.values.DefaultUnreachableToleration != nil {
+		defaultTolerations = append(defaultTolerations, corev1.Toleration{
+			Key:               corev1.TaintNodeUnreachable,
+			Operator:          corev1.TolerationOpExists,
+			Effect:            corev1.TaintEffectNoExecute,
+			TolerationSeconds: r.values.DefaultUnreachableToleration,
+		})
+	}
+
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, deployment, func() error {
 		deployment.Labels = r.getLabels()
 
@@ -849,6 +867,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 						},
 					},
 				},
+				Tolerations: defaultTolerations,
 				Volumes: []corev1.Volume{
 					{
 						Name: volumeNameAPIServerAccess,

@@ -606,6 +606,20 @@ var _ = Describe("ResourceManager", func() {
 									},
 								},
 							},
+							Tolerations: []corev1.Toleration{
+								{
+									Key:               corev1.TaintNodeNotReady,
+									Operator:          corev1.TolerationOpExists,
+									Effect:            corev1.TaintEffectNoExecute,
+									TolerationSeconds: defaultNotReadyTolerationSeconds,
+								},
+								{
+									Key:               corev1.TaintNodeUnreachable,
+									Operator:          corev1.TolerationOpExists,
+									Effect:            corev1.TaintEffectNoExecute,
+									TolerationSeconds: defaultUnreachableTolerationSeconds,
+								},
+							},
 							Volumes: []corev1.Volume{
 								{
 									Name: "kube-api-access-gardener",

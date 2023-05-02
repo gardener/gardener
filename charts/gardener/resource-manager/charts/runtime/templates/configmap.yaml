@@ -148,6 +148,12 @@ data:
         enabled: {{ .Values.global.config.webhooks.extensionValidation.enabled }}
       highAvailabilityConfig:
         enabled: {{ .Values.global.config.webhooks.highAvailabilityConfig.enabled }}
+        {{- if .Values.global.config.webhooks.highAvailabilityConfig.defaultNotReadyTolerationSeconds }}
+        defaultNotReadyTolerationSeconds: {{ .Values.global.config.webhooks.highAvailabilityConfig.defaultNotReadyTolerationSeconds }}
+        {{- end }}
+        {{- if .Values.global.config.webhooks.highAvailabilityConfig.defaultUnreachableTolerationSeconds }}
+        defaultUnreachableTolerationSeconds: {{ .Values.global.config.webhooks.highAvailabilityConfig.defaultUnreachableTolerationSeconds }}
+        {{- end }}
       podSchedulerName:
         enabled: {{ .Values.global.config.webhooks.podSchedulerName.enabled }}
         {{- if .Values.global.config.webhooks.podSchedulerName.schedulerName }}

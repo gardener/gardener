@@ -13,6 +13,10 @@ global:
   podLabels: {}
   priorityClassName: ""
 
+# nodeToleration:
+#   defaultNotReadyTolerationSeconds: 60
+#   defaultUnreachableTolerationSeconds: 60
+
   config:
     sourceClientConnection:
       qps: 100
@@ -115,6 +119,8 @@ global:
         enabled: false
       highAvailabilityConfig:
         enabled: false
+      # defaultNotReadyTolerationSeconds: 60
+      # defaultUnreachableTolerationSeconds: 60
       podSchedulerName:
         enabled: false
       # schedulerName: foo-scheduler
