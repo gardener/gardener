@@ -588,11 +588,9 @@ func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1beta1.Cond
 	for _, cond := range extensionsConditions {
 		// check if the extension controller's last heartbeat time or the condition's LastUpdateTime is older than the configured staleExtensionHealthCheckThreshold
 		if b.staleExtensionHealthCheckThreshold != nil {
-			// TODO(plkokanov): the condition's LastUpdateTime is also checked for backwards compatibility in cases where the extension controller still
-			// does not use the heartbeat controller and therefore the LastHeartbeatTime is nil. This can be removed in the future.
 			lastHeartbeatTime := cond.LastHeartbeatTime
 			if lastHeartbeatTime == nil {
-				lastHeartbeatTime = &metav1.MicroTime{Time: cond.Condition.LastUpdateTime.Time}
+				lastHeartbeatTime = &metav1.MicroTime{}
 			}
 			if b.clock.Now().UTC().Sub(lastHeartbeatTime.UTC()) > b.staleExtensionHealthCheckThreshold.Duration {
 				c := v1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionUnknown, fmt.Sprintf("%sOutdatedHealthCheckReport", cond.ExtensionType), fmt.Sprintf("%s extension (%s/%s) reports an outdated health status (last updated: %s ago at %s).", cond.ExtensionType, cond.ExtensionNamespace, cond.ExtensionName, b.clock.Now().UTC().Sub(lastHeartbeatTime.UTC()).Round(time.Minute).String(), lastHeartbeatTime.UTC().Round(time.Minute).String()))

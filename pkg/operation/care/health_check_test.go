@@ -1180,22 +1180,6 @@ var _ = Describe("health check", func() {
 			},
 			BeNil(),
 		),
-		Entry("health check report is not outdated - LastHeartbeatTime is nil, but LastUpdateTime is maintained",
-			// 2 minute threshold for outdated health check reports
-			&metav1.Duration{Duration: time.Minute * 2},
-			gardencorev1beta1.Condition{Type: "type"},
-			[]care.ExtensionCondition{
-				{
-					Condition: gardencorev1beta1.Condition{
-						Type:   gardencorev1beta1.ShootControlPlaneHealthy,
-						Status: gardencorev1beta1.ConditionTrue,
-						// health check result is only 30 seconds old so < than the staleExtensionHealthCheckThreshold
-						LastUpdateTime: metav1.Time{Time: time.Now().Add(time.Second * -30)},
-					},
-				},
-			},
-			BeNil(),
-		),
 		Entry("should determine that health check report is outdated - LastHeartbeatTime is nil",
 			// 2 minute threshold for outdated health check reports
 			&metav1.Duration{Duration: time.Minute * 2},
