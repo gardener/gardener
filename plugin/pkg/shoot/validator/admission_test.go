@@ -3629,23 +3629,6 @@ var _ = Describe("validator", func() {
 					Expect(err.Error()).To(ContainSubstring("spec.provider.workers[1].cri.containerRuntimes[0].providerConfig: Invalid value: \"some.api/__internal, Kind=ContainerRuntimeConfig\": must not use apiVersion 'internal'"))
 				})
 
-				// TODO (voelzmo): remove this test and the associated production code once we gave owners of existing Shoots a nice grace period to move away from 'internal' apiVersion
-				It("ensures existing clusters can still use the apiVersion 'internal' for compatibility reasons", func() {
-					oldShoot := shoot.DeepCopy()
-
-					// update the Shoot spec to avoid early exit in the admission process
-					shoot.Spec.Provider.Workers[0].Maximum = 1337
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-
-					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).NotTo(HaveOccurred())
-				})
-
 				It("admits new clusters using other apiVersion than 'internal'", func() {
 					shoot.Spec.Provider.InfrastructureConfig = &runtime.RawExtension{
 						Raw: []byte(`{

@@ -283,10 +283,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	validationContext.addMetadataAnnotations(a)
 
 	var allErrs field.ErrorList
-	// TODO (voelzmo): remove this 'if' statement once we gave owners of existing Shoots a nice grace period to move away from 'internal' apiVersion
-	if a.GetOperation() == admission.Create {
-		allErrs = append(allErrs, validationContext.validateAPIVersionForRawExtensions()...)
-	}
+	allErrs = append(allErrs, validationContext.validateAPIVersionForRawExtensions()...)
 	allErrs = append(allErrs, validationContext.validateShootNetworks(gardencorehelper.IsWorkerless(shoot))...)
 	allErrs = append(allErrs, validationContext.validateKubernetes(a)...)
 	allErrs = append(allErrs, validationContext.validateRegion()...)
