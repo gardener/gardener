@@ -672,7 +672,7 @@ subjects:
 				configWithNodeMonitorGracePeriod = &gardencorev1beta1.KubeControllerManagerConfig{NodeMonitorGracePeriod: &nodeMonitorGracePeriod}
 			)
 
-			DescribeTable("success tests for various kubernetes versions(shoots with workers)",
+			DescribeTable("success tests for various kubernetes versions (shoots with workers)",
 				func(version string, config *gardencorev1beta1.KubeControllerManagerConfig, hvpaConfig *HVPAConfig) {
 					isWorkerless = false
 					semverVersion, err := semver.NewVersion(version)
@@ -786,7 +786,7 @@ subjects:
 				Entry("kubernetes 1.20 with NodeMonitorGradePeriod", "1.20.0", configWithNodeMonitorGracePeriod, hvpaConfigDisabled),
 			)
 
-			DescribeTable("success tests for various kubernetes versions(workerless shoot)",
+			DescribeTable("success tests for various kubernetes versions (workerless shoot)",
 				func(version string, config *gardencorev1beta1.KubeControllerManagerConfig, hvpaConfig *HVPAConfig) {
 					isWorkerless = true
 					semverVersion, err := semver.NewVersion(version)

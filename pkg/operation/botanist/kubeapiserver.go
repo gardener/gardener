@@ -55,6 +55,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 			services = b.Shoot.Networks.Services.String()
 		}
 	}
+
 	if b.Shoot.GetInfo().Spec.Networking != nil {
 		nodes = b.Shoot.GetInfo().Spec.Networking.Nodes
 	}

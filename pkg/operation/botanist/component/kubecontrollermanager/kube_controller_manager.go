@@ -171,7 +171,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAClient)
 	}
 
-	secretCAKubelet := &corev1.Secret{}
+	var secretCAKubelet *corev1.Secret
 	if !k.isWorkerless {
 		secretCAKubelet, found = k.secretsManager.Get(v1beta1constants.SecretNameCAKubelet, secretsmanager.Current)
 		if !found {

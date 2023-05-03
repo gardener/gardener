@@ -2522,7 +2522,7 @@ var _ = Describe("helper", func() {
 			Expect(IsPSPDisabled(shoot)).To(BeFalse())
 		})
 
-		It("should return for workerless Shoots", func() {
+		It("should return true for workerless Shoots", func() {
 			shoot.Spec.Provider.Workers = nil
 
 			Expect(IsPSPDisabled(shoot)).To(BeTrue())
