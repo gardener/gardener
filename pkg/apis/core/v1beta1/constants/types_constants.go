@@ -269,10 +269,6 @@ const (
 	// GardenRoleExposureClassHandler is the value of the GardenRole key indicating type 'exposureclass-handler'.
 	GardenRoleExposureClassHandler = "exposureclass-handler"
 
-	// ShootControlPlaneEnforceZone is an annotation key which is used to pin or schedule all control-plane pods
-	// to the very same availability zone.
-	// Deprecated: Only kept for removal of the label.
-	ShootControlPlaneEnforceZone = "control-plane.shoot.gardener.cloud/enforce-zone"
 	// ShootUID is an annotation key for the shoot namespace in the seed cluster,
 	// which value will be the value of `shoot.status.uid`
 	ShootUID = "shoot.gardener.cloud/uid"
