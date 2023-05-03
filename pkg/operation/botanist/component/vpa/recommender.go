@@ -180,12 +180,6 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: utils.MergeStringMaps(getAllLabels(recommender), map[string]string{
 					v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed,
-					// TODO(rfranzke): Replace this label as soon as gardener-resource-manager's NetworkPolicy
-					//  controller is active for the garden namespace (seed-prometheus scrapes all vpa-recommenders in
-					//  all namespaces).
-					//  Actually, seed-prometheus should probably only scrape the vpa-recommender in garden namespace,
-					//  and the prometheis in the shoot namespaces should scrape their vpa-recommenders.
-					v1beta1constants.LabelNetworkPolicyFromPrometheus: v1beta1constants.LabelNetworkPolicyAllowed,
 				}),
 			},
 			Spec: corev1.PodSpec{
@@ -289,7 +283,7 @@ func (v *vpa) reconcileRecommenderService(service *corev1.Service) {
 		}))
 
 	// TODO: For whatever reasons, the seed-prometheus also scrapes vpa-recommenders in all shoot namespaces.
-	//  Conceptionally, this is wrong and should be improved (seed-prometheus should only scrape vpa-recommenders in
+	//  Conceptually, this is wrong and should be improved (seed-prometheus should only scrape vpa-recommenders in
 	//  garden namespace, and prometheis in shoot namespaces should scrape their vpa-recommenders, respectively).
 	case component.ClusterTypeShoot:
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service, metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}}))
