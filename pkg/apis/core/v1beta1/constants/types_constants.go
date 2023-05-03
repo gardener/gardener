@@ -543,11 +543,6 @@ const (
 	// Kubernetes resources' step. Concretely, after the specified seconds, all the finalizers of the affected resources
 	// are forcefully removed.
 	AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds = "shoot.gardener.cloud/cleanup-kubernetes-resources-finalize-grace-period-seconds"
-	// AnnotationShootCleanupNamespaceResourcesFinalizeGracePeriodSeconds is a key for an annotation on a Shoot
-	// resource that declares the grace period in seconds for finalizing the resources handled in the 'cleanup shoot
-	// namespaces' step. Concretely, after the specified seconds, all the finalizers of the affected resources are
-	// forcefully removed.
-	AnnotationShootCleanupNamespaceResourcesFinalizeGracePeriodSeconds = "shoot.gardener.cloud/cleanup-namespaces-finalize-grace-period-seconds"
 	// AnnotationShootInfrastructureCleanupWaitPeriodSeconds is a key for an annotation on a Shoot
 	// resource that declares the wait period in seconds for infrastructure resources cleanup. Concretely,
 	// Gardener will wait for the specified time after the Infrastructure extension object has been deleted to allow

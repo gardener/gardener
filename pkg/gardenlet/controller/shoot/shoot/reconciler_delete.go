@@ -361,15 +361,17 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:           flow.TaskFn(botanist.Shoot.Components.SystemComponents.MetricsServer.Destroy).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(syncPointReadyForCleanup),
 		})
-		cleanShootNamespaces = g.Add(flow.Task{
-			Name:         "Cleaning shoot namespaces",
-			Fn:           flow.TaskFn(botanist.CleanShootNamespaces).Timeout(10 * time.Minute).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(cleanKubernetesResources, deleteMetricsServer),
-		})
+		syncPointCleanedKubernetesResources = flow.NewTaskIDs(
+			cleanupWebhooks,
+			cleanExtendedAPIs,
+			cleanKubernetesResources,
+			deleteMetricsServer,
+		)
+
 		destroyNetwork = g.Add(flow.Task{
 			Name:         "Destroying shoot network plugin",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Network.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(cleanShootNamespaces),
+			Dependencies: flow.NewTaskIDs(syncPointCleanedKubernetesResources),
 		})
 		waitUntilNetworkIsDestroyed = g.Add(flow.Task{
 			Name:         "Waiting until shoot network plugin has been destroyed",
@@ -379,7 +381,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		destroyWorker = g.Add(flow.Task{
 			Name:         "Destroying shoot workers",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Worker.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(cleanShootNamespaces),
+			Dependencies: flow.NewTaskIDs(syncPointCleanedKubernetesResources),
 		})
 		waitUntilWorkerDeleted = g.Add(flow.Task{
 			Name:         "Waiting until shoot worker nodes have been terminated",
@@ -399,7 +401,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		deleteManagedResources = g.Add(flow.Task{
 			Name:         "Deleting managed resources",
 			Fn:           flow.TaskFn(botanist.DeleteManagedResources).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(cleanShootNamespaces, waitUntilWorkerDeleted),
+			Dependencies: flow.NewTaskIDs(syncPointCleanedKubernetesResources, waitUntilWorkerDeleted),
 		})
 		waitUntilManagedResourcesDeleted = g.Add(flow.Task{
 			Name:         "Waiting until managed resources have been deleted",
@@ -429,7 +431,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		deleteContainerRuntimeResources = g.Add(flow.Task{
 			Name:         "Deleting container runtime resources",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.ContainerRuntime.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(initializeShootClients, cleanKubernetesResources, cleanShootNamespaces),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, syncPointCleanedKubernetesResources),
 		})
 		waitUntilContainerRuntimeResourcesDeleted = g.Add(flow.Task{
 			Name:         "Waiting until stale container runtime resources are deleted",
@@ -469,10 +471,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 
 		syncPointCleaned = flow.NewTaskIDs(
-			cleanupWebhooks,
-			cleanExtendedAPIs,
-			cleanKubernetesResources,
-			cleanShootNamespaces,
+			syncPointCleanedKubernetesResources,
 			deleteAllOperatingSystemConfigs,
 			waitUntilWorkerDeleted,
 			waitUntilManagedResourcesDeleted,
