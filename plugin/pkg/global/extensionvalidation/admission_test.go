@@ -65,7 +65,7 @@ var _ = Describe("ExtensionValidator", func() {
 		}
 
 		It("should allow to create the object", func() {
-			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupBucketResource, backupBucket.Spec.Provider.Type, true)
+			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupBucketResource, backupBucket.Spec.Provider.Type, true, nil)
 			Expect(coreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
 
 			attrs := admission.NewAttributesRecord(backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupbuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
@@ -76,7 +76,7 @@ var _ = Describe("ExtensionValidator", func() {
 		})
 
 		It("should prevent the object from being created because no primary extension is registered for type", func() {
-			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupBucketResource, backupBucket.Spec.Provider.Type, false)
+			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupBucketResource, backupBucket.Spec.Provider.Type, false, nil)
 			Expect(coreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
 
 			attrs := admission.NewAttributesRecord(backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupbuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
@@ -87,7 +87,7 @@ var _ = Describe("ExtensionValidator", func() {
 		})
 
 		It("should prevent the object from being created because extension type is not registered", func() {
-			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupBucketResource, "some-other-type", true)
+			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupBucketResource, "some-other-type", true, nil)
 			Expect(coreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
 
 			attrs := admission.NewAttributesRecord(backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupbuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
@@ -134,7 +134,7 @@ var _ = Describe("ExtensionValidator", func() {
 		)
 
 		It("should allow to create the object", func() {
-			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupEntryResource, backupBucket.Spec.Provider.Type, true)
+			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupEntryResource, backupBucket.Spec.Provider.Type, true, nil)
 			Expect(coreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
 			Expect(coreInformerFactory.Core().InternalVersion().BackupBuckets().Informer().GetStore().Add(backupBucket)).To(Succeed())
 
@@ -146,7 +146,7 @@ var _ = Describe("ExtensionValidator", func() {
 		})
 
 		It("should prevent the object from being created because no primary extension is registered for type", func() {
-			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupEntryResource, backupBucket.Spec.Provider.Type, false)
+			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupEntryResource, backupBucket.Spec.Provider.Type, false, nil)
 			Expect(coreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
 			Expect(coreInformerFactory.Core().InternalVersion().BackupBuckets().Informer().GetStore().Add(backupBucket)).To(Succeed())
 
@@ -158,7 +158,7 @@ var _ = Describe("ExtensionValidator", func() {
 		})
 
 		It("should prevent the object from being created because extension type is not registered", func() {
-			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupEntryResource, "some-other-type", true)
+			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupEntryResource, "some-other-type", true, nil)
 			Expect(coreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
 
 			attrs := admission.NewAttributesRecord(backupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), backupEntry.Namespace, backupEntry.Name, core.Resource("backupentries").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
@@ -216,7 +216,7 @@ var _ = Describe("ExtensionValidator", func() {
 			}
 			registerAllExtensions = func() {
 				for _, registration := range kindToTypes {
-					controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, true)
+					controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, true, nil)
 					Expect(coreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
 				}
 			}
@@ -236,7 +236,7 @@ var _ = Describe("ExtensionValidator", func() {
 			for _, registration := range kindToTypes {
 				registerAllExtensions()
 
-				controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, true)
+				controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, true, nil)
 				Expect(coreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Delete(controllerRegistration)).To(Succeed())
 
 				attrs := admission.NewAttributesRecord(seed, nil, core.Kind("Seed").WithVersion("version"), seed.Namespace, seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
@@ -252,7 +252,7 @@ var _ = Describe("ExtensionValidator", func() {
 			for _, registration := range kindToTypes {
 				registerAllExtensions()
 
-				controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, false)
+				controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, false, nil)
 				Expect(coreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Update(controllerRegistration)).To(Succeed())
 
 				attrs := admission.NewAttributesRecord(seed, nil, core.Kind("Seed").WithVersion("version"), seed.Namespace, seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
@@ -339,7 +339,7 @@ var _ = Describe("ExtensionValidator", func() {
 			}
 			registerAllExtensions = func() {
 				for _, registration := range kindToTypes {
-					controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, true)
+					controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, true, nil)
 					Expect(coreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
 				}
 			}
@@ -359,7 +359,7 @@ var _ = Describe("ExtensionValidator", func() {
 			for _, registration := range kindToTypes {
 				registerAllExtensions()
 
-				controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, true)
+				controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, true, nil)
 				Expect(coreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Delete(controllerRegistration)).To(Succeed())
 
 				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
@@ -382,6 +382,118 @@ var _ = Describe("ExtensionValidator", func() {
 		It("should do nothing because the spec has not changed", func() {
 			attrs := admission.NewAttributesRecord(shoot, shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 			Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+		})
+
+		Context("Workerless Shoot", func() {
+			It("should prevent the object from being created because the extension type doesn't support workerless Shoots", func() {
+				var (
+					nonSupportedType               = "non-supported"
+					nonSupportedExtension          = createControllerRegistrationForKindType(extensionsv1alpha1.ExtensionResource, nonSupportedType, true, pointer.Bool(false))
+					nonSupportedDNSRecordExtension = createControllerRegistrationForKindType(extensionsv1alpha1.DNSRecordResource, nonSupportedType, true, pointer.Bool(false))
+					shoot                          = &core.Shoot{
+						Spec: core.ShootSpec{
+							DNS: &core.DNS{
+								Providers: []core.DNSProvider{
+									{
+										Type:    &nonSupportedType,
+										Primary: pointer.Bool(true),
+									},
+								},
+							},
+							Extensions: []core.Extension{
+								{
+									Type: nonSupportedType,
+								},
+							},
+						},
+					}
+				)
+
+				Expect(coreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Add(nonSupportedExtension)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Add(nonSupportedDNSRecordExtension)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(And(
+					MatchError(ContainSubstring("given Shoot is workerless and uses non-supported type: %q", extensionsv1alpha1.ExtensionResource+"/"+nonSupportedType)),
+					MatchError(ContainSubstring("given Shoot is workerless and uses non-supported type: %q", extensionsv1alpha1.DNSRecordResource+"/"+nonSupportedType)),
+				))
+			})
+
+			It("should prevent the object from being created because the extension type doesn't specify WorkerlessSupported field for workerless Shoots", func() {
+				var (
+					nonSupportedType               = "non-supported"
+					nonSupportedExtension          = createControllerRegistrationForKindType(extensionsv1alpha1.ExtensionResource, nonSupportedType, true, nil)
+					nonSupportedDNSRecordExtension = createControllerRegistrationForKindType(extensionsv1alpha1.DNSRecordResource, nonSupportedType, true, nil)
+					shoot                          = &core.Shoot{
+						Spec: core.ShootSpec{
+							DNS: &core.DNS{
+								Providers: []core.DNSProvider{
+									{
+										Type:    &nonSupportedType,
+										Primary: pointer.Bool(true),
+									},
+								},
+							},
+							Extensions: []core.Extension{
+								{
+									Type: nonSupportedType,
+								},
+							},
+						},
+					}
+				)
+
+				Expect(coreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Add(nonSupportedExtension)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Add(nonSupportedDNSRecordExtension)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(And(
+					MatchError(ContainSubstring("given Shoot is workerless and uses non-supported type: %q", extensionsv1alpha1.ExtensionResource+"/"+nonSupportedType)),
+					MatchError(ContainSubstring("given Shoot is workerless and uses non-supported type: %q", extensionsv1alpha1.DNSRecordResource+"/"+nonSupportedType)),
+				))
+			})
+
+			It("should allow object creation because the extension type supports workerless Shoots", func() {
+				var (
+					supportedType               = "supported"
+					supportedExtension          = createControllerRegistrationForKindType(extensionsv1alpha1.ExtensionResource, supportedType, true, pointer.Bool(true))
+					supportedDNSRecordExtension = createControllerRegistrationForKindType(extensionsv1alpha1.DNSRecordResource, supportedType, true, pointer.Bool(true))
+					shoot                       = &core.Shoot{
+						Spec: core.ShootSpec{
+							DNS: &core.DNS{
+								Providers: []core.DNSProvider{
+									{
+										Type:    &supportedType,
+										Primary: pointer.Bool(true),
+									},
+								},
+							},
+							Extensions: []core.Extension{
+								{
+									Type: supportedType,
+								},
+							},
+						},
+					}
+				)
+
+				Expect(coreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Add(supportedExtension)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Add(supportedDNSRecordExtension)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
 		})
 	})
 
@@ -433,7 +545,7 @@ var _ = Describe("ExtensionValidator", func() {
 	})
 })
 
-func createControllerRegistrationForKindType(extensionKind, extensionType string, primary bool) *core.ControllerRegistration {
+func createControllerRegistrationForKindType(extensionKind, extensionType string, primary bool, workerlessSupported *bool) *core.ControllerRegistration {
 	return &core.ControllerRegistration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: extensionKind + extensionType,
@@ -441,9 +553,10 @@ func createControllerRegistrationForKindType(extensionKind, extensionType string
 		Spec: core.ControllerRegistrationSpec{
 			Resources: []core.ControllerResource{
 				{
-					Kind:    extensionKind,
-					Type:    extensionType,
-					Primary: &primary,
+					Kind:                extensionKind,
+					Type:                extensionType,
+					Primary:             &primary,
+					WorkerlessSupported: workerlessSupported,
 				},
 			},
 		},
