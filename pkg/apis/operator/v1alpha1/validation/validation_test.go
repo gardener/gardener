@@ -701,6 +701,37 @@ var _ = Describe("Validation Tests", func() {
 			)
 		})
 
+		Context("runtime cluster", func() {
+			Context("networking", func() {
+				It("should complain when pod network of runtime cluster intersects with service network of runtime cluster", func() {
+					garden.Spec.RuntimeCluster.Networking.Pods = garden.Spec.RuntimeCluster.Networking.Services
+
+					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.runtimeCluster.networking.services"),
+					}))))
+				})
+
+				It("should complain when node network of runtime cluster intersects with pod network of runtime cluster", func() {
+					garden.Spec.RuntimeCluster.Networking.Nodes = &garden.Spec.RuntimeCluster.Networking.Pods
+
+					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.runtimeCluster.networking.nodes"),
+					}))))
+				})
+
+				It("should complain when node network of runtime cluster intersects with service network of runtime cluster", func() {
+					garden.Spec.RuntimeCluster.Networking.Nodes = &garden.Spec.RuntimeCluster.Networking.Services
+
+					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.runtimeCluster.networking.nodes"),
+					}))))
+				})
+			})
+		})
+
 		Context("virtual cluster", func() {
 			Context("DNS", func() {
 				It("should complain about an invalid service CIDR", func() {

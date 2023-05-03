@@ -48,6 +48,7 @@ func ValidateGarden(garden *operatorv1alpha1.Garden) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateOperation(garden.Annotations[v1beta1constants.GardenerOperation], garden, field.NewPath("metadata", "annotations"))...)
+	allErrs = append(allErrs, validateRuntimeCluster(garden.Spec.RuntimeCluster, field.NewPath("spec", "runtimeCluster"))...)
 	allErrs = append(allErrs, validateVirtualCluster(garden.Spec.VirtualCluster, garden.Spec.RuntimeCluster, field.NewPath("spec", "virtualCluster"))...)
 
 	if helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings) {
@@ -74,6 +75,24 @@ func ValidateGardenUpdate(oldGarden, newGarden *operatorv1alpha1.Garden) field.E
 
 	allErrs = append(allErrs, gardencorevalidation.ValidateKubernetesVersionUpdate(newGarden.Spec.VirtualCluster.Kubernetes.Version, newGarden.Spec.VirtualCluster.Kubernetes.Version, field.NewPath("spec", "virtualCluster", "kubernetes", "version"))...)
 	allErrs = append(allErrs, ValidateGarden(newGarden)...)
+
+	return allErrs
+}
+
+func validateRuntimeCluster(runtimeCluster operatorv1alpha1.RuntimeCluster, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if cidrvalidation.NetworksIntersect(runtimeCluster.Networking.Pods, runtimeCluster.Networking.Services) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services"), runtimeCluster.Networking.Services, "pod network of runtime cluster intersects with service network of runtime cluster"))
+	}
+	if runtimeCluster.Networking.Nodes != nil {
+		if cidrvalidation.NetworksIntersect(*runtimeCluster.Networking.Nodes, runtimeCluster.Networking.Pods) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "nodes"), *runtimeCluster.Networking.Nodes, "node network of runtime cluster intersects with pod network of runtime cluster"))
+		}
+		if cidrvalidation.NetworksIntersect(*runtimeCluster.Networking.Nodes, runtimeCluster.Networking.Services) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "nodes"), *runtimeCluster.Networking.Nodes, "node network of runtime cluster intersects with service network of runtime cluster"))
+		}
+	}
 
 	return allErrs
 }
