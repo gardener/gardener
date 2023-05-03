@@ -83,11 +83,6 @@ func AddToManager(
 		return fmt.Errorf("cluster-identity ConfigMap data does not have %q key", v1beta1constants.ClusterIdentity)
 	}
 
-	gardenNamespace := &corev1.Namespace{}
-	if err := gardenCluster.GetClient().Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace), gardenNamespace); err != nil {
-		return fmt.Errorf("failed getting garden namespace in garden cluster: %w", err)
-	}
-
 	seedClientSet, err := kubernetes.NewWithConfig(
 		kubernetes.WithRESTConfig(seedCluster.GetConfig()),
 		kubernetes.WithRuntimeAPIReader(seedCluster.GetAPIReader()),
@@ -118,7 +113,7 @@ func AddToManager(
 		return fmt.Errorf("failed adding Bastion controller: %w", err)
 	}
 
-	if err := controllerinstallation.AddToManager(mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, gardenNamespace, gardenClusterIdentity); err != nil {
+	if err := controllerinstallation.AddToManager(mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, gardenClusterIdentity); err != nil {
 		return fmt.Errorf("failed adding ControllerInstallation controller: %w", err)
 	}
 

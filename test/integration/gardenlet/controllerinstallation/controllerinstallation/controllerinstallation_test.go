@@ -195,12 +195,10 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				}).Should(Equal(`gardener:
   garden:
     clusterIdentity: ` + gardenClusterIdentity + `
-    identity: ` + string(gardenNamespace.UID) + `
   seed:
     annotations: null
     blockCIDRs: null
     clusterIdentity: ` + seedClusterIdentity + `
-    identity: ` + seed.Name + `
     ingressDomain: ` + seed.Spec.Ingress.Domain + `
     labels:
       ` + testID + `: ` + testRunID + `

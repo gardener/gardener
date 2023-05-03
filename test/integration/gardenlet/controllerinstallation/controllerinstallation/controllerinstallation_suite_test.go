@@ -227,7 +227,6 @@ var _ = BeforeSuite(func() {
 			ConcurrentSyncs: pointer.Int(5),
 		},
 		Identity:              identity,
-		GardenNamespace:       gardenNamespace,
 		GardenClusterIdentity: gardenClusterIdentity,
 	}).AddToManager(mgr, mgr)).To(Succeed())
 

@@ -17,7 +17,6 @@ package controllerinstallation
 import (
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -37,7 +36,6 @@ func AddToManager(
 	seedClientSet kubernetes.Interface,
 	cfg config.GardenletConfiguration,
 	identity *gardencorev1beta1.Gardener,
-	gardenNamespace *corev1.Namespace,
 	gardenClusterIdentity string,
 ) error {
 	if err := (&care.Reconciler{
@@ -50,7 +48,6 @@ func AddToManager(
 		SeedClientSet:         seedClientSet,
 		Config:                *cfg.Controllers.ControllerInstallation,
 		Identity:              identity,
-		GardenNamespace:       gardenNamespace,
 		GardenClusterIdentity: gardenClusterIdentity,
 	}).AddToManager(mgr, gardenCluster); err != nil {
 		return fmt.Errorf("failed adding main reconciler: %w", err)

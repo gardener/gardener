@@ -154,7 +154,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				[]string{"status"},
 			)
 		case namespaceResource:
-			return a.authorizeNamespace(requestLog, seedName, attrs)
+			return a.authorizeRead(requestLog, seedName, graph.VertexTypeNamespace, attrs)
 		case projectResource:
 			return a.authorizeRead(requestLog, seedName, graph.VertexTypeProject, attrs)
 		case secretBindingResource:
@@ -242,18 +242,6 @@ func (a *authorizer) authorizeLease(log logr.Logger, seedName string, attrs auth
 		[]string{"create"},
 		nil,
 	)
-}
-
-func (a *authorizer) authorizeNamespace(log logr.Logger, seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
-	// TODO: Remove this once the gardenlet's `ControllerInstallation` controller does no longer populate the already
-	// deprecated `gardener.garden.identity` value when rendering the Helm charts.
-	if attrs.GetName() == v1beta1constants.GardenNamespace &&
-		utils.ValueExists(attrs.GetVerb(), []string{"get", "list", "watch"}) {
-
-		return auth.DecisionAllow, "", nil
-	}
-
-	return a.authorizeRead(log, seedName, graph.VertexTypeNamespace, attrs)
 }
 
 func (a *authorizer) authorizeSecret(log logr.Logger, seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
