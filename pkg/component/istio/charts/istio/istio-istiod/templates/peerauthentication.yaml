@@ -3,10 +3,6 @@ kind: PeerAuthentication
 metadata:
   name: default
   namespace: {{ .Release.Namespace }}
-{{- if .Values.ignoreMode }}
-  annotations:
-    resources.gardener.cloud/mode: Ignore
-{{- end }}
 spec:
   mtls:
     mode: STRICT

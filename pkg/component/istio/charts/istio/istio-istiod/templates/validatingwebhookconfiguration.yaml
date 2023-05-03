@@ -2,10 +2,6 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: istiod
-{{- if .Values.ignoreMode }}
-  annotations:
-    resources.gardener.cloud/mode: Ignore
-{{- end }}
   labels:
     # The istio revision is required so that the web hook is found at runtime for the caBundle update
     # Currently, we do not set the istio revision. Hence, it is just empty.

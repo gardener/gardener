@@ -3,10 +3,6 @@ kind: Sidecar
 metadata:
   name: default
   namespace: {{ .Release.Namespace }}
-{{- if .Values.ignoreMode }}
-  annotations:
-    resources.gardener.cloud/mode: Ignore
-{{- end }}
   labels:
 {{ .Values.labels | toYaml | indent 4 }}
 spec:

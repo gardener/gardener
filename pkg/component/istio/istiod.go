@@ -137,7 +137,7 @@ func (i *istiod) deployIstiod(ctx context.Context) error {
 		return err
 	}
 
-	renderedIstiodChart, err := i.generateIstiodChart(false)
+	renderedIstiodChart, err := i.generateIstiodChart()
 	if err != nil {
 		return err
 	}
@@ -152,17 +152,6 @@ func (i *istiod) Deploy(ctx context.Context) error {
 
 	var renderedChart = &chartrenderer.RenderedChart{}
 
-	// TODO(rfranzke): Block to be removed after v1.71 got released. Only required to move istiod assets to separate ManagedResource.
-	if i.values.Istiod.Enabled {
-		renderedIstiodChartIgnore, err := i.generateIstiodChart(true)
-		if err != nil {
-			return err
-		}
-
-		renderedChart.Manifests = append(renderedChart.Manifests, renderedIstiodChartIgnore.Manifests...)
-	}
-
-	// TODO(mvladev): Rotate this on every istio version upgrade.
 	for _, ingressGateway := range i.values.IngressGateway {
 		for _, filterName := range []string{"tcp-stats-filter-1.11", "stats-filter-1.11", "tcp-stats-filter-1.12", "stats-filter-1.12"} {
 			if err := client.IgnoreNotFound(i.client.Delete(ctx, &networkingv1alpha3.EnvoyFilter{
@@ -300,7 +289,7 @@ func (i *istiod) GetValues() Values {
 	return i.values
 }
 
-func (i *istiod) generateIstiodChart(ignoreMode bool) (*chartrenderer.RenderedChart, error) {
+func (i *istiod) generateIstiodChart() (*chartrenderer.RenderedChart, error) {
 	istiodValues := i.values.Istiod
 
 	return i.chartRenderer.RenderEmbeddedFS(chartIstiod, chartPathIstiod, releaseName, i.values.Istiod.Namespace, map[string]interface{}{
@@ -318,8 +307,7 @@ func (i *istiod) generateIstiodChart(ignoreMode bool) (*chartrenderer.RenderedCh
 		"portsNames": map[string]interface{}{
 			"metrics": istiodServicePortNameMetrics,
 		},
-		"image":      istiodValues.Image,
-		"ignoreMode": ignoreMode,
+		"image": istiodValues.Image,
 	})
 }
 

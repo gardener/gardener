@@ -73,14 +73,8 @@ var _ = Describe("istiod", func() {
 
 		externalTrafficPolicy corev1.ServiceExternalTrafficPolicyType
 
-		ignoreAnnotation = `
-    resources.gardener.cloud/mode: Ignore`
-
-		istiodService = func(ignore bool) string {
+		istiodService = func() string {
 			var additionalAnnotation string
-			if ignore {
-				additionalAnnotation += ignoreAnnotation
-			}
 
 			return `apiVersion: v1
 kind: Service
@@ -115,17 +109,11 @@ spec:
     
 `
 		}
-		istioClusterRole = func(ignore bool) string {
-			var annotations string
-			if ignore {
-				annotations = `
-  annotations:` + ignoreAnnotation
-			}
-
+		istioClusterRole = func() string {
 			return `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: istiod` + annotations + `
+  name: istiod
   labels:
     app: istiod
     istio: pilot
@@ -356,7 +344,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: istiod-gateway-controller` + annotations + `
+  name: istiod-gateway-controller
   labels:
     app: istiod
     istio: pilot
@@ -374,17 +362,11 @@ rules:
 `
 		}
 
-		istiodClusterRoleBinding = func(ignore bool) string {
-			var annotations string
-			if ignore {
-				annotations = `
-  annotations:` + ignoreAnnotation
-			}
-
+		istiodClusterRoleBinding = func() string {
 			return `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: istiod` + annotations + `
+  name: istiod
   labels:
     app: istiod
     istio: pilot
@@ -402,7 +384,7 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: istiod-gateway-controller` + annotations + `
+  name: istiod-gateway-controller
   labels:
     app: istiod
     istio: pilot
@@ -418,18 +400,12 @@ subjects:
 `
 		}
 
-		istiodDestinationRule = func(ignore bool) string {
-			var annotations string
-			if ignore {
-				annotations = `
-  annotations:` + ignoreAnnotation
-			}
-
+		istiodDestinationRule = func() string {
 			return `apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
   name: default
-  namespace: ` + deployNS + annotations + `
+  namespace: ` + deployNS + `
 spec:
   host: "*"
   exportTo:
@@ -440,31 +416,19 @@ spec:
 `
 		}
 
-		istiodPeerAuthentication = func(ignore bool) string {
-			var annotations string
-			if ignore {
-				annotations = `
-  annotations:` + ignoreAnnotation
-			}
-
+		istiodPeerAuthentication = func() string {
 			return `apiVersion: security.istio.io/v1beta1
 kind: PeerAuthentication
 metadata:
   name: default
-  namespace: ` + deployNS + annotations + `
+  namespace: ` + deployNS + `
 spec:
   mtls:
     mode: STRICT
 `
 		}
 
-		istiodPodDisruptionBudgetFor = func(k8sGreaterEqual121 bool, ignore bool) string {
-			var annotations string
-			if ignore {
-				annotations = `
-  annotations:` + ignoreAnnotation
-			}
-
+		istiodPodDisruptionBudgetFor = func(k8sGreaterEqual121 bool) string {
 			apiVersion := "policy/v1beta1"
 			if k8sGreaterEqual121 {
 				apiVersion = "policy/v1"
@@ -474,7 +438,7 @@ apiVersion: ` + apiVersion + `
 kind: PodDisruptionBudget
 metadata:
   name: istiod
-  namespace: ` + deployNS + annotations + `
+  namespace: ` + deployNS + `
   labels:
     app: istiod
     istio: pilot
@@ -488,17 +452,12 @@ spec:
 			return out
 		}
 
-		istiodRole = func(ignore bool) string {
-			var annotations string
-			if ignore {
-				annotations = `
-  annotations:` + ignoreAnnotation
-			}
+		istiodRole = func() string {
 			return `apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: istiod
-  namespace: ` + deployNS + annotations + `
+  namespace: ` + deployNS + `
   labels:
     app: istiod
     istio: pilot
@@ -543,17 +502,12 @@ rules:
 `
 		}
 
-		istiodRoleBinding = func(ignore bool) string {
-			var annotations string
-			if ignore {
-				annotations = `
-  annotations:` + ignoreAnnotation
-			}
+		istiodRoleBinding = func() string {
 			return `apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: istiod
-  namespace: ` + deployNS + annotations + `
+  namespace: ` + deployNS + `
   labels:
     app: istiod
     istio: pilot
@@ -568,18 +522,12 @@ subjects:
 `
 		}
 
-		istiodServiceAccount = func(ignore bool) string {
-			var annotations string
-			if ignore {
-				annotations = `
-  annotations:` + ignoreAnnotation
-			}
-
+		istiodServiceAccount = func() string {
 			return `apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: istiod
-  namespace: ` + deployNS + annotations + `
+  namespace: ` + deployNS + `
   labels:
     app: istiod
     istio: pilot
@@ -588,17 +536,12 @@ automountServiceAccountToken: false
 `
 		}
 
-		istiodSidecar = func(ignore bool) string {
-			var annotations string
-			if ignore {
-				annotations = `
-  annotations:` + ignoreAnnotation
-			}
+		istiodSidecar = func() string {
 			return `apiVersion: networking.istio.io/v1alpha3
 kind: Sidecar
 metadata:
   name: default
-  namespace: ` + deployNS + annotations + `
+  namespace: ` + deployNS + `
   labels:
     app: istiod
     istio: pilot
@@ -612,17 +555,12 @@ spec:
 `
 		}
 
-		istiodAutoscale = func(ignore bool) string {
-			var annotations string
-			if ignore {
-				annotations = `
-  annotations:` + ignoreAnnotation
-			}
+		istiodAutoscale = func() string {
 			return `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: istiod
-  namespace: ` + deployNS + annotations + `
+  namespace: ` + deployNS + `
   labels:
     app: istiod
     istio: pilot
@@ -642,17 +580,11 @@ spec:
 `
 		}
 
-		istiodValidationWebhook = func(ignore bool) string {
-			var annotations string
-			if ignore {
-				annotations = `
-  annotations:` + ignoreAnnotation
-			}
-
+		istiodValidationWebhook = func() string {
 			return `apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  name: istiod` + annotations + `
+  name: istiod
   labels:
     # The istio revision is required so that the web hook is found at runtime for the caBundle update
     # Currently, we do not set the istio revision. Hence, it is just empty.
@@ -693,19 +625,12 @@ webhooks:
 `
 		}
 
-		istiodConfigMap = func(ignore bool) string {
-			var annotations string
-			if ignore {
-				annotations = `
-  annotations:` + ignoreAnnotation
-			}
-
+		istiodConfigMap = func() string {
 			return `apiVersion: v1
 kind: ConfigMap
 metadata:
   name: istio
-  namespace: ` + deployNS +
-				annotations + `
+  namespace: ` + deployNS + `
   labels:
     app: istiod
     istio: pilot
@@ -809,19 +734,12 @@ data:
 `
 		}
 
-		istiodDeployment = func(ignore bool, checksum string) string {
-			var annotations string
-			if ignore {
-				annotations = `
-  annotations:` + ignoreAnnotation
-			}
-
+		istiodDeployment = func(checksum string) string {
 			return `apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: istiod
-  namespace: ` + deployNS +
-				annotations + `
+  namespace: ` + deployNS + `
   labels:
     app: istiod
     istio: pilot
@@ -2243,24 +2161,7 @@ spec:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 			Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceIstioSecret.Data).To(HaveLen(30))
-
-			By("Verify istio-system resources in `Ignore` mode")
-			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_configmap.yaml"])).To(Equal(istiodConfigMap(true)))
-			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_deployment.yaml"])).To(Equal(istiodDeployment(true, "b1493f472a93df6b9764ee8530150faad2fb61b22b68acded9fdf4cf2a815c15")))
-			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_service.yaml"])).To(Equal(istiodService(true)))
-			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_clusterrole.yaml"])).To(Equal(istioClusterRole(true)))
-			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_clusterrolebinding.yaml"])).To(Equal(istiodClusterRoleBinding(true)))
-			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_destinationrule.yaml"])).To(Equal(istiodDestinationRule(true)))
-			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_namespace.yaml"])).To(BeEmpty())
-			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_peerauthentication.yaml"])).To(Equal(istiodPeerAuthentication(true)))
-			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"])).To(Equal(istiodPodDisruptionBudgetFor(true, true)))
-			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_role.yaml"])).To(Equal(istiodRole(true)))
-			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_rolebinding.yaml"])).To(Equal(istiodRoleBinding(true)))
-			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_serviceaccount.yaml"])).To(Equal(istiodServiceAccount(true)))
-			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_sidecar.yaml"])).To(Equal(istiodSidecar(true)))
-			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_autoscale.yaml"])).To(Equal(istiodAutoscale(true)))
-			Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_validatingwebhookconfiguration.yaml"])).To(Equal(istiodValidationWebhook(true)))
+			Expect(managedResourceIstioSecret.Data).To(HaveLen(15))
 
 			By("Verify istio-ingress resources")
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_autoscale_test-ingress.yaml"])).To(Equal(istioIngressAutoscaler(nil, nil)))
@@ -2287,21 +2188,21 @@ spec:
 			Expect(managedResourceIstioSystemSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceIstioSystemSecret.Data).To(HaveLen(15))
 
-			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_configmap.yaml"])).To(Equal(istiodConfigMap(false)))
-			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_deployment.yaml"])).To(Equal(istiodDeployment(false, "d34796e6fc25a26d4a8a4cb3276e34961b18f867d70f5a1984255d57bfefb4c6")))
-			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_service.yaml"])).To(Equal(istiodService(false)))
-			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_clusterrole.yaml"])).To(Equal(istioClusterRole(false)))
-			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_clusterrolebinding.yaml"])).To(Equal(istiodClusterRoleBinding(false)))
-			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_destinationrule.yaml"])).To(Equal(istiodDestinationRule(false)))
+			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_configmap.yaml"])).To(Equal(istiodConfigMap()))
+			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_deployment.yaml"])).To(Equal(istiodDeployment("d34796e6fc25a26d4a8a4cb3276e34961b18f867d70f5a1984255d57bfefb4c6")))
+			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_service.yaml"])).To(Equal(istiodService()))
+			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_clusterrole.yaml"])).To(Equal(istioClusterRole()))
+			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_clusterrolebinding.yaml"])).To(Equal(istiodClusterRoleBinding()))
+			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_destinationrule.yaml"])).To(Equal(istiodDestinationRule()))
 			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_namespace.yaml"])).To(BeEmpty())
-			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_peerauthentication.yaml"])).To(Equal(istiodPeerAuthentication(false)))
-			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"])).To(Equal(istiodPodDisruptionBudgetFor(true, false)))
-			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_role.yaml"])).To(Equal(istiodRole(false)))
-			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_rolebinding.yaml"])).To(Equal(istiodRoleBinding(false)))
-			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_serviceaccount.yaml"])).To(Equal(istiodServiceAccount(false)))
-			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_sidecar.yaml"])).To(Equal(istiodSidecar(false)))
-			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_autoscale.yaml"])).To(Equal(istiodAutoscale(false)))
-			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_validatingwebhookconfiguration.yaml"])).To(Equal(istiodValidationWebhook(false)))
+			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_peerauthentication.yaml"])).To(Equal(istiodPeerAuthentication()))
+			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"])).To(Equal(istiodPodDisruptionBudgetFor(true)))
+			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_role.yaml"])).To(Equal(istiodRole()))
+			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_rolebinding.yaml"])).To(Equal(istiodRoleBinding()))
+			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_serviceaccount.yaml"])).To(Equal(istiodServiceAccount()))
+			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_sidecar.yaml"])).To(Equal(istiodSidecar()))
+			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_autoscale.yaml"])).To(Equal(istiodAutoscale()))
+			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_validatingwebhookconfiguration.yaml"])).To(Equal(istiodValidationWebhook()))
 		})
 
 		Context("with outdated stats filters", func() {
@@ -2358,12 +2259,11 @@ spec:
 				)
 			})
 
-			It("should succesfully deploy pdb with correct apiVersion ", func() {
+			It("should succesfully deploy pdb with correct apiVersion", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceIstioSecret.Data).To(HaveLen(30))
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(15))
 
-				Expect(string(managedResourceIstioSecret.Data["istio-istiod_templates_poddisruptionbudget.yaml"])).To(Equal(istiodPodDisruptionBudgetFor(false, true)))
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_poddisruptionbudget_test-ingress.yaml"])).To(Equal(istioIngressPodDisruptionBudgetFor(false)))
 			})
 		})
@@ -2474,7 +2374,7 @@ spec:
 			It("should successfully deploy all resources", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceIstioSecret.Data).To(HaveLen(30))
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(15))
 
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_vpn-gateway_test-ingress.yaml"])).To(BeEmpty())
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_vpn-envoy-filter_test-ingress.yaml"])).To(BeEmpty())
@@ -2507,7 +2407,7 @@ spec:
 			It("should successfully deploy all resources", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceIstioSecret.Data).To(HaveLen(30))
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(15))
 
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress.yaml"])).To(BeEmpty())
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-gateway_test-ingress.yaml"])).To(BeEmpty())
