@@ -43,6 +43,7 @@ import (
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
+	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
@@ -128,6 +129,15 @@ var _ = Describe("Garden controller tests", func() {
 					Garden: config.GardenControllerConfig{
 						ConcurrentSyncs: pointer.Int(5),
 						SyncPeriod:      &metav1.Duration{Duration: time.Minute},
+						ETCDConfig: &gardenletconfig.ETCDConfig{
+							ETCDController:      &gardenletconfig.ETCDController{Workers: pointer.Int64(5)},
+							CustodianController: &gardenletconfig.CustodianController{Workers: pointer.Int64(5)},
+							BackupCompactionController: &gardenletconfig.BackupCompactionController{
+								EnableBackupCompaction: pointer.Bool(false),
+								Workers:                pointer.Int64(5),
+								EventsThreshold:        pointer.Int64(100),
+							},
+						},
 					},
 				},
 			},

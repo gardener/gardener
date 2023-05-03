@@ -382,22 +382,18 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 }
 
 func getDruidDeployCommands(etcdConfig *config.ETCDConfig) []string {
-	command := []string{"/etcd-druid"}
-	command = append(command, "--enable-leader-election=true")
-	command = append(command, "--ignore-operation-annotation=false")
-	command = append(command, "--disable-etcd-serviceaccount-automount=true")
-
-	if etcdConfig == nil {
-		// TODO(abdasgupta): Following line to add 50 workers is only for backward compatibility. Please, remove.
-		command = append(command, "--workers=50")
-		return command
+	command := []string{
+		"/etcd-druid",
+		"--enable-leader-election=true",
+		"--ignore-operation-annotation=false",
+		"--disable-etcd-serviceaccount-automount=true",
+		"--workers=" + strconv.FormatInt(*etcdConfig.ETCDController.Workers, 10),
+		"--custodian-workers=" + strconv.FormatInt(*etcdConfig.CustodianController.Workers, 10),
+		"--compaction-workers=" + strconv.FormatInt(*etcdConfig.BackupCompactionController.Workers, 10),
+		"--enable-backup-compaction=" + strconv.FormatBool(*etcdConfig.BackupCompactionController.EnableBackupCompaction),
+		"--etcd-events-threshold=" + strconv.FormatInt(*etcdConfig.BackupCompactionController.EventsThreshold, 10),
 	}
 
-	command = append(command, "--workers="+strconv.FormatInt(*etcdConfig.ETCDController.Workers, 10))
-	command = append(command, "--custodian-workers="+strconv.FormatInt(*etcdConfig.CustodianController.Workers, 10))
-	command = append(command, "--compaction-workers="+strconv.FormatInt(*etcdConfig.BackupCompactionController.Workers, 10))
-	command = append(command, "--enable-backup-compaction="+strconv.FormatBool(*etcdConfig.BackupCompactionController.EnableBackupCompaction))
-	command = append(command, "--etcd-events-threshold="+strconv.FormatInt(*etcdConfig.BackupCompactionController.EventsThreshold, 10))
 	if etcdConfig.BackupCompactionController.ActiveDeadlineDuration != nil {
 		command = append(command, "--active-deadline-duration="+etcdConfig.BackupCompactionController.ActiveDeadlineDuration.Duration.String())
 	}

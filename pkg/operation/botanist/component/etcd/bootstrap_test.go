@@ -78,7 +78,7 @@ var _ = Describe("Etcd", func() {
 		c = mockclient.NewMockClient(ctrl)
 		etcdConfig = &config.ETCDConfig{
 			ETCDController: &config.ETCDController{
-				Workers: pointer.Int64(50),
+				Workers: pointer.Int64(25),
 			},
 			CustodianController: &config.CustodianController{
 				Workers: pointer.Int64(3),
@@ -354,7 +354,7 @@ spec:
         - --enable-leader-election=true
         - --ignore-operation-annotation=false
         - --disable-etcd-serviceaccount-automount=true
-        - --workers=50
+        - --workers=25
         - --custodian-workers=3
         - --compaction-workers=3
         - --enable-backup-compaction=true
@@ -409,7 +409,7 @@ spec:
         - --enable-leader-election=true
         - --ignore-operation-annotation=false
         - --disable-etcd-serviceaccount-automount=true
-        - --workers=50
+        - --workers=25
         - --custodian-workers=3
         - --compaction-workers=3
         - --enable-backup-compaction=true
