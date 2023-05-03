@@ -5197,9 +5197,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeForbidden),
 				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type": Equal(field.ErrorTypeForbidden),
-				})),
 			)),
 		)
 
@@ -5231,8 +5228,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			Entry("all worker pools min=max=0", zero, zero, zero, zero, true, true, nil, nil, ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type": Equal(field.ErrorTypeForbidden),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeForbidden),
 				})),
 			)),

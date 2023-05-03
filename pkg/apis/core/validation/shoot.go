@@ -1726,7 +1726,6 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 		allErrs = field.ErrorList{}
 
 		workerNames                               = make(map[string]bool)
-		atLeastOneActivePool                      = false
 		atLeastOnePoolWithCompatibleTaints        = len(workers) == 0
 		atLeastOnePoolWithAllowedSystemComponents = false
 	)
@@ -1766,17 +1765,9 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 			atLeastOnePoolWithAllowedSystemComponents = true
 		}
 
-		if !atLeastOneActivePool {
-			atLeastOneActivePool = poolIsActive
-		}
-
 		if !atLeastOnePoolWithCompatibleTaints {
 			atLeastOnePoolWithCompatibleTaints = poolHasCompatibleTaints
 		}
-	}
-
-	if !atLeastOneActivePool {
-		allErrs = append(allErrs, field.Forbidden(fldPath, "at least one worker pool with min>0 and max> 0 needed"))
 	}
 
 	if !atLeastOnePoolWithCompatibleTaints {
