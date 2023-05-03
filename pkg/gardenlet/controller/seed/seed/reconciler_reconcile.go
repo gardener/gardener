@@ -998,13 +998,14 @@ func (r *Reconciler) runReconcileSeedFlow(
 				Name: "Deploying kube-state-metrics",
 				Fn:   kubeStateMetrics.Deploy,
 			})
-			_ = g.Add(flow.Task{
+			reconcileFluentOperatorResources = g.Add(flow.Task{
 				Name: "Deploying Fluent Operator resources",
 				Fn:   component.OpWait(fluentOperatorCustomResources).Deploy,
 			})
 			_ = g.Add(flow.Task{
-				Name: "Deploying Fluent Operator",
-				Fn:   component.OpWait(fluentOperator).Deploy,
+				Name:         "Deploying Fluent Operator",
+				Fn:           component.OpWait(fluentOperator).Deploy,
+				Dependencies: flow.NewTaskIDs(reconcileFluentOperatorResources),
 			})
 		)
 	}
