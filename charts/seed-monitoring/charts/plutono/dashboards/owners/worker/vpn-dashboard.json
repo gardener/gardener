@@ -276,7 +276,7 @@
         {
           "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"vpn-shoot-.*\"}[$__rate_interval]))",
           "format": "time_series",
-          "interval": "10s",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Actual",
           "refId": "A",
@@ -286,7 +286,7 @@
           "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\", unit=\"core\", pod=~\"vpn-shoot-.*\"})",
           "format": "time_series",
           "hide": false,
-          "interval": "10s",
+          "interval": "",
           "intervalFactor": 2,
           "legendFormat": "Requests",
           "refId": "B"
@@ -294,7 +294,7 @@
         {
           "expr": "sum(kube_pod_container_resource_limits{resource=\"cpu\", unit=\"core\", pod=~\"vpn-shoot-.*\"})",
           "format": "time_series",
-          "interval": "10s",
+          "interval": "",
           "intervalFactor": 2,
           "legendFormat": "Limits",
           "refId": "C"
@@ -391,7 +391,7 @@
         {
           "expr": "sum (container_memory_working_set_bytes{pod=~\"vpn-shoot-.*\"})",
           "format": "time_series",
-          "interval": "10s",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Actual",
           "metric": "container_memory_working_set_bytes",
@@ -402,7 +402,7 @@
           "expr": "sum(kube_pod_container_resource_requests{resource=\"memory\", unit=\"byte\", pod=~\"vpn-shoot-.*\"})",
           "format": "time_series",
           "hide": false,
-          "interval": "10s",
+          "interval": "",
           "intervalFactor": 2,
           "legendFormat": "Requests",
           "refId": "C"
@@ -410,7 +410,7 @@
         {
           "expr": "sum(kube_pod_container_resource_limits{resource=\"memory\", unit=\"byte\", pod=~\"vpn-shoot-.*\"})",
           "format": "time_series",
-          "interval": "10s",
+          "interval": "",
           "intervalFactor": 2,
           "legendFormat": "Limits",
           "refId": "B"
@@ -521,7 +521,7 @@
           "expr": "rate(container_cpu_usage_seconds_total{pod=~\"kube-apiserver-.*|prometheus-.*\", container=\"vpn-seed\"}[$__rate_interval])",
           "format": "time_series",
           "hide": false,
-          "interval": "10s",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Actual ({{pod}}/{{container}})",
           "refId": "A",
@@ -634,7 +634,7 @@
         {
           "expr": "container_memory_working_set_bytes{pod=~\"kube-apiserver-.*|prometheus-.*\", container=\"vpn-seed\"}",
           "format": "time_series",
-          "interval": "10s",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Actual ({{pod}}/{{container}})",
           "metric": "container_memory_working_set_bytes",
