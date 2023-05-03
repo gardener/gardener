@@ -820,17 +820,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
-	// TODO(rfranzke): Delete this in a future version.
-	{
-		if err := kubernetesutils.DeleteObjects(ctx, seedClient,
-			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-loki", Namespace: r.GardenNamespace}},
-			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-loki", Namespace: r.GardenNamespace}},
-			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-aggregate-prometheus", Namespace: r.GardenNamespace}},
-		); err != nil {
-			return err
-		}
-	}
-
 	if features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster) {
 		if err := kubernetesutils.DeleteObject(ctx, seedClient, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-seed-prometheus", Namespace: r.GardenNamespace}}); err != nil {
 			return err
