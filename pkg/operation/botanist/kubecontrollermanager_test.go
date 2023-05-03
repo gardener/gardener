@@ -311,6 +311,11 @@ var _ = Describe("KubeControllerManager", func() {
 	})
 
 	Describe("#ScaleKubeControllerManagerToOne", func() {
+		var (
+			sw    *mockclient.MockSubResourceClient
+			patch = client.RawPatch(types.MergePatchType, []byte(`{"spec":{"replicas":1}}`))
+		)
+
 		BeforeEach(func() {
 			botanist.SeedClientSet = kubernetesClient
 			botanist.Shoot = &shootpkg.Shoot{
@@ -318,17 +323,18 @@ var _ = Describe("KubeControllerManager", func() {
 			}
 
 			kubernetesClient.EXPECT().Client().Return(c)
+
+			sw = mockclient.NewMockSubResourceClient(ctrl)
+			c.EXPECT().SubResource("scale").Return(sw)
 		})
 
-		var patch = client.RawPatch(types.MergePatchType, []byte(`{"spec":{"replicas":1}}`))
-
 		It("should scale the KCM deployment", func() {
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), patch)
+			sw.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), patch)
 			Expect(botanist.ScaleKubeControllerManagerToOne(ctx)).To(Succeed())
 		})
 
 		It("should fail when the scale call fails", func() {
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), patch).Return(fakeErr)
+			sw.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), patch).Return(fakeErr)
 			Expect(botanist.ScaleKubeControllerManagerToOne(ctx)).To(MatchError(fakeErr))
 		})
 	})

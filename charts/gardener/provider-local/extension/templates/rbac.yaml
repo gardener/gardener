@@ -91,6 +91,7 @@ rules:
   - configmaps
   - endpoints
   - deployments
+  - deployments/scale
   - services
   - services/status
   - nodes

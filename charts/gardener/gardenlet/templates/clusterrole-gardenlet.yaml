@@ -167,9 +167,11 @@ rules:
   - apps
   resources:
   - deployments
+  - deployments/scale
   # TODO(Kristian-ZH): remove this when the old fluent-bit deletion logic is removed
   - daemonsets
   - statefulsets
+  - statefulsets/scale
   - replicasets
   verbs:
   - create

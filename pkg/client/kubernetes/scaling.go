@@ -54,10 +54,7 @@ func ScaleDeployment(ctx context.Context, c client.Client, key client.ObjectKey,
 // scaleResource scales resource's 'spec.replicas' to replicas count
 func scaleResource(ctx context.Context, c client.Client, obj client.Object, replicas int32) error {
 	patch := []byte(fmt.Sprintf(`{"spec":{"replicas":%d}}`, replicas))
-
-	// TODO: replace this with call to scale subresource once controller-runtime supports it
-	// see: https://github.com/kubernetes-sigs/controller-runtime/issues/172
-	return c.Patch(ctx, obj, client.RawPatch(types.MergePatchType, patch))
+	return c.SubResource("scale").Patch(ctx, obj, client.RawPatch(types.MergePatchType, patch))
 }
 
 // WaitUntilDeploymentScaledToDesiredReplicas waits for the number of available replicas to be equal to the deployment's desired replicas count.

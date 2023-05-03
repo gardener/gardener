@@ -35,6 +35,7 @@ var _ = Describe("scale", func() {
 	var (
 		ctrl          *gomock.Controller
 		runtimeClient *mockclient.MockClient
+		sw            *mockclient.MockSubResourceClient
 		key           = client.ObjectKey{Name: "foo", Namespace: "bar"}
 		statefullSet  = &appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
@@ -66,6 +67,7 @@ var _ = Describe("scale", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		runtimeClient = mockclient.NewMockClient(ctrl)
+		sw = mockclient.NewMockSubResourceClient(ctrl)
 	})
 
 	AfterEach(func() {
@@ -74,14 +76,16 @@ var _ = Describe("scale", func() {
 
 	Context("ScaleStatefulSet", func() {
 		It("sets scale to 2", func() {
-			runtimeClient.EXPECT().Patch(context.TODO(), statefullSet, getPatch(2))
+			runtimeClient.EXPECT().SubResource("scale").Return(sw)
+			sw.EXPECT().Patch(context.TODO(), statefullSet, getPatch(2))
 			Expect(ScaleStatefulSet(context.TODO(), runtimeClient, key, 2)).To(Succeed(), "scale succeeds")
 		})
 	})
 
 	Context("ScaleDeployment", func() {
 		It("sets scale to 2", func() {
-			runtimeClient.EXPECT().Patch(context.TODO(), deployment, getPatch(2))
+			runtimeClient.EXPECT().SubResource("scale").Return(sw)
+			sw.EXPECT().Patch(context.TODO(), deployment, getPatch(2))
 			Expect(ScaleDeployment(context.TODO(), runtimeClient, key, 2)).To(Succeed(), "scale succeeds")
 		})
 	})
@@ -122,7 +126,8 @@ var _ = Describe("scale", func() {
 
 	Describe("#ScaleStatefulSetAndWaitUntilScaled", func() {
 		It("should scale and wait until statefulset was scaled", func() {
-			runtimeClient.EXPECT().Patch(context.TODO(), statefullSet, getPatch(2))
+			runtimeClient.EXPECT().SubResource("scale").Return(sw)
+			sw.EXPECT().Patch(context.TODO(), statefullSet, getPatch(2))
 			runtimeClient.EXPECT().Get(gomock.Any(), key, gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).DoAndReturn(
 				func(_ context.Context, _ types.NamespacedName, deploy *appsv1.StatefulSet, _ ...client.GetOption) error {
 					*deploy = statefullSetWith2Replicas
