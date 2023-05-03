@@ -34,7 +34,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
@@ -55,7 +54,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -214,16 +212,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 		})
 		fluentOperatorCRDs = fluentoperator.NewCRDs(r.SeedClientSet.Applier())
 	)
-
-	// TODO(rfranzke): Delete this in a future version.
-	{
-		if err := kubernetesutils.DeleteObjects(ctx, seedClient,
-			&resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "gardener-seed-admission-controller", Namespace: r.GardenNamespace}},
-			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-gardener-seed-admission-controller", Namespace: r.GardenNamespace}},
-		); err != nil {
-			return err
-		}
-	}
 
 	var (
 		g                = flow.NewGraph("Seed cluster deletion")
