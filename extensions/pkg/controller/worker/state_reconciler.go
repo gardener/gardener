@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
-	"strings"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -84,18 +83,6 @@ func (r *stateReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 	rawState, err := json.Marshal(state)
 	if err != nil {
 		return reconcile.Result{}, err
-	}
-
-	// Previously, this actuator was using 'update'/PUT calls to write the state into the Worker status. However, this
-	// unnecessarily persisted also null-ed fields. Below PATCH call does not remove them, hence we have to reset the
-	// state once to ensure these null-ed fields disappear.
-	// TODO(rfranzke): Remove this in a future version.
-	if worker.Status.State != nil && strings.Contains(string(worker.Status.State.Raw), `"creationTimestamp":null`) {
-		patch := client.MergeFromWithOptions(worker.DeepCopy(), client.MergeFromWithOptimisticLock{})
-		worker.Status.State = nil
-		if err := r.client.Status().Patch(ctx, worker, patch); err != nil {
-			return reconcilerutils.ReconcileErr(fmt.Errorf("error updating Worker state: %w", err))
-		}
 	}
 
 	// If the state did not change, do not even try to send an empty PATCH request.
