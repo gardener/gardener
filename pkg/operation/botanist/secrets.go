@@ -62,13 +62,6 @@ func (b *Botanist) InitializeSecretsManagement(ctx context.Context) error {
 		flow.TaskFn(b.deleteSSHKeypair).SkipIf(v1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo())),
 		b.generateGenericTokenKubeconfig,
 		b.reconcileWildcardIngressCertificate,
-		// TODO(rfranzke): Remove this function in a future release.
-		func(ctx context.Context) error {
-			return client.IgnoreNotFound(b.SeedClientSet.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-				Name:      v1beta1constants.SecretNameGenericTokenKubeconfig,
-				Namespace: b.Shoot.SeedNamespace,
-			}}))
-		},
 	)(ctx)
 }
 
