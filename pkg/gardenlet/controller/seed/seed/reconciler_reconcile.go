@@ -1322,13 +1322,13 @@ func CleanupOldFluentBit(ctx context.Context, seedClient client.Client) error {
 	fluentBitService := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit", Namespace: v1beta1constants.GardenNamespace}}
 	fluentBitServiceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit", Namespace: v1beta1constants.GardenNamespace}}
 
-	if err := seedClient.Get(ctx, kubernetesutils.Key(fluentBitDaemonSet.GetNamespace(), fluentBitDaemonSet.GetName()), fluentBitDaemonSet); client.IgnoreNotFound(err) != nil {
+	if err := seedClient.Get(ctx, client.ObjectKeyFromObject(fluentBitDaemonSet), fluentBitDaemonSet); client.IgnoreNotFound(err) != nil {
 		return err
 	}
-	if err := seedClient.Get(ctx, kubernetesutils.Key(fluentBitService.GetNamespace(), fluentBitService.GetName()), fluentBitService); client.IgnoreNotFound(err) != nil {
+	if err := seedClient.Get(ctx, client.ObjectKeyFromObject(fluentBitService), fluentBitService); client.IgnoreNotFound(err) != nil {
 		return err
 	}
-	if err := seedClient.Get(ctx, kubernetesutils.Key(fluentBitServiceAccount.GetNamespace(), fluentBitServiceAccount.GetName()), fluentBitServiceAccount); client.IgnoreNotFound(err) != nil {
+	if err := seedClient.Get(ctx, client.ObjectKeyFromObject(fluentBitServiceAccount), fluentBitServiceAccount); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 

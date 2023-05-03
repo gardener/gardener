@@ -38,12 +38,18 @@ const (
 
 // CustomResourcesValues are the values for the custom resources.
 type CustomResourcesValues struct {
-	// FluentBitImage is the fluent-bit image.
-	FluentBitImage string
-	// FluentBitInitImage is the fluent-bit init container image.
-	FluentBitInitImage string
-	// FluentBitPriorityClass is the name of the priority class of the fluent-bit.
-	FluentBitPriorityClass string
+	// FluentBit represents the fluent-bit values.
+	FluentBit FluentBit
+}
+
+// FluentBit holds the fluent-bit configurations
+type FluentBit struct {
+	// Image is the fluent-bit image.
+	Image string
+	// InitContainerImage is the fluent-bit init container image.
+	InitContainerImage string
+	// PriorityClass is the name of the priority class of the fluent-bit.
+	PriorityClass string
 }
 
 type customResources struct {
@@ -143,7 +149,7 @@ end`,
 
 	resources := []client.Object{configMap}
 
-	fluentBit := customresources.GetFluentBit(getFluentBitLabels(), v1beta1constants.DaemonSetNameFluentBit, c.namespace, c.values.FluentBitImage, c.values.FluentBitInitImage, c.values.FluentBitPriorityClass)
+	fluentBit := customresources.GetFluentBit(getFluentBitLabels(), v1beta1constants.DaemonSetNameFluentBit, c.namespace, c.values.FluentBit.Image, c.values.FluentBit.InitContainerImage, c.values.FluentBit.PriorityClass)
 	resources = append(resources, fluentBit)
 
 	clusterFluentBitConfig := customresources.GetClusterFluentBitConfig(v1beta1constants.DaemonSetNameFluentBit, getCustomResourcesLabels())

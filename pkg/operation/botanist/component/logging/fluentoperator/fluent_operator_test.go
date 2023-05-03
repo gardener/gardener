@@ -54,8 +54,8 @@ var _ = Describe("Fluent Operator", func() {
 		image             = "some-image:some-tag"
 		priorityClassName = "some-priority-class"
 		values            = Values{
-			OperatorImage:             image,
-			OperatorPriorityClassName: priorityClassName,
+			Image:             image,
+			PriorityClassName: priorityClassName,
 		}
 
 		c         client.Client

@@ -53,10 +53,10 @@ var (
 
 // Values keeps values for the Fluent Operator.
 type Values struct {
-	// OperatorImage is the image of the Fluent Operator
-	OperatorImage string
-	// FluentBitImage is the Fluent-bit image
-	OperatorPriorityClassName string
+	// Image is the image of the Fluent Operator.
+	Image string
+	// PriorityClassName is the name of the priority class of the Fluent Operator.
+	PriorityClassName string
 }
 
 type fluentOperator struct {
@@ -86,14 +86,14 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: f.namespace,
-				Labels:    f.getLabels(),
+				Labels:    getLabels(),
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
 		}
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   roleName,
-				Labels: f.getLabels(),
+				Labels: getLabels(),
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
@@ -131,7 +131,7 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   name,
-				Labels: f.getLabels(),
+				Labels: getLabels(),
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,
@@ -148,7 +148,7 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      v1beta1constants.DeploymentNameFluentOperator,
 				Namespace: f.namespace,
-				Labels: utils.MergeStringMaps(f.getLabels(), map[string]string{
+				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
 				}),
 			},
@@ -156,22 +156,22 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 				RevisionHistoryLimit: pointer.Int32(2),
 				Replicas:             pointer.Int32(1),
 				Selector: &metav1.LabelSelector{
-					MatchLabels: f.getLabels(),
+					MatchLabels: getLabels(),
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: utils.MergeStringMaps(f.getLabels(), map[string]string{
+						Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 							v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
 							v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 						}),
 					},
 					Spec: corev1.PodSpec{
 						ServiceAccountName: serviceAccount.Name,
-						PriorityClassName:  f.values.OperatorPriorityClassName,
+						PriorityClassName:  f.values.PriorityClassName,
 						Containers: []corev1.Container{
 							{
 								Name:            name,
-								Image:           f.values.OperatorImage,
+								Image:           f.values.Image,
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Args:            []string{"--disable-component-controllers", "fluentd"},
 								Env:             f.computeEnv(),
@@ -280,7 +280,7 @@ func (f *fluentOperator) computeEnv() []corev1.EnvVar {
 	}
 }
 
-func (f *fluentOperator) getLabels() map[string]string {
+func getLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.LabelApp:   name,
 		v1beta1constants.LabelRole:  v1beta1constants.LabelLogging,

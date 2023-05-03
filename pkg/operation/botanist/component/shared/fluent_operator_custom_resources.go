@@ -54,9 +54,11 @@ func NewFluentOperatorCustomResources(
 		c,
 		gardenNamespaceName,
 		fluentoperator.CustomResourcesValues{
-			FluentBitImage:         fluentBitImage.String(),
-			FluentBitInitImage:     fluentBitInitImage.String(),
-			FluentBitPriorityClass: priorityClassName,
+			FluentBit: fluentoperator.FluentBit{
+				Image:              fluentBitImage.String(),
+				InitContainerImage: fluentBitInitImage.String(),
+				PriorityClass:      priorityClassName,
+			},
 		},
 		additionalInputs,
 		additionalFilters,

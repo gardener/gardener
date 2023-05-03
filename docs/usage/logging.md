@@ -123,8 +123,8 @@ Exposing logs for a new component to the User's Grafana is described in the [How
 The Fluent-bit configurations can be found on `pkg/operation/botanist/component/logging/fluentoperator/customresources`
 There are six different specifications:
 
-* FluentBit: Defines the Fluent-bit statefulset specifications
-* ClusterFluentBitConfig: Defines the labelselectors of the resources which FB will match
+* FluentBit: Defines the fluent-bit DaemonSet specifications
+* ClusterFluentBitConfig: Defines the labelselectors of the resources which fluent-bit will match
 * ClusterInput: Defines the location of the input stream of the logs
 * ClusterOutput: Defines the location of the output source (Loki for example)
 * ClusterFilter: Defines filters which match specific keys

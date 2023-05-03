@@ -47,9 +47,11 @@ var _ = Describe("Fluent Operator Custom Resources", func() {
 		image             = "some-image:some-tag"
 		priorityClassName = "some-priority-class"
 		values            = CustomResourcesValues{
-			FluentBitImage:         image,
-			FluentBitInitImage:     image,
-			FluentBitPriorityClass: priorityClassName,
+			FluentBit: FluentBit{
+				Image:              image,
+				InitContainerImage: image,
+				PriorityClass:      priorityClassName,
+			},
 		}
 
 		c         client.Client
