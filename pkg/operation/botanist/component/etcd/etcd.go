@@ -75,9 +75,6 @@ const (
 	// LabelAppValue is the value of a label whose key is 'app'.
 	LabelAppValue = "etcd-statefulset"
 
-	// NetworkPolicyNameClient is the name of a network policy that allows ingress traffic to etcd from certain sources.
-	NetworkPolicyNameClient = "allow-etcd"
-
 	// NetworkPolicyNamePeer is the name of a network policy that allows ingress traffic to etcd from member pods.
 	NetworkPolicyNamePeer = "allow-etcd-peer"
 
@@ -275,11 +272,6 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	// Hence, it doesn't make sense if both component deployers are running this code - let's only do it for the main
 	// ETCD.
 	if e.values.Role == v1beta1constants.ETCDRoleMain {
-		// TODO(rfranzke): Remove this in a future version.
-		if err := kubernetesutils.DeleteObject(ctx, e.client, e.emptyNetworkPolicy(NetworkPolicyNameClient)); err != nil {
-			return err
-		}
-
 		// create peer network policy only if there are 3 replicas
 		// TODO(rfranzke): When https://github.com/gardener/etcd-druid/pull/521 is resolved then drop this NetworkPolicy
 		//  and replace it with the new labels instead.
@@ -655,7 +647,6 @@ func (e *etcd) Destroy(ctx context.Context) error {
 	objects := []client.Object{
 		e.emptyHVPA(),
 		e.etcd,
-		e.emptyNetworkPolicy(NetworkPolicyNameClient),
 	}
 
 	if e.values.HighAvailabilityEnabled {
