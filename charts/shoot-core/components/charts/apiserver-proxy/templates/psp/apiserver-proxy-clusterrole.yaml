@@ -1,9 +1,0 @@
-# TODO(oliver-goetz): Delete this Helm chart in a future version.
-{{- if not .Values.global.pspDisabled }}
-apiVersion: {{ include "rbacversion" . }}
-kind: ClusterRole
-metadata:
-  name: gardener.cloud:psp:kube-system:apiserver-proxy
-  annotations:
-    resources.gardener.cloud/mode: Ignore
-{{- end }}

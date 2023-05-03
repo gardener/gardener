@@ -65,8 +65,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 	}
 
 	values := map[string]interface{}{
-		"global":          global,
-		"apiserver-proxy": common.GenerateAddonConfig(nil, b.APIServerSNIEnabled() && !b.Shoot.IsWorkerless),
+		"global": global,
 		"monitoring": common.GenerateAddonConfig(map[string]interface{}{
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,

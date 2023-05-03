@@ -1,9 +1,0 @@
-# TODO(oliver-goetz): Delete this Helm chart in a future version.
-{{- if not .Values.global.pspDisabled }}
-apiVersion: {{ include "podsecuritypolicyversion" .}}
-kind: PodSecurityPolicy
-metadata:
-  name: gardener.kube-system.apiserver-proxy
-  annotations:
-    resources.gardener.cloud/mode: Ignore
-{{- end }}
