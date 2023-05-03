@@ -197,7 +197,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			}).DoIf(!o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady, deployOwnerDomainDNSRecord),
 		})
-		deployExternalDomainDNSRecord = g.Add(flow.Task{
+		_ = g.Add(flow.Task{
 			Name: "Deploying external domain DNS record",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				if err := botanist.DeployOrDestroyExternalDNSRecord(ctx); err != nil {
@@ -613,7 +613,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.WaitUntilNginxIngressServiceIsReady).DoIf(v1beta1helper.NginxIngressEnabled(botanist.Shoot.GetInfo().Spec.Addons)).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployManagedResourcesForAddons, initializeShootClients, waitUntilWorkerReady, ensureShootClusterIdentity),
 		})
-		deployIngressDomainDNSRecord = g.Add(flow.Task{
+		_ = g.Add(flow.Task{
 			Name: "Deploying nginx ingress DNS record",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				if err := botanist.DeployOrDestroyIngressDNSRecord(ctx); err != nil {
@@ -622,11 +622,6 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 				return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskDeployDNSRecordIngress)
 			}).DoIf(!o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(nginxLBReady),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Cleaning up orphaned DNSRecord secrets",
-			Fn:           flow.TaskFn(botanist.CleanupOrphanedDNSRecordSecrets).DoIf(!o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(deployInternalDomainDNSRecord, deployExternalDomainDNSRecord, deployOwnerDomainDNSRecord, deployIngressDomainDNSRecord),
 		})
 		waitUntilTunnelConnectionExists = g.Add(flow.Task{
 			Name:         "Waiting until the Kubernetes API server can connect to the Shoot workers",
