@@ -224,24 +224,6 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			},
 			Dependencies: flow.NewTaskIDs(deployInfrastructure),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Reconciling network policies",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.NetworkPolicies.Deploy).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployNamespace),
-		})
-		// If the nodes CIDR is not static then it might be assigned only after the Infrastructure reconciliation. Hence,
-		// we might need to reconcile the network policies again after this step (because it might be only known afterwards).
-		_ = g.Add(flow.Task{
-			Name: "Reconciling network policies now that infrastructure is ready",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if botanist.Shoot.GetInfo().Spec.Networking.Nodes != nil {
-					o.Shoot.Components.NetworkPolicies = botanist.DefaultNetworkPolicies()
-					return botanist.Shoot.Components.NetworkPolicies.Deploy(ctx)
-				}
-				return nil
-			}).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(!staticNodesCIDR),
-			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady),
-		})
 		deploySourceBackupEntry = g.Add(flow.Task{
 			Name:         "Deploying source backup entry",
 			Fn:           flow.TaskFn(botanist.DeploySourceBackupEntry).DoIf(isCopyOfBackupsRequired),

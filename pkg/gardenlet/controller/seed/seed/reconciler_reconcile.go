@@ -803,10 +803,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if err != nil {
 		return err
 	}
-	networkPolicies, err := defaultNetworkPolicies(seedClient, r.GardenNamespace)
-	if err != nil {
-		return err
-	}
 	dwdWeeder, dwdProber, err := defaultDependencyWatchdogs(seedClient, kubernetesVersion, r.ImageVector, seed.GetInfo().Spec.Settings, r.GardenNamespace)
 	if err != nil {
 		return err
@@ -831,10 +827,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		_ = g.Add(flow.Task{
 			Name: "Deploying Istio",
 			Fn:   istio.Deploy,
-		})
-		_ = g.Add(flow.Task{
-			Name: "Ensuring network policies",
-			Fn:   networkPolicies.Deploy,
 		})
 		nginxLBReady = g.Add(flow.Task{
 			Name: "Waiting until nginx ingress LoadBalancer is ready",

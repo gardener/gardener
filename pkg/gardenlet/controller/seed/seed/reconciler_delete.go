@@ -45,7 +45,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/logging/fluentoperator"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
@@ -197,7 +196,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 		kubeAPIServerIngress = kubeapiserverexposure.NewIngress(seedClient, r.GardenNamespace, kubeapiserverexposure.IngressValues{})
 		kubeAPIServerService = kubeapiserverexposure.NewInternalNameService(seedClient, r.GardenNamespace)
 		nginxIngress         = nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{})
-		networkPolicies      = networkpolicies.NewBootstrapper(seedClient, r.GardenNamespace)
 		dwdWeeder            = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleWeeder})
 		dwdProber            = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProber})
 		systemResources      = seedsystem.New(seedClient, r.GardenNamespace, seedsystem.Values{})
@@ -231,10 +229,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 		destroyNginxIngress = g.Add(flow.Task{
 			Name: "Destroying nginx-ingress",
 			Fn:   component.OpDestroyAndWait(nginxIngress).Destroy,
-		})
-		destroyNetworkPolicies = g.Add(flow.Task{
-			Name: "Destroy network policies",
-			Fn:   component.OpDestroyAndWait(networkPolicies).Destroy,
 		})
 		destroyDWDWeeder = g.Add(flow.Task{
 			Name: "Destroy dependency-watchdog-weeder",
@@ -274,7 +268,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 		syncPointCleanedUp = flow.NewTaskIDs(
 			destroyNginxIngress,
 			destroyClusterAutoscaler,
-			destroyNetworkPolicies,
 			destroyDWDWeeder,
 			destroyDWDProber,
 			destroyKubeAPIServerIngress,
