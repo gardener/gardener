@@ -273,7 +273,6 @@ func (shootBindingStrategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Obj
 }
 
 // ToSelectableFields returns a field set that represents the object
-// TODO: fields are not labels, and the validation rules for them do not apply.
 func ToSelectableFields(shoot *core.Shoot) fields.Set {
 	// The purpose of allocation with a given number of elements is to reduce
 	// amount of allocations needed to create the fields.Set. If you add any
