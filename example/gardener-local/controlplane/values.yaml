@@ -158,7 +158,6 @@ global:
         maxSize: 0
         policy: ""
     featureGates:
-      HAControlPlanes: true
       IPv6SingleStack: true
       MutableShootSpecNetworkingNodes: true
     resources: {}

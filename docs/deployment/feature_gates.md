@@ -25,7 +25,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | APIServerSNI                               | `false` | `Alpha` | `1.7`  | `1.18` |
 | APIServerSNI                               | `true`  | `Beta`  | `1.19` |        |
 | APIServerSNI (deprecated)                  | `true`  | `Beta`  | `1.48` |        |
-| HAControlPlanes                            | `false` | `Alpha` | `1.49` |        |
+| HAControlPlanes                            | `false` | `Alpha` | `1.49` | `1.70` |
+| HAControlPlanes                            | `true`  | `Beta`  | `1.71` |        |
 | DefaultSeccompProfile                      | `false` | `Alpha` | `1.54` |        |
 | CoreDNSQueryRewriting                      | `false` | `Alpha` | `1.55` |        |
 | IPv6SingleStack                            | `false` | `Alpha` | `1.63` |        |
