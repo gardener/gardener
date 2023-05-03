@@ -84,7 +84,7 @@ type ControllerResource struct {
 	Lifecycle *ControllerResourceLifecycle `json:"lifecycle,omitempty" protobuf:"bytes,6,opt,name=lifecycle"`
 	// WorkerlessSupported specifies whether this ControllerResource supports Workerless Shoot clusters.
 	// +optional
-	WorkerlessSupported *bool `json:"workerlessSupported,omitempty"`
+	WorkerlessSupported *bool `json:"workerlessSupported,omitempty" protobuf:"varint,7,opt,name=workerlessSupported"`
 }
 
 // DeploymentRef contains information about `ControllerDeployment` references.

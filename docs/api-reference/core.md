@@ -3458,6 +3458,18 @@ Delete: &ldquo;BeforeKubeAPIServer&rdquo;
 Migrate: &ldquo;BeforeKubeAPIServer&rdquo;</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>workerlessSupported</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>WorkerlessSupported specifies whether this ControllerResource supports Workerless Shoot clusters.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ControllerResourceLifecycle">ControllerResourceLifecycle

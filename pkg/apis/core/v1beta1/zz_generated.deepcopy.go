@@ -1069,6 +1069,11 @@ func (in *ControllerResource) DeepCopyInto(out *ControllerResource) {
 		*out = new(ControllerResourceLifecycle)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.WorkerlessSupported != nil {
+		in, out := &in.WorkerlessSupported, &out.WorkerlessSupported
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

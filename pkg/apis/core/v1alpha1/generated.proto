@@ -580,6 +580,10 @@ message ControllerResource {
   //  Migrate: "BeforeKubeAPIServer"
   // +optional
   optional ControllerResourceLifecycle lifecycle = 6;
+
+  // WorkerlessSupported specifies whether this ControllerResource supports Workerless Shoot clusters.
+  // +optional
+  optional bool workerlessSupported = 7;
 }
 
 // ControllerResourceLifecycle defines the lifecycle of a controller resource.
