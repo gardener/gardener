@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
@@ -110,6 +111,15 @@ func (g *gardener) Deploy(ctx context.Context) error {
 }
 
 func (g *gardener) Destroy(ctx context.Context) error {
+	var shootAccessSecretNames = []string{v1beta1constants.SecretNameGardener, v1beta1constants.SecretNameGardenerInternal}
+
+	for _, v := range shootAccessSecretNames {
+		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: v, Namespace: g.namespace}}
+		if err := client.IgnoreNotFound(g.client.Delete(ctx, secret)); err != nil {
+			return err
+		}
+	}
+
 	return managedresources.DeleteForShoot(ctx, g.client, g.namespace, managedResourceName)
 }
 
