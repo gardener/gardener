@@ -98,7 +98,6 @@ func GenerateAddonConfig(values map[string]interface{}, enabled bool) map[string
 // DeleteLoki  deletes all resources of the Loki in a given namespace.
 func DeleteLoki(ctx context.Context, k8sClient client.Client, namespace string) error {
 	resources := []client.Object{
-		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-loki", Namespace: namespace}},
 		&hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "loki-config", Namespace: namespace}},
 		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
