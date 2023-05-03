@@ -369,17 +369,11 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		e.etcd.Spec.PriorityClassName = &e.values.PriorityClassName
 		e.etcd.Spec.Annotations = annotations
 		e.etcd.Spec.Labels = utils.MergeStringMaps(e.getRoleLabels(), map[string]string{
-			v1beta1constants.LabelApp:                            LabelAppValue,
-			v1beta1constants.LabelNetworkPolicyToDNS:             v1beta1constants.LabelNetworkPolicyAllowed,
-			v1beta1constants.LabelNetworkPolicyToPublicNetworks:  v1beta1constants.LabelNetworkPolicyAllowed,
-			v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
-			// TODO(rfranzke): etcd-druid wrongly uses all these labels for the .spec.selector of the Services it
-			//  creates. Hence, we cannot change them because otherwise multi-node ETCD clusters would break (since the
-			//  services wouldn't select anything anymore). Until this is fixed, we have to keep using the deprecated
-			//  to-seed-apiserver label instead of the new to-runtime-apiserver.
-			//  See https://github.com/gardener/etcd-druid/pull/521.
-			v1beta1constants.LabelNetworkPolicyToSeedAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
-			// v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelApp:                             LabelAppValue,
+			v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToPublicNetworks:   v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToPrivateNetworks:  v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 		e.etcd.Spec.Selector = &metav1.LabelSelector{
 			MatchLabels: utils.MergeStringMaps(e.getRoleLabels(), map[string]string{
