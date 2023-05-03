@@ -75,6 +75,8 @@ type ControllerResource struct {
 	//  Delete: "BeforeKubeAPIServer"
 	//  Migrate: "BeforeKubeAPIServer"
 	Lifecycle *ControllerResourceLifecycle
+	// WorkerlessSupported specifies whether this ControllerResource supports Workerless Shoot clusters.
+	WorkerlessSupported *bool
 }
 
 // DeploymentRef contains information about `ControllerDeployment` references.
