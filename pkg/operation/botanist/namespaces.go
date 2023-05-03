@@ -106,30 +106,27 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 			// recreate the disks. This is nothing we want to do automatically, so let's find the existing volumes and
 			// use their zones from now on.
 			// As a consequence, even shoots w/o failure tolerance type 'zone' might be pinned to multiple zones.
-			// TODO(rfranzke): Clean up this block in a future release.
-			{
-				pvcList := &corev1.PersistentVolumeClaimList{}
-				if err := b.SeedClientSet.Client().List(ctx, pvcList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
-					return fmt.Errorf("failed listing PVCs: %w", err)
+			pvcList := &corev1.PersistentVolumeClaimList{}
+			if err := b.SeedClientSet.Client().List(ctx, pvcList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
+				return fmt.Errorf("failed listing PVCs: %w", err)
+			}
+
+			for _, pvc := range pvcList.Items {
+				pv := &corev1.PersistentVolume{}
+				if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: pvc.Spec.VolumeName}, pv); err != nil {
+					return fmt.Errorf("failed getting PV %s: %w", pvc.Spec.VolumeName, err)
 				}
 
-				for _, pvc := range pvcList.Items {
-					pv := &corev1.PersistentVolume{}
-					if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: pvc.Spec.VolumeName}, pv); err != nil {
-						return fmt.Errorf("failed getting PV %s: %w", pvc.Spec.VolumeName, err)
-					}
+				pvNodeAffinity := pv.Spec.NodeAffinity
+				if pvNodeAffinity == nil || pvNodeAffinity.Required == nil {
+					continue
+				}
 
-					pvNodeAffinity := pv.Spec.NodeAffinity
-					if pvNodeAffinity == nil || pvNodeAffinity.Required == nil {
-						continue
-					}
-
-					for _, term := range pvNodeAffinity.Required.NodeSelectorTerms {
-						zonesFromTerm := ExtractZonesFromNodeSelectorTerm(term)
-						if len(zonesFromTerm) > 0 {
-							chosenZones.Insert(zonesFromTerm...)
-							b.Logger.Info("Found existing zone(s) due to volume", "zone", strings.Join(zonesFromTerm, ","), "persistentVolume", client.ObjectKeyFromObject(pv))
-						}
+				for _, term := range pvNodeAffinity.Required.NodeSelectorTerms {
+					zonesFromTerm := ExtractZonesFromNodeSelectorTerm(term)
+					if len(zonesFromTerm) > 0 {
+						chosenZones.Insert(zonesFromTerm...)
+						b.Logger.Info("Found existing zone(s) due to volume", "zone", strings.Join(zonesFromTerm, ","), "persistentVolume", client.ObjectKeyFromObject(pv))
 					}
 				}
 			}
