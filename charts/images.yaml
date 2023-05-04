@@ -381,7 +381,7 @@ images:
     name: fluent-bit-to-loki
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/fluent-bit-to-loki
-  tag: "v0.52.0"
+  tag: "v0.53.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -408,7 +408,7 @@ images:
 - name: loki-curator
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/loki-curator
-  tag: "v0.52.0"
+  tag: "v0.53.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -451,7 +451,7 @@ images:
     name: telegraf-iptables
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/telegraf-iptables
-  tag: "v0.52.0"
+  tag: "v0.53.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -467,7 +467,7 @@ images:
 - name: event-logger
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/event-logger
-  tag: "v0.52.0"
+  tag: "v0.53.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
