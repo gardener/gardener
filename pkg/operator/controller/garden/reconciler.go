@@ -38,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -356,6 +357,10 @@ func lastSecretRotationStartTimes(garden *operatorv1alpha1.Garden) map[string]ti
 			for _, config := range nonAutoRotatedCACertConfigurations() {
 				rotation[config.GetName()] = gardenStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time
 			}
+		}
+
+		if gardenStatus.Credentials.Rotation.CertificateAuthorities != nil && gardenStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime != nil {
+			rotation[kubeapiserver.SecretStaticTokenName] = gardenStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time
 		}
 
 		if gardenStatus.Credentials.Rotation.ServiceAccountKey != nil && gardenStatus.Credentials.Rotation.ServiceAccountKey.LastInitiationTime != nil {

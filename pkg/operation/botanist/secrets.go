@@ -39,6 +39,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // InitializeSecretsManagement initializes the secrets management and deploys the required secrets to the shoot
@@ -81,8 +82,18 @@ func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 			}
 		}
 
-		if shootStatus.Credentials.Rotation.Kubeconfig != nil && shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime != nil {
-			rotation[kubeapiserver.SecretStaticTokenName] = shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime.Time
+		// Beginning with Kubernetes v1.27, the static token kubeconfig must always be disabled. Hence, there will not
+		// be any kubeconfig rotation anymore. However, the static token secret does also contain a token for the health
+		// check of the kube-apiserver which still must be rotated. Hence, let's use the last rotation initiation time
+		// of the CA rotation also to rotate the static token secret.
+		if versionutils.ConstraintK8sGreaterEqual127.Check(b.Shoot.KubernetesVersion) {
+			if shootStatus.Credentials.Rotation.CertificateAuthorities != nil && shootStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime != nil {
+				rotation[kubeapiserver.SecretStaticTokenName] = shootStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time
+			}
+		} else {
+			if shootStatus.Credentials.Rotation.Kubeconfig != nil && shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime != nil {
+				rotation[kubeapiserver.SecretStaticTokenName] = shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime.Time
+			}
 		}
 
 		if shootStatus.Credentials.Rotation.SSHKeypair != nil && shootStatus.Credentials.Rotation.SSHKeypair.LastInitiationTime != nil {
