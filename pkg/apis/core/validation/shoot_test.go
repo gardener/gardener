@@ -5163,7 +5163,29 @@ var _ = Describe("Shoot Validation Tests", func() {
 	})
 
 	Describe("#ValidateWorkers", func() {
+		It("should succeed checking workers", func() {
+			workers := []core.Worker{
+				{Name: "worker1"},
+				{Name: "worker2"},
+			}
 
+			Expect(ValidateWorkers(workers, nil)).To(BeEmpty())
+		})
+
+		It("should fail because worker name is duplicated", func() {
+			workers := []core.Worker{
+				{Name: "worker1"},
+				{Name: "worker2"},
+				{Name: "worker1"},
+			}
+
+			Expect(ValidateWorkers(workers, field.NewPath("workers"))).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("workers[2].name"),
+				})),
+			))
+		})
 	})
 
 	Describe("#ValidateSystemComponentWorkers", func() {
