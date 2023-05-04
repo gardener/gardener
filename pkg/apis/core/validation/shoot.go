@@ -20,6 +20,7 @@ import (
 	"net"
 	"net/url"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -1345,6 +1346,7 @@ func validateProvider(provider core.Provider, kubernetes core.Kubernetes, networ
 		}
 
 		allErrs = append(allErrs, ValidateWorkers(provider.Workers, fldPath.Child("workers"))...)
+		allErrs = append(allErrs, ValidateSystemComponentWorkers(kubernetes.Version, provider.Workers, fldPath.Child("workers"))...)
 	}
 
 	if kubernetes.KubeControllerManager != nil && kubernetes.KubeControllerManager.NodeCIDRMaskSize != nil && networking != nil {
@@ -1734,26 +1736,62 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 		workerNames.Insert(worker.Name)
 	}
 
-	allErrs = append(allErrs, ValidateSystemComponentWorkers(workers, fldPath)...)
-
 	return allErrs
 }
 
 // ValidateSystemComponentWorkers validates workers specified to run system components.
-func ValidateSystemComponentWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList {
+func ValidateSystemComponentWorkers(kubernetesVersion string, workers []core.Worker, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs                                   = field.ErrorList{}
 		atLeastOnePoolWithAllowedSystemComponents = false
+
+		workerPoolsWithSufficientWorkers   = make(map[string]struct{})
+		workerPoolsWithInsufficientWorkers = make(map[string]int)
 	)
 
-	for _, worker := range workers {
+	for i, worker := range workers {
+		// check if system component worker pool is configured
 		if !helper.SystemComponentsAllowed(&worker) {
 			continue
 		}
+
 		if worker.Minimum == 0 || worker.Maximum == 0 {
 			continue
 		}
 		atLeastOnePoolWithAllowedSystemComponents = true
+
+		// Check if maximum workers is at least as big as there are zones specified.
+		// It ensures, that the cluster potentially has one worker per zone to schedule required system components with TopologySpreadConstraints.
+		// This is considered per distinct worker pool concerning their zone setup,
+		// e.g. worker.zones: {1,2,3} == worker.zones: {3,2,1}
+		sortedZones := append([]string{}, worker.Zones...)
+		sort.Strings(sortedZones)
+
+		var (
+			hasSufficientWorkers = false
+			workerPoolKey        = strings.Join(sortedZones, "--")
+		)
+
+		if int(worker.Maximum) >= len(worker.Zones) {
+			hasSufficientWorkers = true
+		}
+
+		if hasSufficientWorkers {
+			workerPoolsWithSufficientWorkers[workerPoolKey] = struct{}{}
+			delete(workerPoolsWithInsufficientWorkers, workerPoolKey)
+		} else {
+			if _, b := workerPoolsWithSufficientWorkers[workerPoolKey]; !b {
+				workerPoolsWithInsufficientWorkers[workerPoolKey] = i
+			}
+		}
+	}
+
+	// TODO(timuthy): Remove this check as soon as v1.27 is the least supported Kubernetes version in Gardener.
+	k8sGreaterEqual127, _ := versionutils.CheckVersionMeetsConstraint(kubernetesVersion, ">= 1.27")
+	if k8sGreaterEqual127 {
+		for _, i := range workerPoolsWithInsufficientWorkers {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Index(i).Child("maximum"), "maximum node count should be greater or equal to the number of zones specified for this pool"))
+		}
 	}
 
 	if !atLeastOnePoolWithAllowedSystemComponents {

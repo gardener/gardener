@@ -5163,32 +5163,38 @@ var _ = Describe("Shoot Validation Tests", func() {
 	})
 
 	Describe("#ValidateWorkers", func() {
-		var (
-			zero int32 = 0
-			one  int32 = 1
+
+	})
+
+	Describe("#ValidateSystemComponentWorkers", func() {
+		const (
+			zero = iota
+			one
+			two
+			three
 		)
 
 		DescribeTable("validate that at least one active worker pool is configured",
-			func(min1, max1, min2, max2 int32, matcher gomegatypes.GomegaMatcher) {
+			func(min1, max1, min2, max2 int, matcher gomegatypes.GomegaMatcher) {
 				systemComponents := &core.WorkerSystemComponents{
 					Allow: true,
 				}
 				workers := []core.Worker{
 					{
 						Name:             "one",
-						Minimum:          min1,
-						Maximum:          max1,
+						Minimum:          int32(min1),
+						Maximum:          int32(max1),
 						SystemComponents: systemComponents,
 					},
 					{
 						Name:             "two",
-						Minimum:          min2,
-						Maximum:          max2,
+						Minimum:          int32(min2),
+						Maximum:          int32(max2),
 						SystemComponents: systemComponents,
 					},
 				}
 
-				Expect(ValidateWorkers(workers, field.NewPath("workers"))).To(matcher)
+				Expect(ValidateSystemComponentWorkers("", workers, field.NewPath("workers"))).To(matcher)
 			},
 
 			Entry("at least one worker pool min>0, max>0", zero, zero, one, one, BeEmpty()),
@@ -5200,27 +5206,27 @@ var _ = Describe("Shoot Validation Tests", func() {
 		)
 
 		DescribeTable("validate that at least one worker pool is able to host system components",
-			func(min1, max1, min2, max2 int32, allowSystemComponents1, allowSystemComponents2 bool, matcher gomegatypes.GomegaMatcher) {
+			func(min1, max1, min2, max2 int, allowSystemComponents1, allowSystemComponents2 bool, matcher gomegatypes.GomegaMatcher) {
 				workers := []core.Worker{
 					{
 						Name:    "one-active",
-						Minimum: min1,
-						Maximum: max1,
+						Minimum: int32(min1),
+						Maximum: int32(max1),
 						SystemComponents: &core.WorkerSystemComponents{
 							Allow: allowSystemComponents1,
 						},
 					},
 					{
 						Name:    "two-active",
-						Minimum: min2,
-						Maximum: max2,
+						Minimum: int32(min2),
+						Maximum: int32(max2),
 						SystemComponents: &core.WorkerSystemComponents{
 							Allow: allowSystemComponents2,
 						},
 					},
 				}
 
-				Expect(ValidateWorkers(workers, field.NewPath("workers"))).To(matcher)
+				Expect(ValidateSystemComponentWorkers("", workers, field.NewPath("workers"))).To(matcher)
 			},
 
 			Entry("all worker pools min=max=0", zero, zero, zero, zero, true, true, ConsistOf(
@@ -5229,6 +5235,58 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})),
 			)),
 			Entry("at least one worker pool allows system components", zero, zero, one, one, true, true, BeEmpty()),
+		)
+
+		DescribeTable("validate maximum node count",
+			func(kubernetesVersion string, max1, max2 int, allowSystemComponents1, allowSystemComponents2 bool, zones1, zones2 []string, matcher gomegatypes.GomegaMatcher) {
+				workers := []core.Worker{
+					{
+						Name:    "one-active",
+						Minimum: one,
+						Maximum: int32(max1),
+						SystemComponents: &core.WorkerSystemComponents{
+							Allow: allowSystemComponents1,
+						},
+						Zones: zones1,
+					},
+					{
+						Name:    "two-active",
+						Minimum: one,
+						Maximum: int32(max2),
+						SystemComponents: &core.WorkerSystemComponents{
+							Allow: allowSystemComponents2,
+						},
+						Zones: zones2,
+					},
+				}
+
+				Expect(ValidateSystemComponentWorkers(kubernetesVersion, workers, field.NewPath("workers"))).To(matcher)
+			},
+
+			Entry("maximum == len(zones)", "v1.27", three, one, true, false, []string{"1", "2", "3"}, []string{"1"}, BeEmpty()),
+			Entry("maximum < len(zones)", "1.27", two, one, true, false, []string{"1", "2", "3"}, []string{"1"}, ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("workers[0].maximum"),
+				})),
+			)),
+			Entry("maximum < len(zones) with multiple system component worker pools in different zones", "1.27", two, one, true, true, []string{"1", "2", "3"}, []string{"3", "4", "5"}, ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("workers[0].maximum"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("workers[1].maximum"),
+				})),
+			)),
+			Entry("maximum < len(zones) with multiple system component worker pools in same zones", "1.27", two, one, true, false, []string{"1", "2", "3"}, []string{"3", "1", "2"}, ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("workers[0].maximum"),
+				})),
+			)),
+			Entry("maximum < len(zones) for versions < 1.27", "1.26", two, one, true, false, []string{"1", "2", "3"}, []string{"1"}, BeEmpty()),
 		)
 	})
 
