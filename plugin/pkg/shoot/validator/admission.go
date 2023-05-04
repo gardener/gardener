@@ -1101,7 +1101,7 @@ func validateMachineTypes(constraints []core.MachineType, machine, oldMachine co
 		if pointer.BoolDeref(t.Usable, false) {
 			usableMachines.Insert(t.Name)
 		}
-		if !isUnavailableInAtleastOneZone(regions, region, zones, t.Name) {
+		if !isUnavailableInAtleastOneZone(regions, region, zones, t.Name, "") {
 			machinesAvailableInAllZones.Insert(t.Name)
 		}
 		if t.Name == machine.Type {
@@ -1116,7 +1116,7 @@ func validateMachineTypes(constraints []core.MachineType, machine, oldMachine co
 		machinesWithSupportedArchitecture.Intersection(machinesAvailableInAllZones).Intersection(usableMachines).UnsortedList()
 }
 
-func isUnavailableInAtleastOneZone(regions []core.Region, region string, zones []string, machineType string) bool {
+func isUnavailableInAtleastOneZone(regions []core.Region, region string, zones []string, machineType, volumeType string) bool {
 	for _, r := range regions {
 		if r.Name != region {
 			continue
@@ -1128,9 +1128,17 @@ func isUnavailableInAtleastOneZone(regions []core.Region, region string, zones [
 					continue
 				}
 
-				for _, t := range z.UnavailableMachineTypes {
-					if t == machineType {
-						return true
+				if machineType != "" {
+					for _, t := range z.UnavailableMachineTypes {
+						if t == machineType {
+							return true
+						}
+					}
+				} else {
+					for _, t := range z.UnavailableVolumeTypes {
+						if t == volumeType {
+							return true
+						}
 					}
 				}
 			}
@@ -1196,29 +1204,7 @@ func validateVolumeTypes(constraints []core.VolumeType, volume, oldVolume *core.
 	}
 
 	validValues := []string{}
-
-	var unavailableInAtLeastOneZone bool
-top:
-	for _, r := range regions {
-		if r.Name != region {
-			continue
-		}
-
-		for _, zoneName := range zones {
-			for _, z := range r.Zones {
-				if z.Name != zoneName {
-					continue
-				}
-
-				for _, t := range z.UnavailableVolumeTypes {
-					if t == volumeType {
-						unavailableInAtLeastOneZone = true
-						break top
-					}
-				}
-			}
-		}
-	}
+	unavailableInAtLeastOneZone := isUnavailableInAtleastOneZone(regions, region, zones, "", volumeType)
 
 	for _, v := range constraints {
 		if v.Usable != nil && !*v.Usable {
