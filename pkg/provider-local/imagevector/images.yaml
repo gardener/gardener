@@ -6,7 +6,7 @@ images:
 - name: machine-controller-manager-provider-local
   sourceRepository: github.com/gardener/machine-controller-manager-provider-local
   repository: ghcr.io/gardener/machine-controller-manager-provider-local
-  tag: sha-1c148ce
+  tag: sha-8881d39
 - name: local-path-provisioner
   sourceRepository: github.com/kubernetes-sigs/kind/tree/main/images/local-path-provisioner
   repository: eu.gcr.io/gardener-project/3rd/kindest/local-path-provisioner

@@ -15,6 +15,7 @@
 package controlplane
 
 import (
+	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -39,6 +40,7 @@ func AddToManager(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 		Kind:     controlplane.KindShoot,
 		Provider: local.Type,
 		Types: []extensionswebhook.Type{
+			{Obj: &appsv1.Deployment{}},
 			{Obj: &extensionsv1alpha1.OperatingSystemConfig{}},
 		},
 		Mutator: genericmutator.NewMutator(NewEnsurer(logger), oscutils.NewUnitSerializer(), kubelet.NewConfigCodec(fciCodec), fciCodec, logger),

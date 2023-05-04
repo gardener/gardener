@@ -32,6 +32,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
@@ -47,6 +48,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	extensionscmdwebhook "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	localinstall "github.com/gardener/gardener/pkg/provider-local/apis/local/install"
 	localbackupbucket "github.com/gardener/gardener/pkg/provider-local/controller/backupbucket"
@@ -269,6 +271,65 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			// Send empty patches on start-up to trigger webhooks
 			if err := mgr.Add(&webhookTriggerer{client: mgr.GetClient()}); err != nil {
 				return fmt.Errorf("error adding runnable for triggering DNS config webhook: %w", err)
+			}
+
+			// TODO(rfranzke): Remove this block after v1.71 got released.
+			// Migrate existing machine pods to new NetworkPolicy labels to make upgrade e2e tests work.
+			{
+				if err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
+					machinePods := &corev1.PodList{}
+					if err := mgr.GetClient().List(ctx, machinePods, client.MatchingLabels{
+						"app":              "machine",
+						"machine-provider": "local",
+					}); err != nil {
+						return err
+					}
+
+					for _, p := range machinePods.Items {
+						pod := p
+						patch := client.MergeFrom(pod.DeepCopy())
+						metav1.SetMetaDataLabel(&pod.ObjectMeta, "networking.gardener.cloud/to-runtime-apiserver", "allowed")
+						metav1.SetMetaDataLabel(&pod.ObjectMeta, "networking.resources.gardener.cloud/to-kube-apiserver-tcp-443", "allowed")
+						if err := mgr.GetClient().Patch(ctx, &pod, patch); err != nil {
+							return err
+						}
+					}
+
+					shootNamespaces := &corev1.NamespaceList{}
+					if err := mgr.GetClient().List(ctx, shootNamespaces, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}); err != nil {
+						return err
+					}
+
+					for _, namespace := range shootNamespaces.Items {
+						service := &corev1.Service{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "machines",
+								Namespace: namespace.Name,
+							},
+							Spec: corev1.ServiceSpec{
+								Type:      corev1.ServiceTypeClusterIP,
+								ClusterIP: corev1.ClusterIPNone,
+								Selector: map[string]string{
+									"app":              "machine",
+									"machine-provider": "local",
+								},
+								Ports: []corev1.ServicePort{{
+									Port:       10250,
+									Protocol:   corev1.ProtocolTCP,
+									TargetPort: intstr.FromInt(10250),
+								}},
+							},
+						}
+
+						if err := mgr.GetClient().Create(ctx, service); client.IgnoreAlreadyExists(err) != nil {
+							return err
+						}
+					}
+
+					return nil
+				})); err != nil {
+					return fmt.Errorf("error adding runnable for machine pod network policy label migration: %w", err)
+				}
 			}
 
 			if err := controllerSwitches.Completed().AddToManager(mgr); err != nil {
