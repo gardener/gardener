@@ -773,6 +773,11 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 		return allErrs
 	}
 
+	k8sGreaterEqual127, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.27")
+	if k8sGreaterEqual127 && pointer.BoolDeref(kubernetes.EnableStaticTokenKubeconfig, false) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("enableStaticTokenKubeconfig"), kubernetes.EnableStaticTokenKubeconfig, "for Kubernetes versions >= 1.27, enableStaticTokenKubeconfig field cannot not be set to true, please see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_access.md#static-token-kubeconfig"))
+	}
+
 	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, false, fldPath.Child("kubeAPIServer"))...)
 	allErrs = append(allErrs, validateKubeControllerManager(kubernetes.KubeControllerManager, networking, kubernetes.Version, workerless, fldPath.Child("kubeControllerManager"))...)
 

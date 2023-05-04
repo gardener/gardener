@@ -1951,6 +1951,46 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 		})
 
+		Context("kubernetes.enableStaticTokenKubeconfig field validation", func() {
+			Context("kubernetes version < 1.27", func() {
+				It("should allow creating shoots with this field set to true", func() {
+					shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).To(BeEmpty())
+				})
+			})
+
+			Context("kubernetes version >= 1.27", func() {
+				It("should deny creating shoots with this field set to true", func() {
+					shoot.Spec.Kubernetes.Version = "1.27.0"
+					shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
+
+					errorList := ValidateShoot(shoot)
+					Expect(errorList).Should(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.kubernetes.enableStaticTokenKubeconfig"),
+						"Detail": ContainSubstring("for Kubernetes versions >= 1.27, enableStaticTokenKubeconfig field cannot not be set to true"),
+					}))))
+				})
+
+				It("should deny updating shoots to v1.27 with this field set to true", func() {
+					shoot.Spec.Kubernetes.Version = "1.26.0"
+					shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.Version = "1.27.0"
+
+					errorList := ValidateShootUpdate(newShoot, shoot)
+					Expect(errorList).Should(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.kubernetes.enableStaticTokenKubeconfig"),
+						"Detail": ContainSubstring("for Kubernetes versions >= 1.27, enableStaticTokenKubeconfig field cannot not be set to true"),
+					}))))
+				})
+			})
+		})
+
 		Context("KubeControllerManager validation", func() {
 			Context("for workerless shoots", func() {
 				BeforeEach(func() {
