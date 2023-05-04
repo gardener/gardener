@@ -2,7 +2,6 @@ rules:
 - selectorRegexp: github[.]com/gardener/gardener
   # avoid pulling in the entire gardener packages, most of which should be of no interest to extensions
   allowedPrefixes:
-  - github.com/gardener/gardener/pkg/operation/botanist/component
   - github.com/gardener/gardener/extensions
   - github.com/gardener/gardener/pkg/api
   - github.com/gardener/gardener/pkg/apis
