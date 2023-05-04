@@ -76,6 +76,7 @@ type ControllerResource struct {
 	//  Migrate: "BeforeKubeAPIServer"
 	Lifecycle *ControllerResourceLifecycle
 	// WorkerlessSupported specifies whether this ControllerResource supports Workerless Shoot clusters.
+	// This field is only relevant when kind is "Extension".
 	WorkerlessSupported *bool
 }
 

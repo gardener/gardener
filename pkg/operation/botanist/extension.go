@@ -104,7 +104,6 @@ func mergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, e
 			}
 
 			if res.GloballyEnabled != nil && *res.GloballyEnabled {
-				// For workerlessShoots, check if the extension supports it
 				if workerlessShoot && !pointer.BoolDeref(res.WorkerlessSupported, false) {
 					continue
 				}

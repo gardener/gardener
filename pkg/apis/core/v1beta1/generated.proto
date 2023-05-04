@@ -581,6 +581,7 @@ message ControllerResource {
   optional ControllerResourceLifecycle lifecycle = 6;
 
   // WorkerlessSupported specifies whether this ControllerResource supports Workerless Shoot clusters.
+  // This field is only relevant when kind is "Extension".
   // +optional
   optional bool workerlessSupported = 7;
 }

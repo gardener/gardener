@@ -1229,17 +1229,13 @@ var _ = Describe("Shoot", func() {
 				ExtensionsID(extensionsv1alpha1.BackupBucketResource, backupProvider),
 				ExtensionsID(extensionsv1alpha1.BackupEntryResource, backupProvider),
 				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, seedProvider),
-				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, shootProvider),
-				ExtensionsID(extensionsv1alpha1.InfrastructureResource, shootProvider),
-				ExtensionsID(extensionsv1alpha1.NetworkResource, networkingType),
-				ExtensionsID(extensionsv1alpha1.WorkerResource, shootProvider),
 				ExtensionsID(extensionsv1alpha1.ExtensionResource, extensionType1),
 				ExtensionsID(extensionsv1alpha1.DNSRecordResource, dnsProviderType1),
 				ExtensionsID(extensionsv1alpha1.DNSRecordResource, dnsProviderType2),
 			)))
 		})
 
-		It("should compute the correct list of required extensions (workerless Shoot with not supported globally enabled extension)", func() {
+		It("should compute the correct list of required extensions (workerless Shoot and globally enabled extension)", func() {
 			shoot.Spec.Extensions = []gardencorev1beta1.Extension{}
 			shoot.Spec.Provider.Workers = nil
 			controllerRegistrationList = &gardencorev1beta1.ControllerRegistrationList{
@@ -1288,10 +1284,6 @@ var _ = Describe("Shoot", func() {
 				ExtensionsID(extensionsv1alpha1.BackupBucketResource, backupProvider),
 				ExtensionsID(extensionsv1alpha1.BackupEntryResource, backupProvider),
 				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, seedProvider),
-				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, shootProvider),
-				ExtensionsID(extensionsv1alpha1.InfrastructureResource, shootProvider),
-				ExtensionsID(extensionsv1alpha1.NetworkResource, networkingType),
-				ExtensionsID(extensionsv1alpha1.WorkerResource, shootProvider),
 				ExtensionsID(extensionsv1alpha1.ExtensionResource, extensionType2),
 				ExtensionsID(extensionsv1alpha1.DNSRecordResource, dnsProviderType1),
 				ExtensionsID(extensionsv1alpha1.DNSRecordResource, dnsProviderType2),

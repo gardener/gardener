@@ -3467,7 +3467,8 @@ bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>WorkerlessSupported specifies whether this ControllerResource supports Workerless Shoot clusters.</p>
+<p>WorkerlessSupported specifies whether this ControllerResource supports Workerless Shoot clusters.
+This field is only relevant when kind is &ldquo;Extension&rdquo;.</p>
 </td>
 </tr>
 </tbody>

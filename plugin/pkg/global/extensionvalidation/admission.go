@@ -219,7 +219,7 @@ func (e *ExtensionValidator) Validate(ctx context.Context, a admission.Attribute
 		}
 
 		if !apiequality.Semantic.DeepEqual(shoot.Spec, oldShoot.Spec) {
-			validationError = e.validateShoot(kindToTypesMap, computeSupportedForWorkerlessExtensionKindTypes(controllerRegistrationList), shoot.Spec, gardencorehelper.IsWorkerless(shoot))
+			validationError = e.validateShoot(kindToTypesMap, computeWorkerlessSupportedExtensionTypes(controllerRegistrationList), shoot.Spec, gardencorehelper.IsWorkerless(shoot))
 		}
 	}
 
@@ -274,7 +274,7 @@ func (e *ExtensionValidator) validateSeed(kindToTypesMap map[string]sets.Set[str
 	return requiredExtensions.areRegistered(kindToTypesMap)
 }
 
-func (e *ExtensionValidator) validateShoot(kindToTypesMap map[string]sets.Set[string], supportedForWorkerlessMap map[string]sets.Set[string], spec core.ShootSpec, workerless bool) error {
+func (e *ExtensionValidator) validateShoot(kindToTypesMap map[string]sets.Set[string], workerlessSupportedExtensionTypes sets.Set[string], spec core.ShootSpec, workerless bool) error {
 	var (
 		message            = "given Shoot uses non-registered"
 		providerTypeMsg    = fmt.Sprintf("%s provider type: %s", message, field.NewPath("spec", "provider", "type"))
@@ -288,10 +288,9 @@ func (e *ExtensionValidator) validateShoot(kindToTypesMap map[string]sets.Set[st
 			requiredExtension{extensionsv1alpha1.InfrastructureResource, spec.Provider.Type, providerTypeMsg},
 			requiredExtension{extensionsv1alpha1.WorkerResource, spec.Provider.Type, providerTypeMsg},
 		)
-	}
-
-	if spec.Networking != nil && spec.Networking.Type != nil {
-		requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.NetworkResource, *spec.Networking.Type, fmt.Sprintf("%s networking type: %s", message, field.NewPath("spec", "networking", "type"))})
+		if spec.Networking != nil && spec.Networking.Type != nil {
+			requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.NetworkResource, *spec.Networking.Type, fmt.Sprintf("%s networking type: %s", message, field.NewPath("spec", "networking", "type"))})
+		}
 	}
 
 	if spec.DNS != nil {
@@ -329,7 +328,7 @@ func (e *ExtensionValidator) validateShoot(kindToTypesMap map[string]sets.Set[st
 	}
 
 	if workerless {
-		if err := requiredExtensions.areSupportedForWorkerlessShoots(supportedForWorkerlessMap); err != nil {
+		if err := requiredExtensions.areSupportedForWorkerlessShoots(workerlessSupportedExtensionTypes); err != nil {
 			result = multierror.Append(result, err)
 		}
 	}
@@ -390,45 +389,34 @@ func computeRegisteredPrimaryExtensionKindTypes(controllerRegistrationList []*co
 	return out
 }
 
-// computeSupportedForWorkerlessExtensionKindTypes computes a map that maps the extension kind to the set of types that are
-// supported for workerless Shoots, e.g. {Extension=>{foo,bar,baz}.
-func computeSupportedForWorkerlessExtensionKindTypes(controllerRegistrationList []*core.ControllerRegistration) map[string]sets.Set[string] {
-	out := map[string]sets.Set[string]{}
+// computeWorkerlessSupportedExtensionTypes computes Extension types that are supported for workerless Shoots.
+func computeWorkerlessSupportedExtensionTypes(controllerRegistrationList []*core.ControllerRegistration) sets.Set[string] {
+	out := sets.Set[string]{}
 
 	for _, controllerRegistration := range controllerRegistrationList {
 		for _, resource := range controllerRegistration.Spec.Resources {
-			if !pointer.BoolDeref(resource.WorkerlessSupported, false) {
+			if resource.Kind != extensionsv1alpha1.ExtensionResource || !pointer.BoolDeref(resource.WorkerlessSupported, false) {
 				continue
 			}
 
-			if _, ok := out[resource.Kind]; !ok {
-				out[resource.Kind] = sets.New[string]()
-			}
-
-			out[resource.Kind].Insert(resource.Type)
+			out.Insert(resource.Type)
 		}
 	}
 
 	return out
 }
 
-func (r requiredExtensions) areSupportedForWorkerlessShoots(supportedForWorkerlessMap map[string]sets.Set[string]) error {
+func (r requiredExtensions) areSupportedForWorkerlessShoots(workerlessSupportedExtensionTypes sets.Set[string]) error {
 	var result error
-	msg := "given Shoot is workerless and uses non-supported type"
 	for _, requiredExtension := range r {
-		if err := isExtensionSupportedForWorkerlessShoots(supportedForWorkerlessMap, requiredExtension.extensionKind, requiredExtension.extensionType, msg); err != nil {
-			result = multierror.Append(result, err)
+		if requiredExtension.extensionKind != extensionsv1alpha1.ExtensionResource {
+			continue
+		}
+
+		if !workerlessSupportedExtensionTypes.Has(requiredExtension.extensionType) {
+			result = multierror.Append(result, fmt.Errorf("given Shoot is workerless and uses non-supported Extension type: %q", requiredExtension.extensionType))
 		}
 	}
 
 	return result
-}
-
-// isExtensionSupportedForWorkerlessShoots takes a map of supported kinds for workerless Shoots to a set of types and a kind/type to verify.
-// If the provided kind/type combination is supported then it returns nil, otherwise it returns an error with the given message.
-func isExtensionSupportedForWorkerlessShoots(supportedForWorkerlessMap map[string]sets.Set[string], extensionKind, extensionType, message string) error {
-	if types, ok := supportedForWorkerlessMap[extensionKind]; !ok || !types.Has(extensionType) {
-		return fmt.Errorf("%s: %q", message, fmt.Sprintf("%s/%s", extensionKind, extensionType))
-	}
-	return nil
 }

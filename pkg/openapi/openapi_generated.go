@@ -2473,7 +2473,7 @@ func schema_pkg_apis_core_v1alpha1_ControllerResource(ref common.ReferenceCallba
 					},
 					"workerlessSupported": {
 						SchemaProps: spec.SchemaProps{
-							Description: "WorkerlessSupported specifies whether this ControllerResource supports Workerless Shoot clusters.",
+							Description: "WorkerlessSupported specifies whether this ControllerResource supports Workerless Shoot clusters. This field is only relevant when kind is \"Extension\".",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -10234,7 +10234,7 @@ func schema_pkg_apis_core_v1beta1_ControllerResource(ref common.ReferenceCallbac
 					},
 					"workerlessSupported": {
 						SchemaProps: spec.SchemaProps{
-							Description: "WorkerlessSupported specifies whether this ControllerResource supports Workerless Shoot clusters.",
+							Description: "WorkerlessSupported specifies whether this ControllerResource supports Workerless Shoot clusters. This field is only relevant when kind is \"Extension\".",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},

@@ -387,19 +387,11 @@ var _ = Describe("ExtensionValidator", func() {
 		Context("Workerless Shoot", func() {
 			It("should prevent the object from being created because the extension type doesn't support workerless Shoots", func() {
 				var (
-					nonSupportedType               = "non-supported"
-					nonSupportedExtension          = createControllerRegistrationForKindType(extensionsv1alpha1.ExtensionResource, nonSupportedType, true, pointer.Bool(false))
-					nonSupportedDNSRecordExtension = createControllerRegistrationForKindType(extensionsv1alpha1.DNSRecordResource, nonSupportedType, true, pointer.Bool(false))
-					shoot                          = &core.Shoot{
+					nonSupportedType      = "non-supported"
+					nonSupportedExtension = createControllerRegistrationForKindType(extensionsv1alpha1.ExtensionResource, nonSupportedType, true, pointer.Bool(false))
+
+					shoot = &core.Shoot{
 						Spec: core.ShootSpec{
-							DNS: &core.DNS{
-								Providers: []core.DNSProvider{
-									{
-										Type:    &nonSupportedType,
-										Primary: pointer.Bool(true),
-									},
-								},
-							},
 							Extensions: []core.Extension{
 								{
 									Type: nonSupportedType,
@@ -410,34 +402,21 @@ var _ = Describe("ExtensionValidator", func() {
 				)
 
 				Expect(coreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Add(nonSupportedExtension)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Add(nonSupportedDNSRecordExtension)).To(Succeed())
 
 				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
-				Expect(err).To(And(
-					MatchError(ContainSubstring("given Shoot is workerless and uses non-supported type: %q", extensionsv1alpha1.ExtensionResource+"/"+nonSupportedType)),
-					MatchError(ContainSubstring("given Shoot is workerless and uses non-supported type: %q", extensionsv1alpha1.DNSRecordResource+"/"+nonSupportedType)),
-				))
+				Expect(err).To(MatchError(ContainSubstring("given Shoot is workerless and uses non-supported Extension type: %q", nonSupportedType)))
 			})
 
 			It("should prevent the object from being created because the extension type doesn't specify WorkerlessSupported field for workerless Shoots", func() {
 				var (
-					nonSupportedType               = "non-supported"
-					nonSupportedExtension          = createControllerRegistrationForKindType(extensionsv1alpha1.ExtensionResource, nonSupportedType, true, nil)
-					nonSupportedDNSRecordExtension = createControllerRegistrationForKindType(extensionsv1alpha1.DNSRecordResource, nonSupportedType, true, nil)
-					shoot                          = &core.Shoot{
+					nonSupportedType      = "non-supported"
+					nonSupportedExtension = createControllerRegistrationForKindType(extensionsv1alpha1.ExtensionResource, nonSupportedType, true, nil)
+					shoot                 = &core.Shoot{
 						Spec: core.ShootSpec{
-							DNS: &core.DNS{
-								Providers: []core.DNSProvider{
-									{
-										Type:    &nonSupportedType,
-										Primary: pointer.Bool(true),
-									},
-								},
-							},
 							Extensions: []core.Extension{
 								{
 									Type: nonSupportedType,
@@ -448,34 +427,21 @@ var _ = Describe("ExtensionValidator", func() {
 				)
 
 				Expect(coreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Add(nonSupportedExtension)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Add(nonSupportedDNSRecordExtension)).To(Succeed())
 
 				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
-				Expect(err).To(And(
-					MatchError(ContainSubstring("given Shoot is workerless and uses non-supported type: %q", extensionsv1alpha1.ExtensionResource+"/"+nonSupportedType)),
-					MatchError(ContainSubstring("given Shoot is workerless and uses non-supported type: %q", extensionsv1alpha1.DNSRecordResource+"/"+nonSupportedType)),
-				))
+				Expect(err).To(MatchError(ContainSubstring("given Shoot is workerless and uses non-supported Extension type: %q", nonSupportedType)))
 			})
 
 			It("should allow object creation because the extension type supports workerless Shoots", func() {
 				var (
-					supportedType               = "supported"
-					supportedExtension          = createControllerRegistrationForKindType(extensionsv1alpha1.ExtensionResource, supportedType, true, pointer.Bool(true))
-					supportedDNSRecordExtension = createControllerRegistrationForKindType(extensionsv1alpha1.DNSRecordResource, supportedType, true, pointer.Bool(true))
-					shoot                       = &core.Shoot{
+					supportedType      = "supported"
+					supportedExtension = createControllerRegistrationForKindType(extensionsv1alpha1.ExtensionResource, supportedType, true, pointer.Bool(true))
+					shoot              = &core.Shoot{
 						Spec: core.ShootSpec{
-							DNS: &core.DNS{
-								Providers: []core.DNSProvider{
-									{
-										Type:    &supportedType,
-										Primary: pointer.Bool(true),
-									},
-								},
-							},
 							Extensions: []core.Extension{
 								{
 									Type: supportedType,
@@ -486,7 +452,6 @@ var _ = Describe("ExtensionValidator", func() {
 				)
 
 				Expect(coreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Add(supportedExtension)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().ControllerRegistrations().Informer().GetStore().Add(supportedDNSRecordExtension)).To(Succeed())
 
 				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
