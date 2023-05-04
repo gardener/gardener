@@ -1354,8 +1354,7 @@ func getDefaultMachineImage(machineImages []core.MachineImage, imageName string,
 }
 
 func validateMachineImagesConstraints(constraints []core.MachineImage, machine, oldMachine core.Machine) (bool, bool, bool, []string) {
-	if oldMachine.Image == nil ||
-		(apiequality.Semantic.DeepEqual(machine.Image, oldMachine.Image) && pointer.StringEqual(machine.Architecture, oldMachine.Architecture)) {
+	if apiequality.Semantic.DeepEqual(machine.Image, oldMachine.Image) && pointer.StringEqual(machine.Architecture, oldMachine.Architecture) {
 		return true, true, true, nil
 	}
 
