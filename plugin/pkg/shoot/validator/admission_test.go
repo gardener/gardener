@@ -176,13 +176,15 @@ var _ = Describe("validator", func() {
 					},
 					VolumeTypes: []core.VolumeType{
 						{
-							Name:  volumeType,
-							Class: "super-premium",
+							Name:   volumeType,
+							Class:  "super-premium",
+							Usable: pointer.Bool(true),
 						},
 						{
 							Name:    volumeType2,
 							Class:   "super-premium",
 							MinSize: &minVolSize,
+							Usable:  pointer.Bool(true),
 						},
 					},
 					Regions: []core.Region{
@@ -3497,6 +3499,13 @@ var _ = Describe("validator", func() {
 			})
 
 			Context("volume checks", func() {
+				BeforeEach(func() {
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				})
+
 				It("should reject due to an invalid volume type", func() {
 					notAllowed := "not-allowed"
 					shoot.Spec.Provider.Workers = []core.Worker{
@@ -3511,25 +3520,147 @@ var _ = Describe("validator", func() {
 						},
 					}
 
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("Unsupported value: %q", notAllowed)))
+				})
+
+				It("should reject if the volume is unavailable in atleast one zone", func() {
+					unavailableVolume := "unavailable-volume"
+					zone := "europe-a"
+
+					cloudProfile.Spec.VolumeTypes = []core.VolumeType{
+						{
+							Name:   unavailableVolume,
+							Class:  "super-premium",
+							Usable: pointer.Bool(true),
+						},
+						{
+							Name:    volumeType2,
+							Class:   "super-premium",
+							MinSize: &minVolSize,
+							Usable:  pointer.Bool(true),
+						},
+					}
+
+					cloudProfile.Spec.Regions = []core.Region{{
+						Name: shoot.Spec.Region,
+						Zones: []core.AvailabilityZone{
+							{
+								Name:                   zone,
+								UnavailableVolumeTypes: []string{unavailableVolume},
+							},
+						},
+					}}
+
+					shoot.Spec.Provider.Workers = []core.Worker{
+						{
+							Machine: core.Machine{
+								Type:         "machine-type-1",
+								Architecture: pointer.String("amd64"),
+							},
+							Volume: &core.Volume{
+								Type: &unavailableVolume,
+							},
+							Zones: []string{zone},
+						},
+					}
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("volume type %q is unavailable in at least one zone, supported types are [%s]", unavailableVolume, volumeType2)))
+				})
+
+				It("should reject if the volume is unusable and unavailable in atleast one zone", func() {
+					unavailableVolume := "unavailable-volume"
+					zone := "europe-a"
+
+					cloudProfile.Spec.VolumeTypes = []core.VolumeType{
+						{
+							Name:   unavailableVolume,
+							Class:  "super-premium",
+							Usable: pointer.Bool(false),
+						},
+						{
+							Name:    volumeType2,
+							Class:   "super-premium",
+							MinSize: &minVolSize,
+							Usable:  pointer.Bool(true),
+						},
+					}
+
+					cloudProfile.Spec.Regions = []core.Region{{
+						Name: shoot.Spec.Region,
+						Zones: []core.AvailabilityZone{
+							{
+								Name:                   zone,
+								UnavailableVolumeTypes: []string{unavailableVolume},
+							},
+						},
+					}}
+
+					shoot.Spec.Provider.Workers = []core.Worker{
+						{
+							Machine: core.Machine{
+								Type:         "machine-type-1",
+								Architecture: pointer.String("amd64"),
+							},
+							Volume: &core.Volume{
+								Type: &unavailableVolume,
+							},
+							Zones: []string{zone},
+						},
+					}
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("volume type %q is unusable, is unavailable in at least one zone, supported types are [%s]", unavailableVolume, volumeType2)))
+				})
+
+				It("should reject because volume type is unusable", func() {
+					cloudProfile.Spec.VolumeTypes = []core.VolumeType{
+						{
+							Name:   volumeType,
+							Class:  "super-premium",
+							Usable: pointer.Bool(false),
+						},
+						{
+							Name:    volumeType2,
+							Class:   "super-premium",
+							MinSize: &minVolSize,
+							Usable:  pointer.Bool(true),
+						},
+					}
+
+					shoot.Spec.Provider.Workers = []core.Worker{
+						{
+							Machine: core.Machine{
+								Type:         "machine-type-1",
+								Architecture: pointer.String("amd64"),
+							},
+							Volume: &core.Volume{
+								Type: &volumeType,
+							},
+						},
+					}
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("volume type %q is unusable, supported types are [%s]", volumeType, volumeType2)))
 				})
 
 				It("should allow volume removal", func() {
 					oldShoot := shoot.DeepCopy()
 					shoot.Spec.Provider.Workers[0].Volume = nil
 					oldShoot.Spec.Provider.Workers[0].Volume.VolumeSize = "20Gi"
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 
 					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(ctx, attrs, nil)
@@ -3576,11 +3707,6 @@ var _ = Describe("validator", func() {
 							},
 						},
 					}
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)

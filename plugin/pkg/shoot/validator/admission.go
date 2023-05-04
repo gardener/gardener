@@ -822,8 +822,18 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 				}
 			}
 		}
-		if ok, validVolumeTypes := validateVolumeTypes(c.cloudProfile.Spec.VolumeTypes, worker.Volume, oldWorker.Volume, c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, worker.Zones); !ok {
-			allErrs = append(allErrs, field.NotSupported(idxPath.Child("volume", "type"), worker.Volume, validVolumeTypes))
+		isVolumePresentInCloudprofile, availableInAllZones, isUsableVolume, supportedVolumeTypes := validateVolumeTypes(c.cloudProfile.Spec.VolumeTypes, worker.Volume, oldWorker.Volume, c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, worker.Zones)
+		if !isVolumePresentInCloudprofile {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("volume", "type"), pointer.StringDeref(worker.Volume.Type, ""), supportedVolumeTypes))
+		} else if !availableInAllZones || !isUsableVolume {
+			detail := fmt.Sprintf("volume type %q ", *worker.Volume.Type)
+			if !isUsableVolume {
+				detail += "is unusable, "
+			}
+			if !availableInAllZones {
+				detail += "is unavailable in at least one zone, "
+			}
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("volume", "type"), *worker.Volume.Type, fmt.Sprintf("%ssupported types are %+v", detail, supportedVolumeTypes)))
 		}
 		if ok, minSize := validateVolumeSize(c.cloudProfile.Spec.VolumeTypes, c.cloudProfile.Spec.MachineTypes, worker.Machine.Type, worker.Volume); !ok {
 			allErrs = append(allErrs, field.Invalid(idxPath.Child("volume", "size"), worker.Volume.VolumeSize, fmt.Sprintf("size must be >= %s", minSize)))
@@ -1193,9 +1203,9 @@ func validateKubeletConfig(fldPath *field.Path, machineTypes []core.MachineType,
 	return allErrs
 }
 
-func validateVolumeTypes(constraints []core.VolumeType, volume, oldVolume *core.Volume, regions []core.Region, region string, zones []string) (bool, []string) {
+func validateVolumeTypes(constraints []core.VolumeType, volume, oldVolume *core.Volume, regions []core.Region, region string, zones []string) (bool, bool, bool, []string) {
 	if volume == nil || volume.Type == nil || (volume != nil && oldVolume != nil && volume.Type != nil && oldVolume.Type != nil && *volume.Type == *oldVolume.Type) {
-		return true, nil
+		return true, true, true, nil
 	}
 
 	var volumeType string
@@ -1203,23 +1213,28 @@ func validateVolumeTypes(constraints []core.VolumeType, volume, oldVolume *core.
 		volumeType = *volume.Type
 	}
 
-	validValues := []string{}
-	unavailableInAtLeastOneZone := isUnavailableInAtleastOneZone(regions, region, zones, "", volumeType)
+	var (
+		isVolumePresentInCloudprofile = false
+		volumesAvailableInAllZones    = sets.New[string]()
+		usableVolumes                 = sets.New[string]()
+	)
 
 	for _, v := range constraints {
-		if v.Usable != nil && !*v.Usable {
-			continue
+		if pointer.BoolDeref(v.Usable, false) {
+			usableVolumes.Insert(v.Name)
 		}
-		if unavailableInAtLeastOneZone {
-			continue
+		if !isUnavailableInAtleastOneZone(regions, region, zones, "", v.Name) {
+			volumesAvailableInAllZones.Insert(v.Name)
 		}
-		validValues = append(validValues, v.Name)
 		if v.Name == volumeType {
-			return true, nil
+			isVolumePresentInCloudprofile = true
 		}
 	}
 
-	return false, validValues
+	return isVolumePresentInCloudprofile,
+		volumesAvailableInAllZones.Has(volumeType),
+		usableVolumes.Has(volumeType),
+		usableVolumes.Intersection(volumesAvailableInAllZones).UnsortedList()
 }
 
 func (c *validationContext) validateRegion() field.ErrorList {
