@@ -783,10 +783,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 
 			if !isMachinePresentInCloudprofile {
 				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "type"), worker.Machine.Type, fmt.Sprintf("%sis not supported, supported types are %+v", detail, supportedMachineTypes)))
-				return allErrs
-			}
-
-			if !architectureSupported || !availableInAllZones || !isUsableMachine {
+			} else if !architectureSupported || !availableInAllZones || !isUsableMachine {
 				if !isUsableMachine {
 					detail += "is unusable, "
 				}
@@ -797,7 +794,6 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 					detail += fmt.Sprintf("does not support CPU architecture %q, ", *worker.Machine.Architecture)
 				}
 				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "type"), worker.Machine.Type, fmt.Sprintf("%ssupported types are %+v", detail, supportedMachineTypes)))
-				return allErrs
 			}
 
 			isMachineImagePresentInCloudprofile, architectureSupported, activeMachineImageVersion, validMachineImageversions := validateMachineImagesConstraints(c.cloudProfile.Spec.MachineImages, worker.Machine, oldWorker.Machine)
