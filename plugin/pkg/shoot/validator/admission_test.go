@@ -2494,7 +2494,7 @@ var _ = Describe("validator", func() {
 
 					cloudProfileMachineImages = []core.MachineImage{
 						{
-							Name: imageName1,
+							Name: validMachineImageName,
 							Versions: []core.MachineImageVersion{
 								{
 									ExpirableVersion: core.ExpirableVersion{
@@ -2608,7 +2608,7 @@ var _ = Describe("validator", func() {
 						})
 					})
 
-					It("should reject due to an invalid machine image", func() {
+					It("should reject due to an invalid machine image (not present in cloudprofile)", func() {
 						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
 							Name:    "not-supported",
 							Version: "not-supported",
@@ -2623,6 +2623,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(BeForbiddenError())
+						Expect(err.Error()).To(ContainSubstring("machine image version is not supported"))
 					})
 
 					It("should reject due to an invalid machine image (version unset)", func() {
@@ -2644,7 +2645,7 @@ var _ = Describe("validator", func() {
 
 					It("should reject due to a machine image with expiration date in the past", func() {
 						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-							Name:    imageName1,
+							Name:    validMachineImageName,
 							Version: expiredVersion,
 						}
 
@@ -2657,6 +2658,86 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(BeForbiddenError())
+						Expect(err).To(MatchError(ContainSubstring("machine image version 'some-machineimage:1.1.1' is expired")))
+					})
+
+					It("should reject due to a machine image version with non-supported architecture", func() {
+						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+							Name:    validMachineImageName,
+							Version: nonExpiredVersion1,
+						}
+						shoot.Spec.Provider.Workers[0].Machine.Architecture = pointer.String(v1beta1constants.ArchitectureAMD64)
+
+						cloudProfile.Spec.MachineImages = []core.MachineImage{
+							{
+								Name: validMachineImageName,
+								Versions: []core.MachineImageVersion{
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version: nonExpiredVersion1,
+										},
+										Architectures: []string{"arm64"},
+									},
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version: nonExpiredVersion2,
+										},
+										Architectures: []string{"amd64", "arm64"},
+									},
+								},
+							},
+						}
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).To(BeForbiddenError())
+						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' does not support CPU architecture %q, supported machine image versions are: [%s]]", fmt.Sprintf("%s:%s", validMachineImageName, nonExpiredVersion1), "amd64", fmt.Sprintf("%s:%s", validMachineImageName, nonExpiredVersion2))))
+					})
+
+					It("should reject due to a machine image version with non-supported architecture and expired version", func() {
+						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+							Name:    validMachineImageName,
+							Version: expiredVersion,
+						}
+						shoot.Spec.Provider.Workers[0].Machine.Architecture = pointer.String(v1beta1constants.ArchitectureAMD64)
+
+						cloudProfile.Spec.MachineImages = []core.MachineImage{
+							{
+								Name: validMachineImageName,
+								Versions: []core.MachineImageVersion{
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version:        expiredVersion,
+											ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
+										},
+										Architectures: []string{"arm64"},
+									},
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version: nonExpiredVersion2,
+										},
+										Architectures: []string{"amd64", "arm64"},
+									},
+								},
+							},
+						}
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).To(BeForbiddenError())
+						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' does not support CPU architecture %q, is expired, supported machine image versions are: [%s]]", fmt.Sprintf("%s:%s", validMachineImageName, expiredVersion), "amd64", fmt.Sprintf("%s:%s", validMachineImageName, nonExpiredVersion2))))
 					})
 
 					It("should reject due to a machine image that does not match the kubeletVersionConstraint when the control plane K8s version does not match", func() {

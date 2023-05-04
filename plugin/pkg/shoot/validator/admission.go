@@ -800,9 +800,18 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 				return allErrs
 			}
 
-			if ok, validMachineImages := validateMachineImagesConstraints(c.cloudProfile.Spec.MachineImages, worker.Machine, oldWorker.Machine); !ok {
-				detail := fmt.Sprintf("machine image '%s' does not support CPU architecture '%s' or is expired; valid machine images are: %+v", worker.Machine.Image, *worker.Machine.Architecture, validMachineImages)
-				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, detail))
+			isMachineImagePresentInCloudprofile, architectureSupported, activeMachineImageVersion, validMachineImageversions := validateMachineImagesConstraints(c.cloudProfile.Spec.MachineImages, worker.Machine, oldWorker.Machine)
+			if !isMachineImagePresentInCloudprofile {
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, fmt.Sprintf("machine image version is not supported, supported machine image versions are: %+v", validMachineImageversions)))
+			} else if !architectureSupported || !activeMachineImageVersion {
+				detail := fmt.Sprintf("machine image version '%s:%s' ", worker.Machine.Image.Name, worker.Machine.Image.Version)
+				if !architectureSupported {
+					detail += fmt.Sprintf("does not support CPU architecture %q, ", *worker.Machine.Architecture)
+				}
+				if !activeMachineImageVersion {
+					detail += "is expired, "
+				}
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, fmt.Sprintf("%ssupported machine image versions are: %+v", detail, validMachineImageversions)))
 			} else {
 				allErrs = append(allErrs, validateContainerRuntimeConstraints(c.cloudProfile.Spec.MachineImages, worker, oldWorker, idxPath.Child("cri"))...)
 
@@ -1347,53 +1356,42 @@ func getDefaultMachineImage(machineImages []core.MachineImage, imageName string,
 	return &core.ShootMachineImage{Name: defaultImage.Name, Version: latestMachineImageVersion.Version}, nil
 }
 
-func validateMachineImagesConstraints(constraints []core.MachineImage, machine, oldMachine core.Machine) (bool, []string) {
+func validateMachineImagesConstraints(constraints []core.MachineImage, machine, oldMachine core.Machine) (bool, bool, bool, []string) {
 	if oldMachine.Image == nil ||
 		(apiequality.Semantic.DeepEqual(machine.Image, oldMachine.Image) && pointer.StringEqual(machine.Architecture, oldMachine.Architecture)) {
-		return true, nil
+		return true, true, true, nil
 	}
 
-	validValues := []string{}
-	if machine.Image == nil {
-		for _, machineImage := range constraints {
-			for _, machineVersion := range machineImage.Versions {
-				if machineVersion.ExpirationDate != nil && machineVersion.ExpirationDate.Time.UTC().Before(time.Now().UTC()) {
-					continue
-				}
-				if !slices.Contains(machineVersion.Architectures, *machine.Architecture) {
-					continue
-				}
-
-				validValues = append(validValues, fmt.Sprintf("machineImage(%s:%s)", machineImage.Name, machineVersion.Version))
-			}
-		}
-
-		return false, validValues
-	}
-
-	if len(machine.Image.Version) == 0 {
-		return true, nil
-	}
+	var (
+		machineImageVersionsInCloudProfile            = sets.New[string]()
+		activeMachineImageVersions                    = sets.New[string]()
+		machineImageVersionsWithSupportedArchitecture = sets.New[string]()
+	)
 
 	for _, machineImage := range constraints {
-		if machineImage.Name == machine.Image.Name {
-			for _, machineVersion := range machineImage.Versions {
-				if machineVersion.ExpirationDate != nil && machineVersion.ExpirationDate.Time.UTC().Before(time.Now().UTC()) {
-					continue
-				}
-				if !slices.Contains(machineVersion.Architectures, *machine.Architecture) {
-					continue
-				}
+		for _, machineVersion := range machineImage.Versions {
+			machineImageVersion := fmt.Sprintf("%s:%s", machineImage.Name, machineVersion.Version)
 
-				validValues = append(validValues, fmt.Sprintf("machineImage(%s:%s)", machineImage.Name, machineVersion.Version))
-
-				if machineVersion.Version == machine.Image.Version {
-					return true, nil
-				}
+			if machineVersion.ExpirationDate == nil || machineVersion.ExpirationDate.Time.UTC().After(time.Now().UTC()) {
+				activeMachineImageVersions.Insert(machineImageVersion)
 			}
+			if slices.Contains(machineVersion.Architectures, *machine.Architecture) {
+				machineImageVersionsWithSupportedArchitecture.Insert(machineImageVersion)
+			}
+			machineImageVersionsInCloudProfile.Insert(machineImageVersion)
 		}
 	}
-	return false, validValues
+
+	supportedMachineImageVersions := activeMachineImageVersions.Intersection(machineImageVersionsWithSupportedArchitecture).UnsortedList()
+	if machine.Image == nil || len(machine.Image.Version) == 0 {
+		return false, false, false, supportedMachineImageVersions
+	}
+
+	shootMachineImageVersion := fmt.Sprintf("%s:%s", machine.Image.Name, machine.Image.Version)
+	return machineImageVersionsInCloudProfile.Has(shootMachineImageVersion),
+		machineImageVersionsWithSupportedArchitecture.Has(shootMachineImageVersion),
+		activeMachineImageVersions.Has(shootMachineImageVersion),
+		supportedMachineImageVersions
 }
 
 func validateContainerRuntimeConstraints(constraints []core.MachineImage, worker, oldWorker core.Worker, fldPath *field.Path) field.ErrorList {
