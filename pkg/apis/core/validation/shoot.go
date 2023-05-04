@@ -1723,27 +1723,37 @@ func validateTaintEffect(effect *corev1.TaintEffect, allowEmpty bool, fldPath *f
 // ValidateWorkers validates worker objects.
 func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList {
 	var (
-		allErrs = field.ErrorList{}
-
-		workerNames                               = make(map[string]bool)
-		atLeastOnePoolWithAllowedSystemComponents = false
+		allErrs     = field.ErrorList{}
+		workerNames = sets.New[string]()
 	)
 
 	for i, worker := range workers {
-		var poolIsActive = false
-
-		if worker.Minimum != 0 && worker.Maximum != 0 {
-			poolIsActive = true
-		}
-
-		if workerNames[worker.Name] {
+		if workerNames.Has(worker.Name) {
 			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("name"), worker.Name))
 		}
-		workerNames[worker.Name] = true
+		workerNames.Insert(worker.Name)
+	}
 
-		if poolIsActive && helper.SystemComponentsAllowed(&worker) {
-			atLeastOnePoolWithAllowedSystemComponents = true
+	allErrs = append(allErrs, ValidateSystemComponentWorkers(workers, fldPath)...)
+
+	return allErrs
+}
+
+// ValidateSystemComponentWorkers validates workers specified to run system components.
+func ValidateSystemComponentWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList {
+	var (
+		allErrs                                   = field.ErrorList{}
+		atLeastOnePoolWithAllowedSystemComponents = false
+	)
+
+	for _, worker := range workers {
+		if !helper.SystemComponentsAllowed(&worker) {
+			continue
 		}
+		if worker.Minimum == 0 || worker.Maximum == 0 {
+			continue
+		}
+		atLeastOnePoolWithAllowedSystemComponents = true
 	}
 
 	if !atLeastOnePoolWithAllowedSystemComponents {
