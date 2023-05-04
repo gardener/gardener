@@ -16,7 +16,6 @@ package validation_test
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -5201,7 +5200,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		)
 
 		DescribeTable("validate that at least one worker pool is able to host system components",
-			func(min1, max1, min2, max2 int32, allowSystemComponents1, allowSystemComponents2 bool, taints1, taints2 []corev1.Taint, matcher gomegatypes.GomegaMatcher) {
+			func(min1, max1, min2, max2 int32, allowSystemComponents1, allowSystemComponents2 bool, matcher gomegatypes.GomegaMatcher) {
 				workers := []core.Worker{
 					{
 						Name:    "one-active",
@@ -5210,7 +5209,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 						SystemComponents: &core.WorkerSystemComponents{
 							Allow: allowSystemComponents1,
 						},
-						Taints: taints1,
 					},
 					{
 						Name:    "two-active",
@@ -5219,107 +5217,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 						SystemComponents: &core.WorkerSystemComponents{
 							Allow: allowSystemComponents2,
 						},
-						Taints: taints2,
 					},
 				}
 
 				Expect(ValidateWorkers(workers, field.NewPath("workers"))).To(matcher)
 			},
 
-			Entry("all worker pools min=max=0", zero, zero, zero, zero, true, true, nil, nil, ConsistOf(
+			Entry("all worker pools min=max=0", zero, zero, zero, zero, true, true, ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeForbidden),
 				})),
 			)),
-			Entry("at least one worker pool allows system components", zero, zero, one, one, true, true, nil, nil, BeEmpty()),
-			Entry("one active but taints prevent scheduling", one, one, zero, zero, true, true, []corev1.Taint{{Effect: corev1.TaintEffectNoSchedule}}, nil, ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type": Equal(field.ErrorTypeForbidden),
-				})),
-			)),
-		)
-
-		DescribeTable("ensure that at least one worker pool exists that either has no taints or only those with `PreferNoSchedule` effect",
-			func(matcher gomegatypes.GomegaMatcher, taints ...[]corev1.Taint) {
-				var (
-					workers          []core.Worker
-					systemComponents = &core.WorkerSystemComponents{
-						Allow: true,
-					}
-				)
-
-				for i, t := range taints {
-					workers = append(workers, core.Worker{
-						Name:             "pool-" + strconv.Itoa(i),
-						Minimum:          1,
-						Maximum:          2,
-						Taints:           t,
-						SystemComponents: systemComponents,
-					})
-				}
-
-				Expect(ValidateWorkers(workers, field.NewPath("workers"))).To(matcher)
-			},
-
-			Entry(
-				"no pools with taints",
-				BeEmpty(),
-				[]corev1.Taint{},
-			),
-			Entry(
-				"all pools with PreferNoSchedule taints",
-				BeEmpty(),
-				[]corev1.Taint{{Effect: corev1.TaintEffectPreferNoSchedule}},
-			),
-			Entry(
-				"at least one pools with either no or PreferNoSchedule taints (1)",
-				BeEmpty(),
-				[]corev1.Taint{{Effect: corev1.TaintEffectNoExecute}},
-				[]corev1.Taint{{Effect: corev1.TaintEffectPreferNoSchedule}},
-			),
-			Entry(
-				"at least one pools with either no or PreferNoSchedule taints (2)",
-				BeEmpty(),
-				[]corev1.Taint{{Effect: corev1.TaintEffectNoSchedule}},
-				[]corev1.Taint{{Effect: corev1.TaintEffectPreferNoSchedule}},
-			),
-			Entry(
-				"all pools with NoSchedule taints",
-				ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type": Equal(field.ErrorTypeForbidden),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type": Equal(field.ErrorTypeForbidden),
-					})),
-				),
-				[]corev1.Taint{{Effect: corev1.TaintEffectNoSchedule}},
-			),
-			Entry(
-				"all pools with NoExecute taints",
-				ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type": Equal(field.ErrorTypeForbidden),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type": Equal(field.ErrorTypeForbidden),
-					})),
-				),
-				[]corev1.Taint{{Effect: corev1.TaintEffectNoExecute}},
-			),
-			Entry(
-				"all pools with either NoSchedule or NoExecute taints",
-				ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type": Equal(field.ErrorTypeForbidden),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type": Equal(field.ErrorTypeForbidden),
-					})),
-				),
-				[]corev1.Taint{{Effect: corev1.TaintEffectNoExecute}},
-				[]corev1.Taint{{Effect: corev1.TaintEffectNoSchedule}},
-			),
+			Entry("at least one worker pool allows system components", zero, zero, one, one, true, true, BeEmpty()),
 		)
 	})
 
