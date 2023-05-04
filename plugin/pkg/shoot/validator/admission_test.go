@@ -3416,7 +3416,7 @@ var _ = Describe("validator", func() {
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).To(BeForbiddenError())
-					Expect(err).To(MatchError(ContainSubstring("machine type %q is not supported", shoot.Spec.Provider.Workers[0].Machine.Type)))
+					Expect(err).To(MatchError(ContainSubstring("Unsupported value: %q: supported values: %q, %q]", "not-present-in-cloudprofile", "machine-type-1", "machine-type-2")))
 				})
 
 				It("should reject if the machine is unavailable in atleast one zone", func() {

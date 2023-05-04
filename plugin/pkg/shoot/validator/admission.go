@@ -782,7 +782,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 			)
 
 			if !isMachinePresentInCloudprofile {
-				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "type"), worker.Machine.Type, fmt.Sprintf("%sis not supported, supported types are %+v", detail, supportedMachineTypes)))
+				allErrs = append(allErrs, field.NotSupported(idxPath.Child("machine", "type"), worker.Machine.Type, supportedMachineTypes))
 			} else if !architectureSupported || !availableInAllZones || !isUsableMachine {
 				if !isUsableMachine {
 					detail += "is unusable, "
