@@ -65,11 +65,10 @@ func NewGardenerResourceManager(
 	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
 	return resourcemanager.New(c, gardenNamespaceName, secretsManager, resourcemanager.Values{
-		ConcurrentSyncs:                                pointer.Int(20),
-		DefaultSeccompProfileEnabled:                   defaultSeccompProfileEnabled,
-		EndpointSliceHintsEnabled:                      endpointSliceHintsEnabled,
-		FullNetworkPolicies:                            fullNetworkPoliciesEnabled,
-		NetworkPolicyControllerIncludesGardenNamespace: true,
+		ConcurrentSyncs:              pointer.Int(20),
+		DefaultSeccompProfileEnabled: defaultSeccompProfileEnabled,
+		EndpointSliceHintsEnabled:    endpointSliceHintsEnabled,
+		FullNetworkPolicies:          fullNetworkPoliciesEnabled,
 		NetworkPolicyControllerIngressControllerSelector: &resourcemanagerv1alpha1.IngressControllerSelector{
 			Namespace: v1beta1constants.GardenNamespace,
 			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{

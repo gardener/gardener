@@ -91,7 +91,7 @@ build:
         - pkg/operator/client
         - pkg/operator/controller
         - pkg/operator/controller/garden
-        - pkg/operator/controller/networkpolicy
+        - pkg/operator/controller/networkpolicyregistrar
         - pkg/operator/features
         - pkg/operator/webhook
         - pkg/operator/webhook/defaulting
