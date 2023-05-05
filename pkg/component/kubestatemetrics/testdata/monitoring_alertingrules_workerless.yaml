@@ -1,0 +1,23 @@
+rule_files:
+- kube-state-metrics.rules.yaml
+
+evaluation_interval: 30s
+
+tests:
+- interval: 30s
+  input_series:
+  # KubeStateMetricsSeedDown
+  - series: 'kube_verticalpodautoscaler_status_recommendation_containerrecommendations_target{exported_job="kube-state-metrics"}'
+    values: '42 _ stale'
+  alert_rule_test:
+  - eval_time: 20m
+    alertname: KubeStateMetricsSeedDown
+    exp_alerts:
+    - exp_labels:
+        service: kube-state-metrics-seed
+        severity: critical
+        visibility: operator
+        type: seed
+      exp_annotations:
+        summary: There are no kube-state-metrics metrics for the control plane
+        description: Kube-state-metrics is scraped by the cache prometheus and federated by the control plane prometheus. Something is broken in that process.

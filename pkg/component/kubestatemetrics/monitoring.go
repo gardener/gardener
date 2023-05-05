@@ -287,6 +287,22 @@ metric_relabel_configs:
   - record: kube_pod_container_resource_requests_memory_bytes
     expr: ` + monitoringMetricKubePodContainerResourceRequests + `{resource="memory", unit="byte"}
 `
+
+	monitoringAlertingRulesWorkerlessShoot = `groups:
+- name: kube-state-metrics.rules
+  rules:
+  - alert: KubeStateMetricsSeedDown
+    expr: absent(count({exported_job="kube-state-metrics"}))
+    for: 15m
+    labels:
+      service: kube-state-metrics-seed
+      severity: critical
+      visibility: operator
+      type: seed
+    annotations:
+      summary: There are no kube-state-metrics metrics for the control plane
+      description: Kube-state-metrics is scraped by the cache prometheus and federated by the control plane prometheus. Something is broken in that process.
+`
 )
 
 func init() {
@@ -320,6 +336,10 @@ func (k *kubeStateMetrics) ScrapeConfigs() ([]string, error) {
 		scrapeConfig bytes.Buffer
 	)
 
+	if k.values.IsWorkerless {
+		return []string{}, nil
+	}
+
 	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]interface{}{
 		"jobName":          monitoringPrometheusJobName,
 		"serviceNamespace": k.namespace,
@@ -335,5 +355,11 @@ func (k *kubeStateMetrics) ScrapeConfigs() ([]string, error) {
 
 // AlertingRules returns the alerting rules for AlertManager.
 func (k *kubeStateMetrics) AlertingRules() (map[string]string, error) {
-	return map[string]string{"kube-state-metrics.rules.yaml": monitoringAlertingRules}, nil
+	rules := monitoringAlertingRules
+
+	if k.values.IsWorkerless {
+		rules = monitoringAlertingRulesWorkerlessShoot
+	}
+
+	return map[string]string{"kube-state-metrics.rules.yaml": rules}, nil
 }
