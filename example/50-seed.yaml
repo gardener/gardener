@@ -75,7 +75,7 @@ spec:
     verticalPodAutoscaler:
       enabled: true # a Gardener-managed VPA deployment is enabled
     ownerChecks:
-      enabled: true # owner checks are enabled for shoots scheduled on this seed
+      enabled: false # owner checks are disabled for shoots scheduled on this seed
     topologyAwareRouting:
       enabled: true # certain Services deployed in the seed will be topology-aware
 # taints:

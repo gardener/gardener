@@ -205,7 +205,7 @@ func SeedSettingSchedulingVisible(settings *core.SeedSettings) bool {
 
 // SeedSettingOwnerChecksEnabled returns true if the 'ownerChecks' setting is enabled.
 func SeedSettingOwnerChecksEnabled(settings *core.SeedSettings) bool {
-	return settings == nil || settings.OwnerChecks == nil || settings.OwnerChecks.Enabled
+	return settings != nil && settings.OwnerChecks != nil && settings.OwnerChecks.Enabled
 }
 
 // SeedSettingTopologyAwareRoutingEnabled returns true if the topology-aware routing is enabled.

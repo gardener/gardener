@@ -515,8 +515,8 @@ var _ = Describe("helper", func() {
 			Expect(SeedSettingOwnerChecksEnabled(settings)).To(Equal(expected))
 		},
 
-		Entry("no settings", nil, true),
-		Entry("no owner checks setting", &core.SeedSettings{}, true),
+		Entry("no settings", nil, false),
+		Entry("no owner checks setting", &core.SeedSettings{}, false),
 		Entry("owner checks enabled", &core.SeedSettings{OwnerChecks: &core.SeedSettingOwnerChecks{Enabled: true}}, true),
 		Entry("owner checks disabled", &core.SeedSettings{OwnerChecks: &core.SeedSettingOwnerChecks{Enabled: false}}, false),
 	)

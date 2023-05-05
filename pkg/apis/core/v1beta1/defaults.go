@@ -65,7 +65,7 @@ func SetDefaults_Seed(obj *Seed) {
 	}
 
 	if obj.Spec.Settings.OwnerChecks == nil {
-		obj.Spec.Settings.OwnerChecks = &SeedSettingOwnerChecks{Enabled: true}
+		obj.Spec.Settings.OwnerChecks = &SeedSettingOwnerChecks{Enabled: false}
 	}
 
 	if obj.Spec.Settings.DependencyWatchdog == nil {

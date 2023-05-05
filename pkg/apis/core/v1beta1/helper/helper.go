@@ -495,7 +495,7 @@ func SeedSettingVerticalPodAutoscalerEnabled(settings *gardencorev1beta1.SeedSet
 
 // SeedSettingOwnerChecksEnabled returns true if the 'ownerChecks' setting is enabled.
 func SeedSettingOwnerChecksEnabled(settings *gardencorev1beta1.SeedSettings) bool {
-	return settings == nil || settings.OwnerChecks == nil || settings.OwnerChecks.Enabled
+	return settings != nil && settings.OwnerChecks != nil && settings.OwnerChecks.Enabled
 }
 
 // SeedSettingDependencyWatchdogWeederEnabled returns true if the dependency-watchdog-weeder is enabled.

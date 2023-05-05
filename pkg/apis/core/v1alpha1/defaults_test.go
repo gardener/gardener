@@ -43,7 +43,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
-			Expect(obj.Spec.Settings.OwnerChecks.Enabled).To(BeTrue())
+			Expect(obj.Spec.Settings.OwnerChecks.Enabled).To(BeFalse())
 			Expect(obj.Spec.Settings.TopologyAwareRouting.Enabled).To(BeFalse())
 		})
 
@@ -61,7 +61,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
-			Expect(obj.Spec.Settings.OwnerChecks.Enabled).To(BeTrue())
+			Expect(obj.Spec.Settings.OwnerChecks.Enabled).To(BeFalse())
 			Expect(obj.Spec.Settings.TopologyAwareRouting.Enabled).To(BeFalse())
 			Expect(obj.Spec.Taints).To(HaveLen(3))
 			Expect(obj.Spec.Taints).To(Equal(taints))
@@ -75,7 +75,7 @@ var _ = Describe("Defaults", func() {
 				excessCapacityReservation = false
 				scheduling                = true
 				vpaEnabled                = false
-				ownerChecks               = false
+				ownerChecks               = true
 			)
 
 			obj.Spec.Settings = &SeedSettings{
