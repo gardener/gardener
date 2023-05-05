@@ -157,8 +157,8 @@ type Values struct {
 	FeatureGates map[string]bool
 	// Images is a set of container images used for the containers of the kube-apiserver pods.
 	Images Images
-	// IsNodeless specifies whether the cluster managed by this API server has worker nodes.
-	IsNodeless bool
+	// IsWorkerless specifies whether the cluster managed by this API server has worker nodes.
+	IsWorkerless bool
 	// Logging contains configuration settings for the log and access logging verbosity
 	Logging *gardencorev1beta1.KubeAPIServerLogging
 	// NamePrefix is the prefix for the resource names.
@@ -571,7 +571,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		}
 	}
 
-	if !k.values.IsNodeless {
+	if !k.values.IsWorkerless {
 		data, err := k.computeShootResourcesData()
 		if err != nil {
 			return err
