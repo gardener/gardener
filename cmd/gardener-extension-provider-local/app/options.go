@@ -30,6 +30,7 @@ import (
 	backupentrycontroller "github.com/gardener/gardener/pkg/provider-local/controller/backupentry"
 	controlplanecontroller "github.com/gardener/gardener/pkg/provider-local/controller/controlplane"
 	dnsrecordcontroller "github.com/gardener/gardener/pkg/provider-local/controller/dnsrecord"
+	networkpolicycontroller "github.com/gardener/gardener/pkg/provider-local/controller/extension/networkpolicy"
 	localextensionseedcontroller "github.com/gardener/gardener/pkg/provider-local/controller/extension/seed"
 	localextensionshootcontroller "github.com/gardener/gardener/pkg/provider-local/controller/extension/shoot"
 	healthcheckcontroller "github.com/gardener/gardener/pkg/provider-local/controller/healthcheck"
@@ -62,6 +63,7 @@ func ControllerSwitchOptions() *extensionscmdcontroller.SwitchOptions {
 		extensionscmdcontroller.Switch(extensionsheartbeatcontroller.ControllerName, extensionsheartbeatcontroller.AddToManager),
 		extensionscmdcontroller.Switch(localextensionseedcontroller.ControllerName, localextensionseedcontroller.AddToManager),
 		extensionscmdcontroller.Switch(localextensionshootcontroller.ControllerName, localextensionshootcontroller.AddToManager),
+		extensionscmdcontroller.Switch(networkpolicycontroller.ControllerName, networkpolicycontroller.AddToManager),
 	)
 }
 

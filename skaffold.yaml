@@ -622,6 +622,7 @@ build:
         - pkg/provider-local/controller/backupoptions
         - pkg/provider-local/controller/controlplane
         - pkg/provider-local/controller/dnsrecord
+        - pkg/provider-local/controller/extension/networkpolicy
         - pkg/provider-local/controller/extension/seed
         - pkg/provider-local/controller/extension/shoot
         - pkg/provider-local/controller/healthcheck
