@@ -164,7 +164,8 @@ func (h *Handler) handleDeployment(
 	}
 
 	h.mutateNodeAffinity(
-		// TODO(ScheererJ): Remove "failureToleranceType != nil" in the future
+		// TODO(ScheererJ): Remove "failureToleranceType != nil" after the shoot namespaces have been annotated with
+		//  "zone-pinning=enabled" as well (today, only the istio-ingress namespaces have this annotation).
 		failureToleranceType != nil || isZonePinningEnabled,
 		zones,
 		&deployment.Spec.Template,
@@ -216,7 +217,8 @@ func (h *Handler) handleStatefulSet(
 	}
 
 	h.mutateNodeAffinity(
-		// TODO(ScheererJ): Remove "failureToleranceType != nil" in the future
+		// TODO(ScheererJ): Remove "failureToleranceType != nil" after the shoot namespaces have been annotated with
+		//  "zone-pinning=enabled" as well (today, only the istio-ingress namespaces have this annotation).
 		failureToleranceType != nil || isZonePinningEnabled,
 		zones,
 		&statefulSet.Spec.Template,
