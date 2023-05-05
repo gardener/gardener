@@ -148,6 +148,8 @@ type Values struct {
 	PodNetwork *net.IPNet
 	// ServiceNetwork is the service CIDR of the target cluster.
 	ServiceNetwork *net.IPNet
+	// ClusterSigningDuration is the value for the `--cluster-signing-duration` flag.
+	ClusterSigningDuration *time.Duration
 }
 
 func (k *kubeControllerManager) Deploy(ctx context.Context) error {
@@ -625,7 +627,7 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 	)
 
 	command = append(command,
-		"--cluster-signing-duration=720h",
+		"--cluster-signing-duration="+pointer.DurationDeref(k.values.ClusterSigningDuration, 720*time.Hour).String(),
 		"--concurrent-endpoint-syncs=15",
 		"--concurrent-gc-syncs=30",
 		"--concurrent-namespace-syncs=50",

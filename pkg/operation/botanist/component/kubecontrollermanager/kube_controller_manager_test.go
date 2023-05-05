@@ -101,6 +101,7 @@ var _ = Describe("KubeControllerManager", func() {
 			PodEvictionTimeout:            &podEvictionTimeout,
 			NodeMonitorGracePeriod:        &nodeMonitorGracePeriod,
 		}
+		clusterSigningDuration = pointer.Duration(time.Hour)
 
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
 		vpaName                          = "kube-controller-manager-vpa"
@@ -512,7 +513,7 @@ var _ = Describe("KubeControllerManager", func() {
 											Name:            "kube-controller-manager",
 											Image:           image,
 											ImagePullPolicy: corev1.PullIfNotPresent,
-											Command:         commandForKubernetesVersion(version, 10257, config.NodeCIDRMaskSize, config.PodEvictionTimeout, config.NodeMonitorGracePeriod, namespace, isWorkerless, serviceCIDR, podCIDR, getHorizontalPodAutoscalerConfig(config.HorizontalPodAutoscalerConfig), kubernetesutils.FeatureGatesToCommandLineParameter(config.FeatureGates)),
+											Command:         commandForKubernetesVersion(version, 10257, config.NodeCIDRMaskSize, config.PodEvictionTimeout, config.NodeMonitorGracePeriod, namespace, isWorkerless, serviceCIDR, podCIDR, getHorizontalPodAutoscalerConfig(config.HorizontalPodAutoscalerConfig), kubernetesutils.FeatureGatesToCommandLineParameter(config.FeatureGates), clusterSigningDuration),
 											LivenessProbe: &corev1.Probe{
 												ProbeHandler: corev1.ProbeHandler{
 													HTTPGet: &corev1.HTTPGetAction{
@@ -683,14 +684,15 @@ subjects:
 					Expect(err).NotTo(HaveOccurred())
 
 					values = Values{
-						RuntimeVersion: runtimeKubernetesVersion,
-						TargetVersion:  semverVersion,
-						Image:          image,
-						Config:         config,
-						HVPAConfig:     hvpaConfig,
-						IsWorkerless:   isWorkerless,
-						PodNetwork:     podCIDR,
-						ServiceNetwork: serviceCIDR,
+						RuntimeVersion:         runtimeKubernetesVersion,
+						TargetVersion:          semverVersion,
+						Image:                  image,
+						Config:                 config,
+						HVPAConfig:             hvpaConfig,
+						IsWorkerless:           isWorkerless,
+						PodNetwork:             podCIDR,
+						ServiceNetwork:         serviceCIDR,
+						ClusterSigningDuration: clusterSigningDuration,
 					}
 					kubeControllerManager = New(testLogger, fakeInterface, namespace, sm, values)
 					kubeControllerManager.SetReplicaCount(replicas)
@@ -793,14 +795,15 @@ subjects:
 					Expect(err).NotTo(HaveOccurred())
 
 					values = Values{
-						RuntimeVersion: runtimeKubernetesVersion,
-						TargetVersion:  semverVersion,
-						Image:          image,
-						Config:         config,
-						HVPAConfig:     hvpaConfig,
-						IsWorkerless:   isWorkerless,
-						PodNetwork:     podCIDR,
-						ServiceNetwork: serviceCIDR,
+						RuntimeVersion:         runtimeKubernetesVersion,
+						TargetVersion:          semverVersion,
+						Image:                  image,
+						Config:                 config,
+						HVPAConfig:             hvpaConfig,
+						IsWorkerless:           isWorkerless,
+						PodNetwork:             podCIDR,
+						ServiceNetwork:         serviceCIDR,
+						ClusterSigningDuration: clusterSigningDuration,
 					}
 					kubeControllerManager = New(testLogger, fakeInterface, namespace, sm, values)
 					kubeControllerManager.SetReplicaCount(replicas)
@@ -988,6 +991,7 @@ func commandForKubernetesVersion(
 	serviceNetwork, podNetwork *net.IPNet,
 	horizontalPodAutoscalerConfig *gardencorev1beta1.HorizontalPodAutoscalerConfig,
 	featureGateFlags string,
+	clusterSigningDuration *time.Duration,
 ) []string {
 	var command []string
 
@@ -1048,8 +1052,13 @@ func commandForKubernetesVersion(
 		"--cluster-signing-legacy-unknown-key-file=/srv/kubernetes/ca-client/ca.key",
 	)
 
+	if clusterSigningDuration == nil {
+		command = append(command, "--cluster-signing-duration=720h")
+	} else {
+		command = append(command, "--cluster-signing-duration="+clusterSigningDuration.String())
+	}
+
 	command = append(command,
-		"--cluster-signing-duration=720h",
 		"--concurrent-endpoint-syncs=15",
 		"--concurrent-gc-syncs=30",
 		"--concurrent-namespace-syncs=50",
