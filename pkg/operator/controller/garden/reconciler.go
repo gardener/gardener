@@ -357,9 +357,6 @@ func lastSecretRotationStartTimes(garden *operatorv1alpha1.Garden) map[string]ti
 			for _, config := range nonAutoRotatedCACertConfigurations() {
 				rotation[config.GetName()] = gardenStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time
 			}
-		}
-
-		if gardenStatus.Credentials.Rotation.CertificateAuthorities != nil && gardenStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime != nil {
 			rotation[kubeapiserver.SecretStaticTokenName] = gardenStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time
 		}
 
