@@ -126,7 +126,7 @@ var _ = Describe("ResourceManager", func() {
 		deployment                          *appsv1.Deployment
 		defaultNotReadyTolerationSeconds    *int64
 		defaultUnreachableTolerationSeconds *int64
-		configMapFor                        func(watchedNamespace *string, targetKubeconfig *string) *corev1.ConfigMap
+		configMapFor                        func(watchedNamespace, targetKubeconfig *string, isWorkerless bool) *corev1.ConfigMap
 		deploymentFor                       func(configMapName string, kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string, targetClusterDiffersFromSourceCluster bool, secretNameBootstrapKubeconfig *string) *appsv1.Deployment
 		defaultLabels                       map[string]string
 		roleBinding                         *rbacv1.RoleBinding
@@ -352,7 +352,7 @@ var _ = Describe("ResourceManager", func() {
 			AutomountServiceAccountToken: pointer.Bool(false),
 		}
 
-		configMapFor = func(watchedNamespace *string, targetKubeconfig *string) *corev1.ConfigMap {
+		configMapFor = func(watchedNamespace *string, targetKubeconfig *string, isWorkerless bool) *corev1.ConfigMap {
 			configMap := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gardener-resource-manager",
@@ -399,7 +399,7 @@ var _ = Describe("ResourceManager", func() {
 						SyncPeriod:      &healthSyncPeriod,
 					},
 					KubeletCSRApprover: resourcemanagerv1alpha1.KubeletCSRApproverControllerConfig{
-						Enabled:         true,
+						Enabled:         true && !isWorkerless,
 						ConcurrentSyncs: &maxConcurrentCSRApproverWorkers,
 					},
 					ManagedResource: resourcemanagerv1alpha1.ManagedResourceControllerConfig{
@@ -421,7 +421,7 @@ var _ = Describe("ResourceManager", func() {
 				},
 				Webhooks: resourcemanagerv1alpha1.ResourceManagerWebhookConfiguration{
 					HighAvailabilityConfig: resourcemanagerv1alpha1.HighAvailabilityConfigWebhookConfig{
-						Enabled:                             true,
+						Enabled:                             true && !isWorkerless,
 						DefaultNotReadyTolerationSeconds:    defaultNotReadyTolerationSeconds,
 						DefaultUnreachableTolerationSeconds: defaultUnreachableTolerationSeconds,
 					},
@@ -429,10 +429,10 @@ var _ = Describe("ResourceManager", func() {
 						Enabled: false,
 					},
 					PodTopologySpreadConstraints: resourcemanagerv1alpha1.PodTopologySpreadConstraintsWebhookConfig{
-						Enabled: true,
+						Enabled: true && !isWorkerless,
 					},
 					ProjectedTokenMount: resourcemanagerv1alpha1.ProjectedTokenMountWebhookConfig{
-						Enabled: true,
+						Enabled: true && !isWorkerless,
 					},
 					SystemComponentsConfig: resourcemanagerv1alpha1.SystemComponentsConfigWebhookConfig{
 						Enabled: false,
@@ -451,13 +451,13 @@ var _ = Describe("ResourceManager", func() {
 					DisableCachedClient: &targetDisableCache,
 				}
 
-				config.Controllers.Node.Enabled = true
+				config.Controllers.Node.Enabled = true && !isWorkerless
 				config.Webhooks.PodSchedulerName = resourcemanagerv1alpha1.PodSchedulerNameWebhookConfig{
-					Enabled:       true,
+					Enabled:       true && !isWorkerless,
 					SchedulerName: pointer.String("bin-packing-scheduler"),
 				}
 				config.Webhooks.SystemComponentsConfig = resourcemanagerv1alpha1.SystemComponentsConfigWebhookConfig{
-					Enabled: true,
+					Enabled: true && !isWorkerless,
 					NodeSelector: map[string]string{
 						"worker.gardener.cloud/system-components": "true",
 					},
@@ -1792,7 +1792,7 @@ subjects:
 		Context("target cluster != source cluster; watched namespace is set", func() {
 			JustBeforeEach(func() {
 				role.Namespace = watchedNamespace
-				configMap = configMapFor(&watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig))
+				configMap = configMapFor(&watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), false)
 				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, &watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), true, nil)
 				resourceManager = New(c, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)
@@ -1984,7 +1984,7 @@ subjects:
 				clusterRole.Rules = allowManagedResources
 				cfg.TargetDiffersFromSourceCluster = true
 				cfg.WatchedNamespace = nil
-				configMap = configMapFor(nil, pointer.String(gardenerutils.PathGenericKubeconfig))
+				configMap = configMapFor(nil, pointer.String(gardenerutils.PathGenericKubeconfig), false)
 				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, nil, pointer.String(gardenerutils.PathGenericKubeconfig), true, nil)
 
 				resourceManager = New(c, deployNamespace, sm, cfg)
@@ -2080,6 +2080,78 @@ subjects:
 			})
 		})
 
+		Context("target cluster != source cluster, workerless shoot", func() {
+			JustBeforeEach(func() {
+				clusterRole.Rules = allowManagedResources
+				cfg.TargetDiffersFromSourceCluster = true
+				cfg.WatchedNamespace = nil
+				cfg.IsWorkerless = true
+				configMap = configMapFor(nil, pointer.String(gardenerutils.PathGenericKubeconfig), true)
+				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, nil, pointer.String(gardenerutils.PathGenericKubeconfig), true, nil)
+
+				resourceManager = New(c, deployNamespace, sm, cfg)
+				resourceManager.SetSecrets(secrets)
+			})
+
+			It("should disable controllers and webhooks properly in resource manager configuration", func() {
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(secret))
+						}),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(serviceAccount))
+						}),
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
+						Do(func(_ context.Context, obj *corev1.ConfigMap, _ ...client.CreateOption) {
+							Expect(obj).To(DeepEqual(configMap))
+						}),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(clusterRoleName), gomock.AssignableToTypeOf(&rbacv1.ClusterRole{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRole{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(clusterRole))
+						}),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(clusterRoleName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(clusterRoleBinding))
+						}),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(service))
+						}),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(deployment))
+						}),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, pdbV1.Name), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(pdbV1))
+						}),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, "gardener-resource-manager-vpa"), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(vpa))
+						}),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, "managedresource-shoot-core-gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+						Expect(obj).To(DeepEqual(managedResourceSecret))
+					}),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, "shoot-core-gardener-resource-manager"), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+						Expect(obj).To(DeepEqual(managedResource))
+					}),
+				)
+				Expect(resourceManager.Deploy(ctx)).To(Succeed())
+			})
+		})
+
 		Context("target cluster = source cluster", func() {
 			BeforeEach(func() {
 				clusterRole.Rules = allowAll
@@ -2087,7 +2159,7 @@ subjects:
 				delete(service.Annotations, "networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports")
 				service.Annotations["networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports"] = `[{"protocol":"TCP","port":8080}]`
 				service.Annotations["networking.resources.gardener.cloud/from-world-to-ports"] = `[{"protocol":"TCP","port":10250}]`
-				configMap = configMapFor(&watchedNamespace, nil)
+				configMap = configMapFor(&watchedNamespace, nil, false)
 				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, &watchedNamespace, nil, false, nil)
 
 				deployment.Spec.Template.Spec.Volumes = deployment.Spec.Template.Spec.Volumes[:len(deployment.Spec.Template.Spec.Volumes)-2]
@@ -2387,7 +2459,7 @@ subjects:
 
 	Describe("#Wait", func() {
 		BeforeEach(func() {
-			configMap = configMapFor(&watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig))
+			configMap = configMapFor(&watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), false)
 			deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, &watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), false, nil)
 			resourceManager = New(fakeClient, deployNamespace, nil, cfg)
 		})

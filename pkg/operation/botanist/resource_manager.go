@@ -60,6 +60,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		v1beta1constants.SecretNameCACluster,
 		gardenerutils.ExtractSystemComponentsTolerations(b.Shoot.GetInfo().Spec.Provider.Workers),
 		b.Shoot.TopologyAwareRoutingEnabled,
+		b.Shoot.IsWorkerless,
 	)
 }
 

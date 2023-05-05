@@ -316,6 +316,8 @@ type Values struct {
 	// TopologyAwareRoutingEnabled indicates whether topology-aware routing is enabled for the gardener-resource-manager service.
 	// This value is only applicable for the GRM that is deployed in the Shoot control plane (when TargetDiffersFromSourceCluster=true).
 	TopologyAwareRoutingEnabled bool
+	// IsWorkerless specifies whether the cluster has workers.
+	IsWorkerless bool
 }
 
 // VPAConfig contains information for configuring VerticalPodAutoscaler settings for the gardener-resource-manager deployment.
@@ -633,10 +635,15 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			},
 			PodTolerations: r.values.SystemComponentTolerations,
 		}
+
+		config.Controllers.Node.Enabled = true
 	}
 
-	if r.values.TargetDiffersFromSourceCluster {
-		config.Controllers.Node.Enabled = true
+	// this function should be called at the last to make sure we disable
+	// unneeded controllers and webhooks for workerless shoot, it is required so
+	// that we don't overwrite it in the later stage.
+	if r.values.IsWorkerless {
+		disableControllersAndWebhooksForWorkerlessShoot(config)
 	}
 
 	data, err := runtime.Encode(codec, config)
@@ -1983,4 +1990,17 @@ type Secrets struct {
 	BootstrapKubeconfig *component.Secret
 
 	shootAccess *gardenerutils.ShootAccessSecret
+}
+
+func disableControllersAndWebhooksForWorkerlessShoot(config *resourcemanagerv1alpha1.ResourceManagerConfiguration) {
+	// disable unneeded controllers
+	config.Controllers.KubeletCSRApprover.Enabled = false
+	config.Controllers.Node.Enabled = false
+
+	// disable unneeded webhooks
+	config.Webhooks.PodSchedulerName.Enabled = false
+	config.Webhooks.SystemComponentsConfig.Enabled = false
+	config.Webhooks.ProjectedTokenMount.Enabled = false
+	config.Webhooks.HighAvailabilityConfig.Enabled = false
+	config.Webhooks.PodTopologySpreadConstraints.Enabled = false
 }
