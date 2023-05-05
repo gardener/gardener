@@ -168,13 +168,16 @@ type ControllerWorkers struct {
 	Endpoint *int
 	// GarbageCollector is the number of workers for the GarbageCollector controller.
 	GarbageCollector *int
-	// Namespace is the number of workers for the Namespace controller.
+	// Namespace is the number of workers for the Namespace controller. Set it to '0' in order to disable the controller
+	// (only works when cluster is workerless).
 	Namespace *int
-	// ResourceQuota is the number of workers for the ResourceQuota controller.
+	// ResourceQuota is the number of workers for the ResourceQuota controller. Set it to '0' in order to disable the
+	// controller (only works when cluster is workerless).
 	ResourceQuota *int
 	// ServiceEndpoint is the number of workers for the ServiceEndpoint controller.
 	ServiceEndpoint *int
-	// ServiceAccountToken is the number of workers for the ServiceAccountToken controller.
+	// ServiceAccountToken is the number of workers for the ServiceAccountToken controller. Set it to '0' in order to
+	// disable the controller (only works when cluster is workerless).
 	ServiceAccountToken *int
 }
 
@@ -183,6 +186,18 @@ type ControllerSyncPeriods struct {
 	// ResourceQuota is the sync period for the ResourceQuota controller.
 	ResourceQuota *time.Duration
 }
+
+const (
+	defaultControllerWorkersDeployment          = 50
+	defaultControllerWorkersReplicaSet          = 50
+	defaultControllerWorkersStatefulSet         = 15
+	defaultControllerWorkersEndpoint            = 15
+	defaultControllerWorkersGarbageCollector    = 30
+	defaultControllerWorkersServiceEndpoint     = 15
+	defaultControllerWorkersNamespace           = 30
+	defaultControllerWorkersResourceQuota       = 15
+	defaultControllerWorkersServiceAccountToken = 15
+)
 
 func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 	serverSecret, err := k.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
@@ -635,14 +650,38 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 			"--leader-elect=true",
 			fmt.Sprintf("--node-monitor-grace-period=%s", nodeMonitorGracePeriod.Duration),
 			fmt.Sprintf("--pod-eviction-timeout=%s", podEvictionTimeout.Duration),
-			fmt.Sprintf("--concurrent-deployment-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.Deployment, 50)),
-			fmt.Sprintf("--concurrent-replicaset-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.ReplicaSet, 50)),
-			fmt.Sprintf("--concurrent-statefulset-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.StatefulSet, 15)),
+			fmt.Sprintf("--concurrent-deployment-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.Deployment, defaultControllerWorkersDeployment)),
+			fmt.Sprintf("--concurrent-replicaset-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.ReplicaSet, defaultControllerWorkersReplicaSet)),
+			fmt.Sprintf("--concurrent-statefulset-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.StatefulSet, defaultControllerWorkersStatefulSet)),
 		)
 	} else {
-		command = append(command,
-			"--controllers=namespace,serviceaccount,serviceaccount-token,clusterrole-aggregation,garbagecollector,csrapproving,csrcleaner,csrsigning,bootstrapsigner,tokencleaner,resourcequota",
+		var controllers []string
+
+		if v := pointer.IntDeref(k.values.ControllerWorkers.Namespace, defaultControllerWorkersNamespace); v != 0 {
+			controllers = append(controllers, "namespace")
+		}
+
+		controllers = append(controllers, "serviceaccount")
+
+		if v := pointer.IntDeref(k.values.ControllerWorkers.ServiceAccountToken, defaultControllerWorkersServiceAccountToken); v != 0 {
+			controllers = append(controllers, "serviceaccount-token")
+		}
+
+		controllers = append(controllers,
+			"clusterrole-aggregation",
+			"garbagecollector",
+			"csrapproving",
+			"csrcleaner",
+			"csrsigning",
+			"bootstrapsigner",
+			"tokencleaner",
 		)
+
+		if v := pointer.IntDeref(k.values.ControllerWorkers.ResourceQuota, defaultControllerWorkersResourceQuota); v != 0 {
+			controllers = append(controllers, "resourcequota")
+		}
+
+		command = append(command, "--controllers="+strings.Join(controllers, ","))
 	}
 
 	command = append(command,
@@ -652,16 +691,24 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		fmt.Sprintf("--cluster-signing-legacy-unknown-cert-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyCertificateCA),
 		fmt.Sprintf("--cluster-signing-legacy-unknown-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
 		"--cluster-signing-duration="+pointer.DurationDeref(k.values.ClusterSigningDuration, 720*time.Hour).String(),
-		fmt.Sprintf("--concurrent-endpoint-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.Endpoint, 15)),
-		fmt.Sprintf("--concurrent-gc-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.GarbageCollector, 30)),
-		fmt.Sprintf("--concurrent-namespace-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.Namespace, 50)),
-		fmt.Sprintf("--concurrent-resource-quota-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.ResourceQuota, 15)),
-		fmt.Sprintf("--concurrent-service-endpoint-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.ServiceEndpoint, 15)),
-		fmt.Sprintf("--concurrent-serviceaccount-token-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.ServiceAccountToken, 15)),
+		fmt.Sprintf("--concurrent-endpoint-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.Endpoint, defaultControllerWorkersEndpoint)),
+		fmt.Sprintf("--concurrent-gc-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.GarbageCollector, defaultControllerWorkersGarbageCollector)),
+		fmt.Sprintf("--concurrent-service-endpoint-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.ServiceEndpoint, defaultControllerWorkersServiceEndpoint)),
 	)
 
-	if k.values.ControllerSyncPeriods.ResourceQuota != nil {
-		command = append(command, "--resource-quota-sync-period="+k.values.ControllerSyncPeriods.ResourceQuota.String())
+	if v := pointer.IntDeref(k.values.ControllerWorkers.Namespace, defaultControllerWorkersNamespace); v != 0 {
+		command = append(command, fmt.Sprintf("--concurrent-namespace-syncs=%d", v))
+	}
+
+	if v := pointer.IntDeref(k.values.ControllerWorkers.ResourceQuota, defaultControllerWorkersResourceQuota); v != 0 {
+		command = append(command, fmt.Sprintf("--concurrent-resource-quota-syncs=%d", v))
+		if k.values.ControllerSyncPeriods.ResourceQuota != nil {
+			command = append(command, "--resource-quota-sync-period="+k.values.ControllerSyncPeriods.ResourceQuota.String())
+		}
+	}
+
+	if v := pointer.IntDeref(k.values.ControllerWorkers.ServiceAccountToken, defaultControllerWorkersServiceAccountToken); v != 0 {
+		command = append(command, fmt.Sprintf("--concurrent-serviceaccount-token-syncs=%d", v))
 	}
 
 	if len(k.values.Config.FeatureGates) > 0 {
