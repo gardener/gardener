@@ -569,7 +569,6 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 
 	command = append(command,
 		"/usr/local/bin/kube-controller-manager",
-		"--attach-detach-reconcile-sync-period=1m0s",
 		"--authentication-kubeconfig="+gardenerutils.PathGenericKubeconfig,
 		"--authorization-kubeconfig="+gardenerutils.PathGenericKubeconfig,
 		"--kubeconfig="+gardenerutils.PathGenericKubeconfig,
@@ -588,6 +587,7 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 
 		command = append(command,
 			"--allocate-node-cidrs=true",
+			"--attach-detach-reconcile-sync-period=1m0s",
 			"--controllers=*,bootstrapsigner,tokencleaner",
 			fmt.Sprintf("--cluster-cidr=%s", k.podNetwork.String()),
 			fmt.Sprintf("--cluster-signing-kubelet-client-cert-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyCertificateCA),

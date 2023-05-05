@@ -1016,7 +1016,6 @@ func commandForKubernetesVersion(
 
 	command = append(command,
 		"/usr/local/bin/kube-controller-manager",
-		"--attach-detach-reconcile-sync-period=1m0s",
 		"--authentication-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 		"--authorization-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 		"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
@@ -1029,6 +1028,7 @@ func commandForKubernetesVersion(
 
 		command = append(command,
 			"--allocate-node-cidrs=true",
+			"--attach-detach-reconcile-sync-period=1m0s",
 			"--controllers=*,bootstrapsigner,tokencleaner",
 			fmt.Sprintf("--cluster-cidr=%s", podNetwork.String()),
 			"--cluster-signing-kubelet-client-cert-file=/srv/kubernetes/ca-client/ca.crt",
