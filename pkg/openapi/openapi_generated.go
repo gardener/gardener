@@ -2471,6 +2471,13 @@ func schema_pkg_apis_core_v1alpha1_ControllerResource(ref common.ReferenceCallba
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerResourceLifecycle"),
 						},
 					},
+					"workerlessSupported": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WorkerlessSupported specifies whether this ControllerResource supports Workerless Shoot clusters. This field is only relevant when kind is \"Extension\".",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"kind", "type"},
 			},
@@ -10223,6 +10230,13 @@ func schema_pkg_apis_core_v1beta1_ControllerResource(ref common.ReferenceCallbac
 						SchemaProps: spec.SchemaProps{
 							Description: "Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed. This field is defaulted in the following way when kind is \"Extension\".\n Reconcile: \"AfterKubeAPIServer\"\n Delete: \"BeforeKubeAPIServer\"\n Migrate: \"BeforeKubeAPIServer\"",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerResourceLifecycle"),
+						},
+					},
+					"workerlessSupported": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WorkerlessSupported specifies whether this ControllerResource supports Workerless Shoot clusters. This field is only relevant when kind is \"Extension\".",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 				},

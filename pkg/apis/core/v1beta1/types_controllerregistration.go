@@ -82,6 +82,10 @@ type ControllerResource struct {
 	//  Migrate: "BeforeKubeAPIServer"
 	// +optional
 	Lifecycle *ControllerResourceLifecycle `json:"lifecycle,omitempty" protobuf:"bytes,6,opt,name=lifecycle"`
+	// WorkerlessSupported specifies whether this ControllerResource supports Workerless Shoot clusters.
+	// This field is only relevant when kind is "Extension".
+	// +optional
+	WorkerlessSupported *bool `json:"workerlessSupported,omitempty" protobuf:"varint,7,opt,name=workerlessSupported"`
 }
 
 // DeploymentRef contains information about `ControllerDeployment` references.

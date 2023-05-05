@@ -680,7 +680,10 @@ func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev
 	for _, controllerRegistration := range controllerRegistrationList.Items {
 		for _, resource := range controllerRegistration.Spec.Resources {
 			id := ExtensionsID(extensionsv1alpha1.ExtensionResource, resource.Type)
-			if resource.Kind == extensionsv1alpha1.ExtensionResource && resource.GloballyEnabled != nil && *resource.GloballyEnabled && !disabledExtensions.Has(id) {
+			if resource.Kind == extensionsv1alpha1.ExtensionResource && pointer.BoolDeref(resource.GloballyEnabled, false) && !disabledExtensions.Has(id) {
+				if v1beta1helper.IsWorkerless(shoot) && !pointer.BoolDeref(resource.WorkerlessSupported, false) {
+					continue
+				}
 				requiredExtensions.Insert(id)
 			}
 		}

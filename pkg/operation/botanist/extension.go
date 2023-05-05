@@ -33,7 +33,7 @@ func (b *Botanist) DefaultExtension(ctx context.Context) (extension.Interface, e
 		return nil, err
 	}
 
-	extensions, err := mergeExtensions(controllerRegistrations.Items, b.Shoot.GetInfo().Spec.Extensions, b.Shoot.SeedNamespace)
+	extensions, err := mergeExtensions(controllerRegistrations.Items, b.Shoot.GetInfo().Spec.Extensions, b.Shoot.SeedNamespace, b.Shoot.IsWorkerless)
 	if err != nil {
 		return nil, fmt.Errorf("cannot calculate required extensions for shoot %s: %w", b.Shoot.GetInfo().Name, err)
 	}
@@ -69,7 +69,7 @@ func (b *Botanist) DeployExtensionsBeforeKubeAPIServer(ctx context.Context) erro
 	return b.Shoot.Components.Extensions.Extension.DeployBeforeKubeAPIServer(ctx)
 }
 
-func mergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, extensions []gardencorev1beta1.Extension, namespace string) (map[string]extension.Extension, error) {
+func mergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, extensions []gardencorev1beta1.Extension, namespace string, workerlessShoot bool) (map[string]extension.Extension, error) {
 	var (
 		typeToExtension    = make(map[string]extension.Extension)
 		requiredExtensions = make(map[string]extension.Extension)
@@ -104,6 +104,9 @@ func mergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, e
 			}
 
 			if res.GloballyEnabled != nil && *res.GloballyEnabled {
+				if workerlessShoot && !pointer.BoolDeref(res.WorkerlessSupported, false) {
+					continue
+				}
 				requiredExtensions[res.Type] = typeToExtension[res.Type]
 			}
 		}

@@ -115,6 +115,18 @@ var _ = Describe("Extensions", func() {
 					},
 				},
 			}
+			barRegistrationSupportedForWorkerless = gardencorev1beta1.ControllerRegistration{
+				Spec: gardencorev1beta1.ControllerRegistrationSpec{
+					Resources: []gardencorev1beta1.ControllerResource{
+						{
+							Kind:                extensionKind,
+							Type:                barExtensionType,
+							GloballyEnabled:     pointer.Bool(true),
+							WorkerlessSupported: pointer.Bool(true),
+						},
+					},
+				},
+			}
 			barExtension = gardencorev1beta1.Extension{
 				Type:           barExtensionType,
 				ProviderConfig: &providerConfig,
@@ -135,8 +147,10 @@ var _ = Describe("Extensions", func() {
 		})
 
 		DescribeTable("#DefaultExtension",
-			func(registrations []gardencorev1beta1.ControllerRegistration, extensions []gardencorev1beta1.Extension, conditionMatcher gomegatypes.GomegaMatcher) {
+			func(registrations []gardencorev1beta1.ControllerRegistration, extensions []gardencorev1beta1.Extension, workerless bool, conditionMatcher gomegatypes.GomegaMatcher) {
 				botanist.Shoot.GetInfo().Spec.Extensions = extensions
+				botanist.Shoot.IsWorkerless = workerless
+
 				gardenClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistrationList{})).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
 					(&gardencorev1beta1.ControllerRegistrationList{Items: registrations}).DeepCopyInto(list.(*gardencorev1beta1.ControllerRegistrationList))
 					return nil
@@ -151,18 +165,21 @@ var _ = Describe("Extensions", func() {
 				"No extensions",
 				nil,
 				nil,
+				false,
 				BeEmpty(),
 			),
 			Entry(
 				"Extension w/o registration",
 				nil,
 				[]gardencorev1beta1.Extension{{Type: fooExtensionType}},
+				false,
 				BeEmpty(),
 			),
 			Entry(
 				"Extensions w/ registration",
 				[]gardencorev1beta1.ControllerRegistration{fooRegistration},
 				[]gardencorev1beta1.Extension{fooExtension},
+				false,
 				HaveKeyWithValue(
 					Equal(fooExtensionType),
 					MatchAllFields(
@@ -185,12 +202,14 @@ var _ = Describe("Extensions", func() {
 				"Registration w/o extension",
 				[]gardencorev1beta1.ControllerRegistration{fooRegistration},
 				nil,
+				false,
 				BeEmpty(),
 			),
 			Entry(
 				"Globally enabled extension registration, w/o extension",
 				[]gardencorev1beta1.ControllerRegistration{barRegistration},
 				nil,
+				false,
 				HaveKeyWithValue(
 					Equal(barExtensionType),
 					MatchAllFields(
@@ -213,12 +232,14 @@ var _ = Describe("Extensions", func() {
 				"Globally enabled extension registration but explicitly disabled",
 				[]gardencorev1beta1.ControllerRegistration{barRegistration},
 				[]gardencorev1beta1.Extension{barExtensionDisabled},
+				false,
 				BeEmpty(),
 			),
 			Entry(
 				"Multiple registration but a globally one is explicitly disabled",
 				[]gardencorev1beta1.ControllerRegistration{fooRegistration, barRegistration},
 				[]gardencorev1beta1.Extension{fooExtension, barExtensionDisabled},
+				false,
 				SatisfyAll(
 					HaveLen(1),
 					HaveKeyWithValue(
@@ -257,6 +278,7 @@ var _ = Describe("Extensions", func() {
 					},
 				},
 				[]gardencorev1beta1.Extension{barExtension},
+				false,
 				HaveKeyWithValue(
 					Equal(barExtensionType),
 					MatchAllFields(
@@ -274,6 +296,36 @@ var _ = Describe("Extensions", func() {
 						},
 					),
 				),
+			),
+			Entry(
+				"Globally enabled extension supported for workerless",
+				[]gardencorev1beta1.ControllerRegistration{
+					barRegistrationSupportedForWorkerless,
+				},
+				[]gardencorev1beta1.Extension{},
+				true,
+				HaveKeyWithValue(
+					Equal(barExtensionType),
+					MatchFields(IgnoreExtras, Fields{
+						"Extension": MatchFields(IgnoreExtras, Fields{
+							"Spec": MatchFields(IgnoreExtras, Fields{
+								"DefaultSpec": MatchFields(IgnoreExtras, Fields{
+									"Type": Equal(barExtensionType),
+								}),
+							}),
+						}),
+					},
+					),
+				),
+			),
+			Entry(
+				"Globally enabled extension not supported for workerless",
+				[]gardencorev1beta1.ControllerRegistration{
+					barRegistration,
+				},
+				[]gardencorev1beta1.Extension{},
+				true,
+				BeEmpty(),
 			),
 		)
 	})

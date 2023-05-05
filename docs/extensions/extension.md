@@ -18,9 +18,10 @@ spec:
   - kind: Extension
     type: example
     globallyEnabled: true
+    workerlessSupported: true
 ```
 
-If `spec.resources[].globallyEnabled` is `true`, then the `Extension` resources of the given `type` is created for every shoot cluster. Set to `false`, the `Extension` resource is only created if configured in the `Shoot` manifest.
+If `spec.resources[].globallyEnabled` is `true`, then the `Extension` resources of the given `type` is created for every shoot cluster. Set to `false`, the `Extension` resource is only created if configured in the `Shoot` manifest. In case of workerless shoot, `Extension` resource is created only if `spec.resources[].workerlessSupported` is also set to `true`.
 
 The `Extension` resources are created in the shoot namespace of the seed cluster.
 

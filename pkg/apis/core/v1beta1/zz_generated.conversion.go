@@ -2626,6 +2626,7 @@ func autoConvert_v1beta1_ControllerResource_To_core_ControllerResource(in *Contr
 	out.ReconcileTimeout = (*metav1.Duration)(unsafe.Pointer(in.ReconcileTimeout))
 	out.Primary = (*bool)(unsafe.Pointer(in.Primary))
 	out.Lifecycle = (*core.ControllerResourceLifecycle)(unsafe.Pointer(in.Lifecycle))
+	out.WorkerlessSupported = (*bool)(unsafe.Pointer(in.WorkerlessSupported))
 	return nil
 }
 
@@ -2641,6 +2642,7 @@ func autoConvert_core_ControllerResource_To_v1beta1_ControllerResource(in *core.
 	out.ReconcileTimeout = (*metav1.Duration)(unsafe.Pointer(in.ReconcileTimeout))
 	out.Primary = (*bool)(unsafe.Pointer(in.Primary))
 	out.Lifecycle = (*ControllerResourceLifecycle)(unsafe.Pointer(in.Lifecycle))
+	out.WorkerlessSupported = (*bool)(unsafe.Pointer(in.WorkerlessSupported))
 	return nil
 }
 

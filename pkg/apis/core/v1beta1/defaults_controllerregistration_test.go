@@ -69,6 +69,13 @@ var _ = Describe("ControllerRegistration defaulting", func() {
 			Expect(obj.Spec.Resources[1].Primary).To(PointTo(BeFalse()))
 		})
 
+		It("should not default the WorkerlessSupported field", func() {
+			SetObjectDefaults_ControllerRegistration(obj)
+
+			Expect(obj.Spec.Resources[0].WorkerlessSupported).To(BeNil())
+			Expect(obj.Spec.Resources[1].WorkerlessSupported).To(BeNil())
+		})
+
 		Context("kind != Extension", func() {
 			It("should not default the globallyEnabled field", func() {
 				SetObjectDefaults_ControllerRegistration(obj)

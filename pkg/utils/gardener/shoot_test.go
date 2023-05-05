@@ -1219,6 +1219,76 @@ var _ = Describe("Shoot", func() {
 				ExtensionsID(extensionsv1alpha1.DNSRecordResource, dnsProviderType2),
 			)))
 		})
+
+		It("should compute the correct list of required extensions (workerless Shoot)", func() {
+			shoot.Spec.Provider.Workers = nil
+
+			result := ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
+
+			Expect(result).To(Equal(sets.New(
+				ExtensionsID(extensionsv1alpha1.BackupBucketResource, backupProvider),
+				ExtensionsID(extensionsv1alpha1.BackupEntryResource, backupProvider),
+				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, seedProvider),
+				ExtensionsID(extensionsv1alpha1.ExtensionResource, extensionType1),
+				ExtensionsID(extensionsv1alpha1.DNSRecordResource, dnsProviderType1),
+				ExtensionsID(extensionsv1alpha1.DNSRecordResource, dnsProviderType2),
+			)))
+		})
+
+		It("should compute the correct list of required extensions (workerless Shoot and globally enabled extension)", func() {
+			shoot.Spec.Extensions = []gardencorev1beta1.Extension{}
+			shoot.Spec.Provider.Workers = nil
+			controllerRegistrationList = &gardencorev1beta1.ControllerRegistrationList{
+				Items: []gardencorev1beta1.ControllerRegistration{
+					{
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{
+									Kind:                extensionsv1alpha1.ExtensionResource,
+									Type:                extensionType1,
+									GloballyEnabled:     pointer.Bool(true),
+									WorkerlessSupported: pointer.Bool(false),
+								},
+							},
+						},
+					},
+					{
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{
+									Kind:                extensionsv1alpha1.ExtensionResource,
+									Type:                extensionType2,
+									GloballyEnabled:     pointer.Bool(true),
+									WorkerlessSupported: pointer.Bool(true),
+								},
+							},
+						},
+					},
+					{
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{
+									Kind:            extensionsv1alpha1.ExtensionResource,
+									Type:            extensionType3,
+									GloballyEnabled: pointer.Bool(true),
+								},
+							},
+						},
+					},
+				},
+			}
+
+			result := ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
+
+			Expect(result).To(Equal(sets.New(
+				ExtensionsID(extensionsv1alpha1.BackupBucketResource, backupProvider),
+				ExtensionsID(extensionsv1alpha1.BackupEntryResource, backupProvider),
+				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, seedProvider),
+				ExtensionsID(extensionsv1alpha1.ExtensionResource, extensionType2),
+				ExtensionsID(extensionsv1alpha1.DNSRecordResource, dnsProviderType1),
+				ExtensionsID(extensionsv1alpha1.DNSRecordResource, dnsProviderType2),
+			)))
+		})
 	})
 
 	Describe("#ExtensionsID", func() {
