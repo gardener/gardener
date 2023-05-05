@@ -20,7 +20,6 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/test"
@@ -29,9 +28,7 @@ import (
 var _ = Describe("Monitoring", func() {
 	DescribeTable("success tests for scrape config various kubernetes versions",
 		func(version, expectedScrapeConfig string) {
-			semverVersion, err := semver.NewVersion(version)
-			Expect(err).NotTo(HaveOccurred())
-			kubeControllerManager := New(logr.Discard(), nil, "", nil, semverVersion, "", nil, false, nil, nil, nil, semver.MustParse("1.25.0"))
+			kubeControllerManager := New(logr.Discard(), nil, "", nil, Values{RuntimeVersion: semver.MustParse("1.25.0"), TargetVersion: semver.MustParse(version)})
 			test.ScrapeConfigs(kubeControllerManager, expectedScrapeConfig)
 		},
 
@@ -41,9 +38,7 @@ var _ = Describe("Monitoring", func() {
 	)
 
 	It("should successfully test the alerting rules", func() {
-		semverVersion, err := semver.NewVersion("1.21.4")
-		Expect(err).NotTo(HaveOccurred())
-		kubeControllerManager := New(logr.Discard(), nil, "", nil, semverVersion, "", nil, false, nil, nil, nil, semver.MustParse("1.25.0"))
+		kubeControllerManager := New(logr.Discard(), nil, "", nil, Values{RuntimeVersion: semver.MustParse("1.25.0"), TargetVersion: semver.MustParse("1.21.4")})
 
 		test.AlertingRulesWithPromtool(
 			kubeControllerManager,

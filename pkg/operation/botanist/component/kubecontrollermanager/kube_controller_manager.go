@@ -106,47 +106,48 @@ func New(
 	seedClient kubernetes.Interface,
 	namespace string,
 	secretsManager secretsmanager.Interface,
-	version *semver.Version,
-	image string,
-	config *gardencorev1beta1.KubeControllerManagerConfig,
-	isWorkerless bool,
-	podNetwork *net.IPNet,
-	serviceNetwork *net.IPNet,
-	hvpaConfig *HVPAConfig,
-	runtimeKubernetesVersion *semver.Version,
+	values Values,
 ) Interface {
 	return &kubeControllerManager{
 		log:                           log,
 		seedClient:                    seedClient,
 		namespace:                     namespace,
 		secretsManager:                secretsManager,
-		version:                       version,
-		image:                         image,
-		config:                        config,
-		isWorkerless:                  isWorkerless,
-		podNetwork:                    podNetwork,
-		serviceNetwork:                serviceNetwork,
-		hvpaConfig:                    hvpaConfig,
-		runtimeVersionGreaterEqual123: versionutils.ConstraintK8sGreaterEqual123.Check(runtimeKubernetesVersion),
+		values:                        values,
+		runtimeVersionGreaterEqual123: versionutils.ConstraintK8sGreaterEqual123.Check(values.RuntimeVersion),
 	}
 }
 
 type kubeControllerManager struct {
-	log            logr.Logger
-	seedClient     kubernetes.Interface
-	shootClient    client.Client
-	namespace      string
-	secretsManager secretsmanager.Interface
-	version        *semver.Version
-	image          string
-	replicas       int32
-	config         *gardencorev1beta1.KubeControllerManagerConfig
-	isWorkerless   bool
-	podNetwork     *net.IPNet
-	serviceNetwork *net.IPNet
-	hvpaConfig     *HVPAConfig
-
+	log                           logr.Logger
+	seedClient                    kubernetes.Interface
+	shootClient                   client.Client
+	namespace                     string
+	secretsManager                secretsmanager.Interface
+	values                        Values
 	runtimeVersionGreaterEqual123 bool
+}
+
+// Values are the values for the kube-controller-manager deployment.
+type Values struct {
+	// RuntimeVersion is the Kubernetes version of the runtime cluster.
+	RuntimeVersion *semver.Version
+	// TargetVersion is the Kubernetes version of the target cluster.
+	TargetVersion *semver.Version
+	// Image is the image of the kube-controller-manager.
+	Image string
+	// Replicas is the number of replicas for the kube-controller-manager deployment.
+	Replicas int32
+	// Config is the configuration of the kube-controller-manager.
+	Config *gardencorev1beta1.KubeControllerManagerConfig
+	// HVPAConfig is the configuration for HVPA.
+	HVPAConfig *HVPAConfig
+	// IsWorkerless specifies whether the cluster has worker nodes.
+	IsWorkerless bool
+	// PodNetwork is the pod CIDR of the target cluster.
+	PodNetwork *net.IPNet
+	// ServiceNetwork is the service CIDR of the target cluster.
+	ServiceNetwork *net.IPNet
 }
 
 func (k *kubeControllerManager) Deploy(ctx context.Context) error {
@@ -172,7 +173,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 	}
 
 	var secretCAKubelet *corev1.Secret
-	if !k.isWorkerless {
+	if !k.values.IsWorkerless {
 		secretCAKubelet, found = k.secretsManager.Get(v1beta1constants.SecretNameCAKubelet, secretsmanager.Current)
 		if !found {
 			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAKubelet)
@@ -268,7 +269,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			v1beta1constants.GardenRole:                  v1beta1constants.GardenRoleControlPlane,
 			resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
 		})
-		deployment.Spec.Replicas = &k.replicas
+		deployment.Spec.Replicas = &k.values.Replicas
 		deployment.Spec.RevisionHistoryLimit = pointer.Int32(1)
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: getLabels()}
 		deployment.Spec.Template = corev1.PodTemplateSpec{
@@ -286,7 +287,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 				Containers: []corev1.Container{
 					{
 						Name:            containerName,
-						Image:           k.image,
+						Image:           k.values.Image,
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						Command:         command,
 						LivenessProbe: &corev1.Probe{
@@ -368,7 +369,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			},
 		}
 
-		if !k.isWorkerless {
+		if !k.values.IsWorkerless {
 			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 				Name:      volumeNameCAKubelet,
 				MountPath: volumeMountPathCAKubelet,
@@ -410,7 +411,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if k.hvpaConfig != nil && k.hvpaConfig.Enabled {
+	if k.values.HVPAConfig != nil && k.values.HVPAConfig.Enabled {
 		if err := kubernetesutils.DeleteObject(ctx, k.seedClient.Client(), vpa); err != nil {
 			return err
 		}
@@ -420,7 +421,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			vpaLabels      = map[string]string{v1beta1constants.LabelRole: "kube-controller-manager-vpa"}
 		)
 
-		scaleDownUpdateMode := k.hvpaConfig.ScaleDownUpdateMode
+		scaleDownUpdateMode := k.values.HVPAConfig.ScaleDownUpdateMode
 		if scaleDownUpdateMode == nil {
 			scaleDownUpdateMode = pointer.String(hvpav1alpha1.UpdateModeAuto)
 		}
@@ -512,7 +513,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 }
 
 func (k *kubeControllerManager) SetShootClient(c client.Client)  { k.shootClient = c }
-func (k *kubeControllerManager) SetReplicaCount(replicas int32)  { k.replicas = replicas }
+func (k *kubeControllerManager) SetReplicaCount(replicas int32)  { k.values.Replicas = replicas }
 func (k *kubeControllerManager) Destroy(_ context.Context) error { return nil }
 
 func (k *kubeControllerManager) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
@@ -574,22 +575,22 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		"--kubeconfig="+gardenerutils.PathGenericKubeconfig,
 	)
 
-	if !k.isWorkerless {
-		if v := k.config.PodEvictionTimeout; v != nil {
+	if !k.values.IsWorkerless {
+		if v := k.values.Config.PodEvictionTimeout; v != nil {
 			podEvictionTimeout = *v
 		}
-		if v := k.config.NodeMonitorGracePeriod; v != nil {
+		if v := k.values.Config.NodeMonitorGracePeriod; v != nil {
 			nodeMonitorGracePeriod = *v
 		}
-		if k.config.NodeCIDRMaskSize != nil {
-			command = append(command, fmt.Sprintf("--node-cidr-mask-size=%d", *k.config.NodeCIDRMaskSize))
+		if k.values.Config.NodeCIDRMaskSize != nil {
+			command = append(command, fmt.Sprintf("--node-cidr-mask-size=%d", *k.values.Config.NodeCIDRMaskSize))
 		}
 
 		command = append(command,
 			"--allocate-node-cidrs=true",
 			"--attach-detach-reconcile-sync-period=1m0s",
 			"--controllers=*,bootstrapsigner,tokencleaner",
-			fmt.Sprintf("--cluster-cidr=%s", k.podNetwork.String()),
+			fmt.Sprintf("--cluster-cidr=%s", k.values.PodNetwork.String()),
 			fmt.Sprintf("--cluster-signing-kubelet-client-cert-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyCertificateCA),
 			fmt.Sprintf("--cluster-signing-kubelet-client-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
 			fmt.Sprintf("--cluster-signing-kubelet-serving-cert-file=%s/%s", volumeMountPathCAKubelet, secrets.DataKeyCertificateCA),
@@ -633,11 +634,11 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		"--concurrent-serviceaccount-token-syncs=15",
 	)
 
-	if len(k.config.FeatureGates) > 0 {
-		command = append(command, kubernetesutils.FeatureGatesToCommandLineParameter(k.config.FeatureGates))
+	if len(k.values.Config.FeatureGates) > 0 {
+		command = append(command, kubernetesutils.FeatureGatesToCommandLineParameter(k.values.Config.FeatureGates))
 	}
 
-	if versionutils.ConstraintK8sLess124.Check(k.version) {
+	if versionutils.ConstraintK8sLess124.Check(k.values.TargetVersion) {
 		command = append(command, "--port=0")
 	}
 
@@ -647,9 +648,9 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		fmt.Sprintf("--secure-port=%d", port),
 	)
 
-	if k.serviceNetwork != nil {
+	if k.values.ServiceNetwork != nil {
 		command = append(command,
-			fmt.Sprintf("--service-cluster-ip-range=%s", k.serviceNetwork.String()),
+			fmt.Sprintf("--service-cluster-ip-range=%s", k.values.ServiceNetwork.String()),
 		)
 	}
 
@@ -657,7 +658,7 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		"--profiling=false",
 		fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificate),
 		fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.DataKeyPrivateKey),
-		fmt.Sprintf("--tls-cipher-suites=%s", strings.Join(kubernetesutils.TLSCipherSuites(k.version), ",")),
+		fmt.Sprintf("--tls-cipher-suites=%s", strings.Join(kubernetesutils.TLSCipherSuites(k.values.TargetVersion), ",")),
 		"--use-service-account-credentials=true",
 		"--v=2",
 	)
@@ -674,20 +675,20 @@ func (k *kubeControllerManager) getHorizontalPodAutoscalerConfig() gardencorev1b
 		Tolerance:               &defaultHPATolerance,
 	}
 
-	if k.config.HorizontalPodAutoscalerConfig != nil {
-		if v := k.config.HorizontalPodAutoscalerConfig.CPUInitializationPeriod; v != nil {
+	if k.values.Config.HorizontalPodAutoscalerConfig != nil {
+		if v := k.values.Config.HorizontalPodAutoscalerConfig.CPUInitializationPeriod; v != nil {
 			horizontalPodAutoscalerConfig.CPUInitializationPeriod = v
 		}
-		if v := k.config.HorizontalPodAutoscalerConfig.DownscaleStabilization; v != nil {
+		if v := k.values.Config.HorizontalPodAutoscalerConfig.DownscaleStabilization; v != nil {
 			horizontalPodAutoscalerConfig.DownscaleStabilization = v
 		}
-		if v := k.config.HorizontalPodAutoscalerConfig.InitialReadinessDelay; v != nil {
+		if v := k.values.Config.HorizontalPodAutoscalerConfig.InitialReadinessDelay; v != nil {
 			horizontalPodAutoscalerConfig.InitialReadinessDelay = v
 		}
-		if v := k.config.HorizontalPodAutoscalerConfig.SyncPeriod; v != nil {
+		if v := k.values.Config.HorizontalPodAutoscalerConfig.SyncPeriod; v != nil {
 			horizontalPodAutoscalerConfig.SyncPeriod = v
 		}
-		if v := k.config.HorizontalPodAutoscalerConfig.Tolerance; v != nil {
+		if v := k.values.Config.HorizontalPodAutoscalerConfig.Tolerance; v != nil {
 			horizontalPodAutoscalerConfig.Tolerance = v
 		}
 	}
@@ -702,7 +703,7 @@ func (k *kubeControllerManager) computeResourceRequirements(ctx context.Context)
 		},
 	}
 
-	if k.hvpaConfig == nil || !k.hvpaConfig.Enabled {
+	if k.values.HVPAConfig == nil || !k.values.HVPAConfig.Enabled {
 		return defaultResources, nil
 	}
 

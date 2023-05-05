@@ -68,6 +68,7 @@ var _ = Describe("KubeControllerManager", func() {
 		fakeInterface         kubernetes.Interface
 		sm                    secretsmanager.Interface
 		kubeControllerManager Interface
+		values                Values
 
 		_, podCIDR, _                 = net.ParseCIDR("100.96.0.0/11")
 		_, serviceCIDR, _             = net.ParseCIDR("100.64.0.0/13")
@@ -133,19 +134,22 @@ var _ = Describe("KubeControllerManager", func() {
 	Describe("#Deploy", func() {
 		Context("Tests expecting a failure", func() {
 			BeforeEach(func() {
+				values = Values{
+					RuntimeVersion: runtimeKubernetesVersion,
+					TargetVersion:  semverVersion,
+					Image:          image,
+					Config:         &kcmConfig,
+					HVPAConfig:     hvpaConfigDisabled,
+					IsWorkerless:   isWorkerless,
+					PodNetwork:     podCIDR,
+					ServiceNetwork: serviceCIDR,
+				}
 				kubeControllerManager = New(
 					testLogger,
 					fakeInterface,
 					namespace,
 					sm,
-					semverVersion,
-					image,
-					&kcmConfig,
-					isWorkerless,
-					podCIDR,
-					serviceCIDR,
-					hvpaConfigDisabled,
-					runtimeKubernetesVersion,
+					values,
 				)
 			})
 
@@ -678,21 +682,17 @@ subjects:
 					semverVersion, err := semver.NewVersion(version)
 					Expect(err).NotTo(HaveOccurred())
 
-					kubeControllerManager = New(
-						testLogger,
-						fakeInterface,
-						namespace,
-						sm,
-						semverVersion,
-						image,
-						config,
-						isWorkerless,
-						podCIDR,
-						serviceCIDR,
-						hvpaConfig,
-						runtimeKubernetesVersion,
-					)
-
+					values = Values{
+						RuntimeVersion: runtimeKubernetesVersion,
+						TargetVersion:  semverVersion,
+						Image:          image,
+						Config:         config,
+						HVPAConfig:     hvpaConfig,
+						IsWorkerless:   isWorkerless,
+						PodNetwork:     podCIDR,
+						ServiceNetwork: serviceCIDR,
+					}
+					kubeControllerManager = New(testLogger, fakeInterface, namespace, sm, values)
 					kubeControllerManager.SetReplicaCount(replicas)
 
 					if hvpaConfig.Enabled {
@@ -792,21 +792,17 @@ subjects:
 					semverVersion, err := semver.NewVersion(version)
 					Expect(err).NotTo(HaveOccurred())
 
-					kubeControllerManager = New(
-						testLogger,
-						fakeInterface,
-						namespace,
-						sm,
-						semverVersion,
-						image,
-						config,
-						isWorkerless,
-						podCIDR,
-						serviceCIDR,
-						hvpaConfig,
-						runtimeKubernetesVersion,
-					)
-
+					values = Values{
+						RuntimeVersion: runtimeKubernetesVersion,
+						TargetVersion:  semverVersion,
+						Image:          image,
+						Config:         config,
+						HVPAConfig:     hvpaConfig,
+						IsWorkerless:   isWorkerless,
+						PodNetwork:     podCIDR,
+						ServiceNetwork: serviceCIDR,
+					}
+					kubeControllerManager = New(testLogger, fakeInterface, namespace, sm, values)
 					kubeControllerManager.SetReplicaCount(replicas)
 
 					if hvpaConfig.Enabled {
@@ -931,20 +927,11 @@ subjects:
 			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 			fakeKubernetesInterface := kubernetesfake.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
 
-			kubeControllerManager = New(
-				testLogger,
-				fakeKubernetesInterface,
-				namespace,
-				nil,
-				nil,
-				"",
-				nil,
-				isWorkerless,
-				nil,
-				nil,
-				nil,
-				semver.MustParse("1.25.0"),
-			)
+			values = Values{
+				RuntimeVersion: semver.MustParse("1.25.0"),
+				IsWorkerless:   isWorkerless,
+			}
+			kubeControllerManager = New(testLogger, fakeKubernetesInterface, namespace, nil, values)
 
 			deploy := deployment.DeepCopy()
 

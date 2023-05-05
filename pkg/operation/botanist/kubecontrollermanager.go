@@ -58,17 +58,19 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interfa
 		b.SeedClientSet,
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
-		b.Shoot.KubernetesVersion,
-		image.String(),
-		b.Shoot.GetInfo().Spec.Kubernetes.KubeControllerManager,
-		b.Shoot.IsWorkerless,
-		pods,
-		services,
-		&kubecontrollermanager.HVPAConfig{
-			Enabled:             hvpaEnabled,
-			ScaleDownUpdateMode: &scaleDownUpdateMode,
+		kubecontrollermanager.Values{
+			RuntimeVersion: b.Seed.KubernetesVersion,
+			TargetVersion:  b.Shoot.KubernetesVersion,
+			Image:          image.String(),
+			Config:         b.Shoot.GetInfo().Spec.Kubernetes.KubeControllerManager,
+			HVPAConfig: &kubecontrollermanager.HVPAConfig{
+				Enabled:             hvpaEnabled,
+				ScaleDownUpdateMode: &scaleDownUpdateMode,
+			},
+			IsWorkerless:   b.Shoot.IsWorkerless,
+			PodNetwork:     pods,
+			ServiceNetwork: services,
 		},
-		b.Seed.KubernetesVersion,
 	), nil
 }
 
