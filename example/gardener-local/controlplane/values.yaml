@@ -160,6 +160,7 @@ global:
     featureGates:
       IPv6SingleStack: true
       MutableShootSpecNetworkingNodes: true
+      WorkerlessShoots: true
     resources: {}
 
   # Gardener admission controller configuration values

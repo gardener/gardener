@@ -57,7 +57,7 @@ apiserver_flags="
   --secure-port=8443 \
   --tls-cert-file $TLS_CERT_FILE \
   --tls-private-key-file $TLS_KEY_FILE \
-  --feature-gates IPv6SingleStack=true,MutableShootSpecNetworkingNodes=true \
+  --feature-gates IPv6SingleStack=true,MutableShootSpecNetworkingNodes=true,WorkerlessShoots=true \
   --shoot-admin-kubeconfig-max-expiration=24h \
   --enable-admission-plugins=ShootVPAEnabledByDefault \
   --v 2"
