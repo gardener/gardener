@@ -24,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -39,7 +40,6 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // InitializeSecretsManagement initializes the secrets management and deploys the required secrets to the shoot
@@ -82,11 +82,11 @@ func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 			}
 		}
 
-		// Beginning with Kubernetes v1.27, the static token kubeconfig must always be disabled. Hence, there will not
-		// be any kubeconfig rotation anymore. However, the static token secret does also contain a token for the health
-		// check of the kube-apiserver which still must be rotated. Hence, let's use the last rotation initiation time
-		// of the CA rotation also to rotate the static token secret.
-		if versionutils.ConstraintK8sGreaterEqual127.Check(b.Shoot.KubernetesVersion) {
+		// When the static token kubeconfig is disabled, there will not be any kubeconfig rotation anymore. However, the
+		// static token secret does not only contain the token for the user kubeconfig but also a token for the health
+		// check of the kube-apiserver. This token must still be rotated even when the userk ubeconfig is disabled.
+		// Hence, let's use the last rotation initiation time of the CA rotation also to rotate the static token secret.
+		if !pointer.BoolDeref(b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
 			if shootStatus.Credentials.Rotation.CertificateAuthorities != nil && shootStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime != nil {
 				rotation[kubeapiserver.SecretStaticTokenName] = shootStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time
 			}
