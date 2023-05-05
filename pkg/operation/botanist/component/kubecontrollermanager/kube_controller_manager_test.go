@@ -102,6 +102,17 @@ var _ = Describe("KubeControllerManager", func() {
 			NodeMonitorGracePeriod:        &nodeMonitorGracePeriod,
 		}
 		clusterSigningDuration = pointer.Duration(time.Hour)
+		controllerWorkers      = ControllerWorkers{
+			StatefulSet:         pointer.Int(1),
+			Deployment:          pointer.Int(2),
+			ReplicaSet:          pointer.Int(3),
+			Endpoint:            pointer.Int(4),
+			GarbageCollector:    pointer.Int(5),
+			Namespace:           pointer.Int(6),
+			ResourceQuota:       pointer.Int(7),
+			ServiceEndpoint:     pointer.Int(8),
+			ServiceAccountToken: pointer.Int(9),
+		}
 
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
 		vpaName                          = "kube-controller-manager-vpa"
@@ -513,7 +524,7 @@ var _ = Describe("KubeControllerManager", func() {
 											Name:            "kube-controller-manager",
 											Image:           image,
 											ImagePullPolicy: corev1.PullIfNotPresent,
-											Command:         commandForKubernetesVersion(version, 10257, config.NodeCIDRMaskSize, config.PodEvictionTimeout, config.NodeMonitorGracePeriod, namespace, isWorkerless, serviceCIDR, podCIDR, getHorizontalPodAutoscalerConfig(config.HorizontalPodAutoscalerConfig), kubernetesutils.FeatureGatesToCommandLineParameter(config.FeatureGates), clusterSigningDuration),
+											Command:         commandForKubernetesVersion(version, 10257, config.NodeCIDRMaskSize, config.PodEvictionTimeout, config.NodeMonitorGracePeriod, namespace, isWorkerless, serviceCIDR, podCIDR, getHorizontalPodAutoscalerConfig(config.HorizontalPodAutoscalerConfig), kubernetesutils.FeatureGatesToCommandLineParameter(config.FeatureGates), clusterSigningDuration, controllerWorkers),
 											LivenessProbe: &corev1.Probe{
 												ProbeHandler: corev1.ProbeHandler{
 													HTTPGet: &corev1.HTTPGetAction{
@@ -693,6 +704,7 @@ subjects:
 						PodNetwork:             podCIDR,
 						ServiceNetwork:         serviceCIDR,
 						ClusterSigningDuration: clusterSigningDuration,
+						ControllerWorkers:      controllerWorkers,
 					}
 					kubeControllerManager = New(testLogger, fakeInterface, namespace, sm, values)
 					kubeControllerManager.SetReplicaCount(replicas)
@@ -804,6 +816,7 @@ subjects:
 						PodNetwork:             podCIDR,
 						ServiceNetwork:         serviceCIDR,
 						ClusterSigningDuration: clusterSigningDuration,
+						ControllerWorkers:      controllerWorkers,
 					}
 					kubeControllerManager = New(testLogger, fakeInterface, namespace, sm, values)
 					kubeControllerManager.SetReplicaCount(replicas)
@@ -992,6 +1005,7 @@ func commandForKubernetesVersion(
 	horizontalPodAutoscalerConfig *gardencorev1beta1.HorizontalPodAutoscalerConfig,
 	featureGateFlags string,
 	clusterSigningDuration *time.Duration,
+	controllerWorkers ControllerWorkers,
 ) []string {
 	var command []string
 
@@ -1034,10 +1048,25 @@ func commandForKubernetesVersion(
 			"--leader-elect=true",
 			fmt.Sprintf("--node-monitor-grace-period=%s", nodeMonitorGracePeriodSetting),
 			fmt.Sprintf("--pod-eviction-timeout=%s", podEvictionTimeoutSetting),
-			"--concurrent-deployment-syncs=50",
-			"--concurrent-replicaset-syncs=50",
-			"--concurrent-statefulset-syncs=15",
 		)
+
+		if v := controllerWorkers.Deployment; v == nil {
+			command = append(command, "--concurrent-deployment-syncs=50")
+		} else {
+			command = append(command, fmt.Sprintf("--concurrent-deployment-syncs=%d", *v))
+		}
+
+		if v := controllerWorkers.ReplicaSet; v == nil {
+			command = append(command, "--concurrent-replicaset-syncs=50")
+		} else {
+			command = append(command, fmt.Sprintf("--concurrent-replicaset-syncs=%d", *v))
+		}
+
+		if v := controllerWorkers.StatefulSet; v == nil {
+			command = append(command, "--concurrent-statefulset-syncs=15")
+		} else {
+			command = append(command, fmt.Sprintf("--concurrent-statefulset-syncs=%d", *v))
+		}
 	} else {
 		command = append(command,
 			"--controllers=namespace,serviceaccount,serviceaccount-token,clusterrole-aggregation,garbagecollector,csrapproving,csrcleaner,csrsigning,bootstrapsigner,tokencleaner,resourcequota",
@@ -1058,14 +1087,41 @@ func commandForKubernetesVersion(
 		command = append(command, "--cluster-signing-duration="+clusterSigningDuration.String())
 	}
 
-	command = append(command,
-		"--concurrent-endpoint-syncs=15",
-		"--concurrent-gc-syncs=30",
-		"--concurrent-namespace-syncs=50",
-		"--concurrent-resource-quota-syncs=15",
-		"--concurrent-service-endpoint-syncs=15",
-		"--concurrent-serviceaccount-token-syncs=15",
-	)
+	if v := controllerWorkers.Endpoint; v == nil {
+		command = append(command, "--concurrent-endpoint-syncs=15")
+	} else {
+		command = append(command, fmt.Sprintf("--concurrent-endpoint-syncs=%d", *v))
+	}
+
+	if v := controllerWorkers.GarbageCollector; v == nil {
+		command = append(command, "--concurrent-gc-syncs=30")
+	} else {
+		command = append(command, fmt.Sprintf("--concurrent-gc-syncs=%d", *v))
+	}
+
+	if v := controllerWorkers.Namespace; v == nil {
+		command = append(command, "--concurrent-namespace-syncs=50")
+	} else {
+		command = append(command, fmt.Sprintf("--concurrent-namespace-syncs=%d", *v))
+	}
+
+	if v := controllerWorkers.ResourceQuota; v == nil {
+		command = append(command, "--concurrent-resource-quota-syncs=15")
+	} else {
+		command = append(command, fmt.Sprintf("--concurrent-resource-quota-syncs=%d", *v))
+	}
+
+	if v := controllerWorkers.ServiceEndpoint; v == nil {
+		command = append(command, "--concurrent-service-endpoint-syncs=15")
+	} else {
+		command = append(command, fmt.Sprintf("--concurrent-service-endpoint-syncs=%d", *v))
+	}
+
+	if v := controllerWorkers.ServiceAccountToken; v == nil {
+		command = append(command, "--concurrent-serviceaccount-token-syncs=15")
+	} else {
+		command = append(command, fmt.Sprintf("--concurrent-serviceaccount-token-syncs=%d", *v))
+	}
 
 	if len(featureGateFlags) > 0 {
 		command = append(command, featureGateFlags)

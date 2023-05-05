@@ -150,6 +150,30 @@ type Values struct {
 	ServiceNetwork *net.IPNet
 	// ClusterSigningDuration is the value for the `--cluster-signing-duration` flag.
 	ClusterSigningDuration *time.Duration
+	// ControllerWorkers is used for configuring the workers for controllers.
+	ControllerWorkers ControllerWorkers
+}
+
+// ControllerWorkers is used for configuring the workers for controllers.
+type ControllerWorkers struct {
+	// StatefulSet is the number of workers for the StatefulSet controller.
+	StatefulSet *int
+	// Deployment is the number of workers for the Deployment controller.
+	Deployment *int
+	// ReplicaSet is the number of workers for the ReplicaSet controller.
+	ReplicaSet *int
+	// Endpoint is the number of workers for the Endpoint controller.
+	Endpoint *int
+	// GarbageCollector is the number of workers for the GarbageCollector controller.
+	GarbageCollector *int
+	// Namespace is the number of workers for the Namespace controller.
+	Namespace *int
+	// ResourceQuota is the number of workers for the ResourceQuota controller.
+	ResourceQuota *int
+	// ServiceEndpoint is the number of workers for the ServiceEndpoint controller.
+	ServiceEndpoint *int
+	// ServiceAccountToken is the number of workers for the ServiceAccountToken controller.
+	ServiceAccountToken *int
 }
 
 func (k *kubeControllerManager) Deploy(ctx context.Context) error {
@@ -564,17 +588,15 @@ func getLabels() map[string]string {
 
 func (k *kubeControllerManager) computeCommand(port int32) []string {
 	var (
-		command                              []string
 		defaultHorizontalPodAutoscalerConfig = k.getHorizontalPodAutoscalerConfig()
 		podEvictionTimeout                   = metav1.Duration{Duration: 2 * time.Minute}
 		nodeMonitorGracePeriod               = metav1.Duration{Duration: 2 * time.Minute}
-	)
-
-	command = append(command,
-		"/usr/local/bin/kube-controller-manager",
-		"--authentication-kubeconfig="+gardenerutils.PathGenericKubeconfig,
-		"--authorization-kubeconfig="+gardenerutils.PathGenericKubeconfig,
-		"--kubeconfig="+gardenerutils.PathGenericKubeconfig,
+		command                              = []string{
+			"/usr/local/bin/kube-controller-manager",
+			"--authentication-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
+			"--authorization-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
+			"--kubeconfig=" + gardenerutils.PathGenericKubeconfig,
+		}
 	)
 
 	if !k.values.IsWorkerless {
@@ -605,12 +627,9 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 			"--leader-elect=true",
 			fmt.Sprintf("--node-monitor-grace-period=%s", nodeMonitorGracePeriod.Duration),
 			fmt.Sprintf("--pod-eviction-timeout=%s", podEvictionTimeout.Duration),
-		)
-
-		command = append(command,
-			"--concurrent-deployment-syncs=50",
-			"--concurrent-replicaset-syncs=50",
-			"--concurrent-statefulset-syncs=15",
+			fmt.Sprintf("--concurrent-deployment-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.Deployment, 50)),
+			fmt.Sprintf("--concurrent-replicaset-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.ReplicaSet, 50)),
+			fmt.Sprintf("--concurrent-statefulset-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.StatefulSet, 15)),
 		)
 	} else {
 		command = append(command,
@@ -624,16 +643,13 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		fmt.Sprintf("--cluster-signing-kube-apiserver-client-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
 		fmt.Sprintf("--cluster-signing-legacy-unknown-cert-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyCertificateCA),
 		fmt.Sprintf("--cluster-signing-legacy-unknown-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
-	)
-
-	command = append(command,
 		"--cluster-signing-duration="+pointer.DurationDeref(k.values.ClusterSigningDuration, 720*time.Hour).String(),
-		"--concurrent-endpoint-syncs=15",
-		"--concurrent-gc-syncs=30",
-		"--concurrent-namespace-syncs=50",
-		"--concurrent-resource-quota-syncs=15",
-		"--concurrent-service-endpoint-syncs=15",
-		"--concurrent-serviceaccount-token-syncs=15",
+		fmt.Sprintf("--concurrent-endpoint-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.Endpoint, 15)),
+		fmt.Sprintf("--concurrent-gc-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.GarbageCollector, 30)),
+		fmt.Sprintf("--concurrent-namespace-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.Namespace, 50)),
+		fmt.Sprintf("--concurrent-resource-quota-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.ResourceQuota, 15)),
+		fmt.Sprintf("--concurrent-service-endpoint-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.ServiceEndpoint, 15)),
+		fmt.Sprintf("--concurrent-serviceaccount-token-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.ServiceAccountToken, 15)),
 	)
 
 	if len(k.values.Config.FeatureGates) > 0 {
@@ -664,6 +680,7 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		"--use-service-account-credentials=true",
 		"--v=2",
 	)
+
 	return command
 }
 
