@@ -27,9 +27,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
@@ -62,7 +60,6 @@ const (
 var (
 	// FinalizeAfterFiveMinutes is an option to finalize resources after five minutes.
 	FinalizeAfterFiveMinutes = utilclient.FinalizeGracePeriodSeconds(5 * 60)
-
 	// FinalizeAfterOneHour is an option to finalize resources after one hour.
 	FinalizeAfterOneHour = utilclient.FinalizeGracePeriodSeconds(60 * 60)
 
@@ -111,21 +108,6 @@ var (
 		},
 	}
 
-	// NamespaceMatchingLabelsSelector is the delete label selector for Namespaces.
-	NamespaceMatchingLabelsSelector = utilclient.ListWith{&NoCleanupPreventionListOption}
-
-	// NamespaceMatchingFieldsSelector is the delete field selector for Namespaces.
-	NamespaceMatchingFieldsSelector = utilclient.ListWith{
-		client.MatchingFieldsSelector{
-			Selector: fields.AndSelectors(
-				fields.OneTermNotEqualSelector(MetadataNameField, metav1.NamespacePublic),
-				fields.OneTermNotEqualSelector(MetadataNameField, metav1.NamespaceSystem),
-				fields.OneTermNotEqualSelector(MetadataNameField, metav1.NamespaceDefault),
-				fields.OneTermNotEqualSelector(MetadataNameField, corev1.NamespaceNodeLease),
-			),
-		},
-	}
-
 	// APIServiceCleanOption is the delete selector for APIServices.
 	APIServiceCleanOption = utilclient.ListWith{
 		client.MatchingLabelsSelector{
@@ -159,9 +141,6 @@ var (
 
 	// VolumeSnapshotContentCleanOption is the delete selector for VolumeSnapshotContents.
 	VolumeSnapshotContentCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
-
-	// NamespaceErrorToleration are the errors to be tolerated during deletion.
-	NamespaceErrorToleration = utilclient.TolerateErrors{apierrors.IsConflict}
 )
 
 func cleanResourceFn(cleanOps utilclient.CleanOps, c client.Client, list client.ObjectList, opts ...utilclient.CleanOption) flow.TaskFn {
@@ -182,7 +161,7 @@ func cleanResourceFn(cleanOps utilclient.CleanOps, c client.Client, list client.
 func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 	var (
 		c       = b.ShootClientSet.Client()
-		ensurer = utilclient.GoneBeforeEnsurer(b.Shoot.GetInfo().GetDeletionTimestamp().Time)
+		ensurer = utilclient.DefaultGoneEnsurer()
 		ops     = utilclient.NewCleanOps(ensurer, utilclient.DefaultCleaner())
 	)
 
@@ -201,7 +180,7 @@ func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 	var (
 		c       = b.ShootClientSet.Client()
-		ensurer = utilclient.GoneBeforeEnsurer(b.Shoot.GetInfo().GetDeletionTimestamp().Time)
+		ensurer = utilclient.DefaultGoneEnsurer()
 		ops     = utilclient.NewCleanOps(ensurer, utilclient.DefaultCleaner())
 	)
 
@@ -223,7 +202,7 @@ func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 	var (
 		c                  = b.ShootClientSet.Client()
-		ensurer            = utilclient.GoneBeforeEnsurer(b.Shoot.GetInfo().GetDeletionTimestamp().Time)
+		ensurer            = utilclient.DefaultGoneEnsurer()
 		cleaner            = utilclient.DefaultCleaner()
 		ops                = utilclient.NewCleanOps(ensurer, cleaner)
 		snapshotContentOps = utilclient.NewCleanOps(ensurer, cleaner, utilclient.DefaultVolumeSnapshotContentCleaner())
@@ -274,23 +253,6 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		cleanResourceFn(ops, c, &volumesnapshotv1.VolumeSnapshotList{}, VolumeSnapshotContentCleanOption, snapshotCleanOptions),
 		cleanResourceFn(snapshotContentOps, c, &volumesnapshotv1.VolumeSnapshotContentList{}, VolumeSnapshotContentCleanOption, snapshotCleanOptions),
 	)(ctx)
-}
-
-// CleanShootNamespaces deletes all non-system namespaces in the Shoot cluster.
-// It assumes that all workload resources are cleaned up in previous step(s).
-func (b *Botanist) CleanShootNamespaces(ctx context.Context) error {
-	var (
-		c                 = b.ShootClientSet.Client()
-		namespaceCleaner  = utilclient.NewNamespaceCleaner(b.ShootClientSet.Kubernetes().CoreV1().Namespaces())
-		namespaceCleanOps = utilclient.NewCleanOps(utilclient.DefaultGoneEnsurer(), namespaceCleaner)
-	)
-
-	cleanOptions, err := b.getCleanOptions(ZeroGracePeriod, FinalizeAfterFiveMinutes, v1beta1constants.AnnotationShootCleanupNamespaceResourcesFinalizeGracePeriodSeconds, 0)
-	if err != nil {
-		return err
-	}
-
-	return cleanResourceFn(namespaceCleanOps, c, &corev1.NamespaceList{}, cleanOptions, NamespaceMatchingLabelsSelector, NamespaceMatchingFieldsSelector, NamespaceErrorToleration)(ctx)
 }
 
 // CleanVolumeAttachments cleans up all VolumeAttachments in the cluster, waits for them to be gone and finalizes any

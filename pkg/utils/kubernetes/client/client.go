@@ -24,7 +24,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
-	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -144,11 +143,6 @@ var defaultCleaner = NewCleaner(timeutils.DefaultOps(), defaultFinalizer)
 // DefaultCleaner is the default Cleaner.
 func DefaultCleaner() Cleaner {
 	return defaultCleaner
-}
-
-// NewNamespaceCleaner instantiates a new Cleaner with ability to clean namespaces.
-func NewNamespaceCleaner(namespaceInterface typedcorev1.NamespaceInterface) Cleaner {
-	return NewCleaner(timeutils.DefaultOps(), NewNamespaceFinalizer())
 }
 
 // Clean deletes and optionally finalizes resources that expired their termination date.
@@ -294,40 +288,6 @@ func (f GoneEnsurerFunc) EnsureGone(ctx context.Context, c client.Client, obj ru
 // DefaultGoneEnsurer is the default GoneEnsurer.
 func DefaultGoneEnsurer() GoneEnsurer {
 	return defaultGoneEnsurer
-}
-
-// GoneBeforeEnsurer returns an implementation of `GoneEnsurer` which is time aware.
-// It ensures that only resources created <before> are deleted.
-func GoneBeforeEnsurer(before time.Time) GoneEnsurer {
-	return &beforeGoneEnsurer{
-		time: before,
-	}
-}
-
-type beforeGoneEnsurer struct {
-	time time.Time
-}
-
-// EnsureGone ensures that no given object or objects in the list are deleted, if they were created before the given time.
-func (b *beforeGoneEnsurer) EnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...client.ListOption) error {
-	if err := EnsureGone(ctx, c, obj, opts...); err != nil {
-		remainingObjs, ok := err.(objectsRemaining)
-		if !ok {
-			return err
-		}
-
-		var relevants []client.Object
-		for _, remaining := range remainingObjs {
-			if remaining.GetCreationTimestamp().Time.Before(b.time) {
-				relevants = append(relevants, remaining)
-			}
-		}
-
-		if len(relevants) > 0 {
-			return objectsRemaining(relevants)
-		}
-	}
-	return nil
 }
 
 // EnsureGone ensures that the given object or list is gone.
