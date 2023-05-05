@@ -62,7 +62,34 @@ func getShootControlPlane() *gardencorev1beta1.ControlPlane {
 }
 
 // DefaultShoot returns a Shoot object with default values for the e2e tests.
-func DefaultShoot(name string) *gardencorev1beta1.Shoot {
+func DefaultShoot(name string, workerless bool) *gardencorev1beta1.Shoot {
+	if workerless {
+		return &gardencorev1beta1.Shoot{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name + "-wl",
+			},
+			Spec: gardencorev1beta1.ShootSpec{
+				ControlPlane:     getShootControlPlane(),
+				Region:           "local",
+				CloudProfileName: "local",
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					Version:                     "1.26.0",
+					EnableStaticTokenKubeconfig: pointer.Bool(false),
+				},
+				Provider: gardencorev1beta1.Provider{
+					Type: "local",
+				},
+				Extensions: []gardencorev1beta1.Extension{
+					{
+						Type: "local-ext-seed",
+					},
+					{
+						Type: "local-ext-shoot",
+					},
+				}},
+		}
+	}
+
 	return &gardencorev1beta1.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,

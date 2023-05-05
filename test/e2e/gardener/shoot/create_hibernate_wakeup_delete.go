@@ -23,40 +23,56 @@ import (
 
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/node"
+	"github.com/gardener/gardener/test/framework"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	f := defaultShootCreationFramework()
-	f.Shoot = e2e.DefaultShoot("e2e-wake-up")
+	var test = func(f *framework.ShootCreationFramework) {
+		It("Create, Hibernate, Wake up and Delete Shoot", func() {
+			By("Create Shoot")
+			ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
+			defer cancel()
+			Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
+			f.Verify()
 
-	It("Create, Hibernate, Wake up and Delete Shoot", func() {
-		By("Create Shoot")
-		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
-		defer cancel()
-		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
-		f.Verify()
+			By("Verify Bootstrapping of Nodes with node-critical components")
+			// We verify the node readiness feature in this specific e2e test because it uses a single-node shoot cluster.
+			// The default shoot e2e test deals with multiple nodes, deleting all of them and waiting for them to be recreated
+			// might increase the test duration undesirably.
+			ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
+			defer cancel()
+			node.VerifyNodeCriticalComponentsBootstrapping(ctx, f.ShootFramework)
 
-		By("Verify Bootstrapping of Nodes with node-critical components")
-		// We verify the node readiness feature in this specific e2e test because it uses a single-node shoot cluster.
-		// The default shoot e2e test deals with multiple nodes, deleting all of them and waiting for them to be recreated
-		// might increase the test duration undesirably.
-		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
-		defer cancel()
-		node.VerifyNodeCriticalComponentsBootstrapping(ctx, f.ShootFramework)
+			By("Hibernate Shoot")
+			ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
+			defer cancel()
+			Expect(f.HibernateShoot(ctx, f.Shoot)).To(Succeed())
 
-		By("Hibernate Shoot")
-		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
-		defer cancel()
-		Expect(f.HibernateShoot(ctx, f.Shoot)).To(Succeed())
+			By("Wake up Shoot")
+			ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
+			defer cancel()
+			Expect(f.WakeUpShoot(ctx, f.Shoot)).To(Succeed())
 
-		By("Wake up Shoot")
-		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
-		defer cancel()
-		Expect(f.WakeUpShoot(ctx, f.Shoot)).To(Succeed())
+			By("Delete Shoot")
+			ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
+			defer cancel()
+			Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
+		})
+	}
 
-		By("Delete Shoot")
-		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
-		defer cancel()
-		Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
+	Context("Shoot with workers", func() {
+		f := defaultShootCreationFramework()
+
+		f.Shoot = e2e.DefaultShoot("e2e-wake-up", false)
+
+		test(f)
+	})
+
+	Context("Workerless Shoot", func() {
+		f := defaultShootCreationFramework()
+
+		f.Shoot = e2e.DefaultShoot("e2e-wake-up", true)
+
+		test(f)
 	})
 })

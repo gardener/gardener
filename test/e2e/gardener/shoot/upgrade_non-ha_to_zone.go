@@ -23,30 +23,45 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
+	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/shoots/update/highavailability"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "high-availability", "upgrade-to-zone"), func() {
-	f := defaultShootCreationFramework()
-	f.Shoot = e2e.DefaultShoot("e2e-update-zone")
-	f.Shoot.Spec.ControlPlane = nil
+	var test = func(f *framework.ShootCreationFramework) {
+		f.Shoot.Spec.ControlPlane = nil
 
-	It("Create, Upgrade (non-HA to HA with failure tolerance type 'zone') and Delete Shoot", func() {
-		By("Create Shoot")
-		ctx, cancel := context.WithTimeout(parentCtx, 30*time.Minute)
-		defer cancel()
+		It("Create, Upgrade (non-HA to HA with failure tolerance type 'zone') and Delete Shoot", func() {
+			By("Create Shoot")
+			ctx, cancel := context.WithTimeout(parentCtx, 30*time.Minute)
+			defer cancel()
 
-		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
-		f.Verify()
+			Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
+			f.Verify()
 
-		By("Upgrade Shoot (non-HA to HA with failure tolerance type 'zone')")
-		ctx, cancel = context.WithTimeout(parentCtx, 30*time.Minute)
-		defer cancel()
-		highavailability.UpgradeAndVerify(ctx, f.ShootFramework, v1beta1.FailureToleranceTypeZone)
+			By("Upgrade Shoot (non-HA to HA with failure tolerance type 'zone')")
+			ctx, cancel = context.WithTimeout(parentCtx, 30*time.Minute)
+			defer cancel()
+			highavailability.UpgradeAndVerify(ctx, f.ShootFramework, v1beta1.FailureToleranceTypeZone)
 
-		By("Delete Shoot")
-		ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
-		defer cancel()
-		Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
+			By("Delete Shoot")
+			ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
+			defer cancel()
+			Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
+		})
+	}
+
+	Context("Shoot with workers", func() {
+		f := defaultShootCreationFramework()
+		f.Shoot = e2e.DefaultShoot("e2e-upd-zone", false)
+
+		test(f)
+	})
+
+	Context("Workerless Shoot", func() {
+		f := defaultShootCreationFramework()
+		f.Shoot = e2e.DefaultShoot("e2e-upd-zone", true)
+
+		test(f)
 	})
 })

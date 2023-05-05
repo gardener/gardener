@@ -34,7 +34,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	f := defaultShootCreationFramework()
 	f.GardenerFramework.Config.SkipAccessingShoot = false
 
-	f.Shoot = e2e.DefaultShoot("e2e-unpriv")
+	f.Shoot = e2e.DefaultShoot("e2e-unpriv", false)
 	// This version is pinned here, because we have removed support for this field for shoots with k8s v1.25+
 	f.Shoot.Spec.Kubernetes.Version = "1.24.8"
 	f.Shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)

@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
@@ -44,6 +45,10 @@ const driverName = "foo.driver.example.org"
 
 // VerifyNodeCriticalComponentsBootstrapping tests the node readiness feature (see docs/usage/node-readiness.md).
 func VerifyNodeCriticalComponentsBootstrapping(ctx context.Context, f *framework.ShootFramework) {
+	if v1beta1helper.IsWorkerless(f.Shoot) {
+		return
+	}
+
 	shootClientSet, err := access.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, f.Shoot)
 	Expect(err).To(Succeed())
 

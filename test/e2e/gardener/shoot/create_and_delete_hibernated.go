@@ -24,27 +24,43 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
+	"github.com/gardener/gardener/test/framework"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	f := defaultShootCreationFramework()
-	f.Shoot = e2e.DefaultShoot("e2e-hibernated")
-	f.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
-		Enabled: pointer.Bool(true),
+	var test = func(f *framework.ShootCreationFramework) {
+		f.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
+			Enabled: pointer.Bool(true),
+		}
+
+		It("Create and Delete Hibernated Shoot", Label("hibernated"), func() {
+			By("Create Shoot")
+			ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
+			defer cancel()
+			Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
+			f.Verify()
+
+			Expect(f.GardenerFramework.VerifyNoRunningPods(ctx, f.Shoot)).To(Succeed())
+
+			By("Delete Shoot")
+			ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
+			defer cancel()
+			Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
+		})
 	}
 
-	It("Create and Delete Hibernated Shoot", Label("hibernated"), func() {
-		By("Create Shoot")
-		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
-		defer cancel()
-		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
-		f.Verify()
+	Context("Shoot with workers", func() {
+		f := defaultShootCreationFramework()
+		f.Shoot = e2e.DefaultShoot("e2e-hib", false)
 
-		Expect(f.GardenerFramework.VerifyNoRunningPods(ctx, f.Shoot)).To(Succeed())
-
-		By("Delete Shoot")
-		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
-		defer cancel()
-		Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
+		test(f)
 	})
+
+	Context("Workerless Shoot", func() {
+		f := defaultShootCreationFramework()
+		f.Shoot = e2e.DefaultShoot("e2e-hib", true)
+
+		test(f)
+	})
+
 })

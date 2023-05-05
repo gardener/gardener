@@ -55,7 +55,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 	f := framework.NewShootCreationFramework(&framework.ShootCreationConfig{
 		GardenerConfig: e2e.DefaultGardenConfig("garden"),
 	})
-	f.Shoot = e2e.DefaultShoot("e2e-managedseed")
+	f.Shoot = e2e.DefaultShoot("e2e-managedseed", false)
 
 	It("Create Shoot, Create ManagedSeed, Delete ManagedSeed, Delete Shoot", func() {
 		By("Create Shoot")
