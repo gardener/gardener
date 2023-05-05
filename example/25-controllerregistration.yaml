@@ -12,6 +12,7 @@ spec:
   # primary: true|false
   # globallyEnabled: true|false # only valid if kind=Extension
   # reconcileTimeout: 30s # only valid if kind=Extension
+  # workerlessSupported: true|false # only valid if kind=Extension
   deployment:
     deploymentRefs:
     - name: os-gardenlinux # reference to ControllerDeployment
