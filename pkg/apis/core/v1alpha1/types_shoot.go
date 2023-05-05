@@ -662,11 +662,10 @@ type KubeAPIServerConfig struct {
 	// AuditConfig contains configuration settings for the audit of the kube-apiserver.
 	// +optional
 	AuditConfig *AuditConfig `json:"auditConfig,omitempty" protobuf:"bytes,4,opt,name=auditConfig"`
-	// EnableBasicAuthentication defines whether basic authentication should be enabled for this cluster or not.
-	//
-	// Deprecated: basic authentication has been removed in Kubernetes v1.19+. The field is no-op and will be removed in a future version.
-	// +optional
-	EnableBasicAuthentication *bool `json:"enableBasicAuthentication,omitempty" protobuf:"varint,5,opt,name=enableBasicAuthentication"`
+
+	// EnableBasicAuthentication is tombstoned to show why 5 is reserved protobuf tag.
+	// EnableBasicAuthentication *bool `json:"enableBasicAuthentication,omitempty" protobuf:"varint,5,opt,name=enableBasicAuthentication"`
+
 	// OIDCConfig contains configuration settings for the OIDC provider.
 	// +optional
 	OIDCConfig *OIDCConfig `json:"oidcConfig,omitempty" protobuf:"bytes,6,opt,name=oidcConfig"`

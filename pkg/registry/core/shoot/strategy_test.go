@@ -575,64 +575,6 @@ var _ = Describe("Strategy", func() {
 				))
 			})
 		})
-
-		Context("enableBasicAuthentication field", func() {
-			It("should drop the enableBasicAuthentication field when the kubeAPIServer is not nil", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
-					EnableBasicAuthentication: pointer.Bool(false),
-				}
-
-				shootregistry.NewStrategy(0).Canonicalize(shoot)
-
-				Expect(shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication).To(BeNil())
-			})
-
-			It("should do nothing when kubeAPIServer is nil", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer = nil
-
-				shootregistry.NewStrategy(0).Canonicalize(shoot)
-
-				Expect(shoot.Spec.Kubernetes.KubeAPIServer).To(BeNil())
-			})
-		})
-
-		DescribeTable("kubernetesDashboard.authenticationMode field",
-			func(addons *core.Addons, expected *core.Addons) {
-				shoot := &core.Shoot{
-					Spec: core.ShootSpec{
-						Kubernetes: core.Kubernetes{
-							Version: "1.24.8",
-						},
-						Addons: addons,
-					},
-				}
-
-				shootregistry.NewStrategy(0).Canonicalize(shoot)
-
-				Expect(shoot.Spec.Addons).To(Equal(expected))
-			},
-
-			Entry("addons field is nil",
-				nil,
-				nil,
-			),
-			Entry("kubernetesDashboard field is nil",
-				&core.Addons{KubernetesDashboard: nil},
-				&core.Addons{KubernetesDashboard: nil},
-			),
-			Entry("authMode is nil",
-				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: nil}},
-				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: nil}},
-			),
-			Entry("authMode is basic",
-				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("basic")}},
-				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("token")}},
-			),
-			Entry("authMode is token",
-				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("token")}},
-				&core.Addons{KubernetesDashboard: &core.KubernetesDashboard{AuthenticationMode: pointer.String("token")}},
-			),
-		)
 	})
 })
 

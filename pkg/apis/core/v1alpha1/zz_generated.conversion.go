@@ -3241,7 +3241,6 @@ func autoConvert_v1alpha1_KubeAPIServerConfig_To_core_KubeAPIServerConfig(in *Ku
 	}
 	out.APIAudiences = *(*[]string)(unsafe.Pointer(&in.APIAudiences))
 	out.AuditConfig = (*core.AuditConfig)(unsafe.Pointer(in.AuditConfig))
-	out.EnableBasicAuthentication = (*bool)(unsafe.Pointer(in.EnableBasicAuthentication))
 	out.OIDCConfig = (*core.OIDCConfig)(unsafe.Pointer(in.OIDCConfig))
 	out.RuntimeConfig = *(*map[string]bool)(unsafe.Pointer(&in.RuntimeConfig))
 	out.ServiceAccountConfig = (*core.ServiceAccountConfig)(unsafe.Pointer(in.ServiceAccountConfig))
@@ -3277,7 +3276,6 @@ func autoConvert_core_KubeAPIServerConfig_To_v1alpha1_KubeAPIServerConfig(in *co
 	}
 	out.APIAudiences = *(*[]string)(unsafe.Pointer(&in.APIAudiences))
 	out.AuditConfig = (*AuditConfig)(unsafe.Pointer(in.AuditConfig))
-	out.EnableBasicAuthentication = (*bool)(unsafe.Pointer(in.EnableBasicAuthentication))
 	out.OIDCConfig = (*OIDCConfig)(unsafe.Pointer(in.OIDCConfig))
 	out.RuntimeConfig = *(*map[string]bool)(unsafe.Pointer(&in.RuntimeConfig))
 	out.ServiceAccountConfig = (*ServiceAccountConfig)(unsafe.Pointer(in.ServiceAccountConfig))
