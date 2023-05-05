@@ -45,7 +45,6 @@ var (
 		v1beta1constants.DeploymentNameGardenerResourceManager,
 		v1beta1constants.DeploymentNameKubeAPIServer,
 		v1beta1constants.DeploymentNameKubeControllerManager,
-		v1beta1constants.DeploymentNameKubeScheduler,
 	)
 
 	requiredControlPlaneEtcds = sets.New(
@@ -55,12 +54,10 @@ var (
 
 	requiredMonitoringSeedDeploymentsBefore171 = sets.New(
 		v1beta1constants.DeploymentNameGrafana,
-		v1beta1constants.DeploymentNameKubeStateMetrics,
 	)
 
 	requiredMonitoringSeedDeployments = sets.New(
 		v1beta1constants.DeploymentNamePlutono,
-		v1beta1constants.DeploymentNameKubeStateMetrics,
 	)
 
 	requiredLoggingStatefulSetsBefore171 = sets.New(
@@ -362,23 +359,42 @@ func shootControlPlaneNotRunningMessage(lastOperation *gardencorev1beta1.LastOpe
 
 // This is a hack to quickly do a cloud provider specific check for the required control plane deployments.
 func computeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (sets.Set[string], error) {
-	shootWantsClusterAutoscaler, err := v1beta1helper.ShootWantsClusterAutoscaler(shoot)
-	if err != nil {
-		return nil, err
-	}
-
 	requiredControlPlaneDeployments := sets.New(requiredControlPlaneDeployments.UnsortedList()...)
-	if shootWantsClusterAutoscaler {
-		requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameClusterAutoscaler)
-	}
 
-	if v1beta1helper.ShootWantsVerticalPodAutoscaler(shoot) {
-		for _, vpaDeployment := range v1beta1constants.GetShootVPADeploymentNames() {
-			requiredControlPlaneDeployments.Insert(vpaDeployment)
+	if !v1beta1helper.IsWorkerless(shoot) {
+		requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameKubeScheduler)
+
+		shootWantsClusterAutoscaler, err := v1beta1helper.ShootWantsClusterAutoscaler(shoot)
+		if err != nil {
+			return nil, err
+		}
+
+		if shootWantsClusterAutoscaler {
+			requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameClusterAutoscaler)
+		}
+
+		if v1beta1helper.ShootWantsVerticalPodAutoscaler(shoot) {
+			for _, vpaDeployment := range v1beta1constants.GetShootVPADeploymentNames() {
+				requiredControlPlaneDeployments.Insert(vpaDeployment)
+			}
 		}
 	}
 
 	return requiredControlPlaneDeployments, nil
+}
+
+func computeRequiredMonitoringSeedDeployments(shoot *gardencorev1beta1.Shoot, gardenerVersion *semver.Version) sets.Set[string] {
+	requiredDeployments := requiredMonitoringSeedDeployments.Clone()
+	// TODO(rickardsjp, istvanballok): remove in release v1.77
+	if versionConstraintLessThan171.Check(gardenerVersion) {
+		requiredDeployments = requiredMonitoringSeedDeploymentsBefore171.Clone()
+	}
+
+	if !v1beta1helper.IsWorkerless(shoot) {
+		requiredDeployments.Insert(v1beta1constants.DeploymentNameKubeStateMetrics)
+	}
+
+	return requiredDeployments
 }
 
 // computeRequiredMonitoringStatefulSets determine the required monitoring statefulsets
@@ -517,6 +533,7 @@ func (b *HealthChecker) CheckClusterNodes(
 // CheckMonitoringControlPlane checks whether the monitoring in the given listers are complete and healthy.
 func (b *HealthChecker) CheckMonitoringControlPlane(
 	ctx context.Context,
+	shoot *gardencorev1beta1.Shoot,
 	namespace string,
 	shootMonitoringEnabled bool,
 	wantsAlertmanager bool,
@@ -539,12 +556,7 @@ func (b *HealthChecker) CheckMonitoringControlPlane(
 		return nil, err
 	}
 
-	// TODO(rickardsjp, istvanballok): remove in release v1.77
-	requiredDeployments := requiredMonitoringSeedDeployments
-	if versionConstraintLessThan171.Check(b.gardenerVersion) {
-		requiredDeployments = requiredMonitoringSeedDeploymentsBefore171
-	}
-	if exitCondition := b.checkRequiredDeployments(condition, requiredDeployments, deploymentList.Items); exitCondition != nil {
+	if exitCondition := b.checkRequiredDeployments(condition, computeRequiredMonitoringSeedDeployments(shoot, b.gardenerVersion), deploymentList.Items); exitCondition != nil {
 		return exitCondition, nil
 	}
 

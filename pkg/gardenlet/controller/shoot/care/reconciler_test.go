@@ -34,6 +34,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -80,6 +81,11 @@ var _ = Describe("Shoot Care Control", func() {
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				SeedName: &seedName,
+				Provider: gardencorev1beta1.Provider{
+					Workers: []gardencorev1beta1.Worker{
+						{Name: "foo"},
+					},
+				},
 			},
 		}
 
@@ -131,7 +137,7 @@ var _ = Describe("Shoot Care Control", func() {
 
 		Context("when health check setup is broken", func() {
 			Context("when operation cannot be created", func() {
-				It("should report a setup failure", func() {
+				JustBeforeEach(func() {
 					fakeErr := errors.New("foo")
 					DeferCleanup(test.WithVar(&NewOperation, opFunc(nil, fakeErr)))
 
@@ -146,11 +152,28 @@ var _ = Describe("Shoot Care Control", func() {
 					result, err := reconciler.Reconcile(ctx, req)
 					Expect(result).To(Equal(reconcile.Result{}))
 					Expect(err).To(MatchError(fakeErr))
+				})
 
-					updatedShoot := &gardencorev1beta1.Shoot{}
-					Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
-					Expect(updatedShoot.Status.Conditions).To(consistOfConditionsInUnknownStatus("Precondition failed: operation could not be initialized"))
-					Expect(updatedShoot.Status.Constraints).To(consistOfConstraintsInUnknownStatus("Precondition failed: operation could not be initialized"))
+				Context("shoot with workers", func() {
+					It("should report a setup failure", func() {
+						updatedShoot := &gardencorev1beta1.Shoot{}
+						Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
+						Expect(updatedShoot.Status.Conditions).To(consistOfConditionsInUnknownStatus("Precondition failed: operation could not be initialized", v1beta1helper.IsWorkerless(shoot)))
+						Expect(updatedShoot.Status.Constraints).To(consistOfConstraintsInUnknownStatus("Precondition failed: operation could not be initialized"))
+					})
+				})
+
+				Context("workerless shoot", func() {
+					BeforeEach(func() {
+						shoot.Spec.Provider.Workers = nil
+					})
+
+					It("should report a setup failure", func() {
+						updatedShoot := &gardencorev1beta1.Shoot{}
+						Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
+						Expect(updatedShoot.Status.Conditions).To(consistOfConditionsInUnknownStatus("Precondition failed: operation could not be initialized", v1beta1helper.IsWorkerless(shoot)))
+						Expect(updatedShoot.Status.Constraints).To(consistOfConstraintsInUnknownStatus("Precondition failed: operation could not be initialized"))
+					})
 				})
 			})
 
@@ -541,8 +564,9 @@ func nopGarbageCollectorFunc() NewGarbageCollectorFunc {
 	}
 }
 
-func consistOfConditionsInUnknownStatus(message string) types.GomegaMatcher {
-	return And(
+func consistOfConditionsInUnknownStatus(message string, isWorkerless bool) types.GomegaMatcher {
+	var len = 3
+	matcher := And(
 		ContainCondition(
 			OfType(gardencorev1beta1.ShootAPIServerAvailable),
 			WithStatus(gardencorev1beta1.ConditionUnknown),
@@ -554,16 +578,29 @@ func consistOfConditionsInUnknownStatus(message string) types.GomegaMatcher {
 			WithMessage(message),
 		),
 		ContainCondition(
-			OfType(gardencorev1beta1.ShootEveryNodeReady),
-			WithStatus(gardencorev1beta1.ConditionUnknown),
-			WithMessage(message),
-		),
-		ContainCondition(
-			OfType(gardencorev1beta1.ShootSystemComponentsHealthy),
+			OfType(gardencorev1beta1.ShootObservabilityComponentsHealthy),
 			WithStatus(gardencorev1beta1.ConditionUnknown),
 			WithMessage(message),
 		),
 	)
+
+	if !isWorkerless {
+		len = 5
+		matcher = And(matcher,
+			ContainCondition(
+				OfType(gardencorev1beta1.ShootEveryNodeReady),
+				WithStatus(gardencorev1beta1.ConditionUnknown),
+				WithMessage(message),
+			),
+			ContainCondition(
+				OfType(gardencorev1beta1.ShootSystemComponentsHealthy),
+				WithStatus(gardencorev1beta1.ConditionUnknown),
+				WithMessage(message),
+			),
+		)
+	}
+
+	return And(matcher, HaveLen(len))
 }
 
 func consistOfConstraintsInUnknownStatus(message string) types.GomegaMatcher {
