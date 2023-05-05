@@ -3,3 +3,11 @@ kind: Kustomization
 
 resources:
 - https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml
+
+images:
+- name: docker.io/calico/cni
+  newName: eu.gcr.io/gardener-project/3rd/calico/cni
+- name: docker.io/calico/node
+  newName: eu.gcr.io/gardener-project/3rd/calico/node
+- name: docker.io/calico/kube-controllers
+  newName: eu.gcr.io/gardener-project/3rd/calico/kube-controllers
