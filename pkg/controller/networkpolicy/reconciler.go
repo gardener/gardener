@@ -44,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 )
 
 // Reconciler implements the reconcile.Reconcile interface for namespace reconciliation.
@@ -291,6 +292,17 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToPublicNetworks(ctx context.Con
 							carrierGradeNATBlock().String(),
 						}, r.RuntimeNetworks.BlockCIDRs...),
 					},
+				}, {
+					IPBlock: &networkingv1.IPBlock{
+						CIDR: "::/0",
+						// TODO: exclude private blocks so that this actually allows only public networks
+						// Except: append([]string{
+						// 	private8BitBlock().String(),
+						// 	private12BitBlock().String(),
+						// 	private16BitBlock().String(),
+						// 	carrierGradeNATBlock().String(),
+						// }, r.SeedNetworks.BlockCIDRs...),
+					},
 				}},
 			}},
 			Ingress:     []networkingv1.NetworkPolicyIngressRule{},
@@ -432,6 +444,7 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToDNS(ctx context.Context, log l
 	if err != nil {
 		return fmt.Errorf("cannot calculate CoreDNS ClusterIP: %w", err)
 	}
+	runtimeDNSServerAddressBitLen := netutils.GetBitLen(runtimeDNSServerAddress.String())
 
 	return r.reconcileNetworkPolicy(ctx, log, networkPolicy, func(policy *networkingv1.NetworkPolicy) {
 		metav1.SetMetaDataAnnotation(&policy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
@@ -474,12 +487,13 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToDNS(ctx context.Context, log l
 					// required for node local dns feature, allows egress traffic to CoreDNS
 					{
 						IPBlock: &networkingv1.IPBlock{
-							CIDR: fmt.Sprintf("%s/32", runtimeDNSServerAddress),
+							CIDR: fmt.Sprintf("%s/%d", runtimeDNSServerAddress, runtimeDNSServerAddressBitLen),
 						},
 					},
 					// required for node local dns feature, allows egress traffic to node local dns cache
 					{
 						IPBlock: &networkingv1.IPBlock{
+							// TODO: support node-local-dns with IPv6 single-stack networking
 							CIDR: fmt.Sprintf("%s/32", nodelocaldnsconstants.IPVSAddress),
 						},
 					},

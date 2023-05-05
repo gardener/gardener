@@ -173,6 +173,9 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 								IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"},
 							},
 							{
+								IPBlock: &networkingv1.IPBlock{CIDR: "::/0"},
+							},
+							{
 								PodSelector: &metav1.LabelSelector{
 									MatchExpressions: []metav1.LabelSelectorRequirement{{
 										Key:      corednsconstants.LabelKey,
@@ -218,7 +221,10 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed}},
-				Egress:      []networkingv1.NetworkPolicyEgressRule{{To: []networkingv1.NetworkPolicyPeer{{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}}}}},
+				Egress: []networkingv1.NetworkPolicyEgressRule{{To: []networkingv1.NetworkPolicyPeer{
+					{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
+					{IPBlock: &networkingv1.IPBlock{CIDR: "::/0"}},
+				}}},
 				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 			},
 		}

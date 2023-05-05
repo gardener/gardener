@@ -349,6 +349,8 @@ spec:
     to:
     - ipBlock:
         cidr: 0.0.0.0/0
+    - ipBlock:
+        cidr: ::/0
     - podSelector:
         matchExpressions:
         - key: k8s-app
@@ -395,6 +397,8 @@ spec:
   - to:
     - ipBlock:
         cidr: 0.0.0.0/0
+    - ipBlock:
+        cidr: ::/0
   podSelector:
     matchLabels:
       networking.gardener.cloud/to-public-networks: allowed

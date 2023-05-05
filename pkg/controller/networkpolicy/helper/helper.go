@@ -21,6 +21,8 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
+
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 )
 
 // GetEgressRules creates Network Policy egress rules from endpoint subsets.
@@ -40,7 +42,7 @@ func GetEgressRules(subsets ...corev1.EndpointSubset) []networkingv1.NetworkPoli
 
 			egressRule.To = append(egressRule.To, networkingv1.NetworkPolicyPeer{
 				IPBlock: &networkingv1.IPBlock{
-					CIDR: fmt.Sprintf("%s/32", address.IP),
+					CIDR: fmt.Sprintf("%s/%d", address.IP, netutils.GetBitLen(address.IP)),
 				},
 			})
 		}
