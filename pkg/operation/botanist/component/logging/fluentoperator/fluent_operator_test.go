@@ -68,6 +68,8 @@ var _ = Describe("Fluent Operator", func() {
 		serviceAccount     *corev1.ServiceAccount
 		clusterRole        *rbacv1.ClusterRole
 		clusterRoleBinding *rbacv1.ClusterRoleBinding
+		role               *rbacv1.Role
+		roleBinding        *rbacv1.RoleBinding
 		deployment         *appsv1.Deployment
 		vpa                *vpaautoscalingv1.VerticalPodAutoscaler
 	)
@@ -103,33 +105,23 @@ var _ = Describe("Fluent Operator", func() {
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
-					APIGroups: []string{"apps"},
-					Resources: []string{"daemonsets", "statefulsets"},
-					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
-				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{"pods"},
-					Verbs:     []string{"get"},
-				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{"secrets", "configmaps", "serviceaccounts", "services", "namespaces"},
-					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
-				},
-				{
 					APIGroups: []string{"fluentbit.fluent.io"},
 					Resources: []string{"fluentbits", "clusterfluentbitconfigs", "clusterfilters", "clusterinputs", "clusteroutputs", "clusterparsers", "collectors", "fluentbitconfigs", "filters", "outputs", "parsers"},
 					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 				},
 				{
-					APIGroups: []string{"rbac.authorization.k8s.io"},
-					Resources: []string{"clusterrolebindings", "clusterroles"},
-					Verbs:     []string{"get", "list", "watch", "create"},
+					APIGroups: []string{""},
+					Resources: []string{"secrets", "configmaps", "serviceaccounts", "services"},
+					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
-					APIGroups: []string{"extensions.gardener.cloud"},
-					Resources: []string{"clusters"},
+					APIGroups: []string{"apps"},
+					Resources: []string{"daemonsets", "statefulsets"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"rbac.authorization.k8s.io"},
+					Resources: []string{"clusterrolebindings", "clusterroles"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
 			},
@@ -153,6 +145,67 @@ var _ = Describe("Fluent Operator", func() {
 				Name:      "fluent-operator",
 				Namespace: namespace,
 			}},
+		}
+		role = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:logging:fluent-operator",
+				Namespace: namespace,
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"coordination.k8s.io"},
+					Resources: []string{"leases"},
+					Verbs:     []string{"create", "get", "watch", "update"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"events"},
+					Verbs:     []string{"create", "get", "list", "watch", "patch"},
+				},
+				{
+					APIGroups: []string{"apps"},
+					Resources: []string{"daemonsets", "statefulsets"},
+					Verbs:     []string{"create", "delete", "patch", "update"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"pods"},
+					Verbs:     []string{"get"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"secrets", "configmaps", "serviceaccounts", "services", "namespaces"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"extensions.gardener.cloud"},
+					Resources: []string{"clusters"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"rbac.authorization.k8s.io"},
+					Resources: []string{"clusterrolebindings", "clusterroles"},
+					Verbs:     []string{"create"},
+				},
+			},
+		}
+		roleBinding = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:logging:fluent-operator",
+				Namespace: namespace,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      "fluent-operator",
+					Namespace: namespace,
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Role",
+				Name:     "gardener.cloud:logging:fluent-operator",
+			},
 		}
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
@@ -192,7 +245,10 @@ var _ = Describe("Fluent Operator", func() {
 							Name:            name,
 							Image:           image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
-							Args:            []string{"--disable-component-controllers", "fluentd"},
+							Args: []string{
+								"--leader-elect=true",
+								"--disable-component-controllers=fluentd",
+							},
 							Env: []corev1.EnvVar{
 								{
 									Name: "NAMESPACE",
@@ -304,11 +360,13 @@ var _ = Describe("Fluent Operator", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(operatorManagedResourceSecret), operatorManagedResourceSecret)).To(Succeed())
 			Expect(operatorManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(operatorManagedResourceSecret.Data).To(HaveLen(5))
+			Expect(operatorManagedResourceSecret.Data).To(HaveLen(7))
 
 			Expect(string(operatorManagedResourceSecret.Data["serviceaccount__"+namespace+"__fluent-operator.yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
 			Expect(string(operatorManagedResourceSecret.Data["clusterrole____gardener.cloud_logging_fluent-operator.yaml"])).To(Equal(componenttest.Serialize(clusterRole)))
 			Expect(string(operatorManagedResourceSecret.Data["clusterrolebinding____fluent-operator.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
+			Expect(string(operatorManagedResourceSecret.Data["role__"+namespace+"__gardener.cloud_logging_fluent-operator.yaml"])).To(Equal(componenttest.Serialize(role)))
+			Expect(string(operatorManagedResourceSecret.Data["rolebinding__"+namespace+"__gardener.cloud_logging_fluent-operator.yaml"])).To(Equal(componenttest.Serialize(roleBinding)))
 			Expect(string(operatorManagedResourceSecret.Data["deployment__"+namespace+"__fluent-operator.yaml"])).To(Equal(componenttest.Serialize(deployment)))
 			Expect(string(operatorManagedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__fluent-operator.yaml"])).To(Equal(componenttest.Serialize(vpa)))
 		})

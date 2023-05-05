@@ -97,33 +97,23 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
-					APIGroups: []string{"apps"},
-					Resources: []string{"daemonsets", "statefulsets"},
-					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
-				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{"pods"},
-					Verbs:     []string{"get"},
-				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{"secrets", "configmaps", "serviceaccounts", "services", "namespaces"},
-					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
-				},
-				{
 					APIGroups: []string{"fluentbit.fluent.io"},
 					Resources: []string{"fluentbits", "clusterfluentbitconfigs", "clusterfilters", "clusterinputs", "clusteroutputs", "clusterparsers", "collectors", "fluentbitconfigs", "filters", "outputs", "parsers"},
 					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 				},
 				{
-					APIGroups: []string{"rbac.authorization.k8s.io"},
-					Resources: []string{"clusterrolebindings", "clusterroles"},
-					Verbs:     []string{"get", "list", "watch", "create"},
+					APIGroups: []string{""},
+					Resources: []string{"secrets", "configmaps", "serviceaccounts", "services"},
+					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
-					APIGroups: []string{"extensions.gardener.cloud"},
-					Resources: []string{"clusters"},
+					APIGroups: []string{"apps"},
+					Resources: []string{"daemonsets", "statefulsets"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"rbac.authorization.k8s.io"},
+					Resources: []string{"clusterrolebindings", "clusterroles"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
 			},
@@ -143,6 +133,67 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 				Name:      serviceAccount.Name,
 				Namespace: serviceAccount.Namespace,
 			}},
+		}
+		role = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      roleName,
+				Namespace: f.namespace,
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"coordination.k8s.io"},
+					Resources: []string{"leases"},
+					Verbs:     []string{"create", "get", "watch", "update"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"events"},
+					Verbs:     []string{"create", "get", "list", "watch", "patch"},
+				},
+				{
+					APIGroups: []string{"apps"},
+					Resources: []string{"daemonsets", "statefulsets"},
+					Verbs:     []string{"create", "delete", "patch", "update"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"pods"},
+					Verbs:     []string{"get"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"secrets", "configmaps", "serviceaccounts", "services", "namespaces"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"extensions.gardener.cloud"},
+					Resources: []string{"clusters"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"rbac.authorization.k8s.io"},
+					Resources: []string{"clusterrolebindings", "clusterroles"},
+					Verbs:     []string{"create"},
+				},
+			},
+		}
+		roleBinding = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      role.Name,
+				Namespace: f.namespace,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Name:      serviceAccount.Name,
+					Namespace: serviceAccount.Namespace,
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Role",
+				Name:     role.Name,
+			},
 		}
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
@@ -173,8 +224,11 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 								Name:            name,
 								Image:           f.values.Image,
 								ImagePullPolicy: corev1.PullIfNotPresent,
-								Args:            []string{"--disable-component-controllers", "fluentd"},
-								Env:             f.computeEnv(),
+								Args: []string{
+									"--leader-elect=true",
+									"--disable-component-controllers=fluentd",
+								},
+								Env: f.computeEnv(),
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("20m"),
@@ -236,6 +290,8 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 		serviceAccount,
 		clusterRole,
 		clusterRoleBinding,
+		role,
+		roleBinding,
 		deployment,
 		vpa,
 	)
