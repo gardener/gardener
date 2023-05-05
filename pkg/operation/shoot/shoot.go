@@ -335,6 +335,10 @@ func (s *Shoot) UpdateInfoStatus(ctx context.Context, c client.Client, useStrate
 // extension components that should be migrated by the shoot controller in parallel.
 // Note that this method does not return ControlPlane and Infrastructure components as they require specific handling during migration.
 func (s *Shoot) GetExtensionComponentsForParallelMigration() []component.DeployMigrateWaiter {
+	if s.IsWorkerless {
+		return []component.DeployMigrateWaiter{}
+	}
+
 	return []component.DeployMigrateWaiter{
 		s.Components.Extensions.ContainerRuntime,
 		s.Components.Extensions.ControlPlaneExposure,
