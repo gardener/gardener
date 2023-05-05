@@ -357,7 +357,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: istiod-gateway-controller
+  name: istiod-gateway-controller` + annotations + `
   labels:
     app: istiod
     istio: pilot
@@ -403,7 +403,7 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: istiod-gateway-controller
+  name: istiod-gateway-controller` + annotations + `
   labels:
     app: istiod
     istio: pilot
