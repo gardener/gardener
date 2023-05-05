@@ -113,6 +113,9 @@ var _ = Describe("KubeControllerManager", func() {
 			ServiceEndpoint:     pointer.Int(8),
 			ServiceAccountToken: pointer.Int(9),
 		}
+		controllerSyncPeriods = ControllerSyncPeriods{
+			ResourceQuota: pointer.Duration(time.Minute),
+		}
 
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
 		vpaName                          = "kube-controller-manager-vpa"
@@ -524,7 +527,7 @@ var _ = Describe("KubeControllerManager", func() {
 											Name:            "kube-controller-manager",
 											Image:           image,
 											ImagePullPolicy: corev1.PullIfNotPresent,
-											Command:         commandForKubernetesVersion(version, 10257, config.NodeCIDRMaskSize, config.PodEvictionTimeout, config.NodeMonitorGracePeriod, namespace, isWorkerless, serviceCIDR, podCIDR, getHorizontalPodAutoscalerConfig(config.HorizontalPodAutoscalerConfig), kubernetesutils.FeatureGatesToCommandLineParameter(config.FeatureGates), clusterSigningDuration, controllerWorkers),
+											Command:         commandForKubernetesVersion(version, 10257, config.NodeCIDRMaskSize, config.PodEvictionTimeout, config.NodeMonitorGracePeriod, namespace, isWorkerless, serviceCIDR, podCIDR, getHorizontalPodAutoscalerConfig(config.HorizontalPodAutoscalerConfig), kubernetesutils.FeatureGatesToCommandLineParameter(config.FeatureGates), clusterSigningDuration, controllerWorkers, controllerSyncPeriods),
 											LivenessProbe: &corev1.Probe{
 												ProbeHandler: corev1.ProbeHandler{
 													HTTPGet: &corev1.HTTPGetAction{
@@ -705,6 +708,7 @@ subjects:
 						ServiceNetwork:         serviceCIDR,
 						ClusterSigningDuration: clusterSigningDuration,
 						ControllerWorkers:      controllerWorkers,
+						ControllerSyncPeriods:  controllerSyncPeriods,
 					}
 					kubeControllerManager = New(testLogger, fakeInterface, namespace, sm, values)
 					kubeControllerManager.SetReplicaCount(replicas)
@@ -817,6 +821,7 @@ subjects:
 						ServiceNetwork:         serviceCIDR,
 						ClusterSigningDuration: clusterSigningDuration,
 						ControllerWorkers:      controllerWorkers,
+						ControllerSyncPeriods:  controllerSyncPeriods,
 					}
 					kubeControllerManager = New(testLogger, fakeInterface, namespace, sm, values)
 					kubeControllerManager.SetReplicaCount(replicas)
@@ -1006,6 +1011,7 @@ func commandForKubernetesVersion(
 	featureGateFlags string,
 	clusterSigningDuration *time.Duration,
 	controllerWorkers ControllerWorkers,
+	controllerSyncPeriods ControllerSyncPeriods,
 ) []string {
 	var command []string
 
@@ -1121,6 +1127,10 @@ func commandForKubernetesVersion(
 		command = append(command, "--concurrent-serviceaccount-token-syncs=15")
 	} else {
 		command = append(command, fmt.Sprintf("--concurrent-serviceaccount-token-syncs=%d", *v))
+	}
+
+	if v := controllerSyncPeriods.ResourceQuota; v != nil {
+		command = append(command, "--resource-quota-sync-period="+v.String())
 	}
 
 	if len(featureGateFlags) > 0 {

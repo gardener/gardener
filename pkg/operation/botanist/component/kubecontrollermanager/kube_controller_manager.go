@@ -152,6 +152,8 @@ type Values struct {
 	ClusterSigningDuration *time.Duration
 	// ControllerWorkers is used for configuring the workers for controllers.
 	ControllerWorkers ControllerWorkers
+	// ControllerSyncPeriods is used for configuring the sync periods for controllers.
+	ControllerSyncPeriods ControllerSyncPeriods
 }
 
 // ControllerWorkers is used for configuring the workers for controllers.
@@ -174,6 +176,12 @@ type ControllerWorkers struct {
 	ServiceEndpoint *int
 	// ServiceAccountToken is the number of workers for the ServiceAccountToken controller.
 	ServiceAccountToken *int
+}
+
+// ControllerSyncPeriods is used for configuring the sync periods for controllers.
+type ControllerSyncPeriods struct {
+	// ResourceQuota is the sync period for the ResourceQuota controller.
+	ResourceQuota *time.Duration
 }
 
 func (k *kubeControllerManager) Deploy(ctx context.Context) error {
@@ -651,6 +659,10 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		fmt.Sprintf("--concurrent-service-endpoint-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.ServiceEndpoint, 15)),
 		fmt.Sprintf("--concurrent-serviceaccount-token-syncs=%d", pointer.IntDeref(k.values.ControllerWorkers.ServiceAccountToken, 15)),
 	)
+
+	if k.values.ControllerSyncPeriods.ResourceQuota != nil {
+		command = append(command, "--resource-quota-sync-period="+k.values.ControllerSyncPeriods.ResourceQuota.String())
+	}
 
 	if len(k.values.Config.FeatureGates) > 0 {
 		command = append(command, kubernetesutils.FeatureGatesToCommandLineParameter(k.values.Config.FeatureGates))
