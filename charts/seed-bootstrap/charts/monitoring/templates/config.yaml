@@ -30,9 +30,6 @@ data:
         target_label: __address__
       - action: labelmap
         regex: __meta_kubernetes_pod_label_(.+)
-        # TODO(shafeeqes) : remove this relabel config in favor of one below once all extensions have added the prometheus.io/name annotation  
-      - source_labels: [ __meta_kubernetes_pod_label_app_kubernetes_io_instance ] # deprecated, use the prometheus.io/name annotation instead
-        target_label: job
       - source_labels: [ __meta_kubernetes_pod_annotation_prometheus_io_name ]
         regex: (.+)
         action: replace
