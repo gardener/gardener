@@ -268,7 +268,7 @@ func (k *kubeAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.Secr
 		ipAddresses = append(ipAddresses, net.ParseIP("127.0.0.1"))
 	}
 
-	if !k.values.IsNodeless {
+	if !k.values.IsWorkerless {
 		dnsNames = append(dnsNames, kubernetesutils.DNSNamesForService("kubernetes", metav1.NamespaceDefault)...)
 	}
 
@@ -283,7 +283,7 @@ func (k *kubeAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.Secr
 }
 
 func (k *kubeAPIServer) reconcileSecretKubeletClient(ctx context.Context) (*corev1.Secret, error) {
-	if k.values.IsNodeless {
+	if k.values.IsWorkerless {
 		return nil, nil
 	}
 

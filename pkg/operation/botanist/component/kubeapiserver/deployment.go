@@ -558,6 +558,23 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, "--requestheader-group-headers=X-Remote-Group")
 	out = append(out, "--requestheader-username-headers=X-Remote-User")
 
+	if k.values.IsWorkerless {
+		disableAPIs := map[string]bool{
+			"autoscaling/v2":                 false,
+			"batch/v1":                       false,
+			"apps/v1":                        false,
+			"policy/v1/poddisruptionbudgets": false,
+			"storage.k8s.io/v1/csidrivers":   false,
+			"storage.k8s.io/v1/csinodes":     false,
+		}
+
+		if version.ConstraintK8sLess125.Check(k.values.Version) {
+			disableAPIs["policy/v1beta1/podsecuritypolicies"] = false
+		}
+
+		k.values.RuntimeConfig = utils.MergeStringMaps(k.values.RuntimeConfig, disableAPIs)
+	}
+
 	if k.values.RuntimeConfig != nil {
 		out = append(out, kubernetesutils.MapStringBoolToCommandLineParameter(k.values.RuntimeConfig, "--runtime-config="))
 	}
@@ -1222,7 +1239,7 @@ func (k *kubeAPIServer) handlePodMutatorSettings(deployment *appsv1.Deployment) 
 }
 
 func (k *kubeAPIServer) handleKubeletSettings(deployment *appsv1.Deployment, secretKubeletClient *corev1.Secret) error {
-	if k.values.IsNodeless {
+	if k.values.IsWorkerless {
 		return nil
 	}
 
@@ -1393,7 +1410,7 @@ func (k *kubeAPIServer) handleAuthenticationSettings(deployment *appsv1.Deployme
 func (k *kubeAPIServer) handleAuthorizationSettings(deployment *appsv1.Deployment, secretWebhookKubeconfig *corev1.Secret) {
 	authModes := []string{"RBAC"}
 
-	if !k.values.IsNodeless {
+	if !k.values.IsWorkerless {
 		authModes = append([]string{"Node"}, authModes...)
 	}
 

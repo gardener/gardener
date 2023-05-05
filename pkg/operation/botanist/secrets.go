@@ -76,7 +76,7 @@ func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 
 	if shootStatus := b.Shoot.GetInfo().Status; shootStatus.Credentials != nil && shootStatus.Credentials.Rotation != nil {
 		if shootStatus.Credentials.Rotation.CertificateAuthorities != nil && shootStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime != nil {
-			for _, config := range caCertConfigurations() {
+			for _, config := range caCertConfigurations(b.Shoot.IsWorkerless) {
 				rotation[config.GetName()] = shootStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time
 			}
 		}
@@ -136,8 +136,8 @@ func (b *Botanist) restoreSecretsFromShootStateForSecretsManagerAdoption(ctx con
 	return flow.Parallel(fns...)(ctx)
 }
 
-func caCertConfigurations() []secretsutils.ConfigInterface {
-	return []secretsutils.ConfigInterface{
+func caCertConfigurations(isWorkerless bool) []secretsutils.ConfigInterface {
+	certificateSecretConfigs := []secretsutils.ConfigInterface{
 		// The CommonNames for CA certificates will be overridden with the secret name by the secrets manager when
 		// generated to ensure that each CA has a unique common name. For backwards-compatibility, we still keep the
 		// CommonNames here (if we removed them then new CAs would be generated with the next shoot reconciliation
@@ -147,10 +147,17 @@ func caCertConfigurations() []secretsutils.ConfigInterface {
 		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCD, CommonName: "etcd", CertType: secretsutils.CACert},
 		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCDPeer, CommonName: "etcd-peer", CertType: secretsutils.CACert},
 		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAFrontProxy, CommonName: "front-proxy", CertType: secretsutils.CACert},
-		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAKubelet, CommonName: "kubelet", CertType: secretsutils.CACert},
-		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAMetricsServer, CommonName: "metrics-server", CertType: secretsutils.CACert},
-		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAVPN, CommonName: "vpn", CertType: secretsutils.CACert},
 	}
+
+	if !isWorkerless {
+		certificateSecretConfigs = append(certificateSecretConfigs,
+			&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAKubelet, CommonName: "kubelet", CertType: secretsutils.CACert},
+			&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAMetricsServer, CommonName: "metrics-server", CertType: secretsutils.CACert},
+			&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAVPN, CommonName: "vpn", CertType: secretsutils.CACert},
+		)
+	}
+
+	return certificateSecretConfigs
 }
 
 func (b *Botanist) caCertGenerateOptionsFor(configName string) []secretsmanager.GenerateOption {
@@ -183,7 +190,7 @@ func (b *Botanist) caCertGenerateOptionsFor(configName string) []secretsmanager.
 }
 
 func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
-	for _, config := range caCertConfigurations() {
+	for _, config := range caCertConfigurations(b.Shoot.IsWorkerless) {
 		if _, err := b.SecretsManager.Generate(ctx, config, b.caCertGenerateOptionsFor(config.GetName())...); err != nil {
 			return err
 		}

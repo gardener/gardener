@@ -2468,6 +2468,13 @@ var _ = Describe("helper", func() {
 						Version:       "1.24.0",
 						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
 					},
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{
+							{
+								Name: "worker",
+							},
+						},
+					},
 				},
 			}
 		})
@@ -2513,6 +2520,12 @@ var _ = Describe("helper", func() {
 			shoot.Spec.Kubernetes.KubeAPIServer = nil
 
 			Expect(IsPSPDisabled(shoot)).To(BeFalse())
+		})
+
+		It("should return true for workerless Shoots", func() {
+			shoot.Spec.Provider.Workers = nil
+
+			Expect(IsPSPDisabled(shoot)).To(BeTrue())
 		})
 	})
 
@@ -2615,10 +2628,11 @@ var _ = Describe("helper", func() {
 	})
 
 	DescribeTable("#ShootEnablesSSHAccess",
-		func(workersSettings *gardencorev1beta1.WorkersSettings, expectedResult bool) {
+		func(workers []gardencorev1beta1.Worker, workersSettings *gardencorev1beta1.WorkersSettings, expectedResult bool) {
 			shoot := &gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Provider: gardencorev1beta1.Provider{
+						Workers:         workers,
 						WorkersSettings: workersSettings,
 					},
 				},
@@ -2626,10 +2640,11 @@ var _ = Describe("helper", func() {
 			Expect(ShootEnablesSSHAccess(shoot)).To(Equal(expectedResult))
 		},
 
-		Entry("should return true when shoot provider has no WorkersSettings", nil, true),
-		Entry("should return true when shoot worker settings has no SSHAccess", &gardencorev1beta1.WorkersSettings{}, true),
-		Entry("should return true when shoot worker settings has SSHAccess set to true", &gardencorev1beta1.WorkersSettings{SSHAccess: &gardencorev1beta1.SSHAccess{Enabled: true}}, true),
-		Entry("should return false when shoot worker settings has SSHAccess set to false", &gardencorev1beta1.WorkersSettings{SSHAccess: &gardencorev1beta1.SSHAccess{Enabled: false}}, false),
+		Entry("should return false when shoot provider has zero workers", nil, nil, false),
+		Entry("should return true when shoot provider has no WorkersSettings", []gardencorev1beta1.Worker{gardencorev1beta1.Worker{}}, nil, true),
+		Entry("should return true when shoot worker settings has no SSHAccess", []gardencorev1beta1.Worker{gardencorev1beta1.Worker{}}, &gardencorev1beta1.WorkersSettings{}, true),
+		Entry("should return true when shoot worker settings has SSHAccess set to true", []gardencorev1beta1.Worker{gardencorev1beta1.Worker{}}, &gardencorev1beta1.WorkersSettings{SSHAccess: &gardencorev1beta1.SSHAccess{Enabled: true}}, true),
+		Entry("should return false when shoot worker settings has SSHAccess set to false", []gardencorev1beta1.Worker{gardencorev1beta1.Worker{}}, &gardencorev1beta1.WorkersSettings{SSHAccess: &gardencorev1beta1.SSHAccess{Enabled: false}}, false),
 	)
 
 	Describe("#GetFailureToleranceType", func() {

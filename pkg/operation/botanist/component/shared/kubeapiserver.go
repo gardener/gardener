@@ -93,7 +93,7 @@ func NewKubeAPIServer(
 	serviceNetworkCIDR string,
 	vpnConfig kubeapiserver.VPNConfig,
 	priorityClassName string,
-	isNodeless bool,
+	isWorkerless bool,
 	staticTokenKubeconfigEnabled *bool,
 	auditWebhookConfig *kubeapiserver.AuditWebhook,
 	authenticationWebhookConfig *kubeapiserver.AuthenticationWebhook,
@@ -125,7 +125,7 @@ func NewKubeAPIServer(
 	)
 
 	if apiServerConfig != nil {
-		enabledAdmissionPlugins = computeEnabledKubeAPIServerAdmissionPlugins(enabledAdmissionPlugins, apiServerConfig.AdmissionPlugins)
+		enabledAdmissionPlugins = computeEnabledKubeAPIServerAdmissionPlugins(enabledAdmissionPlugins, apiServerConfig.AdmissionPlugins, isWorkerless)
 		disabledAdmissionPlugins = computeDisabledKubeAPIServerAdmissionPlugins(apiServerConfig.AdmissionPlugins)
 
 		enabledAdmissionPlugins, err = ensureAdmissionPluginConfig(enabledAdmissionPlugins)
@@ -179,7 +179,7 @@ func NewKubeAPIServer(
 			EventTTL:                            eventTTL,
 			FeatureGates:                        featureGates,
 			Images:                              images,
-			IsNodeless:                          isNodeless,
+			IsWorkerless:                        isWorkerless,
 			Logging:                             logging,
 			NamePrefix:                          namePrefix,
 			OIDC:                                oidcConfig,
@@ -400,7 +400,7 @@ func convertToAdmissionPluginConfigs(plugins []gardencorev1beta1.AdmissionPlugin
 	return out, nil
 }
 
-func computeEnabledKubeAPIServerAdmissionPlugins(defaultPlugins, configuredPlugins []gardencorev1beta1.AdmissionPlugin) []gardencorev1beta1.AdmissionPlugin {
+func computeEnabledKubeAPIServerAdmissionPlugins(defaultPlugins, configuredPlugins []gardencorev1beta1.AdmissionPlugin, isWorkerless bool) []gardencorev1beta1.AdmissionPlugin {
 	for _, plugin := range configuredPlugins {
 		pluginOverwritesDefault := false
 
@@ -419,6 +419,10 @@ func computeEnabledKubeAPIServerAdmissionPlugins(defaultPlugins, configuredPlugi
 
 	var admissionPlugins []gardencorev1beta1.AdmissionPlugin
 	for _, defaultPlugin := range defaultPlugins {
+		// if it's a workerless cluster, we don't add the PodSecurityPolicy plugin, because the API is disabled already
+		if isWorkerless && defaultPlugin.Name == "PodSecurityPolicy" {
+			continue
+		}
 		if !pointer.BoolDeref(defaultPlugin.Disabled, false) {
 			admissionPlugins = append(admissionPlugins, defaultPlugin)
 		}

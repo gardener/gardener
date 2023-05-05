@@ -23,6 +23,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -95,7 +96,7 @@ func getWarningsForDueCredentialsRotations(shoot *core.Shoot, credentialsRotatio
 		warnings = append(warnings, "you should consider rotating the ServiceAccount token signing key, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_credentials_rotation.md#serviceaccount-token-signing-key for details")
 	}
 
-	if rotation.SSHKeypair == nil || initiationDue(rotation.SSHKeypair.LastInitiationTime, credentialsRotationInterval) {
+	if shootEnablesSSHAccess(shoot) && (rotation.SSHKeypair == nil || initiationDue(rotation.SSHKeypair.LastInitiationTime, credentialsRotationInterval)) {
 		warnings = append(warnings, "you should consider rotating the SSH keypair, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_credentials_rotation.md#ssh-key-pair-for-worker-nodes for details")
 	}
 
@@ -151,7 +152,7 @@ func completionWarning(credentials string, recommendedCompletionInterval time.Du
 }
 
 func getWarningsForPSPAdmissionPlugin(shoot *core.Shoot) string {
-	if shoot.Spec.Kubernetes.KubeAPIServer != nil {
+	if !helper.IsWorkerless(shoot) && shoot.Spec.Kubernetes.KubeAPIServer != nil {
 		for _, plugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
 			if plugin.Name == "PodSecurityPolicy" && pointer.BoolDeref(plugin.Disabled, false) {
 				return ""
@@ -160,4 +161,9 @@ func getWarningsForPSPAdmissionPlugin(shoot *core.Shoot) string {
 	}
 
 	return "you should consider migrating to PodSecurity, see https://github.com/gardener/gardener/blob/master/docs/usage/pod-security.md#migrating-from-podsecuritypolicys-to-podsecurity-admission-controller for details"
+}
+
+func shootEnablesSSHAccess(shoot *core.Shoot) bool {
+	return !helper.IsWorkerless(shoot) &&
+		(shoot.Spec.Provider.WorkersSettings == nil || shoot.Spec.Provider.WorkersSettings.SSHAccess == nil || shoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled)
 }

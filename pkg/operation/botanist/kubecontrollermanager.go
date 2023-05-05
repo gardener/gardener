@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"context"
+	"net"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,6 +47,12 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interfa
 		scaleDownUpdateMode = hvpav1alpha1.UpdateModeOff
 	}
 
+	var services, pods *net.IPNet
+	if b.Shoot.Networks != nil {
+		services = b.Shoot.Networks.Services
+		pods = b.Shoot.Networks.Pods
+	}
+
 	return kubecontrollermanager.New(
 		b.Logger.WithValues("component", "kube-controller-manager"),
 		b.SeedClientSet,
@@ -54,8 +61,9 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interfa
 		b.Shoot.KubernetesVersion,
 		image.String(),
 		b.Shoot.GetInfo().Spec.Kubernetes.KubeControllerManager,
-		b.Shoot.Networks.Pods,
-		b.Shoot.Networks.Services,
+		b.Shoot.IsWorkerless,
+		pods,
+		services,
 		&kubecontrollermanager.HVPAConfig{
 			Enabled:             hvpaEnabled,
 			ScaleDownUpdateMode: &scaleDownUpdateMode,

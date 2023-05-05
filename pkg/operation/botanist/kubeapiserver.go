@@ -39,6 +39,36 @@ import (
 
 // DefaultKubeAPIServer returns a deployer for the kube-apiserver.
 func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Interface, error) {
+	var (
+		pods, services string
+		nodes          *string
+		vpnConfig      = kubeapiserver.VPNConfig{
+			Enabled: false,
+		}
+	)
+
+	if b.Shoot.Networks != nil {
+		if b.Shoot.Networks.Pods != nil {
+			pods = b.Shoot.Networks.Pods.String()
+		}
+		if b.Shoot.Networks.Services != nil {
+			services = b.Shoot.Networks.Services.String()
+		}
+	}
+
+	if b.Shoot.GetInfo().Spec.Networking != nil {
+		nodes = b.Shoot.GetInfo().Spec.Networking.Nodes
+	}
+
+	if !b.Shoot.IsWorkerless {
+		vpnConfig.Enabled = true
+		vpnConfig.PodNetworkCIDR = pods
+		vpnConfig.NodeNetworkCIDR = nodes
+		vpnConfig.HighAvailabilityEnabled = b.Shoot.VPNHighAvailabilityEnabled
+		vpnConfig.HighAvailabilityNumberOfSeedServers = b.Shoot.VPNHighAvailabilityNumberOfSeedServers
+		vpnConfig.HighAvailabilityNumberOfShootClients = b.Shoot.VPNHighAvailabilityNumberOfShootClients
+	}
+
 	return shared.NewKubeAPIServer(
 		ctx,
 		b.SeedClientSet,
@@ -52,17 +82,10 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		"",
 		b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer,
 		b.computeKubeAPIServerAutoscalingConfig(),
-		b.Shoot.Networks.Services.String(),
-		kubeapiserver.VPNConfig{
-			Enabled:                              true,
-			PodNetworkCIDR:                       b.Shoot.Networks.Pods.String(),
-			NodeNetworkCIDR:                      b.Shoot.GetInfo().Spec.Networking.Nodes,
-			HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
-			HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
-			HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
-		},
+		services,
+		vpnConfig,
 		v1beta1constants.PriorityClassNameShootControlPlane500,
-		false,
+		b.Shoot.IsWorkerless,
 		b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig,
 		nil,
 		nil,
@@ -186,14 +209,16 @@ func resourcesRequirementsForKubeAPIServer(nodeCount int32, scalingClass string)
 
 func (b *Botanist) computeKubeAPIServerServerCertificateConfig() kubeapiserver.ServerCertificateConfig {
 	var (
-		ipAddresses = []net.IP{
-			b.Shoot.Networks.APIServer,
-		}
-		dnsNames = []string{
+		ipAddresses = []net.IP{}
+		dnsNames    = []string{
 			gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 			b.Shoot.GetInfo().Status.TechnicalID,
 		}
 	)
+
+	if b.Shoot.Networks != nil {
+		ipAddresses = append(ipAddresses, b.Shoot.Networks.APIServer)
+	}
 
 	if b.Shoot.ExternalClusterDomain != nil {
 		dnsNames = append(dnsNames, *(b.Shoot.GetInfo().Spec.DNS.Domain), gardenerutils.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain))

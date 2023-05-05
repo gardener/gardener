@@ -1348,6 +1348,11 @@ func MutateShootETCDEncryptionKeyRotation(shoot *gardencorev1beta1.Shoot, f func
 
 // IsPSPDisabled returns true if the PodSecurityPolicy plugin is explicitly disabled in the ShootSpec or the cluster version is >= 1.25.
 func IsPSPDisabled(shoot *gardencorev1beta1.Shoot) bool {
+	// we have disabled the policy/v1beta1/podsecuritypolicies API for workerless Shoots
+	if IsWorkerless(shoot) {
+		return true
+	}
+
 	if versionutils.ConstraintK8sGreaterEqual125.Check(semver.MustParse(shoot.Spec.Kubernetes.Version)) {
 		return true
 	}
@@ -1389,7 +1394,8 @@ func IsWorkerless(shoot *gardencorev1beta1.Shoot) bool {
 
 // ShootEnablesSSHAccess returns true if ssh access to worker nodes should be allowed for the given shoot.
 func ShootEnablesSSHAccess(shoot *gardencorev1beta1.Shoot) bool {
-	return shoot.Spec.Provider.WorkersSettings == nil || shoot.Spec.Provider.WorkersSettings.SSHAccess == nil || shoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled
+	return !IsWorkerless(shoot) &&
+		(shoot.Spec.Provider.WorkersSettings == nil || shoot.Spec.Provider.WorkersSettings.SSHAccess == nil || shoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled)
 }
 
 // GetFailureToleranceType determines the failure tolerance type of the given shoot.

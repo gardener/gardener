@@ -109,6 +109,7 @@ func New(
 	version *semver.Version,
 	image string,
 	config *gardencorev1beta1.KubeControllerManagerConfig,
+	isWorkerless bool,
 	podNetwork *net.IPNet,
 	serviceNetwork *net.IPNet,
 	hvpaConfig *HVPAConfig,
@@ -122,6 +123,7 @@ func New(
 		version:                       version,
 		image:                         image,
 		config:                        config,
+		isWorkerless:                  isWorkerless,
 		podNetwork:                    podNetwork,
 		serviceNetwork:                serviceNetwork,
 		hvpaConfig:                    hvpaConfig,
@@ -139,6 +141,7 @@ type kubeControllerManager struct {
 	image          string
 	replicas       int32
 	config         *gardencorev1beta1.KubeControllerManagerConfig
+	isWorkerless   bool
 	podNetwork     *net.IPNet
 	serviceNetwork *net.IPNet
 	hvpaConfig     *HVPAConfig
@@ -168,9 +171,12 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAClient)
 	}
 
-	secretCAKubelet, found := k.secretsManager.Get(v1beta1constants.SecretNameCAKubelet, secretsmanager.Current)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAKubelet)
+	var secretCAKubelet *corev1.Secret
+	if !k.isWorkerless {
+		secretCAKubelet, found = k.secretsManager.Get(v1beta1constants.SecretNameCAKubelet, secretsmanager.Current)
+		if !found {
+			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAKubelet)
+		}
 	}
 
 	genericTokenKubeconfigSecret, found := k.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
@@ -315,10 +321,6 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 								MountPath: volumeMountPathCAClient,
 							},
 							{
-								Name:      volumeNameCAKubelet,
-								MountPath: volumeMountPathCAKubelet,
-							},
-							{
 								Name:      volumeNameServiceAccountKey,
 								MountPath: volumeMountPathServiceAccountKey,
 							},
@@ -347,14 +349,6 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						},
 					},
 					{
-						Name: volumeNameCAKubelet,
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName: secretCAKubelet.Name,
-							},
-						},
-					},
-					{
 						Name: volumeNameServiceAccountKey,
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
@@ -372,6 +366,22 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 					},
 				},
 			},
+		}
+
+		if !k.isWorkerless {
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+				Name:      volumeNameCAKubelet,
+				MountPath: volumeMountPathCAKubelet,
+			})
+
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+				Name: volumeNameCAKubelet,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: secretCAKubelet.Name,
+					},
+				},
+			})
 		}
 
 		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, shootAccessSecret.Secret.Name))
@@ -553,45 +563,73 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 	var (
 		command                              []string
 		defaultHorizontalPodAutoscalerConfig = k.getHorizontalPodAutoscalerConfig()
+		podEvictionTimeout                   = metav1.Duration{Duration: 2 * time.Minute}
+		nodeMonitorGracePeriod               = metav1.Duration{Duration: 2 * time.Minute}
 	)
 
 	command = append(command,
 		"/usr/local/bin/kube-controller-manager",
-		"--allocate-node-cidrs=true",
-		"--attach-detach-reconcile-sync-period=1m0s",
-		"--controllers=*,bootstrapsigner,tokencleaner",
 		"--authentication-kubeconfig="+gardenerutils.PathGenericKubeconfig,
 		"--authorization-kubeconfig="+gardenerutils.PathGenericKubeconfig,
 		"--kubeconfig="+gardenerutils.PathGenericKubeconfig,
 	)
 
-	if k.config.NodeCIDRMaskSize != nil {
-		command = append(command, fmt.Sprintf("--node-cidr-mask-size=%d", *k.config.NodeCIDRMaskSize))
+	if !k.isWorkerless {
+		if v := k.config.PodEvictionTimeout; v != nil {
+			podEvictionTimeout = *v
+		}
+		if v := k.config.NodeMonitorGracePeriod; v != nil {
+			nodeMonitorGracePeriod = *v
+		}
+		if k.config.NodeCIDRMaskSize != nil {
+			command = append(command, fmt.Sprintf("--node-cidr-mask-size=%d", *k.config.NodeCIDRMaskSize))
+		}
+
+		command = append(command,
+			"--allocate-node-cidrs=true",
+			"--attach-detach-reconcile-sync-period=1m0s",
+			"--controllers=*,bootstrapsigner,tokencleaner",
+			fmt.Sprintf("--cluster-cidr=%s", k.podNetwork.String()),
+			fmt.Sprintf("--cluster-signing-kubelet-client-cert-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyCertificateCA),
+			fmt.Sprintf("--cluster-signing-kubelet-client-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
+			fmt.Sprintf("--cluster-signing-kubelet-serving-cert-file=%s/%s", volumeMountPathCAKubelet, secrets.DataKeyCertificateCA),
+			fmt.Sprintf("--cluster-signing-kubelet-serving-key-file=%s/%s", volumeMountPathCAKubelet, secrets.DataKeyPrivateKeyCA),
+			fmt.Sprintf("--horizontal-pod-autoscaler-downscale-stabilization=%s", defaultHorizontalPodAutoscalerConfig.DownscaleStabilization.Duration.String()),
+			fmt.Sprintf("--horizontal-pod-autoscaler-initial-readiness-delay=%s", defaultHorizontalPodAutoscalerConfig.InitialReadinessDelay.Duration.String()),
+			fmt.Sprintf("--horizontal-pod-autoscaler-cpu-initialization-period=%s", defaultHorizontalPodAutoscalerConfig.CPUInitializationPeriod.Duration.String()),
+			fmt.Sprintf("--horizontal-pod-autoscaler-sync-period=%s", defaultHorizontalPodAutoscalerConfig.SyncPeriod.Duration.String()),
+			fmt.Sprintf("--horizontal-pod-autoscaler-tolerance=%v", *defaultHorizontalPodAutoscalerConfig.Tolerance),
+			"--leader-elect=true",
+			fmt.Sprintf("--node-monitor-grace-period=%s", nodeMonitorGracePeriod.Duration),
+			fmt.Sprintf("--pod-eviction-timeout=%s", podEvictionTimeout.Duration),
+		)
+
+		command = append(command,
+			"--concurrent-deployment-syncs=50",
+			"--concurrent-replicaset-syncs=50",
+			"--concurrent-statefulset-syncs=15",
+		)
+	} else {
+		command = append(command,
+			"--controllers=namespace,serviceaccount,serviceaccount-token,clusterrole-aggregation,garbagecollector,csrapproving,csrcleaner,csrsigning,bootstrapsigner,tokencleaner,resourcequota",
+		)
 	}
 
 	command = append(command,
-		fmt.Sprintf("--cluster-cidr=%s", k.podNetwork.String()),
 		fmt.Sprintf("--cluster-name=%s", k.namespace),
 		fmt.Sprintf("--cluster-signing-kube-apiserver-client-cert-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyCertificateCA),
 		fmt.Sprintf("--cluster-signing-kube-apiserver-client-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
-		fmt.Sprintf("--cluster-signing-kubelet-client-cert-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyCertificateCA),
-		fmt.Sprintf("--cluster-signing-kubelet-client-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
-		fmt.Sprintf("--cluster-signing-kubelet-serving-cert-file=%s/%s", volumeMountPathCAKubelet, secrets.DataKeyCertificateCA),
-		fmt.Sprintf("--cluster-signing-kubelet-serving-key-file=%s/%s", volumeMountPathCAKubelet, secrets.DataKeyPrivateKeyCA),
 		fmt.Sprintf("--cluster-signing-legacy-unknown-cert-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyCertificateCA),
 		fmt.Sprintf("--cluster-signing-legacy-unknown-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
 	)
 
 	command = append(command,
 		"--cluster-signing-duration=720h",
-		"--concurrent-deployment-syncs=50",
 		"--concurrent-endpoint-syncs=15",
 		"--concurrent-gc-syncs=30",
 		"--concurrent-namespace-syncs=50",
-		"--concurrent-replicaset-syncs=50",
 		"--concurrent-resource-quota-syncs=15",
 		"--concurrent-service-endpoint-syncs=15",
-		"--concurrent-statefulset-syncs=15",
 		"--concurrent-serviceaccount-token-syncs=15",
 	)
 
@@ -599,37 +637,24 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		command = append(command, kubernetesutils.FeatureGatesToCommandLineParameter(k.config.FeatureGates))
 	}
 
-	podEvictionTimeout := metav1.Duration{Duration: 2 * time.Minute}
-	if v := k.config.PodEvictionTimeout; v != nil {
-		podEvictionTimeout = *v
-	}
-
-	nodeMonitorGracePeriod := metav1.Duration{Duration: 2 * time.Minute}
-	if v := k.config.NodeMonitorGracePeriod; v != nil {
-		nodeMonitorGracePeriod = *v
-	}
-
-	command = append(command,
-		fmt.Sprintf("--horizontal-pod-autoscaler-sync-period=%s", defaultHorizontalPodAutoscalerConfig.SyncPeriod.Duration.String()),
-		fmt.Sprintf("--horizontal-pod-autoscaler-tolerance=%v", *defaultHorizontalPodAutoscalerConfig.Tolerance),
-		"--leader-elect=true",
-		fmt.Sprintf("--node-monitor-grace-period=%s", nodeMonitorGracePeriod.Duration),
-		fmt.Sprintf("--pod-eviction-timeout=%s", podEvictionTimeout.Duration),
-		fmt.Sprintf("--root-ca-file=%s/%s", volumeMountPathCA, secrets.DataKeyCertificateBundle),
-		fmt.Sprintf("--service-account-private-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey),
-		fmt.Sprintf("--service-cluster-ip-range=%s", k.serviceNetwork.String()),
-		fmt.Sprintf("--secure-port=%d", port),
-	)
-
 	if versionutils.ConstraintK8sLess124.Check(k.version) {
 		command = append(command, "--port=0")
 	}
 
 	command = append(command,
+		fmt.Sprintf("--root-ca-file=%s/%s", volumeMountPathCA, secrets.DataKeyCertificateBundle),
+		fmt.Sprintf("--service-account-private-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey),
+		fmt.Sprintf("--secure-port=%d", port),
+	)
+
+	if k.serviceNetwork != nil {
+		command = append(command,
+			fmt.Sprintf("--service-cluster-ip-range=%s", k.serviceNetwork.String()),
+		)
+	}
+
+	command = append(command,
 		"--profiling=false",
-		fmt.Sprintf("--horizontal-pod-autoscaler-downscale-stabilization=%s", defaultHorizontalPodAutoscalerConfig.DownscaleStabilization.Duration.String()),
-		fmt.Sprintf("--horizontal-pod-autoscaler-initial-readiness-delay=%s", defaultHorizontalPodAutoscalerConfig.InitialReadinessDelay.Duration.String()),
-		fmt.Sprintf("--horizontal-pod-autoscaler-cpu-initialization-period=%s", defaultHorizontalPodAutoscalerConfig.CPUInitializationPeriod.Duration.String()),
 		fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificate),
 		fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.DataKeyPrivateKey),
 		fmt.Sprintf("--tls-cipher-suites=%s", strings.Join(kubernetesutils.TLSCipherSuites(k.version), ",")),

@@ -43,6 +43,9 @@ var _ = Describe("Warnings", func() {
 						Version:                     "1.22.11",
 						EnableStaticTokenKubeconfig: pointer.Bool(false),
 					},
+					Provider: core.Provider{
+						Workers: []core.Worker{{Name: "test"}},
+					},
 				},
 			}
 		})
@@ -270,6 +273,22 @@ var _ = Describe("Warnings", func() {
 					func(rotation *core.ShootCredentialsRotation) {
 						rotation.SSHKeypair.LastInitiationTime = &metav1.Time{Time: time.Now().Add(-credentialsRotationInterval / 2)}
 					},
+				),
+				Entry("ssh is disabled for shoot with workers", Not(ContainElement(ContainSubstring("you should consider rotating the SSH keypair"))), func(shoot *core.Shoot) {
+					shoot.Spec.Provider.WorkersSettings = &core.WorkersSettings{
+						SSHAccess: &core.SSHAccess{
+							Enabled: false,
+						},
+					}
+				}, func(rotation *core.ShootCredentialsRotation) {
+					rotation.SSHKeypair = nil
+				},
+				),
+				Entry("workerless shoot", Not(ContainElement(ContainSubstring("you should consider rotating the SSH keypair"))), func(shoot *core.Shoot) {
+					shoot.Spec.Provider.Workers = nil
+				}, func(rotation *core.ShootCredentialsRotation) {
+					rotation.SSHKeypair = nil
+				},
 				),
 			)
 		})

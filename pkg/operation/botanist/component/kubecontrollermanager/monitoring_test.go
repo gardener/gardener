@@ -31,7 +31,7 @@ var _ = Describe("Monitoring", func() {
 		func(version, expectedScrapeConfig string) {
 			semverVersion, err := semver.NewVersion(version)
 			Expect(err).NotTo(HaveOccurred())
-			kubeControllerManager := New(logr.Discard(), nil, "", nil, semverVersion, "", nil, nil, nil, nil, semver.MustParse("1.25.0"))
+			kubeControllerManager := New(logr.Discard(), nil, "", nil, semverVersion, "", nil, false, nil, nil, nil, semver.MustParse("1.25.0"))
 			test.ScrapeConfigs(kubeControllerManager, expectedScrapeConfig)
 		},
 
@@ -43,7 +43,7 @@ var _ = Describe("Monitoring", func() {
 	It("should successfully test the alerting rules", func() {
 		semverVersion, err := semver.NewVersion("1.21.4")
 		Expect(err).NotTo(HaveOccurred())
-		kubeControllerManager := New(logr.Discard(), nil, "", nil, semverVersion, "", nil, nil, nil, nil, semver.MustParse("1.25.0"))
+		kubeControllerManager := New(logr.Discard(), nil, "", nil, semverVersion, "", nil, false, nil, nil, nil, semver.MustParse("1.25.0"))
 
 		test.AlertingRulesWithPromtool(
 			kubeControllerManager,

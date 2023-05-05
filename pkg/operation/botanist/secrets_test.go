@@ -96,6 +96,13 @@ var _ = Describe("Secrets", func() {
 				Name:      shootName,
 				Namespace: gardenNamespace,
 			},
+			Spec: gardencorev1beta1.ShootSpec{
+				Provider: gardencorev1beta1.Provider{
+					Workers: []gardencorev1beta1.Worker{
+						{Name: "foo"},
+					},
+				},
+			},
 		})
 		botanist.SetShootState(&gardencorev1beta1.ShootState{})
 	})
@@ -149,6 +156,21 @@ var _ = Describe("Secrets", func() {
 				gardenSecret := &corev1.Secret{}
 				Expect(gardenClient.Get(ctx, kubernetesutils.Key(gardenNamespace, shootName+".ssh-keypair"), gardenSecret)).To(Succeed())
 				Expect(gardenSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "ssh-keypair"))
+			})
+
+			It("should not generate the ssh keypair in case of workerless shoot", func() {
+				shoot := botanist.Shoot.GetInfo()
+				shoot.Spec.Provider.Workers = nil
+				botanist.Shoot.SetInfo(shoot)
+
+				Expect(botanist.InitializeSecretsManagement(ctx)).To(Succeed())
+
+				secretList := &corev1.SecretList{}
+				Expect(seedClient.List(ctx, secretList, client.InNamespace(seedNamespace), client.MatchingLabels{
+					"name":       "ssh-keypair",
+					"managed-by": "secrets-manager",
+				})).To(Succeed())
+				Expect(secretList.Items).To(BeEmpty())
 			})
 
 			It("should also sync the old ssh-keypair secret to the garden", func() {

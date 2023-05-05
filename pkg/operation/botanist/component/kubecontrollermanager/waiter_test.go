@@ -50,6 +50,7 @@ var _ = Describe("WaiterTest", func() {
 		kubeControllerManager Interface
 		namespace             = "shoot--foo--bar"
 		version               = semver.MustParse("v1.21.8")
+		isWorkerless          = false
 
 		// mock
 		ctrl              *gomock.Controller
@@ -90,6 +91,7 @@ var _ = Describe("WaiterTest", func() {
 				version,
 				"",
 				nil,
+				isWorkerless,
 				nil,
 				nil,
 				nil,

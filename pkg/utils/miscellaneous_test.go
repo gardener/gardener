@@ -30,12 +30,6 @@ import (
 
 var _ = Describe("utils", func() {
 	Describe("#MergeStringMaps", func() {
-		It("should return nil", func() {
-			result := MergeStringMaps(nil, nil)
-
-			Expect(result).To(BeNil())
-		})
-
 		It("should return an empty map", func() {
 			emptyMap := map[string]string{}
 
@@ -44,7 +38,7 @@ var _ = Describe("utils", func() {
 			Expect(result).To(Equal(emptyMap))
 		})
 
-		It("should return a merged map", func() {
+		It("should return a merged map (string value)", func() {
 			var (
 				oldMap = map[string]string{
 					"a": "1",
@@ -62,6 +56,27 @@ var _ = Describe("utils", func() {
 				"a": "1",
 				"b": "20",
 				"c": "3",
+			}))
+		})
+
+		It("should return a merged map (bool value)", func() {
+			var (
+				a = map[string]bool{
+					"p": true,
+					"q": false,
+				}
+				b = map[string]bool{
+					"q": true,
+					"r": false,
+				}
+			)
+
+			result := MergeStringMaps(a, b)
+
+			Expect(result).To(Equal(map[string]bool{
+				"p": true,
+				"q": true,
+				"r": false,
 			}))
 		})
 	})
