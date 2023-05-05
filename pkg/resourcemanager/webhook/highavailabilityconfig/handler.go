@@ -43,6 +43,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
@@ -56,9 +57,7 @@ type Handler struct {
 	Logger        logr.Logger
 	TargetClient  client.Reader
 	TargetVersion *semver.Version
-
-	DefaultNotReadyTolerationSeconds    *int64
-	DefaultUnreachableTolerationSeconds *int64
+	Config        config.HighAvailabilityConfigWebhookConfig
 
 	decoder *admission.Decoder
 }
@@ -491,21 +490,21 @@ func (h *Handler) mutatePodTolerationSeconds(podTemplateSpec *corev1.PodTemplate
 		}
 	}
 
-	if !toleratesNodeNotReady && h.DefaultNotReadyTolerationSeconds != nil {
+	if !toleratesNodeNotReady && h.Config.DefaultNotReadyTolerationSeconds != nil {
 		podTemplateSpec.Spec.Tolerations = append(podTemplateSpec.Spec.Tolerations, corev1.Toleration{
 			Key:               corev1.TaintNodeNotReady,
 			Operator:          corev1.TolerationOpExists,
 			Effect:            corev1.TaintEffectNoExecute,
-			TolerationSeconds: h.DefaultNotReadyTolerationSeconds,
+			TolerationSeconds: h.Config.DefaultNotReadyTolerationSeconds,
 		})
 	}
 
-	if !toleratesNodeUnreachable && h.DefaultUnreachableTolerationSeconds != nil {
+	if !toleratesNodeUnreachable && h.Config.DefaultUnreachableTolerationSeconds != nil {
 		podTemplateSpec.Spec.Tolerations = append(podTemplateSpec.Spec.Tolerations, corev1.Toleration{
 			Key:               corev1.TaintNodeUnreachable,
 			Operator:          corev1.TolerationOpExists,
 			Effect:            corev1.TaintEffectNoExecute,
-			TolerationSeconds: h.DefaultUnreachableTolerationSeconds,
+			TolerationSeconds: h.Config.DefaultUnreachableTolerationSeconds,
 		})
 	}
 }

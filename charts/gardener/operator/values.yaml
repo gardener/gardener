@@ -74,3 +74,6 @@ config:
       #   etcdConnectionTimeout: 5s
     networkPolicy:
       concurrentSyncs: 5
+# nodeToleration:
+#   defaultNotReadyTolerationSeconds: 60
+#   defaultUnreachableTolerationSeconds: 60

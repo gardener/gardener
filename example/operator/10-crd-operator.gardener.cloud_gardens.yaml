@@ -115,27 +115,6 @@ spec:
                               object.
                             type: object
                         type: object
-                      nodeToleration:
-                        description: NodeToleration contains optional settings for
-                          default tolerations.
-                        properties:
-                          defaultNotReadyTolerationSeconds:
-                            description: DefaultNotReadyTolerationSeconds specifies
-                              the seconds for the `node.kubernetes.io/not-ready` toleration
-                              that should be added to pods not already tolerating
-                              this taint.
-                            format: int64
-                            minimum: 0
-                            type: integer
-                          defaultUnreachableTolerationSeconds:
-                            description: DefaultUnreachableTolerationSeconds specifies
-                              the seconds for the `node.kubernetes.io/unreachable`
-                              toleration that should be added to pods not already
-                              tolerating this taint.
-                            format: int64
-                            minimum: 0
-                            type: integer
-                        type: object
                       topologyAwareRouting:
                         description: TopologyAwareRouting controls certain settings
                           for topology-aware traffic routing in the cluster. See https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md.

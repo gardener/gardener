@@ -116,4 +116,50 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 			})
 		})
 	})
+
+	Context("node toleration", func() {
+		It("should pass with unset toleration options", func() {
+			conf.NodeToleration = nil
+
+			Expect(ValidateOperatorConfiguration(conf)).To(BeEmpty())
+		})
+
+		It("should pass with unset toleration seconds", func() {
+			conf.NodeToleration = &config.NodeTolerationConfiguration{
+				DefaultNotReadyTolerationSeconds:    nil,
+				DefaultUnreachableTolerationSeconds: nil,
+			}
+
+			Expect(ValidateOperatorConfiguration(conf)).To(BeEmpty())
+		})
+
+		It("should pass with valid toleration options", func() {
+			conf.NodeToleration = &config.NodeTolerationConfiguration{
+				DefaultNotReadyTolerationSeconds:    pointer.Int64(60),
+				DefaultUnreachableTolerationSeconds: pointer.Int64(120),
+			}
+
+			Expect(ValidateOperatorConfiguration(conf)).To(BeEmpty())
+		})
+
+		It("should fail with invalid toleration options", func() {
+			conf.NodeToleration = &config.NodeTolerationConfiguration{
+				DefaultNotReadyTolerationSeconds:    pointer.Int64(-1),
+				DefaultUnreachableTolerationSeconds: pointer.Int64(-2),
+			}
+
+			errorList := ValidateOperatorConfiguration(conf)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("nodeToleration.defaultNotReadyTolerationSeconds"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("nodeToleration.defaultUnreachableTolerationSeconds"),
+				}))),
+			)
+		})
+	})
 })

@@ -37,6 +37,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
+	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
 )
@@ -115,9 +116,11 @@ var _ = BeforeSuite(func() {
 		Logger:       log,
 		TargetClient: testClient,
 		// Use the same version as the envtest package
-		TargetVersion:                       semver.MustParse("1.26.0"),
-		DefaultNotReadyTolerationSeconds:    pointer.Int64(defaultNotReadyTolerationSeconds),
-		DefaultUnreachableTolerationSeconds: pointer.Int64(defaultUnreachableTolerationSeconds),
+		TargetVersion: semver.MustParse("1.26.0"),
+		Config: config.HighAvailabilityConfigWebhookConfig{
+			DefaultNotReadyTolerationSeconds:    pointer.Int64(defaultNotReadyTolerationSeconds),
+			DefaultUnreachableTolerationSeconds: pointer.Int64(defaultUnreachableTolerationSeconds),
+		},
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("Start manager")

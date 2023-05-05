@@ -52,9 +52,9 @@ const namePrefix = "virtual-garden-"
 
 func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
 	var defaultNotReadyTolerationSeconds, defaultUnreachableTolerationSeconds *int64
-	if garden.Spec.RuntimeCluster.Settings != nil && garden.Spec.RuntimeCluster.Settings.NodeToleration != nil {
-		defaultNotReadyTolerationSeconds = garden.Spec.RuntimeCluster.Settings.NodeToleration.DefaultNotReadyTolerationSeconds
-		defaultUnreachableTolerationSeconds = garden.Spec.RuntimeCluster.Settings.NodeToleration.DefaultUnreachableTolerationSeconds
+	if nodeToleration := r.Config.NodeToleration; nodeToleration != nil {
+		defaultNotReadyTolerationSeconds = nodeToleration.DefaultNotReadyTolerationSeconds
+		defaultUnreachableTolerationSeconds = nodeToleration.DefaultUnreachableTolerationSeconds
 	}
 
 	return sharedcomponent.NewGardenerResourceManager(

@@ -17,6 +17,7 @@ package validation
 import (
 	"time"
 
+	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -39,6 +40,7 @@ func ValidateOperatorConfiguration(conf *config.OperatorConfiguration) field.Err
 	}
 
 	allErrs = append(allErrs, validateControllerConfiguration(conf.Controllers, field.NewPath("controllers"))...)
+	allErrs = append(allErrs, validateNodeTolerationConfiguration(conf.NodeToleration, field.NewPath("nodeToleration"))...)
 
 	return allErrs
 }
@@ -68,6 +70,19 @@ func validateSyncPeriod(val *metav1.Duration, fldPath *field.Path) field.ErrorLi
 	if val == nil || val.Duration < 15*time.Second {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("syncPeriod"), val, "must be at least 15s"))
 	}
+
+	return allErrs
+}
+
+func validateNodeTolerationConfiguration(conf *config.NodeTolerationConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if conf == nil {
+		return allErrs
+	}
+
+	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(pointer.Int64Deref(conf.DefaultNotReadyTolerationSeconds, 0), fldPath.Child("defaultNotReadyTolerationSeconds"))...)
+	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(pointer.Int64Deref(conf.DefaultUnreachableTolerationSeconds, 0), fldPath.Child("defaultUnreachableTolerationSeconds"))...)
 
 	return allErrs
 }

@@ -150,14 +150,18 @@ spec:
 {{- end }}
 {{- if .Values.nodeToleration }}
       tolerations:
+{{- if .Values.nodeToleration.defaultNotReadyTolerationSeconds }}
       - effect: NoExecute
         key: node.kubernetes.io/not-ready
         operator: Exists
-        tolerationSeconds: {{ required ".Values.nodeToleration.defaultNotReadyTolerationSeconds is required" .Values.nodeToleration.defaultNotReadyTolerationSeconds }}
+        tolerationSeconds: {{ .Values.nodeToleration.defaultNotReadyTolerationSeconds }}
+{{- end }}
+{{- if .Values.nodeToleration.defaultUnreachableTolerationSeconds }}
       - effect: NoExecute
         key: node.kubernetes.io/unreachable
         operator: Exists
-        tolerationSeconds: {{ required ".Values.nodeToleration.defaultNotReadyTolerationSeconds is required" .Values.nodeToleration.defaultUnreachableTolerationSeconds }}
+        tolerationSeconds: {{ .Values.nodeToleration.defaultUnreachableTolerationSeconds }}
+{{- end }}
 {{- end }}
       volumes:
       {{- if semverCompare ">= 1.20-0" .Capabilities.KubeVersion.GitVersion }}

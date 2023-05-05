@@ -105,9 +105,6 @@ type Settings struct {
 	// cluster.
 	// +optional
 	LoadBalancerServices *SettingLoadBalancerServices `json:"loadBalancerServices,omitempty"`
-	// NodeToleration contains optional settings for default tolerations.
-	// +optional
-	NodeToleration *SettingNodeToleration `json:"nodeToleration,omitempty"`
 	// VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the
 	// cluster.
 	// +optional
@@ -124,20 +121,6 @@ type SettingLoadBalancerServices struct {
 	// Annotations is a map of annotations that will be injected/merged into every load balancer service object.
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
-}
-
-// SettingNodeToleration contains information about node toleration options.
-type SettingNodeToleration struct {
-	// DefaultNotReadyTolerationSeconds specifies the seconds for the `node.kubernetes.io/not-ready` toleration that
-	// should be added to pods not already tolerating this taint.
-	// +kubebuilder:validation:Minimum=0
-	// +optional
-	DefaultNotReadyTolerationSeconds *int64 `json:"defaultNotReadyTolerationSeconds,omitempty"`
-	// DefaultUnreachableTolerationSeconds specifies the seconds for the `node.kubernetes.io/unreachable` toleration that
-	// should be added to pods not already tolerating this taint.
-	// +kubebuilder:validation:Minimum=0
-	// +optional
-	DefaultUnreachableTolerationSeconds *int64 `json:"defaultUnreachableTolerationSeconds,omitempty"`
 }
 
 // SettingVerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the

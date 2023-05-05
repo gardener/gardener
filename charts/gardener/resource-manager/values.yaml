@@ -119,8 +119,6 @@ global:
         enabled: false
       highAvailabilityConfig:
         enabled: false
-      # defaultNotReadyTolerationSeconds: 60
-      # defaultUnreachableTolerationSeconds: 60
       podSchedulerName:
         enabled: false
       # schedulerName: foo-scheduler
