@@ -155,41 +155,44 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			}).Should(ConsistOf("core.gardener.cloud/controllerinstallation"))
 		})
 
-		It("should create a namespace and deploy the chart", func() {
-			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.FullNetworkPoliciesInRuntimeCluster, false))
+		Context("FullNetworkPoliciesinRuntimeCluster is disabled", func() {
+			BeforeEach(func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.FullNetworkPoliciesInRuntimeCluster, false))
+			})
 
-			By("Ensure namespace was created")
-			namespace := &corev1.Namespace{}
-			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "extension-" + controllerInstallation.Name}, namespace)).To(Succeed())
-				g.Expect(namespace.Labels).To(And(
-					HaveKeyWithValue("gardener.cloud/role", "extension"),
-					HaveKeyWithValue("controllerregistration.core.gardener.cloud/name", controllerRegistration.Name),
-					HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
-				))
-				g.Expect(namespace.Annotations).To(And(
-					HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b,c"),
-				))
-			}).Should(Succeed())
+			It("should create a namespace and deploy the chart", func() {
+				By("Ensure namespace was created")
+				namespace := &corev1.Namespace{}
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "extension-" + controllerInstallation.Name}, namespace)).To(Succeed())
+					g.Expect(namespace.Labels).To(And(
+						HaveKeyWithValue("gardener.cloud/role", "extension"),
+						HaveKeyWithValue("controllerregistration.core.gardener.cloud/name", controllerRegistration.Name),
+						HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
+					))
+					g.Expect(namespace.Annotations).To(And(
+						HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b,c"),
+					))
+				}).Should(Succeed())
 
-			By("Ensure 'gardenlet-allow-all-traffic' policy was created because FullNetworkPoliciesInRuntimeCluster feature gate is disabled")
-			Eventually(func() error {
-				return testClient.Get(ctx, client.ObjectKey{Namespace: namespace.Name, Name: "gardenlet-allow-all-traffic"}, &networkingv1.NetworkPolicy{})
-			}).Should(Succeed())
+				By("Ensure 'gardenlet-allow-all-traffic' policy was created because FullNetworkPoliciesInRuntimeCluster feature gate is disabled")
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKey{Namespace: namespace.Name, Name: "gardenlet-allow-all-traffic"}, &networkingv1.NetworkPolicy{})
+				}).Should(Succeed())
 
-			By("Ensure chart was deployed correctly")
-			Eventually(func(g Gomega) string {
-				managedResource := &resourcesv1alpha1.ManagedResource{}
-				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: "garden", Name: controllerInstallation.Name}, managedResource)).To(Succeed())
+				By("Ensure chart was deployed correctly")
+				Eventually(func(g Gomega) string {
+					managedResource := &resourcesv1alpha1.ManagedResource{}
+					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: "garden", Name: controllerInstallation.Name}, managedResource)).To(Succeed())
 
-				secret := &corev1.Secret{}
-				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: managedResource.Namespace, Name: managedResource.Spec.SecretRefs[0].Name}, secret)).To(Succeed())
+					secret := &corev1.Secret{}
+					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: managedResource.Namespace, Name: managedResource.Spec.SecretRefs[0].Name}, secret)).To(Succeed())
 
-				configMap := &corev1.ConfigMap{}
-				Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_config.yaml"], configMap)).To(Succeed())
+					configMap := &corev1.ConfigMap{}
+					Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_config.yaml"], configMap)).To(Succeed())
 
-				return configMap.Data["values"]
-			}).Should(Equal(`gardener:
+					return configMap.Data["values"]
+				}).Should(Equal(`gardener:
   garden:
     clusterIdentity: ` + gardenClusterIdentity + `
     identity: ` + string(gardenNamespace.UID) + `
@@ -264,14 +267,15 @@ var _ = Describe("ControllerInstallation controller tests", func() {
   version: 1.2.3
 `))
 
-			By("Ensure conditions are maintained correctly")
-			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
-				return controllerInstallation.Status.Conditions
-			}).Should(And(
-				ContainCondition(OfType(gardencorev1beta1.ControllerInstallationValid), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("RegistrationValid")),
-				ContainCondition(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("InstallationPending")),
-			))
+				By("Ensure conditions are maintained correctly")
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
+					return controllerInstallation.Status.Conditions
+				}).Should(And(
+					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationValid), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("RegistrationValid")),
+					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("InstallationPending")),
+				))
+			})
 		})
 
 		It("should properly clean up on ControllerInstallation deletion", func() {
@@ -321,8 +325,6 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 		})
 
 		It("should delete the 'gardenlet-allow-all-traffic' network policy", func() {
-			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.FullNetworkPoliciesInRuntimeCluster, true))
-
 			By("Ensure namespace was created")
 			namespace := &corev1.Namespace{}
 			Eventually(func() error {
