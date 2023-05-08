@@ -849,11 +849,6 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
 				PodSelector: metav1.LabelSelector{MatchLabels: serviceSelector},
 				Ingress: []networkingv1.NetworkPolicyIngressRule{{
-					From: []networkingv1.NetworkPolicyPeer{
-						{PodSelector: &metav1.LabelSelector{}, NamespaceSelector: &metav1.LabelSelector{}},
-						{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
-						{IPBlock: &networkingv1.IPBlock{CIDR: "::/0"}},
-					},
 					Ports: []networkingv1.NetworkPolicyPort{
 						{Protocol: &port1Protocol, Port: &port1TargetPort},
 						{Protocol: &port2Protocol, Port: &port2TargetPort},
@@ -879,13 +874,7 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 			}).Should(Equal(networkingv1.NetworkPolicySpec{
 				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
 				PodSelector: metav1.LabelSelector{MatchLabels: serviceSelector},
-				Ingress: []networkingv1.NetworkPolicyIngressRule{{
-					From: []networkingv1.NetworkPolicyPeer{
-						{PodSelector: &metav1.LabelSelector{}, NamespaceSelector: &metav1.LabelSelector{}},
-						{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
-						{IPBlock: &networkingv1.IPBlock{CIDR: "::/0"}},
-					},
-				}},
+				Ingress:     []networkingv1.NetworkPolicyIngressRule{{}},
 			}))
 		})
 
