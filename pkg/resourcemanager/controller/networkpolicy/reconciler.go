@@ -342,14 +342,7 @@ func (r *Reconciler) reconcileIngressFromWorldPolicy(ctx context.Context, servic
 			"ingress traffic from everywhere to ports %v for pods selected by the %s service selector.", portAndProtocolOf(ports),
 			client.ObjectKeyFromObject(service)))
 
-		networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{{
-			From: []networkingv1.NetworkPolicyPeer{
-				{PodSelector: &metav1.LabelSelector{}, NamespaceSelector: &metav1.LabelSelector{}},
-				{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
-				{IPBlock: &networkingv1.IPBlock{CIDR: "::/0"}},
-			},
-			Ports: ports,
-		}}
+		networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{{Ports: ports}}
 		networkPolicy.Spec.Egress = nil
 		networkPolicy.Spec.PodSelector = metav1.LabelSelector{MatchLabels: service.Spec.Selector}
 		networkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeIngress}
