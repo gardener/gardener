@@ -109,23 +109,21 @@ func New(
 	values Values,
 ) Interface {
 	return &kubeControllerManager{
-		log:                           log,
-		seedClient:                    seedClient,
-		namespace:                     namespace,
-		secretsManager:                secretsManager,
-		values:                        values,
-		runtimeVersionGreaterEqual123: versionutils.ConstraintK8sGreaterEqual123.Check(values.RuntimeVersion),
+		log:            log,
+		seedClient:     seedClient,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		values:         values,
 	}
 }
 
 type kubeControllerManager struct {
-	log                           logr.Logger
-	seedClient                    kubernetes.Interface
-	shootClient                   client.Client
-	namespace                     string
-	secretsManager                secretsmanager.Interface
-	values                        Values
-	runtimeVersionGreaterEqual123 bool
+	log            logr.Logger
+	seedClient     kubernetes.Interface
+	shootClient    client.Client
+	namespace      string
+	secretsManager secretsmanager.Interface
+	values         Values
 }
 
 // Values are the values for the kube-controller-manager deployment.
@@ -584,7 +582,7 @@ func (k *kubeControllerManager) emptyDeployment() *appsv1.Deployment {
 func (k *kubeControllerManager) emptyPodDisruptionBudget() client.Object {
 	objectMeta := metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeControllerManager, Namespace: k.namespace}
 
-	if k.runtimeVersionGreaterEqual123 {
+	if versionutils.ConstraintK8sGreaterEqual121.Check(k.values.RuntimeVersion) {
 		return &policyv1.PodDisruptionBudget{ObjectMeta: objectMeta}
 	}
 	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: objectMeta}
