@@ -85,6 +85,31 @@ var _ = Describe("Add", func() {
 				seed.DeletionTimestamp = &metav1.Time{}
 				Expect(p.Update(event.UpdateEvent{ObjectNew: seed, ObjectOld: oldSeed})).To(BeTrue())
 			})
+
+			It("should return true if the TopologyAwareRouting setting has been changed (disabled to enabled)", func() {
+				oldSeed := seed.DeepCopy()
+				seed.Spec.Settings = &gardencorev1beta1.SeedSettings{
+					TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{
+						Enabled: true,
+					},
+				}
+				Expect(p.Update(event.UpdateEvent{ObjectNew: seed, ObjectOld: oldSeed})).To(BeTrue())
+			})
+
+			It("should return true if the TopologyAwareRouting setting has been changed (enabled to disabled)", func() {
+				oldSeed := seed.DeepCopy()
+				oldSeed.Spec.Settings = &gardencorev1beta1.SeedSettings{
+					TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{
+						Enabled: true,
+					},
+				}
+				seed.Spec.Settings = &gardencorev1beta1.SeedSettings{
+					TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{
+						Enabled: false,
+					},
+				}
+				Expect(p.Update(event.UpdateEvent{ObjectNew: seed, ObjectOld: oldSeed})).To(BeTrue())
+			})
 		})
 
 		Describe("#Delete", func() {
