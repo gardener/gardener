@@ -1346,6 +1346,7 @@ func validateProvider(provider core.Provider, kubernetes core.Kubernetes, networ
 		}
 
 		allErrs = append(allErrs, ValidateWorkers(provider.Workers, fldPath.Child("workers"))...)
+		allErrs = append(allErrs, ValidateSystemComponentWorkers(provider.Workers, kubernetes.Version, fldPath.Child("workers"))...)
 	}
 
 	if kubernetes.KubeControllerManager != nil && kubernetes.KubeControllerManager.NodeCIDRMaskSize != nil && networking != nil {
@@ -1724,64 +1725,72 @@ func validateTaintEffect(effect *corev1.TaintEffect, allowEmpty bool, fldPath *f
 // ValidateWorkers validates worker objects.
 func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList {
 	var (
-		allErrs = field.ErrorList{}
-
-		workerNames                               = make(map[string]bool)
-		atLeastOneActivePool                      = false
-		atLeastOnePoolWithCompatibleTaints        = len(workers) == 0
-		atLeastOnePoolWithAllowedSystemComponents = false
+		allErrs     = field.ErrorList{}
+		workerNames = sets.New[string]()
 	)
 
 	for i, worker := range workers {
-		var (
-			poolIsActive            = false
-			poolHasCompatibleTaints = false
-		)
-
-		if worker.Minimum != 0 && worker.Maximum != 0 {
-			poolIsActive = true
-		}
-
-		if workerNames[worker.Name] {
+		if workerNames.Has(worker.Name) {
 			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("name"), worker.Name))
 		}
-		workerNames[worker.Name] = true
+		workerNames.Insert(worker.Name)
+	}
 
-		switch {
-		case len(worker.Taints) == 0:
-			poolHasCompatibleTaints = true
-		case !atLeastOnePoolWithCompatibleTaints:
-			onlyPreferNoScheduleEffectTaints := true
-			for _, taint := range worker.Taints {
-				if taint.Effect != corev1.TaintEffectPreferNoSchedule {
-					onlyPreferNoScheduleEffectTaints = false
-					break
-				}
+	return allErrs
+}
+
+// ValidateSystemComponentWorkers validates workers specified to run system components.
+func ValidateSystemComponentWorkers(workers []core.Worker, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
+	var (
+		allErrs                                   = field.ErrorList{}
+		atLeastOnePoolWithAllowedSystemComponents = false
+
+		workerPoolsWithSufficientWorkers   = make(map[string]struct{})
+		workerPoolsWithInsufficientWorkers = make(map[string]int)
+	)
+
+	for i, worker := range workers {
+		// check if system component worker pool is configured
+		if !helper.SystemComponentsAllowed(&worker) {
+			continue
+		}
+
+		if worker.Minimum == 0 || worker.Maximum == 0 {
+			continue
+		}
+		atLeastOnePoolWithAllowedSystemComponents = true
+
+		// Check if the maximum worker count is greater than or equal to the number of specified zones.
+		// It ensures that the cluster has at least one worker per zone in order to schedule required system components with TopologySpreadConstraints.
+		// This check is done per distinct worker pool concerning their zone setup,
+		// e.g. 'worker[x].zones: {1,2,3}' is the same as 'worker[y].zones: {3,2,1}', so the constraint is only considered once for both worker groups.
+		zonesSet := sets.New(worker.Zones...)
+
+		var (
+			hasSufficientWorkers = false
+			workerPoolKey        = strings.Join(sets.List(zonesSet), "--")
+		)
+
+		if int(worker.Maximum) >= len(worker.Zones) {
+			hasSufficientWorkers = true
+		}
+
+		if hasSufficientWorkers {
+			workerPoolsWithSufficientWorkers[workerPoolKey] = struct{}{}
+			delete(workerPoolsWithInsufficientWorkers, workerPoolKey)
+		} else {
+			if _, b := workerPoolsWithSufficientWorkers[workerPoolKey]; !b {
+				workerPoolsWithInsufficientWorkers[workerPoolKey] = i
 			}
-			if onlyPreferNoScheduleEffectTaints {
-				poolHasCompatibleTaints = true
-			}
-		}
-
-		if poolIsActive && poolHasCompatibleTaints && helper.SystemComponentsAllowed(&worker) {
-			atLeastOnePoolWithAllowedSystemComponents = true
-		}
-
-		if !atLeastOneActivePool {
-			atLeastOneActivePool = poolIsActive
-		}
-
-		if !atLeastOnePoolWithCompatibleTaints {
-			atLeastOnePoolWithCompatibleTaints = poolHasCompatibleTaints
 		}
 	}
 
-	if !atLeastOneActivePool {
-		allErrs = append(allErrs, field.Forbidden(fldPath, "at least one worker pool with min>0 and max> 0 needed"))
-	}
-
-	if !atLeastOnePoolWithCompatibleTaints {
-		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("at least one worker pool must exist having either no taints or only the %q taint", corev1.TaintEffectPreferNoSchedule)))
+	// TODO(timuthy): Remove this check as soon as v1.27 is the least supported Kubernetes version in Gardener.
+	k8sGreaterEqual127, _ := versionutils.CheckVersionMeetsConstraint(kubernetesVersion, ">= 1.27")
+	if k8sGreaterEqual127 {
+		for _, i := range workerPoolsWithInsufficientWorkers {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Index(i).Child("maximum"), "maximum node count should be greater than or equal to the number of zones specified for this pool"))
+		}
 	}
 
 	if !atLeastOnePoolWithAllowedSystemComponents {
