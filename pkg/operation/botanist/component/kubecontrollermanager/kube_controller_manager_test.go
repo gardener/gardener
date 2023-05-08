@@ -1036,6 +1036,9 @@ func commandForKubernetesVersion(
 	}
 
 	nodeMonitorGracePeriodSetting := "2m0s"
+	if versionutils.ConstraintK8sGreaterEqual127.Check(semver.MustParse(version)) {
+		nodeMonitorGracePeriodSetting = "40s"
+	}
 	if nodeMonitorGracePeriod != nil {
 		nodeMonitorGracePeriodSetting = nodeMonitorGracePeriod.Duration.String()
 	}

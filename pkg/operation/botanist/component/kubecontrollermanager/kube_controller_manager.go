@@ -620,6 +620,10 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		}
 	)
 
+	if versionutils.ConstraintK8sGreaterEqual127.Check(k.values.TargetVersion) {
+		nodeMonitorGracePeriod = metav1.Duration{Duration: 40 * time.Second}
+	}
+
 	if !k.values.IsWorkerless {
 		if v := k.values.Config.NodeMonitorGracePeriod; v != nil {
 			nodeMonitorGracePeriod = *v

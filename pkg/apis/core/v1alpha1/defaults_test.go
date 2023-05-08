@@ -253,12 +253,22 @@ var _ = Describe("Defaults", func() {
 				Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(nodeMonitorGracePeriod))
 			})
 
-			It("should default the kube-controller-manager's node monitor grace period", func() {
+			It("should default the kube-controller-manager's node monitor grace period to 2 minutes for Shoot cluster with k8s version < 1.27", func() {
+				obj.Spec.Kubernetes.Version = "1.26.0"
 				obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{}
 
 				SetObjectDefaults_Shoot(obj)
 
 				Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(&metav1.Duration{Duration: 2 * time.Minute}))
+			})
+
+			It("should default the kube-controller-manager's node monitor grace period to 40 seconds for Shoot cluster with k8s version >= 1.27", func() {
+				obj.Spec.Kubernetes.Version = "1.27.0"
+				obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{}
+
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(&metav1.Duration{Duration: 40 * time.Second}))
 			})
 
 			Describe("nodeCIDRMaskSize", func() {
