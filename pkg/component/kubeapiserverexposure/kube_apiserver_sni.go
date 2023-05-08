@@ -38,6 +38,7 @@ import (
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 )
 
 var (
@@ -56,9 +57,10 @@ func init() {
 
 // SNIValues configure the kube-apiserver service SNI.
 type SNIValues struct {
-	Hosts               []string
-	APIServerProxy      *APIServerProxy
-	IstioIngressGateway IstioIngressGateway
+	Hosts                       []string
+	APIServerProxy              *APIServerProxy
+	IstioIngressGateway         IstioIngressGateway
+	APIServerClusterIPPrefixLen int
 }
 
 // APIServerProxy contains values for the APIServer proxy protocol configuration.
@@ -105,11 +107,12 @@ type sni struct {
 
 type envoyFilterTemplateValues struct {
 	*APIServerProxy
-	IngressGatewayLabels map[string]string
-	Name                 string
-	Namespace            string
-	Host                 string
-	Port                 int
+	IngressGatewayLabels        map[string]string
+	Name                        string
+	Namespace                   string
+	Host                        string
+	Port                        int
+	APIServerClusterIPPrefixLen int
 }
 
 func (s *sni) Deploy(ctx context.Context) error {
@@ -124,16 +127,20 @@ func (s *sni) Deploy(ctx context.Context) error {
 		envoyFilterSpec bytes.Buffer
 	)
 
+	sniValues := s.valuesFunc()
+
 	if values.APIServerProxy != nil {
 		envoyFilter := s.emptyEnvoyFilter()
+		sniValues.APIServerClusterIPPrefixLen = netutils.GetBitLen(values.APIServerProxy.APIServerClusterIP)
 
 		if err := envoyFilterSpecTemplate.Execute(&envoyFilterSpec, envoyFilterTemplateValues{
-			APIServerProxy:       values.APIServerProxy,
-			IngressGatewayLabels: values.IstioIngressGateway.Labels,
-			Name:                 envoyFilter.Name,
-			Namespace:            envoyFilter.Namespace,
-			Host:                 hostName,
-			Port:                 kubeapiserverconstants.Port,
+			APIServerProxy:              values.APIServerProxy,
+			IngressGatewayLabels:        values.IstioIngressGateway.Labels,
+			Name:                        envoyFilter.Name,
+			Namespace:                   envoyFilter.Namespace,
+			Host:                        hostName,
+			Port:                        kubeapiserverconstants.Port,
+			APIServerClusterIPPrefixLen: sniValues.APIServerClusterIPPrefixLen,
 		}); err != nil {
 			return err
 		}
@@ -180,9 +187,9 @@ func (s *sni) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, gateway, func() error {
 		gateway.Labels = getLabels()
 		gateway.Spec = istioapinetworkingv1beta1.Gateway{
-			Selector: s.valuesFunc().IstioIngressGateway.Labels,
+			Selector: sniValues.IstioIngressGateway.Labels,
 			Servers: []*istioapinetworkingv1beta1.Server{{
-				Hosts: s.valuesFunc().Hosts,
+				Hosts: sniValues.Hosts,
 				Port: &istioapinetworkingv1beta1.Port{
 					Number:   kubeapiserverconstants.Port,
 					Name:     "tls",
@@ -202,12 +209,12 @@ func (s *sni) Deploy(ctx context.Context) error {
 		virtualService.Labels = getLabels()
 		virtualService.Spec = istioapinetworkingv1beta1.VirtualService{
 			ExportTo: []string{"*"},
-			Hosts:    s.valuesFunc().Hosts,
+			Hosts:    sniValues.Hosts,
 			Gateways: []string{gateway.Name},
 			Tls: []*istioapinetworkingv1beta1.TLSRoute{{
 				Match: []*istioapinetworkingv1beta1.TLSMatchAttributes{{
 					Port:     kubeapiserverconstants.Port,
-					SniHosts: s.valuesFunc().Hosts,
+					SniHosts: sniValues.Hosts,
 				}},
 				Route: []*istioapinetworkingv1beta1.RouteDestination{{
 					Destination: &istioapinetworkingv1beta1.Destination{

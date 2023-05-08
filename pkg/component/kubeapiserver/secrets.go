@@ -164,6 +164,7 @@ func (k *kubeAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.Secr
 
 	if k.values.SNI.Enabled || (k.values.VPN.Enabled && k.values.VPN.HighAvailabilityEnabled) {
 		ipAddresses = append(ipAddresses, net.ParseIP("127.0.0.1"))
+		ipAddresses = append(ipAddresses, net.ParseIP("::1"))
 	}
 
 	if !k.values.IsWorkerless {

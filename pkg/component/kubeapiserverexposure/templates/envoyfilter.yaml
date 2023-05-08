@@ -36,4 +36,4 @@ spec:
           destination_port: {{ .Port }}
           prefix_ranges:
           - address_prefix: {{ .APIServerClusterIP }}
-            prefix_len: 32
+            prefix_len: {{ .APIServerClusterIPPrefixLen }}

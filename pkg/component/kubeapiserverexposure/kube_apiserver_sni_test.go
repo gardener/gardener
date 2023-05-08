@@ -17,6 +17,7 @@ package kubeapiserverexposure_test
 import (
 	"context"
 
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -205,7 +206,7 @@ var _ = Describe("#SNI", func() {
 
 	JustBeforeEach(func() {
 		defaultDepWaiter = NewSNI(c, applier, v1beta1constants.DeploymentNameKubeAPIServer, namespace, func() *SNIValues {
-			return &SNIValues{
+			val := &SNIValues{
 				Hosts:          hosts,
 				APIServerProxy: apiServerProxyValues,
 				IstioIngressGateway: IstioIngressGateway{
@@ -213,6 +214,10 @@ var _ = Describe("#SNI", func() {
 					Labels:    istioLabels,
 				},
 			}
+			if apiServerProxyValues != nil {
+				val.APIServerClusterIPPrefixLen = netutils.GetBitLen(apiServerProxyValues.APIServerClusterIP)
+			}
+			return val
 		})
 	})
 
