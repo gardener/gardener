@@ -186,10 +186,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	}
 
 	var (
-		networks = map[string]interface{}{
-			"pods":     b.Shoot.Networks.Pods.String(),
-			"services": b.Shoot.Networks.Services.String(),
-		}
+		networks         = map[string]interface{}{}
 		prometheusConfig = map[string]interface{}{
 			"secretNameClusterCA":      clusterCASecret.Name,
 			"secretNameEtcdCA":         etcdCASecret.Name,
@@ -211,8 +208,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"namespace": map[string]interface{}{
 				"uid": b.SeedNamespaceObject.UID,
 			},
-			"replicas":           b.Shoot.GetReplicas(1),
-			"apiserverServiceIP": b.Shoot.Networks.APIServer.String(),
+			"replicas": b.Shoot.GetReplicas(1),
 			"seed": map[string]interface{}{
 				"apiserver": b.SeedClientSet.RESTConfig().Host,
 				"region":    b.Seed.GetInfo().Spec.Provider.Region,
@@ -246,9 +242,21 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		}
 	)
 
-	if v := b.Shoot.GetInfo().Spec.Networking.Nodes; v != nil {
-		networks["nodes"] = *v
+	if b.Shoot.Networks != nil {
+		if services := b.Shoot.Networks.Services; services != nil {
+			networks["services"] = services.String()
+		}
+		if pods := b.Shoot.Networks.Pods; pods != nil {
+			networks["pods"] = pods.String()
+		}
+		if apiServer := b.Shoot.Networks.APIServer; apiServer != nil {
+			prometheusConfig["apiserverServiceIP"] = apiServer.String()
+		}
 	}
+	if b.Shoot.GetInfo().Spec.Networking != nil && b.Shoot.GetInfo().Spec.Networking.Nodes != nil {
+		networks["nodes"] = *b.Shoot.GetInfo().Spec.Networking.Nodes
+	}
+
 	prometheusConfig["networks"] = networks
 
 	// Add remotewrite to prometheus when enabled
