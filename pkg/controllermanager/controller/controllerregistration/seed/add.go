@@ -123,7 +123,9 @@ func (r *Reconciler) SeedPredicate() predicate.Predicate {
 				return false
 			}
 
-			return !apiequality.Semantic.DeepEqual(oldSeed.Spec.DNS.Provider, seed.Spec.DNS.Provider) ||
+			return !apiequality.Semantic.DeepEqual(oldSeed.Spec, seed.Spec) ||
+				!apiequality.Semantic.DeepEqual(oldSeed.Annotations, seed.Annotations) ||
+				!apiequality.Semantic.DeepEqual(oldSeed.Labels, seed.Labels) ||
 				seed.DeletionTimestamp != nil
 		},
 	}

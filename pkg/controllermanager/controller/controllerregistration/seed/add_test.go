@@ -70,13 +70,28 @@ var _ = Describe("Add", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectNew: seed})).To(BeFalse())
 			})
 
-			It("should return false because neither DNS provider changed nor deletion timestamp got set", func() {
+			It("should return false because neither spec, annotations, labels changed nor deletion timestamp got set", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectNew: seed, ObjectOld: seed})).To(BeFalse())
 			})
 
-			It("should return true because DNS provider changed", func() {
+			It("should return true because spec has changed", func() {
 				oldSeed := seed.DeepCopy()
 				seed.Spec.DNS.Provider = &gardencorev1beta1.SeedDNSProvider{Type: "foo"}
+				Expect(p.Update(event.UpdateEvent{ObjectNew: seed, ObjectOld: oldSeed})).To(BeTrue())
+			})
+
+			It("should return true because annotations have changed", func() {
+				oldSeed := seed.DeepCopy()
+				metav1.SetMetaDataAnnotation(&seed.ObjectMeta, "foo", "bar")
+
+				Expect(p.Update(event.UpdateEvent{ObjectNew: seed, ObjectOld: oldSeed})).To(BeTrue())
+			})
+
+			It("should return true because labels have changed", func() {
+				oldSeed := seed.DeepCopy()
+				metav1.SetMetaDataLabel(&oldSeed.ObjectMeta, "foo", "bar")
+				metav1.SetMetaDataLabel(&seed.ObjectMeta, "foo", "baz")
+
 				Expect(p.Update(event.UpdateEvent{ObjectNew: seed, ObjectOld: oldSeed})).To(BeTrue())
 			})
 
