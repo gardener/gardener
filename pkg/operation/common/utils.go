@@ -29,6 +29,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -217,22 +218,23 @@ func waitForLokiPodTermination(ctx context.Context, k8sClient client.Client, nam
 			Namespace: namespace,
 		},
 	}
-	for {
+	if err := wait.PollUntilWithContext(ctx, 1*time.Second, func(context.Context) (done bool, err error) {
 		if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(pod), pod); err != nil {
 			if apierrors.IsNotFound(err) {
 				log.Info("Loki2vali: pod loki-0 not found, continuing with the rename", "lokiNamespace", namespace)
-				return nil
+				return true, nil
 			} else {
-				return fmt.Errorf("Loki2vali: %v: Error retrieving pod loki-0, aborting: %w", namespace, err)
+				return true, fmt.Errorf("Loki2vali: %v: Error retrieving pod loki-0, aborting: %w", namespace, err)
 			}
 		}
 		log.Info("Loki2vali: Waiting for pod loki-0 to terminate", "lokiNamespace", namespace, "timeLeft", time.Until(deadline))
-		if time.Until(deadline) < 0 {
-			err := fmt.Errorf("Loki2vali: %v: Timeout while waiting for the loki-0 pod to terminate", namespace)
-			log.Info("Loki2vali:", "lokiError", err)
-			return err
-		}
-		time.Sleep(1 * time.Second)
+		return false, nil
+	}); err != nil && err == wait.ErrWaitTimeout {
+		err := fmt.Errorf("Loki2vali: %v: Timeout while waiting for the loki-0 pod to terminate", namespace)
+		log.Info("Loki2vali:", "lokiError", err)
+		return err
+	} else {
+		return err
 	}
 }
 
@@ -286,22 +288,24 @@ func deleteLokiPvc(ctx context.Context, k8sClient client.Client, namespace strin
 	ctx, cancel := context.WithDeadline(ctx, time.Now().Add(30*time.Second))
 	defer cancel()
 	deadline, _ := ctx.Deadline()
-	for {
+
+	if err := wait.PollUntilWithContext(ctx, 1*time.Second, func(context.Context) (done bool, err error) {
 		if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(pvc), pvc); err != nil {
 			if apierrors.IsNotFound(err) {
 				log.Info("Loki2vali: Successfully deleted the Loki PVC", "lokiNamespace", namespace)
-				return nil
+				return true, nil
 			} else {
-				return err
+				return true, err
 			}
 		}
 		log.Info("Loki2vali: Wait for Loki PVC deletion to complete", "lokiNamespace", namespace, "timeLeft", time.Until(deadline))
-		if time.Until(deadline) < 0 {
-			err := fmt.Errorf("Loki2vali: %v: Timeout while waiting for the loki-loki-0 PVC to terminate", namespace)
-			log.Info("Loki2vali:", "lokiError", err)
-			return err
-		}
-		time.Sleep(1 * time.Second)
+		return false, nil
+	}); err != nil && err == wait.ErrWaitTimeout {
+		err := fmt.Errorf("Loki2vali: %v: Timeout while waiting for the loki-loki-0 PVC to terminate", namespace)
+		log.Info("Loki2vali:", "lokiError", err)
+		return err
+	} else {
+		return err
 	}
 }
 
@@ -384,31 +388,31 @@ func waitForValiPvcToBeBound(ctx context.Context, k8sClient client.Client, names
 	ctx, cancel := context.WithDeadline(ctx, time.Now().Add(1*time.Minute))
 	defer cancel()
 	deadline, _ := ctx.Deadline()
-	for {
+	if err := wait.PollUntilWithContext(ctx, 1*time.Second, func(context.Context) (done bool, err error) {
 		if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(valiPvc), valiPvc); err != nil {
 			if apierrors.IsNotFound(err) {
 				log.Info("Loki2vali: Vali PVC is not yet created", "lokiNamespace", namespace, "lokiError", err)
-				time.Sleep(1 * time.Second)
-				continue
+				return false, nil
 			}
 			log.Info("Loki2vali: waitForValiPvcToBeBound failed", "lokiNamespace", namespace, "lokiError", err)
-			return err
+			return true, err
 		}
 		if valiPvc.Status.Phase == corev1.ClaimBound {
 			log.Info("Loki2vali: PVC is bound", "lokiNamespace", namespace)
-			return nil
+			return true, nil
 		} else if valiPvc.Status.Phase == corev1.ClaimLost {
 			err := fmt.Errorf("Loki2vali: %v: Vali PVC is in Lost state, triggering recovery", namespace)
 			log.Info("Loki2vali:", "lokiError", err)
-			return err
+			return true, err
 		}
 		log.Info("Loki2vali: Wait for the Vali PVC to be bound", "lokiNamespace", namespace, "timeLeft", time.Until(deadline))
-		if time.Until(deadline) < 0 {
-			err := fmt.Errorf("Loki2vali: %v: Timeout while waiting for the vali PVC to be bound", namespace)
-			log.Info("Loki2vali:", "lokiError", err)
-			return err
-		}
-		time.Sleep(1 * time.Second)
+		return false, nil
+	}); err != nil && err == wait.ErrWaitTimeout {
+		err := fmt.Errorf("Loki2vali: %v: Timeout while waiting for the vali PVC to be bound", namespace)
+		log.Info("Loki2vali:", "lokiError", err)
+		return err
+	} else {
+		return err
 	}
 }
 
