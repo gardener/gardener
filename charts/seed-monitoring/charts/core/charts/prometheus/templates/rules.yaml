@@ -5,7 +5,18 @@ metadata:
   name: prometheus-rules
   namespace: {{ .Release.Namespace }}
 data:
-{{ range $name, $bytes := .Files.Glob "rules/**.yaml" }}
+{{- if eq $.Values.shoot.workerless false }}
+{{ range $name, $bytes := .Files.Glob "rules/worker/**.yaml" }}
+  {{ base $name }}: |-
+{{ toString $bytes | indent 4}}
+{{ end }}
+{{ else }}
+{{ range $name, $bytes := .Files.Glob "rules/workerless/**.yaml" }}
+  {{ base $name }}: |-
+{{ toString $bytes | indent 4}}
+{{ end }}
+{{- end}}
+{{ range $name, $bytes := .Files.Glob "rules/*.yaml" }}
   {{ base $name }}: |-
 {{ toString $bytes | indent 4}}
 {{ end }}

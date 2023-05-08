@@ -95,90 +95,6 @@ data:
         regex: true
         action: drop
     scrape_configs:
-    - job_name: kube-kubelet
-      honor_labels: false
-      scheme: https
-{{ include "prometheus.kube-auth" . | indent 6 }}
-      kubernetes_sd_configs:
-      - role: node
-        api_server: https://kube-apiserver:443
-{{ include "prometheus.kube-auth" . | indent 8 }}
-      relabel_configs:
-      - source_labels: [ __meta_kubernetes_node_address_InternalIP ]
-        target_label: instance
-      - action: labelmap
-        regex: __meta_kubernetes_node_label_(.+)
-      - target_label: __address__
-        replacement: kube-apiserver:443
-      - source_labels: [__meta_kubernetes_node_name]
-        regex: (.+)
-        target_label: __metrics_path__
-        replacement: /api/v1/nodes/${1}/proxy/metrics
-      - target_label: type
-        replacement: shoot
-      # get system services
-      metric_relabel_configs:
-      - source_labels: [ __name__ ]
-        regex: ^(kubelet_running_pods|process_max_fds|process_open_fds)$
-        action: keep
-
-    - job_name: cadvisor
-      honor_timestamps: false
-      honor_labels: false
-      scheme: https
-{{ include "prometheus.kube-auth" . | indent 6 }}
-      kubernetes_sd_configs:
-      - role: node
-        api_server: https://kube-apiserver:443
-{{ include "prometheus.kube-auth" . | indent 8 }}
-      relabel_configs:
-      - action: labelmap
-        regex: __meta_kubernetes_node_label_(.+)
-      - target_label: __address__
-        replacement: kube-apiserver:443
-      - source_labels: [__meta_kubernetes_node_name]
-        regex: (.+)
-        target_label: __metrics_path__
-        replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
-      - target_label: type
-        replacement: shoot
-      metric_relabel_configs:
-      # get system services
-      - source_labels: [ id ]
-        action: replace
-        regex: ^/system\.slice/(.+)\.service$
-        target_label: systemd_service_name
-        replacement: '${1}'
-      - source_labels: [ id ]
-        action: replace
-        regex: ^/system\.slice/(.+)\.service$
-        target_label: container
-        replacement: '${1}'
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.cAdvisor | indent 6 }}
-      # We want to keep only metrics in kube-system namespace
-      - source_labels: [ namespace ]
-        action: keep
-        # systemd containers don't have namespaces
-        regex: (^$|^kube-system$)
-      - source_labels:
-        - container
-        - __name__
-        # The system container POD is used for networking
-        regex: POD;({{ without .Values.allowedMetrics.cAdvisor "container_network_receive_bytes_total" "container_network_transmit_bytes_total" | join "|" }})
-        action: drop
-      - source_labels: [ __name__, container, interface, id ]
-        regex: container_network.+;;(eth0;/.+|(ens.+|tunl0|eth0);/)|.+;.+;.*;.*
-        action: keep
-      - source_labels: [ __name__, container, interface ]
-        regex: container_network.+;POD;(.{5,}|tun0|en.+)
-        action: drop
-      - source_labels: [ __name__, id ]
-        regex: container_network.+;/
-        target_label: host_network
-        replacement: "true"
-      - regex: ^id$
-        action: labeldrop
-
     # We fetch kubelet metrics from seed's kube-system Prometheus and filter
     # the metrics in shoot's namespace
     - job_name: kube-kubelet-seed
@@ -250,6 +166,113 @@ data:
         target_label: pod
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.prometheus | indent 6 }}
+
+    - job_name: blackbox-apiserver
+      params:
+        module:
+        - http_apiserver
+      scrape_timeout: 10s
+      metrics_path: /probe
+      static_configs:
+      - targets:
+        - {{ .Values.shoot.apiserver }}/healthz
+      relabel_configs:
+      - target_label: type
+        replacement: seed
+      - source_labels: [__address__]
+        target_label: __param_target
+        action: replace
+      - source_labels: [__param_target]
+        target_label: instance
+        action: replace
+      - target_label: __address__
+        replacement: 127.0.0.1:9115
+        action: replace
+
+{{- if not .Values.shoot.workerless }}
+    - job_name: cadvisor
+      honor_timestamps: false
+      honor_labels: false
+      scheme: https
+{{ include "prometheus.kube-auth" . | indent 6 }}
+      kubernetes_sd_configs:
+      - role: node
+        api_server: https://kube-apiserver:443
+{{ include "prometheus.kube-auth" . | indent 8 }}
+      relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+      - target_label: __address__
+        replacement: kube-apiserver:443
+      - source_labels: [__meta_kubernetes_node_name]
+        regex: (.+)
+        target_label: __metrics_path__
+        replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
+      - target_label: type
+        replacement: shoot
+      metric_relabel_configs:
+      # get system services
+      - source_labels: [ id ]
+        action: replace
+        regex: ^/system\.slice/(.+)\.service$
+        target_label: systemd_service_name
+        replacement: '${1}'
+      - source_labels: [ id ]
+        action: replace
+        regex: ^/system\.slice/(.+)\.service$
+        target_label: container
+        replacement: '${1}'
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.cAdvisor | indent 6 }}
+      # We want to keep only metrics in kube-system namespace
+      - source_labels: [ namespace ]
+        action: keep
+        # systemd containers don't have namespaces
+        regex: (^$|^kube-system$)
+      - source_labels:
+        - container
+        - __name__
+        # The system container POD is used for networking
+        regex: POD;({{ without .Values.allowedMetrics.cAdvisor "container_network_receive_bytes_total" "container_network_transmit_bytes_total" | join "|" }})
+        action: drop
+      - source_labels: [ __name__, container, interface, id ]
+        regex: container_network.+;;(eth0;/.+|(ens.+|tunl0|eth0);/)|.+;.+;.*;.*
+        action: keep
+      - source_labels: [ __name__, container, interface ]
+        regex: container_network.+;POD;(.{5,}|tun0|en.+)
+        action: drop
+      - source_labels: [ __name__, id ]
+        regex: container_network.+;/
+        target_label: host_network
+        replacement: "true"
+      - regex: ^id$
+        action: labeldrop
+
+    - job_name: kube-kubelet
+      honor_labels: false
+      scheme: https
+{{ include "prometheus.kube-auth" . | indent 6 }}
+      kubernetes_sd_configs:
+      - role: node
+        api_server: https://kube-apiserver:443
+{{ include "prometheus.kube-auth" . | indent 8 }}
+      relabel_configs:
+      - source_labels: [ __meta_kubernetes_node_address_InternalIP ]
+        target_label: instance
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+      - target_label: __address__
+        replacement: kube-apiserver:443
+      - source_labels: [__meta_kubernetes_node_name]
+        regex: (.+)
+        target_label: __metrics_path__
+        replacement: /api/v1/nodes/${1}/proxy/metrics
+      - target_label: type
+        replacement: shoot
+      # get system services
+      metric_relabel_configs:
+      - source_labels: [ __name__ ]
+        regex: ^(kubelet_running_pods|process_max_fds|process_open_fds)$
+        action: keep
 
     - job_name: node-exporter
       honor_labels: false
@@ -357,28 +380,6 @@ data:
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.vpn | indent 6 }}
 
-    - job_name: blackbox-apiserver
-      params:
-        module:
-        - http_apiserver
-      scrape_timeout: 10s
-      metrics_path: /probe
-      static_configs:
-      - targets:
-        - {{ .Values.shoot.apiserver }}/healthz
-      relabel_configs:
-      - target_label: type
-        replacement: seed
-      - source_labels: [__address__]
-        target_label: __param_target
-        action: replace
-      - source_labels: [__param_target]
-        target_label: instance
-        action: replace
-      - target_label: __address__
-        replacement: 127.0.0.1:9115
-        action: replace
-
     - job_name: blackbox-exporter-k8s-service-check
       honor_labels: false
       scheme: https
@@ -413,6 +414,7 @@ data:
         action: replace
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.blackboxExporter | indent 8 }}
+{{- end }}
 
 {{- if  (index .Values.rules.optional "loki" ).enabled }}
     - job_name: loki

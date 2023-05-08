@@ -234,6 +234,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 				"provider":            b.Shoot.GetInfo().Spec.Provider.Type,
 				"name":                b.Shoot.GetInfo().Name,
 				"project":             b.Garden.Project.Name,
+				"workerless":          b.Shoot.IsWorkerless,
 			},
 			"ignoreAlerts":            b.Shoot.IgnoreAlerts,
 			"alerting":                alerting,

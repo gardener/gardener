@@ -193,6 +193,7 @@ shoot:
   apiserverServerName: api.foo.bar
   provider: aws
   sniEnabled: false
+  workerless: false
 
 rules:
   optional:

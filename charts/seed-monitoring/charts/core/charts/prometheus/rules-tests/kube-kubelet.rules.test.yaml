@@ -1,5 +1,5 @@
 rule_files:
-- ../rules/kube-kubelet.rules.yaml
+- ../rules/worker/kube-kubelet.rules.yaml
 
 evaluation_interval: 30s
 
