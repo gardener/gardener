@@ -87,6 +87,9 @@ type GardenletConfiguration struct {
 	// MonitoringConfig is optional and adds additional settings for the monitoring stack.
 	// +optional
 	Monitoring *MonitoringConfig `json:"monitoring,omitempty"`
+	// NodeToleration contains optional settings for default tolerations.
+	// +optional
+	NodeToleration *NodeToleration `json:"nodeToleration,omitempty"`
 }
 
 // GardenClientConnection specifies the kubeconfig file and the client connection settings
@@ -719,3 +722,15 @@ var DefaultControllerSyncPeriod = metav1.Duration{Duration: time.Minute}
 
 // DefaultCentralLokiStorage is a default value for garden/loki's storage.
 var DefaultCentralLokiStorage = resource.MustParse("100Gi")
+
+// NodeToleration contains information about node toleration options.
+type NodeToleration struct {
+	// DefaultNotReadyTolerationSeconds specifies the seconds for the `node.kubernetes.io/not-ready` toleration that
+	// should be added to pods not already tolerating this taint.
+	// +optional
+	DefaultNotReadyTolerationSeconds *int64 `json:"defaultNotReadyTolerationSeconds,omitempty"`
+	// DefaultUnreachableTolerationSeconds specifies the seconds for the `node.kubernetes.io/unreachable` toleration that
+	// should be added to pods not already tolerating this taint.
+	// +optional
+	DefaultUnreachableTolerationSeconds *int64 `json:"defaultUnreachableTolerationSeconds,omitempty"`
+}

@@ -249,6 +249,10 @@ type Values struct {
 	ClusterIdentity *string
 	// ConcurrentSyncs are the number of worker threads for concurrent reconciliation of resources
 	ConcurrentSyncs *int
+	// DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute
+	DefaultNotReadyToleration *int64
+	// DefaultUnreachableTolerationSeconds indicates the tolerationSeconds of the toleration for unreachable:NoExecute
+	DefaultUnreachableToleration *int64
 	// HealthSyncPeriod describes the duration of how often the health of existing resources should be synced
 	HealthSyncPeriod *metav1.Duration
 	// FullNetworkPolicies makes the network policy controller to consider all relevant namespaces.
@@ -553,7 +557,9 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 				Enabled: r.values.EndpointSliceHintsEnabled,
 			},
 			HighAvailabilityConfig: resourcemanagerv1alpha1.HighAvailabilityConfigWebhookConfig{
-				Enabled: true,
+				Enabled:                             true,
+				DefaultNotReadyTolerationSeconds:    r.values.DefaultNotReadyToleration,
+				DefaultUnreachableTolerationSeconds: r.values.DefaultUnreachableToleration,
 			},
 			PodTopologySpreadConstraints: resourcemanagerv1alpha1.PodTopologySpreadConstraintsWebhookConfig{
 				Enabled: r.values.PodTopologySpreadConstraintsEnabled,
@@ -755,6 +761,24 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 		return err
 	}
 
+	var tolerations []corev1.Toleration
+	if r.values.DefaultNotReadyToleration != nil {
+		tolerations = append(tolerations, corev1.Toleration{
+			Key:               corev1.TaintNodeNotReady,
+			Operator:          corev1.TolerationOpExists,
+			Effect:            corev1.TaintEffectNoExecute,
+			TolerationSeconds: r.values.DefaultNotReadyToleration,
+		})
+	}
+	if r.values.DefaultUnreachableToleration != nil {
+		tolerations = append(tolerations, corev1.Toleration{
+			Key:               corev1.TaintNodeUnreachable,
+			Operator:          corev1.TolerationOpExists,
+			Effect:            corev1.TaintEffectNoExecute,
+			TolerationSeconds: r.values.DefaultUnreachableToleration,
+		})
+	}
+
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, deployment, func() error {
 		deployment.Labels = r.getLabels()
 
@@ -843,6 +867,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 						},
 					},
 				},
+				Tolerations: tolerations,
 				Volumes: []corev1.Volume{
 					{
 						Name: volumeNameAPIServerAccess,

@@ -270,6 +270,12 @@ type ExtensionValidation struct {
 type HighAvailabilityConfigWebhookConfig struct {
 	// Enabled defines whether this webhook is enabled.
 	Enabled bool
+	// DefaultNotReadyTolerationSeconds specifies the seconds for the `node.kubernetes.io/not-ready` toleration that
+	// should be added to pods not already tolerating this taint.
+	DefaultNotReadyTolerationSeconds *int64
+	// DefaultUnreachableTolerationSeconds specifies the seconds for the `node.kubernetes.io/unreachable` toleration that
+	// should be added to pods not already tolerating this taint.
+	DefaultUnreachableTolerationSeconds *int64
 }
 
 // SystemComponentsConfigWebhookConfig is the configuration for the system-components-config webhook.

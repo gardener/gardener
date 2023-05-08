@@ -34,6 +34,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
@@ -95,6 +96,28 @@ var _ = Describe("ResourceManager", func() {
 			resourceManager, err := botanist.DefaultResourceManager()
 			Expect(resourceManager).To(BeNil())
 			Expect(err).To(HaveOccurred())
+		})
+
+		It("should consider node toleration configuration", func() {
+			botanist.ImageVector = imagevector.ImageVector{
+				{Name: "gardener-resource-manager"},
+			}
+
+			notReadyTolerationSeconds := pointer.Int64(60)
+			unreachableTolerationSeconds := pointer.Int64(120)
+
+			botanist.Config = &gardenletconfig.GardenletConfiguration{
+				NodeToleration: &gardenletconfig.NodeToleration{
+					DefaultNotReadyTolerationSeconds:    notReadyTolerationSeconds,
+					DefaultUnreachableTolerationSeconds: unreachableTolerationSeconds,
+				},
+			}
+
+			resourceManager, err := botanist.DefaultResourceManager()
+			Expect(resourceManager).NotTo(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resourceManager.GetValues().DefaultNotReadyToleration).To(Equal(notReadyTolerationSeconds))
+			Expect(resourceManager.GetValues().DefaultUnreachableToleration).To(Equal(unreachableTolerationSeconds))
 		})
 	})
 

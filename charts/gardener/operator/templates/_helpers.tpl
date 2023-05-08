@@ -83,6 +83,10 @@ config.yaml: |
       concurrentSyncs: {{ .Values.config.controllers.networkPolicy.concurrentSyncs }}
       {{- end }}
     {{- end }}
+  {{- if .Values.nodeToleration }}
+  nodeToleration:
+{{ toYaml .Values.nodeToleration | indent 4 }}
+  {{- end }}
 {{- end -}}
 
 {{- define "operator.config.name" -}}

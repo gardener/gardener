@@ -181,6 +181,7 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 					Expect(getReplicas()).To(PointTo(Equal(int32(1))))
 					Expect(getPodSpec().Affinity).To(BeNil())
 					Expect(getPodSpec().TopologySpreadConstraints).To(BeEmpty())
+					Expect(getPodSpec().Tolerations).To(BeEmpty())
 				})
 			})
 
@@ -665,6 +666,149 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 
 								test()
 							})
+						})
+					})
+				})
+
+				Context("tolerations", func() {
+					Context("when no tolerations specified", func() {
+						It("should default 'not-ready' and 'unreachable' seconds", func() {
+							Expect(getPodSpec().Tolerations).To(ConsistOf(
+								corev1.Toleration{
+									Key:               "node.kubernetes.io/not-ready",
+									Operator:          "Exists",
+									Effect:            "NoExecute",
+									TolerationSeconds: pointer.Int64(defaultNotReadyTolerationSeconds),
+								},
+								corev1.Toleration{
+									Key:               "node.kubernetes.io/unreachable",
+									Operator:          "Exists",
+									Effect:            "NoExecute",
+									TolerationSeconds: pointer.Int64(defaultUnreachableTolerationSeconds),
+								},
+							))
+						})
+					})
+
+					Context("when some tolerations specified", func() {
+						existingTolerations := []corev1.Toleration{
+							{
+								Key:      "foo",
+								Operator: "Equal",
+								Effect:   "NoSchedule",
+								Value:    "bar",
+							},
+							{
+								Key:               "foo",
+								Operator:          "Exists",
+								Effect:            "NoExecute",
+								TolerationSeconds: pointer.Int64(15),
+							},
+							{
+								Key:      "node.kubernetes.io/not-ready",
+								Operator: "Exists",
+								Effect:   "NoSchedule",
+							},
+							{
+								Key:      "node.kubernetes.io/unreachable",
+								Operator: "Exists",
+								Effect:   "NoSchedule",
+							},
+						}
+
+						BeforeEach(func() {
+							setPodSpec(func(spec *corev1.PodSpec) {
+								spec.Tolerations = existingTolerations
+							})
+						})
+
+						It("should default 'not-ready' and 'unreachable' seconds", func() {
+							expectedTolerations := append(existingTolerations,
+								corev1.Toleration{
+									Key:               "node.kubernetes.io/not-ready",
+									Operator:          "Exists",
+									Effect:            "NoExecute",
+									TolerationSeconds: pointer.Int64(defaultNotReadyTolerationSeconds),
+								},
+								corev1.Toleration{
+									Key:               "node.kubernetes.io/unreachable",
+									Operator:          "Exists",
+									Effect:            "NoExecute",
+									TolerationSeconds: pointer.Int64(defaultUnreachableTolerationSeconds),
+								},
+							)
+
+							Expect(getPodSpec().Tolerations).To(ConsistOf(expectedTolerations))
+						})
+					})
+
+					Context("when 'not-ready' toleration exists", func() {
+						existingTolerations := []corev1.Toleration{
+							corev1.Toleration{
+								Key:               "node.kubernetes.io/not-ready",
+								Operator:          "Exists",
+								Effect:            "NoExecute",
+								TolerationSeconds: pointer.Int64(300),
+							},
+						}
+
+						BeforeEach(func() {
+							setPodSpec(func(spec *corev1.PodSpec) {
+								spec.Tolerations = existingTolerations
+							})
+						})
+
+						It("should default 'not-ready' and 'unreachable' seconds", func() {
+							Expect(getPodSpec().Tolerations).To(ConsistOf(
+								corev1.Toleration{
+									Key:               "node.kubernetes.io/not-ready",
+									Operator:          "Exists",
+									Effect:            "NoExecute",
+									TolerationSeconds: pointer.Int64(300),
+								},
+								corev1.Toleration{
+									Key:               "node.kubernetes.io/unreachable",
+									Operator:          "Exists",
+									Effect:            "NoExecute",
+									TolerationSeconds: pointer.Int64(defaultUnreachableTolerationSeconds),
+								},
+							))
+						})
+					})
+
+					Context("when 'unreachable' toleration exists", func() {
+						existingTolerations := []corev1.Toleration{
+							corev1.Toleration{
+								Key:               "node.kubernetes.io/unreachable",
+								Operator:          "Exists",
+								Effect:            "NoExecute",
+								TolerationSeconds: pointer.Int64(300),
+							},
+						}
+
+						BeforeEach(func() {
+							setPodSpec(func(spec *corev1.PodSpec) {
+								spec.Tolerations = existingTolerations
+							})
+						})
+
+						It("should default 'not-ready' and 'unreachable' seconds", func() {
+							Expect(getPodSpec().Tolerations).To(ConsistOf(
+								corev1.Toleration{
+									Key:               "node.kubernetes.io/not-ready",
+									Operator:          "Exists",
+									Effect:            "NoExecute",
+									Value:             "",
+									TolerationSeconds: pointer.Int64(defaultNotReadyTolerationSeconds),
+								},
+								corev1.Toleration{
+									Key:               "node.kubernetes.io/unreachable",
+									Operator:          "Exists",
+									Effect:            "NoExecute",
+									Value:             "",
+									TolerationSeconds: pointer.Int64(300),
+								},
+							))
 						})
 					})
 				})

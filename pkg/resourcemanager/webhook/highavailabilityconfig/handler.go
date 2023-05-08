@@ -43,6 +43,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
@@ -56,6 +57,7 @@ type Handler struct {
 	Logger        logr.Logger
 	TargetClient  client.Reader
 	TargetVersion *semver.Version
+	Config        config.HighAvailabilityConfigWebhookConfig
 
 	decoder *admission.Decoder
 }
@@ -177,6 +179,10 @@ func (h *Handler) handleDeployment(
 		&deployment.Spec.Template,
 	)
 
+	h.mutatePodTolerationSeconds(
+		&deployment.Spec.Template,
+	)
+
 	return deployment, nil
 }
 
@@ -222,6 +228,10 @@ func (h *Handler) handleStatefulSet(
 		isHorizontallyScaled,
 		statefulSet.Spec.Replicas,
 		maxReplicas,
+		&statefulSet.Spec.Template,
+	)
+
+	h.mutatePodTolerationSeconds(
 		&statefulSet.Spec.Template,
 	)
 
@@ -457,6 +467,45 @@ func (h *Handler) mutateTopologySpreadConstraints(
 		}
 
 		podTemplateSpec.Spec.TopologySpreadConstraints = append(filteredConstraints, constraints...)
+	}
+}
+
+func (h *Handler) mutatePodTolerationSeconds(podTemplateSpec *corev1.PodTemplateSpec) {
+	var (
+		toleratesNodeNotReady    bool
+		toleratesNodeUnreachable bool
+	)
+
+	// Check if toleration is already specific in podTemplate.
+	for _, toleration := range podTemplateSpec.Spec.Tolerations {
+		if len(toleration.Effect) > 0 && toleration.Effect != corev1.TaintEffectNoExecute {
+			continue
+		}
+
+		switch toleration.Key {
+		case corev1.TaintNodeNotReady:
+			toleratesNodeNotReady = true
+		case corev1.TaintNodeUnreachable:
+			toleratesNodeUnreachable = true
+		}
+	}
+
+	if !toleratesNodeNotReady && h.Config.DefaultNotReadyTolerationSeconds != nil {
+		podTemplateSpec.Spec.Tolerations = append(podTemplateSpec.Spec.Tolerations, corev1.Toleration{
+			Key:               corev1.TaintNodeNotReady,
+			Operator:          corev1.TolerationOpExists,
+			Effect:            corev1.TaintEffectNoExecute,
+			TolerationSeconds: h.Config.DefaultNotReadyTolerationSeconds,
+		})
+	}
+
+	if !toleratesNodeUnreachable && h.Config.DefaultUnreachableTolerationSeconds != nil {
+		podTemplateSpec.Spec.Tolerations = append(podTemplateSpec.Spec.Tolerations, corev1.Toleration{
+			Key:               corev1.TaintNodeUnreachable,
+			Operator:          corev1.TolerationOpExists,
+			Effect:            corev1.TaintEffectNoExecute,
+			TolerationSeconds: h.Config.DefaultUnreachableTolerationSeconds,
+		})
 	}
 }
 

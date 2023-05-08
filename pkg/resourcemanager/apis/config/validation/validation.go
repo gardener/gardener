@@ -147,6 +147,7 @@ func validateResourceManagerWebhookConfiguration(conf config.ResourceManagerWebh
 
 	allErrs = append(allErrs, validatePodSchedulerNameWebhookConfiguration(conf.PodSchedulerName, fldPath.Child("podSchedulerName"))...)
 	allErrs = append(allErrs, validateProjectedTokenMountWebhookConfiguration(conf.ProjectedTokenMount, fldPath.Child("projectedTokenMount"))...)
+	allErrs = append(allErrs, validateHighAvailabilityConfigWebhookConfiguration(conf.HighAvailabilityConfig, fldPath.Child("highAvailabilityConfig"))...)
 
 	return allErrs
 }
@@ -167,6 +168,15 @@ func validateProjectedTokenMountWebhookConfiguration(conf config.ProjectedTokenM
 	if conf.Enabled && pointer.Int64Deref(conf.ExpirationSeconds, 0) < 600 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("expirationSeconds"), pointer.Int64Deref(conf.ExpirationSeconds, 0), "must be at least 600"))
 	}
+
+	return allErrs
+}
+
+func validateHighAvailabilityConfigWebhookConfiguration(conf config.HighAvailabilityConfigWebhookConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(pointer.Int64Deref(conf.DefaultNotReadyTolerationSeconds, 0), fldPath.Child("defaultNotReadyTolerationSeconds"))...)
+	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(pointer.Int64Deref(conf.DefaultUnreachableTolerationSeconds, 0), fldPath.Child("defaultUnreachableTolerationSeconds"))...)
 
 	return allErrs
 }

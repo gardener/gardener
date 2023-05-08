@@ -45,6 +45,8 @@ func NewGardenerResourceManager(
 	logLevel, logFormat string,
 	secretNameServerCA string,
 	priorityClassName string,
+	defaultNotReadyToleration *int64,
+	defaultUnreachableToleration *int64,
 	defaultSeccompProfileEnabled bool,
 	endpointSliceHintsEnabled bool,
 	fullNetworkPoliciesEnabled bool,
@@ -67,6 +69,8 @@ func NewGardenerResourceManager(
 	return resourcemanager.New(c, gardenNamespaceName, secretsManager, resourcemanager.Values{
 		ConcurrentSyncs:              pointer.Int(20),
 		DefaultSeccompProfileEnabled: defaultSeccompProfileEnabled,
+		DefaultNotReadyToleration:    defaultNotReadyToleration,
+		DefaultUnreachableToleration: defaultUnreachableToleration,
 		EndpointSliceHintsEnabled:    endpointSliceHintsEnabled,
 		FullNetworkPolicies:          fullNetworkPoliciesEnabled,
 		NetworkPolicyControllerIngressControllerSelector: &resourcemanagerv1alpha1.IngressControllerSelector{

@@ -51,6 +51,12 @@ import (
 const namePrefix = "virtual-garden-"
 
 func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+	var defaultNotReadyTolerationSeconds, defaultUnreachableTolerationSeconds *int64
+	if nodeToleration := r.Config.NodeToleration; nodeToleration != nil {
+		defaultNotReadyTolerationSeconds = nodeToleration.DefaultNotReadyTolerationSeconds
+		defaultUnreachableTolerationSeconds = nodeToleration.DefaultUnreachableTolerationSeconds
+	}
+
 	return sharedcomponent.NewGardenerResourceManager(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
@@ -60,6 +66,8 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 		r.Config.LogLevel, r.Config.LogFormat,
 		operatorv1alpha1.SecretNameCARuntime,
 		v1beta1constants.PriorityClassNameGardenSystemCritical,
+		defaultNotReadyTolerationSeconds,
+		defaultUnreachableTolerationSeconds,
 		features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
 		helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 		features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster),

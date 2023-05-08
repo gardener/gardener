@@ -13,6 +13,10 @@ global:
   podLabels: {}
   priorityClassName: ""
 
+  nodeToleration:
+    defaultNotReadyTolerationSeconds: 60
+    defaultUnreachableTolerationSeconds: 60
+
   config:
     sourceClientConnection:
       qps: 100

@@ -401,6 +401,12 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 	// When the seed is the garden cluster then gardener-resource-manager is reconciled by the gardener-operator.
 	if !seedIsGarden {
+		var defaultNotReadyTolerationSeconds, defaultUnreachableTolerationSeconds *int64
+		if nodeToleration := r.Config.NodeToleration; nodeToleration != nil {
+			defaultNotReadyTolerationSeconds = nodeToleration.DefaultNotReadyTolerationSeconds
+			defaultUnreachableTolerationSeconds = nodeToleration.DefaultUnreachableTolerationSeconds
+		}
+
 		// Deploy gardener-resource-manager first since it serves central functionality (e.g., projected token mount
 		// webhook) which is required for all other components to start-up.
 		gardenerResourceManager, err := sharedcomponent.NewGardenerResourceManager(
@@ -412,6 +418,8 @@ func (r *Reconciler) runReconcileSeedFlow(
 			r.Config.LogLevel, r.Config.LogFormat,
 			v1beta1constants.SecretNameCASeed,
 			v1beta1constants.PriorityClassNameSeedSystemCritical,
+			defaultNotReadyTolerationSeconds,
+			defaultUnreachableTolerationSeconds,
 			features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
 			v1beta1helper.SeedSettingTopologyAwareRoutingEnabled(seed.GetInfo().Spec.Settings),
 			features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster),

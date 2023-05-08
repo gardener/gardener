@@ -83,6 +83,8 @@ webhooks:
     enabled: true
   highAvailabilityConfig:
     enabled: true
+    defaultNotReadyTolerationSeconds: 60
+    defaultUnreachableTolerationSeconds: 60
   podSchedulerName:
     enabled: true
     schedulerName: foo-scheduler

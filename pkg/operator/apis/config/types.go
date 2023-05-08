@@ -48,6 +48,8 @@ type OperatorConfiguration struct {
 	FeatureGates map[string]bool
 	// Controllers defines the configuration of the controllers.
 	Controllers ControllerConfiguration
+	// NodeToleration contains optional settings for default tolerations.
+	NodeToleration *NodeTolerationConfiguration
 }
 
 // ControllerConfiguration defines the configuration of the controllers.
@@ -91,4 +93,14 @@ type Server struct {
 	BindAddress string
 	// Port is the port on which to serve requests.
 	Port int
+}
+
+// NodeTolerationConfiguration contains information about node toleration options.
+type NodeTolerationConfiguration struct {
+	// DefaultNotReadyTolerationSeconds specifies the seconds for the `node.kubernetes.io/not-ready` toleration that
+	// should be added to pods not already tolerating this taint.
+	DefaultNotReadyTolerationSeconds *int64
+	// DefaultUnreachableTolerationSeconds specifies the seconds for the `node.kubernetes.io/unreachable` toleration that
+	// should be added to pods not already tolerating this taint.
+	DefaultUnreachableTolerationSeconds *int64
 }

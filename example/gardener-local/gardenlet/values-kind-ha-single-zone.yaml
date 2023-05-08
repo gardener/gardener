@@ -11,3 +11,7 @@ config:
         domain: ingress.local-ha-single-zone.seed.local.gardener.cloud
       secretRef:
         name: seed-local-ha-single-zone
+nodeToleration:
+  defaultNotReadyTolerationSeconds: 60
+  defaultUnreachableTolerationSeconds: 60
+

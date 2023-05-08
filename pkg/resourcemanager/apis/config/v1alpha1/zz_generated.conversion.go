@@ -469,6 +469,8 @@ func Convert_config_HealthControllerConfig_To_v1alpha1_HealthControllerConfig(in
 
 func autoConvert_v1alpha1_HighAvailabilityConfigWebhookConfig_To_config_HighAvailabilityConfigWebhookConfig(in *HighAvailabilityConfigWebhookConfig, out *config.HighAvailabilityConfigWebhookConfig, s conversion.Scope) error {
 	out.Enabled = in.Enabled
+	out.DefaultNotReadyTolerationSeconds = (*int64)(unsafe.Pointer(in.DefaultNotReadyTolerationSeconds))
+	out.DefaultUnreachableTolerationSeconds = (*int64)(unsafe.Pointer(in.DefaultUnreachableTolerationSeconds))
 	return nil
 }
 
@@ -479,6 +481,8 @@ func Convert_v1alpha1_HighAvailabilityConfigWebhookConfig_To_config_HighAvailabi
 
 func autoConvert_config_HighAvailabilityConfigWebhookConfig_To_v1alpha1_HighAvailabilityConfigWebhookConfig(in *config.HighAvailabilityConfigWebhookConfig, out *HighAvailabilityConfigWebhookConfig, s conversion.Scope) error {
 	out.Enabled = in.Enabled
+	out.DefaultNotReadyTolerationSeconds = (*int64)(unsafe.Pointer(in.DefaultNotReadyTolerationSeconds))
+	out.DefaultUnreachableTolerationSeconds = (*int64)(unsafe.Pointer(in.DefaultUnreachableTolerationSeconds))
 	return nil
 }
 

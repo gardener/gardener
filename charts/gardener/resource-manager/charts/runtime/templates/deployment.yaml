@@ -97,6 +97,21 @@ spec:
         - name: tls
           mountPath: /etc/gardener-resource-manager/tls
 {{- end }}
+{{- if .Values.global.nodeToleration }}
+      tolerations:
+{{- if .Values.global.nodeToleration.defaultNotReadyTolerationSeconds }}
+      - effect: NoExecute
+        key: node.kubernetes.io/not-ready
+        operator: Exists
+        tolerationSeconds: {{ .Values.global.nodeToleration.defaultNotReadyTolerationSeconds }}
+{{- end }}
+{{- if .Values.global.nodeToleration.defaultUnreachableTolerationSeconds }}
+      - effect: NoExecute
+        key: node.kubernetes.io/unreachable
+        operator: Exists
+        tolerationSeconds: {{ .Values.global.nodeToleration.defaultUnreachableTolerationSeconds }}
+{{- end }}
+{{- end }}
       volumes:
       - name: config
         configMap:

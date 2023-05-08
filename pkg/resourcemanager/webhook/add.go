@@ -79,6 +79,7 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 			Logger:        mgr.GetLogger().WithName("webhook").WithName(highavailabilityconfig.HandlerName),
 			TargetClient:  targetCluster.GetClient(),
 			TargetVersion: targetVersion,
+			Config:        cfg.Webhooks.HighAvailabilityConfig,
 		}).AddToManager(mgr); err != nil {
 			return fmt.Errorf("failed adding %s webhook handler: %w", highavailabilityconfig.HandlerName, err)
 		}

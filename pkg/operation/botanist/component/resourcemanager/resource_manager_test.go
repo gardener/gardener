@@ -117,31 +117,33 @@ var _ = Describe("ResourceManager", func() {
 			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{"bar": "baz"}},
 		}
 
-		allowAll                       []rbacv1.PolicyRule
-		allowManagedResources          []rbacv1.PolicyRule
-		allowMachines                  []rbacv1.PolicyRule
-		cfg                            Values
-		clusterRole                    *rbacv1.ClusterRole
-		clusterRoleBinding             *rbacv1.ClusterRoleBinding
-		configMap                      *corev1.ConfigMap
-		deployment                     *appsv1.Deployment
-		configMapFor                   func(watchedNamespace *string, targetKubeconfig *string) *corev1.ConfigMap
-		deploymentFor                  func(configMapName string, kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string, targetClusterDiffersFromSourceCluster bool, secretNameBootstrapKubeconfig *string) *appsv1.Deployment
-		defaultLabels                  map[string]string
-		roleBinding                    *rbacv1.RoleBinding
-		role                           *rbacv1.Role
-		secret                         *corev1.Secret
-		service                        *corev1.Service
-		serviceAccount                 *corev1.ServiceAccount
-		updateMode                     = vpaautoscalingv1.UpdateModeAuto
-		controlledValues               = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		pdbV1beta1                     *policyv1beta1.PodDisruptionBudget
-		pdbV1                          *policyv1.PodDisruptionBudget
-		vpa                            *vpaautoscalingv1.VerticalPodAutoscaler
-		mutatingWebhookConfiguration   *admissionregistrationv1.MutatingWebhookConfiguration
-		validatingWebhookConfiguration *admissionregistrationv1.ValidatingWebhookConfiguration
-		managedResourceSecret          *corev1.Secret
-		managedResource                *resourcesv1alpha1.ManagedResource
+		allowAll                            []rbacv1.PolicyRule
+		allowManagedResources               []rbacv1.PolicyRule
+		allowMachines                       []rbacv1.PolicyRule
+		cfg                                 Values
+		clusterRole                         *rbacv1.ClusterRole
+		clusterRoleBinding                  *rbacv1.ClusterRoleBinding
+		configMap                           *corev1.ConfigMap
+		deployment                          *appsv1.Deployment
+		defaultNotReadyTolerationSeconds    *int64
+		defaultUnreachableTolerationSeconds *int64
+		configMapFor                        func(watchedNamespace *string, targetKubeconfig *string) *corev1.ConfigMap
+		deploymentFor                       func(configMapName string, kubernetesVersion *semver.Version, watchedNamespace *string, targetKubeconfig *string, targetClusterDiffersFromSourceCluster bool, secretNameBootstrapKubeconfig *string) *appsv1.Deployment
+		defaultLabels                       map[string]string
+		roleBinding                         *rbacv1.RoleBinding
+		role                                *rbacv1.Role
+		secret                              *corev1.Secret
+		service                             *corev1.Service
+		serviceAccount                      *corev1.ServiceAccount
+		updateMode                          = vpaautoscalingv1.UpdateModeAuto
+		controlledValues                    = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		pdbV1beta1                          *policyv1beta1.PodDisruptionBudget
+		pdbV1                               *policyv1.PodDisruptionBudget
+		vpa                                 *vpaautoscalingv1.VerticalPodAutoscaler
+		mutatingWebhookConfiguration        *admissionregistrationv1.MutatingWebhookConfiguration
+		validatingWebhookConfiguration      *admissionregistrationv1.ValidatingWebhookConfiguration
+		managedResourceSecret               *corev1.Secret
+		managedResource                     *resourcesv1alpha1.ManagedResource
 	)
 
 	BeforeEach(func() {
@@ -205,6 +207,9 @@ var _ = Describe("ResourceManager", func() {
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 			v1beta1constants.LabelApp:   "gardener-resource-manager",
 		}
+
+		defaultNotReadyTolerationSeconds = pointer.Int64(60)
+		defaultUnreachableTolerationSeconds = pointer.Int64(120)
 
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
@@ -302,10 +307,12 @@ var _ = Describe("ResourceManager", func() {
 			},
 		}
 		cfg = Values{
-			AlwaysUpdate:        &alwaysUpdate,
-			ClusterIdentity:     &clusterIdentity,
-			ConcurrentSyncs:     &concurrentSyncs,
-			FullNetworkPolicies: true,
+			AlwaysUpdate:                 &alwaysUpdate,
+			ClusterIdentity:              &clusterIdentity,
+			ConcurrentSyncs:              &concurrentSyncs,
+			DefaultNotReadyToleration:    defaultNotReadyTolerationSeconds,
+			DefaultUnreachableToleration: defaultUnreachableTolerationSeconds,
+			FullNetworkPolicies:          true,
 			NetworkPolicyControllerIngressControllerSelector: ingressControllerSelector,
 			HealthSyncPeriod:                     &healthSyncPeriod,
 			Image:                                image,
@@ -414,7 +421,9 @@ var _ = Describe("ResourceManager", func() {
 				},
 				Webhooks: resourcemanagerv1alpha1.ResourceManagerWebhookConfiguration{
 					HighAvailabilityConfig: resourcemanagerv1alpha1.HighAvailabilityConfigWebhookConfig{
-						Enabled: true,
+						Enabled:                             true,
+						DefaultNotReadyTolerationSeconds:    defaultNotReadyTolerationSeconds,
+						DefaultUnreachableTolerationSeconds: defaultUnreachableTolerationSeconds,
 					},
 					PodSchedulerName: resourcemanagerv1alpha1.PodSchedulerNameWebhookConfig{
 						Enabled: false,
@@ -595,6 +604,20 @@ var _ = Describe("ResourceManager", func() {
 											ReadOnly:  true,
 										},
 									},
+								},
+							},
+							Tolerations: []corev1.Toleration{
+								{
+									Key:               corev1.TaintNodeNotReady,
+									Operator:          corev1.TolerationOpExists,
+									Effect:            corev1.TaintEffectNoExecute,
+									TolerationSeconds: defaultNotReadyTolerationSeconds,
+								},
+								{
+									Key:               corev1.TaintNodeUnreachable,
+									Operator:          corev1.TolerationOpExists,
+									Effect:            corev1.TaintEffectNoExecute,
+									TolerationSeconds: defaultUnreachableTolerationSeconds,
 								},
 							},
 							Volumes: []corev1.Volume{
