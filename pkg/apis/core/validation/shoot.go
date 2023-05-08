@@ -20,7 +20,6 @@ import (
 	"net"
 	"net/url"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -1346,7 +1345,7 @@ func validateProvider(provider core.Provider, kubernetes core.Kubernetes, networ
 		}
 
 		allErrs = append(allErrs, ValidateWorkers(provider.Workers, fldPath.Child("workers"))...)
-		allErrs = append(allErrs, ValidateSystemComponentWorkers(kubernetes.Version, provider.Workers, fldPath.Child("workers"))...)
+		allErrs = append(allErrs, ValidateSystemComponentWorkers(provider.Workers, kubernetes.Version, fldPath.Child("workers"))...)
 	}
 
 	if kubernetes.KubeControllerManager != nil && kubernetes.KubeControllerManager.NodeCIDRMaskSize != nil && networking != nil {
@@ -1740,7 +1739,7 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 }
 
 // ValidateSystemComponentWorkers validates workers specified to run system components.
-func ValidateSystemComponentWorkers(kubernetesVersion string, workers []core.Worker, fldPath *field.Path) field.ErrorList {
+func ValidateSystemComponentWorkers(workers []core.Worker, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs                                   = field.ErrorList{}
 		atLeastOnePoolWithAllowedSystemComponents = false
@@ -1760,16 +1759,15 @@ func ValidateSystemComponentWorkers(kubernetesVersion string, workers []core.Wor
 		}
 		atLeastOnePoolWithAllowedSystemComponents = true
 
-		// Check if maximum workers is at least as big as there are zones specified.
-		// It ensures, that the cluster potentially has one worker per zone to schedule required system components with TopologySpreadConstraints.
-		// This is considered per distinct worker pool concerning their zone setup,
-		// e.g. worker.zones: {1,2,3} == worker.zones: {3,2,1}
-		sortedZones := append([]string{}, worker.Zones...)
-		sort.Strings(sortedZones)
+		// Check if the maximum worker count is greater than or equal to the number of specified zones.
+		// It ensures that the cluster has at least one worker per zone in order to schedule required system components with TopologySpreadConstraints.
+		// This check is done per distinct worker pool concerning their zone setup,
+		// e.g. 'worker[x].zones: {1,2,3}' is the same as 'worker[y].zones: {3,2,1}', so the constraint is only considered once for both worker groups.
+		zonesSet := sets.New(worker.Zones...)
 
 		var (
 			hasSufficientWorkers = false
-			workerPoolKey        = strings.Join(sortedZones, "--")
+			workerPoolKey        = strings.Join(sets.List(zonesSet), "--")
 		)
 
 		if int(worker.Maximum) >= len(worker.Zones) {
@@ -1790,7 +1788,7 @@ func ValidateSystemComponentWorkers(kubernetesVersion string, workers []core.Wor
 	k8sGreaterEqual127, _ := versionutils.CheckVersionMeetsConstraint(kubernetesVersion, ">= 1.27")
 	if k8sGreaterEqual127 {
 		for _, i := range workerPoolsWithInsufficientWorkers {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Index(i).Child("maximum"), "maximum node count should be greater or equal to the number of zones specified for this pool"))
+			allErrs = append(allErrs, field.Forbidden(fldPath.Index(i).Child("maximum"), "maximum node count should be greater than or equal to the number of zones specified for this pool"))
 		}
 	}
 

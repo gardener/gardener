@@ -5216,7 +5216,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				Expect(ValidateSystemComponentWorkers("", workers, field.NewPath("workers"))).To(matcher)
+				Expect(ValidateSystemComponentWorkers(workers, "", field.NewPath("workers"))).To(matcher)
 			},
 
 			Entry("at least one worker pool min>0, max>0", zero, zero, one, one, BeEmpty()),
@@ -5248,7 +5248,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				Expect(ValidateSystemComponentWorkers("", workers, field.NewPath("workers"))).To(matcher)
+				Expect(ValidateSystemComponentWorkers(workers, "", field.NewPath("workers"))).To(matcher)
 			},
 
 			Entry("all worker pools min=max=0", zero, zero, zero, zero, true, true, ConsistOf(
@@ -5282,10 +5282,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				Expect(ValidateSystemComponentWorkers(kubernetesVersion, workers, field.NewPath("workers"))).To(matcher)
+				Expect(ValidateSystemComponentWorkers(workers, kubernetesVersion, field.NewPath("workers"))).To(matcher)
 			},
 
 			Entry("maximum == len(zones)", "v1.27", three, one, true, false, []string{"1", "2", "3"}, []string{"1"}, BeEmpty()),
+			Entry("maximum == len(zones) with multiple system component worker pools and smaller group first", "v1.27", one, three, true, true, []string{"1", "2", "3"}, []string{"1", "2", "3"}, BeEmpty()),
+			Entry("maximum == len(zones) with multiple system component worker pools and smaller group last", "v1.27", three, one, true, true, []string{"1", "2", "3"}, []string{"1", "2", "3"}, BeEmpty()),
 			Entry("maximum < len(zones)", "1.27", two, one, true, false, []string{"1", "2", "3"}, []string{"1"}, ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
