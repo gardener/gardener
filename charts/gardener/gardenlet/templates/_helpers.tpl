@@ -296,7 +296,7 @@ config.yaml: |
   {{- end }}
   {{- if .Values.config.etcdConfig }}
   etcdConfig:
-{{ toYaml .Values.config.etcdConfig | indent 4}}
+{{ toYaml .Values.config.etcdConfig | indent 4 }}
   {{- end}}
   {{- if .Values.config.exposureClassHandlers }}
   exposureClassHandlers:
@@ -304,7 +304,7 @@ config.yaml: |
   {{- end }}
   {{- if .Values.nodeToleration }}
   nodeToleration:
-{{ toYaml .Values.nodeToleration | indent 4}}
+{{ toYaml .Values.nodeToleration | indent 4 }}
   {{- end}}
 {{- end -}}
 

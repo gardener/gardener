@@ -934,11 +934,11 @@ The webhook performs the following actions:
 
 4. Adds default tolerations for [taint-based evictions](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/#taint-based-evictions):
 
-   Tolerations for taints `node.kubernetes.io/not-ready` and `node.kubernetes.io/unreachable` are added to the handled `Deployment` and `StatefulSet` if their `podTemplate` do not already specify them.
+   Tolerations for taints `node.kubernetes.io/not-ready` and `node.kubernetes.io/unreachable` are added to the handled `Deployment` and `StatefulSet` if their `podTemplate`s do not already specify them.
    The `TolerationSeconds` are taken from the respective configuration section of the webhook's configuration (see [example](../../example/resource-manager/10-componentconfig.yaml))).
    
    We consider fine-tuned values for those tolerations a matter of high-availability because they often help to reduce recovery times in case of node or zone outages, also see [High-Availability Best Practices](../../docs/usage/shoot_high_availability_best_practices.md).
-   In addition, this webhook handling helps to set defaults for many but not all workload components in a cluster. For instance, Gardener can use this webhook to set defaults for nearly every component in seed clusters but only for managed ones in shoot clusters. Any customer workload remains unchanged.
+   In addition, this webhook handling helps to set defaults for many but not all workload components in a cluster. For instance, Gardener can use this webhook to set defaults for nearly every component in seed clusters but only for the system components in shoot clusters. Any customer workload remains unchanged.
 
 #### Auto-Mounting Projected `ServiceAccount` Tokens
 

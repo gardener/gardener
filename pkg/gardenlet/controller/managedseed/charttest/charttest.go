@@ -880,6 +880,10 @@ func ComputeExpectedGardenletConfiguration(
 				Workers: pointer.Int64(50),
 			},
 		},
+		NodeToleration: &gardenletv1alpha1.NodeToleration{
+			DefaultNotReadyTolerationSeconds:    pointer.Int64(60),
+			DefaultUnreachableTolerationSeconds: pointer.Int64(60),
+		},
 	}
 
 	if hasGardenClientConnectionKubeconfig {
@@ -1031,6 +1035,20 @@ func ComputeExpectedGardenletDeploymentSpec(
 							MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
 							ReadOnly:  true,
 						}},
+					},
+				},
+				Tolerations: []corev1.Toleration{
+					{
+						Key:               "node.kubernetes.io/not-ready",
+						Operator:          "Exists",
+						TolerationSeconds: pointer.Int64(60),
+						Effect:            "NoExecute",
+					},
+					{
+						Key:               "node.kubernetes.io/unreachable",
+						Operator:          "Exists",
+						TolerationSeconds: pointer.Int64(60),
+						Effect:            "NoExecute",
 					},
 				},
 				Volumes: []corev1.Volume{{

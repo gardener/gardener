@@ -85,8 +85,8 @@ config.yaml: |
     {{- end }}
   {{- if .Values.nodeToleration }}
   nodeToleration:
-{{ toYaml .Values.nodeToleration | indent 4}}
-  {{- end}}
+{{ toYaml .Values.nodeToleration | indent 4 }}
+  {{- end }}
 {{- end -}}
 
 {{- define "operator.config.name" -}}

@@ -761,9 +761,9 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 		return err
 	}
 
-	var defaultTolerations []corev1.Toleration
+	var tolerations []corev1.Toleration
 	if r.values.DefaultNotReadyToleration != nil {
-		defaultTolerations = append(defaultTolerations, corev1.Toleration{
+		tolerations = append(tolerations, corev1.Toleration{
 			Key:               corev1.TaintNodeNotReady,
 			Operator:          corev1.TolerationOpExists,
 			Effect:            corev1.TaintEffectNoExecute,
@@ -771,7 +771,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 		})
 	}
 	if r.values.DefaultUnreachableToleration != nil {
-		defaultTolerations = append(defaultTolerations, corev1.Toleration{
+		tolerations = append(tolerations, corev1.Toleration{
 			Key:               corev1.TaintNodeUnreachable,
 			Operator:          corev1.TolerationOpExists,
 			Effect:            corev1.TaintEffectNoExecute,
@@ -867,7 +867,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 						},
 					},
 				},
-				Tolerations: defaultTolerations,
+				Tolerations: tolerations,
 				Volumes: []corev1.Volume{
 					{
 						Name: volumeNameAPIServerAccess,
