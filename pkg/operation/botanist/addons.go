@@ -51,6 +51,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		global = map[string]interface{}{
 			"vpaEnabled":  b.Shoot.WantsVerticalPodAutoscaler,
 			"pspDisabled": b.Shoot.PSPDisabled,
+			"hasWorkers":  !b.Shoot.IsWorkerless,
 		}
 		podSecurityPolicies = map[string]interface{}{
 			"allowPrivilegedContainers": pointer.BoolDeref(b.Shoot.GetInfo().Spec.Kubernetes.AllowPrivilegedContainers, false),
@@ -70,12 +71,12 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 
 	values := map[string]interface{}{
 		"global":          global,
-		"apiserver-proxy": common.GenerateAddonConfig(nil, b.APIServerSNIEnabled()),
+		"apiserver-proxy": common.GenerateAddonConfig(nil, b.APIServerSNIEnabled() && !b.Shoot.IsWorkerless),
 		"monitoring": common.GenerateAddonConfig(map[string]interface{}{
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,
 		}, b.Operation.IsShootMonitoringEnabled()),
-		"podsecuritypolicies": common.GenerateAddonConfig(podSecurityPolicies, !b.Shoot.PSPDisabled),
+		"podsecuritypolicies": common.GenerateAddonConfig(podSecurityPolicies, !b.Shoot.PSPDisabled && !b.Shoot.IsWorkerless),
 	}
 
 	return b.ShootClientSet.ChartRenderer().Render(filepath.Join(charts.Path, "shoot-core", "components"), "shoot-core", metav1.NamespaceSystem, values)
