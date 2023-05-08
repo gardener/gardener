@@ -881,9 +881,14 @@
             "value": "shoot"
           }
         ],
-        "query": "seed,shoot",
+        "query": {
+          "query": "label_values(kube_statefulset_metadata_generation{}, type)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
         "skipUrlSync": false,
-        "type": "custom"
+        "sort": 0,
+        "type": "query"
       },
       {
         "allValue": null,

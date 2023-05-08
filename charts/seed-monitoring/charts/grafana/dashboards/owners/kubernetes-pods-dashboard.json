@@ -797,10 +797,14 @@
             "value": "shoot"
           }
         ],
-        "query": "seed,shoot",
-        "queryValue": "",
+        "query": {
+          "query": "label_values(kube_pod_info{}, type)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
         "skipUrlSync": false,
-        "type": "custom"
+        "sort": 0,
+        "type": "query"
       },
       {
         "allValue": null,
