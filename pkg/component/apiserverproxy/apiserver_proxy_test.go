@@ -16,6 +16,7 @@ package apiserverproxy_test
 
 import (
 	"context"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -60,319 +61,6 @@ var _ = Describe("APIServerProxy", func() {
 		sidecarImage        = "sidecar-image:some-tag"
 		advertiseIPAddress  = "10.2.170.21"
 		proxySeedServerHost = "api.internal.local."
-
-		configMapYAML = `apiVersion: v1
-data:
-  envoy.yaml: |
-    layered_runtime:
-      layers:
-        - name: static_layer_0
-          static_layer:
-            envoy:
-              resource_limits:
-                listener:
-                  kube_apiserver:
-                    connection_limit: 10000
-            overload:
-              global_downstream_max_connections: 10000
-    admin:
-      access_log:
-      - name: envoy.access_loggers.stdout
-        # Remove spammy readiness/liveness probes and metrics requests from access log
-        filter:
-          and_filter:
-            filters:
-            - header_filter:
-                header:
-                  name: :Path
-                  string_match:
-                    exact: /ready
-                  invert_match: true
-            - header_filter:
-                header:
-                  name: :Path
-                  string_match:
-                    exact: /stats/prometheus
-                  invert_match: true
-        typed_config:
-          "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
-      address:
-        pipe:
-          # The admin interface should not be exposed as a TCP address.
-          # It's only used and exposed via the metrics lister that
-          # exposes only /stats/prometheus path for metrics scrape.
-          path: /etc/admin-uds/admin.socket
-    static_resources:
-      listeners:
-      - name: kube_apiserver
-        address:
-          socket_address:
-            address: 10.2.170.21
-            port_value: 443
-        per_connection_buffer_limit_bytes: 32768 # 32 KiB
-        filter_chains:
-        - filters:
-          - name: envoy.filters.network.tcp_proxy
-            typed_config:
-              "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-              stat_prefix: kube_apiserver
-              cluster: kube_apiserver
-              access_log:
-              - name: envoy.access_loggers.stdout
-                typed_config:
-                  "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
-                  log_format:
-                    text_format_source:
-                      inline_string: "[%START_TIME%] %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% rx %BYTES_SENT% tx %DURATION%ms \"%DOWNSTREAM_REMOTE_ADDRESS%\" \"%UPSTREAM_HOST%\"\n"
-      - name: metrics
-        address:
-          socket_address:
-            address: 0.0.0.0
-            port_value: 16910
-        filter_chains:
-        - filters:
-          - name: envoy.filters.network.http_connection_manager
-            typed_config:
-              "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-              stat_prefix: ingress_http
-              use_remote_address: true
-              common_http_protocol_options:
-                idle_timeout: 8s
-                max_connection_duration: 10s
-                max_headers_count: 20
-                max_stream_duration: 8s
-                headers_with_underscores_action: REJECT_REQUEST
-              http2_protocol_options:
-                max_concurrent_streams: 5
-                initial_stream_window_size: 65536
-                initial_connection_window_size: 1048576
-              stream_idle_timeout: 8s
-              request_timeout: 9s
-              codec_type: AUTO
-              route_config:
-                name: local_route
-                virtual_hosts:
-                - name: local_service
-                  domains: ["*"]
-                  routes:
-                  - match:
-                      path: /metrics
-                    route:
-                      cluster: uds_admin
-                      prefix_rewrite: /stats/prometheus
-                  - match:
-                      path: /ready
-                    route:
-                      cluster: uds_admin
-              http_filters:
-              - name: envoy.filters.http.router
-                typed_config:
-                  "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-
-      clusters:
-      - name: kube_apiserver
-        connect_timeout: 5s
-        per_connection_buffer_limit_bytes: 32768 # 32 KiB
-        type: LOGICAL_DNS
-        dns_lookup_family: V4_ONLY
-        lb_policy: ROUND_ROBIN
-        load_assignment:
-          cluster_name: kube_apiserver
-          endpoints:
-          - lb_endpoints:
-            - endpoint:
-                address:
-                  socket_address:
-                    address: api.internal.local.
-                    port_value: 8443
-        transport_socket:
-          name: envoy.transport_sockets.upstream_proxy_protocol
-          typed_config:
-            "@type": type.googleapis.com/envoy.extensions.transport_sockets.proxy_protocol.v3.ProxyProtocolUpstreamTransport
-            config:
-              version: V2
-            transport_socket:
-              name: envoy.transport_sockets.raw_buffer
-              typed_config:
-                "@type": type.googleapis.com/envoy.extensions.transport_sockets.raw_buffer.v3.RawBuffer
-        upstream_connection_options:
-          tcp_keepalive:
-            keepalive_time: 7200
-            keepalive_interval: 55
-      - name: uds_admin
-        connect_timeout: 0.25s
-        type: STATIC
-        lb_policy: ROUND_ROBIN
-        load_assignment:
-          cluster_name: uds_admin
-          endpoints:
-          - lb_endpoints:
-              - endpoint:
-                  address:
-                    pipe:
-                      path: /etc/admin-uds/admin.socket
-        transport_socket:
-          name: envoy.transport_sockets.raw_buffer
-          typed_config:
-            "@type": type.googleapis.com/envoy.extensions.transport_sockets.raw_buffer.v3.RawBuffer
-immutable: true
-kind: ConfigMap
-metadata:
-  creationTimestamp: null
-  labels:
-    app: kubernetes
-    gardener.cloud/role: system-component
-    origin: gardener
-    resources.gardener.cloud/garbage-collectable-reference: "true"
-    role: apiserver-proxy
-  name: apiserver-proxy-config-4baf1826
-  namespace: kube-system
-`
-
-		daemonSetYAML = `apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  annotations:
-    reference.resources.gardener.cloud/configmap-12f893dc: apiserver-proxy-config-4baf1826
-  creationTimestamp: null
-  labels:
-    app: kubernetes
-    gardener.cloud/role: system-component
-    node.gardener.cloud/critical-component: "true"
-    origin: gardener
-    role: apiserver-proxy
-  name: apiserver-proxy
-  namespace: kube-system
-spec:
-  selector:
-    matchLabels:
-      app: kubernetes
-      role: apiserver-proxy
-  template:
-    metadata:
-      annotations:
-        reference.resources.gardener.cloud/configmap-12f893dc: apiserver-proxy-config-4baf1826
-      creationTimestamp: null
-      labels:
-        app: kubernetes
-        gardener.cloud/role: system-component
-        networking.gardener.cloud/from-seed: allowed
-        networking.gardener.cloud/to-apiserver: allowed
-        networking.gardener.cloud/to-dns: allowed
-        node.gardener.cloud/critical-component: "true"
-        origin: gardener
-        role: apiserver-proxy
-    spec:
-      automountServiceAccountToken: false
-      containers:
-      - args:
-        - --ip-address=10.2.170.21
-        - --setup-iptables=false
-        - --interface=lo
-        image: sidecar-image:some-tag
-        imagePullPolicy: IfNotPresent
-        name: sidecar
-        resources:
-          limits:
-            memory: 90Mi
-          requests:
-            cpu: 20m
-            memory: 20Mi
-        securityContext:
-          capabilities:
-            add:
-            - NET_ADMIN
-      - command:
-        - envoy
-        - --concurrency
-        - "2"
-        - --use-dynamic-base-id
-        - -c
-        - /etc/apiserver-proxy/envoy.yaml
-        image: some-image:some-tag
-        imagePullPolicy: IfNotPresent
-        livenessProbe:
-          failureThreshold: 3
-          httpGet:
-            path: /ready
-            port: 16910
-          initialDelaySeconds: 1
-          periodSeconds: 10
-          successThreshold: 1
-          timeoutSeconds: 1
-        name: proxy
-        ports:
-        - containerPort: 16910
-          hostPort: 16910
-          name: metrics
-        readinessProbe:
-          httpGet:
-            path: /ready
-            port: 16910
-          initialDelaySeconds: 1
-          periodSeconds: 2
-          successThreshold: 1
-          timeoutSeconds: 1
-        resources:
-          limits:
-            memory: 1Gi
-          requests:
-            cpu: 20m
-            memory: 20Mi
-        securityContext:
-          capabilities:
-            add:
-            - NET_BIND_SERVICE
-          runAsUser: 0
-        volumeMounts:
-        - mountPath: /etc/apiserver-proxy
-          name: proxy-config
-        - mountPath: /etc/admin-uds
-          name: admin-uds
-      hostNetwork: true
-      initContainers:
-      - args:
-        - --ip-address=10.2.170.21
-        - --setup-iptables=false
-        - --daemon=false
-        - --interface=lo
-        image: sidecar-image:some-tag
-        imagePullPolicy: IfNotPresent
-        name: setup
-        resources:
-          limits:
-            memory: 200Mi
-          requests:
-            cpu: 20m
-            memory: 20Mi
-        securityContext:
-          capabilities:
-            add:
-            - NET_ADMIN
-      priorityClassName: system-node-critical
-      securityContext:
-        seccompProfile:
-          type: RuntimeDefault
-      serviceAccountName: apiserver-proxy
-      tolerations:
-      - effect: NoSchedule
-        operator: Exists
-      - effect: NoExecute
-        operator: Exists
-      volumes:
-      - configMap:
-          name: apiserver-proxy-config-4baf1826
-        name: proxy-config
-      - emptyDir: {}
-        name: admin-uds
-  updateStrategy:
-    type: RollingUpdate
-status:
-  currentNumberScheduled: 0
-  desiredNumberScheduled: 0
-  numberMisscheduled: 0
-  numberReady: 0
-`
 
 		serviceYAML = `apiVersion: v1
 kind: Service
@@ -508,6 +196,8 @@ subjects:
 			Image:               image,
 			SidecarImage:        sidecarImage,
 			ProxySeedServerHost: proxySeedServerHost,
+			ListenIPAddress:     "0.0.0.0",
+			DNSLookupFamily:     "V4_ONLY",
 		}
 
 		component = New(c, namespace, sm, values)
@@ -576,21 +266,43 @@ subjects:
 				Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_apiserver-proxy.yaml"])).To(Equal(roleBindingYAML))
 			}
 			Expect(managedResourceSecret.Data).To(HaveLen(expectedLen))
-			Expect(string(managedResourceSecret.Data["configmap__kube-system__apiserver-proxy-config-4baf1826.yaml"])).To(Equal(configMapYAML))
-			Expect(string(managedResourceSecret.Data["daemonset__kube-system__apiserver-proxy.yaml"])).To(Equal(daemonSetYAML))
+			hash := extractConfigMapHash(managedResourceSecret.Data)
+			Expect(string(managedResourceSecret.Data["configmap__kube-system__apiserver-proxy-config-"+hash+".yaml"])).To(Equal(getConfigYAML(hash, values.ListenIPAddress, values.DNSLookupFamily)))
+			Expect(string(managedResourceSecret.Data["daemonset__kube-system__apiserver-proxy.yaml"])).To(Equal(getDaemonSetYAML(hash)))
 			Expect(string(managedResourceSecret.Data["service__kube-system__apiserver-proxy.yaml"])).To(Equal(serviceYAML))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__apiserver-proxy.yaml"])).To(Equal(serviceAccountYAML))
 		}
 
-		Context("PSP disabled", func() {
-			It("should deploy the managed resource successfully", func() {
-				test(true)
+		Context("IPv4", func() {
+			Context("PSP disabled", func() {
+				It("should deploy the managed resource successfully", func() {
+					test(true)
+				})
+			})
+
+			Context("PSP enabled", func() {
+				It("should deploy the managed resource successfully", func() {
+					test(false)
+				})
 			})
 		})
 
-		Context("PSP enabled", func() {
-			It("should deploy the managed resource successfully", func() {
-				test(false)
+		Context("IPv6", func() {
+			BeforeEach(func() {
+				values.ListenIPAddress = "::"
+				values.DNSLookupFamily = "V6_ONLY"
+			})
+
+			Context("PSP disabled", func() {
+				It("should deploy the managed resource successfully", func() {
+					test(true)
+				})
+			})
+
+			Context("PSP enabled", func() {
+				It("should deploy the managed resource successfully", func() {
+					test(false)
+				})
 			})
 		})
 	})
@@ -700,3 +412,333 @@ subjects:
 		})
 	})
 })
+
+func getConfigYAML(hash string, listenIPAddress string, dnsLookUpFamily string) string {
+	return `apiVersion: v1
+data:
+  envoy.yaml: |
+    layered_runtime:
+      layers:
+        - name: static_layer_0
+          static_layer:
+            envoy:
+              resource_limits:
+                listener:
+                  kube_apiserver:
+                    connection_limit: 10000
+            overload:
+              global_downstream_max_connections: 10000
+    admin:
+      access_log:
+      - name: envoy.access_loggers.stdout
+        # Remove spammy readiness/liveness probes and metrics requests from access log
+        filter:
+          and_filter:
+            filters:
+            - header_filter:
+                header:
+                  name: :Path
+                  string_match:
+                    exact: /ready
+                  invert_match: true
+            - header_filter:
+                header:
+                  name: :Path
+                  string_match:
+                    exact: /stats/prometheus
+                  invert_match: true
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
+      address:
+        pipe:
+          # The admin interface should not be exposed as a TCP address.
+          # It's only used and exposed via the metrics lister that
+          # exposes only /stats/prometheus path for metrics scrape.
+          path: /etc/admin-uds/admin.socket
+    static_resources:
+      listeners:
+      - name: kube_apiserver
+        address:
+          socket_address:
+            address: 10.2.170.21
+            port_value: 443
+        per_connection_buffer_limit_bytes: 32768 # 32 KiB
+        filter_chains:
+        - filters:
+          - name: envoy.filters.network.tcp_proxy
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+              stat_prefix: kube_apiserver
+              cluster: kube_apiserver
+              access_log:
+              - name: envoy.access_loggers.stdout
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
+                  log_format:
+                    text_format_source:
+                      inline_string: "[%START_TIME%] %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% rx %BYTES_SENT% tx %DURATION%ms \"%DOWNSTREAM_REMOTE_ADDRESS%\" \"%UPSTREAM_HOST%\"\n"
+      - name: metrics
+        address:
+          socket_address:
+            address: "` + listenIPAddress + `"
+            port_value: 16910
+        filter_chains:
+        - filters:
+          - name: envoy.filters.network.http_connection_manager
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+              stat_prefix: ingress_http
+              use_remote_address: true
+              common_http_protocol_options:
+                idle_timeout: 8s
+                max_connection_duration: 10s
+                max_headers_count: 20
+                max_stream_duration: 8s
+                headers_with_underscores_action: REJECT_REQUEST
+              http2_protocol_options:
+                max_concurrent_streams: 5
+                initial_stream_window_size: 65536
+                initial_connection_window_size: 1048576
+              stream_idle_timeout: 8s
+              request_timeout: 9s
+              codec_type: AUTO
+              route_config:
+                name: local_route
+                virtual_hosts:
+                - name: local_service
+                  domains: ["*"]
+                  routes:
+                  - match:
+                      path: /metrics
+                    route:
+                      cluster: uds_admin
+                      prefix_rewrite: /stats/prometheus
+                  - match:
+                      path: /ready
+                    route:
+                      cluster: uds_admin
+              http_filters:
+              - name: envoy.filters.http.router
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+      clusters:
+      - name: kube_apiserver
+        connect_timeout: 5s
+        per_connection_buffer_limit_bytes: 32768 # 32 KiB
+        type: LOGICAL_DNS
+        dns_lookup_family: ` + dnsLookUpFamily + `
+        lb_policy: ROUND_ROBIN
+        load_assignment:
+          cluster_name: kube_apiserver
+          endpoints:
+          - lb_endpoints:
+            - endpoint:
+                address:
+                  socket_address:
+                    address: api.internal.local.
+                    port_value: 8443
+        transport_socket:
+          name: envoy.transport_sockets.upstream_proxy_protocol
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.transport_sockets.proxy_protocol.v3.ProxyProtocolUpstreamTransport
+            config:
+              version: V2
+            transport_socket:
+              name: envoy.transport_sockets.raw_buffer
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.transport_sockets.raw_buffer.v3.RawBuffer
+        upstream_connection_options:
+          tcp_keepalive:
+            keepalive_time: 7200
+            keepalive_interval: 55
+      - name: uds_admin
+        connect_timeout: 0.25s
+        type: STATIC
+        lb_policy: ROUND_ROBIN
+        load_assignment:
+          cluster_name: uds_admin
+          endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    pipe:
+                      path: /etc/admin-uds/admin.socket
+        transport_socket:
+          name: envoy.transport_sockets.raw_buffer
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.transport_sockets.raw_buffer.v3.RawBuffer
+immutable: true
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: kubernetes
+    gardener.cloud/role: system-component
+    origin: gardener
+    resources.gardener.cloud/garbage-collectable-reference: "true"
+    role: apiserver-proxy
+  name: apiserver-proxy-config-` + hash + `
+  namespace: kube-system
+`
+}
+
+func extractConfigMapHash(data map[string][]byte) string {
+	const prefix = "configmap__kube-system__apiserver-proxy-config-"
+	for key := range data {
+		if strings.HasPrefix(key, prefix) {
+			hash := strings.TrimPrefix(key, prefix)
+			hash = strings.TrimSuffix(hash, ".yaml")
+			return hash
+		}
+	}
+	Fail("secret does not have expected configmap")
+	return ""
+}
+
+func getDaemonSetYAML(hash string) string {
+	return `apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations:
+    ` + references.AnnotationKey(references.KindConfigMap, "apiserver-proxy-config-"+hash) + `: apiserver-proxy-config-` + hash + `
+  creationTimestamp: null
+  labels:
+    app: kubernetes
+    gardener.cloud/role: system-component
+    node.gardener.cloud/critical-component: "true"
+    origin: gardener
+    role: apiserver-proxy
+  name: apiserver-proxy
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: kubernetes
+      role: apiserver-proxy
+  template:
+    metadata:
+      annotations:
+        ` + references.AnnotationKey(references.KindConfigMap, "apiserver-proxy-config-"+hash) + `: apiserver-proxy-config-` + hash + `
+      creationTimestamp: null
+      labels:
+        app: kubernetes
+        gardener.cloud/role: system-component
+        networking.gardener.cloud/from-seed: allowed
+        networking.gardener.cloud/to-apiserver: allowed
+        networking.gardener.cloud/to-dns: allowed
+        node.gardener.cloud/critical-component: "true"
+        origin: gardener
+        role: apiserver-proxy
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - args:
+        - --ip-address=10.2.170.21
+        - --setup-iptables=false
+        - --interface=lo
+        image: sidecar-image:some-tag
+        imagePullPolicy: IfNotPresent
+        name: sidecar
+        resources:
+          limits:
+            memory: 90Mi
+          requests:
+            cpu: 20m
+            memory: 20Mi
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN
+      - command:
+        - envoy
+        - --concurrency
+        - "2"
+        - --use-dynamic-base-id
+        - -c
+        - /etc/apiserver-proxy/envoy.yaml
+        image: some-image:some-tag
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ready
+            port: 16910
+          initialDelaySeconds: 1
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: proxy
+        ports:
+        - containerPort: 16910
+          hostPort: 16910
+          name: metrics
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 16910
+          initialDelaySeconds: 1
+          periodSeconds: 2
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            memory: 1Gi
+          requests:
+            cpu: 20m
+            memory: 20Mi
+        securityContext:
+          capabilities:
+            add:
+            - NET_BIND_SERVICE
+          runAsUser: 0
+        volumeMounts:
+        - mountPath: /etc/apiserver-proxy
+          name: proxy-config
+        - mountPath: /etc/admin-uds
+          name: admin-uds
+      hostNetwork: true
+      initContainers:
+      - args:
+        - --ip-address=10.2.170.21
+        - --setup-iptables=false
+        - --daemon=false
+        - --interface=lo
+        image: sidecar-image:some-tag
+        imagePullPolicy: IfNotPresent
+        name: setup
+        resources:
+          limits:
+            memory: 200Mi
+          requests:
+            cpu: 20m
+            memory: 20Mi
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN
+      priorityClassName: system-node-critical
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: apiserver-proxy
+      tolerations:
+      - effect: NoSchedule
+        operator: Exists
+      - effect: NoExecute
+        operator: Exists
+      volumes:
+      - configMap:
+          name: apiserver-proxy-config-` + hash + `
+        name: proxy-config
+      - emptyDir: {}
+        name: admin-uds
+  updateStrategy:
+    type: RollingUpdate
+status:
+  currentNumberScheduled: 0
+  desiredNumberScheduled: 0
+  numberMisscheduled: 0
+  numberReady: 0
+`
+}

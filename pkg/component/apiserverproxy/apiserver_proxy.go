@@ -87,6 +87,8 @@ type Values struct {
 	PSPDisabled         bool
 	Image               string
 	SidecarImage        string
+	ListenIPAddress     string
+	DNSLookupFamily     string
 
 	advertiseIPAddress string
 }
@@ -158,6 +160,8 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 	var envoyYAML bytes.Buffer
 	if err := tplEnvoy.Execute(&envoyYAML, map[string]interface{}{
 		"advertiseIPAddress":  a.values.advertiseIPAddress,
+		"listenAddress":       a.values.ListenIPAddress,
+		"dnsLookupFamily":     a.values.DNSLookupFamily,
 		"adminPort":           adminPort,
 		"proxySeedServerHost": a.values.ProxySeedServerHost,
 		"proxySeedServerPort": proxySeedServerPort,
