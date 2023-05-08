@@ -117,6 +117,9 @@ var data = map[string]string{
 	// explicitly enable IPv4 forwarding for all interfaces by default if not enabled by the OS image already
 	"net.ipv4.conf.all.forwarding":     "1",
 	"net.ipv4.conf.default.forwarding": "1",
+	// explicitly enable IPv6 forwarding for all interfaces by default if not enabled by the OS image already
+	"net.ipv6.conf.all.forwarding":     "1",
+	"net.ipv6.conf.default.forwarding": "1",
 	// enable martian packets
 	"net.ipv4.conf.default.log_martians": "1",
 	// Increase the maximum total buffer-space allocatable
