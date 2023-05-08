@@ -253,9 +253,6 @@ type Values struct {
 	HealthSyncPeriod *metav1.Duration
 	// FullNetworkPolicies makes the network policy controller to consider all relevant namespaces.
 	FullNetworkPolicies bool
-	// NetworkPolicyControllerIncludesGardenNamespace describes whether the 'garden' namespace should be targeted by the
-	// network policy controller.
-	NetworkPolicyControllerIncludesGardenNamespace bool
 	// NetworkPolicyControllerIngressControllerSelector is the peer information of the ingress controller for the
 	// network policy controller.
 	NetworkPolicyControllerIngressControllerSelector *resourcemanagerv1alpha1.IngressControllerSelector
@@ -585,6 +582,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 				{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem}},
 				{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
 				{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}},
+				{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}},
 			},
 			IngressControllerSelector: r.values.NetworkPolicyControllerIngressControllerSelector,
 		}
@@ -594,12 +592,6 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 		if r.values.FullNetworkPolicies {
 			config.Controllers.NetworkPolicy.NamespaceSelectors = append(config.Controllers.NetworkPolicy.NamespaceSelectors,
 				metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}},
-			)
-		}
-
-		if r.values.NetworkPolicyControllerIncludesGardenNamespace {
-			config.Controllers.NetworkPolicy.NamespaceSelectors = append(config.Controllers.NetworkPolicy.NamespaceSelectors,
-				metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}},
 			)
 		}
 	}

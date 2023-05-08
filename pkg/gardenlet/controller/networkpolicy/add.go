@@ -1,4 +1,4 @@
-// Copyright 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,124 +17,97 @@ package networkpolicy
 import (
 	"context"
 	"fmt"
+	"time"
 
-	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controller/networkpolicy"
+	"github.com/gardener/gardener/pkg/controller/networkpolicy/hostnameresolver"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-// ControllerName is the name of this controller.
-const ControllerName = "networkpolicy"
+// SeedIsGardenCheckInterval is the interval how often it should be checked whether the seed cluster has been registered
+// as garden cluster.
+var SeedIsGardenCheckInterval = time.Minute
 
-// AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluster cluster.Cluster) error {
-	if r.GardenClient == nil {
-		r.GardenClient = gardenCluster.GetClient()
-	}
-	if r.RuntimeClient == nil {
-		r.RuntimeClient = seedCluster.GetClient()
-	}
-	if r.Resolver == nil {
-		resolver, err := hostnameresolver.CreateForCluster(seedCluster.GetConfig(), mgr.GetLogger())
-		if err != nil {
-			return fmt.Errorf("failed to get hostnameresolver: %w", err)
-		}
-		resolverUpdate := make(chan event.GenericEvent)
-		resolver.WithCallback(func() { resolverUpdate <- event.GenericEvent{} })
-		if err := mgr.Add(resolver); err != nil {
-			return fmt.Errorf("failed to add hostnameresolver to manager: %w", err)
-		}
-		r.Resolver = resolver
-		r.ResolverUpdate = resolverUpdate
-	}
-	if r.ResolverUpdate == nil {
-		r.ResolverUpdate = make(chan event.GenericEvent)
-	}
-
-	c, err := builder.
-		ControllerManagedBy(mgr).
-		Named(ControllerName).
-		WithOptions(controller.Options{
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
-		}).
-		Watches(
-			source.NewKindWithCache(&corev1.Namespace{}, seedCluster.GetCache()),
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update)),
-		).
-		Build(r)
+// AddToManager adds all Seed controllers to the given manager.
+func AddToManager(
+	ctx context.Context,
+	mgr manager.Manager,
+	gardenletCancel context.CancelFunc,
+	seedCluster cluster.Cluster,
+	cfg config.GardenletConfiguration,
+	resolver hostnameresolver.HostResolver,
+) error {
+	seedIsGarden, err := gardenerutils.SeedIsGarden(ctx, seedCluster.GetAPIReader())
 	if err != nil {
+		return fmt.Errorf("failed checking whether the seed is the garden cluster: %w", err)
+	}
+	if seedIsGarden {
+		return nil // When the seed is the garden cluster at the same time, the gardener-operator runs this controller.
+	}
+
+	reconciler := &networkpolicy.Reconciler{
+		ConcurrentSyncs: cfg.Controllers.NetworkPolicy.ConcurrentSyncs,
+		Resolver:        resolver,
+		RuntimeNetworks: networkpolicy.RuntimeNetworkConfig{
+			Pods:       cfg.SeedConfig.Spec.Networks.Pods,
+			Services:   cfg.SeedConfig.Spec.Networks.Services,
+			Nodes:      cfg.SeedConfig.Spec.Networks.Nodes,
+			BlockCIDRs: cfg.SeedConfig.Spec.Networks.BlockCIDRs,
+		},
+	}
+
+	reconciler.WatchRegisterers = append(reconciler.WatchRegisterers, func(c controller.Controller) error {
+		return c.Watch(
+			source.NewKindWithCache(&extensionsv1alpha1.Cluster{}, seedCluster.GetCache()),
+			mapper.EnqueueRequestsFrom(mapper.MapFunc(reconciler.MapObjectToName), mapper.UpdateWithNew, mgr.GetLogger()),
+			ClusterPredicate(),
+		)
+	})
+
+	if err := reconciler.AddToManager(mgr, seedCluster); err != nil {
 		return err
 	}
 
-	if err := c.Watch(
-		source.NewKindWithCache(&corev1.Endpoints{}, seedCluster.GetCache()),
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, c.GetLogger()),
-		r.IsKubernetesEndpoint(),
-	); err != nil {
-		return err
-	}
+	// At this point, the seed is not the garden cluster at the same time. However, this could change during the runtime
+	// of gardenlet. If so, gardener-operator will take over responsiblity of the NetworkPolicy management and will run
+	// this controller. Since there is no way to stop a controller after it started, we cancel the manager context in
+	// case the seed is registered as garden during runtime. This way, gardenlet will restart and not add the controller
+	// again.
+	return mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
+		wait.Until(func() {
+			seedIsGarden, err = gardenerutils.SeedIsGarden(ctx, seedCluster.GetClient())
+			if err != nil {
+				mgr.GetLogger().Error(err, "Failed checking whether the seed cluster is the garden cluster at the same time")
+				return
+			}
+			if !seedIsGarden {
+				return
+			}
 
-	if err := c.Watch(
-		source.NewKindWithCache(&networkingv1.NetworkPolicy{}, seedCluster.GetCache()),
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapObjectToNamespace), mapper.UpdateWithNew, c.GetLogger()),
-		r.NetworkPolicyPredicate(),
-	); err != nil {
-		return err
-	}
-
-	if err := c.Watch(
-		source.NewKindWithCache(&extensionsv1alpha1.Cluster{}, seedCluster.GetCache()),
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapObjectToName), mapper.UpdateWithNew, mgr.GetLogger()),
-		r.ClusterPredicate(),
-	); err != nil {
-		return err
-	}
-
-	return c.Watch(
-		&source.Channel{Source: r.ResolverUpdate},
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, c.GetLogger()),
-	)
-}
-
-// NetworkPolicyPredicate is a predicate which returns true in case the network policy name matches with one of those
-// managed by this reconciler.
-func (r *Reconciler) NetworkPolicyPredicate() predicate.Predicate {
-	var (
-		configs    = r.networkPolicyConfigs()
-		predicates = make([]predicate.Predicate, 0, len(configs))
-	)
-
-	for _, config := range configs {
-		predicates = append(predicates, predicateutils.HasName(config.name))
-	}
-
-	return predicate.Or(predicates...)
+			mgr.GetLogger().Info("Terminating gardenlet since seed cluster has been registered as garden cluster. " +
+				"This effectively stops the NetworkPolicy controller (gardener-operator takes over now).")
+			gardenletCancel()
+		}, SeedIsGardenCheckInterval, ctx.Done())
+		return nil
+	}))
 }
 
 // ClusterPredicate is a predicate which returns 'true' when the network CIDRs of a shoot cluster change.
-func (r *Reconciler) ClusterPredicate() predicate.Predicate {
+func ClusterPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			cluster, ok := e.ObjectNew.(*extensionsv1alpha1.Cluster)
@@ -142,7 +115,7 @@ func (r *Reconciler) ClusterPredicate() predicate.Predicate {
 				return false
 			}
 			shoot, err := extensions.ShootFromCluster(cluster)
-			if err != nil {
+			if err != nil || shoot == nil {
 				return false
 			}
 
@@ -151,7 +124,7 @@ func (r *Reconciler) ClusterPredicate() predicate.Predicate {
 				return false
 			}
 			oldShoot, err := extensions.ShootFromCluster(oldCluster)
-			if err != nil {
+			if err != nil || oldShoot == nil {
 				return false
 			}
 
@@ -173,48 +146,4 @@ func (r *Reconciler) ClusterPredicate() predicate.Predicate {
 		DeleteFunc:  func(event.DeleteEvent) bool { return false },
 		GenericFunc: func(event.GenericEvent) bool { return false },
 	}
-}
-
-// MapToNamespaces is a mapper function which returns requests for all relevant namespaces.
-func (r *Reconciler) MapToNamespaces(ctx context.Context, log logr.Logger, _ client.Reader, _ client.Object) []reconcile.Request {
-	var selectors []labels.Selector
-	for _, config := range r.networkPolicyConfigs() {
-		selectors = append(selectors, config.namespaceSelectors...)
-	}
-
-	namespaceList := &corev1.NamespaceList{}
-	if err := r.RuntimeClient.List(ctx, namespaceList); err != nil {
-		log.Error(err, "Unable to list all namespaces")
-		return nil
-	}
-
-	namespaceNames := sets.New[string]()
-	for _, namespace := range namespaceList.Items {
-		if labelsMatchAnySelector(namespace.Labels, selectors) {
-			namespaceNames.Insert(namespace.Name)
-		}
-	}
-
-	var requests []reconcile.Request
-	for _, namespaceName := range namespaceNames.UnsortedList() {
-		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespaceName}})
-	}
-	return requests
-}
-
-// MapObjectToName is a mapper function which maps an object to its name.
-func (r *Reconciler) MapObjectToName(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: obj.GetName()}}}
-}
-
-// MapObjectToNamespace is a mapper function which maps an object to its namespace.
-func (r *Reconciler) MapObjectToNamespace(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: obj.GetNamespace()}}}
-}
-
-// IsKubernetesEndpoint returns a predicate which evaluates if the object is the kubernetes endpoint.
-func (r *Reconciler) IsKubernetesEndpoint() predicate.Predicate {
-	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		return obj.GetNamespace() == corev1.NamespaceDefault && obj.GetName() == "kubernetes"
-	})
 }

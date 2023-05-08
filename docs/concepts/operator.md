@@ -81,7 +81,7 @@ The credentials rotation works in the same way as it does for `Shoot` resources,
 
 For certificate authorities, `gardener-operator` generates one which is automatically rotated roughly each month (`ca-garden-runtime`) and several CAs which are **NOT** automatically rotated but only on demand.
 
-**🚨 Hence, it is the responsibility of the operator to regularly perform the credentials rotation.**
+**🚨 Hence, it is the responsibility of the (human) operator to regularly perform the credentials rotation.**
 
 Please refer to [this document](../usage/shoot_credentials_rotation.md#gardener-provided-credentials) for more details. As of today, `gardener-operator` only creates the following types of credentials (i.e., some sections of the document don't apply for `Garden`s and can be ignored):
 
@@ -259,6 +259,13 @@ It is also mandatory to provide an IPv4 CIDR for the service network of the virt
 This range is used by the API server to compute the cluster IPs of `Service`s.
 
 The controller maintains the `Reconciled` condition which indicates the status of an operation.
+
+#### [`NetworkPolicy` Controller Registrar](../../pkg/controller/networkpolicy)
+
+This controller registers the same `NetworkPolicy` controller which is also used in `gardenlet`, please read it up [here](gardenlet.md#networkpolicy-controllerpkggardenletcontrollernetworkpolicy) for more details.
+
+The registration happens as soon as the `Garden` resource is created.
+It contains the networking information of the garden runtime cluster which is required configuration for the `NetworkPolicy` controller.
 
 ### Webhooks
 

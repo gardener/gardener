@@ -793,6 +793,9 @@ build:
         - pkg/client/kubernetes/clientmap/builder
         - pkg/client/kubernetes/clientmap/internal
         - pkg/client/kubernetes/clientmap/keys
+        - pkg/controller/networkpolicy
+        - pkg/controller/networkpolicy/helper
+        - pkg/controller/networkpolicy/hostnameresolver
         - pkg/controllerutils
         - pkg/controllerutils/mapper
         - pkg/controllerutils/predicate
@@ -818,8 +821,6 @@ build:
         - pkg/gardenlet/controller/controllerinstallation/utils
         - pkg/gardenlet/controller/managedseed
         - pkg/gardenlet/controller/networkpolicy
-        - pkg/gardenlet/controller/networkpolicy/helper
-        - pkg/gardenlet/controller/networkpolicy/hostnameresolver
         - pkg/gardenlet/controller/seed
         - pkg/gardenlet/controller/seed/care
         - pkg/gardenlet/controller/seed/lease

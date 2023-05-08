@@ -1098,6 +1098,19 @@ string
 <tbody>
 <tr>
 <td>
+<code>networking</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.RuntimeNetworking">
+RuntimeNetworking
+</a>
+</em>
+</td>
+<td>
+<p>Networking defines the networking configuration of the runtime cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>provider</code></br>
 <em>
 <a href="#operator.gardener.cloud/v1alpha1.Provider">
@@ -1121,6 +1134,71 @@ Settings
 <td>
 <em>(Optional)</em>
 <p>Settings contains certain settings for this cluster.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.RuntimeNetworking">RuntimeNetworking
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.RuntimeCluster">RuntimeCluster</a>)
+</p>
+<p>
+<p>RuntimeNetworking defines the networking configuration of the runtime cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>nodes</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Nodes is the CIDR of the node network. This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>pods</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Pods is the CIDR of the pod network. This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>services</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Services is the CIDR of the service network. This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>blockCIDRs</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>BlockCIDRs is a list of network addresses that should be blocked.</p>
 </td>
 </tr>
 </tbody>

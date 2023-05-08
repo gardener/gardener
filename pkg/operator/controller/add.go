@@ -29,6 +29,7 @@ import (
 	sharedcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
+	"github.com/gardener/gardener/pkg/operator/controller/networkpolicyregistrar"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
@@ -60,6 +61,12 @@ func AddToManager(mgr manager.Manager, cfg *config.OperatorConfiguration) error 
 		ComponentImageVectors: componentImageVectors,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding Garden controller: %w", err)
+	}
+
+	if err := (&networkpolicyregistrar.Reconciler{
+		Config: cfg.Controllers.NetworkPolicy,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding NetworkPolicy Registrar controller: %w", err)
 	}
 
 	if os.Getenv("GARDENER_OPERATOR_LOCAL") == "true" {

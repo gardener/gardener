@@ -69,3 +69,5 @@ config:
       # backupLeaderElection:
       #   reelectionPeriod: 5s
       #   etcdConnectionTimeout: 5s
+    networkPolicy:
+      concurrentSyncs: 5

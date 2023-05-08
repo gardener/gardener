@@ -192,3 +192,11 @@ rules:
   - patch
   - update
   - delete
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - get
+  - list
+  - watch

@@ -14,6 +14,12 @@ metadata:
   name: garden
 spec:
   runtimeCluster:
+    networking:
+      # Those CIDRs have been chosen to match with the kind Cluster configuration (see example/gardener-local/kind/cluster/values.yaml).
+      # Generally, they have to match the CIDRs of the runtime cluster.
+      nodes: 172.18.0.0/16
+      pods: 10.1.0.0/16
+      services: 10.2.0.0/16
     provider:
       zones:
       - "0"

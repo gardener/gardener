@@ -31,6 +31,7 @@ import (
 	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
+	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	"github.com/gardener/gardener/pkg/utils/validation/kubernetesversion"
 )
 
@@ -47,7 +48,8 @@ func ValidateGarden(garden *operatorv1alpha1.Garden) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateOperation(garden.Annotations[v1beta1constants.GardenerOperation], garden, field.NewPath("metadata", "annotations"))...)
-	allErrs = append(allErrs, validateVirtualCluster(garden.Spec.VirtualCluster, field.NewPath("spec", "virtualCluster"))...)
+	allErrs = append(allErrs, validateRuntimeCluster(garden.Spec.RuntimeCluster, field.NewPath("spec", "runtimeCluster"))...)
+	allErrs = append(allErrs, validateVirtualCluster(garden.Spec.VirtualCluster, garden.Spec.RuntimeCluster, field.NewPath("spec", "virtualCluster"))...)
 
 	if helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings) {
 		if len(garden.Spec.RuntimeCluster.Provider.Zones) <= 1 {
@@ -77,7 +79,25 @@ func ValidateGardenUpdate(oldGarden, newGarden *operatorv1alpha1.Garden) field.E
 	return allErrs
 }
 
-func validateVirtualCluster(virtualCluster operatorv1alpha1.VirtualCluster, fldPath *field.Path) field.ErrorList {
+func validateRuntimeCluster(runtimeCluster operatorv1alpha1.RuntimeCluster, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if cidrvalidation.NetworksIntersect(runtimeCluster.Networking.Pods, runtimeCluster.Networking.Services) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services"), runtimeCluster.Networking.Services, "pod network of runtime cluster intersects with service network of runtime cluster"))
+	}
+	if runtimeCluster.Networking.Nodes != nil {
+		if cidrvalidation.NetworksIntersect(*runtimeCluster.Networking.Nodes, runtimeCluster.Networking.Pods) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "nodes"), *runtimeCluster.Networking.Nodes, "node network of runtime cluster intersects with pod network of runtime cluster"))
+		}
+		if cidrvalidation.NetworksIntersect(*runtimeCluster.Networking.Nodes, runtimeCluster.Networking.Services) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "nodes"), *runtimeCluster.Networking.Nodes, "node network of runtime cluster intersects with service network of runtime cluster"))
+		}
+	}
+
+	return allErrs
+}
+
+func validateVirtualCluster(virtualCluster operatorv1alpha1.VirtualCluster, runtimeCluster operatorv1alpha1.RuntimeCluster, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(virtualCluster.DNS.Domain, fldPath.Child("dns", "domain"))...)
@@ -99,6 +119,15 @@ func validateVirtualCluster(virtualCluster operatorv1alpha1.VirtualCluster, fldP
 
 	if _, _, err := net.ParseCIDR(virtualCluster.Networking.Services); err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services"), virtualCluster.Networking.Services, fmt.Sprintf("cannot parse service network cidr: %s", err.Error())))
+	}
+	if cidrvalidation.NetworksIntersect(runtimeCluster.Networking.Pods, virtualCluster.Networking.Services) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services"), virtualCluster.Networking.Services, "pod network of runtime cluster intersects with service network of virtual cluster"))
+	}
+	if cidrvalidation.NetworksIntersect(runtimeCluster.Networking.Services, virtualCluster.Networking.Services) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services"), virtualCluster.Networking.Services, "service network of runtime cluster intersects with service network of virtual cluster"))
+	}
+	if runtimeCluster.Networking.Nodes != nil && cidrvalidation.NetworksIntersect(*runtimeCluster.Networking.Nodes, virtualCluster.Networking.Services) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services"), virtualCluster.Networking.Services, "node network of runtime cluster intersects with service network of virtual cluster"))
 	}
 
 	return allErrs

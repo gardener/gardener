@@ -18,11 +18,13 @@ import (
 	"context"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/uuid"
@@ -38,14 +40,16 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controller/networkpolicy/hostnameresolver"
 	gardenerenvtest "github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 func TestNetworkPolicy(t *testing.T) {
@@ -61,6 +65,10 @@ const (
 
 var (
 	testRunID string
+
+	testContext     context.Context
+	testCancel      context.CancelFunc
+	gardenNamespace *corev1.Namespace
 
 	ctx = context.Background()
 	log logr.Logger
@@ -78,7 +86,10 @@ var _ = BeforeSuite(func() {
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		Environment: &envtest.Environment{
 			CRDInstallOptions: envtest.CRDInstallOptions{
-				Paths: []string{filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_clusters.yaml")},
+				Paths: []string{
+					filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_clusters.yaml"),
+					filepath.Join("..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml"),
+				},
 			},
 			ErrorIfCRDPathMissing: true,
 		},
@@ -101,6 +112,7 @@ var _ = BeforeSuite(func() {
 	testSchemeBuilder := runtime.NewSchemeBuilder(
 		kubernetes.AddGardenSchemeToScheme,
 		extensionsv1alpha1.AddToScheme,
+		operatorv1alpha1.AddToScheme,
 	)
 	testScheme := runtime.NewScheme()
 	Expect(testSchemeBuilder.AddToScheme(testScheme)).To(Succeed())
@@ -110,6 +122,25 @@ var _ = BeforeSuite(func() {
 
 	testRunID = utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 	log.Info("Using test run ID for test", "testRunID", testRunID)
+
+	By("Create garden namespace")
+	gardenNamespace = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "garden",
+			Labels: map[string]string{
+				testID: testRunID,
+			},
+		},
+	}
+
+	By("Create garden namespace")
+	Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
+	log.Info("Created garden namespace for test", "namespaceName", gardenNamespace.Name)
+
+	DeferCleanup(func() {
+		By("Delete garden namespace")
+		Expect(testClient.Delete(ctx, gardenNamespace)).To(Succeed())
+	})
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
@@ -129,16 +160,25 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Register controller")
-	Expect((&networkpolicy.Reconciler{
-		Config:   config.NetworkPolicyControllerConfiguration{ConcurrentSyncs: pointer.Int(5)},
-		Resolver: hostnameresolver.NewNoOpProvider(),
-		SeedNetworks: gardencore.SeedNetworks{
-			Pods:       "10.0.0.0/16",
-			Services:   "10.1.0.0/16",
-			Nodes:      pointer.String("10.2.0.0/16"),
-			BlockCIDRs: []string{blockedCIDR},
+	DeferCleanup(test.WithVar(&networkpolicy.SeedIsGardenCheckInterval, 500*time.Millisecond))
+	testContext, testCancel = context.WithCancel(ctx)
+	Expect(networkpolicy.AddToManager(ctx, mgr, testCancel, mgr, config.GardenletConfiguration{
+		Controllers: &config.GardenletControllerConfiguration{
+			NetworkPolicy: &config.NetworkPolicyControllerConfiguration{ConcurrentSyncs: pointer.Int(5)},
 		},
-	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
+		SeedConfig: &config.SeedConfig{
+			SeedTemplate: gardencore.SeedTemplate{
+				Spec: gardencore.SeedSpec{
+					Networks: gardencore.SeedNetworks{
+						Pods:       "10.0.0.0/16",
+						Services:   "10.1.0.0/16",
+						Nodes:      pointer.String("10.2.0.0/16"),
+						BlockCIDRs: []string{blockedCIDR},
+					},
+				},
+			},
+		},
+	}, hostnameresolver.NewNoOpProvider())).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

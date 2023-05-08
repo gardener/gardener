@@ -25,5 +25,6 @@ func RegisterFeatureGates() {
 	utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(
 		features.DefaultSeccompProfile,
 		features.HVPA,
+		features.FullNetworkPoliciesInRuntimeCluster,
 	)))
 }

@@ -298,7 +298,7 @@ This condition is taken into account by the `ControllerRegistration` controller 
 
 ### [`NetworkPolicy` Controller](../../pkg/gardenlet/controller/networkpolicy)
 
-The `NetworkPolicy` controller reconciles `NetworkPolicy`s in shoot namespaces in order to ensure access to the Kubernetes API server.
+The `NetworkPolicy` controller reconciles `NetworkPolicy`s in all relevant namespaces in the seed cluster and provides so-called "general" policies for access to the runtime cluster's API server, DNS, public networks, etc.
 
 The controller resolves the IP address of the Kubernetes service in the `default` namespace and creates an egress `NetworkPolicy`s for it.
 

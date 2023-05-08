@@ -152,7 +152,7 @@ func GetWildcardCertificate(ctx context.Context, c client.Client) (*corev1.Secre
 }
 
 // SeedIsGarden returns 'true' if the cluster is registered as a Garden cluster.
-func SeedIsGarden(ctx context.Context, seedClient client.Client) (bool, error) {
+func SeedIsGarden(ctx context.Context, seedClient client.Reader) (bool, error) {
 	seedIsGarden, err := kubernetesutils.ResourcesExist(ctx, seedClient, operatorv1alpha1.SchemeGroupVersion.WithKind("GardenList"))
 	if err != nil {
 		if !meta.IsNoMatchError(err) {

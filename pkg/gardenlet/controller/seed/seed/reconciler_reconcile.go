@@ -80,7 +80,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/operation/common"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
-	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -416,14 +415,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
 			v1beta1helper.SeedSettingTopologyAwareRoutingEnabled(seed.GetInfo().Spec.Settings),
 			features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster),
-			true,
-			&resourcemanagerv1alpha1.IngressControllerSelector{
-				Namespace: v1beta1constants.GardenNamespace,
-				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{
-					v1beta1constants.LabelApp:      nginxingress.LabelAppValue,
-					nginxingress.LabelKeyComponent: nginxingress.LabelValueController,
-				}},
-			},
 			seed.GetInfo().Spec.Provider.Zones,
 		)
 		if err != nil {
