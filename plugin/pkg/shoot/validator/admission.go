@@ -281,6 +281,9 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	if err := validationContext.ensureMachineImages(); err != nil {
 		return err
 	}
+	if err := validationContext.validateShootScaleupToHA(); err != nil {
+		return err
+	}
 
 	validationContext.addMetadataAnnotations(a)
 
@@ -1540,4 +1543,28 @@ func isShootInMigrationOrRestorePhase(shoot *core.Shoot) bool {
 		(shoot.Status.LastOperation.Type == core.LastOperationTypeRestore &&
 			shoot.Status.LastOperation.State != core.LastOperationStateSucceeded ||
 			shoot.Status.LastOperation.Type == core.LastOperationTypeMigrate)
+}
+
+func (c *validationContext) validateShootScaleupToHA() error {
+	if !isShootHA(c.oldShoot) && isShootHA(c.shoot) {
+		if isShootInHibernation(c.shoot) {
+			return fmt.Errorf("Shoot is currently hibernated and cannot be scaled up to HA. Please make sure your cluster has woken up before scaling it up to HA")
+		}
+	}
+	return nil
+}
+
+func isShootHA(shoot *core.Shoot) bool {
+	if shoot.Spec.ControlPlane != nil {
+		return shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type == core.FailureToleranceTypeNode || shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type == core.FailureToleranceTypeZone
+	}
+	return false
+}
+
+func isShootInHibernation(shoot *core.Shoot) bool {
+	if shoot.Spec.Hibernation != nil {
+		return *shoot.Spec.Hibernation.Enabled
+	}
+
+	return shoot.Status.IsHibernated
 }
