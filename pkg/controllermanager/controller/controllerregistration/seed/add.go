@@ -123,9 +123,10 @@ func (r *Reconciler) SeedPredicate() predicate.Predicate {
 				return false
 			}
 
-			return !apiequality.Semantic.DeepEqual(oldSeed.Spec.DNS.Provider, seed.Spec.DNS.Provider) ||
-				seed.DeletionTimestamp != nil ||
-				topologyAwareRoutingSettingsHasChanged(oldSeed.Spec.Settings, seed.Spec.Settings)
+			return !apiequality.Semantic.DeepEqual(oldSeed.Spec, seed.Spec) ||
+				!apiequality.Semantic.DeepEqual(oldSeed.Annotations, seed.Annotations) ||
+				!apiequality.Semantic.DeepEqual(oldSeed.Labels, seed.Labels) ||
+				seed.DeletionTimestamp != nil
 		},
 	}
 }
@@ -375,13 +376,4 @@ func shootNetworkingTypeHasChanged(old, new *gardencorev1beta1.Networking) bool 
 		return old.Type != nil
 	}
 	return !pointer.StringEqual(old.Type, new.Type)
-}
-
-func topologyAwareRoutingSettingsHasChanged(old, new *gardencorev1beta1.SeedSettings) bool {
-	var (
-		oldHasTopologyAwareRoutingEnabled = old != nil && old.TopologyAwareRouting != nil && old.TopologyAwareRouting.Enabled
-		newHasTopologyAwareRoutingEnabled = new != nil && new.TopologyAwareRouting != nil && new.TopologyAwareRouting.Enabled
-	)
-
-	return oldHasTopologyAwareRoutingEnabled != newHasTopologyAwareRoutingEnabled
 }
