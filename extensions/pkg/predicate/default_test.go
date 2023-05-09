@@ -15,8 +15,6 @@
 package predicate_test
 
 import (
-	"time"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,7 +32,6 @@ var _ = Describe("Default", func() {
 			pred      predicate.Predicate
 			obj       *extensionsv1alpha1.Infrastructure
 			namespace = "shoot--foo--bar"
-			now       = time.Now()
 		)
 
 		BeforeEach(func() {
@@ -112,20 +109,6 @@ var _ = Describe("Default", func() {
 					obj.SetDeletionTimestamp(&metav1.Time{})
 					oldObj := obj.DeepCopy()
 					obj.Status.ObservedGeneration = 3
-					Expect(pred.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj})).To(BeFalse())
-				})
-
-				It("should return true when last operation has not succeeded and the timestamp changed", func() {
-					obj.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateError}
-					oldObj := obj.DeepCopy()
-					obj.SetAnnotations(map[string]string{"gardener.cloud/timestamp": now.UTC().Add(time.Second).Format(time.RFC3339Nano)})
-					Expect(pred.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj})).To(BeTrue())
-				})
-
-				It("should return false when last operation has succeeded and the timestamp changed", func() {
-					obj.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateSucceeded}
-					oldObj := obj.DeepCopy()
-					obj.SetAnnotations(map[string]string{"gardener.cloud/timestamp": now.UTC().Add(time.Second).Format(time.RFC3339Nano)})
 					Expect(pred.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: oldObj})).To(BeFalse())
 				})
 			})

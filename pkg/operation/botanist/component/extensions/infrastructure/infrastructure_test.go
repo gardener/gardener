@@ -168,10 +168,8 @@ var _ = Describe("#Interface", func() {
 
 			actual := &extensionsv1alpha1.Infrastructure{}
 			expected.Spec.SSHPublicKey = []byte("")
+			expected.Annotations = map[string]string{}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(expected), actual)).To(Succeed())
-			expected.SetAnnotations(map[string]string{
-				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
-			})
 			Expect(actual).To(DeepEqual(expected))
 		})
 
@@ -253,7 +251,8 @@ var _ = Describe("#Interface", func() {
 				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
 			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
-				State: gardencorev1beta1.LastOperationStateSucceeded,
+				State:          gardencorev1beta1.LastOperationStateSucceeded,
+				LastUpdateTime: metav1.Time{Time: now.UTC().Add(time.Second)},
 			}
 			expected.Status.NodesCIDR = nodesCIDR
 			expected.Status.ProviderStatus = providerStatus

@@ -198,7 +198,8 @@ var _ = Describe("#BackupEntry", func() {
 				v1beta1constants.GardenerTimestamp: fakeClock.Now().UTC().Format(time.RFC3339Nano),
 			}
 			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
-				State: gardencorev1beta1.LastOperationStateSucceeded,
+				State:          gardencorev1beta1.LastOperationStateSucceeded,
+				LastUpdateTime: metav1.Time{Time: fakeClock.Now().UTC().Add(time.Second)},
 			}
 			Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching backupentry succeeds")
 

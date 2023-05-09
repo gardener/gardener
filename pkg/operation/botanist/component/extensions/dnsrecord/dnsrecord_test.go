@@ -282,7 +282,7 @@ var _ = Describe("DNSRecord", func() {
 			By("Create existing DNSRecord")
 			existingDNS := dns.DeepCopy()
 			delete(existingDNS.Annotations, v1beta1constants.GardenerOperation)
-			metav1.SetMetaDataAnnotation(&existingDNS.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).Format(time.RFC3339Nano))
+			metav1.SetMetaDataAnnotation(&existingDNS.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Format(time.RFC3339Nano))
 			Expect(c.Create(ctx, existingDNS)).To(Succeed())
 
 			By("Deploy DNSRecord again")
@@ -430,13 +430,13 @@ var _ = Describe("DNSRecord", func() {
 				Expect(deployedDNS).To(DeepEqual(expectedDNSRecord))
 			})
 
-			It("should only update the timestamp annotation if the DNSRecord exists with the same values", func() {
+			It("should not update the timestamp annotation if the DNSRecord exists with the same values", func() {
 				delete(dns.Annotations, v1beta1constants.GardenerOperation)
 				// set old timestamp (e.g. added on creation / earlier Deploy call)
 				metav1.SetMetaDataAnnotation(&dns.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).Format(time.RFC3339Nano))
 
 				expectedDNSRecord.Annotations = map[string]string{
-					v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
+					v1beta1constants.GardenerTimestamp: now.UTC().Add(-time.Second).Format(time.RFC3339Nano),
 				}
 
 				Expect(c.Create(ctx, dns)).To(Succeed())
@@ -514,7 +514,8 @@ var _ = Describe("DNSRecord", func() {
 				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
 			dns.Status.LastOperation = &gardencorev1beta1.LastOperation{
-				State: gardencorev1beta1.LastOperationStateSucceeded,
+				State:          gardencorev1beta1.LastOperationStateSucceeded,
+				LastUpdateTime: metav1.Time{Time: now.UTC().Add(time.Second)},
 			}
 			Expect(c.Patch(ctx, dns, patch)).To(Succeed(), "patching dnsrecord succeeds")
 
