@@ -48,8 +48,7 @@ Each pod that should be scraped for metrics by these instances must have a `Serv
 
 ```yaml
 annotations:
-  networking.resources.gardener.cloud/from-policy-pod-label-selector: all-seed-scrape-targets
-  networking.resources.gardener.cloud/from-policy-allowed-ports: '[{"port":<metrics-port-on-pod>,"protocol":"<protocol, typically TCP>"}]'
+  networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports: '[{"port":<metrics-port-on-pod>,"protocol":"<protocol, typically TCP>"}]'
 ```
 
 If the respective pod is not running in the `garden` namespace, the `Service` needs these annotations in addition:
@@ -75,11 +74,21 @@ Each pod that should be scraped for metrics must have a `Service` which is annot
 
 ```yaml
 annotations:
-  networking.resources.gardener.cloud/from-policy-pod-label-selector: all-scrape-targets
-  networking.resources.gardener.cloud/from-policy-allowed-ports: '[{"port":<metrics-port-on-pod>,"protocol":"<protocol, typically TCP>"}]'
+  networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports: '[{"port":<metrics-port-on-pod>,"protocol":"<protocol, typically TCP>"}]'
 ```
 
-This automatically allows the needed network traffic from the Prometheus pod.
+This automatically allows the network traffic from the Prometheus pod.
+
+### Webhook Servers
+
+Components serving webhook handlers that must be reached by `kube-apiserver`s of the virtual garden cluster or shoot clusters just need to annotate their `Service` as follows:
+
+```yaml
+annotations:
+  networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports: '[{"port":<server-port-on-pod>,"protocol":"<protocol, typically TCP>"}]'
+```
+
+This automatically allows the network traffic from the API server pods.
 
 ## Shoot Cluster
 
