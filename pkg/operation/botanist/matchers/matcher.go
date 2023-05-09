@@ -60,6 +60,14 @@ var (
 		v1beta1constants.ShootNoCleanup: "true",
 		managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 	}
+
+	// WebhookConstraintMatchersForLeases contains a list of lease api resources which can break
+	// the waking up of a cluster.
+	WebhookConstraintMatchersForLeases = []WebhookConstraintMatcher{
+		{GVR: coordinationv1.SchemeGroupVersion.WithResource("leases"), NamespaceLabels: kubeSystemNamespaceLabels},
+		{GVR: coordinationv1beta1.SchemeGroupVersion.WithResource("leases"), NamespaceLabels: kubeSystemNamespaceLabels},
+	}
+
 	// WebhookConstraintMatchers contains a list of all api resources which can break
 	// the waking up of a cluster.
 	WebhookConstraintMatchers = []WebhookConstraintMatcher{

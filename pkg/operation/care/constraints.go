@@ -337,6 +337,18 @@ func IsProblematicWebhook(
 	rules []admissionregistrationv1.RuleWithOperations,
 	timeoutSeconds *int32,
 ) bool {
+	// this is a special case, webhook affecting lease in kube-system namespace can block hibernation
+	// even if FailurePolicy is set to `Ignore` and timeoutSeconds is 10 seconds.
+	if timeoutSeconds == nil || (timeoutSeconds != nil && *timeoutSeconds > 3) {
+		for _, rule := range rules {
+			for _, matcher := range matchers.WebhookConstraintMatchersForLeases {
+				if matcher.Match(rule, objSelector, nsSelector) {
+					return true
+				}
+			}
+		}
+	}
+
 	if failurePolicy != nil && *failurePolicy != admissionregistrationv1.Fail {
 		// in admissionregistration.k8s.io/v1 FailurePolicy is defaulted to `Fail`
 		// see https://github.com/kubernetes/api/blob/release-1.16/admissionregistration/v1/types.go#L195
