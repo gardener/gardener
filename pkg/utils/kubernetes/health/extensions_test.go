@@ -115,6 +115,60 @@ var _ = Describe("Extensions", func() {
 				},
 				HaveOccurred(),
 			),
+			Entry("timestamp is before last update time",
+				&extensionsv1alpha1.Infrastructure{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							"gardener.cloud/timestamp": time.Now().UTC().Add(-5 * time.Second).Format(time.RFC3339Nano),
+						},
+					},
+					Status: extensionsv1alpha1.InfrastructureStatus{
+						DefaultStatus: extensionsv1alpha1.DefaultStatus{
+							LastOperation: &gardencorev1beta1.LastOperation{
+								State:          gardencorev1beta1.LastOperationStateSucceeded,
+								LastUpdateTime: metav1.Time{Time: time.Now().UTC()},
+							},
+						},
+					},
+				},
+				Succeed(),
+			),
+			Entry("timestamp is after last update time",
+				&extensionsv1alpha1.Infrastructure{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							"gardener.cloud/timestamp": time.Now().UTC().Add(5 * time.Second).Format(time.RFC3339Nano),
+						},
+					},
+					Status: extensionsv1alpha1.InfrastructureStatus{
+						DefaultStatus: extensionsv1alpha1.DefaultStatus{
+							LastOperation: &gardencorev1beta1.LastOperation{
+								State:          gardencorev1beta1.LastOperationStateSucceeded,
+								LastUpdateTime: metav1.Time{Time: time.Now().UTC()},
+							},
+						},
+					},
+				},
+				HaveOccurred(),
+			),
+			Entry("invalid timestamp",
+				&extensionsv1alpha1.Infrastructure{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							"gardener.cloud/timestamp": "not a valid value",
+						},
+					},
+					Status: extensionsv1alpha1.InfrastructureStatus{
+						DefaultStatus: extensionsv1alpha1.DefaultStatus{
+							LastOperation: &gardencorev1beta1.LastOperation{
+								State:          gardencorev1beta1.LastOperationStateSucceeded,
+								LastUpdateTime: metav1.Now(),
+							},
+						},
+					},
+				},
+				HaveOccurred(),
+			),
 		)
 	})
 
