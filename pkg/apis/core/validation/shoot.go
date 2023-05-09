@@ -2022,7 +2022,7 @@ func ValidateShootHAConfig(shoot *core.Shoot) field.ErrorList {
 // ValidateShootHAConfigUpdate validates the HA shoot control plane configuration.
 func ValidateShootHAConfigUpdate(newShoot, oldSnoot *core.Shoot) field.ErrorList {
 	allErrs := field.ErrorList{}
-	allErrs = append(allErrs, validateShootHAControlPlaneSpecUpdate(&newShoot.Spec, &oldSnoot.Spec, field.NewPath("spec.controlPlane"))...)
+	allErrs = append(allErrs, validateShootHAControlPlaneSpecUpdate(newShoot, oldSnoot, field.NewPath("spec.controlPlane"))...)
 	return allErrs
 }
 
@@ -2034,22 +2034,25 @@ func validateHAShootControlPlaneConfigurationValue(shoot *core.Shoot) field.Erro
 	return allErrs
 }
 
-func validateShootHAControlPlaneSpecUpdate(newSpec, oldSpec *core.ShootSpec, fldPath *field.Path) field.ErrorList {
+func validateShootHAControlPlaneSpecUpdate(newShoot, oldShoot *core.Shoot, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs          = field.ErrorList{}
-		shootIsScheduled = newSpec.SeedName != nil
+		shootIsScheduled = newShoot.Spec.SeedName != nil
 
 		oldVal, newVal core.FailureToleranceType
 		oldValExists   bool
 	)
 
-	if oldSpec.ControlPlane != nil && oldSpec.ControlPlane.HighAvailability != nil {
-		oldVal = oldSpec.ControlPlane.HighAvailability.FailureTolerance.Type
+	if oldShoot.Spec.ControlPlane != nil && oldShoot.Spec.ControlPlane.HighAvailability != nil {
+		oldVal = oldShoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type
 		oldValExists = true
 	}
 
-	if newSpec.ControlPlane != nil && newSpec.ControlPlane.HighAvailability != nil {
-		newVal = newSpec.ControlPlane.HighAvailability.FailureTolerance.Type
+	if newShoot.Spec.ControlPlane != nil && newShoot.Spec.ControlPlane.HighAvailability != nil {
+		newVal = newShoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type
+		if !oldValExists && isShootInHibernation(newShoot) {
+			allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "controlPlane", "highAvailability", "failureTolerance", "type"), "Shoot is currently hibernated and cannot be scaled up to HA. Please make sure your cluster has woken up before scaling it up to HA"))
+		}
 	}
 
 	if oldValExists && shootIsScheduled {
@@ -2071,4 +2074,12 @@ func isShootReadyForRotationStart(lastOperation *core.LastOperation) bool {
 		return true
 	}
 	return lastOperation.Type == core.LastOperationTypeReconcile
+}
+
+func isShootInHibernation(shoot *core.Shoot) bool {
+	if shoot.Spec.Hibernation != nil {
+		return *shoot.Spec.Hibernation.Enabled
+	}
+
+	return shoot.Status.IsHibernated
 }
