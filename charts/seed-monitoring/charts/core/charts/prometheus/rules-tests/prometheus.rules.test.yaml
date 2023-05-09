@@ -14,6 +14,9 @@ tests:
   # PrometheusConfigurationFailure
   - series: 'prometheus_config_last_reload_successful'
     values: '0+0x120'
+  # PrometheusBlackboxSslCertificateWillExpireSoon
+  - series: 'probe_ssl_earliest_cert_expiry{instance="instance", job="blackbox-ingress"}'
+    values: '0+0x20'
   alert_rule_test:
   - eval_time: 1h
     alertname: PrometheusCantScrape
@@ -39,3 +42,16 @@ tests:
       exp_annotations:
         description: Latest Prometheus configuration is broken and Prometheus is using the previous one.
         summary: Prometheus is misconfigured
+  - eval_time: 6m
+    alertname: PrometheusBlackboxSslCertificateWillExpireSoon
+    exp_alerts:
+    - exp_labels:
+        service: prometheus
+        severity: warning
+        type: seed
+        visibility: operator
+        job: blackbox-ingress
+        instance: instance
+      exp_annotations:
+        description: Blackbox SSL certificate will expire in 3 days
+        summary: Blackbox SSL certificate will expire soon (instance instance)"

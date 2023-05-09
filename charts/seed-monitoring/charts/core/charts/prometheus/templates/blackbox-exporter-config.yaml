@@ -15,6 +15,12 @@ data:
       tcp_vpn:
         prober: tcp
         timeout: 5s
+      http_2xx:
+        prober: http
+        timeout: 5s
+        http:
+          method: GET
+          preferred_ip_protocol: "ip4"
       http_apiserver:
         prober: http
         timeout: 10s

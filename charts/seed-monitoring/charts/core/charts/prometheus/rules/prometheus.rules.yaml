@@ -24,3 +24,15 @@ groups:
     annotations:
       description: Latest Prometheus configuration is broken and Prometheus is using the previous one.
       summary: Prometheus is misconfigured
+
+  - alert: PrometheusBlackboxSslCertificateWillExpireSoon
+    expr:  probe_ssl_earliest_cert_expiry{job=~".*ingress.*"} - time() <= 86400*3
+    for: 5m
+    labels:
+      service: prometheus
+      severity: warning
+      type: seed
+      visibility: operator
+    annotations:
+      description: Blackbox SSL certificate will expire in 3 days
+      summary: Blackbox SSL certificate will expire soon (instance {{ $labels.instance }})"

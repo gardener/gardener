@@ -112,6 +112,71 @@ data:
       # we make the shoot's pods in the shoot's namespace to appear in as its in the kube-system
       - target_label: namespace
         replacement: kube-system
+    # We fetch kubelet metrics from seed's kube-system Prometheus and filter
+    # the metrics in shoot's namespace
+    - job_name: kube-kubelet-seed
+      honor_timestamps: false
+      metrics_path: /federate
+      params:
+        'match[]':
+        - '{job="cadvisor",namespace="{{ .Release.Namespace }}"}'
+        - '{job="kube-state-metrics",namespace="{{ .Release.Namespace }}"}'
+        - '{__name__=~"metering:.+",namespace="{{ .Release.Namespace }}"}'
+      static_configs:
+      - targets:
+        - prometheus-web.garden.svc
+      metric_relabel_configs:
+      # we make the shoot's pods in the shoot's namespace to appear in as its in the kube-system
+      - target_label: namespace
+        replacement: kube-system
+
+    - job_name: 'annotated-seed-service-endpoints'
+      - role: endpoints
+        namespaces:
+          names: [{{ .Release.Namespace }}]
+      sample_limit: 500
+{{ include "prometheus.service-endpoints.relabel-config" . | indent 6 }}
+      metric_relabel_configs:
+{{ include "prometheus.drop-metrics.metric-relabel-config" . | indent 6 }}
+
+{{- if  (index .Values.rules.optional "alertmanager" ).enabled }}
+    - job_name: alertmanager
+      honor_labels: false
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names: [{{ .Release.Namespace }}]
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_service_name
+        - __meta_kubernetes_endpoint_port_name
+        action: keep
+        regex: alertmanager-client;metrics
+      # common metrics
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels: [ __meta_kubernetes_pod_name ]
+        target_label: pod
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.alertManager | indent 6 }}
+{{- end }}
+
+    - job_name: prometheus
+      honor_labels: false
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names: [{{ .Release.Namespace }}]
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_service_name
+        - __meta_kubernetes_endpoint_port_name
+        regex: prometheus-web;metrics
+      # common metrics
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels: [ __meta_kubernetes_pod_name ]
+        target_label: pod
+      metric_relabel_configs:
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.prometheus | indent 6 }}
 
     - job_name: 'annotated-seed-service-endpoints'
       honor_labels: false
@@ -138,32 +203,32 @@ data:
         - __meta_kubernetes_endpoint_port_name
         action: keep
         regex: alertmanager-client;metrics
-      # common metrics
+        # common metrics
       - action: labelmap
         regex: __meta_kubernetes_service_label_(.+)
       - source_labels: [ __meta_kubernetes_pod_name ]
         target_label: pod
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.alertManager | indent 6 }}
-{{- end }}
+{{ - end }}
 
     - job_name: prometheus
       honor_labels: false
       kubernetes_sd_configs:
-      - role: endpoints
-        namespaces:
-          names: [{{ .Release.Namespace }}]
+        - role: endpoints
+          namespaces:
+            names: [{{ .Release.Namespace }}]
       relabel_configs:
-      - source_labels:
-        - __meta_kubernetes_service_name
-        - __meta_kubernetes_endpoint_port_name
-        action: keep
-        regex: prometheus-web;metrics
-      # common metrics
-      - action: labelmap
-        regex: __meta_kubernetes_service_label_(.+)
-      - source_labels: [ __meta_kubernetes_pod_name ]
-        target_label: pod
+        - source_labels:
+            - __meta_kubernetes_service_name
+            - __meta_kubernetes_endpoint_port_name
+          action: keep
+          regex: prometheus-web;metrics
+        # common metrics
+        - action: labelmap
+          regex: __meta_kubernetes_service_label_(.+)
+        - source_labels: [ __meta_kubernetes_pod_name ]
+          target_label: pod
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.prometheus | indent 6 }}
 
@@ -179,15 +244,39 @@ data:
       relabel_configs:
       - target_label: type
         replacement: seed
-      - source_labels: [__address__]
+      - source_labels: [ __address__ ]
         target_label: __param_target
         action: replace
-      - source_labels: [__param_target]
+      - source_labels: [ __param_target ]
         target_label: instance
         action: replace
       - target_label: __address__
         replacement: 127.0.0.1:9115
         action: replace
+
+{{ - range .Values.ingress.hosts }}
+    - job_name: blackbox-ingress
+      params:
+        module:
+        - http_2xx
+      scrape_timeout: 10s
+      metrics_path: /probe
+      static_configs:
+      - targets:
+        - https://{{ required ".hostName is required" .hostName }}
+      relabel_configs:
+      - target_label: type
+        replacement: seed
+      - source_labels: [ __address__ ]
+        target_label: __param_target
+        action: replace
+      - source_labels: [ __param_target ]
+        target_label: instance
+        action: replace
+      - target_label: __address__
+        replacement: 127.0.0.1:9115
+        action: replace
+{{ - end }}
 
 {{- if not .Values.shoot.workerless }}
     - job_name: cadvisor
