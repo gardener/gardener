@@ -20,6 +20,19 @@ rules:
   - get
   - list
   - watch
+- apiGroups: # TODO (istvanballok,rickardsjp): remove in a future release. Patching persistent volumes is needed for the Loki -> Vali migration.
+  - ""
+  resources:
+  - persistentvolumes
+  verbs:
+  - delete
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumeclaims
+  verbs:
+  - create
 - apiGroups:
   - ""
   resources:

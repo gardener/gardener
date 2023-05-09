@@ -235,6 +235,8 @@ var _ = Describe("Logging", func() {
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-prometheus-to-loki-telegraf", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: seedNamespace}}),
 				// Delete Vali
+				c.EXPECT().Delete(ctx, &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "loki-0", Namespace: seedNamespace}}, client.GracePeriodSeconds(5)),
+
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-loki", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-loki", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
@@ -243,6 +245,60 @@ var _ = Describe("Logging", func() {
 				c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-promtail", Namespace: seedNamespace}}),
 				c.EXPECT().DeleteAllOf(ctx, &corev1.ConfigMap{}, deleteOptions...),
+
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Do(func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					pvc := obj.(*corev1.PersistentVolumeClaim)
+					pvc.Spec.VolumeName = "volumeIDofLoki"
+					return nil
+				}),
+
+				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: seedNamespace, Name: "loki-0"}, gomock.AssignableToTypeOf(&corev1.Pod{})).Return(nil),
+				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: seedNamespace, Name: "loki-0"}, gomock.AssignableToTypeOf(&corev1.Pod{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Pod"}, "loki-0")),
+
+				c.EXPECT().Get(ctx, client.ObjectKey{Name: "volumeIDofLoki"}, gomock.AssignableToTypeOf(&corev1.PersistentVolume{})).Do(func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					pv := obj.(*corev1.PersistentVolume)
+					pv.Spec.PersistentVolumeReclaimPolicy = corev1.PersistentVolumeReclaimDelete
+					return nil
+				}),
+
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.PersistentVolume{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+					pv := obj.(*corev1.PersistentVolume)
+					Expect(pv.Spec.PersistentVolumeReclaimPolicy).To(Equal(corev1.PersistentVolumeReclaimRetain))
+					return nil
+				}),
+
+				c.EXPECT().Delete(ctx, &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "loki-loki-0", Namespace: seedNamespace}, Spec: corev1.PersistentVolumeClaimSpec{VolumeName: "volumeIDofLoki"}}),
+
+				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(nil),
+				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
+
+				c.EXPECT().Get(ctx, client.ObjectKey{Name: "volumeIDofLoki"}, gomock.AssignableToTypeOf(&corev1.PersistentVolume{})).Return(nil),
+
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.PersistentVolume{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+					pv := obj.(*corev1.PersistentVolume)
+					Expect(pv.Spec.ClaimRef).To(BeNil())
+					return nil
+				}),
+
+				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Do(func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+					pvc := obj.(*corev1.PersistentVolumeClaim)
+					Expect(pvc.ObjectMeta.Name).To(Equal("vali-vali-0"))
+					return nil
+				}),
+
+				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: seedNamespace, Name: "vali-vali-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "vali-vali-0")),
+				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: seedNamespace, Name: "vali-vali-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(nil),
+				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: seedNamespace, Name: "vali-vali-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Do(func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					pvc := obj.(*corev1.PersistentVolumeClaim)
+					pvc.Status.Phase = corev1.ClaimBound
+					return nil
+				}),
+
+				c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&corev1.PersistentVolume{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+					pv := obj.(*corev1.PersistentVolume)
+					Expect(pv.Spec.PersistentVolumeReclaimPolicy).To(Equal(corev1.PersistentVolumeReclaimDelete))
+					return nil
+				}),
 
 				// deploy Shoot Event Logging
 				shootEventLoggerDeployer.EXPECT().Deploy(ctx),

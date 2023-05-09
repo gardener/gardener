@@ -183,6 +183,16 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			},
 			{
 				APIGroups: []string{""},
+				Resources: []string{"persistentvolumes"},
+				Verbs:     []string{"delete", "patch"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"persistentvolumeclaims"},
+				Verbs:     []string{"create"},
+			},
+			{
+				APIGroups: []string{""},
 				Resources: []string{"endpoints", "persistentvolumes"},
 				Verbs:     []string{"get", "list", "watch"},
 			},
