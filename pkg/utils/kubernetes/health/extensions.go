@@ -16,6 +16,7 @@ package health
 
 import (
 	"fmt"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,6 +33,7 @@ import (
 // * No gardener.cloud/operation is set
 // * No lastError is in the status
 // * A last operation is state succeeded is present
+// * gardener.cloud/timestamp annotation is not set or if its truncated value is not after last update time
 func CheckExtensionObject(o client.Object) error {
 	obj, ok := o.(extensionsv1alpha1.Object)
 	if !ok {
@@ -79,6 +81,21 @@ func checkExtensionObject(generation int64, observedGeneration int64, annotation
 
 	if lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
 		return fmt.Errorf("extension state is not succeeded but %v", lastOperation.State)
+	}
+
+	if timestamp, ok := annotations[v1beta1constants.GardenerTimestamp]; ok {
+		parsedTimestamp, err := time.Parse(time.RFC3339Nano, timestamp)
+		if err != nil {
+			return fmt.Errorf("cannot parse gardener.cloud/timestamp annotation: %w", err)
+		}
+
+		if parsedTimestamp.Truncate(time.Second).UTC().After(lastOperation.LastUpdateTime.Time.UTC()) {
+			return fmt.Errorf(
+				"extension is not reconciled yet - reconciliation requested at %s, last update time is: %s",
+				parsedTimestamp.Truncate(time.Second).UTC().Format(time.RFC3339),
+				lastOperation.LastUpdateTime.Time.UTC().Format(time.RFC3339),
+			)
+		}
 	}
 
 	return nil

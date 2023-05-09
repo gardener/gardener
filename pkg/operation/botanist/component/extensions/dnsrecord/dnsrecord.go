@@ -143,10 +143,10 @@ func (c *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 	}
 
 	mutateFn := func() error {
-		if c.values.AnnotateOperation || c.valuesDontMatchDNSRecord() {
+		if c.values.AnnotateOperation || c.valuesDontMatchDNSRecord() || c.lastOperationNotSuccessful() {
 			metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerOperation, operation)
+			metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 		}
-		metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 
 		c.dnsRecord.Spec = extensionsv1alpha1.DNSRecordSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
@@ -179,16 +179,9 @@ func (c *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 			}
 		} else {
 			patch := client.MergeFrom(c.dnsRecord.DeepCopy())
-			if c.dnsRecord.Status.LastOperation != nil && c.dnsRecord.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
-				// If the DNSRecord is not yet Succeeded, reconcile it again.
+			if c.valuesDontMatchDNSRecord() || c.lastOperationNotSuccessful() {
+				// If the DNSRecord is not yet Succeeded or values have changed, reconcile it again.
 				_ = mutateFn()
-			} else if c.valuesDontMatchDNSRecord() {
-				_ = mutateFn()
-			} else {
-				// Otherwise, just update the timestamp annotation.
-				// If the object is still annotated with the operation annotation (e.g. not reconciled yet) this will send a watch
-				// event to the extension controller triggering a new reconciliation.
-				metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 			}
 			if err := c.client.Patch(ctx, c.dnsRecord, patch); err != nil {
 				return nil, err
@@ -308,4 +301,8 @@ func (c *dnsRecord) valuesDontMatchDNSRecord() bool {
 		!pointer.StringEqual(c.values.Zone, c.dnsRecord.Spec.Zone) ||
 		!reflect.DeepEqual(c.values.Values, c.dnsRecord.Spec.Values) ||
 		!pointer.Int64Equal(c.values.TTL, c.dnsRecord.Spec.TTL)
+}
+
+func (c *dnsRecord) lastOperationNotSuccessful() bool {
+	return c.dnsRecord.Status.LastOperation != nil && c.dnsRecord.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded
 }
