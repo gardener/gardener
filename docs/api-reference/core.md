@@ -9100,8 +9100,7 @@ bool
 </em>
 </td>
 <td>
-<p>Enabled controls whether owner checks are enabled for shoots scheduled on this seed. It
-is enabled by default because it is a prerequisite for control plane migration.</p>
+<p>Enabled controls whether owner checks are enabled for shoots scheduled on this seed.</p>
 </td>
 </tr>
 </tbody>

@@ -6701,7 +6701,7 @@ func schema_pkg_apis_core_v1alpha1_SeedSettingOwnerChecks(ref common.ReferenceCa
 				Properties: map[string]spec.Schema{
 					"enabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Enabled controls whether owner checks are enabled for shoots scheduled on this seed. It is enabled by default because it is a prerequisite for control plane migration.",
+							Description: "Enabled controls whether owner checks are enabled for shoots scheduled on this seed.",
 							Default:     false,
 							Type:        []string{"boolean"},
 							Format:      "",
@@ -14470,7 +14470,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettingOwnerChecks(ref common.ReferenceCal
 				Properties: map[string]spec.Schema{
 					"enabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Enabled controls whether owner checks are enabled for shoots scheduled on this seed. It is enabled by default because it is a prerequisite for control plane migration.",
+							Description: "Enabled controls whether owner checks are enabled for shoots scheduled on this seed.",
 							Default:     false,
 							Type:        []string{"boolean"},
 							Format:      "",

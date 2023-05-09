@@ -922,8 +922,9 @@ var _ = Describe("Seed Validation Tests", func() {
 
 					Expect(errorList).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeForbidden),
-							"Field": Equal("spec.settings.ownerChecks.enabled"),
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.settings.ownerChecks.enabled"),
+							"Detail": Equal("owner checks is locked to false in Gardener v1.72+"),
 						})),
 					))
 				})
