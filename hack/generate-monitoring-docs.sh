@@ -41,7 +41,7 @@ cat <<EOF > $PROJECT_ROOT/docs/monitoring/operator_alerts.md
 EOF
 
 pushd $PROJECT_ROOT/charts/seed-monitoring/charts/core/charts/prometheus > /dev/null
-for file in rules/*.yaml; do
+for file in rules/worker/*.yaml rules/*.yaml; do
   cat $file | yaml2json | jq -r '
       .groups |
       .[].rules |

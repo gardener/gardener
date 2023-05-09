@@ -1,6 +1,7 @@
 global:
   vpaEnabled: false
   pspDisabled: false
+  hasWorkers: true
 apiserver-proxy:
   enabled: false
   images:

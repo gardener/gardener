@@ -1,0 +1,8 @@
+groups:
+- name: networking.rules
+  rules:
+  - record: shoot:container_network_transmit_bytes_total_apiserver:sum
+    expr: sum(rate(container_network_transmit_bytes_total{pod=~"kube-apiserver(.+)"}[10m]))
+
+  - record: shoot:container_network_receive_bytes_total_apiserver:sum
+    expr: sum(rate(container_network_receive_bytes_total{pod=~"kube-apiserver(.+)"}[10m]))

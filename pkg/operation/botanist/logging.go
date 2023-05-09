@@ -190,7 +190,7 @@ func (b *Botanist) destroyShootNodeLogging(ctx context.Context) error {
 }
 
 func (b *Botanist) isShootNodeLoggingEnabled() bool {
-	if b.Shoot != nil && b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) &&
+	if b.Shoot != nil && !b.Shoot.IsWorkerless && b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) &&
 		gardenlethelper.IsLokiEnabled(b.Config) && b.Config != nil &&
 		b.Config.Logging != nil && b.Config.Logging.ShootNodeLogging != nil {
 

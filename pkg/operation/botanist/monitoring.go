@@ -78,22 +78,27 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		b.Shoot.Components.ControlPlane.EtcdMain,
 		b.Shoot.Components.ControlPlane.EtcdEvents,
 		b.Shoot.Components.ControlPlane.KubeAPIServer,
-		b.Shoot.Components.ControlPlane.KubeScheduler,
 		b.Shoot.Components.ControlPlane.KubeControllerManager,
 		b.Shoot.Components.ControlPlane.KubeStateMetrics,
 		b.Shoot.Components.ControlPlane.ResourceManager,
-		b.Shoot.Components.SystemComponents.CoreDNS,
-		b.Shoot.Components.SystemComponents.KubeProxy,
-		b.Shoot.Components.SystemComponents.VPNShoot,
-		b.Shoot.Components.ControlPlane.VPNSeedServer,
 	}
 
-	if b.Shoot.NodeLocalDNSEnabled {
-		monitoringComponents = append(monitoringComponents, b.Shoot.Components.SystemComponents.NodeLocalDNS)
-	}
+	if !b.Shoot.IsWorkerless {
+		monitoringComponents = append(monitoringComponents,
+			b.Shoot.Components.ControlPlane.KubeScheduler,
+			b.Shoot.Components.SystemComponents.CoreDNS,
+			b.Shoot.Components.SystemComponents.KubeProxy,
+			b.Shoot.Components.SystemComponents.VPNShoot,
+			b.Shoot.Components.ControlPlane.VPNSeedServer,
+		)
 
-	if b.Shoot.WantsClusterAutoscaler {
-		monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.ClusterAutoscaler)
+		if b.Shoot.NodeLocalDNSEnabled {
+			monitoringComponents = append(monitoringComponents, b.Shoot.Components.SystemComponents.NodeLocalDNS)
+		}
+
+		if b.Shoot.WantsClusterAutoscaler {
+			monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.ClusterAutoscaler)
+		}
 	}
 
 	for _, component := range monitoringComponents {
@@ -181,10 +186,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	}
 
 	var (
-		networks = map[string]interface{}{
-			"pods":     b.Shoot.Networks.Pods.String(),
-			"services": b.Shoot.Networks.Services.String(),
-		}
+		networks         = map[string]interface{}{}
 		prometheusConfig = map[string]interface{}{
 			"secretNameClusterCA":      clusterCASecret.Name,
 			"secretNameEtcdCA":         etcdCASecret.Name,
@@ -206,8 +208,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"namespace": map[string]interface{}{
 				"uid": b.SeedNamespaceObject.UID,
 			},
-			"replicas":           b.Shoot.GetReplicas(1),
-			"apiserverServiceIP": b.Shoot.Networks.APIServer.String(),
+			"replicas": b.Shoot.GetReplicas(1),
 			"seed": map[string]interface{}{
 				"apiserver": b.SeedClientSet.RESTConfig().Host,
 				"region":    b.Seed.GetInfo().Spec.Provider.Region,
@@ -233,6 +234,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 				"provider":            b.Shoot.GetInfo().Spec.Provider.Type,
 				"name":                b.Shoot.GetInfo().Name,
 				"project":             b.Garden.Project.Name,
+				"workerless":          b.Shoot.IsWorkerless,
 			},
 			"ignoreAlerts":            b.Shoot.IgnoreAlerts,
 			"alerting":                alerting,
@@ -241,9 +243,21 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		}
 	)
 
-	if v := b.Shoot.GetInfo().Spec.Networking.Nodes; v != nil {
-		networks["nodes"] = *v
+	if b.Shoot.Networks != nil {
+		if services := b.Shoot.Networks.Services; services != nil {
+			networks["services"] = services.String()
+		}
+		if pods := b.Shoot.Networks.Pods; pods != nil {
+			networks["pods"] = pods.String()
+		}
+		if apiServer := b.Shoot.Networks.APIServer; apiServer != nil {
+			prometheusConfig["apiserverServiceIP"] = apiServer.String()
+		}
 	}
+	if b.Shoot.GetInfo().Spec.Networking != nil && b.Shoot.GetInfo().Spec.Networking.Nodes != nil {
+		networks["nodes"] = *b.Shoot.GetInfo().Spec.Networking.Nodes
+	}
+
 	prometheusConfig["networks"] = networks
 
 	// Add remotewrite to prometheus when enabled
@@ -571,6 +585,7 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, credentialsSecret *c
 		"reversedVPN": map[string]interface{}{
 			"highAvailabilityEnabled": b.Shoot.VPNHighAvailabilityEnabled,
 		},
+		"workerless": b.Shoot.IsWorkerless,
 	}, images.ImageNameGrafana)
 	if err != nil {
 		return err
