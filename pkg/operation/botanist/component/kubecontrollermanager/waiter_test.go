@@ -83,21 +83,11 @@ var _ = Describe("WaiterTest", func() {
 
 	Describe("#WaitForControllerToBeActive", func() {
 		BeforeEach(func() {
-			kubeControllerManager = New(
-				testLogger,
-				fakeSeedInterface,
-				namespace,
-				nil,
-				version,
-				"",
-				nil,
-				isWorkerless,
-				nil,
-				nil,
-				nil,
-				semver.MustParse("1.25.0"),
-			)
-
+			kubeControllerManager = New(testLogger, fakeSeedInterface, namespace, nil, Values{
+				RuntimeVersion: semver.MustParse("1.25.0"),
+				TargetVersion:  version,
+				IsWorkerless:   isWorkerless,
+			})
 			kubeControllerManager.SetShootClient(shootClient)
 
 			waiter = &retryfake.Ops{MaxAttempts: 1}

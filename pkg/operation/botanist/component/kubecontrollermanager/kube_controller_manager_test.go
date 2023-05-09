@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -68,6 +69,7 @@ var _ = Describe("KubeControllerManager", func() {
 		fakeInterface         kubernetes.Interface
 		sm                    secretsmanager.Interface
 		kubeControllerManager Interface
+		values                Values
 
 		_, podCIDR, _                 = net.ParseCIDR("100.96.0.0/11")
 		_, serviceCIDR, _             = net.ParseCIDR("100.64.0.0/13")
@@ -99,6 +101,32 @@ var _ = Describe("KubeControllerManager", func() {
 			NodeCIDRMaskSize:              &nodeCIDRMask,
 			PodEvictionTimeout:            &podEvictionTimeout,
 			NodeMonitorGracePeriod:        &nodeMonitorGracePeriod,
+		}
+		clusterSigningDuration = pointer.Duration(time.Hour)
+		controllerWorkers      = ControllerWorkers{
+			StatefulSet:         pointer.Int(1),
+			Deployment:          pointer.Int(2),
+			ReplicaSet:          pointer.Int(3),
+			Endpoint:            pointer.Int(4),
+			GarbageCollector:    pointer.Int(5),
+			Namespace:           pointer.Int(6),
+			ResourceQuota:       pointer.Int(7),
+			ServiceEndpoint:     pointer.Int(8),
+			ServiceAccountToken: pointer.Int(9),
+		}
+		controllerWorkersWithDisabledControllers = ControllerWorkers{
+			StatefulSet:         pointer.Int(1),
+			Deployment:          pointer.Int(2),
+			ReplicaSet:          pointer.Int(3),
+			Endpoint:            pointer.Int(4),
+			GarbageCollector:    pointer.Int(5),
+			Namespace:           pointer.Int(0),
+			ResourceQuota:       pointer.Int(0),
+			ServiceEndpoint:     pointer.Int(8),
+			ServiceAccountToken: pointer.Int(0),
+		}
+		controllerSyncPeriods = ControllerSyncPeriods{
+			ResourceQuota: pointer.Duration(time.Minute),
 		}
 
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
@@ -133,19 +161,22 @@ var _ = Describe("KubeControllerManager", func() {
 	Describe("#Deploy", func() {
 		Context("Tests expecting a failure", func() {
 			BeforeEach(func() {
+				values = Values{
+					RuntimeVersion: runtimeKubernetesVersion,
+					TargetVersion:  semverVersion,
+					Image:          image,
+					Config:         &kcmConfig,
+					HVPAConfig:     hvpaConfigDisabled,
+					IsWorkerless:   isWorkerless,
+					PodNetwork:     podCIDR,
+					ServiceNetwork: serviceCIDR,
+				}
 				kubeControllerManager = New(
 					testLogger,
 					fakeInterface,
 					namespace,
 					sm,
-					semverVersion,
-					image,
-					&kcmConfig,
-					isWorkerless,
-					podCIDR,
-					serviceCIDR,
-					hvpaConfigDisabled,
-					runtimeKubernetesVersion,
+					values,
 				)
 			})
 
@@ -468,7 +499,7 @@ var _ = Describe("KubeControllerManager", func() {
 				}
 
 				replicas      int32 = 1
-				deploymentFor       = func(version string, config *gardencorev1beta1.KubeControllerManagerConfig, isWorkerless bool) *appsv1.Deployment {
+				deploymentFor       = func(version string, config *gardencorev1beta1.KubeControllerManagerConfig, isWorkerless bool, controllerWorkers ControllerWorkers) *appsv1.Deployment {
 					deploy := &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      v1beta1constants.DeploymentNameKubeControllerManager,
@@ -508,7 +539,7 @@ var _ = Describe("KubeControllerManager", func() {
 											Name:            "kube-controller-manager",
 											Image:           image,
 											ImagePullPolicy: corev1.PullIfNotPresent,
-											Command:         commandForKubernetesVersion(version, 10257, config.NodeCIDRMaskSize, config.PodEvictionTimeout, config.NodeMonitorGracePeriod, namespace, isWorkerless, serviceCIDR, podCIDR, getHorizontalPodAutoscalerConfig(config.HorizontalPodAutoscalerConfig), kubernetesutils.FeatureGatesToCommandLineParameter(config.FeatureGates)),
+											Command:         commandForKubernetesVersion(version, 10257, config.NodeCIDRMaskSize, config.PodEvictionTimeout, config.NodeMonitorGracePeriod, namespace, isWorkerless, serviceCIDR, podCIDR, getHorizontalPodAutoscalerConfig(config.HorizontalPodAutoscalerConfig), kubernetesutils.FeatureGatesToCommandLineParameter(config.FeatureGates), clusterSigningDuration, controllerWorkers, controllerSyncPeriods),
 											LivenessProbe: &corev1.Probe{
 												ProbeHandler: corev1.ProbeHandler{
 													HTTPGet: &corev1.HTTPGetAction{
@@ -678,21 +709,20 @@ subjects:
 					semverVersion, err := semver.NewVersion(version)
 					Expect(err).NotTo(HaveOccurred())
 
-					kubeControllerManager = New(
-						testLogger,
-						fakeInterface,
-						namespace,
-						sm,
-						semverVersion,
-						image,
-						config,
-						isWorkerless,
-						podCIDR,
-						serviceCIDR,
-						hvpaConfig,
-						runtimeKubernetesVersion,
-					)
-
+					values = Values{
+						RuntimeVersion:         runtimeKubernetesVersion,
+						TargetVersion:          semverVersion,
+						Image:                  image,
+						Config:                 config,
+						HVPAConfig:             hvpaConfig,
+						IsWorkerless:           isWorkerless,
+						PodNetwork:             podCIDR,
+						ServiceNetwork:         serviceCIDR,
+						ClusterSigningDuration: clusterSigningDuration,
+						ControllerWorkers:      controllerWorkers,
+						ControllerSyncPeriods:  controllerSyncPeriods,
+					}
+					kubeControllerManager = New(testLogger, fakeInterface, namespace, sm, values)
 					kubeControllerManager.SetReplicaCount(replicas)
 
 					if hvpaConfig.Enabled {
@@ -713,7 +743,7 @@ subjects:
 						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
 							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-								Expect(obj).To(DeepEqual(deploymentFor(version, config, isWorkerless)))
+								Expect(obj).To(DeepEqual(deploymentFor(version, config, isWorkerless, controllerWorkers)))
 							}),
 						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, pdbName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).
@@ -787,26 +817,25 @@ subjects:
 			)
 
 			DescribeTable("success tests for various kubernetes versions (workerless shoot)",
-				func(version string, config *gardencorev1beta1.KubeControllerManagerConfig, hvpaConfig *HVPAConfig) {
+				func(version string, config *gardencorev1beta1.KubeControllerManagerConfig, hvpaConfig *HVPAConfig, controllerWorkers ControllerWorkers) {
 					isWorkerless = true
 					semverVersion, err := semver.NewVersion(version)
 					Expect(err).NotTo(HaveOccurred())
 
-					kubeControllerManager = New(
-						testLogger,
-						fakeInterface,
-						namespace,
-						sm,
-						semverVersion,
-						image,
-						config,
-						isWorkerless,
-						podCIDR,
-						serviceCIDR,
-						hvpaConfig,
-						runtimeKubernetesVersion,
-					)
-
+					values = Values{
+						RuntimeVersion:         runtimeKubernetesVersion,
+						TargetVersion:          semverVersion,
+						Image:                  image,
+						Config:                 config,
+						HVPAConfig:             hvpaConfig,
+						IsWorkerless:           isWorkerless,
+						PodNetwork:             podCIDR,
+						ServiceNetwork:         serviceCIDR,
+						ClusterSigningDuration: clusterSigningDuration,
+						ControllerWorkers:      controllerWorkers,
+						ControllerSyncPeriods:  controllerSyncPeriods,
+					}
+					kubeControllerManager = New(testLogger, fakeInterface, namespace, sm, values)
 					kubeControllerManager.SetReplicaCount(replicas)
 
 					if hvpaConfig.Enabled {
@@ -827,7 +856,7 @@ subjects:
 						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
 							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-								Expect(obj).To(DeepEqual(deploymentFor(version, config, isWorkerless)))
+								Expect(obj).To(DeepEqual(deploymentFor(version, config, isWorkerless, controllerWorkers)))
 							}),
 						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, pdbName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).
@@ -872,32 +901,35 @@ subjects:
 					Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
 				},
 
-				Entry("kubernetes 1.22 w/o config", "1.22.0", emptyConfig, hvpaConfigDisabled),
-				Entry("kubernetes 1.22 with HVPA", "1.22.0", emptyConfig, hvpaConfigEnabled),
-				Entry("kubernetes 1.22 with HVPA and custom scale-down update mode", "1.22.0", emptyConfig, hvpaConfigEnabledScaleDownOff),
-				Entry("kubernetes 1.22 with non-default autoscaler config", "1.22.0", configWithAutoscalerConfig, hvpaConfigDisabled),
-				Entry("kubernetes 1.22 with feature flags", "1.22.0", configWithFeatureFlags, hvpaConfigDisabled),
-				Entry("kubernetes 1.22 with NodeCIDRMaskSize", "1.22.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
-				Entry("kubernetes 1.22 with PodEvictionTimeout", "1.22.0", configWithPodEvictionTimeout, hvpaConfigDisabled),
-				Entry("kubernetes 1.22 with NodeMonitorGradePeriod", "1.22.0", configWithNodeMonitorGracePeriod, hvpaConfigDisabled),
+				Entry("kubernetes 1.22 w/o config", "1.22.0", emptyConfig, hvpaConfigDisabled, controllerWorkers),
+				Entry("kubernetes 1.22 with HVPA", "1.22.0", emptyConfig, hvpaConfigEnabled, controllerWorkers),
+				Entry("kubernetes 1.22 with HVPA and custom scale-down update mode", "1.22.0", emptyConfig, hvpaConfigEnabledScaleDownOff, controllerWorkers),
+				Entry("kubernetes 1.22 with non-default autoscaler config", "1.22.0", configWithAutoscalerConfig, hvpaConfigDisabled, controllerWorkers),
+				Entry("kubernetes 1.22 with feature flags", "1.22.0", configWithFeatureFlags, hvpaConfigDisabled, controllerWorkers),
+				Entry("kubernetes 1.22 with NodeCIDRMaskSize", "1.22.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled, controllerWorkers),
+				Entry("kubernetes 1.22 with PodEvictionTimeout", "1.22.0", configWithPodEvictionTimeout, hvpaConfigDisabled, controllerWorkers),
+				Entry("kubernetes 1.22 with NodeMonitorGradePeriod", "1.22.0", configWithNodeMonitorGracePeriod, hvpaConfigDisabled, controllerWorkers),
+				Entry("kubernetes 1.22 with disabled controllers", "1.22.0", configWithNodeMonitorGracePeriod, hvpaConfigDisabled, controllerWorkersWithDisabledControllers),
 
-				Entry("kubernetes 1.21 w/o config", "1.21.0", emptyConfig, hvpaConfigDisabled),
-				Entry("kubernetes 1.21 with HVPA", "1.21.0", emptyConfig, hvpaConfigEnabled),
-				Entry("kubernetes 1.21 with HVPA and custom scale-down update mode", "1.21.0", emptyConfig, hvpaConfigEnabledScaleDownOff),
-				Entry("kubernetes 1.21 with non-default autoscaler config", "1.21.0", configWithAutoscalerConfig, hvpaConfigDisabled),
-				Entry("kubernetes 1.21 with feature flags", "1.21.0", configWithFeatureFlags, hvpaConfigDisabled),
-				Entry("kubernetes 1.21 with NodeCIDRMaskSize", "1.21.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
-				Entry("kubernetes 1.21 with PodEvictionTimeout", "1.21.0", configWithPodEvictionTimeout, hvpaConfigDisabled),
-				Entry("kubernetes 1.21 with NodeMonitorGradePeriod", "1.21.0", configWithNodeMonitorGracePeriod, hvpaConfigDisabled),
+				Entry("kubernetes 1.21 w/o config", "1.21.0", emptyConfig, hvpaConfigDisabled, controllerWorkers),
+				Entry("kubernetes 1.21 with HVPA", "1.21.0", emptyConfig, hvpaConfigEnabled, controllerWorkers),
+				Entry("kubernetes 1.21 with HVPA and custom scale-down update mode", "1.21.0", emptyConfig, hvpaConfigEnabledScaleDownOff, controllerWorkers),
+				Entry("kubernetes 1.21 with non-default autoscaler config", "1.21.0", configWithAutoscalerConfig, hvpaConfigDisabled, controllerWorkers),
+				Entry("kubernetes 1.21 with feature flags", "1.21.0", configWithFeatureFlags, hvpaConfigDisabled, controllerWorkers),
+				Entry("kubernetes 1.21 with NodeCIDRMaskSize", "1.21.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled, controllerWorkers),
+				Entry("kubernetes 1.21 with PodEvictionTimeout", "1.21.0", configWithPodEvictionTimeout, hvpaConfigDisabled, controllerWorkers),
+				Entry("kubernetes 1.21 with NodeMonitorGradePeriod", "1.21.0", configWithNodeMonitorGracePeriod, hvpaConfigDisabled, controllerWorkers),
+				Entry("kubernetes 1.21 with disabled controllers", "1.21.0", configWithNodeMonitorGracePeriod, hvpaConfigDisabled, controllerWorkersWithDisabledControllers),
 
-				Entry("kubernetes 1.20 w/o config", "1.20.0", emptyConfig, hvpaConfigDisabled),
-				Entry("kubernetes 1.20 with HVPA", "1.20.0", emptyConfig, hvpaConfigEnabled),
-				Entry("kubernetes 1.20 with HVPA and custom scale-down update mode", "1.20.0", emptyConfig, hvpaConfigEnabledScaleDownOff),
-				Entry("kubernetes 1.20 with non-default autoscaler config", "1.20.0", configWithAutoscalerConfig, hvpaConfigDisabled),
-				Entry("kubernetes 1.20 with feature flags", "1.20.0", configWithFeatureFlags, hvpaConfigDisabled),
-				Entry("kubernetes 1.20 with NodeCIDRMaskSize", "1.20.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
-				Entry("kubernetes 1.20 with PodEvictionTimeout", "1.20.0", configWithPodEvictionTimeout, hvpaConfigDisabled),
-				Entry("kubernetes 1.20 with NodeMonitorGradePeriod", "1.20.0", configWithNodeMonitorGracePeriod, hvpaConfigDisabled),
+				Entry("kubernetes 1.20 w/o config", "1.20.0", emptyConfig, hvpaConfigDisabled, controllerWorkers),
+				Entry("kubernetes 1.20 with HVPA", "1.20.0", emptyConfig, hvpaConfigEnabled, controllerWorkers),
+				Entry("kubernetes 1.20 with HVPA and custom scale-down update mode", "1.20.0", emptyConfig, hvpaConfigEnabledScaleDownOff, controllerWorkers),
+				Entry("kubernetes 1.20 with non-default autoscaler config", "1.20.0", configWithAutoscalerConfig, hvpaConfigDisabled, controllerWorkers),
+				Entry("kubernetes 1.20 with feature flags", "1.20.0", configWithFeatureFlags, hvpaConfigDisabled, controllerWorkers),
+				Entry("kubernetes 1.20 with NodeCIDRMaskSize", "1.20.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled, controllerWorkers),
+				Entry("kubernetes 1.20 with PodEvictionTimeout", "1.20.0", configWithPodEvictionTimeout, hvpaConfigDisabled, controllerWorkers),
+				Entry("kubernetes 1.20 with NodeMonitorGradePeriod", "1.20.0", configWithNodeMonitorGracePeriod, hvpaConfigDisabled, controllerWorkers),
+				Entry("kubernetes 1.20 with disabled controllers", "1.20.0", configWithNodeMonitorGracePeriod, hvpaConfigDisabled, controllerWorkersWithDisabledControllers),
 			)
 		})
 	})
@@ -931,20 +963,11 @@ subjects:
 			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 			fakeKubernetesInterface := kubernetesfake.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
 
-			kubeControllerManager = New(
-				testLogger,
-				fakeKubernetesInterface,
-				namespace,
-				nil,
-				nil,
-				"",
-				nil,
-				isWorkerless,
-				nil,
-				nil,
-				nil,
-				semver.MustParse("1.25.0"),
-			)
+			values = Values{
+				RuntimeVersion: semver.MustParse("1.25.0"),
+				IsWorkerless:   isWorkerless,
+			}
+			kubeControllerManager = New(testLogger, fakeKubernetesInterface, namespace, nil, values)
 
 			deploy := deployment.DeepCopy()
 
@@ -1001,6 +1024,9 @@ func commandForKubernetesVersion(
 	serviceNetwork, podNetwork *net.IPNet,
 	horizontalPodAutoscalerConfig *gardencorev1beta1.HorizontalPodAutoscalerConfig,
 	featureGateFlags string,
+	clusterSigningDuration *time.Duration,
+	controllerWorkers ControllerWorkers,
+	controllerSyncPeriods ControllerSyncPeriods,
 ) []string {
 	var command []string
 
@@ -1043,14 +1069,53 @@ func commandForKubernetesVersion(
 			"--leader-elect=true",
 			fmt.Sprintf("--node-monitor-grace-period=%s", nodeMonitorGracePeriodSetting),
 			fmt.Sprintf("--pod-eviction-timeout=%s", podEvictionTimeoutSetting),
-			"--concurrent-deployment-syncs=50",
-			"--concurrent-replicaset-syncs=50",
-			"--concurrent-statefulset-syncs=15",
 		)
+
+		if v := controllerWorkers.Deployment; v == nil {
+			command = append(command, "--concurrent-deployment-syncs=50")
+		} else {
+			command = append(command, fmt.Sprintf("--concurrent-deployment-syncs=%d", *v))
+		}
+
+		if v := controllerWorkers.ReplicaSet; v == nil {
+			command = append(command, "--concurrent-replicaset-syncs=50")
+		} else {
+			command = append(command, fmt.Sprintf("--concurrent-replicaset-syncs=%d", *v))
+		}
+
+		if v := controllerWorkers.StatefulSet; v == nil {
+			command = append(command, "--concurrent-statefulset-syncs=15")
+		} else {
+			command = append(command, fmt.Sprintf("--concurrent-statefulset-syncs=%d", *v))
+		}
 	} else {
-		command = append(command,
-			"--controllers=namespace,serviceaccount,serviceaccount-token,clusterrole-aggregation,garbagecollector,csrapproving,csrcleaner,csrsigning,bootstrapsigner,tokencleaner,resourcequota",
+		var controllers []string
+
+		if controllerWorkers.Namespace == nil || *controllerWorkers.Namespace != 0 {
+			controllers = append(controllers, "namespace")
+		}
+
+		controllers = append(controllers, "serviceaccount")
+
+		if controllerWorkers.ServiceAccountToken == nil || *controllerWorkers.ServiceAccountToken != 0 {
+			controllers = append(controllers, "serviceaccount-token")
+		}
+
+		controllers = append(controllers,
+			"clusterrole-aggregation",
+			"garbagecollector",
+			"csrapproving",
+			"csrcleaner",
+			"csrsigning",
+			"bootstrapsigner",
+			"tokencleaner",
 		)
+
+		if controllerWorkers.ResourceQuota == nil || *controllerWorkers.ResourceQuota != 0 {
+			controllers = append(controllers, "resourcequota")
+		}
+
+		command = append(command, "--controllers="+strings.Join(controllers, ","))
 	}
 
 	command = append(command,
@@ -1061,15 +1126,51 @@ func commandForKubernetesVersion(
 		"--cluster-signing-legacy-unknown-key-file=/srv/kubernetes/ca-client/ca.key",
 	)
 
-	command = append(command,
-		"--cluster-signing-duration=720h",
-		"--concurrent-endpoint-syncs=15",
-		"--concurrent-gc-syncs=30",
-		"--concurrent-namespace-syncs=50",
-		"--concurrent-resource-quota-syncs=15",
-		"--concurrent-service-endpoint-syncs=15",
-		"--concurrent-serviceaccount-token-syncs=15",
-	)
+	if clusterSigningDuration == nil {
+		command = append(command, "--cluster-signing-duration=720h")
+	} else {
+		command = append(command, "--cluster-signing-duration="+clusterSigningDuration.String())
+	}
+
+	if v := controllerWorkers.Endpoint; v == nil {
+		command = append(command, "--concurrent-endpoint-syncs=15")
+	} else {
+		command = append(command, fmt.Sprintf("--concurrent-endpoint-syncs=%d", *v))
+	}
+
+	if v := controllerWorkers.GarbageCollector; v == nil {
+		command = append(command, "--concurrent-gc-syncs=30")
+	} else {
+		command = append(command, fmt.Sprintf("--concurrent-gc-syncs=%d", *v))
+	}
+
+	if v := controllerWorkers.ServiceEndpoint; v == nil {
+		command = append(command, "--concurrent-service-endpoint-syncs=15")
+	} else {
+		command = append(command, fmt.Sprintf("--concurrent-service-endpoint-syncs=%d", *v))
+	}
+
+	if v := controllerWorkers.Namespace; v == nil {
+		command = append(command, "--concurrent-namespace-syncs=50")
+	} else if *v != 0 {
+		command = append(command, fmt.Sprintf("--concurrent-namespace-syncs=%d", *v))
+	}
+
+	if v := controllerWorkers.ResourceQuota; v == nil {
+		command = append(command, "--concurrent-resource-quota-syncs=15")
+	} else if *v != 0 {
+		command = append(command, fmt.Sprintf("--concurrent-resource-quota-syncs=%d", *v))
+
+		if v := controllerSyncPeriods.ResourceQuota; v != nil {
+			command = append(command, "--resource-quota-sync-period="+v.String())
+		}
+	}
+
+	if v := controllerWorkers.ServiceAccountToken; v == nil {
+		command = append(command, "--concurrent-serviceaccount-token-syncs=15")
+	} else if *v != 0 {
+		command = append(command, fmt.Sprintf("--concurrent-serviceaccount-token-syncs=%d", *v))
+	}
 
 	if len(featureGateFlags) > 0 {
 		command = append(command, featureGateFlags)
