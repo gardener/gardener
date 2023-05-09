@@ -99,14 +99,27 @@ func GenerateAddonConfig(values map[string]interface{}, enabled bool) map[string
 func DeleteVali(ctx context.Context, k8sClient client.Client, namespace string) error {
 	resources := []client.Object{
 		&hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: namespace}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "vali-config", Namespace: namespace}},
 		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: namespace}},
 		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "logging", Namespace: namespace}},
 		&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: namespace}},
+		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: namespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-valitail", Namespace: namespace}},
 		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "vali-vali-0", Namespace: namespace}},
 	}
 
-	return kubernetesutils.DeleteObjects(ctx, k8sClient, resources...)
+	if err := kubernetesutils.DeleteObjects(ctx, k8sClient, resources...); err != nil {
+		return err
+	}
+
+	deleteOptions := []client.DeleteAllOfOption{
+		client.InNamespace(namespace),
+		client.MatchingLabels{
+			v1beta1constants.GardenRole: "logging",
+			v1beta1constants.LabelApp:   "vali",
+		},
+	}
+
+	return k8sClient.DeleteAllOf(ctx, &corev1.ConfigMap{}, deleteOptions...)
 }
 
 // DeleteAlertmanager deletes all resources of the Alertmanager in a given namespace.

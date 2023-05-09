@@ -31,9 +31,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/mock"
@@ -165,19 +167,34 @@ var _ = Describe("Logging", func() {
 				shootEventLoggerDeployer.EXPECT().Destroy(ctx),
 				// Delete Vali
 				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
-				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "vali-config", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "logging",
 					Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-valitail", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "vali-vali-0", Namespace: seedNamespace}}),
 			)
+
+			deleteOptions := []interface{}{
+				client.InNamespace(seedNamespace),
+				client.MatchingLabels{
+					v1beta1constants.GardenRole: "logging",
+					v1beta1constants.LabelApp:   "vali",
+				}}
+			c.EXPECT().DeleteAllOf(ctx, &corev1.ConfigMap{}, deleteOptions...)
 
 			Expect(botanist.DeploySeedLogging(ctx)).To(Succeed())
 		})
 
 		It("should successfully delete the logging stack when it is disabled", func() {
 			*botanist.Config.Logging.Enabled = false
+			deleteOptions := []interface{}{
+				client.InNamespace(seedNamespace),
+				client.MatchingLabels{
+					v1beta1constants.GardenRole: "logging",
+					v1beta1constants.LabelApp:   "vali",
+				}}
 			gomock.InOrder(
 				// Destroying the Shoot Node Logging
 				shootRBACProxyDeployer.EXPECT().Destroy(ctx),
@@ -187,12 +204,14 @@ var _ = Describe("Logging", func() {
 				shootEventLoggerDeployer.EXPECT().Destroy(ctx),
 				// Delete Vali
 				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
-				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "vali-config", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "logging",
 					Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-valitail", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "vali-vali-0", Namespace: seedNamespace}}),
+				c.EXPECT().DeleteAllOf(ctx, &corev1.ConfigMap{}, deleteOptions...),
 			)
 
 			Expect(botanist.DeploySeedLogging(ctx)).To(Succeed())
@@ -262,6 +281,12 @@ var _ = Describe("Logging", func() {
 
 		It("should not deploy shoot node logging and Vali when Vali is disabled", func() {
 			*botanist.Config.Logging.Vali.Enabled = false
+			deleteOptions := []interface{}{
+				client.InNamespace(seedNamespace),
+				client.MatchingLabels{
+					v1beta1constants.GardenRole: "logging",
+					v1beta1constants.LabelApp:   "vali",
+				}}
 			gomock.InOrder(
 				// deploy Shoot Event Logging
 				shootEventLoggerDeployer.EXPECT().Deploy(ctx),
@@ -271,12 +296,14 @@ var _ = Describe("Logging", func() {
 				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: seedNamespace}}),
 				// destroy Vali
 				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
-				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "vali-config", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "logging",
 					Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-valitail", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "vali-vali-0", Namespace: seedNamespace}}),
+				c.EXPECT().DeleteAllOf(ctx, &corev1.ConfigMap{}, deleteOptions...),
 			)
 
 			Expect(botanist.DeploySeedLogging(ctx)).To(Succeed())
