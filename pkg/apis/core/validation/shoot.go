@@ -2021,9 +2021,9 @@ func ValidateShootHAConfig(shoot *core.Shoot) field.ErrorList {
 }
 
 // ValidateShootHAConfigUpdate validates the HA shoot control plane configuration.
-func ValidateShootHAConfigUpdate(newShoot, oldSnoot *core.Shoot) field.ErrorList {
+func ValidateShootHAConfigUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	allErrs := field.ErrorList{}
-	allErrs = append(allErrs, validateShootHAControlPlaneSpecUpdate(newShoot, oldSnoot, field.NewPath("spec.controlPlane"))...)
+	allErrs = append(allErrs, validateShootHAControlPlaneSpecUpdate(newShoot, oldShoot, field.NewPath("spec.controlPlane"))...)
 	return allErrs
 }
 
@@ -2052,7 +2052,7 @@ func validateShootHAControlPlaneSpecUpdate(newShoot, oldShoot *core.Shoot, fldPa
 	if newShoot.Spec.ControlPlane != nil && newShoot.Spec.ControlPlane.HighAvailability != nil {
 		newVal = newShoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type
 		if !oldValExists && isShootInHibernation(newShoot) {
-			allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "controlPlane", "highAvailability", "failureTolerance", "type"), "Shoot is currently hibernated and cannot be scaled up to HA. Please make sure your cluster has woken up before scaling it up to HA"))
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("highAvailability", "failureTolerance", "type"), "Shoot is currently hibernated and cannot be scaled up to HA. Please make sure your cluster has woken up before scaling it up to HA"))
 		}
 	}
 
