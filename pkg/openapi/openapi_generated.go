@@ -3499,13 +3499,6 @@ func schema_pkg_apis_core_v1alpha1_KubeAPIServerConfig(ref common.ReferenceCallb
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.AuditConfig"),
 						},
 					},
-					"enableBasicAuthentication": {
-						SchemaProps: spec.SchemaProps{
-							Description: "EnableBasicAuthentication defines whether basic authentication should be enabled for this cluster or not.\n\nDeprecated: basic authentication has been removed in Kubernetes v1.19+. The field is no-op and will be removed in a future version.",
-							Type:        []string{"boolean"},
-							Format:      "",
-						},
-					},
 					"oidcConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "OIDCConfig contains configuration settings for the OIDC provider.",
@@ -11258,13 +11251,6 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 						SchemaProps: spec.SchemaProps{
 							Description: "AuditConfig contains configuration settings for the audit of the kube-apiserver.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig"),
-						},
-					},
-					"enableBasicAuthentication": {
-						SchemaProps: spec.SchemaProps{
-							Description: "EnableBasicAuthentication defines whether basic authentication should be enabled for this cluster or not.\n\nDeprecated: basic authentication has been removed in Kubernetes v1.19+. The field is no-op and will be removed in a future version.",
-							Type:        []string{"boolean"},
-							Format:      "",
 						},
 					},
 					"oidcConfig": {

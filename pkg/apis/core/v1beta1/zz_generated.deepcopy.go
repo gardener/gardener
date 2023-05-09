@@ -1761,11 +1761,6 @@ func (in *KubeAPIServerConfig) DeepCopyInto(out *KubeAPIServerConfig) {
 		*out = new(AuditConfig)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.EnableBasicAuthentication != nil {
-		in, out := &in.EnableBasicAuthentication, &out.EnableBasicAuthentication
-		*out = new(bool)
-		**out = **in
-	}
 	if in.OIDCConfig != nil {
 		in, out := &in.OIDCConfig, &out.OIDCConfig
 		*out = new(OIDCConfig)

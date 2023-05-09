@@ -529,10 +529,6 @@ type KubeAPIServerConfig struct {
 	APIAudiences []string
 	// AuditConfig contains configuration settings for the audit of the kube-apiserver.
 	AuditConfig *AuditConfig
-	// EnableBasicAuthentication defines whether basic authentication should be enabled for this cluster or not.
-	//
-	// Deprecated: basic authentication has been removed in Kubernetes v1.19+. The field is no-op and will be removed in a future version.
-	EnableBasicAuthentication *bool
 	// OIDCConfig contains configuration settings for the OIDC provider.
 	OIDCConfig *OIDCConfig
 	// RuntimeConfig contains information about enabled or disabled APIs.

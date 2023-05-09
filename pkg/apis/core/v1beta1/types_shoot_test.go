@@ -37,4 +37,18 @@ var _ = Describe("Shoot", func() {
 			}
 		})
 	})
+
+	Describe("KubeAPIServerConfig", func() {
+		It("should not allow to reuse protobuf numbers of already removed fields", func() {
+			obj := reflect.ValueOf(KubeAPIServerConfig{}).Type()
+			for i := 0; i < obj.NumField(); i++ {
+				f := obj.Field(i)
+
+				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
+				if protobufNum == "5" {
+					Fail("protobuf 5 in KubeAPIServerConfig is reserved for removed enableBasicAuthentication field")
+				}
+			}
+		})
+	})
 })

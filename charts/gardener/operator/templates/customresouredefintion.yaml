@@ -490,13 +490,6 @@ spec:
                               anonymous requests to the secure port of the API server
                               should be allowed (flag `--anonymous-auth`). See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/'
                             type: boolean
-                          enableBasicAuthentication:
-                            description: "EnableBasicAuthentication defines whether
-                              basic authentication should be enabled for this cluster
-                              or not. \n Deprecated: basic authentication has been
-                              removed in Kubernetes v1.19+. The field is no-op and
-                              will be removed in a future version."
-                            type: boolean
                           eventTTL:
                             description: EventTTL controls the amount of time to retain
                               events. Defaults to 1h.
