@@ -237,7 +237,7 @@ func computeKindTypesForShoots(
 				log.Info("Could not determine external domain for shoot", "err", err, "shoot", client.ObjectKeyFromObject(shoot))
 			}
 
-			out <- gardenerutils.ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
+			out <- gardenerutils.ComputeRequiredExtensionsForShoot(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
 		}(shoot.DeepCopy())
 	}
 

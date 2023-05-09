@@ -614,9 +614,9 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 	return externalDomain, nil
 }
 
-// ComputeRequiredExtensions compute the extension kind/type combinations that are required for the
-// reconciliation flow.
-func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList, internalDomain, externalDomain *Domain) utilsets.Set[string] {
+// ComputeRequiredExtensionsForShoot computes the extension kind/type combinations that are required for the
+// shoot reconciliation flow.
+func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList, internalDomain, externalDomain *Domain) utilsets.Set[string] {
 	requiredExtensions := utilsets.New[string]()
 
 	if seed.Spec.Backup != nil {

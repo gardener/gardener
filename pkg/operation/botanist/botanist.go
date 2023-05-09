@@ -249,7 +249,7 @@ func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 		return err
 	}
 
-	requiredExtensions := gardenerutils.ComputeRequiredExtensions(b.Shoot.GetInfo(), b.Seed.GetInfo(), controllerRegistrationList, b.Garden.InternalDomain, b.Shoot.ExternalDomain)
+	requiredExtensions := gardenerutils.ComputeRequiredExtensionsForShoot(b.Shoot.GetInfo(), b.Seed.GetInfo(), controllerRegistrationList, b.Garden.InternalDomain, b.Shoot.ExternalDomain)
 
 	for _, controllerInstallation := range controllerInstallationList.Items {
 		if controllerInstallation.Spec.SeedRef.Name != b.Seed.GetInfo().Name {
