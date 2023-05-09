@@ -37,8 +37,7 @@ var _ = Describe("NetworkPolicy", func() {
 			)).Should(Succeed())
 
 			Expect(obj.Annotations).To(And(
-				HaveKeyWithValue("networking.resources.gardener.cloud/from-policy-pod-label-selector", "all-scrape-targets"),
-				HaveKeyWithValue("networking.resources.gardener.cloud/from-policy-allowed-ports", `[{"protocol":"TCP","port":1234},{"protocol":"UDP","port":"foo"}]`),
+				HaveKeyWithValue("networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports", `[{"protocol":"TCP","port":1234},{"protocol":"UDP","port":"foo"}]`),
 			))
 		})
 	})
@@ -54,8 +53,7 @@ var _ = Describe("NetworkPolicy", func() {
 			)).Should(Succeed())
 
 			Expect(obj.Annotations).To(And(
-				HaveKeyWithValue("networking.resources.gardener.cloud/from-policy-pod-label-selector", "all-seed-scrape-targets"),
-				HaveKeyWithValue("networking.resources.gardener.cloud/from-policy-allowed-ports", `[{"protocol":"TCP","port":1234},{"protocol":"UDP","port":"foo"}]`),
+				HaveKeyWithValue("networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports", `[{"protocol":"TCP","port":1234},{"protocol":"UDP","port":"foo"}]`),
 			))
 		})
 	})

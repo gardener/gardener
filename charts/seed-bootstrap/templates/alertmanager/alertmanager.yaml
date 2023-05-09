@@ -8,8 +8,7 @@ metadata:
     component: alertmanager
     role: monitoring
   annotations:
-    networking.resources.gardener.cloud/from-policy-allowed-ports: '[{"port":9093,"protocol":"TCP"}]'
-    networking.resources.gardener.cloud/from-policy-pod-label-selector: all-seed-scrape-targets
+    networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports: '[{"port":9093,"protocol":"TCP"}]'
     networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"shoot"}}]'
 spec:
   ports:

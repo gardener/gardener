@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
 
@@ -154,8 +155,7 @@ func GetFluentBit(labels map[string]string, fluentBitName, namespace, image, ini
 			Service: fluentbitv1alpha2.FluentBitService{
 				Name: fluentBitName,
 				Annotations: map[string]string{
-					resourcesv1alpha1.NetworkingFromPolicyPodLabelSelector: "all-seed-scrape-targets",
-					resourcesv1alpha1.NetworkingFromPolicyAllowedPorts:     `[{"port":"2020","protocol":"TCP"},{"port":"2021","protocol":"TCP"}]`,
+					resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicySeedScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"port":"2020","protocol":"TCP"},{"port":"2021","protocol":"TCP"}]`,
 				},
 				Labels: labels,
 			},

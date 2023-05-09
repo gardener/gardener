@@ -540,8 +540,7 @@ var _ = Describe("VPA", func() {
 
 			if clusterType == "seed" {
 				obj.Annotations = map[string]string{
-					"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-seed-scrape-targets",
-					"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":8942}]`,
+					"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8942}]`,
 				}
 			} else if clusterType == "shoot" {
 				obj.Annotations = map[string]string{
