@@ -34,10 +34,10 @@ var _ = Describe("ControllerRegistration controller test", func() {
 		providerType    = "provider"
 		dnsProviderType = "dnsProvider"
 
-		seed                   *gardencorev1beta1.Seed
-		seedNamespace          *corev1.Namespace
-		seedSecret             *corev1.Secret
-		controllerRegistration *gardencorev1beta1.ControllerRegistration
+		seed                       *gardencorev1beta1.Seed
+		seedNamespace              *corev1.Namespace
+		seedSecret                 *corev1.Secret
+		seedControllerRegistration *gardencorev1beta1.ControllerRegistration
 	)
 
 	BeforeEach(func() {
@@ -112,18 +112,23 @@ var _ = Describe("ControllerRegistration controller test", func() {
 			return seed.Finalizers
 		}).Should(ConsistOf("core.gardener.cloud/controllerregistration"))
 
-		controllerRegistration = &gardencorev1beta1.ControllerRegistration{
+		seedControllerRegistration = &gardencorev1beta1.ControllerRegistration{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "ctrlreg-" + testID + "-",
 				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ControllerRegistrationSpec{
-				Resources: []gardencorev1beta1.ControllerResource{{Kind: extensionsv1alpha1.DNSRecordResource, Type: dnsProviderType}},
+				Resources: []gardencorev1beta1.ControllerResource{
+					{Kind: extensionsv1alpha1.DNSRecordResource, Type: dnsProviderType},
+					{Kind: extensionsv1alpha1.ControlPlaneResource, Type: providerType},
+					{Kind: extensionsv1alpha1.InfrastructureResource, Type: providerType},
+					{Kind: extensionsv1alpha1.WorkerResource, Type: providerType},
+				},
 			},
 		}
 
 		By("Create ControllerRegistration")
-		Expect(testClient.Create(ctx, controllerRegistration)).To(Succeed())
+		Expect(testClient.Create(ctx, seedControllerRegistration)).To(Succeed())
 
 		DeferCleanup(func() {
 			By("Delete Seed")
@@ -151,15 +156,15 @@ var _ = Describe("ControllerRegistration controller test", func() {
 		It("should reconcile the ControllerInstallations", func() {
 			By("Expect finalizer to be added to ControllerRegistration")
 			Eventually(func(g Gomega) []string {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistration), controllerRegistration)).To(Succeed())
-				return controllerRegistration.Finalizers
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seedControllerRegistration), seedControllerRegistration)).To(Succeed())
+				return seedControllerRegistration.Finalizers
 			}).Should(ConsistOf("core.gardener.cloud/controllerregistration"))
 
 			By("Expect ControllerInstallation be created")
 			Eventually(func(g Gomega) {
 				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
 				g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
-					core.RegistrationRefName: controllerRegistration.Name,
+					core.RegistrationRefName: seedControllerRegistration.Name,
 					core.SeedRefName:         seed.Name,
 				})).To(Succeed())
 				g.Expect(controllerInstallationList.Items).To(HaveLen(1))
@@ -172,18 +177,18 @@ var _ = Describe("ControllerRegistration controller test", func() {
 			Eventually(func(g Gomega) {
 				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
 				g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
-					core.RegistrationRefName: controllerRegistration.Name,
+					core.RegistrationRefName: seedControllerRegistration.Name,
 					core.SeedRefName:         seed.Name,
 				})).To(Succeed())
 				g.Expect(controllerInstallationList.Items).To(HaveLen(0))
 			}).Should(Succeed())
 
 			By("Delete ControllerRegistration")
-			Expect(testClient.Delete(ctx, controllerRegistration)).To(Succeed())
+			Expect(testClient.Delete(ctx, seedControllerRegistration)).To(Succeed())
 
 			By("Expect ControllerRegistration to be deleted")
 			Eventually(func() error {
-				return testClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistration), controllerRegistration)
+				return testClient.Get(ctx, client.ObjectKeyFromObject(seedControllerRegistration), seedControllerRegistration)
 			}).Should(BeNotFoundError())
 		})
 	})
@@ -438,6 +443,8 @@ var _ = Describe("ControllerRegistration controller test", func() {
 
 	Context("Shoot", func() {
 		It("should reconcile the ControllerInstallations", func() {
+			shootProviderType := "shootProvider"
+
 			obj := &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: testID + "-",
@@ -449,7 +456,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 					CloudProfileName:  "test-cloudprofile",
 					Region:            "foo-region",
 					Provider: gardencorev1beta1.Provider{
-						Type: providerType,
+						Type: shootProviderType,
 						Workers: []gardencorev1beta1.Worker{
 							{
 								Name:    "cpu-worker",
@@ -458,14 +465,14 @@ var _ = Describe("ControllerRegistration controller test", func() {
 								Machine: gardencorev1beta1.Machine{
 									Type: "large",
 									Image: &gardencorev1beta1.ShootMachineImage{
-										Name:    providerType,
+										Name:    shootProviderType,
 										Version: pointer.String("0.0.0"),
 									},
 								},
 								CRI: &gardencorev1beta1.CRI{
 									Name: gardencorev1beta1.CRINameContainerD,
 									ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{
-										Type: providerType,
+										Type: shootProviderType,
 									}},
 								},
 							},
@@ -475,46 +482,46 @@ var _ = Describe("ControllerRegistration controller test", func() {
 						Version: "1.21.1",
 					},
 					Networking: &gardencorev1beta1.Networking{
-						Type: pointer.String(providerType),
+						Type: pointer.String(shootProviderType),
 					},
 					Extensions: []gardencorev1beta1.Extension{{
-						Type: providerType,
+						Type: shootProviderType,
 					}},
 					DNS: &gardencorev1beta1.DNS{
 						Providers: []gardencorev1beta1.DNSProvider{{
-							Type: &providerType,
+							Type: &shootProviderType,
 						}},
 					},
 					SeedName: &seed.Name,
 				},
 			}
 
-			controllerRegistration := &gardencorev1beta1.ControllerRegistration{
+			shootControllerRegistration := &gardencorev1beta1.ControllerRegistration{
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: "ctrlreg-" + testID + "-",
 					Labels:       map[string]string{testID: testRunID},
 				},
 				Spec: gardencorev1beta1.ControllerRegistrationSpec{
 					Resources: []gardencorev1beta1.ControllerResource{
-						{Kind: extensionsv1alpha1.ControlPlaneResource, Type: providerType},
-						{Kind: extensionsv1alpha1.InfrastructureResource, Type: providerType},
-						{Kind: extensionsv1alpha1.WorkerResource, Type: providerType},
-						{Kind: extensionsv1alpha1.NetworkResource, Type: providerType},
-						{Kind: extensionsv1alpha1.ContainerRuntimeResource, Type: providerType},
-						{Kind: extensionsv1alpha1.DNSRecordResource, Type: providerType},
-						{Kind: extensionsv1alpha1.OperatingSystemConfigResource, Type: providerType},
-						{Kind: extensionsv1alpha1.ExtensionResource, Type: providerType},
+						{Kind: extensionsv1alpha1.ControlPlaneResource, Type: shootProviderType},
+						{Kind: extensionsv1alpha1.InfrastructureResource, Type: shootProviderType},
+						{Kind: extensionsv1alpha1.WorkerResource, Type: shootProviderType},
+						{Kind: extensionsv1alpha1.NetworkResource, Type: shootProviderType},
+						{Kind: extensionsv1alpha1.ContainerRuntimeResource, Type: shootProviderType},
+						{Kind: extensionsv1alpha1.DNSRecordResource, Type: shootProviderType},
+						{Kind: extensionsv1alpha1.OperatingSystemConfigResource, Type: shootProviderType},
+						{Kind: extensionsv1alpha1.ExtensionResource, Type: shootProviderType},
 					},
 				},
 			}
 
 			By("Create ControllerRegistration")
-			Expect(testClient.Create(ctx, controllerRegistration)).To(Succeed())
+			Expect(testClient.Create(ctx, shootControllerRegistration)).To(Succeed())
 
 			By("Expect finalizer to be added to ControllerRegistration")
 			Eventually(func(g Gomega) []string {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistration), controllerRegistration)).To(Succeed())
-				return controllerRegistration.Finalizers
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootControllerRegistration), shootControllerRegistration)).To(Succeed())
+				return shootControllerRegistration.Finalizers
 			}).Should(ConsistOf("core.gardener.cloud/controllerregistration"))
 
 			By("Create object")
@@ -524,7 +531,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 			Eventually(func(g Gomega) {
 				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
 				g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
-					core.RegistrationRefName: controllerRegistration.Name,
+					core.RegistrationRefName: shootControllerRegistration.Name,
 					core.SeedRefName:         seed.Name,
 				})).To(Succeed())
 				g.Expect(controllerInstallationList.Items).To(HaveLen(1))
@@ -537,18 +544,18 @@ var _ = Describe("ControllerRegistration controller test", func() {
 			Eventually(func(g Gomega) {
 				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
 				g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
-					core.RegistrationRefName: controllerRegistration.Name,
+					core.RegistrationRefName: shootControllerRegistration.Name,
 					core.SeedRefName:         seed.Name,
 				})).To(Succeed())
 				g.Expect(controllerInstallationList.Items).To(HaveLen(0))
 			}).Should(Succeed())
 
 			By("Delete ControllerRegistration")
-			Expect(testClient.Delete(ctx, controllerRegistration)).To(Succeed())
+			Expect(testClient.Delete(ctx, shootControllerRegistration)).To(Succeed())
 
 			By("Expect ControllerRegistration to be deleted")
 			Eventually(func() error {
-				return testClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistration), controllerRegistration)
+				return testClient.Get(ctx, client.ObjectKeyFromObject(shootControllerRegistration), shootControllerRegistration)
 			}).Should(BeNotFoundError())
 		})
 	})

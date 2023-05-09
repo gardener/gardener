@@ -269,6 +269,11 @@ func computeKindTypesForSeed(
 		wantedKindTypeCombinations.Insert(gardenerutils.ExtensionsID(extensionsv1alpha1.DNSRecordResource, seed.Spec.DNS.Provider.Type))
 	}
 
+	// add extension combinations for seed provider type
+	wantedKindTypeCombinations.Insert(gardenerutils.ExtensionsID(extensionsv1alpha1.ControlPlaneResource, seed.Spec.Provider.Type))
+	wantedKindTypeCombinations.Insert(gardenerutils.ExtensionsID(extensionsv1alpha1.InfrastructureResource, seed.Spec.Provider.Type))
+	wantedKindTypeCombinations.Insert(gardenerutils.ExtensionsID(extensionsv1alpha1.WorkerResource, seed.Spec.Provider.Type))
+
 	return wantedKindTypeCombinations
 }
 

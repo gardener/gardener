@@ -583,6 +583,9 @@ var _ = Describe("Reconciler", func() {
 		It("should add the DNSRecord extension", func() {
 			seed := &gardencorev1beta1.Seed{
 				Spec: gardencorev1beta1.SeedSpec{
+					Provider: gardencorev1beta1.SeedProvider{
+						Type: type1,
+					},
 					DNS: gardencorev1beta1.SeedDNS{
 						Provider: &gardencorev1beta1.SeedDNSProvider{
 							Type: providerType,
@@ -591,7 +594,12 @@ var _ = Describe("Reconciler", func() {
 				},
 			}
 
-			expected := sets.New(gardenerutils.ExtensionsID(extensionsv1alpha1.DNSRecordResource, providerType))
+			expected := sets.New(
+				extensionsv1alpha1.DNSRecordResource+"/fake-provider-type",
+				extensionsv1alpha1.ControlPlaneResource+"/type1",
+				extensionsv1alpha1.InfrastructureResource+"/type1",
+				extensionsv1alpha1.WorkerResource+"/type1",
+			)
 			actual := computeKindTypesForSeed(seed)
 			Expect(actual).To(Equal(expected))
 		})
@@ -616,12 +624,20 @@ var _ = Describe("Reconciler", func() {
 			Expect(actual).To(Equal(expected))
 		})
 
-		It("should not add an extension if no provider configured", func() {
+		It("should only add seed provider type extenions", func() {
 			seed := &gardencorev1beta1.Seed{
-				Spec: gardencorev1beta1.SeedSpec{},
+				Spec: gardencorev1beta1.SeedSpec{
+					Provider: gardencorev1beta1.SeedProvider{
+						Type: type1,
+					},
+				},
 			}
 
-			expected := sets.New[string]()
+			expected := sets.New(
+				extensionsv1alpha1.ControlPlaneResource+"/type1",
+				extensionsv1alpha1.InfrastructureResource+"/type1",
+				extensionsv1alpha1.WorkerResource+"/type1",
+			)
 			actual := computeKindTypesForSeed(seed)
 			Expect(actual).To(Equal(expected))
 		})
