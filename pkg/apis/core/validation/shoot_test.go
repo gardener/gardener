@@ -431,13 +431,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})
 			})
 
-			Context("Shoot is hibernated", func() {
-				It("Should not allow upgrading from non-HA to HA when Spec.Hibernation.Enabled is set to `true`", func() {
+			Context("shoot is hibernated", func() {
+				It("should not allow upgrading from non-HA to HA when Spec.Hibernation.Enabled is set to `true`", func() {
 					shoot.Spec.ControlPlane = &core.ControlPlane{}
-					ValueTrue := true
 					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
-					newShoot.Spec.Hibernation = &core.Hibernation{Enabled: &ValueTrue}
+					newShoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)}
 					errorList := ValidateShootHAConfigUpdate(newShoot, shoot)
 					Expect(errorList).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
@@ -448,7 +447,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					))
 				})
 
-				It("Should not allow upgrading from non-HA to HA when Status.IsHibernation is set to `true`", func() {
+				It("should not allow upgrading from non-HA to HA when Status.IsHibernation is set to `true`", func() {
 					shoot.Spec.ControlPlane = &core.ControlPlane{}
 					newShoot := prepareShootForUpdate(shoot)
 					newShoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
