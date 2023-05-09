@@ -22,9 +22,11 @@ import (
 	"strings"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -116,6 +118,55 @@ func DeleteVali(ctx context.Context, k8sClient client.Client, namespace string) 
 		client.MatchingLabels{
 			v1beta1constants.GardenRole: "logging",
 			v1beta1constants.LabelApp:   "vali",
+		},
+	}
+
+	return k8sClient.DeleteAllOf(ctx, &corev1.ConfigMap{}, deleteOptions...)
+}
+
+// LokiPvcExists checks if the loki-loki-0 PVC exists in the given namespace.
+func LokiPvcExists(ctx context.Context, k8sClient client.Client, namespace string, log logr.Logger) (bool, error) {
+	pvc := &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "loki-loki-0",
+			Namespace: namespace,
+		},
+	}
+	if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(pvc), pvc); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("Loki2vali: Loki PVC not found", "lokiNamespace", namespace)
+			return false, nil
+		} else {
+			return false, err
+		}
+	}
+	log.Info("Loki2vali: Loki PVC found", "lokiNamespace", namespace)
+	return true, nil
+}
+
+// DeleteLokiRetainPvc deletes all Loki resources in a given namespace.
+func DeleteLokiRetainPvc(ctx context.Context, k8sClient client.Client, namespace string, log logr.Logger) error {
+	resources := []client.Object{
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-loki", Namespace: namespace}},
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-loki", Namespace: namespace}},
+		&hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
+		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
+		&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
+		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-promtail", Namespace: namespace}},
+		// We retain the PVC and reuse it with Vali.
+		//&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "loki-loki-0", Namespace: namespace}},
+	}
+
+	if err := kubernetesutils.DeleteObjects(ctx, k8sClient, resources...); err != nil {
+		return err
+	}
+
+	deleteOptions := []client.DeleteAllOfOption{
+		client.InNamespace(namespace),
+		client.MatchingLabels{
+			v1beta1constants.GardenRole: "logging",
+			v1beta1constants.LabelApp:   "loki",
 		},
 	}
 

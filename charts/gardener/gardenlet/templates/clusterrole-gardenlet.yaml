@@ -91,6 +91,7 @@ rules:
   resourceNames:
   - alertmanager-db-alertmanager-0
   - vali-vali-0
+  - loki-loki-0
   - prometheus-db-prometheus-0
   verbs:
   - delete
@@ -215,6 +216,7 @@ rules:
   - aggregate-prometheus
   - prometheus
   - vali
+  - loki
   verbs:
   - delete
   - patch

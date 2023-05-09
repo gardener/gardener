@@ -45,6 +45,15 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		return b.destroyShootLoggingStack(ctx)
 	}
 
+	//TODO(rickardsjp, istvanballok): Remove in the next release once the Loki to Vali migration is complete.
+	if exists, err := b.lokiPvcExists(ctx); err != nil {
+		return err
+	} else if exists {
+		if err := b.destroyLokiBasedShootLoggingStackRetainingPvc(ctx); err != nil {
+			return err
+		}
+	}
+
 	seedImages, err := b.InjectSeedSeedImages(map[string]interface{}{},
 		images.ImageNameVali,
 		images.ImageNameValiCurator,
@@ -168,6 +177,23 @@ func (b *Botanist) destroyShootLoggingStack(ctx context.Context) error {
 	return common.DeleteVali(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
 }
 
+func (b *Botanist) lokiPvcExists(ctx context.Context) (bool, error) {
+	return common.LokiPvcExists(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.Logger)
+}
+
+func (b *Botanist) destroyLokiBasedShootLoggingStackRetainingPvc(ctx context.Context) error {
+	if err := b.destroyLokiBasedShootNodeLogging(ctx); err != nil {
+		return err
+	}
+
+	// The EventLogger is not dependent on Loki/Vali and therefore doesn't need to be deleted.
+	// if err := b.Shoot.Components.Logging.ShootEventLogger.Destroy(ctx); err != nil {
+	// 	return err
+	// }
+
+	return common.DeleteLokiRetainPvc(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.Logger)
+}
+
 func (b *Botanist) destroyShootNodeLogging(ctx context.Context) error {
 	if err := b.Shoot.Components.Logging.ShootRBACProxy.Destroy(ctx); err != nil {
 		return err
@@ -175,6 +201,18 @@ func (b *Botanist) destroyShootNodeLogging(ctx context.Context) error {
 
 	return kubernetesutils.DeleteObjects(ctx, b.SeedClientSet.Client(),
 		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: b.Shoot.SeedNamespace}},
+	)
+}
+
+func (b *Botanist) destroyLokiBasedShootNodeLogging(ctx context.Context) error {
+	if err := b.Shoot.Components.Logging.ShootRBACProxy.Destroy(ctx); err != nil {
+		return err
+	}
+
+	return kubernetesutils.DeleteObjects(ctx, b.SeedClientSet.Client(),
+		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: b.Shoot.SeedNamespace}},
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-prometheus-to-loki-telegraf", Namespace: b.Shoot.SeedNamespace}},
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: b.Shoot.SeedNamespace}},
 	)
 }
