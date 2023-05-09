@@ -58,6 +58,22 @@ var _ = Describe("NetworkPolicy", func() {
 		})
 	})
 
+	Describe("#InjectNetworkPolicyAnnotationsForWebhookTargets", func() {
+		It("should inject the annotations", func() {
+			obj := &corev1.Service{}
+
+			Expect(InjectNetworkPolicyAnnotationsForWebhookTargets(
+				obj,
+				networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(1234), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
+				networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromString("foo"), Protocol: utils.ProtocolPtr(corev1.ProtocolUDP)},
+			)).Should(Succeed())
+
+			Expect(obj.Annotations).To(And(
+				HaveKeyWithValue("networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports", `[{"protocol":"TCP","port":1234},{"protocol":"UDP","port":"foo"}]`),
+			))
+		})
+	})
+
 	Describe("#InjectNetworkPolicyNamespaceSelectors", func() {
 		It("should inject the annotation", func() {
 			obj := &corev1.Service{}

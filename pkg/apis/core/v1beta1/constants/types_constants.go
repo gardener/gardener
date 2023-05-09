@@ -468,6 +468,10 @@ const (
 	// seed system components or extensions which should be scraped by Prometheus.
 	// See https://github.com/gardener/gardener/blob/master/docs/concepts/resource-manager.md#overwriting-the-pod-selector-label.
 	LabelNetworkPolicySeedScrapeTargets = "all-seed-scrape-targets"
+	// LabelNetworkPolicyWebhookTargets is a constant for pod selector label which can be used on Services for
+	// garden or shoot components which serve a webhook endpoint that must be reachable by the kube-apiserver.
+	// See https://github.com/gardener/gardener/blob/master/docs/concepts/resource-manager.md#overwriting-the-pod-selector-label.
+	LabelNetworkPolicyWebhookTargets = "all-webhook-targets"
 	// LabelNetworkPolicyShootNamespaceAlias is a constant for the alias for shoot namespaces used in NetworkPolicy
 	// labels.
 	LabelNetworkPolicyShootNamespaceAlias = "all-shoots"

@@ -1853,6 +1853,7 @@ rules:
 						"networking.gardener.cloud/to-dns": "allowed",
 						"networking.gardener.cloud/to-private-networks":                              "allowed",
 						"networking.gardener.cloud/to-public-networks":                               "allowed",
+						"networking.resources.gardener.cloud/to-all-webhook-targets":                 "allowed",
 						"networking.resources.gardener.cloud/to-etcd-main-client-tcp-2379":           "allowed",
 						"networking.resources.gardener.cloud/to-etcd-events-client-tcp-2379":         "allowed",
 						"networking.resources.gardener.cloud/to-gardener-resource-manager-tcp-10250": "allowed",

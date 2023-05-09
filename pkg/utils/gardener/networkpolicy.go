@@ -38,6 +38,12 @@ func InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service *corev1.Service,
 	return injectNetworkPolicyAnnotationsForScrapeTargets(service, v1beta1constants.LabelNetworkPolicySeedScrapeTargets, ports...)
 }
 
+// InjectNetworkPolicyAnnotationsForWebhookTargets injects the provided ports into the
+// `networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports` annotation of the given service.
+func InjectNetworkPolicyAnnotationsForWebhookTargets(service *corev1.Service, ports ...networkingv1.NetworkPolicyPort) error {
+	return injectNetworkPolicyAnnotationsForScrapeTargets(service, v1beta1constants.LabelNetworkPolicyWebhookTargets, ports...)
+}
+
 // InjectNetworkPolicyAnnotationsForScrapeTargets injects the provided ports into the
 // `networking.resources.gardener.cloud/from-<podLabelSelector>-allowed-ports` annotation of the given service.
 func injectNetworkPolicyAnnotationsForScrapeTargets(service *corev1.Service, podLabelSelector string, ports ...networkingv1.NetworkPolicyPort) error {
