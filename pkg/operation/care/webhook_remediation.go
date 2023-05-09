@@ -82,10 +82,24 @@ func (r *WebhookRemediation) Remediate(ctx context.Context) error {
 			mustPatch     bool
 			patch         = client.StrategicMergeFrom(webhookConfig.DeepCopy())
 			remediations  []string
+			matchers      []webhookmatchers.WebhookConstraintMatcher
 		)
 
 		for i, w := range webhookConfig.Webhooks {
 			remediate := newRemediator(r.log, "ValidatingWebhookConfiguration", webhookConfig.Name, w.Name, &remediations)
+
+			for _, rule := range w.Rules {
+				for _, matcher := range webhookmatchers.WebhookConstraintMatchersForLeases {
+					if matcher.Match(rule, w.ObjectSelector, w.NamespaceSelector) {
+						matchers = append(matchers, matcher)
+					}
+				}
+			}
+
+			if len(matchers) > 0 && (w.TimeoutSeconds == nil || *w.TimeoutSeconds > 3) {
+				mustPatch = true
+				webhookConfig.Webhooks[i].TimeoutSeconds = pointer.Int32(3)
+			}
 
 			if mustRemediateTimeoutSeconds(w.TimeoutSeconds) {
 				mustPatch = true
@@ -96,7 +110,7 @@ func (r *WebhookRemediation) Remediate(ctx context.Context) error {
 				continue
 			}
 
-			matchers := getMatchingRules(w.Rules, w.ObjectSelector, w.NamespaceSelector)
+			matchers = getMatchingRules(w.Rules, w.ObjectSelector, w.NamespaceSelector)
 
 			if mustRemediateFailurePolicy(matchers) {
 				mustPatch = true
@@ -127,10 +141,24 @@ func (r *WebhookRemediation) Remediate(ctx context.Context) error {
 			mustPatch     bool
 			patch         = client.StrategicMergeFrom(webhookConfig.DeepCopy())
 			remediations  []string
+			matchers      []webhookmatchers.WebhookConstraintMatcher
 		)
 
 		for i, w := range webhookConfig.Webhooks {
 			remediate := newRemediator(r.log, "MutatingWebhookConfiguration", webhookConfig.Name, w.Name, &remediations)
+
+			for _, rule := range w.Rules {
+				for _, matcher := range webhookmatchers.WebhookConstraintMatchersForLeases {
+					if matcher.Match(rule, w.ObjectSelector, w.NamespaceSelector) {
+						matchers = append(matchers, matcher)
+					}
+				}
+			}
+
+			if len(matchers) > 0 && (w.TimeoutSeconds == nil || *w.TimeoutSeconds > 3) {
+				mustPatch = true
+				webhookConfig.Webhooks[i].TimeoutSeconds = pointer.Int32(3)
+			}
 
 			if mustRemediateTimeoutSeconds(w.TimeoutSeconds) {
 				mustPatch = true
@@ -141,7 +169,7 @@ func (r *WebhookRemediation) Remediate(ctx context.Context) error {
 				continue
 			}
 
-			matchers := getMatchingRules(w.Rules, w.ObjectSelector, w.NamespaceSelector)
+			matchers = getMatchingRules(w.Rules, w.ObjectSelector, w.NamespaceSelector)
 
 			if mustRemediateFailurePolicy(matchers) {
 				mustPatch = true
