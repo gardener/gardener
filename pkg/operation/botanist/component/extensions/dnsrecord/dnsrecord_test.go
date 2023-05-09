@@ -350,6 +350,51 @@ var _ = Describe("DNSRecord", func() {
 			}))
 		})
 
+		It("should deploy the DNSRecord with operation annotation if it is in error state", func() {
+			expectedDNSRecord := &extensionsv1alpha1.DNSRecord{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
+					Kind:       extensionsv1alpha1.DNSRecordResource},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+					Annotations: map[string]string{
+						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
+						v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
+					},
+					ResourceVersion: "2",
+				},
+				Spec: dns.Spec,
+				Status: extensionsv1alpha1.DNSRecordStatus{
+					DefaultStatus: extensionsv1alpha1.DefaultStatus{
+						LastOperation: &gardencorev1beta1.LastOperation{
+							State: gardencorev1beta1.LastOperationStateError,
+						},
+					},
+				},
+			}
+
+			existingDNS := dns.DeepCopy()
+			delete(existingDNS.Annotations, v1beta1constants.GardenerOperation)
+			metav1.SetMetaDataAnnotation(&existingDNS.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).Format(time.RFC3339Nano))
+			existingDNS.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State: gardencorev1beta1.LastOperationStateError,
+			}
+
+			Expect(c.Create(ctx, existingDNS)).To(Succeed())
+			values.AnnotateOperation = false
+			dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
+			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
+
+			deployedDNS := &extensionsv1alpha1.DNSRecord{ObjectMeta: metav1.ObjectMeta{
+				Name:      existingDNS.Name,
+				Namespace: existingDNS.Namespace,
+			}}
+			err := c.Get(ctx, client.ObjectKeyFromObject(deployedDNS), deployedDNS)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(deployedDNS).To(DeepEqual(expectedDNSRecord))
+		})
+
 		It("should fail if creating the DNSRecord resource failed", func() {
 			mc := mockclient.NewMockClient(ctrl)
 			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(secret), gomock.AssignableToTypeOf(&corev1.Secret{})).
