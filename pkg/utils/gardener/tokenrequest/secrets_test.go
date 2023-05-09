@@ -24,19 +24,40 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 )
 
 var _ = Describe("Secrets", func() {
 	var (
 		ctx = context.TODO()
 
-		namespace = "foo-bar"
-		c         client.Client
+		namespace          = "foo-bar"
+		c                  client.Client
+		fakeSecretsManager secretsmanager.Interface
 	)
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().Build()
+		fakeSecretsManager = fakesecretsmanager.New(c, namespace)
+
+		_, err := fakeSecretsManager.Generate(
+			ctx,
+			&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCACluster, CommonName: "kubernetes", CertType: secretsutils.CACert},
+		)
+		Expect(err).ShouldNot(HaveOccurred())
+	})
+
+	Describe("GenerateGenericTokenKubeconfig", func() {
+		It("should generate the generic token kubeconfig", func() {
+			secret, err := GenerateGenericTokenKubeconfig(ctx, fakeSecretsManager, namespace, "kube-apiserver")
+			Expect(err).ShouldNot(HaveOccurred())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+		})
 	})
 
 	Describe("#RenewAccessSecrets", func() {

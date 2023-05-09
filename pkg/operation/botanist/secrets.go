@@ -23,7 +23,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -36,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -214,24 +214,7 @@ func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
 }
 
 func (b *Botanist) generateGenericTokenKubeconfig(ctx context.Context) error {
-	clusterCABundleSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
-	}
-
-	config := &secretsutils.KubeconfigSecretConfig{
-		Name:        v1beta1constants.SecretNameGenericTokenKubeconfig,
-		ContextName: b.Shoot.SeedNamespace,
-		Cluster: clientcmdv1.Cluster{
-			Server:                   b.Shoot.ComputeInClusterAPIServerAddress(true),
-			CertificateAuthorityData: clusterCABundleSecret.Data[secretsutils.DataKeyCertificateBundle],
-		},
-		AuthInfo: clientcmdv1.AuthInfo{
-			TokenFile: gardenerutils.PathShootToken,
-		},
-	}
-
-	genericTokenKubeconfigSecret, err := b.SecretsManager.Generate(ctx, config, secretsmanager.Rotate(secretsmanager.InPlace))
+	genericTokenKubeconfigSecret, err := tokenrequest.GenerateGenericTokenKubeconfig(ctx, b.SecretsManager, b.Shoot.SeedNamespace, b.Shoot.ComputeInClusterAPIServerAddress(true))
 	if err != nil {
 		return err
 	}

@@ -16,16 +16,43 @@ package tokenrequest
 
 import (
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
+
+// GenerateGenericTokenKubeconfig generates a generic token kubeconfig in the given namespace for the given kube-apiserver address
+func GenerateGenericTokenKubeconfig(ctx context.Context, secretsManager secretsmanager.Interface, namespace, kubeAPIServerAddress string) (*corev1.Secret, error) {
+	clusterCABundleSecret, found := secretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+	}
+
+	config := &secretsutils.KubeconfigSecretConfig{
+		Name:        v1beta1constants.SecretNameGenericTokenKubeconfig,
+		ContextName: namespace,
+		Cluster: clientcmdv1.Cluster{
+			Server:                   kubeAPIServerAddress,
+			CertificateAuthorityData: clusterCABundleSecret.Data[secretsutils.DataKeyCertificateBundle],
+		},
+		AuthInfo: clientcmdv1.AuthInfo{
+			TokenFile: gardenerutils.PathShootToken,
+		},
+	}
+
+	return secretsManager.Generate(ctx, config, secretsmanager.Rotate(secretsmanager.InPlace))
+}
 
 // RenewAccessSecrets drops the serviceaccount.resources.gardener.cloud/token-renew-timestamp annotation from all
 // access secrets. This will make the TokenRequestor controller part of gardener-resource-manager issuing new
