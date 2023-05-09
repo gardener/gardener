@@ -264,12 +264,17 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 					"clusteroutputs.fluentbit.fluent.io",
 					"clusterparsers.fluentbit.fluent.io",
 					"fluentbits.fluentbit.fluent.io",
+					"collectors.fluentbit.fluent.io",
+					"fluentbitconfigs.fluentbit.fluent.io",
+					"filters.fluentbit.fluent.io",
+					"outputs.fluentbit.fluent.io",
+					"parsers.fluentbit.fluent.io",
 				},
 				Verbs: []string{"delete"},
 			},
 			{
 				APIGroups: []string{"apps"},
-				Resources: []string{"deployments", "statefulsets", "replicasets"},
+				Resources: []string{"deployments", "daemonsets", "statefulsets", "replicasets"},
 				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 			},
 			{
@@ -546,12 +551,6 @@ func getGardenGardenletRole(labels map[string]string) *rbacv1.Role {
 				APIGroups: []string{""},
 				Resources: []string{"events"},
 				Verbs:     []string{"get", "list", "create", "patch", "update"},
-			},
-			{
-				APIGroups:     []string{"apps"},
-				Resources:     []string{"daemonsets"},
-				ResourceNames: []string{"fluent-bit"},
-				Verbs:         []string{"delete", "get", "patch", "update"},
 			},
 			{
 				APIGroups: []string{"apps"},

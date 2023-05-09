@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -225,6 +226,124 @@ var _ = Describe("Reconcile", func() {
 			runtimeClient.EXPECT().Delete(ctx, lokiPVC)
 			runtimeClient.EXPECT().Delete(ctx, statefulset).Return(errForbidden)
 			Expect(ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, log, runtimeClient, new80GiStorageQuantity)).ToNot(Succeed())
+		})
+	})
+
+	Describe("#CleanupOldFluentBit", func() {
+		const (
+			fluentBitName   = "fluent-bit"
+			gardenNamespace = "garden"
+		)
+
+		var (
+			ctrl          *gomock.Controller
+			runtimeClient *mockclient.MockClient
+			ctx           = context.TODO()
+
+			fluentBitClusterRole        = &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: fluentBitName + "-read"}}
+			fluentBitClusterRoleBinding = &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: fluentBitName + "-read"}}
+			fluentBitDaemonSet          = &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: fluentBitName, Namespace: gardenNamespace}}
+			fluentBitService            = &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: fluentBitName, Namespace: gardenNamespace}}
+			fluentBitServiceAccount     = &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: fluentBitName, Namespace: gardenNamespace}}
+
+			fluentOperatorOwnerReferenceKind       = "FluentBit"
+			fluentOperatorOwnerReferenceAPIVersion = "fluentbit.fluent.io/v1alpha2"
+
+			managedByOperatorDaemonSet = &appsv1.DaemonSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fluentBitName,
+					Namespace: gardenNamespace,
+					OwnerReferences: []metav1.OwnerReference{
+						{Kind: fluentOperatorOwnerReferenceKind, APIVersion: fluentOperatorOwnerReferenceAPIVersion},
+					},
+				},
+			}
+
+			managedByOperatorService = &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fluentBitName,
+					Namespace: gardenNamespace,
+					OwnerReferences: []metav1.OwnerReference{
+						{Kind: fluentOperatorOwnerReferenceKind, APIVersion: fluentOperatorOwnerReferenceAPIVersion},
+					},
+				},
+			}
+
+			managedByOperatorServiceAccount = &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fluentBitName,
+					Namespace: gardenNamespace,
+					OwnerReferences: []metav1.OwnerReference{
+						{Kind: fluentOperatorOwnerReferenceKind, APIVersion: fluentOperatorOwnerReferenceAPIVersion},
+					},
+				},
+			}
+
+			funcGetManagedByOperatorFluentBitDaemonSet = func(_ context.Context, _ types.NamespacedName, ds *appsv1.DaemonSet, _ ...client.GetOption) error {
+				*ds = *managedByOperatorDaemonSet
+				return nil
+			}
+
+			funcGetNotManagedByOperatorFluentBitDaemonSet = func(_ context.Context, _ types.NamespacedName, ds *appsv1.DaemonSet, _ ...client.GetOption) error {
+				*ds = *fluentBitDaemonSet
+				return nil
+			}
+
+			funcGetManagedByOperatorFluentBitService = func(_ context.Context, _ types.NamespacedName, svc *corev1.Service, _ ...client.GetOption) error {
+				*svc = *managedByOperatorService
+				return nil
+			}
+
+			funcGetNotManagedByOperatorFluentBitService = func(_ context.Context, _ types.NamespacedName, svc *corev1.Service, _ ...client.GetOption) error {
+				*svc = *fluentBitService
+				return nil
+			}
+
+			funcGetManagedByOperatorFluentBitServiceAccount = func(_ context.Context, _ types.NamespacedName, sa *corev1.ServiceAccount, _ ...client.GetOption) error {
+				*sa = *managedByOperatorServiceAccount
+				return nil
+			}
+
+			funcGetNotManagedByOperatorFluentBitServiceAccount = func(_ context.Context, _ types.NamespacedName, sa *corev1.ServiceAccount, _ ...client.GetOption) error {
+				*sa = *fluentBitServiceAccount
+				return nil
+			}
+		)
+
+		BeforeEach(func() {
+			ctrl = gomock.NewController(GinkgoT())
+			runtimeClient = mockclient.NewMockClient(ctrl)
+		})
+
+		AfterEach(func() {
+			ctrl.Finish()
+		})
+
+		It("should delete all fluent bit resources if they are not managed by the fluent operator", func() {
+			gomock.InOrder(
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(fluentBitDaemonSet.GetNamespace(), fluentBitDaemonSet.GetName()), fluentBitDaemonSet).DoAndReturn(funcGetNotManagedByOperatorFluentBitDaemonSet),
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(fluentBitService.GetNamespace(), fluentBitService.GetName()), fluentBitService).DoAndReturn(funcGetNotManagedByOperatorFluentBitService),
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(fluentBitServiceAccount.GetNamespace(), fluentBitServiceAccount.GetName()), fluentBitServiceAccount).DoAndReturn(funcGetNotManagedByOperatorFluentBitServiceAccount),
+				runtimeClient.EXPECT().Delete(ctx, fluentBitDaemonSet),
+				runtimeClient.EXPECT().Delete(ctx, fluentBitService),
+				runtimeClient.EXPECT().Delete(ctx, fluentBitServiceAccount),
+				runtimeClient.EXPECT().Delete(ctx, fluentBitClusterRole),
+				runtimeClient.EXPECT().Delete(ctx, fluentBitClusterRoleBinding),
+			)
+
+			Expect(CleanupOldFluentBit(ctx, runtimeClient)).To(Succeed())
+		})
+
+		It("should not delete resources if they are managed by the fluent operator", func() {
+			gomock.InOrder(
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(fluentBitDaemonSet.GetNamespace(), fluentBitDaemonSet.GetName()), fluentBitDaemonSet).DoAndReturn(funcGetManagedByOperatorFluentBitDaemonSet),
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(fluentBitService.GetNamespace(), fluentBitService.GetName()), fluentBitService).DoAndReturn(funcGetManagedByOperatorFluentBitService),
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(fluentBitServiceAccount.GetNamespace(), fluentBitServiceAccount.GetName()), fluentBitServiceAccount).DoAndReturn(funcGetManagedByOperatorFluentBitServiceAccount),
+				runtimeClient.EXPECT().Delete(ctx, fluentBitClusterRole),
+				runtimeClient.EXPECT().Delete(ctx, fluentBitClusterRoleBinding),
+			)
+
+			Expect(CleanupOldFluentBit(ctx, runtimeClient)).To(Succeed())
 		})
 	})
 })

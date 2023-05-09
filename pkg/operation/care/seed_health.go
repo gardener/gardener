@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
@@ -52,21 +53,23 @@ var requiredManagedResourcesSeed = sets.New(
 
 // SeedHealth contains information needed to execute health checks for seed.
 type SeedHealth struct {
-	seed         *gardencorev1beta1.Seed
-	seedClient   client.Client
-	clock        clock.Clock
-	namespace    *string
-	seedIsGarden bool
+	seed           *gardencorev1beta1.Seed
+	seedClient     client.Client
+	clock          clock.Clock
+	namespace      *string
+	seedIsGarden   bool
+	loggingEnabled bool
 }
 
 // NewHealthForSeed creates a new Health instance with the given parameters.
-func NewHealthForSeed(seed *gardencorev1beta1.Seed, seedClient client.Client, clock clock.Clock, namespace *string, seedIsGarden bool) *SeedHealth {
+func NewHealthForSeed(seed *gardencorev1beta1.Seed, seedClient client.Client, clock clock.Clock, namespace *string, seedIsGarden bool, loggingEnabled bool) *SeedHealth {
 	return &SeedHealth{
-		seedClient:   seedClient,
-		seed:         seed,
-		clock:        clock,
-		namespace:    namespace,
-		seedIsGarden: seedIsGarden,
+		seedClient:     seedClient,
+		seed:           seed,
+		clock:          clock,
+		namespace:      namespace,
+		seedIsGarden:   seedIsGarden,
+		loggingEnabled: loggingEnabled,
 	}
 }
 
@@ -120,6 +123,10 @@ func (h *SeedHealth) checkSeedSystemComponents(
 	}
 	if v1beta1helper.SeedUsesNginxIngressController(h.seed) {
 		managedResources = append(managedResources, nginxingress.ManagedResourceName)
+	}
+	if h.loggingEnabled {
+		managedResources = append(managedResources, fluentoperator.OperatorManagedResourceName)
+		managedResources = append(managedResources, fluentoperator.CustomResourcesManagedResourceName)
 	}
 
 	for _, name := range managedResources {

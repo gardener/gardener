@@ -15,28 +15,64 @@
 package vpa
 
 import (
+	"fmt"
+
+	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
+	fluentbitv1alpha2filter "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/filter"
+	fluentbitv1alpha2parser "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/parser"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 )
 
-const (
-	loggingParserName = "vpaParser"
-	loggingParser     = `[PARSER]
-    Name        ` + loggingParserName + `
-    Format      regex
-    Regex       ^(?<severity>\w)(?<time>\d{4} [^\s]*)\s+(?<pid>\d+)\s+(?<source>[^ \]]+)\] (?<log>.*)$
-    Time_Key    time
-    Time_Format %m%d %H:%M:%S.%L
-`
-	loggingFilter = `[FILTER]
-    Name                parser
-    Match               kubernetes.*vpa-*
-    Key_Name            log
-    Parser              ` + loggingParserName + `
-    Reserve_Data        True
-`
+var (
+	componentName = "vpa"
 )
 
 // CentralLoggingConfiguration returns a fluent-bit parser and filter for the VPA logs.
 func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
-	return component.CentralLoggingConfig{Filters: loggingFilter, Parsers: loggingParser}, nil
+	return component.CentralLoggingConfig{Filters: generateClusterFilters(), Parsers: generateClusterParsers()}, nil
+}
+
+func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
+	return []*fluentbitv1alpha2.ClusterFilter{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   componentName,
+				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
+			},
+			Spec: fluentbitv1alpha2.FilterSpec{
+				Match: fmt.Sprintf("kubernetes.*%s-*", componentName),
+				FilterItems: []fluentbitv1alpha2.FilterItem{
+					{
+						Parser: &fluentbitv1alpha2filter.Parser{
+							KeyName:     "log",
+							Parser:      componentName + "-parser",
+							ReserveData: pointer.Bool(true),
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func generateClusterParsers() []*fluentbitv1alpha2.ClusterParser {
+	return []*fluentbitv1alpha2.ClusterParser{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   componentName + "-parser",
+				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
+			},
+			Spec: fluentbitv1alpha2.ParserSpec{
+				Regex: &fluentbitv1alpha2parser.Regex{
+					Regex:      "^(?<severity>\\w)(?<time>\\d{4} [^\\s]*)\\s+(?<pid>\\d+)\\s+(?<source>[^ \\]]+)\\] (?<log>.*)$",
+					TimeKey:    "time",
+					TimeFormat: "%m%d %H:%M:%S.%L",
+				},
+			},
+		},
+	}
 }

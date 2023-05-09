@@ -41,11 +41,11 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/fluentoperator"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
@@ -321,11 +321,13 @@ func (r *Reconciler) runDeleteSeedFlow(
 	// When the seed is the garden cluster then these components are reconciled by the gardener-operator.
 	if !seedIsGarden {
 		var (
-			kubeStateMetrics      = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
-			etcdDruid             = etcd.NewBootstrapper(seedClient, r.GardenNamespace, nil, r.Config.ETCDConfig, "", nil, "")
-			hvpa                  = hvpa.New(seedClient, r.GardenNamespace, hvpa.Values{})
-			verticalPodAutoscaler = vpa.New(seedClient, r.GardenNamespace, nil, vpa.Values{ClusterType: component.ClusterTypeSeed, RuntimeKubernetesVersion: kubernetesVersion})
-			resourceManager       = resourcemanager.New(seedClient, r.GardenNamespace, nil, resourcemanager.Values{KubernetesVersion: kubernetesVersion})
+			kubeStateMetrics              = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
+			etcdDruid                     = etcd.NewBootstrapper(seedClient, r.GardenNamespace, nil, r.Config.ETCDConfig, "", nil, "")
+			hvpa                          = hvpa.New(seedClient, r.GardenNamespace, hvpa.Values{})
+			verticalPodAutoscaler         = vpa.New(seedClient, r.GardenNamespace, nil, vpa.Values{ClusterType: component.ClusterTypeSeed, RuntimeKubernetesVersion: kubernetesVersion})
+			resourceManager               = resourcemanager.New(seedClient, r.GardenNamespace, nil, resourcemanager.Values{KubernetesVersion: kubernetesVersion})
+			fluentOperator                = fluentoperator.NewFluentOperator(seedClient, r.GardenNamespace, fluentoperator.Values{})
+			fluentOperatorCustomResources = fluentoperator.NewCustomResources(seedClient, r.GardenNamespace, fluentoperator.CustomResourcesValues{}, nil, nil, nil)
 
 			destroyKubeStateMetrics = g.Add(flow.Task{
 				Name: "Destroy kube-state-metrics",
@@ -347,6 +349,15 @@ func (r *Reconciler) runDeleteSeedFlow(
 				Name: "Destroy HVPA controller",
 				Fn:   component.OpDestroyAndWait(hvpa).Destroy,
 			})
+			destroyFluentOperatorResources = g.Add(flow.Task{
+				Name: "Destroy Fluent Operator Custom Resources",
+				Fn:   component.OpDestroyAndWait(fluentOperatorCustomResources).Destroy,
+			})
+			destroyFluentOperator = g.Add(flow.Task{
+				Name:         "Destroy Fluent Operator",
+				Fn:           component.OpDestroyAndWait(fluentOperator).Destroy,
+				Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources),
+			})
 		)
 
 		syncPointCleanedUp.Insert(
@@ -354,6 +365,8 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyEtcdDruid,
 			destroyHVPA,
 			destroyVPA,
+			destroyFluentOperatorResources,
+			destroyFluentOperator,
 		)
 
 		var (

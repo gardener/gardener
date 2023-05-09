@@ -2,11 +2,11 @@
 
 Gardener provides an integrated logging and monitoring stack for alerting, monitoring, and troubleshooting of its managed components by operators or end users. For further information how to make use of it in these roles, refer to the corresponding guides for [exploring logs](https://github.com/gardener/logging/tree/master/docs/usage/README.md) and for [monitoring with Grafana](https://grafana.com/docs/grafana/latest/getting-started/getting-started/#all-users).
 
-The components that constitute the logging and monitoring stack are managed by Gardener. By default, it deploys [Prometheus](https://prometheus.io/), [Alertmanager](https://prometheus.io/docs/alerting/latest/alertmanager/), and [Grafana](https://grafana.com/) into the `garden` namespace of all seed clusters. If the logging is enabled in the `gardenlet` configuration (`logging.enabled`), it will deploy [fluent-bit](https://fluentbit.io/) and [Loki](https://grafana.com/oss/loki/) in the `garden` namespace too.
+The components that constitute the logging and monitoring stack are managed by Gardener. By default, it deploys [Prometheus](https://prometheus.io/), [Alertmanager](https://prometheus.io/docs/alerting/latest/alertmanager/), and [Grafana](https://grafana.com/) into the `garden` namespace of all seed clusters. If the logging is enabled in the `gardenlet` configuration (`logging.enabled`), it will deploy [fluent-operator](https://github.com/fluent/fluent-operator) and [Loki](https://grafana.com/oss/loki/) in the `garden` namespace too.
 
 Each shoot namespace hosts managed logging and monitoring components. As part of the shoot reconciliation flow, Gardener deploys a shoot-specific Prometheus, Grafana and, if configured, an Alertmanager into the shoot namespace, next to the other control plane components. If the logging is enabled in the `gardenlet` configuration (`logging.enabled`) and the [shoot purpose](../usage/shoot_purposes.md#behavioral-differences) is not `testing`, it deploys a shoot-specific Loki in the shoot namespace too.
 
-The logging and monitoring stack is extensible by configuration. Gardener extensions can take advantage of that and contribute configurations encoded in `ConfigMap`s for their own, specific dashboards, alerts, log parsers and other supported assets and integrate with it. As with other Gardener resources, they will be continuously reconciled.
+The logging and monitoring stack is extensible by configuration. Gardener extensions can take advantage of that and contribute monitoring configurations encoded in `ConfigMap`s for their own, specific dashboards, alerts and other supported assets and integrate with it. As with other Gardener resources, they will be continuously reconciled. The extensions can also deploy directly fluent-operator custom resources which will be created in the seed cluster and plugged into the fluent-bit instance.
 
 This guide is about the roles and extensibility options of the logging and monitoring stack components, and how to integrate extensions with:
 - [Monitoring](#monitoring)
@@ -98,40 +98,34 @@ In Kubernetes clusters, container logs are non-persistent and do not survive sto
 
 Gardener logging consists of components in three roles - log collectors and forwarders, log persistency and exploration/consumption interfaces. All of them live in the seed clusters in multiple instances:
 - Logs are persisted by Loki instances deployed as StatefulSets - one per shoot namespace, if the logging is enabled in the `gardenlet` configuration (`logging.enabled`) and the [shoot purpose](../usage/shoot_purposes.md#behavioral-differences) is not `testing`, and one in the `garden` namespace. The shoot instances store logs from the control plane components hosted there. The `garden` Loki instance is responsible for logs from the rest of the seed namespaces - `kube-system`, `garden`, `extension-*`, and others.
-- Fluent-bit DaemonSets deployed on each seed node collect logs from it. A custom plugin takes care to distribute the collected log messages to the Loki instances that they are intended for. This allows to fetch the logs once for the whole cluster, and to distribute them afterwards.
+- Fluent-bit DaemonSets deployed by the fluent-operator on each seed node collect logs from it. A custom plugin takes care to distribute the collected log messages to the Loki instances that they are intended for. This allows to fetch the logs once for the whole cluster, and to distribute them afterwards.
 - Grafana is the UI component used to explore monitoring and log data together for easier troubleshooting and in context. Grafana instances are configured to use the corresponding Loki instances, sharing the same namespace as data providers. There is one Grafana Deployment in the `garden` namespace and one Deployment per shoot namespace (exposed to the end users and to the operators).
 
-Logs can be produced from various sources, such as containers or systemd, and in different formats. The fluent-bit design supports configurable [data pipeline](https://docs.fluentbit.io/manual/concepts/data-pipeline) to address that problem. Gardener provides such [configuration](../../charts/seed-bootstrap/charts/fluent-bit/templates/fluent-bit-configmap.yaml) for logs produced by all its core managed components as a `ConfigMap`. Extensions can contribute their own, specific configurations as `ConfigMap`s too. See for example the [logging configuration](https://github.com/gardener/gardener-extension-provider-aws/blob/master/charts/gardener-extension-provider-aws/templates/configmap-logging.yaml) for the Gardener AWS provider extension. The Gardener reconciliation loop watches such resources and updates the fluent-bit agents dynamically.
+Logs can be produced from various sources, such as containers or systemd, and in different formats. The fluent-bit design supports configurable [data pipeline](https://docs.fluentbit.io/manual/concepts/data-pipeline) to address that problem. Gardener provides such [configuration](../../pkg/operation/botanist/component/kubeapiserver/logging.go) for logs produced by all its core managed components as `ClusterFilters` and `ClusterParsers` . Extensions can contribute their own, specific configurations as fluent-operator custom resources too. See for example the [logging configuration](https://github.com/gardener/gardener-extension-provider-aws/blob/master/charts/gardener-extension-provider-aws/templates/clusterfilters-logging.yaml) for the Gardener AWS provider extension.
 
-### Fluent-bit Log Parsers and Filters
+### Fluent-bit Log Parsers and Filters 
 To integrate with Gardener logging, extensions can and *should* specify how fluent-bit will handle the logs produced by the managed components that they contribute to Gardener. Normally, that would require to configure a *parser* for the specific logging format, if none of the available is applicable, and a *filter* defining how to apply it. For a complete reference for the configuration options, refer to fluent-bit's [documentation](https://docs.fluentbit.io/manual/).
 
-> **Note:** At the moment, only *parser* and *filter* configurations are supported.
+To contribute its own configuration to the fluent-bit agents data pipelines, an extension must deploy a `fluent-operator` custom resource labeled with `fluentbit.gardener/type: seed` in the seed cluster.
 
-To contribute its own configuration to the fluent-bit agents data pipelines, an extension must provide it as a `ConfigMap` labeled `extensions.gardener.cloud/configuration=logging` and deployed in the seed's `garden` namespace. Unlike the monitoring stack, where configurations are deployed per shoot, here a *single* configuration `ConfigMap` is sufficient and it applies to all fluent-bit agents in the seed. Its `data` field can have the following properties:
-- `filter-kubernetes.conf` - configuration for data pipeline [filters](https://docs.fluentbit.io/manual/concepts/data-pipeline/filter)
-- `parser.conf` - configuration for data pipeline [parsers](https://docs.fluentbit.io/manual/concepts/data-pipeline/parser)
+> **Note:** Take care to provide the correct data pipeline elements in the corresponding fields and not to mix them.
 
-> **Note:** Take care to provide the correct data pipeline elements in the corresponding data field and not to mix them.
-
-**Example:** Logging configuration for provider-specific (OpenStack) worker controller deploying a `machine-controller-manager` component into a shoot namespace that reuses the `kubeapiserverParser` defined in [fluent-bit-configmap.yaml](../../charts/seed-bootstrap/charts/fluent-bit/templates/fluent-bit-configmap.yaml#L304-L309) to parse the component logs:
+**Example:** Logging configuration for provider-specific (OpenStack) worker controller deploying a `machine-controller-manager` component into a shoot namespace that reuses the `kube-apiserver-parser` defined in [logging.go](../../pkg/operation/botanist/component/kubeapiserver/logging.go) to parse the component logs:
 
 ```yaml
-apiVersion: v1
-kind: ConfigMap
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
 metadata:
-  name: gardener-extension-provider-openstack-logging-config
-  namespace: garden
   labels:
-    extensions.gardener.cloud/configuration: logging
-data:
-  filter-kubernetes.conf: |
-    [FILTER]
-        Name                parser
-        Match               kubernetes.machine-controller-manager*openstack-machine-controller-manager*
-        Key_Name            log
-        Parser              kubeapiserverParser
-        Reserve_Data        True
+    fluentbit.gardener/type: "seed"
+  name: machine-controller-manager-openstack
+spec:
+  filters:
+  - parser:
+      keyName: log
+      parser: kube-apiserver-parser
+      reserveData: true
+  match: kubernetes.*machine-controller-manager*openstack*
 ```
 
 Further details how to define parsers and use them with examples can be found in the following [guide](../development/log_parsers.md).
@@ -154,6 +148,7 @@ If the type of logs exposed in the Grafana instances needs to be changed, it is 
 
 ## Tips
 
+- Be careful to create `ClusterFilters` and `ClusterParsers` with unique names because they are not namespaced. We use `pod_name` for filters with one container and `pod_name--container_name` for pods with multiple containers.
 - Be careful to match exactly the log names that you need for a particular parser in your filters configuration. The regular expression you will supply will match names in the form `kubernetes.pod_name.<metadata>.container_name`. If there are extensions with the same container and pod names, they will all match the same parser in a filter. That may be a desired effect, if they all share the same log format. But it will be a problem if they don't. To solve it, either the pod or container names must be unique, and the regular expression in the filter has to match that unique pattern. A recommended approach is to prefix containers with the extension name and tune the regular expression to match it. For example, using `myextension-container` as container name and a regular expression `kubernetes.mypod.*myextension-container` will guarantee match of the right log name. Make sure that the regular expression does not match more than you expect. For example, `kubernetes.systemd.*systemd.*` will match both `systemd-service` and `systemd-monitor-service`. You will want to be as specific as possible.
 - It's a good idea to put the logging configuration into the Helm chart that also deploys the extension *controller*, while the monitoring configuration can be part of the Helm chart/deployment routine that deploys the *component* managed by the controller.
 

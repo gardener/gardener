@@ -184,10 +184,6 @@ config:
 #     etcdConnectionTimeout: 5s
 # logging:
 #   enabled: false
-#   fluentBit:
-#     output: |-
-#       [Output]
-#           ...
 # monitoring:
 #   shoot:
 #     remoteWrite:

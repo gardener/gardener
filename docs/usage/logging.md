@@ -120,14 +120,15 @@ Exposing logs for a new component to the User's Grafana is described in the [How
 
 ### Fluent-bit
 
-The Fluent-bit configurations can be found on `charts/seed-bootstrap/charts/fluent-bit/templates/fluent-bit-configmap.yaml`
-There are five different specifications:
+The Fluent-bit configurations can be found on `pkg/operation/botanist/component/logging/fluentoperator/customresources`
+There are six different specifications:
 
-* SERVICE: Defines the location of the server specifications.
-* INPUT: Defines the location of the input stream of the logs.
-* OUTPUT: Defines the location of the output source (Loki for example).
-* FILTER: Defines filters which match specific keys.
-* PARSER: Defines parsers which are used by the filters.
+* FluentBit: Defines the fluent-bit DaemonSet specifications
+* ClusterFluentBitConfig: Defines the labelselectors of the resources which fluent-bit will match
+* ClusterInput: Defines the location of the input stream of the logs
+* ClusterOutput: Defines the location of the output source (Loki for example)
+* ClusterFilter: Defines filters which match specific keys
+* ClusterParser: Defines parsers which are used by the filters
 
 ### Loki
 

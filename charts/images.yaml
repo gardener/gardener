@@ -363,10 +363,23 @@ images:
   tag: "3.15.8"
 
 # Logging
+- name: fluent-operator
+  sourceRepository: github.com/fluent/fluent-operator
+  repository: eu.gcr.io/gardener-project/3rd/kubesphere/fluent-operator
+  tag: "v2.2.0"
+  labels:
+  - name: 'gardener.cloud/cve-categorisation'
+    value:
+      network_exposure: 'private'
+      authentication_enforced: false
+      user_interaction: 'gardener-operator'
+      confidentiality_requirement: 'low'
+      integrity_requirement: 'low'
+      availability_requirement: 'low'
 - name: fluent-bit
-  sourceRepository: github.com/fluent/fluent-bit
-  repository: eu.gcr.io/gardener-project/3rd/fluent/fluent-bit
-  tag: "1.9.7"
+  sourceRepository: github.com/fluent/fluent-operator
+  repository: eu.gcr.io/gardener-project/3rd/kubesphere/fluent-bit
+  tag: "v2.0.9"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:

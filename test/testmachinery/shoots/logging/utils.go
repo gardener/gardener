@@ -221,6 +221,15 @@ func getConfigMapName(volumes []corev1.Volume, wantedVolumeName string) string {
 	return ""
 }
 
+func getSecretNameFromVolume(volumes []corev1.Volume, wantedVolumeName string) string {
+	for _, volume := range volumes {
+		if volume.Name == wantedVolumeName && volume.Secret != nil {
+			return volume.Secret.SecretName
+		}
+	}
+	return ""
+}
+
 func newEmptyDirVolume(name, size string) corev1.Volume {
 	lokiDataVolumeSize := resource.MustParse(size)
 	return corev1.Volume{

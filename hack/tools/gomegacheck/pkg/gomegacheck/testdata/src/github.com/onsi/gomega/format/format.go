@@ -258,7 +258,11 @@ Set PrintContextObjects to true to print the content of objects implementing con
 func Object(object interface{}, indentation uint) string {
 	indent := strings.Repeat(Indent, int(indentation))
 	value := reflect.ValueOf(object)
-	return fmt.Sprintf("%s<%s>: %s", indent, formatType(value), formatValue(value, indentation))
+	commonRepresentation := ""
+	if err, ok := object.(error); ok {
+		commonRepresentation += "\n" + IndentString(err.Error(), indentation) + "\n" + indent
+	}
+	return fmt.Sprintf("%s<%s>: %s%s", indent, formatType(value), commonRepresentation, formatValue(value, indentation))
 }
 
 /*

@@ -1,0 +1,113 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.3
+  creationTimestamp: null
+  name: parsers.fluentbit.fluent.io
+spec:
+  group: fluentbit.fluent.io
+  names:
+    kind: Parser
+    listKind: ParserList
+    plural: parsers
+    shortNames:
+    - fbp
+    singular: parser
+  scope: Namespaced
+  versions:
+  - name: v1alpha2
+    schema:
+      openAPIV3Schema:
+        description: Parser is the Schema for namespace level parser API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ParserSpec defines the desired state of ClusterParser
+            properties:
+              decoders:
+                description: 'Decoders are a built-in feature available through the
+                  Parsers file, each Parser definition can optionally set one or multiple
+                  decoders. There are two type of decoders type: Decode_Field and
+                  Decode_Field_As.'
+                items:
+                  properties:
+                    decodeField:
+                      description: If the content can be decoded in a structured message,
+                        append that structure message (keys and values) to the original
+                        log message.
+                      type: string
+                    decodeFieldAs:
+                      description: Any content decoded (unstructured or structured)
+                        will be replaced in the same key/value, no extra keys are
+                        added.
+                      type: string
+                  type: object
+                type: array
+              json:
+                description: JSON defines json parser configuration.
+                properties:
+                  timeFormat:
+                    description: Time_Format, eg. %Y-%m-%dT%H:%M:%S %z
+                    type: string
+                  timeKeep:
+                    description: Time_Keep
+                    type: boolean
+                  timeKey:
+                    description: Time_Key
+                    type: string
+                type: object
+              logfmt:
+                description: Logfmt defines logfmt parser configuration.
+                type: object
+              ltsv:
+                description: LTSV defines ltsv parser configuration.
+                properties:
+                  timeFormat:
+                    description: Time_Format, eg. %Y-%m-%dT%H:%M:%S %z
+                    type: string
+                  timeKeep:
+                    description: Time_Keep
+                    type: boolean
+                  timeKey:
+                    description: Time_Key
+                    type: string
+                  types:
+                    type: string
+                type: object
+              regex:
+                description: Regex defines regex parser configuration.
+                properties:
+                  regex:
+                    type: string
+                  timeFormat:
+                    description: Time_Format, eg. %Y-%m-%dT%H:%M:%S %z
+                    type: string
+                  timeKeep:
+                    description: Time_Keep
+                    type: boolean
+                  timeKey:
+                    description: Time_Key
+                    type: string
+                  timeOffset:
+                    description: Time_Offset, eg. +0200
+                    type: string
+                  types:
+                    type: string
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true

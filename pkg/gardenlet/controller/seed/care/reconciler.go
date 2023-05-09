@@ -41,12 +41,13 @@ var (
 
 // Reconciler reconciles Seed resources and executes health check operations.
 type Reconciler struct {
-	GardenClient client.Client
-	SeedClient   client.Client
-	Config       config.SeedCareControllerConfiguration
-	Clock        clock.Clock
-	Namespace    *string
-	SeedName     string
+	GardenClient   client.Client
+	SeedClient     client.Client
+	Config         config.SeedCareControllerConfiguration
+	Clock          clock.Clock
+	Namespace      *string
+	SeedName       string
+	LoggingEnabled bool
 }
 
 // Reconcile reconciles Seed resources and executes health check operations.
@@ -85,7 +86,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		return reconcile.Result{}, err
 	}
 
-	updatedConditions := NewHealthCheck(seed, r.SeedClient, r.Clock, r.Namespace, seedIsGarden).CheckSeed(ctx, conditions, r.conditionThresholdsToProgressingMapping())
+	updatedConditions := NewHealthCheck(seed, r.SeedClient, r.Clock, r.Namespace, seedIsGarden, r.LoggingEnabled).CheckSeed(ctx, conditions, r.conditionThresholdsToProgressingMapping())
 
 	// Update Seed status conditions if necessary
 	if v1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) {

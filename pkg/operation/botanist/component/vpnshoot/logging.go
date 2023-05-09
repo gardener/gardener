@@ -15,28 +15,60 @@
 package vpnshoot
 
 import (
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-)
+	"fmt"
 
-const (
-	loggingParserName = "vpnShootParser"
-	loggingParser     = `[PARSER]
-    Name        ` + loggingParserName + `
-    Format      regex
-    Regex       ^(?<time>[^0-9]*\d{1,2}\s+[^\s]+\s+\d{4})\s+(?<log>.*)
-    Time_Key    time
-    Time_Format %a %b%t%d %H:%M:%S %Y
-`
-	loggingFilter = `[FILTER]
-    Name                parser
-    Match               kubernetes.*` + deploymentName + `*` + containerName + `*
-    Key_Name            log
-    Parser              ` + loggingParserName + `
-    Reserve_Data        True
-`
+	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
+	fluentbitv1alpha2filter "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/filter"
+	fluentbitv1alpha2parser "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/parser"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 )
 
 // CentralLoggingConfiguration returns a fluent-bit parser and filter for the VPNShoot logs.
 func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
-	return component.CentralLoggingConfig{Filters: loggingFilter, Parsers: loggingParser}, nil
+	return component.CentralLoggingConfig{Filters: generateClusterFilters(), Parsers: generateClusterParsers()}, nil
+}
+
+func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
+	return []*fluentbitv1alpha2.ClusterFilter{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   deploymentName,
+				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
+			},
+			Spec: fluentbitv1alpha2.FilterSpec{
+				Match: fmt.Sprintf("kubernetes.*%s*%s*", deploymentName, containerName),
+				FilterItems: []fluentbitv1alpha2.FilterItem{
+					{
+						Parser: &fluentbitv1alpha2filter.Parser{
+							KeyName:     "log",
+							Parser:      containerName + "-parser",
+							ReserveData: pointer.Bool(true),
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func generateClusterParsers() []*fluentbitv1alpha2.ClusterParser {
+	return []*fluentbitv1alpha2.ClusterParser{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   containerName + "-parser",
+				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
+			},
+			Spec: fluentbitv1alpha2.ParserSpec{
+				Regex: &fluentbitv1alpha2parser.Regex{
+					Regex:      "^(?<time>[^0-9]*\\d{1,2}\\s+[^\\s]+\\s+\\d{4})\\s+(?<log>.*)",
+					TimeKey:    "time",
+					TimeFormat: "%a %b%t%d %H:%M:%S %Y",
+				},
+			},
+		},
+	}
 }

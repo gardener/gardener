@@ -23,11 +23,13 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
+	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
 	"github.com/go-logr/logr"
 	istiov1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -58,8 +60,12 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/crds"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/fluentoperator"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
@@ -70,8 +76,12 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/logging/eventlogger"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/logging/fluentoperator"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/logging/loki"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/monitoring"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingressshoot"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodeproblemdetector"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	sharedcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/shared"
@@ -352,8 +362,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			images.ImageNameLoki,
 			images.ImageNameLokiCurator,
 			images.ImageNameTune2fs,
-			images.ImageNameFluentBit,
-			images.ImageNameFluentBitPluginInstaller,
 			images.ImageNameGrafana,
 			images.ImageNamePrometheus,
 		},
@@ -478,12 +486,11 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 	// Logging feature gate
 	var (
-		additionalEgressIPBlocks          []string
-		fluentBitConfigurationsOverwrites = map[string]interface{}{}
-		lokiValues                        = map[string]interface{}{}
+		lokiValues = map[string]interface{}{}
 
-		filters = strings.Builder{}
-		parsers = strings.Builder{}
+		inputs  []*fluentbitv1alpha2.ClusterInput
+		filters []*fluentbitv1alpha2.ClusterFilter
+		parsers []*fluentbitv1alpha2.ClusterParser
 	)
 	lokiValues["enabled"] = loggingEnabled
 
@@ -549,9 +556,17 @@ func (r *Reconciler) runReconcileSeedFlow(
 		}
 
 		componentsFunctions := []component.CentralLoggingConfiguration{
+			// journald components
+			kubelet.CentralLoggingConfiguration,
+			docker.CentralLoggingConfiguration,
+			containerd.CentralLoggingConfiguration,
+			downloader.CentralLoggingConfiguration,
 			// seed system components
+			extensions.CentralLoggingConfiguration,
 			dependencywatchdog.CentralLoggingConfiguration,
 			resourcemanager.CentralLoggingConfiguration,
+			monitoring.CentralLoggingConfiguration,
+			loki.CentralLoggingConfiguration,
 			// shoot control plane components
 			etcd.CentralLoggingConfiguration,
 			clusterautoscaler.CentralLoggingConfiguration,
@@ -570,6 +585,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			vpnshoot.CentralLoggingConfiguration,
 			// shoot addon components
 			kubernetesdashboard.CentralLoggingConfiguration,
+			nginxingressshoot.CentralLoggingConfiguration,
 		}
 
 		if gardenlethelper.IsEventLoggingEnabled(&r.Config) {
@@ -583,46 +599,20 @@ func (r *Reconciler) runReconcileSeedFlow(
 				return err
 			}
 
-			filters.WriteString(fmt.Sprintln(loggingConfig.Filters))
-			parsers.WriteString(fmt.Sprintln(loggingConfig.Parsers))
-		}
-
-		// Read extension provider specific logging configuration
-		existingConfigMaps := &corev1.ConfigMapList{}
-		if err = seedClient.List(ctx, existingConfigMaps,
-			client.InNamespace(r.GardenNamespace),
-			client.MatchingLabels{v1beta1constants.LabelExtensionConfiguration: v1beta1constants.LabelLogging}); err != nil {
-			return err
-		}
-
-		// Need stable order before passing the dashboards to Grafana config to avoid unnecessary changes
-		kubernetesutils.ByName().Sort(existingConfigMaps)
-
-		// Read all filters and parsers coming from the extension provider configurations
-		for _, cm := range existingConfigMaps.Items {
-			filters.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.FluentBitConfigMapKubernetesFilter]))
-			parsers.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.FluentBitConfigMapParser]))
-		}
-
-		if loggingConfig != nil && loggingConfig.FluentBit != nil {
-			fbConfig := loggingConfig.FluentBit
-
-			if fbConfig.NetworkPolicy != nil {
-				additionalEgressIPBlocks = fbConfig.NetworkPolicy.AdditionalEgressIPBlocks
+			if len(loggingConfig.Inputs) > 0 {
+				inputs = append(inputs, loggingConfig.Inputs...)
 			}
 
-			if fbConfig.ServiceSection != nil {
-				fluentBitConfigurationsOverwrites["service"] = *fbConfig.ServiceSection
+			if len(loggingConfig.Filters) > 0 {
+				filters = append(filters, loggingConfig.Filters...)
 			}
-			if fbConfig.InputSection != nil {
-				fluentBitConfigurationsOverwrites["input"] = *fbConfig.InputSection
-			}
-			if fbConfig.OutputSection != nil {
-				fluentBitConfigurationsOverwrites["output"] = *fbConfig.OutputSection
+
+			if len(loggingConfig.Parsers) > 0 {
+				parsers = append(parsers, loggingConfig.Parsers...)
 			}
 		}
 	} else {
-		if err := common.DeleteSeedLoggingStack(ctx, seedClient); err != nil {
+		if err := common.DeleteLoki(ctx, seedClient, v1beta1constants.GardenNamespace); err != nil {
 			return err
 		}
 	}
@@ -776,16 +766,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		"grafana": map[string]interface{}{
 			"hostName":   grafanaHost,
 			"secretName": grafanaIngressTLSSecretName,
-		},
-		"fluent-bit": map[string]interface{}{
-			"enabled":                           loggingEnabled,
-			"additionalParsers":                 parsers.String(),
-			"additionalFilters":                 filters.String(),
-			"fluentBitConfigurationsOverwrites": fluentBitConfigurationsOverwrites,
-			"exposedComponentsTagPrefix":        "user-exposed",
-			"networkPolicy": map[string]interface{}{
-				"additionalEgressIPBlocks": additionalEgressIPBlocks,
-			},
 		},
 		"loki":         lokiValues,
 		"alertmanager": alertManagerConfig,
@@ -958,6 +938,38 @@ func (r *Reconciler) runReconcileSeedFlow(
 			return err
 		}
 
+		// TODO(Kristian-ZH): Remove this in the next releases
+		if err := CleanupOldFluentBit(ctx, seedClient); err != nil {
+			return err
+		}
+
+		fluentOperatorCustomResources, err := sharedcomponent.NewFluentOperatorCustomResources(
+			seedClient,
+			r.GardenNamespace,
+			kubernetesVersion,
+			r.ImageVector,
+			loggingEnabled,
+			v1beta1constants.PriorityClassNameSeedSystem600,
+			inputs,
+			filters,
+			parsers,
+		)
+		if err != nil {
+			return err
+		}
+
+		fluentOperator, err := sharedcomponent.NewFluentOperator(
+			seedClient,
+			r.GardenNamespace,
+			kubernetesVersion,
+			r.ImageVector,
+			loggingEnabled,
+			v1beta1constants.PriorityClassNameSeedSystem600,
+		)
+		if err != nil {
+			return err
+		}
+
 		kubeStateMetrics, err := sharedcomponent.NewKubeStateMetrics(
 			seedClient,
 			r.GardenNamespace,
@@ -985,6 +997,15 @@ func (r *Reconciler) runReconcileSeedFlow(
 			_ = g.Add(flow.Task{
 				Name: "Deploying kube-state-metrics",
 				Fn:   kubeStateMetrics.Deploy,
+			})
+			reconcileFluentOperatorResources = g.Add(flow.Task{
+				Name: "Deploying Fluent Operator resources",
+				Fn:   component.OpWait(fluentOperatorCustomResources).Deploy,
+			})
+			_ = g.Add(flow.Task{
+				Name:         "Deploying Fluent Operator",
+				Fn:           component.OpWait(fluentOperator).Deploy,
+				Dependencies: flow.NewTaskIDs(reconcileFluentOperatorResources),
 			})
 		)
 	}
@@ -1287,4 +1308,57 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 	}
 
 	return getManagedIngressDNSRecord(log, seedClient, gardenNamespaceName, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), ingressLoadBalancerAddress), nil
+}
+
+// CleanupOldFluentBit deletes all old fluent-bit resources which are not installed by the fluent-operator.
+func CleanupOldFluentBit(ctx context.Context, seedClient client.Client) error {
+	// Resources which does not duplicate these from the operators
+	uniqueResource := []client.Object{
+		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit-read"}},
+		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit-read"}},
+	}
+
+	// Resources whose names duplicate these from the operators
+	fluentBitDaemonSet := &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit", Namespace: v1beta1constants.GardenNamespace}}
+	fluentBitService := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit", Namespace: v1beta1constants.GardenNamespace}}
+	fluentBitServiceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit", Namespace: v1beta1constants.GardenNamespace}}
+
+	if err := seedClient.Get(ctx, client.ObjectKeyFromObject(fluentBitDaemonSet), fluentBitDaemonSet); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+	if err := seedClient.Get(ctx, client.ObjectKeyFromObject(fluentBitService), fluentBitService); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+	if err := seedClient.Get(ctx, client.ObjectKeyFromObject(fluentBitServiceAccount), fluentBitServiceAccount); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+
+	if !isOwnedByFluentOperator(fluentBitDaemonSet) {
+		if err := client.IgnoreNotFound(seedClient.Delete(ctx, fluentBitDaemonSet)); err != nil {
+			return err
+		}
+	}
+
+	if !isOwnedByFluentOperator(fluentBitService) {
+		if err := client.IgnoreNotFound(seedClient.Delete(ctx, fluentBitService)); err != nil {
+			return err
+		}
+	}
+
+	if !isOwnedByFluentOperator(fluentBitServiceAccount) {
+		if err := client.IgnoreNotFound(seedClient.Delete(ctx, fluentBitServiceAccount)); err != nil {
+			return err
+		}
+	}
+
+	return kubernetesutils.DeleteObjects(ctx, seedClient, uniqueResource...)
+}
+
+func isOwnedByFluentOperator(obj client.Object) bool {
+	for _, ownerReference := range obj.GetOwnerReferences() {
+		if ownerReference.Kind == "FluentBit" && ownerReference.APIVersion == "fluentbit.fluent.io/v1alpha2" {
+			return true
+		}
+	}
+	return false
 }

@@ -25,7 +25,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -110,25 +109,6 @@ func DeleteLoki(ctx context.Context, k8sClient client.Client, namespace string) 
 	}
 
 	return kubernetesutils.DeleteObjects(ctx, k8sClient, resources...)
-}
-
-// DeleteSeedLoggingStack deletes all seed resource of the logging stack in the garden namespace.
-func DeleteSeedLoggingStack(ctx context.Context, k8sClient client.Client) error {
-	resources := []client.Object{
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit-config", Namespace: v1beta1constants.GardenNamespace}},
-		&appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit", Namespace: v1beta1constants.GardenNamespace}},
-		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-fluentbit", Namespace: v1beta1constants.GardenNamespace}},
-		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit-read"}},
-		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit-read"}},
-		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit", Namespace: v1beta1constants.GardenNamespace}},
-		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit", Namespace: v1beta1constants.GardenNamespace}},
-	}
-
-	if err := kubernetesutils.DeleteObjects(ctx, k8sClient, resources...); err != nil {
-		return err
-	}
-
-	return DeleteLoki(ctx, k8sClient, v1beta1constants.GardenNamespace)
 }
 
 // DeleteAlertmanager deletes all resources of the Alertmanager in a given namespace.

@@ -14,6 +14,10 @@
 
 package component
 
+import (
+	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
+)
+
 // Secret is a structure that contains information about a Kubernetes secret which is managed externally.
 type Secret struct {
 	// Name is the name of the Kubernetes secret object.
@@ -40,8 +44,10 @@ type CentralMonitoringConfig struct {
 
 // CentralLoggingConfig is a structure that contains configuration for the central logging stack.
 type CentralLoggingConfig struct {
+	// Inputs contains the inputs for specific component.
+	Inputs []*fluentbitv1alpha2.ClusterInput
 	// Filters contains the filters for specific component.
-	Filters string
+	Filters []*fluentbitv1alpha2.ClusterFilter
 	// Parser contains the parsers for specific component.
-	Parsers string
+	Parsers []*fluentbitv1alpha2.ClusterParser
 }

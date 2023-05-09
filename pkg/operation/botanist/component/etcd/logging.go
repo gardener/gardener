@@ -15,44 +15,91 @@
 package etcd
 
 import (
+	"fmt"
+
+	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
+	fluentbitv1alpha2filter "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/filter"
+	fluentbitv1alpha2parser "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/parser"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-)
-
-const (
-	loggingParserEtcdName          = "etcdParser"
-	loggingParserBackupRestoreName = "backupRestoreParser"
-
-	loggingParser = `[PARSER]
-    Name        ` + loggingParserEtcdName + `
-    Format      regex
-    Regex       ^(?<time>\d{4}-\d{2}-\d{2}\s+[^ ]*)\s+(?<severity>\w+)\s+\|\s+(?<source>[^ :]*):\s+(?<log>.*)
-    Time_Key    time
-    Time_Format %Y-%m-%d %H:%M:%S.%L
-
-[PARSER]
-    Name        ` + loggingParserBackupRestoreName + `
-    Format      regex
-    Regex       ^time="(?<time>\d{4}-\d{2}-\d{2}T[^"]*)"\s+level=(?<severity>\w+)\smsg="(?<log>.*)"
-    Time_Key    time
-    Time_Format %Y-%m-%dT%H:%M:%S%z
-`
-	loggingFilter = `[FILTER]
-    Name                parser
-    Match               kubernetes.*` + statefulSetNamePrefix + `*` + containerNameEtcd + `*
-    Key_Name            log
-    Parser              ` + loggingParserEtcdName + `
-    Reserve_Data        True
-
-[FILTER]
-    Name                parser
-    Match               kubernetes.*` + statefulSetNamePrefix + `*` + containerNameBackupRestore + `*
-    Key_Name            log
-    Parser              ` + loggingParserBackupRestoreName + `
-    Reserve_Data        True
-`
 )
 
 // CentralLoggingConfiguration returns a fluent-bit parser and filter for the etcd and backup-restore sidecar logs.
 func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
-	return component.CentralLoggingConfig{Filters: loggingFilter, Parsers: loggingParser}, nil
+	return component.CentralLoggingConfig{Filters: generateClusterFilters(), Parsers: generateClusterParsers()}, nil
+}
+
+func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
+	return []*fluentbitv1alpha2.ClusterFilter{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   fmt.Sprintf("%s--%s", statefulSetNamePrefix, containerNameEtcd),
+				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
+			},
+			Spec: fluentbitv1alpha2.FilterSpec{
+				Match: fmt.Sprintf("kubernetes.*%s*%s*", statefulSetNamePrefix, containerNameEtcd),
+				FilterItems: []fluentbitv1alpha2.FilterItem{
+					{
+						Parser: &fluentbitv1alpha2filter.Parser{
+							KeyName:     "log",
+							Parser:      containerNameEtcd + "-parser",
+							ReserveData: pointer.Bool(true),
+						},
+					},
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   fmt.Sprintf("%s--%s", statefulSetNamePrefix, containerNameBackupRestore),
+				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
+			},
+			Spec: fluentbitv1alpha2.FilterSpec{
+				Match: fmt.Sprintf("kubernetes.*%s*%s*", statefulSetNamePrefix, containerNameBackupRestore),
+				FilterItems: []fluentbitv1alpha2.FilterItem{
+					{
+						Parser: &fluentbitv1alpha2filter.Parser{
+							KeyName:     "log",
+							Parser:      containerNameBackupRestore + "-parser",
+							ReserveData: pointer.Bool(true),
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func generateClusterParsers() []*fluentbitv1alpha2.ClusterParser {
+	return []*fluentbitv1alpha2.ClusterParser{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   containerNameEtcd + "-parser",
+				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
+			},
+			Spec: fluentbitv1alpha2.ParserSpec{
+				Regex: &fluentbitv1alpha2parser.Regex{
+					Regex:      "^(?<time>\\d{4}-\\d{2}-\\d{2}\\s+[^ ]*)\\s+(?<severity>\\w+)\\s+\\|\\s+(?<source>[^ :]*):\\s+(?<log>.*)",
+					TimeKey:    "time",
+					TimeFormat: "%Y-%m-%d %H:%M:%S.%L",
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   containerNameBackupRestore + "-parser",
+				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
+			},
+			Spec: fluentbitv1alpha2.ParserSpec{
+				Regex: &fluentbitv1alpha2parser.Regex{
+					Regex:      "^time=\"(?<time>\\d{4}-\\d{2}-\\d{2}T[^\"]*)\"\\s+level=(?<severity>\\w+)\\smsg=\"(?<log>.*)\"",
+					TimeKey:    "time",
+					TimeFormat: "%Y-%m-%dT%H:%M:%S%z",
+				},
+			},
+		},
+	}
 }

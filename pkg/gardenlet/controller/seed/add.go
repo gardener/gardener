@@ -23,6 +23,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/lease"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
@@ -43,8 +44,9 @@ func AddToManager(
 	componentImageVectors imagevector.ComponentImageVectors,
 ) error {
 	if err := (&care.Reconciler{
-		Config:   *cfg.Controllers.SeedCare,
-		SeedName: cfg.SeedConfig.Name,
+		Config:         *cfg.Controllers.SeedCare,
+		SeedName:       cfg.SeedConfig.Name,
+		LoggingEnabled: gardenlethelper.IsLoggingEnabled(&cfg),
 	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding care reconciler: %w", err)
 	}

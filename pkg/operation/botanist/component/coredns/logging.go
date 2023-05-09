@@ -17,37 +17,71 @@ package coredns
 import (
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-)
+	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
+	fluentbitv1alpha2filter "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/filter"
+	fluentbitv1alpha2parser "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/parser"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 
-const (
-	loggingParser1Name = "coreDNSParser1"
-	loggingParser1     = `[PARSER]
-    Name        ` + loggingParser1Name + `
-    Format      regex
-    Regex       ^(?<time>\d{4}-\d{2}-\d{2}[Tt].*[zZ])\s+\[(?<severity>\w*[^\]])\]\s+(?<log>.*)
-    Time_Key    time
-    Time_Format  %Y-%m-%dT%H:%M:%S.%L
-`
-	loggingParser2Name = "coreDNSParser2"
-	loggingParser2     = `[PARSER]
-    Name        ` + loggingParser2Name + `
-    Format      regex
-    Regex       ^(?<severity>\w)(?<time>\d{4} [^\s]*)\s+(?<pid>\d+)\s+(?<source>[^ \]]+)\] (?<log>.*)$
-    Time_Key    time
-    Time_Format %m%d %H:%M:%S.%L
-`
-	loggingFilter = `[FILTER]
-    Name                parser
-    Match               kubernetes.*` + DeploymentName + `*` + containerName + `*
-    Key_Name            log
-    Parser              ` + loggingParser1Name + `
-    Parser              ` + loggingParser2Name + `
-    Reserve_Data        True
-`
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 )
 
 // CentralLoggingConfiguration returns a fluent-bit parser and filter for the CoreDNS logs.
 func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
-	return component.CentralLoggingConfig{Filters: loggingFilter, Parsers: fmt.Sprintf("%s\n%s", loggingParser1, loggingParser2)}, nil
+	return component.CentralLoggingConfig{Filters: generateClusterFilters(), Parsers: generateClusterParsers()}, nil
+}
+
+func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
+	return []*fluentbitv1alpha2.ClusterFilter{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   DeploymentName,
+				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
+			},
+			Spec: fluentbitv1alpha2.FilterSpec{
+				Match: fmt.Sprintf("kubernetes.*%s*%s*", DeploymentName, containerName),
+				FilterItems: []fluentbitv1alpha2.FilterItem{
+					{
+						Parser: &fluentbitv1alpha2filter.Parser{
+							KeyName:     "log",
+							Parser:      containerName + "-parser1," + containerName + "-parser2",
+							ReserveData: pointer.Bool(true),
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func generateClusterParsers() []*fluentbitv1alpha2.ClusterParser {
+	return []*fluentbitv1alpha2.ClusterParser{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   containerName + "-parser1",
+				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
+			},
+			Spec: fluentbitv1alpha2.ParserSpec{
+				Regex: &fluentbitv1alpha2parser.Regex{
+					Regex:      "^(?<time>\\d{4}-\\d{2}-\\d{2}[Tt].*[zZ])\\s+\\[(?<severity>\\w*[^\\]])\\]\\s+(?<log>.*)",
+					TimeKey:    "time",
+					TimeFormat: "%Y-%m-%dT%H:%M:%S.%L",
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   containerName + "-parser2",
+				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
+			},
+			Spec: fluentbitv1alpha2.ParserSpec{
+				Regex: &fluentbitv1alpha2parser.Regex{
+					Regex:      "^(?<severity>\\w)(?<time>\\d{4} [^\\s]*)\\s+(?<pid>\\d+)\\s+(?<source>[^ \\]]+)\\] (?<log>.*)$",
+					TimeKey:    "time",
+					TimeFormat: "%m%d %H:%M:%S.%L",
+				},
+			},
+		},
+	}
 }

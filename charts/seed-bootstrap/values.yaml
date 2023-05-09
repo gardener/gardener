@@ -210,9 +210,6 @@ global:
     grafana: image-repository:image-tag
     prometheus: image-repository:image-tag
 
-fluent-bit:
-  enabled: true
-
 loki:
   enabled: true
 

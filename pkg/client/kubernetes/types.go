@@ -17,6 +17,7 @@ package kubernetes
 import (
 	"context"
 
+	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -114,6 +115,7 @@ var (
 		apiextensionsscheme.AddToScheme,
 		istionetworkingv1beta1.AddToScheme,
 		istionetworkingv1alpha3.AddToScheme,
+		fluentbitv1alpha2.AddToScheme,
 	)
 
 	shootSchemeBuilder = runtime.NewSchemeBuilder(
