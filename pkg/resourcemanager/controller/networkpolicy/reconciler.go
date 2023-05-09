@@ -203,8 +203,30 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, service *core
 		addTasksForRelevantNamespacesAndPort(networkingv1.NetworkPolicyPort{Protocol: &port.Protocol, Port: &port.TargetPort}, "")
 	}
 
-	if customPodLabelSelector, allowedPorts := service.Annotations[resourcesv1alpha1.NetworkingFromPolicyPodLabelSelector], service.Annotations[resourcesv1alpha1.NetworkingFromPolicyAllowedPorts]; customPodLabelSelector != "" && allowedPorts != "" {
-		var ports []networkingv1.NetworkPolicyPort
+	// TODO(rfranzke): The following block is deprecated and should be removed as soon as v1.82 has been released.
+	{
+		if customPodLabelSelector, allowedPorts := service.Annotations[resourcesv1alpha1.NetworkingFromPolicyPodLabelSelector], service.Annotations[resourcesv1alpha1.NetworkingFromPolicyAllowedPorts]; customPodLabelSelector != "" && allowedPorts != "" {
+			var ports []networkingv1.NetworkPolicyPort
+			if err := json.Unmarshal([]byte(allowedPorts), &ports); err != nil {
+				return nil, nil, fmt.Errorf("failed unmarshaling %s: %w", allowedPorts, err)
+			}
+
+			for _, port := range ports {
+				addTasksForRelevantNamespacesAndPort(port, customPodLabelSelector)
+			}
+		}
+	}
+
+	for k, allowedPorts := range service.Annotations {
+		if !strings.HasPrefix(k, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix) || !strings.HasSuffix(k, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix) {
+			continue
+		}
+
+		var (
+			customPodLabelSelector = strings.TrimSuffix(strings.TrimPrefix(k, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix), resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix)
+			ports                  []networkingv1.NetworkPolicyPort
+		)
+
 		if err := json.Unmarshal([]byte(allowedPorts), &ports); err != nil {
 			return nil, nil, fmt.Errorf("failed unmarshaling %s: %w", allowedPorts, err)
 		}

@@ -17,6 +17,8 @@ package networkpolicy
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"strings"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -135,9 +137,32 @@ func (r *Reconciler) ServicePredicate() predicate.Predicate {
 				oldService.Annotations[resourcesv1alpha1.NetworkingNamespaceSelectors] != service.Annotations[resourcesv1alpha1.NetworkingNamespaceSelectors] ||
 				oldService.Annotations[resourcesv1alpha1.NetworkingFromWorldToPorts] != service.Annotations[resourcesv1alpha1.NetworkingFromWorldToPorts] ||
 				oldService.Annotations[resourcesv1alpha1.NetworkingFromPolicyPodLabelSelector] != service.Annotations[resourcesv1alpha1.NetworkingFromPolicyPodLabelSelector] ||
-				oldService.Annotations[resourcesv1alpha1.NetworkingFromPolicyAllowedPorts] != service.Annotations[resourcesv1alpha1.NetworkingFromPolicyAllowedPorts]
+				oldService.Annotations[resourcesv1alpha1.NetworkingFromPolicyAllowedPorts] != service.Annotations[resourcesv1alpha1.NetworkingFromPolicyAllowedPorts] ||
+				fromPolicyAnnotationsChanged(oldService.Annotations, service.Annotations)
 		},
 	}
+}
+
+func fromPolicyAnnotationsChanged(oldAnnotations, newAnnotations map[string]string) bool {
+	var (
+		oldFromPolicies = make(map[string]string)
+		newFromPolicies = make(map[string]string)
+
+		getPolicies = func(annotations, into map[string]string) {
+			for k, allowedPorts := range annotations {
+				if !strings.HasPrefix(k, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix) || !strings.HasSuffix(k, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix) {
+					continue
+				}
+				customPodLabelSelector := strings.TrimSuffix(strings.TrimPrefix(k, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix), resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix)
+				into[customPodLabelSelector] = allowedPorts
+			}
+		}
+	)
+
+	getPolicies(oldAnnotations, oldFromPolicies)
+	getPolicies(newAnnotations, newFromPolicies)
+
+	return !reflect.DeepEqual(oldFromPolicies, newFromPolicies)
 }
 
 // IngressPredicate returns a predicate which filters UPDATE events on Ingresses such that only updates to the rules

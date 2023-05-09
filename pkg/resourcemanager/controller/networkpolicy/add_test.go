@@ -135,6 +135,28 @@ var _ = Describe("Add", func() {
 
 				Expect(p.Update(event.UpdateEvent{ObjectOld: oldService, ObjectNew: service})).To(BeTrue())
 			})
+
+			It("should return true because a custom pod label selector was added", func() {
+				oldService := service.DeepCopy()
+				service.Annotations = map[string]string{"networking.resources.gardener.cloud/from-foo-allowed-ports": "foo"}
+
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldService, ObjectNew: service})).To(BeTrue())
+			})
+
+			It("should return true because a custom pod label selector was removed", func() {
+				oldService := service.DeepCopy()
+				oldService.Annotations = map[string]string{"networking.resources.gardener.cloud/from-foo-allowed-ports": "foo"}
+
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldService, ObjectNew: service})).To(BeTrue())
+			})
+
+			It("should return true because a custom pod label selector was cjanged", func() {
+				oldService := service.DeepCopy()
+				oldService.Annotations = map[string]string{"networking.resources.gardener.cloud/from-foo-allowed-ports": "foo"}
+				service.Annotations = map[string]string{"networking.resources.gardener.cloud/from-foo-allowed-ports": "bar"}
+
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldService, ObjectNew: service})).To(BeTrue())
+			})
 		})
 
 		Describe("#Delete", func() {
