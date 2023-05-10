@@ -120,7 +120,6 @@ rules:
   - pods
   - nodes
   - nodes/metrics
-  - nodes/stats
   - namespaces
   - configmaps
   verbs:

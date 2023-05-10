@@ -237,11 +237,6 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	// TODO(rfranzke): Delete this in a future release.
-	if err := kubernetesutils.DeleteObject(ctx, v.client, v.emptyNetworkPolicy()); err != nil {
-		return err
-	}
-
 	podTemplate := v.podTemplate(configMap, dhSecret, secretCAVPN, secretServer, secretTLSAuth)
 	labels := map[string]string{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
@@ -836,7 +831,6 @@ func (v *vpnSeedServer) deployVPA(ctx context.Context) error {
 
 func (v *vpnSeedServer) Destroy(ctx context.Context) error {
 	objects := []client.Object{
-		v.emptyNetworkPolicy(),
 		v.emptyDeployment(),
 		v.emptyStatefulSet(),
 		v.emptyDestinationRule(nil),
@@ -893,10 +887,6 @@ func (v *vpnSeedServer) emptyPodDisruptionBudget() client.Object {
 	return &policyv1beta1.PodDisruptionBudget{
 		ObjectMeta: pdbObjectMeta,
 	}
-}
-
-func (v *vpnSeedServer) emptyNetworkPolicy() *networkingv1.NetworkPolicy {
-	return &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-vpn-seed-server", Namespace: v.namespace}}
 }
 
 func (v *vpnSeedServer) emptyDestinationRule(idx *int) *networkingv1beta1.DestinationRule {

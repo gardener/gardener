@@ -49,6 +49,7 @@ var _ = Describe("Reconcile", func() {
 		var (
 			ctrl              *gomock.Controller
 			runtimeClient     *mockclient.MockClient
+			sw                *mockclient.MockSubResourceClient
 			ctx               = context.TODO()
 			log               = logr.Discard()
 			lokiPVCObjectMeta = metav1.ObjectMeta{
@@ -116,6 +117,8 @@ var _ = Describe("Reconcile", func() {
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
 			runtimeClient = mockclient.NewMockClient(ctrl)
+			sw = mockclient.NewMockSubResourceClient(ctrl)
+			runtimeClient.EXPECT().SubResource("scale").Return(sw).AnyTimes()
 		})
 
 		AfterEach(func() {
@@ -124,7 +127,7 @@ var _ = Describe("Reconcile", func() {
 
 		It("should patch garden/loki's PVC when new size is greater than the current one", func() {
 			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
-			runtimeClient.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
+			sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
 			runtimeClient.EXPECT().Get(gomock.Any(), lokiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
 			runtimeClient.EXPECT().Patch(ctx, objectOfTypePVC, gomock.AssignableToTypeOf(patch)).DoAndReturn(funcPatchTo200GiStorage)
 			runtimeClient.EXPECT().Delete(ctx, statefulset)
@@ -133,7 +136,7 @@ var _ = Describe("Reconcile", func() {
 
 		It("should delete garden/loki's PVC when new size is less than the current one", func() {
 			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
-			runtimeClient.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
+			sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
 			runtimeClient.EXPECT().Get(gomock.Any(), lokiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
 			runtimeClient.EXPECT().Delete(ctx, lokiPVC)
 			runtimeClient.EXPECT().Delete(ctx, statefulset)
@@ -152,7 +155,7 @@ var _ = Describe("Reconcile", func() {
 
 		It("should proceed with the garden/loki's PVC resizing when Loki StatefulSet is missing", func() {
 			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
-			runtimeClient.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch).Return(errNotFound)
+			sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch).Return(errNotFound)
 			runtimeClient.EXPECT().Patch(ctx, objectOfTypePVC, gomock.AssignableToTypeOf(patch)).DoAndReturn(funcPatchTo200GiStorage)
 			runtimeClient.EXPECT().Delete(ctx, statefulset).Return(errNotFound)
 			Expect(ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, log, runtimeClient, new200GiStorageQuantity)).To(Succeed())
@@ -160,7 +163,7 @@ var _ = Describe("Reconcile", func() {
 
 		It("should succeed with the garden/loki's PVC resizing when Loki StatefulSet was deleted during function execution", func() {
 			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
-			runtimeClient.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
+			sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
 			runtimeClient.EXPECT().Get(gomock.Any(), lokiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
 			runtimeClient.EXPECT().Patch(ctx, objectOfTypePVC, gomock.AssignableToTypeOf(patch)).DoAndReturn(funcPatchTo200GiStorage)
 			runtimeClient.EXPECT().Delete(ctx, statefulset).Return(errNotFound)
@@ -169,7 +172,7 @@ var _ = Describe("Reconcile", func() {
 
 		It("should not fail with patching garden/loki's PVC when the PVC itself was deleted during function execution", func() {
 			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
-			runtimeClient.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
+			sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
 			runtimeClient.EXPECT().Get(gomock.Any(), lokiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
 			runtimeClient.EXPECT().Patch(ctx, objectOfTypePVC, gomock.AssignableToTypeOf(patch)).Return(errNotFound)
 			runtimeClient.EXPECT().Delete(ctx, statefulset)
@@ -178,7 +181,7 @@ var _ = Describe("Reconcile", func() {
 
 		It("should not fail with deleting garden/loki's PVC when the PVC itself was deleted during function execution", func() {
 			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
-			runtimeClient.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
+			sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
 			runtimeClient.EXPECT().Get(gomock.Any(), lokiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
 			runtimeClient.EXPECT().Delete(ctx, lokiPVC).Return(errNotFound)
 			runtimeClient.EXPECT().Delete(ctx, statefulset)
@@ -192,20 +195,20 @@ var _ = Describe("Reconcile", func() {
 
 		It("should not neglect errors when patching garden/loki's StatefulSet", func() {
 			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
-			runtimeClient.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch).Return(errForbidden)
+			sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch).Return(errForbidden)
 			Expect(ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, log, runtimeClient, new80GiStorageQuantity)).ToNot(Succeed())
 		})
 
 		It("should not neglect errors when getting garden/loki's StatefulSet", func() {
 			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
-			runtimeClient.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
+			sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
 			runtimeClient.EXPECT().Get(gomock.Any(), lokiStatefulSetKey, objectOfTypeSTS).Return(errForbidden)
 			Expect(ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, log, runtimeClient, new80GiStorageQuantity)).ToNot(Succeed())
 		})
 
 		It("should not neglect errors when patching garden/loki's PVC", func() {
 			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
-			runtimeClient.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
+			sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
 			runtimeClient.EXPECT().Get(gomock.Any(), lokiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
 			runtimeClient.EXPECT().Patch(ctx, objectOfTypePVC, gomock.AssignableToTypeOf(patch)).Return(errForbidden)
 			Expect(ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, log, runtimeClient, new200GiStorageQuantity)).ToNot(Succeed())
@@ -213,7 +216,7 @@ var _ = Describe("Reconcile", func() {
 
 		It("should not neglect errors when deleting garden/loki's PVC", func() {
 			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
-			runtimeClient.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
+			sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
 			runtimeClient.EXPECT().Get(gomock.Any(), lokiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
 			runtimeClient.EXPECT().Delete(ctx, lokiPVC).Return(errForbidden)
 			Expect(ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, log, runtimeClient, new80GiStorageQuantity)).ToNot(Succeed())
@@ -221,7 +224,7 @@ var _ = Describe("Reconcile", func() {
 
 		It("should not neglect errors when deleting garden/loki's StatefulSet", func() {
 			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
-			runtimeClient.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
+			sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
 			runtimeClient.EXPECT().Get(gomock.Any(), lokiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
 			runtimeClient.EXPECT().Delete(ctx, lokiPVC)
 			runtimeClient.EXPECT().Delete(ctx, statefulset).Return(errForbidden)

@@ -23,6 +23,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -382,9 +383,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		horizontalPodAutoscaler               client.Object
 		verticalPodAutoscaler                 = k.emptyVerticalPodAutoscaler()
 		hvpa                                  = k.emptyHVPA()
-		networkPolicyAllowFromShootAPIServer  = k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer)
-		networkPolicyAllowToShootAPIServer    = k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer)
-		networkPolicyAllowKubeAPIServer       = k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer)
 		secretETCDEncryptionConfiguration     = k.emptySecret(v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration)
 		secretOIDCCABundle                    = k.emptySecret(secretOIDCCABundleNamePrefix)
 		secretAuditWebhookKubeconfig          = k.emptySecret(secretAuditWebhookKubeconfigNamePrefix)
@@ -416,17 +414,11 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := k.reconcileNetworkPolicyAllowFromShootAPIServer(ctx, networkPolicyAllowFromShootAPIServer); err != nil {
-		return err
-	}
-
-	// TODO(rfranzke): Delete this network policy in a future release.
-	if err := k.reconcileNetworkPolicyAllowToShootAPIServer(ctx, networkPolicyAllowToShootAPIServer); err != nil {
-		return err
-	}
-
 	// TODO(rfranzke): Remove this in a future release.
-	if err := kubernetesutils.DeleteObject(ctx, k.client.Client(), networkPolicyAllowKubeAPIServer); err != nil {
+	if err := kubernetesutils.DeleteObjects(ctx, k.client.Client(),
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-shoot-apiserver", Namespace: k.namespace}},
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-shoot-apiserver", Namespace: k.namespace}},
+	); err != nil {
 		return err
 	}
 
@@ -592,12 +584,12 @@ func (k *kubeAPIServer) Destroy(ctx context.Context) error {
 		k.emptyHVPA(),
 		k.emptyPodDisruptionBudget(),
 		k.emptyDeployment(),
-		k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer),
-		k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer),
-		k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer),
 		k.emptyServiceAccount(),
 		k.emptyRoleHAVPN(),
 		k.emptyRoleBindingHAVPN(),
+		// TOOD(rfranzke): Remove this in a future release.
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-shoot-apiserver", Namespace: k.namespace}},
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-shoot-apiserver", Namespace: k.namespace}},
 	)
 }
 

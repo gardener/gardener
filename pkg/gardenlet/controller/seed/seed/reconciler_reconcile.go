@@ -803,10 +803,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if err != nil {
 		return err
 	}
-	networkPolicies, err := defaultNetworkPolicies(seedClient, r.GardenNamespace)
-	if err != nil {
-		return err
-	}
 	dwdWeeder, dwdProber, err := defaultDependencyWatchdogs(seedClient, kubernetesVersion, r.ImageVector, seed.GetInfo().Spec.Settings, r.GardenNamespace)
 	if err != nil {
 		return err
@@ -820,17 +816,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
-	// TODO(rfranzke): Delete this in a future version.
-	{
-		if err := kubernetesutils.DeleteObjects(ctx, seedClient,
-			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-loki", Namespace: r.GardenNamespace}},
-			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-loki", Namespace: r.GardenNamespace}},
-			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-aggregate-prometheus", Namespace: r.GardenNamespace}},
-		); err != nil {
-			return err
-		}
-	}
-
 	if features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster) {
 		if err := kubernetesutils.DeleteObject(ctx, seedClient, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-seed-prometheus", Namespace: r.GardenNamespace}}); err != nil {
 			return err
@@ -842,10 +827,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		_ = g.Add(flow.Task{
 			Name: "Deploying Istio",
 			Fn:   istio.Deploy,
-		})
-		_ = g.Add(flow.Task{
-			Name: "Ensuring network policies",
-			Fn:   networkPolicies.Deploy,
 		})
 		nginxLBReady = g.Add(flow.Task{
 			Name: "Waiting until nginx ingress LoadBalancer is ready",

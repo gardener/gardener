@@ -23,6 +23,9 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/Masterminds/sprig"
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/pointer"
 
@@ -31,6 +34,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 const pathContainerdConfigScript = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/init-containerd-with-registry-mirrors"
@@ -48,9 +52,7 @@ func init() {
 		New(tplNameInitializer).
 		Funcs(sprig.TxtFuncMap()).
 		Parse(tplContentInitializer)
-	if err != nil {
-		panic(err)
-	}
+	utilruntime.Must(err)
 }
 
 // NewEnsurer creates a new controlplane ensurer.
@@ -65,13 +67,17 @@ type ensurer struct {
 	logger logr.Logger
 }
 
+func (e *ensurer) EnsureKubeAPIServerDeployment(_ context.Context, _ extensionscontextwebhook.GardenContext, new, _ *appsv1.Deployment) error {
+	metav1.SetMetaDataLabel(&new.Spec.Template.ObjectMeta, gardenerutils.NetworkPolicyLabel("machines", 10250), v1beta1constants.LabelNetworkPolicyAllowed)
+	return nil
+}
+
 func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ extensionscontextwebhook.GardenContext, _ *semver.Version, newObj, _ *kubeletconfigv1beta1.KubeletConfiguration) error {
 	newObj.FailSwapOn = pointer.Bool(false)
 	newObj.CgroupDriver = "systemd"
 	return nil
 }
 
-// EnsureAdditionalFiles ensures that additional required system files are added.
 func (e *ensurer) EnsureAdditionalFiles(ctx context.Context, gc extensionscontextwebhook.GardenContext, new, _ *[]extensionsv1alpha1.File) error {
 	var script bytes.Buffer
 	if err := tplInitializer.Execute(&script, nil); err != nil {

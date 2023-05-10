@@ -28,7 +28,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -623,10 +622,9 @@ var _ = Describe("VPA", func() {
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
-								"app":                 "vpa-recommender",
-								"gardener.cloud/role": "vpa",
-								"networking.gardener.cloud/from-prometheus":                     "allowed",
-								"networking.gardener.cloud/to-dns":                              "allowed",
+								"app":                              "vpa-recommender",
+								"gardener.cloud/role":              "vpa",
+								"networking.gardener.cloud/to-dns": "allowed",
 								"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443": "allowed",
 							},
 						},
@@ -1584,10 +1582,6 @@ var _ = Describe("VPA", func() {
 				serviceAdmissionController := serviceAdmissionControllerFor(component.ClusterTypeShoot, false)
 				serviceAdmissionController.ResourceVersion = "1"
 				Expect(service).To(Equal(serviceAdmissionController))
-
-				// TODO(rfranzke): Delete this in a future release.
-				networkPolicy := &networkingv1.NetworkPolicy{}
-				Expect(c.Get(ctx, client.ObjectKey{Name: "allow-kube-apiserver-to-vpa-admission-controller", Namespace: namespace}, networkPolicy)).To(BeNotFoundError())
 
 				deployment = &appsv1.Deployment{}
 				Expect(c.Get(ctx, kubernetesutils.Key(namespace, "vpa-admission-controller"), deployment)).To(Succeed())

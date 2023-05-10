@@ -476,19 +476,6 @@ var _ = Describe("Namespaces", func() {
 			Expect(botanist.SeedNamespaceObject.Annotations).To(HaveKeyWithValue("foo", "bar"))
 			Expect(botanist.SeedNamespaceObject.Labels).To(HaveKeyWithValue("bar", "foo"))
 		})
-
-		It("should successfully remove the zone-enforcement label", func() {
-			Expect(seedClient.Create(ctx, &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   namespace,
-					Labels: map[string]string{"control-plane.shoot.gardener.cloud/enforce-zone": ""},
-				},
-			})).To(Succeed())
-
-			Expect(botanist.SeedNamespaceObject).To(BeNil())
-			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
-			Expect(botanist.SeedNamespaceObject.Labels).NotTo(HaveKey("control-plane.shoot.gardener.cloud/enforce-zone"))
-		})
 	})
 
 	Describe("#DeleteSeedNamespace", func() {

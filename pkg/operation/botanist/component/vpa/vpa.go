@@ -24,7 +24,6 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -176,22 +175,12 @@ func (v *vpa) Deploy(ctx context.Context) error {
 		if err := v.crdDeployer.Deploy(ctx); err != nil {
 			return err
 		}
-
-		// TODO(rfranzke): Delete this in a future release.
-		if err := kubernetesutils.DeleteObject(ctx, v.client, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-vpa-admission-controller", Namespace: v.namespace}}); err != nil {
-			return err
-		}
 	}
 
 	return component.DeployResourceConfigs(ctx, v.client, v.namespace, v.values.ClusterType, v.managedResourceName(), v.registry, allResources)
 }
 
 func (v *vpa) Destroy(ctx context.Context) error {
-	// TODO(rfranzke): Delete this in a future release.
-	if err := kubernetesutils.DeleteObject(ctx, v.client, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-vpa-admission-controller", Namespace: v.namespace}}); err != nil {
-		return err
-	}
-
 	return component.DestroyResourceConfigs(ctx, v.client, v.namespace, v.values.ClusterType, v.managedResourceName(),
 		v.admissionControllerResourceConfigs(),
 		v.recommenderResourceConfigs(),

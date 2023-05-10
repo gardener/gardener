@@ -33,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
@@ -143,16 +142,6 @@ func defaultIstio(
 	}
 
 	return istioDeployer, nil
-}
-
-func defaultNetworkPolicies(
-	c client.Client,
-	gardenNamespaceName string,
-) (
-	component.DeployWaiter,
-	error,
-) {
-	return networkpolicies.NewBootstrapper(c, gardenNamespaceName), nil
 }
 
 func defaultDependencyWatchdogs(

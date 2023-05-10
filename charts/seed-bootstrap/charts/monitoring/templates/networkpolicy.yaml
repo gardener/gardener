@@ -1,5 +1,5 @@
 {{- if .Values.prometheus.deployAllowAllAccessNetworkPolicy }}
-# TODO(rfranzke): Drop this network policy in a future release.
+# TODO(rfranzke): Drop this network policy when FullNetworkPoliciesInRuntimeCluster feature gate is locked to true.
 apiVersion: {{ include "networkpolicyversion" . }}
 kind: NetworkPolicy
 metadata:

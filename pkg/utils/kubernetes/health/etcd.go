@@ -33,8 +33,7 @@ func CheckEtcd(etcd *druidv1alpha1.Etcd) error {
 			continue
 		}
 
-		// TODO(timuthy): Check for cond.Status != druidv1alpha1.ConditionTrue as soon as https://github.com/gardener/etcd-druid/pull/469 is released.
-		if cond.Status == druidv1alpha1.ConditionFalse {
+		if cond.Status != druidv1alpha1.ConditionTrue {
 			return fmt.Errorf("backup for etcd %q is reported as unready: %s", etcd.Name, cond.Message)
 		}
 	}

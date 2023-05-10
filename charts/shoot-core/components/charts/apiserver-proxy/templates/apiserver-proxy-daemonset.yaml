@@ -1,8 +1,0 @@
-# TODO(oliver-goetz): Delete this Helm chart in a future version.
-apiVersion: {{ include "daemonsetversion" . }}
-kind: DaemonSet
-metadata:
-  name: apiserver-proxy
-  namespace: kube-system
-  annotations:
-    resources.gardener.cloud/mode: Ignore

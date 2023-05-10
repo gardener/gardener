@@ -75,12 +75,6 @@ const (
 	// LabelAppValue is the value of a label whose key is 'app'.
 	LabelAppValue = "etcd-statefulset"
 
-	// NetworkPolicyNameClient is the name of a network policy that allows ingress traffic to etcd from certain sources.
-	NetworkPolicyNameClient = "allow-etcd"
-
-	// NetworkPolicyNamePeer is the name of a network policy that allows ingress traffic to etcd from member pods.
-	NetworkPolicyNamePeer = "allow-etcd-peer"
-
 	portNameClient        = "client"
 	portNameBackupRestore = "backuprestore"
 
@@ -201,8 +195,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	}
 
 	var (
-		peerNetworkPolicy = e.emptyNetworkPolicy(NetworkPolicyNamePeer)
-		hvpa              = e.emptyHVPA()
+		hvpa = e.emptyHVPA()
 
 		replicas = e.computeReplicas(existingEtcd)
 
@@ -270,91 +263,6 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	// Without this if condition, both `etcdMain` and `etcdEvents` component deployers execute this code. However, these
-	// network policies are not specified to them (they apply to both because there is no `role` label in the selector).
-	// Hence, it doesn't make sense if both component deployers are running this code - let's only do it for the main
-	// ETCD.
-	if e.values.Role == v1beta1constants.ETCDRoleMain {
-		// TODO(rfranzke): Remove this in a future version.
-		if err := kubernetesutils.DeleteObject(ctx, e.client, e.emptyNetworkPolicy(NetworkPolicyNameClient)); err != nil {
-			return err
-		}
-
-		// create peer network policy only if there are 3 replicas
-		// TODO(rfranzke): When https://github.com/gardener/etcd-druid/pull/521 is resolved then drop this NetworkPolicy
-		//  and replace it with the new labels instead.
-		if e.values.HighAvailabilityEnabled {
-			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, peerNetworkPolicy, func() error {
-				peerNetworkPolicy.Annotations = map[string]string{
-					v1beta1constants.GardenerDescription: "Allows Ingress to etcd pods from etcd pods for peer communication.",
-				}
-				peerNetworkPolicy.Labels = map[string]string{
-					v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-				}
-				peerNetworkPolicy.Spec.PodSelector = metav1.LabelSelector{
-					MatchLabels: GetLabels(),
-				}
-				peerNetworkPolicy.Spec.Egress = []networkingv1.NetworkPolicyEgressRule{
-					{
-						Ports: []networkingv1.NetworkPolicyPort{
-							{
-								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
-								Port:     utils.IntStrPtrFromInt(etcdconstants.PortEtcdClient),
-							},
-							{
-								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
-								Port:     utils.IntStrPtrFromInt(etcdconstants.PortBackupRestore),
-							},
-							{
-								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
-								Port:     utils.IntStrPtrFromInt(etcdconstants.PortEtcdPeer),
-							},
-						},
-						To: []networkingv1.NetworkPolicyPeer{
-							{
-								PodSelector: &metav1.LabelSelector{
-									MatchLabels: GetLabels(),
-								},
-							},
-						},
-					},
-				}
-				peerNetworkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{
-					{
-						From: []networkingv1.NetworkPolicyPeer{
-							{
-								PodSelector: &metav1.LabelSelector{
-									MatchLabels: GetLabels(),
-								},
-							},
-						},
-						Ports: []networkingv1.NetworkPolicyPort{
-							{
-								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
-								Port:     utils.IntStrPtrFromInt(etcdconstants.PortEtcdClient),
-							},
-							{
-								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
-								Port:     utils.IntStrPtrFromInt(etcdconstants.PortBackupRestore),
-							},
-							{
-								Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
-								Port:     utils.IntStrPtrFromInt(etcdconstants.PortEtcdPeer),
-							},
-						},
-					},
-				}
-				peerNetworkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{
-					networkingv1.PolicyTypeIngress,
-					networkingv1.PolicyTypeEgress,
-				}
-				return nil
-			}); err != nil {
-				return err
-			}
-		}
-	}
-
 	clientService := &corev1.Service{}
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(clientService,
 		networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(etcdconstants.PortEtcdClient), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)},
@@ -362,7 +270,6 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	))
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(clientService, metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}}))
 	metav1.SetMetaDataAnnotation(&clientService.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
-
 	gardenerutils.ReconcileTopologyAwareRoutingMetadata(clientService, e.values.TopologyAwareRoutingEnabled)
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, e.etcd, func() error {
@@ -377,18 +284,22 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		e.etcd.Spec.PriorityClassName = &e.values.PriorityClassName
 		e.etcd.Spec.Annotations = annotations
 		e.etcd.Spec.Labels = utils.MergeStringMaps(e.getRoleLabels(), map[string]string{
-			v1beta1constants.LabelApp:                            LabelAppValue,
-			v1beta1constants.LabelNetworkPolicyToDNS:             v1beta1constants.LabelNetworkPolicyAllowed,
-			v1beta1constants.LabelNetworkPolicyToPublicNetworks:  v1beta1constants.LabelNetworkPolicyAllowed,
-			v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
-			// TODO(rfranzke): etcd-druid wrongly uses all these labels for the .spec.selector of the Services it
-			//  creates. Hence, we cannot change them because otherwise multi-node ETCD clusters would break (since the
-			//  services wouldn't select anything anymore). Until this is fixed, we have to keep using the deprecated
-			//  to-seed-apiserver label instead of the new to-runtime-apiserver.
-			//  See https://github.com/gardener/etcd-druid/pull/521.
-			v1beta1constants.LabelNetworkPolicyToSeedAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
-			// v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelApp:                             LabelAppValue,
+			v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToPublicNetworks:   v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToPrivateNetworks:  v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 		})
+
+		if e.values.HighAvailabilityEnabled {
+			// Allow etcd p2p communication
+			e.etcd.Spec.Labels = utils.MergeStringMaps(e.etcd.Spec.Labels, map[string]string{
+				gardenerutils.NetworkPolicyLabel(e.values.NamePrefix+etcdconstants.ServiceName(e.values.Role), etcdconstants.PortEtcdClient):    v1beta1constants.LabelNetworkPolicyAllowed,
+				gardenerutils.NetworkPolicyLabel(e.values.NamePrefix+etcdconstants.ServiceName(e.values.Role), etcdconstants.PortBackupRestore): v1beta1constants.LabelNetworkPolicyAllowed,
+				gardenerutils.NetworkPolicyLabel(e.values.NamePrefix+etcdconstants.ServiceName(e.values.Role), etcdconstants.PortEtcdPeer):      v1beta1constants.LabelNetworkPolicyAllowed,
+			})
+		}
+
 		e.etcd.Spec.Selector = &metav1.LabelSelector{
 			MatchLabels: utils.MergeStringMaps(e.getRoleLabels(), map[string]string{
 				v1beta1constants.LabelApp: LabelAppValue,
@@ -644,7 +555,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 	}
 
-	return nil
+	// TODO(rfranzke): Delete this in a future release (after v1.75).
+	return kubernetesutils.DeleteObject(ctx, e.client, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-etcd-peer", Namespace: e.namespace}})
 }
 
 func (e *etcd) Destroy(ctx context.Context) error {
@@ -655,12 +567,10 @@ func (e *etcd) Destroy(ctx context.Context) error {
 	objects := []client.Object{
 		e.emptyHVPA(),
 		e.etcd,
-		e.emptyNetworkPolicy(NetworkPolicyNameClient),
 	}
 
-	if e.values.HighAvailabilityEnabled {
-		objects = append(objects, e.emptyNetworkPolicy(NetworkPolicyNamePeer))
-	}
+	// TODO(rfranzke): Delete this in a future release (after v1.75).
+	objects = append(objects, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-etcd-peer", Namespace: e.namespace}})
 
 	return kubernetesutils.DeleteObjects(ctx, e.client, objects...)
 }
@@ -678,10 +588,6 @@ func GetLabels() map[string]string {
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		v1beta1constants.LabelApp:   LabelAppValue,
 	}
-}
-
-func (e *etcd) emptyNetworkPolicy(name string) *networkingv1.NetworkPolicy {
-	return &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: e.namespace}}
 }
 
 func (e *etcd) emptyHVPA() *hvpav1alpha1.Hvpa {

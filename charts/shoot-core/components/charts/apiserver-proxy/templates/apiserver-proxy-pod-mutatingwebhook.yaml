@@ -1,9 +1,0 @@
-# TODO(oliver-goetz): Delete this Helm chart in a future version.
-{{- if .Values.podMutatorEnabled }}
-apiVersion: {{ include "webhookadmissionregistration" . }}
-kind: MutatingWebhookConfiguration
-metadata:
-  name: apiserver-proxy.networking.gardener.cloud
-  annotations:
-    resources.gardener.cloud/mode: Ignore
-{{- end }}

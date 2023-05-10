@@ -286,7 +286,6 @@ var _ = Describe("#SNI", func() {
 		Context("CRD available", func() {
 			BeforeEach(func() {
 				s := runtime.NewScheme()
-				// TODO(mvladev): can't directly import the istio apis due to dependency issues.
 				s.AddKnownTypeWithName(schema.FromAPIVersionAndKind("networking.istio.io/v1beta1", "VirtualServiceList"), &unstructured.UnstructuredList{})
 				s.AddKnownTypeWithName(schema.FromAPIVersionAndKind("networking.istio.io/v1beta1", "VirtualService"), &unstructured.Unstructured{})
 				virtualServiceObj := &unstructured.Unstructured{}

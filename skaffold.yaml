@@ -896,7 +896,6 @@ build:
         - pkg/operation/botanist/component/metricsserver
         - pkg/operation/botanist/component/monitoring
         - pkg/operation/botanist/component/namespaces
-        - pkg/operation/botanist/component/networkpolicies
         - pkg/operation/botanist/component/nginxingress
         - pkg/operation/botanist/component/nodelocaldns
         - pkg/operation/botanist/component/nodelocaldns/constants

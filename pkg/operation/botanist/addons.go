@@ -31,11 +31,6 @@ import (
 
 // DeployManagedResourceForAddons deploys all the ManagedResource CRDs for the gardener-resource-manager.
 func (b *Botanist) DeployManagedResourceForAddons(ctx context.Context) error {
-	// TODO(rfranzke): Delete this code in a future release.
-	if err := managedresources.DeleteForShoot(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, "addons"); err != nil {
-		return err
-	}
-
 	renderedChart, err := b.generateCoreAddonsChart()
 	if err != nil {
 		return fmt.Errorf("error rendering shoot-core chart: %w", err)
@@ -70,8 +65,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 	}
 
 	values := map[string]interface{}{
-		"global":          global,
-		"apiserver-proxy": common.GenerateAddonConfig(nil, b.APIServerSNIEnabled() && !b.Shoot.IsWorkerless),
+		"global": global,
 		"monitoring": common.GenerateAddonConfig(map[string]interface{}{
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,

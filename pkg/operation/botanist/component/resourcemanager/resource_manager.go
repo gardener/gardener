@@ -347,10 +347,6 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 
 	if r.values.TargetDiffersFromSourceCluster {
 		fns = append(fns, r.ensureShootResources)
-		// TODO(rfranzke): Remove this in a future version.
-		fns = append(fns, func(ctx context.Context) error {
-			return kubernetesutils.DeleteObject(ctx, r.client, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-gardener-resource-manager", Namespace: r.namespace}})
-		})
 	} else {
 		fns = append(fns, r.ensureMutatingWebhookConfiguration)
 		fns = append(fns, r.ensureValidatingWebhookConfiguration)
@@ -405,8 +401,6 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 			r.emptyValidatingWebhookConfiguration(),
 			r.emptyClusterRole(),
 			r.emptyClusterRoleBinding(),
-			// TODO(rfranzke): Remove this in a future version.
-			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-gardener-resource-manager", Namespace: r.namespace}},
 		}, objectsToDelete...)
 	}
 

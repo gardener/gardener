@@ -106,7 +106,6 @@ type Components struct {
 	SourceBackupEntry        backupentry.Interface
 	ControlPlane             *ControlPlane
 	Extensions               *Extensions
-	NetworkPolicies          component.Deployer
 	SystemComponents         *SystemComponents
 	Logging                  *Logging
 	GardenerAccess           component.Deployer

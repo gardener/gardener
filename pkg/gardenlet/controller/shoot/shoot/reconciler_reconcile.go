@@ -197,7 +197,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			}).DoIf(!o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady, deployOwnerDomainDNSRecord),
 		})
-		deployExternalDomainDNSRecord = g.Add(flow.Task{
+		_ = g.Add(flow.Task{
 			Name: "Deploying external domain DNS record",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				if err := botanist.DeployOrDestroyExternalDNSRecord(ctx); err != nil {
@@ -223,24 +223,6 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 				return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskDeployInfrastructure)
 			},
 			Dependencies: flow.NewTaskIDs(deployInfrastructure),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Reconciling network policies",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.NetworkPolicies.Deploy).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployNamespace),
-		})
-		// If the nodes CIDR is not static then it might be assigned only after the Infrastructure reconciliation. Hence,
-		// we might need to reconcile the network policies again after this step (because it might be only known afterwards).
-		_ = g.Add(flow.Task{
-			Name: "Reconciling network policies now that infrastructure is ready",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if botanist.Shoot.GetInfo().Spec.Networking.Nodes != nil {
-					o.Shoot.Components.NetworkPolicies = botanist.DefaultNetworkPolicies()
-					return botanist.Shoot.Components.NetworkPolicies.Deploy(ctx)
-				}
-				return nil
-			}).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(!staticNodesCIDR),
-			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady),
 		})
 		deploySourceBackupEntry = g.Add(flow.Task{
 			Name:         "Deploying source backup entry",
@@ -631,7 +613,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.WaitUntilNginxIngressServiceIsReady).DoIf(v1beta1helper.NginxIngressEnabled(botanist.Shoot.GetInfo().Spec.Addons)).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployManagedResourcesForAddons, initializeShootClients, waitUntilWorkerReady, ensureShootClusterIdentity),
 		})
-		deployIngressDomainDNSRecord = g.Add(flow.Task{
+		_ = g.Add(flow.Task{
 			Name: "Deploying nginx ingress DNS record",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				if err := botanist.DeployOrDestroyIngressDNSRecord(ctx); err != nil {
@@ -640,11 +622,6 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 				return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskDeployDNSRecordIngress)
 			}).DoIf(!o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(nginxLBReady),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Cleaning up orphaned DNSRecord secrets",
-			Fn:           flow.TaskFn(botanist.CleanupOrphanedDNSRecordSecrets).DoIf(!o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(deployInternalDomainDNSRecord, deployExternalDomainDNSRecord, deployOwnerDomainDNSRecord, deployIngressDomainDNSRecord),
 		})
 		waitUntilTunnelConnectionExists = g.Add(flow.Task{
 			Name:         "Waiting until the Kubernetes API server can connect to the Shoot workers",

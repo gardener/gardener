@@ -152,7 +152,7 @@ func (i *istiod) Deploy(ctx context.Context) error {
 
 	var renderedChart = &chartrenderer.RenderedChart{}
 
-	// TODO(timuthy): Block to be removed in a future version. Only required to move istiod assets to separate ManagedResource.
+	// TODO(rfranzke): Block to be removed after v1.71 got released. Only required to move istiod assets to separate ManagedResource.
 	if i.values.Istiod.Enabled {
 		renderedIstiodChartIgnore, err := i.generateIstiodChart(true)
 		if err != nil {

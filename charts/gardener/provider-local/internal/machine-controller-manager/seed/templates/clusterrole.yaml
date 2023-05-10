@@ -25,6 +25,7 @@ rules:
   - endpoints
   - events
   - pods
+  - services
   verbs:
   - "*"
 - apiGroups:

@@ -274,7 +274,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			},
 			{
 				APIGroups: []string{"apps"},
-				Resources: []string{"deployments", "daemonsets", "statefulsets", "replicasets"},
+				Resources: []string{"deployments", "deployments/scale", "daemonsets", "statefulsets", "statefulsets/scale", "replicasets"},
 				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 			},
 			{

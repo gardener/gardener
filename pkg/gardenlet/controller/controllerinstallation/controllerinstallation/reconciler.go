@@ -61,7 +61,6 @@ type Reconciler struct {
 	Config                config.ControllerInstallationControllerConfiguration
 	Clock                 clock.Clock
 	Identity              *gardencorev1beta1.Gardener
-	GardenNamespace       *corev1.Namespace
 	GardenClusterIdentity string
 }
 
@@ -195,11 +194,9 @@ func (r *Reconciler) reconcile(
 		"gardener": map[string]interface{}{
 			"version": r.Identity.Version,
 			"garden": map[string]interface{}{
-				"identity":        r.GardenNamespace.UID, // 'identity' value is deprecated to be replaced by 'clusterIdentity'. Should be removed in a future version.
 				"clusterIdentity": r.GardenClusterIdentity,
 			},
 			"seed": map[string]interface{}{
-				"identity":        seed.Name, // 'identity' value is deprecated to be replaced either by 'clusterIdentity' or 'name'. Should be removed in a future version.
 				"name":            seed.Name,
 				"clusterIdentity": seedClusterIdentity,
 				"annotations":     seed.Annotations,
