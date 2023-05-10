@@ -15,6 +15,8 @@
 package customresources
 
 import (
+	"fmt"
+
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -24,13 +26,14 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // GetFluentBit returns instance of FluentBit custom resource.
 func GetFluentBit(labels map[string]string, fluentBitName, namespace, image, initImage, priorityClass string) *fluentbitv1alpha2.FluentBit {
 	return &fluentbitv1alpha2.FluentBit{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fluentBitName,
+			Name:      fmt.Sprintf("%v-%v", fluentBitName, utils.ComputeSHA256Hex([]byte(fmt.Sprintf("%v", labels)))[:6]),
 			Namespace: namespace,
 			Labels:    labels,
 		},
