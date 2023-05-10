@@ -1111,7 +1111,7 @@ func validateMachineTypes(constraints []core.MachineType, machine, oldMachine co
 		if pointer.BoolDeref(t.Usable, false) {
 			usableMachines.Insert(t.Name)
 		}
-		if !isUnavailableInAtleastOneZone(regions, region, zones, t.Name, "") {
+		if !isUnavailableInAtleastOneZone(regions, region, zones, t.Name, func(zone core.AvailabilityZone) []string { return zone.UnavailableMachineTypes }) {
 			machinesAvailableInAllZones.Insert(t.Name)
 		}
 		if t.Name == machine.Type {
@@ -1126,7 +1126,7 @@ func validateMachineTypes(constraints []core.MachineType, machine, oldMachine co
 		machinesWithSupportedArchitecture.Intersection(machinesAvailableInAllZones).Intersection(usableMachines).UnsortedList()
 }
 
-func isUnavailableInAtleastOneZone(regions []core.Region, region string, zones []string, machineType, volumeType string) bool {
+func isUnavailableInAtleastOneZone(regions []core.Region, region string, zones []string, t string, unavailableTypes func(zone core.AvailabilityZone) []string) bool {
 	for _, r := range regions {
 		if r.Name != region {
 			continue
@@ -1138,17 +1138,9 @@ func isUnavailableInAtleastOneZone(regions []core.Region, region string, zones [
 					continue
 				}
 
-				if machineType != "" {
-					for _, t := range z.UnavailableMachineTypes {
-						if t == machineType {
-							return true
-						}
-					}
-				} else {
-					for _, t := range z.UnavailableVolumeTypes {
-						if t == volumeType {
-							return true
-						}
+				for _, unavailableType := range unavailableTypes(z) {
+					if t == unavailableType {
+						return true
 					}
 				}
 			}
@@ -1223,7 +1215,7 @@ func validateVolumeTypes(constraints []core.VolumeType, volume, oldVolume *core.
 		if pointer.BoolDeref(v.Usable, false) {
 			usableVolumes.Insert(v.Name)
 		}
-		if !isUnavailableInAtleastOneZone(regions, region, zones, "", v.Name) {
+		if !isUnavailableInAtleastOneZone(regions, region, zones, v.Name, func(zone core.AvailabilityZone) []string { return zone.UnavailableVolumeTypes }) {
 			volumesAvailableInAllZones.Insert(v.Name)
 		}
 		if v.Name == volumeType {
