@@ -120,6 +120,7 @@ data:
         namespaces:
           names: [{{ .Release.Namespace }}]
       sample_limit: 500
+      relabel_configs:
 {{ include "prometheus.service-endpoints.relabel-config" . | indent 6 }}
       metric_relabel_configs:
 {{ include "prometheus.drop-metrics.metric-relabel-config" . | indent 6 }}
@@ -138,9 +139,11 @@ data:
         action: keep
         regex: alertmanager-client;metrics
       # common metrics
+      - action: labelmap
         regex: __meta_kubernetes_service_label_(.+)
       - source_labels: [ __meta_kubernetes_pod_name ]
         target_label: pod
+      metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.alertManager | indent 6 }}
 {{- end }}
 
@@ -154,54 +157,13 @@ data:
       - source_labels:
         - __meta_kubernetes_service_name
         - __meta_kubernetes_endpoint_port_name
+        action: keep
         regex: prometheus-web;metrics
       # common metrics
       - action: labelmap
         regex: __meta_kubernetes_service_label_(.+)
       - source_labels: [ __meta_kubernetes_pod_name ]
         target_label: pod
-      metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.prometheus | indent 6 }}
-
-{{- if  (index .Values.rules.optional "alertmanager" ).enabled }}
-    - job_name: alertmanager
-      honor_labels: false
-      kubernetes_sd_configs:
-      - role: endpoints
-        namespaces:
-          names: [{{ .Release.Namespace }}]
-      relabel_configs:
-      - source_labels:
-        - __meta_kubernetes_service_name
-        - __meta_kubernetes_endpoint_port_name
-        action: keep
-        regex: alertmanager-client;metrics
-        # common metrics
-      - action: labelmap
-        regex: __meta_kubernetes_service_label_(.+)
-      - source_labels: [ __meta_kubernetes_pod_name ]
-        target_label: pod
-      metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.alertManager | indent 6 }}
-{{ - end }}
-
-    - job_name: prometheus
-      honor_labels: false
-      kubernetes_sd_configs:
-        - role: endpoints
-          namespaces:
-            names: [{{ .Release.Namespace }}]
-      relabel_configs:
-        - source_labels:
-            - __meta_kubernetes_service_name
-            - __meta_kubernetes_endpoint_port_name
-          action: keep
-          regex: prometheus-web;metrics
-        # common metrics
-        - action: labelmap
-          regex: __meta_kubernetes_service_label_(.+)
-        - source_labels: [ __meta_kubernetes_pod_name ]
-          target_label: pod
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.prometheus | indent 6 }}
 
@@ -217,10 +179,10 @@ data:
       relabel_configs:
       - target_label: type
         replacement: seed
-      - source_labels: [ __address__ ]
+      - source_labels: [__address__]
         target_label: __param_target
         action: replace
-      - source_labels: [ __param_target ]
+      - source_labels: [__param_target]
         target_label: instance
         action: replace
       - target_label: __address__
@@ -240,10 +202,10 @@ data:
       relabel_configs:
       - target_label: type
         replacement: seed
-      - source_labels: [ __address__ ]
+      - source_labels: [__address__]
         target_label: __param_target
         action: replace
-      - source_labels: [ __param_target ]
+      - source_labels: [__param_target]
         target_label: instance
         action: replace
       - target_label: __address__
