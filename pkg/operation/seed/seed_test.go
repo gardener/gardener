@@ -22,6 +22,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/operation/seed"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("seed", func() {
@@ -99,6 +100,7 @@ var _ = Describe("seed", func() {
 				},
 			})
 
+			Expect(seed.GetLoadBalancerServiceAnnotations()).ToNot(ShareSameReferenceAs(seed.GetInfo().Annotations))
 			Expect(seed.GetLoadBalancerServiceAnnotations()).To(Equal(map[string]string{annotationKey1: annotationValue1, annotationKey2: annotationValue2}))
 		})
 
@@ -116,6 +118,7 @@ var _ = Describe("seed", func() {
 				},
 			})
 
+			Expect(seed.GetLoadBalancerServiceAnnotations()).ToNot(ShareSameReferenceAs(seed.GetInfo().Annotations))
 			Expect(seed.GetLoadBalancerServiceAnnotations()).To(Equal(map[string]string{}))
 		})
 
@@ -180,9 +183,17 @@ var _ = Describe("seed", func() {
 				annotationValue1 = "my-value"
 				annotationKey2   = "second-annotation"
 				annotationValue2 = "second-value"
-				zone1            = "a"
-				zone2            = "b"
-				seed             = &Seed{}
+				annotationsZone1 = map[string]string{
+					annotationKey1: annotationValue1,
+					annotationKey2: annotationValue2,
+				}
+				annotationsZone2 = map[string]string{
+					annotationKey1: annotationValue1,
+				}
+
+				zone1 = "a"
+				zone2 = "b"
+				seed  = &Seed{}
 			)
 			seed.SetInfo(&gardencorev1beta1.Seed{
 				Spec: gardencorev1beta1.SeedSpec{
@@ -190,17 +201,12 @@ var _ = Describe("seed", func() {
 						LoadBalancerServices: &gardencorev1beta1.SeedSettingLoadBalancerServices{
 							Zones: []gardencorev1beta1.SeedSettingLoadBalancerServicesZones{
 								{
-									Name: zone1,
-									Annotations: map[string]string{
-										annotationKey1: annotationValue1,
-										annotationKey2: annotationValue2,
-									},
+									Name:        zone1,
+									Annotations: annotationsZone1,
 								},
 								{
-									Name: zone2,
-									Annotations: map[string]string{
-										annotationKey1: annotationValue1,
-									},
+									Name:        zone2,
+									Annotations: annotationsZone2,
 								},
 							},
 						},
@@ -208,7 +214,9 @@ var _ = Describe("seed", func() {
 				},
 			})
 
+			Expect(seed.GetZonalLoadBalancerServiceAnnotations(zone1)).ToNot(ShareSameReferenceAs(annotationsZone1))
 			Expect(seed.GetZonalLoadBalancerServiceAnnotations(zone1)).To(Equal(map[string]string{annotationKey1: annotationValue1, annotationKey2: annotationValue2}))
+			Expect(seed.GetZonalLoadBalancerServiceAnnotations(zone2)).ToNot(ShareSameReferenceAs(annotationsZone2))
 			Expect(seed.GetZonalLoadBalancerServiceAnnotations(zone2)).To(Equal(map[string]string{annotationKey1: annotationValue1}))
 		})
 
