@@ -161,7 +161,13 @@ func (r *Reconciler) reconcile(
 		allowBackup          = garden.Spec.VirtualCluster.ETCD != nil && garden.Spec.VirtualCluster.ETCD.Main != nil && garden.Spec.VirtualCluster.ETCD.Main.Backup != nil
 		virtualClusterClient client.Client
 
-		g            = flow.NewGraph("Garden reconciliation")
+		g                              = flow.NewGraph("Garden reconciliation")
+		generateGenericTokenKubeconfig = g.Add(flow.Task{
+			Name: "Generating generic token kubeconfig",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return r.generateGenericTokenKubeconfig(ctx, secretsManager)
+			}),
+		})
 		deployVPACRD = g.Add(flow.Task{
 			Name: "Deploying custom resource definition for VPA",
 			Fn:   flow.TaskFn(vpaCRD.Deploy).DoIf(vpaEnabled(garden.Spec.RuntimeCluster.Settings)),
@@ -205,6 +211,7 @@ func (r *Reconciler) reconcile(
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		syncPointSystemComponents = flow.NewTaskIDs(
+			generateGenericTokenKubeconfig,
 			deploySystemResources,
 			deployVPA,
 			deployHVPA,
@@ -237,27 +244,20 @@ func (r *Reconciler) reconcile(
 			Fn:           kubeAPIServer.Wait,
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
-		generateGenericKubeconfigToken = g.Add(flow.Task{
-			Name: "Generating generic kubeconfig token",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return r.generateGenericTokenKubeconfig(ctx, secretsManager)
-			}),
-			Dependencies: flow.NewTaskIDs(syncPointSystemComponents),
-		})
 		deployVirtualGardenGardenerResourceManager = g.Add(flow.Task{
-			Name: "Deploying virtual-garden-gardener-resource-manager",
+			Name: "Deploying gardener-resource-manager for virtual garden",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return r.deployVirtualGardenGardenerResourceManager(ctx, secretsManager, virtualGardenGardenerResourceManager)
 			}),
-			Dependencies: flow.NewTaskIDs(generateGenericKubeconfigToken, waitUntilKubeAPIServerIsReady),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
 		waitUntilVirtualGardenGardenerResourceManagerIsReady = g.Add(flow.Task{
-			Name:         "Waiting until virtual-garden-gardener-resource-manager rolled out",
+			Name:         "Waiting until gardener-resource-manager for virtual garden rolled out",
 			Fn:           virtualGardenGardenerResourceManager.Wait,
 			Dependencies: flow.NewTaskIDs(deployVirtualGardenGardenerResourceManager),
 		})
 		deployVirtualGardenGardenerAccess = g.Add(flow.Task{
-			Name:         "Deploying Gardener virtual garden access resources",
+			Name:         "Deploying resources for gardener-operator access to virtual garden",
 			Fn:           virtualGardenGardenerAccess.Deploy,
 			Dependencies: flow.NewTaskIDs(waitUntilVirtualGardenGardenerResourceManagerIsReady),
 		})
@@ -304,24 +304,6 @@ func (r *Reconciler) reconcile(
 			}).
 				RetryUntilTimeout(30*time.Second, 10*time.Minute).
 				DoIf(helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationCompleting),
-			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient),
-		})
-		_ = g.Add(flow.Task{
-			Name: "Creating new ServiceAccount secrets after creation of new signing key",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return secretsrotation.CreateNewServiceAccountSecrets(ctx, log, virtualClusterClient, secretsManager)
-			}).
-				RetryUntilTimeout(30*time.Second, 10*time.Minute).
-				DoIf(helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationPreparing),
-			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient),
-		})
-		_ = g.Add(flow.Task{
-			Name: "Deleting old ServiceAccount secrets after rotation of signing key",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return secretsrotation.DeleteOldServiceAccountSecrets(ctx, log, virtualClusterClient, garden.Status.Credentials.Rotation.ServiceAccountKey.LastInitiationFinishedTime.Time)
-			}).
-				RetryUntilTimeout(30*time.Second, 10*time.Minute).
-				DoIf(helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationCompleting),
 			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient),
 		})
 

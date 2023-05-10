@@ -279,6 +279,14 @@ func (r *Reconciler) generateGenericTokenKubeconfig(ctx context.Context, secrets
 	return err
 }
 
+func (r *Reconciler) cleanupGenericTokenKubeconfig(ctx context.Context, secretsManager secretsmanager.Interface) error {
+	secret, exists := secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+	if !exists {
+		return nil
+	}
+	return client.IgnoreNotFound(r.RuntimeClientSet.Client().Delete(ctx, secret))
+}
+
 func startRotationCA(garden *operatorv1alpha1.Garden, now *metav1.Time) {
 	helper.MutateCARotation(garden, func(rotation *gardencorev1beta1.CARotation) {
 		rotation.Phase = gardencorev1beta1.RotationPreparing

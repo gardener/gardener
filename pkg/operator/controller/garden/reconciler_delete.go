@@ -122,8 +122,9 @@ func (r *Reconciler) delete(
 			Fn:   virtualGardenGardenerAccess.Destroy,
 		})
 		destroyVirtualGardenGardenerResourceManager = g.Add(flow.Task{
-			Name: "Destroying virtual-garden-gardener-resource-manager",
-			Fn:   component.OpDestroyAndWait(virtualGardenGardenerResourceManager).Destroy,
+			Name:         "Destroying gardener-resource-manager for virtual garden",
+			Fn:           component.OpDestroyAndWait(virtualGardenGardenerResourceManager).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyVirtualGardenGardenerAccess),
 		})
 		destroyKubeAPIServerService = g.Add(flow.Task{
 			Name: "Destroying Kubernetes API Server service",
@@ -145,6 +146,7 @@ func (r *Reconciler) delete(
 			destroyVirtualGardenGardenerAccess,
 			destroyVirtualGardenGardenerResourceManager,
 			destroyKubeAPIServerService,
+			destroyKubeAPIServer,
 			destroyEtcd,
 		)
 
@@ -189,6 +191,13 @@ func (r *Reconciler) delete(
 			Fn:           component.OpWait(gardenerResourceManager).Destroy,
 			Dependencies: flow.NewTaskIDs(ensureNoManagedResourcesExistAnymore),
 		})
+		cleanupGenericTokenKubeconfig = g.Add(flow.Task{
+			Name: "Cleaning up generic token kubeconfig",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return r.cleanupGenericTokenKubeconfig(ctx, secretsManager)
+			}),
+			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
+		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for Istio",
 			Fn:           istioCRD.Destroy,
@@ -207,7 +216,7 @@ func (r *Reconciler) delete(
 		_ = g.Add(flow.Task{
 			Name:         "Cleaning up secrets",
 			Fn:           secretsManager.Cleanup,
-			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
+			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager, cleanupGenericTokenKubeconfig),
 		})
 	)
 
