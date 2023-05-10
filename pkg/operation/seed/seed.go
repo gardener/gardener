@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // NewBuilder returns a new Builder.
@@ -168,7 +169,8 @@ func (s *Seed) GetValidVolumeSize(size string) string {
 func (s *Seed) GetLoadBalancerServiceAnnotations() map[string]string {
 	seed := s.GetInfo()
 	if seed.Spec.Settings != nil && seed.Spec.Settings.LoadBalancerServices != nil {
-		return seed.Spec.Settings.LoadBalancerServices.Annotations
+		// return copy of annotations to prevent any accidental mutation by components
+		return utils.MergeStringMaps(seed.Spec.Settings.LoadBalancerServices.Annotations)
 	}
 	return nil
 }
@@ -188,7 +190,8 @@ func (s *Seed) GetZonalLoadBalancerServiceAnnotations(zone string) map[string]st
 	if seed.Spec.Settings != nil && seed.Spec.Settings.LoadBalancerServices != nil {
 		for _, zoneSettings := range seed.Spec.Settings.LoadBalancerServices.Zones {
 			if zoneSettings.Name == zone {
-				return zoneSettings.Annotations
+				// return copy of annotations to prevent any accidental mutation by components
+				return utils.MergeStringMaps(zoneSettings.Annotations)
 			}
 		}
 	}

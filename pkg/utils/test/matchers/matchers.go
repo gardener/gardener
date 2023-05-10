@@ -131,3 +131,12 @@ func BeCacheError() types.GomegaMatcher {
 		message: "",
 	}
 }
+
+// ShareSameReferenceAs checks if objects shares the same underlying reference as the passed object.
+// This can be used to check if maps or slices have the same underlying data store.
+// Only objects that work for 'reflect.ValueOf(x).Pointer' can be compared.
+func ShareSameReferenceAs(expected interface{}) types.GomegaMatcher {
+	return &referenceMatcher{
+		expected: expected,
+	}
+}
