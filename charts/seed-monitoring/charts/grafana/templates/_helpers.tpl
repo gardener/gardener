@@ -56,38 +56,38 @@ grafana-datasources-{{ include "grafana.datasources.data" . | sha256sum | trunc 
 {{- end }}
 
 {{- define "grafana.dashboards.data" -}}
-{{- if eq $.Values.workerless false }}
-{{- if .Values.sni.enabled }}
-{{ range $name, $bytes := .Files.Glob "dashboards/owners/istio/**.json" }}
-{{ base $name }}: |-
-{{ toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
-{{- end }}
-{{- end }}
-{{- if .Values.nodeLocalDNS.enabled }}
-{{ range $name, $bytes := .Files.Glob "dashboards/dns/**.json" }}
-{{ base $name }}: |-
-{{ toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
-{{- end }}
-{{- end }}
-{{ range $name, $bytes := .Files.Glob "dashboards/owners/worker/**.json" }}
-{{ base $name }}: |-
-{{ toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
-{{- end }}
-{{ else }}
-{{ range $name, $bytes := .Files.Glob "dashboards/owners/workerless/**.json" }}
-{{ base $name }}: |-
-{{ toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
-{{- end }}
-{{- end }}
-{{ range $name, $bytes := .Files.Glob "dashboards/owners/*.json" }}
-{{ if not (and (eq $name "dashboards/owners/vpa-dashboard.json") (eq $.Values.vpaEnabled false)) }}
-{{ base $name }}: |-
-{{ toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
-{{- end }}
-{{- end }}
-{{- if .Values.extensions.dashboards }}
-{{- toString .Values.extensions.dashboards }}
-{{ end }}
+{{-   if eq $.Values.workerless false }}
+{{-     if .Values.sni.enabled }}
+{{        range $name, $bytes := .Files.Glob "dashboards/owners/istio/**.json" }}
+{{          base $name }}: |-
+{{          toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
+{{-       end }}
+{{-     end }}
+{{-     if .Values.nodeLocalDNS.enabled }}
+{{        range $name, $bytes := .Files.Glob "dashboards/dns/**.json" }}
+{{          base $name }}: |-
+{{          toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
+{{-       end }}
+{{-     end }}
+{{      range $name, $bytes := .Files.Glob "dashboards/owners/worker/**.json" }}
+{{        base $name }}: |-
+{{        toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
+{{-     end }}
+{{    else }}
+{{      range $name, $bytes := .Files.Glob "dashboards/owners/workerless/**.json" }}
+{{        base $name }}: |-
+{{        toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
+{{-     end }}
+{{-   end }}
+{{    range $name, $bytes := .Files.Glob "dashboards/owners/*.json" }}
+{{      if not (and (eq $name "dashboards/owners/vpa-dashboard.json") (eq $.Values.vpaEnabled false)) }}
+{{        base $name }}: |-
+{{        toString $bytes | include "grafana.toCompactedJson" | indent 2 }}
+{{-     end }}
+{{-   end }}
+{{-   if .Values.extensions.dashboards }}
+{{-     toString .Values.extensions.dashboards }}
+{{    end }}
 {{- end -}}
 
 {{- define "grafana.dashboards.name" -}}
