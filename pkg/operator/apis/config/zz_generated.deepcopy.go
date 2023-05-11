@@ -85,6 +85,13 @@ func (in *NetworkPolicyControllerConfiguration) DeepCopyInto(out *NetworkPolicyC
 		*out = new(int)
 		**out = **in
 	}
+	if in.AdditionalNamespaceSelectors != nil {
+		in, out := &in.AdditionalNamespaceSelectors, &out.AdditionalNamespaceSelectors
+		*out = make([]v1.LabelSelector, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	return
 }
 

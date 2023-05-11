@@ -1160,6 +1160,7 @@ func Convert_config_MonitoringConfig_To_v1alpha1_MonitoringConfig(in *config.Mon
 
 func autoConvert_v1alpha1_NetworkPolicyControllerConfiguration_To_config_NetworkPolicyControllerConfiguration(in *NetworkPolicyControllerConfiguration, out *config.NetworkPolicyControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
+	out.AdditionalNamespaceSelectors = *(*[]v1.LabelSelector)(unsafe.Pointer(&in.AdditionalNamespaceSelectors))
 	return nil
 }
 
@@ -1170,6 +1171,7 @@ func Convert_v1alpha1_NetworkPolicyControllerConfiguration_To_config_NetworkPoli
 
 func autoConvert_config_NetworkPolicyControllerConfiguration_To_v1alpha1_NetworkPolicyControllerConfiguration(in *config.NetworkPolicyControllerConfiguration, out *NetworkPolicyControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
+	out.AdditionalNamespaceSelectors = *(*[]v1.LabelSelector)(unsafe.Pointer(&in.AdditionalNamespaceSelectors))
 	return nil
 }
 

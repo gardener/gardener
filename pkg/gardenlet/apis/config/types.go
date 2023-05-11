@@ -326,6 +326,9 @@ type ShootStateSyncControllerConfiguration struct {
 type NetworkPolicyControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	ConcurrentSyncs *int
+	// AdditionalNamespaceSelectors is a list of label selectors for additional namespaces that should be considered by
+	// the controller.
+	AdditionalNamespaceSelectors []metav1.LabelSelector
 }
 
 // ManagedSeedControllerConfiguration defines the configuration of the ManagedSeed controller.
