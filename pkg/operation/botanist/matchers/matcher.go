@@ -61,8 +61,8 @@ var (
 		managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 	}
 
-	// WebhookConstraintMatchersForLeases contains a list of lease api resources which can break
-	// the waking up of a cluster.
+	// WebhookConstraintMatchersForLeases contains a list of lease API resources that can break
+	// leader election of essential control plane controllers.
 	WebhookConstraintMatchersForLeases = []WebhookConstraintMatcher{
 		{GVR: coordinationv1.SchemeGroupVersion.WithResource("leases"), NamespaceLabels: kubeSystemNamespaceLabels},
 		{GVR: coordinationv1beta1.SchemeGroupVersion.WithResource("leases"), NamespaceLabels: kubeSystemNamespaceLabels},

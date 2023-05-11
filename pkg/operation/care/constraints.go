@@ -43,10 +43,17 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
-// WebhookMaximumTimeoutSecondsNotProblematic is the maximum timeout in seconds a webhooks on critical resources can
-// have in order to not be considered as a problematic webhook by the constraints checks. Any webhook on critical
-// resources with a larger timeout is considered to be problematic.
-const WebhookMaximumTimeoutSecondsNotProblematic = 15
+const (
+	// WebhookMaximumTimeoutSecondsNotProblematic is the maximum timeout in seconds a webhooks on critical resources can
+	// have in order to not be considered as a problematic webhook by the constraints checks. Any webhook on critical
+	// resources with a larger timeout is considered to be problematic.
+	WebhookMaximumTimeoutSecondsNotProblematic = 15
+	// WebhookMaximumTimeoutSecondsNotProblematicForLeases is the maximum timeout in seconds a webhooks on lease resources in
+	// kube-system namespace can have in order to not be considered as a problematic webhook by the constraints checks.
+	// Any webhook on lease resources in kube-system namespace with a larger timeout can break leader election of essential
+	// control plane controllers.
+	WebhookMaximumTimeoutSecondsNotProblematicForLeases = 3
+)
 
 func shootHibernatedConstraints(clock clock.Clock, conditions ...gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
 	hibernationConditions := make([]gardencorev1beta1.Condition, 0, len(conditions))
@@ -339,7 +346,7 @@ func IsProblematicWebhook(
 ) bool {
 	// this is a special case, webhook affecting lease in kube-system namespace can block hibernation
 	// even if FailurePolicy is set to `Ignore` and timeoutSeconds is 10 seconds.
-	if timeoutSeconds == nil || (timeoutSeconds != nil && *timeoutSeconds > 3) {
+	if timeoutSeconds == nil || (timeoutSeconds != nil && *timeoutSeconds > WebhookMaximumTimeoutSecondsNotProblematicForLeases) {
 		for _, rule := range rules {
 			for _, matcher := range matchers.WebhookConstraintMatchersForLeases {
 				if matcher.Match(rule, objSelector, nsSelector) {
