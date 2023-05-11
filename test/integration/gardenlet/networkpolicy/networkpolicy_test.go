@@ -44,6 +44,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 		shootNamespace              *corev1.Namespace
 		extensionNamespace          *corev1.Namespace
 		fooNamespace                *corev1.Namespace
+		customNamespace             *corev1.Namespace
 		cluster                     *extensionsv1alpha1.Cluster
 	)
 
@@ -97,6 +98,15 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "foo--",
 				Labels:       map[string]string{testID: testRunID},
+			},
+		}
+		customNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "custom--",
+				Labels: map[string]string{
+					testID:   testRunID,
+					"custom": "namespace",
+				},
 			},
 		}
 		cluster = &extensionsv1alpha1.Cluster{
@@ -174,6 +184,15 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, fooNamespace))).To(Succeed())
 		})
 
+		By("Create custom namespace")
+		Expect(testClient.Create(ctx, customNamespace)).To(Succeed())
+		log.Info("Created custom namespace for test", "namespace", client.ObjectKeyFromObject(customNamespace))
+
+		DeferCleanup(func() {
+			By("Delete custom namespace")
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, customNamespace))).To(Succeed())
+		})
+
 		By("Create cluster")
 		cluster.Name = shootNamespace.Name
 		Expect(testClient.Create(ctx, cluster)).To(Succeed())
@@ -223,6 +242,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 		inIstioExposureClassNamespace bool
 		inShootNamespaces             bool
 		inExtensionNamespaces         bool
+		inCustomNamespace             bool
 	}
 
 	defaultTests := func(attrs testAttributes) {
@@ -264,6 +284,12 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 						networkPolicy := &networkingv1.NetworkPolicy{}
 						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: extensionNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).To(Succeed())
 						g.Expect(networkPolicy.Spec).To(Equal(attrs.expectedNetworkPolicySpec(extensionNamespace.Name)))
+					}
+
+					if attrs.inCustomNamespace {
+						networkPolicy := &networkingv1.NetworkPolicy{}
+						g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: customNamespace.Name, Name: attrs.networkPolicyName}, networkPolicy)).To(Succeed())
+						g.Expect(networkPolicy.Spec).To(Equal(attrs.expectedNetworkPolicySpec(customNamespace.Name)))
 					}
 				}).Should(Succeed())
 
@@ -338,6 +364,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			inIstioExposureClassNamespace: true,
 			inShootNamespaces:             true,
 			inExtensionNamespaces:         true,
+			inCustomNamespace:             true,
 		})
 	})
 
@@ -361,6 +388,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			inGardenNamespace:         true,
 			inIstioSystemNamespace:    true,
 			inShootNamespaces:         true,
+			inCustomNamespace:         true,
 		})
 	})
 
@@ -385,6 +413,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			inIstioSystemNamespace:    true,
 			inShootNamespaces:         true,
 			inExtensionNamespaces:     true,
+			inCustomNamespace:         true,
 		})
 	})
 
@@ -417,6 +446,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			inGardenNamespace:         true,
 			inShootNamespaces:         true,
 			inExtensionNamespaces:     true,
+			inCustomNamespace:         true,
 		})
 	})
 
@@ -448,6 +478,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			inGardenNamespace:     true,
 			inShootNamespaces:     true,
 			inExtensionNamespaces: true,
+			inCustomNamespace:     true,
 		})
 	})
 
@@ -487,6 +518,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			inGardenNamespace:         true,
 			inShootNamespaces:         true,
 			inExtensionNamespaces:     true,
+			inCustomNamespace:         true,
 		})
 	})
 
@@ -555,6 +587,7 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			inIstioExposureClassNamespace: true,
 			inShootNamespaces:             true,
 			inExtensionNamespaces:         true,
+			inCustomNamespace:             true,
 		})
 	})
 
