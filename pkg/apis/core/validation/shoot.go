@@ -2051,6 +2051,7 @@ func validateShootHAControlPlaneSpecUpdate(newShoot, oldShoot *core.Shoot, fldPa
 
 	if newShoot.Spec.ControlPlane != nil && newShoot.Spec.ControlPlane.HighAvailability != nil {
 		newVal = newShoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type
+		// TODO(@aaronfern): remove this validation of not allowing scale-up to HA while hibernated when https://github.com/gardener/etcd-druid/issues/589 is resolved
 		if !oldValExists && isShootInHibernation(newShoot) {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("highAvailability", "failureTolerance", "type"), "Shoot is currently hibernated and cannot be scaled up to HA. Please make sure your cluster has woken up before scaling it up to HA"))
 		}
