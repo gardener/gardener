@@ -1236,6 +1236,9 @@ message KubeletConfig {
   //  "5m" for Kubernetes >= v1.26.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration streamingConnectionIdleTimeout = 25;
+
+  // MemorySwap configures swap memory available to container workloads.
+  optional MemorySwapConfiguration memorySwap = 26;
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
@@ -1601,6 +1604,14 @@ message MaintenanceTimeWindow {
   // End is the end of the time window in the format HHMMSS+ZONE, e.g. "220000+0100".
   // If not present, the value will be computed based on the "Begin" value.
   optional string end = 2;
+}
+
+// MemorySwapConfiguration contains kubelet swap configuration
+// For more information, please see KEP: 2400-node-swap
+message MemorySwapConfiguration {
+  // SwapBehavior configures swap memory available to container workloads. May be one of {"LimitedSwap", "UnlimitedSwap"}
+  // defaults to: LimitedSwap
+  optional string swapBehavior = 1;
 }
 
 // Monitoring contains information about the monitoring configuration for the shoot.

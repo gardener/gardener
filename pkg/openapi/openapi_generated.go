@@ -124,6 +124,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Maintenance":                            schema_pkg_apis_core_v1alpha1_Maintenance(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MaintenanceAutoUpdate":                  schema_pkg_apis_core_v1alpha1_MaintenanceAutoUpdate(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MaintenanceTimeWindow":                  schema_pkg_apis_core_v1alpha1_MaintenanceTimeWindow(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MemorySwapConfiguration":                schema_pkg_apis_core_v1alpha1_MemorySwapConfiguration(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Monitoring":                             schema_pkg_apis_core_v1alpha1_Monitoring(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.NamedResourceReference":                 schema_pkg_apis_core_v1alpha1_NamedResourceReference(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Networking":                             schema_pkg_apis_core_v1alpha1_Networking(ref),
@@ -289,6 +290,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance":                             schema_pkg_apis_core_v1beta1_Maintenance(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoUpdate":                   schema_pkg_apis_core_v1beta1_MaintenanceAutoUpdate(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceTimeWindow":                   schema_pkg_apis_core_v1beta1_MaintenanceTimeWindow(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MemorySwapConfiguration":                 schema_pkg_apis_core_v1beta1_MemorySwapConfiguration(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Monitoring":                              schema_pkg_apis_core_v1beta1_Monitoring(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference":                  schema_pkg_apis_core_v1beta1_NamedResourceReference(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Networking":                              schema_pkg_apis_core_v1beta1_Networking(ref),
@@ -3957,11 +3959,17 @@ func schema_pkg_apis_core_v1alpha1_KubeletConfig(ref common.ReferenceCallback) c
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
+					"memorySwap": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MemorySwap configures swap memory available to container workloads.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.MemorySwapConfiguration"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEviction", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEvictionMinimumReclaim", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEvictionSoftGracePeriod", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigReserved", "k8s.io/apimachinery/pkg/api/resource.Quantity", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEviction", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEvictionMinimumReclaim", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEvictionSoftGracePeriod", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigReserved", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.MemorySwapConfiguration", "k8s.io/apimachinery/pkg/api/resource.Quantity", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -4874,6 +4882,26 @@ func schema_pkg_apis_core_v1alpha1_MaintenanceTimeWindow(ref common.ReferenceCal
 					},
 				},
 				Required: []string{"begin", "end"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_MemorySwapConfiguration(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "MemorySwapConfiguration contains kubelet swap configuration For more information, please see KEP: 2400-node-swap",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"swapBehavior": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SwapBehavior configures swap memory available to container workloads. May be one of {\"LimitedSwap\", \"UnlimitedSwap\"} defaults to: LimitedSwap",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
 			},
 		},
 	}
@@ -11711,11 +11739,17 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
+					"memorySwap": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MemorySwap configures swap memory available to container workloads.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MemorySwapConfiguration"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEviction", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEvictionMinimumReclaim", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEvictionSoftGracePeriod", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigReserved", "k8s.io/apimachinery/pkg/api/resource.Quantity", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEviction", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEvictionMinimumReclaim", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEvictionSoftGracePeriod", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigReserved", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MemorySwapConfiguration", "k8s.io/apimachinery/pkg/api/resource.Quantity", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -12628,6 +12662,26 @@ func schema_pkg_apis_core_v1beta1_MaintenanceTimeWindow(ref common.ReferenceCall
 					},
 				},
 				Required: []string{"begin", "end"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_MemorySwapConfiguration(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "MemorySwapConfiguration contains kubelet swap configuration For more information, please see KEP: 2400-node-swap",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"swapBehavior": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SwapBehavior configures swap memory available to container workloads. May be one of {\"LimitedSwap\", \"UnlimitedSwap\"} defaults to: LimitedSwap",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
 			},
 		},
 	}
