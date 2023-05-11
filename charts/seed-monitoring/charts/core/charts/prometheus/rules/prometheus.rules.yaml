@@ -34,5 +34,5 @@ groups:
       type: seed
       visibility: operator
     annotations:
-      description: Blackbox SSL certificate will expire in 3 days
-      summary: Blackbox SSL certificate will expire soon (instance {{ $labels.instance }})"
+      description: Blackbox SSL certificate will expire soon (instance {{ $labels.instance }}).
+      summary: Blackbox SSL certificate will expire in 3 days

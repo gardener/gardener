@@ -10,3 +10,4 @@
 |VPNProbeAPIServerProxyFailed|critical|shoot|`The API Server proxy functionality is not working. Probably the vpn connection from an API Server pod to the vpn-shoot endpoint on the Shoot workers does not work.`|
 |PrometheusCantScrape|warning|seed|`Prometheus failed to scrape metrics. Instance {{ $labels.instance }}, job {{ $labels.job }}.`|
 |PrometheusConfigurationFailure|warning|seed|`Latest Prometheus configuration is broken and Prometheus is using the previous one.`|
+|PrometheusBlackboxSslCertificateWillExpireSoon|warning|seed|`Blackbox SSL certificate will expire soon (instance {{ $labels.instance }}).`|

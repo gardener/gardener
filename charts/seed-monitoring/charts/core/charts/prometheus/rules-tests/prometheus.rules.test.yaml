@@ -53,5 +53,5 @@ tests:
         job: blackbox-ingress
         instance: instance
       exp_annotations:
-        description: Blackbox SSL certificate will expire in 3 days
-        summary: Blackbox SSL certificate will expire soon (instance instance)"
+        description: Blackbox SSL certificate will expire soon (instance instance).
+        summary: Blackbox SSL certificate will expire in 3 days
