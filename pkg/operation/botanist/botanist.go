@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/charts"
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -245,18 +246,13 @@ func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 	}
 
 	controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
-	if err := b.GardenClient.List(ctx, controllerInstallationList); err != nil {
+	if err := b.GardenClient.List(ctx, controllerInstallationList, client.MatchingFields{core.SeedRefName: b.Seed.GetInfo().Name}); err != nil {
 		return err
 	}
 
 	requiredExtensions := gardenerutils.ComputeRequiredExtensionsForShoot(b.Shoot.GetInfo(), b.Seed.GetInfo(), controllerRegistrationList, b.Garden.InternalDomain, b.Shoot.ExternalDomain)
 
 	for _, controllerInstallation := range controllerInstallationList.Items {
-		// TODO(timuthy): Use field selector and drop this check.
-		if controllerInstallation.Spec.SeedRef.Name != b.Seed.GetInfo().Name {
-			continue
-		}
-
 		controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
 		if err := b.GardenClient.Get(ctx, client.ObjectKey{Name: controllerInstallation.Spec.RegistrationRef.Name}, controllerRegistration); err != nil {
 			return err
