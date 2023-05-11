@@ -34,7 +34,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 		// Assign seedName so that shoot does not get scheduled to the seed that will be used as target.
 		f.Shoot.Spec.SeedName = pointer.String(getSeedName(false))
 
-		It("Create, Migrate and Delete", func() {
+		It("Create, Migrate and Delete", Offset(1), func() {
 			By("Create Shoot")
 			ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
 			defer cancel()

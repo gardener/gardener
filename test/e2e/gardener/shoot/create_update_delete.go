@@ -55,7 +55,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			f.Shoot.Spec.Provider.Workers = append(f.Shoot.Spec.Provider.Workers, *pool2, *pool3)
 		}
 
-		It("Create, Update, Delete", Label("simple"), func() {
+		It("Create, Update, Delete", Label("simple"), Offset(1), func() {
 			By("Create Shoot")
 			ctx, cancel := context.WithTimeout(parentCtx, 30*time.Minute)
 			defer cancel()

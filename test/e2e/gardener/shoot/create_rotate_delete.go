@@ -40,7 +40,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		// Explicitly enable the static token kubeconfig to test the kubeconfig rotation.
 		f.Shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
 
-		It("Create Shoot, Rotate Credentials and Delete Shoot", Label("credentials-rotation"), func() {
+		It("Create Shoot, Rotate Credentials and Delete Shoot", Offset(1), Label("credentials-rotation"), func() {
 			ctx, cancel := context.WithTimeout(parentCtx, 20*time.Minute)
 			defer cancel()
 

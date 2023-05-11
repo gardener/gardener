@@ -28,7 +28,7 @@ import (
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	var test = func(f *framework.ShootCreationFramework) {
-		It("Create, Hibernate, Wake up and Delete Shoot", func() {
+		It("Create, Hibernate, Wake up and Delete Shoot", Offset(1), func() {
 			By("Create Shoot")
 			ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
 			defer cancel()

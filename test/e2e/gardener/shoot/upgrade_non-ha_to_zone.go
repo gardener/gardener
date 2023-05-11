@@ -31,7 +31,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability", "upgrade-to-
 	var test = func(f *framework.ShootCreationFramework) {
 		f.Shoot.Spec.ControlPlane = nil
 
-		It("Create, Upgrade (non-HA to HA with failure tolerance type 'zone') and Delete Shoot", func() {
+		It("Create, Upgrade (non-HA to HA with failure tolerance type 'zone') and Delete Shoot", Offset(1), func() {
 			By("Create Shoot")
 			ctx, cancel := context.WithTimeout(parentCtx, 30*time.Minute)
 			defer cancel()
