@@ -2637,7 +2637,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(ContainSubstring("image name \"not-supported\" is not supported"))
+						Expect(err.Error()).To(ContainSubstring("spec.provider.workers[0]: Invalid value: %q: image is not supported", "not-supported"))
 					})
 
 					It("should reject due to a machine image with expiration date in the past", func() {

@@ -192,6 +192,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		shoot               = &core.Shoot{}
 		oldShoot            = &core.Shoot{}
 		convertIsSuccessful bool
+		allErrs             field.ErrorList
 	)
 
 	if a.GetOperation() == admission.Delete {
@@ -275,13 +276,12 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	if err := validationContext.validateShootHibernation(a); err != nil {
 		return err
 	}
-	if err := validationContext.ensureMachineImages(); err != nil {
-		return err
+	if allErrs = validationContext.ensureMachineImages(); len(allErrs) > 0 {
+		return admission.NewForbidden(a, fmt.Errorf("%+v", allErrs))
 	}
 
 	validationContext.addMetadataAnnotations(a)
 
-	var allErrs field.ErrorList
 	allErrs = append(allErrs, validationContext.validateAPIVersionForRawExtensions()...)
 	allErrs = append(allErrs, validationContext.validateShootNetworks(helper.IsWorkerless(shoot))...)
 	allErrs = append(allErrs, validationContext.validateKubernetes(a)...)
@@ -599,18 +599,22 @@ func (c *validationContext) validateShootHibernation(a admission.Attributes) err
 	return nil
 }
 
-func (c *validationContext) ensureMachineImages() error {
+func (c *validationContext) ensureMachineImages() field.ErrorList {
+	allErrs := field.ErrorList{}
+
 	if c.shoot.DeletionTimestamp == nil {
 		for idx, worker := range c.shoot.Spec.Provider.Workers {
-			image, err := ensureMachineImage(c.oldShoot.Spec.Provider.Workers, worker, c.cloudProfile.Spec.MachineImages)
+			fldPath := field.NewPath("spec", "provider", "workers").Index(idx)
+			image, err := ensureMachineImage(c.oldShoot.Spec.Provider.Workers, worker, c.cloudProfile.Spec.MachineImages, fldPath)
 			if err != nil {
-				return err
+				allErrs = append(allErrs, err)
+				continue
 			}
 			c.shoot.Spec.Provider.Workers[idx].Machine.Image = image
 		}
 	}
 
-	return nil
+	return allErrs
 }
 
 func (c *validationContext) addMetadataAnnotations(a admission.Attributes) {
@@ -1294,9 +1298,9 @@ func validateZone(constraints []core.Region, region, zone string) (bool, []strin
 }
 
 // getDefaultMachineImage determines the latest non-preview machine image version from the first machine image in the CloudProfile and considers that as the default image
-func getDefaultMachineImage(machineImages []core.MachineImage, imageName string, arch *string) (*core.ShootMachineImage, error) {
+func getDefaultMachineImage(machineImages []core.MachineImage, imageName string, arch *string, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
 	if len(machineImages) == 0 {
-		return nil, errors.New("the cloud profile does not contain any machine image - cannot create shoot cluster")
+		return nil, field.Invalid(fldPath, imageName, "the cloud profile does not contain any machine image - cannot create shoot cluster")
 	}
 
 	var defaultImage *core.MachineImage
@@ -1309,7 +1313,7 @@ func getDefaultMachineImage(machineImages []core.MachineImage, imageName string,
 			}
 		}
 		if defaultImage == nil {
-			return nil, fmt.Errorf("image name %q is not supported", imageName)
+			return nil, field.Invalid(fldPath, imageName, "image is not supported")
 		}
 	} else {
 		// select the first image which support the required architecture type
@@ -1325,7 +1329,7 @@ func getDefaultMachineImage(machineImages []core.MachineImage, imageName string,
 			}
 		}
 		if defaultImage == nil {
-			return nil, fmt.Errorf("no valid machine image found that support architecture `%s`", *arch)
+			return nil, field.Invalid(fldPath, imageName, fmt.Sprintf("no valid machine image found that support architecture `%s`", *arch))
 		}
 	}
 
@@ -1339,7 +1343,7 @@ func getDefaultMachineImage(machineImages []core.MachineImage, imageName string,
 
 	latestMachineImageVersion, err := helper.DetermineLatestMachineImageVersion(validVersions, true)
 	if err != nil {
-		return nil, fmt.Errorf("failed to determine latest machine image from cloud profile: %s", err.Error())
+		return nil, field.Invalid(fldPath, imageName, fmt.Sprintf("failed to determine latest machine image from cloud profile: %s", err.Error()))
 	}
 	return &core.ShootMachineImage{Name: defaultImage.Name, Version: latestMachineImageVersion.Version}, nil
 }
@@ -1467,7 +1471,7 @@ func validateKubeletVersionConstraint(constraints []core.MachineImage, worker co
 	return nil
 }
 
-func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []core.MachineImage) (*core.ShootMachineImage, error) {
+func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []core.MachineImage, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
 	// General approach with machine image defaulting in this code: Try to keep the machine image
 	// from the old shoot object to not accidentally update it to the default machine image.
 	// This should only happen in the maintenance time window of shoots and is performed by the
@@ -1503,7 +1507,7 @@ func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []c
 		imageName = worker.Machine.Image.Name
 	}
 
-	return getDefaultMachineImage(images, imageName, worker.Machine.Architecture)
+	return getDefaultMachineImage(images, imageName, worker.Machine.Architecture, fldPath)
 }
 
 func addInfrastructureDeploymentTask(shoot *core.Shoot) {
