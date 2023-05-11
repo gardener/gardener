@@ -2223,7 +2223,7 @@ func isShootReadyForRotationStart(lastOperation *core.LastOperation) bool {
 }
 
 func isShootInHibernation(shoot *core.Shoot) bool {
-	if shoot.Spec.Hibernation != nil  && shoot.Spec.Hibernation.Enabled != nil {
+	if shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil {
 		return *shoot.Spec.Hibernation.Enabled || shoot.Status.IsHibernated
 	}
 
