@@ -20,6 +20,7 @@ import (
 	"time"
 
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -71,6 +72,9 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 		}
 		if cfg.Controllers.ManagedSeed != nil {
 			allErrs = append(allErrs, ValidateManagedSeedControllerConfiguration(cfg.Controllers.ManagedSeed, fldPath.Child("controllers", "managedSeed"))...)
+		}
+		if cfg.Controllers.NetworkPolicy != nil {
+			allErrs = append(allErrs, ValidateNetworkPolicyControllerConfiguration(cfg.Controllers.NetworkPolicy, fldPath.Child("controllers", "networkPolicy"))...)
 		}
 	}
 
@@ -231,6 +235,22 @@ func ValidateManagedSeedControllerConfiguration(cfg *config.ManagedSeedControlle
 	}
 	if cfg.SyncJitterPeriod != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(cfg.SyncJitterPeriod.Duration), fldPath.Child("syncJitterPeriod"))...)
+	}
+
+	return allErrs
+}
+
+// ValidateNetworkPolicyControllerConfiguration validates the network policy controller configuration.
+func ValidateNetworkPolicyControllerConfiguration(cfg *config.NetworkPolicyControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if cfg.ConcurrentSyncs != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*cfg.ConcurrentSyncs), fldPath.Child("concurrentSyncs"))...)
+	}
+
+	for i, l := range cfg.AdditionalNamespaceSelectors {
+		labelSelector := l
+		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(&labelSelector, metav1validation.LabelSelectorValidationOptions{}, fldPath.Child("additionalNamespaceSelectors").Index(i))...)
 	}
 
 	return allErrs

@@ -391,6 +391,37 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 		})
 
+		Context("network policy controller", func() {
+			BeforeEach(func() {
+				cfg.Controllers.NetworkPolicy = &config.NetworkPolicyControllerConfiguration{}
+			})
+
+			It("should return errors because concurrent syncs are < 0", func() {
+				cfg.Controllers.NetworkPolicy.ConcurrentSyncs = pointer.Int(-1)
+
+				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.networkPolicy.concurrentSyncs"),
+					})),
+				))
+			})
+
+			It("should return errors because some label selector is invalid", func() {
+				cfg.Controllers.NetworkPolicy.AdditionalNamespaceSelectors = append(cfg.Controllers.NetworkPolicy.AdditionalNamespaceSelectors,
+					metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
+					metav1.LabelSelector{MatchLabels: map[string]string{"foo": "no/slash/allowed"}},
+				)
+
+				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.networkPolicy.additionalNamespaceSelectors[1].matchLabels"),
+					})),
+				))
+			})
+		})
+
 		Context("seed config", func() {
 			It("should require a seedConfig", func() {
 				cfg.SeedConfig = nil

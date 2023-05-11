@@ -49,6 +49,9 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 					ConcurrentSyncs: pointer.Int(5),
 					SyncPeriod:      &metav1.Duration{Duration: time.Minute},
 				},
+				NetworkPolicy: config.NetworkPolicyControllerConfiguration{
+					ConcurrentSyncs: pointer.Int(5),
+				},
 			},
 		}
 	})
@@ -111,6 +114,33 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("controllers.garden.syncPeriod"),
+					})),
+				))
+			})
+		})
+
+		Context("network policy", func() {
+			It("should return errors because concurrent syncs are <= 0", func() {
+				conf.Controllers.NetworkPolicy.ConcurrentSyncs = pointer.Int(0)
+
+				Expect(ValidateOperatorConfiguration(conf)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.networkPolicy.concurrentSyncs"),
+					})),
+				))
+			})
+
+			It("should return errors because some label selector is invalid", func() {
+				conf.Controllers.NetworkPolicy.AdditionalNamespaceSelectors = append(conf.Controllers.NetworkPolicy.AdditionalNamespaceSelectors,
+					metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
+					metav1.LabelSelector{MatchLabels: map[string]string{"foo": "no/slash/allowed"}},
+				)
+
+				Expect(ValidateOperatorConfiguration(conf)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.networkPolicy.additionalNamespaceSelectors[1].matchLabels"),
 					})),
 				))
 			})
