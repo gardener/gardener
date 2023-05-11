@@ -360,7 +360,7 @@ var _ = Describe("Garden controller tests", func() {
 		}).Should(Equal(utils.MergeStringMaps(loadBalancerServiceAnnotations, map[string]string{
 			"networking.resources.gardener.cloud/from-world-to-ports":                   `[{"protocol":"TCP","port":443}]`,
 			"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":443}]`,
-			"networking.resources.gardener.cloud/namespace-selectors":                   `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}}]`,
+			"networking.resources.gardener.cloud/namespace-selectors":                   `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchLabels":{"networking.gardener.cloud/access-target-apiserver":"allowed"}}]`,
 		})))
 
 		// The garden controller waits for the Etcd resources to be healthy, but etcd-druid is not really running in

@@ -483,6 +483,10 @@ const (
 	// LabelNetworkPolicyIstioIngressNamespaceAlias is a constant for the alias for shoot namespaces used in
 	// NetworkPolicy labels.
 	LabelNetworkPolicyIstioIngressNamespaceAlias = "all-istio-ingresses"
+	// LabelNetworkPolicyAccessTargetAPIServer is a constant for the alias for a namespace which runs components that
+	// need to initiate the communication with a target API server (e.g., shoot API server or virtual garden API
+	// server).
+	LabelNetworkPolicyAccessTargetAPIServer = "networking.gardener.cloud/access-target-apiserver"
 
 	// LabelApp is a constant for a label key.
 	LabelApp = "app"
