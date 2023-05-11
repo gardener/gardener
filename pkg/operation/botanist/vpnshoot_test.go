@@ -59,6 +59,9 @@ var _ = Describe("VPNShoot", func() {
 					Kubernetes: gardencorev1beta1.Kubernetes{
 						Version: "1.26.1",
 					},
+					Networking: &gardencorev1beta1.Networking{
+						IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
+					},
 				},
 			})
 		})

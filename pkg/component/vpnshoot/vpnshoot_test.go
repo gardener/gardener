@@ -74,6 +74,7 @@ var _ = Describe("VPNShoot", func() {
 				Endpoint:    endPoint,
 				OpenVPNPort: openVPNPort,
 				Header:      reversedVPNHeader,
+				IPFamilies:  []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
 			},
 			PSPDisabled: true,
 		}
@@ -309,6 +310,10 @@ status: {}
 				})
 
 				env = append(env,
+					corev1.EnvVar{
+						Name:  "IP_FAMILIES",
+						Value: string(values.ReversedVPN.IPFamilies[0]),
+					},
 					corev1.EnvVar{
 						Name:  "ENDPOINT",
 						Value: endPoint,
@@ -685,6 +690,26 @@ status: {}
 			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-vpn.yaml"])).To(Equal(networkPolicyYAML))
 			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-from-seed.yaml"])).To(Equal(networkPolicyFromSeedYAML))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__vpn-shoot.yaml"])).To(Equal(serviceAccountYAML))
+		})
+
+		Context("IPv6", func() {
+			BeforeEach(func() {
+				values.VPAEnabled = false
+				values.ReversedVPN.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}
+			})
+
+			It("should successfully deploy all resources", func() {
+				var (
+					secretNameClient  = expectVPNShootSecret(managedResourceSecret.Data)
+					secretNameCA      = expectCASecret(managedResourceSecret.Data)
+					secretNameTLSAuth = expectTLSAuthSecret(managedResourceSecret.Data)
+				)
+
+				deployment := &appsv1.Deployment{}
+				Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
+				Expect(deployment).To(DeepEqual(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.VPAEnabled)))
+			})
+
 		})
 
 		Context("VPNShoot with ReversedVPN enabled", func() {
