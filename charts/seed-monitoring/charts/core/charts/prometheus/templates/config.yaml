@@ -189,7 +189,7 @@ data:
         replacement: 127.0.0.1:9115
         action: replace
 
-{{ - range .Values.ingress.hosts }}
+{{- range .Values.ingress.hosts }}
     - job_name: blackbox-ingress
       params:
         module:
@@ -211,7 +211,7 @@ data:
       - target_label: __address__
         replacement: 127.0.0.1:9115
         action: replace
-{{ - end }}
+{{- end }}
 
 {{- if not .Values.shoot.workerless }}
     - job_name: cadvisor
