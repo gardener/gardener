@@ -381,11 +381,10 @@ func SetDefaults_ShootStateSyncControllerConfiguration(obj *ShootStateSyncContro
 	}
 }
 
-// SetDefaults_NetworkPolicyControllerConfiguration sets defaults for the seed apiserver endpoints controller.
+// SetDefaults_NetworkPolicyControllerConfiguration sets defaults for the network policy controller.
 func SetDefaults_NetworkPolicyControllerConfiguration(obj *NetworkPolicyControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		// only use few workers for each seed, as the API server endpoints should stay the same most of the time.
-		v := 3
+		v := 5
 		obj.ConcurrentSyncs = &v
 	}
 }

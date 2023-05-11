@@ -239,6 +239,16 @@ config.yaml: |
       jitterUpdates: {{ .Values.config.controllers.managedSeed.jitterUpdates }}
       {{- end }}
     {{- end }}
+    {{- if .Values.config.controllers.networkPolicy }}
+    networkPolicy:
+      {{- if .Values.config.controllers.networkPolicy.concurrentSyncs }}
+      concurrentSyncs: {{ .Values.config.controllers.networkPolicy.concurrentSyncs }}
+      {{- end }}
+      {{- if .Values.config.controllers.networkPolicy.additionalNamespaceSelectors }}
+      additionalNamespaceSelectors:
+{{ toYaml .Values.config.controllers.networkPolicy.additionalNamespaceSelectors | indent 6 }}
+      {{- end }}
+    {{- end }}
   resources:
     capacity:
       shoots: {{ required ".Values.config.resources.capacity.shoots is required" .Values.config.resources.capacity.shoots }}
