@@ -31,7 +31,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
+	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -347,6 +353,193 @@ var _ = Describe("Reconcile", func() {
 			)
 
 			Expect(CleanupOldFluentBit(ctx, runtimeClient)).To(Succeed())
+		})
+	})
+
+	Describe("#RequiredExtensionsReady", func() {
+		var (
+			ctx        context.Context
+			fakeClient client.Client
+
+			controllerRegistrations []*gardencorev1beta1.ControllerRegistration
+			controllerInstallations []*gardencorev1beta1.ControllerInstallation
+
+			seedProvider string
+			dnsProvider  string
+			seed         *gardencorev1beta1.Seed
+		)
+
+		BeforeEach(func() {
+			ctx = context.Background()
+			fakeClient = fakeclient.
+				NewClientBuilder().
+				WithScheme(kubernetes.GardenScheme).
+				WithIndex(
+					&gardencorev1beta1.ControllerInstallation{},
+					core.SeedRefName,
+					indexer.ControllerInstallationSeedRefNameIndexerFunc,
+				).
+				Build()
+
+			seedProvider = "seedProvider"
+			dnsProvider = "dnsProvider"
+
+			seed = &gardencorev1beta1.Seed{
+				Spec: gardencorev1beta1.SeedSpec{
+					Provider: gardencorev1beta1.SeedProvider{
+						Type: seedProvider,
+					},
+					DNS: gardencorev1beta1.SeedDNS{
+						Provider: &gardencorev1beta1.SeedDNSProvider{
+							Type: dnsProvider,
+						},
+					},
+				},
+			}
+		})
+
+		JustBeforeEach(func() {
+			for _, controllerReg := range controllerRegistrations {
+				Expect(fakeClient.Create(ctx, controllerReg)).To(Succeed())
+			}
+			for _, controllerInst := range controllerInstallations {
+				Expect(fakeClient.Create(ctx, controllerInst)).To(Succeed())
+			}
+		})
+
+		Context("when required ControllerInstallations are missing", func() {
+			It("should fail checking all required extensions", func() {
+				Expect(RequiredExtensionsReady(ctx, fakeClient, seed)).To(MatchError("extension controllers missing or unready: map[ControlPlane/seedProvider:{} DNSRecord/dnsProvider:{} Infrastructure/seedProvider:{} Worker/seedProvider:{}]"))
+			})
+		})
+
+		Context("when referenced ControllerRegistration is missing", func() {
+			BeforeEach(func() {
+				controllerInstallations = []*gardencorev1beta1.ControllerInstallation{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "seedProviderExtension",
+						},
+						Spec: gardencorev1beta1.ControllerInstallationSpec{
+							RegistrationRef: corev1.ObjectReference{
+								Name: "foo",
+							},
+							SeedRef: corev1.ObjectReference{
+								Name: seed.Name,
+							},
+						},
+						Status: gardencorev1beta1.ControllerInstallationStatus{
+							Conditions: []gardencorev1beta1.Condition{
+								{Type: gardencorev1beta1.ControllerInstallationInstalled, Status: gardencorev1beta1.ConditionTrue},
+								{Type: gardencorev1beta1.ControllerInstallationHealthy, Status: gardencorev1beta1.ConditionTrue},
+								{Type: gardencorev1beta1.ControllerInstallationProgressing, Status: gardencorev1beta1.ConditionFalse},
+							},
+						},
+					},
+				}
+			})
+
+			It("should fail checking all required extensions", func() {
+				Expect(RequiredExtensionsReady(ctx, fakeClient, seed)).To(MatchError("controllerregistrations.core.gardener.cloud \"foo\" not found"))
+			})
+		})
+
+		Context("when required ControllerRegistration and ControllerInstallations are registered", func() {
+			BeforeEach(func() {
+				controllerRegistrations = []*gardencorev1beta1.ControllerRegistration{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "seedProviderExtension",
+						},
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{Kind: extensionsv1alpha1.ControlPlaneResource, Type: seedProvider},
+								{Kind: extensionsv1alpha1.InfrastructureResource, Type: seedProvider},
+								{Kind: extensionsv1alpha1.WorkerResource, Type: seedProvider},
+							},
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "dnsProviderExtension",
+						},
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{Kind: extensionsv1alpha1.DNSRecordResource, Type: dnsProvider},
+							},
+						},
+					},
+				}
+				controllerInstallations = []*gardencorev1beta1.ControllerInstallation{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "seedProviderExtension",
+						},
+						Spec: gardencorev1beta1.ControllerInstallationSpec{
+							RegistrationRef: corev1.ObjectReference{
+								Name: controllerRegistrations[0].Name,
+							},
+							SeedRef: corev1.ObjectReference{
+								Name: seed.Name,
+							},
+						},
+						Status: gardencorev1beta1.ControllerInstallationStatus{
+							Conditions: []gardencorev1beta1.Condition{
+								{Type: gardencorev1beta1.ControllerInstallationInstalled, Status: gardencorev1beta1.ConditionTrue},
+								{Type: gardencorev1beta1.ControllerInstallationHealthy, Status: gardencorev1beta1.ConditionTrue},
+								{Type: gardencorev1beta1.ControllerInstallationProgressing, Status: gardencorev1beta1.ConditionFalse},
+							},
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "dnsProviderExtension",
+						},
+						Spec: gardencorev1beta1.ControllerInstallationSpec{
+							RegistrationRef: corev1.ObjectReference{
+								Name: controllerRegistrations[1].Name,
+							},
+							SeedRef: corev1.ObjectReference{
+								Name: seed.Name,
+							},
+						},
+					},
+				}
+			})
+
+			Context("when all ControllerInstallations are ready", func() {
+				BeforeEach(func() {
+					for _, controllerInstallation := range controllerInstallations {
+						controllerInstallation.Status = gardencorev1beta1.ControllerInstallationStatus{
+							Conditions: []gardencorev1beta1.Condition{
+								{Type: gardencorev1beta1.ControllerInstallationInstalled, Status: gardencorev1beta1.ConditionTrue},
+								{Type: gardencorev1beta1.ControllerInstallationHealthy, Status: gardencorev1beta1.ConditionTrue},
+								{Type: gardencorev1beta1.ControllerInstallationProgressing, Status: gardencorev1beta1.ConditionFalse},
+							},
+						}
+					}
+				})
+
+				It("should succeed checking all required extensions", func() {
+					Expect(RequiredExtensionsReady(ctx, fakeClient, seed)).To(Succeed())
+				})
+			})
+
+			Context("when a ControllerInstallation is not ready", func() {
+				BeforeEach(func() {
+					controllerInstallations[0].Status = gardencorev1beta1.ControllerInstallationStatus{
+						Conditions: []gardencorev1beta1.Condition{
+							{Type: gardencorev1beta1.ControllerInstallationInstalled, Status: gardencorev1beta1.ConditionTrue},
+							{Type: gardencorev1beta1.ControllerInstallationHealthy, Status: gardencorev1beta1.ConditionTrue},
+							{Type: gardencorev1beta1.ControllerInstallationProgressing, Status: gardencorev1beta1.ConditionFalse},
+						},
+					}
+				})
+
+				It("should fail checking all required extensions", func() {
+					Expect(RequiredExtensionsReady(ctx, fakeClient, seed)).To(MatchError("extension controllers missing or unready: map[DNSRecord/dnsProvider:{}]"))
+				})
+			})
 		})
 	})
 })

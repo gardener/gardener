@@ -45,8 +45,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -96,6 +98,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
@@ -456,6 +459,11 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 
 	if err := systemResources.Deploy(ctx); err != nil {
+		return err
+	}
+
+	// Wait until required extensions are ready because they might be needed by following deployments
+	if err := WaitUntilRequiredExtensionsReady(ctx, r.GardenClient, seed.GetInfo(), 5*time.Second, 1*time.Minute); err != nil {
 		return err
 	}
 
@@ -1379,4 +1387,52 @@ func isOwnedByFluentOperator(obj client.Object) bool {
 		}
 	}
 	return false
+}
+
+// WaitUntilRequiredExtensionsReady checks and waits until all required extensions for a seed exist and are ready.
+func WaitUntilRequiredExtensionsReady(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed, interval, timeout time.Duration) error {
+	return retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
+		if err := RequiredExtensionsReady(ctx, gardenClient, seed); err != nil {
+			return retry.MinorError(err)
+		}
+
+		return retry.Ok()
+	})
+}
+
+// RequiredExtensionsReady checks if all required extensions for a seed exist and are ready.
+func RequiredExtensionsReady(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed) error {
+	controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+	if err := gardenClient.List(ctx, controllerInstallationList, client.MatchingFields{
+		core.SeedRefName: seed.Name,
+	}); err != nil {
+		return err
+	}
+
+	requiredExtensions := gardenerutils.ComputeRequiredExtensionsForSeed(seed)
+
+	for _, controllerInstallation := range controllerInstallationList.Items {
+		controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
+		if err := gardenClient.Get(ctx, client.ObjectKey{Name: controllerInstallation.Spec.RegistrationRef.Name}, controllerRegistration); err != nil {
+			return err
+		}
+
+		for _, kindType := range requiredExtensions.UnsortedList() {
+			split := strings.Split(kindType, "/")
+			if len(split) != 2 {
+				return fmt.Errorf("unexpected required extension: %q", kindType)
+			}
+			extensionKind, extensionType := split[0], split[1]
+
+			if helper.IsResourceSupported(controllerRegistration.Spec.Resources, extensionKind, extensionType) && helper.IsControllerInstallationSuccessful(controllerInstallation) {
+				requiredExtensions.Delete(kindType)
+			}
+		}
+	}
+
+	if len(requiredExtensions) > 0 {
+		return fmt.Errorf("extension controllers missing or unready: %+v", requiredExtensions)
+	}
+
+	return nil
 }
