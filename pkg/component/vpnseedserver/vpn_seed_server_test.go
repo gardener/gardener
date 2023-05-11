@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
@@ -69,6 +70,7 @@ var _ = Describe("VpnSeedServer", func() {
 				PodCIDR:     "10.0.1.0/24",
 				ServiceCIDR: "10.0.0.0/24",
 				NodeCIDR:    "10.0.2.0/24",
+				IPFamilies:  []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
 			},
 			Replicas:                             1,
 			HighAvailabilityEnabled:              false,
@@ -90,163 +92,17 @@ var _ = Describe("VpnSeedServer", func() {
 			DiffieHellmanKey: component.Secret{Name: secretNameDH, Checksum: secretChecksumDH, Data: secretDataDH},
 		}
 
-		configMap = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "vpn-seed-server-envoy-config",
-				Namespace: namespace,
-			},
-			Data: map[string]string{
-				"envoy.yaml": `static_resources:
-  listeners:
-  - name: listener_0
-    address:
-      socket_address:
-        protocol: TCP
-        address: 0.0.0.0
-        port_value: 9443
-    listener_filters:
-    - name: "envoy.filters.listener.tls_inspector"
-      typed_config:
-        "@type": type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
-    filter_chains:
-    - transport_socket:
-        name: envoy.transport_sockets.tls
-        typed_config:
-          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
-          common_tls_context:
-            tls_certificates:
-            - certificate_chain: { filename: "/srv/secrets/vpn-server/tls.crt" }
-              private_key: { filename: "/srv/secrets/vpn-server/tls.key" }
-            validation_context:
-              trusted_ca:
-                filename: /srv/secrets/vpn-server/ca.crt
-      filters:
-      - name: envoy.filters.network.http_connection_manager
-        typed_config:
-          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-          stat_prefix: ingress_http
-          access_log:
-          - name: envoy.access_loggers.stdout
-            filter:
-              or_filter:
-                filters:
-                - status_code_filter:
-                    comparison:
-                      op: GE
-                      value:
-                        default_value: 500
-                        runtime_key: "null"
-                - duration_filter:
-                    comparison:
-                      op: GE
-                      value:
-                        default_value: 1000
-                        runtime_key: "null"
-            typed_config:
-              "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
-              log_format:
-                text_format_source:
-                  inline_string: "[%START_TIME%] \"%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%\" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% rx %BYTES_SENT% tx %DURATION%ms \"%DOWNSTREAM_REMOTE_ADDRESS%\" \"%REQ(X-REQUEST-ID)%\" \"%REQ(:AUTHORITY)%\" \"%UPSTREAM_HOST%\"\n"
-          route_config:
-            name: local_route
-            virtual_hosts:
-            - name: local_service
-              domains:
-              - "*"
-              routes:
-              - match:
-                  connect_matcher: {}
-                route:
-                  cluster: dynamic_forward_proxy_cluster
-                  upgrade_configs:
-                  - upgrade_type: CONNECT
-                    connect_config: {}
-          http_filters:
-          - name: envoy.filters.http.dynamic_forward_proxy
-            typed_config:
-              "@type": type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.FilterConfig
-              dns_cache_config:
-                name: dynamic_forward_proxy_cache_config
-                dns_lookup_family: V4_ONLY
-                max_hosts: 8192
-          - name: envoy.filters.http.router
-            typed_config:
-              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-          http_protocol_options:
-            accept_http_10: true
-          upgrade_configs:
-          - upgrade_type: CONNECT
-  - name: metrics_listener
-    address:
-      socket_address:
-        address: 0.0.0.0
-        port_value: 15000
-    filter_chains:
-    - filters:
-      - name: envoy.filters.network.http_connection_manager
-        typed_config:
-          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-          stat_prefix: stats_server
-          route_config:
-            virtual_hosts:
-            - name: admin_interface
-              domains:
-              - "*"
-              routes:
-              - match:
-                  prefix: "/metrics"
-                  headers:
-                  - name: ":method"
-                    string_match:
-                      exact: GET
-                route:
-                  cluster: prometheus_stats
-                  prefix_rewrite: "/stats/prometheus"
-          http_filters:
-          - name: envoy.filters.http.router
-            typed_config:
-              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-  clusters:
-  - name: dynamic_forward_proxy_cluster
-    connect_timeout: 20s
-    circuitBreakers:
-      thresholds:
-      - maxConnections: 8192
-    lb_policy: CLUSTER_PROVIDED
-    cluster_type:
-      name: envoy.clusters.dynamic_forward_proxy
-      typed_config:
-        "@type": type.googleapis.com/envoy.extensions.clusters.dynamic_forward_proxy.v3.ClusterConfig
-        dns_cache_config:
-          name: dynamic_forward_proxy_cache_config
-          dns_lookup_family: V4_ONLY
-          max_hosts: 8192
-  - name: prometheus_stats
-    connect_timeout: 0.25s
-    type: static
-    load_assignment:
-      cluster_name: prometheus_stats
-      endpoints:
-      - lb_endpoints:
-        - endpoint:
-            address:
-              pipe:
-                path: /home/nonroot/envoy.admin
-admin:
-  address:
-    pipe:
-      path: /home/nonroot/envoy.admin`,
-			},
-		}
+		listenAddress   = "0.0.0.0"
+		dnsLookUpFamily = "V4_ONLY"
 
-		secretDH = &corev1.Secret{
+		configMap = seedConfigMap(listenAddress, dnsLookUpFamily, namespace)
+		secretDH  = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{Name: "vpn-seed-server-dh", Namespace: namespace},
 			Type:       corev1.SecretTypeOpaque,
 			Data:       secretDataDH,
 		}
 	)
 
-	Expect(kubernetesutils.MakeUnique(configMap)).To(Succeed())
 	Expect(kubernetesutils.MakeUnique(secretDH)).To(Succeed())
 
 	var (
@@ -297,6 +153,10 @@ admin:
 								},
 							},
 							Env: []corev1.EnvVar{
+								{
+									Name:  "IP_FAMILIES",
+									Value: string(values.Network.IPFamilies[0]),
+								},
 								{
 									Name:  "SERVICE_NETWORK",
 									Value: values.Network.ServiceCIDR,
@@ -770,6 +630,10 @@ admin:
 		}
 	)
 
+	JustBeforeEach(func() {
+
+	})
+
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
@@ -790,6 +654,73 @@ admin:
 			It("should return an error because the DH secret information is not provided", func() {
 				vpnSeedServer.SetSecrets(Secrets{})
 				Expect(vpnSeedServer.Deploy(ctx)).To(MatchError(ContainSubstring("missing DH secret information")))
+			})
+		})
+
+		Context("IPv6", func() {
+			BeforeEach(func() {
+				listenAddress = "::"
+				dnsLookUpFamily = "V6_ONLY"
+				configMap = seedConfigMap(listenAddress, dnsLookUpFamily, namespace)
+				networkConfig := NetworkValues{
+					PodCIDR:     "2001:db8:1::/48",
+					ServiceCIDR: "2001:db8:3::/48",
+					IPFamilies:  []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6},
+				}
+				values.Network = networkConfig
+
+			})
+
+			It("should successfully deploy all resources (w/ node network)", func() {
+				vpnSeedServer = New(c, namespace, sm, istioNamespaceFunc, values)
+				vpnSeedServer.SetSecrets(secrets)
+				vpnSeedServer.SetSeedNamespaceObjectUID(namespaceUID)
+
+				gomock.InOrder(
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
+						Expect(obj.GetName()).To(HavePrefix("vpn-seed-server"))
+					}),
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
+						Expect(obj.GetName()).To(HavePrefix("vpn-seed-server-tlsauth"))
+					}),
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
+							Expect(obj).To(DeepEqual(configMap))
+						}),
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
+							Expect(obj).To(DeepEqual(secretDH))
+						}),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(deployment(values.Network.NodeCIDR)))
+						}),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(service))
+						}),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(BeComparableTo(destinationRule(), test.CmpOptsForDestinationRule()))
+						}),
+
+					c.EXPECT().Delete(ctx, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-0"}}),
+					c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-0"}}),
+					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-1"}}),
+					c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-1"}}),
+
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, DeploymentName+"-vpa"), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(vpa))
+						}),
+				)
+
+				Expect(vpnSeedServer.Deploy(ctx)).To(Succeed())
 			})
 		})
 
@@ -1247,3 +1178,156 @@ admin:
 		})
 	})
 })
+
+func seedConfigMap(listenAddress string, dnsLookUpFamily string, namespace string) *corev1.ConfigMap {
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "vpn-seed-server-envoy-config",
+			Namespace: namespace,
+		},
+		Data: map[string]string{
+			"envoy.yaml": `static_resources:
+  listeners:
+  - name: listener_0
+    address:
+      socket_address:
+        protocol: TCP
+        address: "` + listenAddress + `"
+        port_value: 9443
+    listener_filters:
+    - name: "envoy.filters.listener.tls_inspector"
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+    filter_chains:
+    - transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+          common_tls_context:
+            tls_certificates:
+            - certificate_chain: { filename: "/srv/secrets/vpn-server/tls.crt" }
+              private_key: { filename: "/srv/secrets/vpn-server/tls.key" }
+            validation_context:
+              trusted_ca:
+                filename: /srv/secrets/vpn-server/ca.crt
+      filters:
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          stat_prefix: ingress_http
+          access_log:
+          - name: envoy.access_loggers.stdout
+            filter:
+              or_filter:
+                filters:
+                - status_code_filter:
+                    comparison:
+                      op: GE
+                      value:
+                        default_value: 500
+                        runtime_key: "null"
+                - duration_filter:
+                    comparison:
+                      op: GE
+                      value:
+                        default_value: 1000
+                        runtime_key: "null"
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
+              log_format:
+                text_format_source:
+                  inline_string: "[%START_TIME%] \"%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%\" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% rx %BYTES_SENT% tx %DURATION%ms \"%DOWNSTREAM_REMOTE_ADDRESS%\" \"%REQ(X-REQUEST-ID)%\" \"%REQ(:AUTHORITY)%\" \"%UPSTREAM_HOST%\"\n"
+          route_config:
+            name: local_route
+            virtual_hosts:
+            - name: local_service
+              domains:
+              - "*"
+              routes:
+              - match:
+                  connect_matcher: {}
+                route:
+                  cluster: dynamic_forward_proxy_cluster
+                  upgrade_configs:
+                  - upgrade_type: CONNECT
+                    connect_config: {}
+          http_filters:
+          - name: envoy.filters.http.dynamic_forward_proxy
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.FilterConfig
+              dns_cache_config:
+                name: dynamic_forward_proxy_cache_config
+                dns_lookup_family: ` + dnsLookUpFamily + `
+                max_hosts: 8192
+          - name: envoy.filters.http.router
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+          http_protocol_options:
+            accept_http_10: true
+          upgrade_configs:
+          - upgrade_type: CONNECT
+  - name: metrics_listener
+    address:
+      socket_address:
+        address: "` + listenAddress + `"
+        port_value: 15000
+    filter_chains:
+    - filters:
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          stat_prefix: stats_server
+          route_config:
+            virtual_hosts:
+            - name: admin_interface
+              domains:
+              - "*"
+              routes:
+              - match:
+                  prefix: "/metrics"
+                  headers:
+                  - name: ":method"
+                    string_match:
+                      exact: GET
+                route:
+                  cluster: prometheus_stats
+                  prefix_rewrite: "/stats/prometheus"
+          http_filters:
+          - name: envoy.filters.http.router
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+  clusters:
+  - name: dynamic_forward_proxy_cluster
+    connect_timeout: 20s
+    circuitBreakers:
+      thresholds:
+      - maxConnections: 8192
+    lb_policy: CLUSTER_PROVIDED
+    cluster_type:
+      name: envoy.clusters.dynamic_forward_proxy
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.clusters.dynamic_forward_proxy.v3.ClusterConfig
+        dns_cache_config:
+          name: dynamic_forward_proxy_cache_config
+          dns_lookup_family: ` + dnsLookUpFamily + `
+          max_hosts: 8192
+  - name: prometheus_stats
+    connect_timeout: 0.25s
+    type: static
+    load_assignment:
+      cluster_name: prometheus_stats
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              pipe:
+                path: /home/nonroot/envoy.admin
+admin:
+  address:
+    pipe:
+      path: /home/nonroot/envoy.admin`,
+		},
+	}
+	Expect(kubernetesutils.MakeUnique(configMap)).To(Succeed())
+	return configMap
+}

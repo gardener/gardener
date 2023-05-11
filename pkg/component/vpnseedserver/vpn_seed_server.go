@@ -18,7 +18,9 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	istionetworkingv1beta1 "istio.io/api/networking/v1beta1"
@@ -119,6 +121,8 @@ type NetworkValues struct {
 	ServiceCIDR string
 	// NodeCIDR is the CIDR of the node network.
 	NodeCIDR string
+	// IPFamilies are the IPFamilies of the shoot
+	IPFamilies []gardencorev1beta1.IPFamily
 }
 
 // Values is a set of configuration values for the VPNSeedServer component.
@@ -184,7 +188,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 				Namespace: v.namespace,
 			},
 			Data: map[string]string{
-				fileNameEnvoyConfig: envoyConfig,
+				fileNameEnvoyConfig: v.getEnvoyConfig(),
 			},
 		}
 
@@ -278,6 +282,11 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 
 func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secretCAVPN, secretServer, secretTLSAuth *corev1.Secret) *corev1.PodTemplateSpec {
 	hostPathCharDev := corev1.HostPathCharDev
+	var ipFamilies []string
+	for _, v := range v.values.Network.IPFamilies {
+		ipFamilies = append(ipFamilies, string(v))
+	}
+
 	template := &corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: utils.MergeStringMaps(getLabels(), map[string]string{
@@ -312,6 +321,10 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 						},
 					},
 					Env: []corev1.EnvVar{
+						{
+							Name:  "IP_FAMILIES",
+							Value: strings.Join(ipFamilies, ","),
+						},
 						{
 							Name:  "SERVICE_NETWORK",
 							Value: v.values.Network.ServiceCIDR,
@@ -863,6 +876,7 @@ func (v *vpnSeedServer) emptyEnvoyFilter() *networkingv1alpha3.EnvoyFilter {
 	return &networkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Name: v.namespace + "-vpn", Namespace: v.istioNamespaceFunc()}}
 }
 
+//TODO: unused function?
 func getLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
@@ -870,13 +884,26 @@ func getLabels() map[string]string {
 	}
 }
 
-var envoyConfig = `static_resources:
+func (v *vpnSeedServer) getEnvoyConfig() string {
+	var (
+		listenAddress = "0.0.0.0"
+		// we don't want to use AUTO for single-stack clusters as it causes an unnecessary failed lookup
+		// ref https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#enum-config-cluster-v3-cluster-dnslookupfamily
+		dnsLookupFamily = "V4_ONLY"
+	)
+
+	if gardencorev1beta1.IsIPv6SingleStack(v.values.Network.IPFamilies) {
+		listenAddress = "::"
+		dnsLookupFamily = "V6_ONLY"
+	}
+
+	return `static_resources:
   listeners:
   - name: listener_0
     address:
       socket_address:
         protocol: TCP
-        address: 0.0.0.0
+        address: ` + fmt.Sprintf("%q", listenAddress) + `
         port_value: ` + fmt.Sprintf("%d", EnvoyPort) + `
     listener_filters:
     - name: "envoy.filters.listener.tls_inspector"
@@ -941,7 +968,7 @@ var envoyConfig = `static_resources:
               "@type": type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.FilterConfig
               dns_cache_config:
                 name: dynamic_forward_proxy_cache_config
-                dns_lookup_family: V4_ONLY
+                dns_lookup_family: ` + dnsLookupFamily + `
                 max_hosts: 8192
           - name: envoy.filters.http.router
             typed_config:
@@ -953,7 +980,7 @@ var envoyConfig = `static_resources:
   - name: metrics_listener
     address:
       socket_address:
-        address: 0.0.0.0
+        address: ` + fmt.Sprintf("%q", listenAddress) + `
         port_value: ` + fmt.Sprintf("%d", MetricsPort) + `
     filter_chains:
     - filters:
@@ -993,7 +1020,7 @@ var envoyConfig = `static_resources:
         "@type": type.googleapis.com/envoy.extensions.clusters.dynamic_forward_proxy.v3.ClusterConfig
         dns_cache_config:
           name: dynamic_forward_proxy_cache_config
-          dns_lookup_family: V4_ONLY
+          dns_lookup_family: ` + dnsLookupFamily + `
           max_hosts: 8192
   - name: prometheus_stats
     connect_timeout: 0.25s
@@ -1010,3 +1037,4 @@ admin:
   address:
     pipe:
       path: /home/nonroot/envoy.admin`
+}
