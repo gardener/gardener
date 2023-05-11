@@ -183,7 +183,7 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, log logr.Log
 
 			healthCheckResult, err := check.Check(ctx, request)
 
-			if errorCodeCheckFunc != nil {
+			if healthCheckResult != nil && errorCodeCheckFunc != nil {
 				healthCheckResult.Codes = append(healthCheckResult.Codes, errorCodeCheckFunc(fmt.Errorf("%s", healthCheckResult.Detail))...)
 			}
 
