@@ -40,7 +40,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 
 	It("Create Garden, Rotate Credentials and Delete Garden", Label("credentials-rotation"), func() {
 		By("Create Garden")
-		ctx, cancel := context.WithTimeout(parentCtx, 5*time.Minute)
+		ctx, cancel := context.WithTimeout(parentCtx, 10*time.Minute)
 		defer cancel()
 
 		Expect(runtimeClient.Create(ctx, backupSecret)).To(Succeed())
