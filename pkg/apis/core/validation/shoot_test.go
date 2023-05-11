@@ -5436,6 +5436,53 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})))),
 		)
 
+		DescribeTable("MemorySwap",
+			func(allowSwap bool, swapBehavior *string, k8sVersion string, matcher gomegatypes.GomegaMatcher) {
+				kubeletConfig := core.KubeletConfig{}
+				if swapBehavior != nil {
+					kubeletConfig.MemorySwap = &core.MemorySwapConfiguration{SwapBehavior: (*core.SwapBehavior)(swapBehavior)}
+				}
+
+				kubeletConfig.FailSwapOn = pointer.Bool(true)
+
+				if allowSwap {
+					kubeletConfig.FeatureGates = map[string]bool{"NodeSwap": true}
+					kubeletConfig.FailSwapOn = pointer.Bool(false)
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, k8sVersion, false, nil)
+				Expect(errList).To(matcher)
+			},
+
+			Entry("should allow empty memory swap", false, nil, "1.22", BeEmpty()),
+			Entry("should allow empty memory swap - NodeSwap set and FailSwap=false", true, nil, "1.22", BeEmpty()),
+			Entry("should allow LimitedSwap behavior", true, pointer.String("LimitedSwap"), "1.22", BeEmpty()),
+			Entry("should allow UnlimitedSwap behavior", true, pointer.String("UnlimitedSwap"), "1.22", BeEmpty()),
+			Entry("should forbid configuration of swap behaviour for k8s < 1.22", true, pointer.String("LimitedSwap"), "1.21", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("memorySwap"),
+				"Detail": Equal("configuring swap behaviour is not available for kubernetes versions < 1.22"),
+			})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("featureGates.NodeSwap"),
+					"Detail": Equal("not supported in Kubernetes version 1.21"),
+				}))),
+			),
+			Entry("should forbid configuration of swap behaviour if either the feature gate NodeSwap is not set or FailSwap=true", false, pointer.String("LimitedSwap"), "1.22", ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("memorySwap"),
+					"Detail": Equal("configuring swap behaviour is not available when the kubelet is configured with 'FailSwapOn=true'"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("memorySwap"),
+					"Detail": Equal("configuring swap behaviour is not available when kubelet's 'NodeSwap' feature gate is not set"),
+				}))),
+			),
+		)
+
 		DescribeTable("EvictionHard & EvictionSoft",
 			func(memoryAvailable, imagefsAvailable, imagefsInodesFree, nodefsAvailable, nodefsInodesFree string, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{

@@ -236,6 +236,14 @@ func SetDefaults_Shoot(obj *Shoot) {
 		if obj.Spec.Kubernetes.Kubelet.FailSwapOn == nil {
 			obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(true)
 		}
+		nodeSwapFeatureGateEnabled, ok := obj.Spec.Kubernetes.Kubelet.FeatureGates["NodeSwap"]
+		if ok && nodeSwapFeatureGateEnabled && !*obj.Spec.Kubernetes.Kubelet.FailSwapOn && obj.Spec.Kubernetes.Kubelet.MemorySwap == nil {
+			obj.Spec.Kubernetes.Kubelet.MemorySwap = &MemorySwapConfiguration{}
+		}
+		if ok && nodeSwapFeatureGateEnabled && !*obj.Spec.Kubernetes.Kubelet.FailSwapOn && obj.Spec.Kubernetes.Kubelet.MemorySwap.SwapBehavior == nil {
+			limitedSwap := LimitedSwap
+			obj.Spec.Kubernetes.Kubelet.MemorySwap.SwapBehavior = &limitedSwap
+		}
 		if obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent == nil {
 			obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent = pointer.Int32(50)
 		}

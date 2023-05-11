@@ -204,6 +204,36 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Kubernetes.Kubelet.FailSwapOn).To(PointTo(BeFalse()))
 		})
 
+		It("should default the swap behaviour", func() {
+			falseVar := false
+			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
+			obj.Spec.Kubernetes.Kubelet.FailSwapOn = &falseVar
+			obj.Spec.Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap).To(Not(BeNil()))
+			Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap.SwapBehavior).To(PointTo(Equal(LimitedSwap)))
+		})
+
+		It("should not default the swap behaviour because failSwapOn=true", func() {
+			trueVar := true
+			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
+			obj.Spec.Kubernetes.Kubelet.FailSwapOn = &trueVar
+			obj.Spec.Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap).To(BeNil())
+		})
+
+		It("should not default the swap behaviour because kubelet feature gate NodeSwap is not set", func() {
+			falseVar := true
+			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
+			obj.Spec.Kubernetes.Kubelet.FailSwapOn = &falseVar
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap).To(BeNil())
+		})
+
 		It("should default the imageGCThreshold fields", func() {
 			SetObjectDefaults_Shoot(obj)
 

@@ -1577,6 +1577,21 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, doc
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("streamingConnectionIdleTimeout"), *v, "value must be between 30s and 4h"))
 		}
 	}
+
+	if v := kubeletConfig.MemorySwap; v != nil {
+		if k8sVersionIsLessThan122, _ := versionutils.CompareVersions(version, "<", "1.22"); k8sVersionIsLessThan122 {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("memorySwap"), "configuring swap behaviour is not available for kubernetes versions < 1.22"))
+		}
+
+		if kubeletConfig.FailSwapOn != nil && *kubeletConfig.FailSwapOn {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("memorySwap"), "configuring swap behaviour is not available when the kubelet is configured with 'FailSwapOn=true'"))
+		}
+
+		if featureGateEnabled, ok := kubeletConfig.FeatureGates["NodeSwap"]; !ok || (!featureGateEnabled && v.SwapBehavior != nil) {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("memorySwap"), "configuring swap behaviour is not available when kubelet's 'NodeSwap' feature gate is not set"))
+		}
+	}
+
 	return allErrs
 }
 
