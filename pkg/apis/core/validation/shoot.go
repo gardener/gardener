@@ -2165,9 +2165,9 @@ func ValidateShootHAConfig(shoot *core.Shoot) field.ErrorList {
 }
 
 // ValidateShootHAConfigUpdate validates the HA shoot control plane configuration.
-func ValidateShootHAConfigUpdate(newShoot, oldSnoot *core.Shoot) field.ErrorList {
+func ValidateShootHAConfigUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	allErrs := field.ErrorList{}
-	allErrs = append(allErrs, validateShootHAControlPlaneSpecUpdate(&newShoot.Spec, &oldSnoot.Spec, field.NewPath("spec.controlPlane"))...)
+	allErrs = append(allErrs, validateShootHAControlPlaneSpecUpdate(newShoot, oldShoot, field.NewPath("spec.controlPlane"))...)
 	return allErrs
 }
 
@@ -2179,22 +2179,26 @@ func validateHAShootControlPlaneConfigurationValue(shoot *core.Shoot) field.Erro
 	return allErrs
 }
 
-func validateShootHAControlPlaneSpecUpdate(newSpec, oldSpec *core.ShootSpec, fldPath *field.Path) field.ErrorList {
+func validateShootHAControlPlaneSpecUpdate(newShoot, oldShoot *core.Shoot, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs          = field.ErrorList{}
-		shootIsScheduled = newSpec.SeedName != nil
+		shootIsScheduled = newShoot.Spec.SeedName != nil
 
 		oldVal, newVal core.FailureToleranceType
 		oldValExists   bool
 	)
 
-	if oldSpec.ControlPlane != nil && oldSpec.ControlPlane.HighAvailability != nil {
-		oldVal = oldSpec.ControlPlane.HighAvailability.FailureTolerance.Type
+	if oldShoot.Spec.ControlPlane != nil && oldShoot.Spec.ControlPlane.HighAvailability != nil {
+		oldVal = oldShoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type
 		oldValExists = true
 	}
 
-	if newSpec.ControlPlane != nil && newSpec.ControlPlane.HighAvailability != nil {
-		newVal = newSpec.ControlPlane.HighAvailability.FailureTolerance.Type
+	if newShoot.Spec.ControlPlane != nil && newShoot.Spec.ControlPlane.HighAvailability != nil {
+		newVal = newShoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type
+		// TODO(@aaronfern): remove this validation of not allowing scale-up to HA while hibernated when https://github.com/gardener/etcd-druid/issues/589 is resolved
+		if !oldValExists && isShootInHibernation(newShoot) {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("highAvailability", "failureTolerance", "type"), "Shoot is currently hibernated and cannot be scaled up to HA. Please make sure your cluster has woken up before scaling it up to HA"))
+		}
 	}
 
 	if oldValExists && shootIsScheduled {
@@ -2216,4 +2220,12 @@ func isShootReadyForRotationStart(lastOperation *core.LastOperation) bool {
 		return true
 	}
 	return lastOperation.Type == core.LastOperationTypeReconcile
+}
+
+func isShootInHibernation(shoot *core.Shoot) bool {
+	if shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil {
+		return *shoot.Spec.Hibernation.Enabled || shoot.Status.IsHibernated
+	}
+
+	return shoot.Status.IsHibernated
 }
