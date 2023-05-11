@@ -46,7 +46,6 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		kubeAPIServerDeploymentFound         = true
 		kubeControllerManagerDeploymentFound = true
 		kubeAPIServerDeploymentReplicas      int32
-		workerless                           = o.Shoot.IsWorkerless
 		infrastructure                       *extensionsv1alpha1.Infrastructure
 		controlPlaneDeploymentNeeded         bool
 		tasksWithErrors                      []string
@@ -120,7 +119,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			return nil
 		}),
 		errors.ToExecute("Retrieve the infrastructure resource", func() error {
-			if workerless {
+			if o.Shoot.IsWorkerless {
 				return nil
 			}
 			obj, err := botanist.Shoot.Components.Extensions.Infrastructure.Get(ctx)
@@ -145,7 +144,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 
 	var (
 		nonTerminatingNamespace = botanist.SeedNamespaceObject.UID != "" && botanist.SeedNamespaceObject.Status.Phase != corev1.NamespaceTerminating
-		cleanupShootResources   = nonTerminatingNamespace && kubeAPIServerDeploymentFound && (infrastructure != nil || workerless)
+		cleanupShootResources   = nonTerminatingNamespace && kubeAPIServerDeploymentFound && (infrastructure != nil || o.Shoot.IsWorkerless)
 		defaultInterval         = 5 * time.Second
 		defaultTimeout          = 30 * time.Second
 		staticNodesCIDR         = o.Shoot.GetInfo().Spec.Networking != nil && o.Shoot.GetInfo().Spec.Networking.Nodes != nil
@@ -169,12 +168,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		// existing machine class secrets.
 		deployCloudProviderSecret = g.Add(flow.Task{
 			Name: "Deploying cloud provider account secret",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
-					return nil
-				}
-				return botanist.DeployCloudProviderSecret(ctx)
-			}).DoIf(nonTerminatingNamespace),
+			Fn:   flow.TaskFn(botanist.DeployCloudProviderSecret).DoIf(nonTerminatingNamespace).SkipIf(o.Shoot.IsWorkerless),
 		})
 		deployKubeAPIServerService = g.Add(flow.Task{
 			Name: "Deploying Kubernetes API server service in the Seed cluster",
@@ -237,19 +231,14 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		// in case it has changed. Also, it's needed for other control plane components like the kube-apiserver or kube-
 		// controller-manager to be updateable due to provider config injection.
 		deployControlPlane = g.Add(flow.Task{
-			Name: "Deploying Shoot control plane",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
-					return nil
-				}
-				return botanist.DeployControlPlane(ctx)
-			}).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources && controlPlaneDeploymentNeeded),
+			Name:         "Deploying Shoot control plane",
+			Fn:           flow.TaskFn(botanist.DeployControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources && controlPlaneDeploymentNeeded).SkipIf(o.Shoot.IsWorkerless),
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, ensureShootClusterIdentity),
 		})
 		waitUntilControlPlaneReady = g.Add(flow.Task{
 			Name: "Waiting until Shoot control plane has been reconciled",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.ControlPlane.Wait(ctx)
@@ -303,19 +292,14 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, waitUntilGardenerResourceManagerReady),
 		})
 		deployControlPlaneExposure = g.Add(flow.Task{
-			Name: "Deploying shoot control plane exposure components",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
-					return nil
-				}
-				return botanist.DeployControlPlaneExposure(ctx)
-			}).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(useSNI).DoIf(cleanupShootResources),
+			Name:         "Deploying shoot control plane exposure components",
+			Fn:           flow.TaskFn(botanist.DeployControlPlaneExposure).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsWorkerless || useSNI).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerIsReady),
 		})
 		waitUntilControlPlaneExposureReady = g.Add(flow.Task{
 			Name: "Waiting until Shoot control plane exposure has been reconciled",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.ControlPlaneExposure.Wait(ctx)
@@ -348,10 +332,9 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		deleteClusterAutoscaler = g.Add(flow.Task{
 			Name: "Deleting cluster autoscaler",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
-
 				return botanist.Shoot.Components.ControlPlane.ClusterAutoscaler.Destroy(ctx)
 			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
@@ -389,7 +372,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		deleteMetricsServer = g.Add(flow.Task{
 			Name: "Deleting metrics-server",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.SystemComponents.MetricsServer.Destroy(ctx)
@@ -406,7 +389,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		destroyNetwork = g.Add(flow.Task{
 			Name: "Destroying shoot network plugin",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.Network.Destroy(ctx)
@@ -416,7 +399,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		waitUntilNetworkIsDestroyed = g.Add(flow.Task{
 			Name: "Waiting until shoot network plugin has been destroyed",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.Network.WaitCleanup(ctx)
@@ -426,7 +409,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		destroyWorker = g.Add(flow.Task{
 			Name: "Destroying shoot workers",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.Worker.Destroy(ctx)
@@ -436,7 +419,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		waitUntilWorkerDeleted = g.Add(flow.Task{
 			Name: "Waiting until shoot worker nodes have been terminated",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.Worker.WaitCleanup(ctx)
@@ -446,7 +429,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		deleteAllOperatingSystemConfigs = g.Add(flow.Task{
 			Name: "Deleting operating system config resources",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.OperatingSystemConfig.Destroy(ctx)
@@ -456,7 +439,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		_ = g.Add(flow.Task{
 			Name: "Waiting until all operating system config resources are deleted",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.OperatingSystemConfig.WaitCleanup(ctx)
@@ -496,7 +479,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		deleteContainerRuntimeResources = g.Add(flow.Task{
 			Name: "Deleting container runtime resources",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.ContainerRuntime.Destroy(ctx)
@@ -506,7 +489,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		waitUntilContainerRuntimeResourcesDeleted = g.Add(flow.Task{
 			Name: "Waiting until stale container runtime resources are deleted",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.ContainerRuntime.WaitCleanup(ctx)
@@ -523,7 +506,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		timeForInfrastructureResourceCleanup = g.Add(flow.Task{
 			Name: "Waiting until time for infrastructure resource cleanup has elapsed",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 
@@ -564,7 +547,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		destroyControlPlane = g.Add(flow.Task{
 			Name: "Destroying shoot control plane",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.ControlPlane.Destroy(ctx)
@@ -574,7 +557,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		waitUntilControlPlaneDeleted = g.Add(flow.Task{
 			Name: "Waiting until shoot control plane has been destroyed",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.ControlPlane.WaitCleanup(ctx)
@@ -637,7 +620,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		destroyControlPlaneExposure = g.Add(flow.Task{
 			Name: "Destroying shoot control plane exposure",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.ControlPlaneExposure.Destroy(ctx)
@@ -647,7 +630,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		waitUntilControlPlaneExposureDeleted = g.Add(flow.Task{
 			Name: "Waiting until shoot control plane exposure has been destroyed",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.ControlPlaneExposure.WaitCleanup(ctx)
@@ -656,19 +639,14 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 
 		destroyIngressDomainDNSRecord = g.Add(flow.Task{
-			Name: "Destroying nginx ingress DNS record",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
-					return nil
-				}
-				return botanist.DestroyIngressDNSRecord(ctx)
-			}).DoIf(nonTerminatingNamespace),
+			Name:         "Destroying nginx ingress DNS record",
+			Fn:           flow.TaskFn(botanist.DestroyIngressDNSRecord).DoIf(nonTerminatingNamespace).SkipIf(o.Shoot.IsWorkerless),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
 		deleteInfrastructure = g.Add(flow.Task{
 			Name: "Destroying shoot infrastructure",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.Infrastructure.Destroy(ctx)
@@ -678,7 +656,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		waitUntilInfrastructureDeleted = g.Add(flow.Task{
 			Name: "Waiting until shoot infrastructure has been deleted",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.Infrastructure.WaitCleanup(ctx)

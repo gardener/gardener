@@ -44,7 +44,6 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		infrastructure                *extensionsv1alpha1.Infrastructure
 		kubeAPIServerDeploymentFound  = true
 		etcdSnapshotRequired          bool
-		workerless                    = o.Shoot.IsWorkerless
 	)
 
 	for _, lastError := range o.Shoot.GetInfo().Status.LastErrors {
@@ -99,7 +98,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			return nil
 		}),
 		errorsutils.ToExecute("Retrieve the infrastructure resource", func() error {
-			if workerless {
+			if o.Shoot.IsWorkerless {
 				return nil
 			}
 			obj, err := botanist.Shoot.Components.Extensions.Infrastructure.Get(ctx)
@@ -159,19 +158,14 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		// in case it has changed. Also, it's needed for other control plane components like the kube-apiserver or kube-
 		// controller-manager to be updateable due to provider config injection.
 		restoreControlPlane = g.Add(flow.Task{
-			Name: "Restoring Shoot control plane",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
-					return nil
-				}
-				return botanist.RestoreControlPlane(ctx)
-			}).DoIf(cleanupShootResources && controlPlaneRestorationNeeded),
+			Name:         "Restoring Shoot control plane",
+			Fn:           flow.TaskFn(botanist.RestoreControlPlane).DoIf(cleanupShootResources && controlPlaneRestorationNeeded).SkipIf(o.Shoot.IsWorkerless),
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
 		})
 		waitUntilControlPlaneReady = g.Add(flow.Task{
 			Name: "Waiting until Shoot control plane has been restored",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.ControlPlane.Wait(ctx)
@@ -263,7 +257,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		migrateControlPlane = g.Add(flow.Task{
 			Name: "Migrating shoot control plane",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.ControlPlane.Migrate(ctx)
@@ -273,7 +267,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		deleteControlPlane = g.Add(flow.Task{
 			Name: "Deleting shoot control plane",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.ControlPlane.Destroy(ctx)
@@ -283,7 +277,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		waitUntilControlPlaneDeleted = g.Add(flow.Task{
 			Name: "Waiting until shoot control plane has been deleted",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.ControlPlane.WaitCleanup(ctx)
@@ -334,7 +328,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		migrateInfrastructure = g.Add(flow.Task{
 			Name: "Migrating shoot infrastructure",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.Infrastructure.Migrate(ctx)
@@ -344,7 +338,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		waitUntilInfrastructureMigrated = g.Add(flow.Task{
 			Name: "Waiting until shoot infrastructure has been migrated",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.Infrastructure.WaitMigrate(ctx)
@@ -354,7 +348,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		deleteInfrastructure = g.Add(flow.Task{
 			Name: "Deleting shoot infrastructure",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.Infrastructure.Destroy(ctx)
@@ -364,7 +358,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		waitUntilInfrastructureDeleted = g.Add(flow.Task{
 			Name: "Waiting until shoot infrastructure has been deleted",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if workerless {
+				if o.Shoot.IsWorkerless {
 					return nil
 				}
 				return botanist.Shoot.Components.Extensions.Infrastructure.WaitCleanup(ctx)
