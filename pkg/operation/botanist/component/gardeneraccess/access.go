@@ -111,12 +111,10 @@ func (g *gardener) Deploy(ctx context.Context) error {
 }
 
 func (g *gardener) Destroy(ctx context.Context) error {
-	var shootAccessSecretNames = []string{v1beta1constants.SecretNameGardener, v1beta1constants.SecretNameGardenerInternal}
-
-	for _, v := range shootAccessSecretNames {
+	for _, v := range []string{v1beta1constants.SecretNameGardener, v1beta1constants.SecretNameGardenerInternal} {
 		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: v, Namespace: g.namespace}}
-		if err := client.IgnoreNotFound(g.client.Delete(ctx, secret)); err != nil {
-			return err
+		if err := g.client.Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
+			return fmt.Errorf("failed deleting secret %s: %w", client.ObjectKeyFromObject(secret), err)
 		}
 	}
 

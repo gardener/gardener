@@ -117,6 +117,12 @@ func (r *Reconciler) delete(
 			Name: "Destroying Kube State Metrics",
 			Fn:   component.OpDestroyAndWait(kubeStateMetrics).Destroy,
 		})
+		cleanupGenericTokenKubeconfig = g.Add(flow.Task{
+			Name: "Cleaning up generic token kubeconfig",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return r.cleanupGenericTokenKubeconfig(ctx, secretsManager)
+			}),
+		})
 		destroyVirtualGardenGardenerAccess = g.Add(flow.Task{
 			Name: "Destroying Gardener virtual garden access resources",
 			Fn:   virtualGardenGardenerAccess.Destroy,
@@ -143,6 +149,7 @@ func (r *Reconciler) delete(
 			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer),
 		})
 		syncPointVirtualGardenControlPlaneDestroyed = flow.NewTaskIDs(
+			cleanupGenericTokenKubeconfig,
 			destroyVirtualGardenGardenerAccess,
 			destroyVirtualGardenGardenerResourceManager,
 			destroyKubeAPIServerService,
@@ -191,13 +198,6 @@ func (r *Reconciler) delete(
 			Fn:           component.OpWait(gardenerResourceManager).Destroy,
 			Dependencies: flow.NewTaskIDs(ensureNoManagedResourcesExistAnymore),
 		})
-		cleanupGenericTokenKubeconfig = g.Add(flow.Task{
-			Name: "Cleaning up generic token kubeconfig",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return r.cleanupGenericTokenKubeconfig(ctx, secretsManager)
-			}),
-			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
-		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for Istio",
 			Fn:           istioCRD.Destroy,
@@ -216,7 +216,7 @@ func (r *Reconciler) delete(
 		_ = g.Add(flow.Task{
 			Name:         "Cleaning up secrets",
 			Fn:           secretsManager.Cleanup,
-			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager, cleanupGenericTokenKubeconfig),
+			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 	)
 

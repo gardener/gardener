@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestSecretsRotation(t *testing.T) {
+func TestTokenRequest(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Utils Gardener TokenRequest Suite")
 }
