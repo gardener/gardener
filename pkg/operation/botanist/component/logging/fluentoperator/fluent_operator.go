@@ -114,6 +114,16 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 				{
 					APIGroups: []string{"rbac.authorization.k8s.io"},
 					Resources: []string{"clusterrolebindings", "clusterroles"},
+					Verbs:     []string{"get", "list", "watch", "create"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"pods"},
+					Verbs:     []string{"get"},
+				},
+				{
+					APIGroups: []string{"extensions.gardener.cloud"},
+					Resources: []string{"clusters"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
 			},
@@ -157,23 +167,8 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 				},
 				{
 					APIGroups: []string{""},
-					Resources: []string{"pods"},
-					Verbs:     []string{"get"},
-				},
-				{
-					APIGroups: []string{""},
 					Resources: []string{"secrets", "configmaps", "serviceaccounts", "services", "namespaces"},
 					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
-				},
-				{
-					APIGroups: []string{"extensions.gardener.cloud"},
-					Resources: []string{"clusters"},
-					Verbs:     []string{"get", "list", "watch"},
-				},
-				{
-					APIGroups: []string{"rbac.authorization.k8s.io"},
-					Resources: []string{"clusterrolebindings", "clusterroles"},
-					Verbs:     []string{"create"},
 				},
 			},
 		}
