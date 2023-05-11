@@ -449,6 +449,16 @@ func (r *Reconciler) runReconcileSeedFlow(
 		}
 	}
 
+	// Deploy System Resources
+	systemResources, err := defaultSystem(seedClient, seed, r.ImageVector, seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled, r.GardenNamespace)
+	if err != nil {
+		return err
+	}
+
+	if err := systemResources.Deploy(ctx); err != nil {
+		return err
+	}
+
 	// Fetch component-specific aggregate and central monitoring configuration
 	var (
 		aggregateScrapeConfigs                = strings.Builder{}
@@ -842,10 +852,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if err != nil {
 		return err
 	}
-	systemResources, err := defaultSystem(seedClient, seed, r.ImageVector, seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled, r.GardenNamespace)
-	if err != nil {
-		return err
-	}
 	vpnAuthzServer, err := defaultVPNAuthzServer(seedClient, kubernetesVersion, r.ImageVector, r.GardenNamespace)
 	if err != nil {
 		return err
@@ -895,10 +901,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		_ = g.Add(flow.Task{
 			Name: "Deploying VPN authorization server",
 			Fn:   vpnAuthzServer.Deploy,
-		})
-		_ = g.Add(flow.Task{
-			Name: "Deploying system resources",
-			Fn:   systemResources.Deploy,
 		})
 	)
 
