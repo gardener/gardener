@@ -47,8 +47,9 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
-// NewGardenerResourceManager instantiates a new `gardener-resource-manager` component.
-func NewGardenerResourceManager(
+// NewRuntimeGardenerResourceManager instantiates a new `gardener-resource-manager` component
+// configured to reconcile objects in the runtime (seed) cluster.
+func NewRuntimeGardenerResourceManager(
 	c client.Client,
 	gardenNamespaceName string,
 	runtimeVersion *semver.Version,
@@ -115,6 +116,78 @@ func NewGardenerResourceManager(
 	}), nil
 }
 
+// NewTargetGardenerResourceManager instantiates a new `gardener-resource-manager` component
+// configured to reconcile object in a target (shoot) cluster.
+func NewTargetGardenerResourceManager(
+	c client.Client,
+	namespaceName string,
+	imageVector imagevector.ImageVector,
+	secretsManager secretsmanager.Interface,
+	clusterIdentity *string,
+	defaultNotReadyTolerationSeconds *int64,
+	defaultUnreachableTolerationSeconds *int64,
+	kubernetesVersion *semver.Version,
+	logLevel, logFormat string,
+	namePrefix string,
+	podTopologySpreadConstraintsEnabled bool,
+	priorityClassName string,
+	schedulingProfile *gardencorev1beta1.SchedulingProfile,
+	secretNameServerCA string,
+	systemComponentsToleration []corev1.Toleration,
+	topologyAwareRoutingEnabled bool,
+) (resourcemanager.Interface, error) {
+	image, err := imageVector.FindImage(images.ImageNameGardenerResourceManager)
+	if err != nil {
+		return nil, err
+	}
+
+	repository, tag := image.String(), version.Get().GitVersion
+	if image.Tag != nil {
+		repository, tag = image.Repository, *image.Tag
+	}
+	image = &imagevector.Image{Repository: repository, Tag: &tag}
+
+	cfg := resourcemanager.Values{
+		AlwaysUpdate:                         pointer.Bool(true),
+		ClusterIdentity:                      clusterIdentity,
+		ConcurrentSyncs:                      pointer.Int(20),
+		DefaultNotReadyToleration:            defaultNotReadyTolerationSeconds,
+		DefaultUnreachableToleration:         defaultUnreachableTolerationSeconds,
+		HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
+		Image:                                image.String(),
+		LogLevel:                             logLevel,
+		LogFormat:                            logFormat,
+		MaxConcurrentHealthWorkers:           pointer.Int(10),
+		MaxConcurrentTokenInvalidatorWorkers: pointer.Int(5),
+		MaxConcurrentTokenRequestorWorkers:   pointer.Int(5),
+		MaxConcurrentCSRApproverWorkers:      pointer.Int(5),
+		NamePrefix:                           namePrefix,
+		PodTopologySpreadConstraintsEnabled:  podTopologySpreadConstraintsEnabled,
+		PriorityClassName:                    priorityClassName,
+		SchedulingProfile:                    schedulingProfile,
+		SecretNameServerCA:                   secretNameServerCA,
+		SyncPeriod:                           &metav1.Duration{Duration: time.Minute},
+		SystemComponentTolerations:           systemComponentsToleration,
+		TargetDiffersFromSourceCluster:       true,
+		TargetDisableCache:                   pointer.Bool(true),
+		KubernetesVersion:                    kubernetesVersion,
+		VPA: &resourcemanager.VPAConfig{
+			MinAllowed: corev1.ResourceList{
+				corev1.ResourceMemory: resource.MustParse("30Mi"),
+			},
+		},
+		WatchedNamespace:            &namespaceName,
+		TopologyAwareRoutingEnabled: topologyAwareRoutingEnabled,
+	}
+
+	return resourcemanager.New(
+		c,
+		namespaceName,
+		secretsManager,
+		cfg,
+	), nil
+}
+
 // TimeoutWaitForGardenerResourceManagerBootstrapping is the maximum time the bootstrap process for the
 // gardener-resource-manager may take.
 // Exposed for testing.
@@ -150,7 +223,8 @@ func DeployGardenerResourceManager(
 			ctx,
 			secretsManager,
 			namespace,
-			getAPIServerAddress)
+			getAPIServerAddress,
+		)
 		if err != nil {
 			return err
 		}

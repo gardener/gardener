@@ -16,14 +16,8 @@ package botanist
 
 import (
 	"context"
-	"time"
 
 	"github.com/Masterminds/semver"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/component-base/version"
-	"k8s.io/utils/pointer"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -32,24 +26,11 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // DefaultResourceManager returns an instance of Gardener Resource Manager with defaults configured for being deployed in a Shoot namespace
 func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
-	image, err := b.ImageVector.FindImage(images.ImageNameGardenerResourceManager)
-	if err != nil {
-		return nil, err
-	}
-
-	repository, tag := image.String(), version.Get().GitVersion
-	if image.Tag != nil {
-		repository, tag = image.Repository, *image.Tag
-	}
-	image = &imagevector.Image{Repository: repository, Tag: &tag}
-
 	version, err := semver.NewVersion(b.SeedClientSet.Version())
 	if err != nil {
 		return nil, err
@@ -62,44 +43,24 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		defaultUnreachableTolerationSeconds = nodeToleration.DefaultUnreachableTolerationSeconds
 	}
 
-	cfg := resourcemanager.Values{
-		AlwaysUpdate:                         pointer.Bool(true),
-		ClusterIdentity:                      b.Seed.GetInfo().Status.ClusterIdentity,
-		ConcurrentSyncs:                      pointer.Int(20),
-		DefaultNotReadyToleration:            defaultNotReadyTolerationSeconds,
-		DefaultUnreachableToleration:         defaultUnreachableTolerationSeconds,
-		HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
-		Image:                                image.String(),
-		LogLevel:                             logger.InfoLevel,
-		LogFormat:                            logger.FormatJSON,
-		MaxConcurrentHealthWorkers:           pointer.Int(10),
-		MaxConcurrentTokenInvalidatorWorkers: pointer.Int(5),
-		MaxConcurrentTokenRequestorWorkers:   pointer.Int(5),
-		MaxConcurrentCSRApproverWorkers:      pointer.Int(5),
-		PodTopologySpreadConstraintsEnabled:  true,
-		PriorityClassName:                    v1beta1constants.PriorityClassNameShootControlPlane400,
-		SchedulingProfile:                    v1beta1helper.ShootSchedulingProfile(b.Shoot.GetInfo()),
-		SecretNameServerCA:                   v1beta1constants.SecretNameCACluster,
-		SyncPeriod:                           &metav1.Duration{Duration: time.Minute},
-		SystemComponentTolerations:           gardenerutils.ExtractSystemComponentsTolerations(b.Shoot.GetInfo().Spec.Provider.Workers),
-		TargetDiffersFromSourceCluster:       true,
-		TargetDisableCache:                   pointer.Bool(true),
-		KubernetesVersion:                    version,
-		VPA: &resourcemanager.VPAConfig{
-			MinAllowed: corev1.ResourceList{
-				corev1.ResourceMemory: resource.MustParse("30Mi"),
-			},
-		},
-		WatchedNamespace:            pointer.String(b.Shoot.SeedNamespace),
-		TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled,
-	}
-
-	return resourcemanager.New(
+	return shared.NewTargetGardenerResourceManager(
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
+		b.ImageVector,
 		b.SecretsManager,
-		cfg,
-	), nil
+		b.Seed.GetInfo().Status.ClusterIdentity,
+		defaultNotReadyTolerationSeconds,
+		defaultUnreachableTolerationSeconds,
+		version,
+		logger.InfoLevel, logger.FormatJSON,
+		"",
+		true,
+		v1beta1constants.PriorityClassNameShootControlPlane400,
+		v1beta1helper.ShootSchedulingProfile(b.Shoot.GetInfo()),
+		v1beta1constants.SecretNameCACluster,
+		gardenerutils.ExtractSystemComponentsTolerations(b.Shoot.GetInfo().Spec.Provider.Workers),
+		b.Shoot.TopologyAwareRoutingEnabled,
+	)
 }
 
 // DeployGardenerResourceManager deploys the gardener-resource-manager
