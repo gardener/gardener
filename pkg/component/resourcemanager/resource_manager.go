@@ -259,6 +259,9 @@ type Values struct {
 	HealthSyncPeriod *metav1.Duration
 	// FullNetworkPolicies makes the network policy controller to consider all relevant namespaces.
 	FullNetworkPolicies bool
+	// NetworkPolicyAdditionalNamespaceSelectors is the list of additional namespace selectors to consider for the
+	// NetworkPolicy controller.
+	NetworkPolicyAdditionalNamespaceSelectors []metav1.LabelSelector
 	// NetworkPolicyControllerIngressControllerSelector is the peer information of the ingress controller for the
 	// network policy controller.
 	NetworkPolicyControllerIngressControllerSelector *resourcemanagerv1alpha1.IngressControllerSelector
@@ -582,13 +585,13 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 	} else {
 		config.Controllers.NetworkPolicy = resourcemanagerv1alpha1.NetworkPolicyControllerConfig{
 			Enabled: true,
-			NamespaceSelectors: []metav1.LabelSelector{
+			NamespaceSelectors: append([]metav1.LabelSelector{
 				{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}},
 				{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem}},
 				{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
 				{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}},
 				{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}},
-			},
+			}, r.values.NetworkPolicyAdditionalNamespaceSelectors...),
 			IngressControllerSelector: r.values.NetworkPolicyControllerIngressControllerSelector,
 		}
 		config.Webhooks.CRDDeletionProtection.Enabled = true

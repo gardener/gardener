@@ -21,6 +21,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -64,6 +65,14 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, runtimeCluster cluster.Cl
 	}
 	if r.ResolverUpdate == nil {
 		r.ResolverUpdate = make(chan event.GenericEvent)
+	}
+	for _, l := range r.AdditionalNamespaceSelectors {
+		labelSelector := l
+		labelMap, err := metav1.LabelSelectorAsMap(&labelSelector)
+		if err != nil {
+			return fmt.Errorf("could not convert additional namespace selector %s into map: %w", labelSelector, err)
+		}
+		r.additionalNamespaceLabelSelectors = append(r.additionalNamespaceLabelSelectors, labels.SelectorFromSet(labelMap))
 	}
 
 	c, err := builder.

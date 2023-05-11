@@ -50,12 +50,14 @@ import (
 
 // Reconciler implements the reconcile.Reconcile interface for namespace reconciliation.
 type Reconciler struct {
-	RuntimeClient    client.Client
-	ConcurrentSyncs  *int
-	WatchRegisterers []func(controller.Controller) error
-	Resolver         hostnameresolver.HostResolver
-	ResolverUpdate   <-chan event.GenericEvent
-	RuntimeNetworks  RuntimeNetworkConfig
+	RuntimeClient                     client.Client
+	ConcurrentSyncs                   *int
+	WatchRegisterers                  []func(controller.Controller) error
+	Resolver                          hostnameresolver.HostResolver
+	ResolverUpdate                    <-chan event.GenericEvent
+	RuntimeNetworks                   RuntimeNetworkConfig
+	AdditionalNamespaceSelectors      []metav1.LabelSelector
+	additionalNamespaceLabelSelectors []labels.Selector
 }
 
 // RuntimeNetworkConfig is the configuration of the networks for the runtime cluster.
@@ -163,13 +165,13 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 		{
 			name:          "deny-all",
 			reconcileFunc: r.reconcileNetworkPolicyDenyAll,
-			namespaceSelectors: extendLabelSelectorsIfFeatureGateEnabled([]labels.Selector{
+			namespaceSelectors: append(extendLabelSelectorsIfFeatureGateEnabled([]labels.Selector{
 				labels.SelectorFromSet(labels.Set{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}),
 				labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.LabelExposureClassHandlerName, selection.Exists)),
-			}),
+			}), r.additionalNamespaceLabelSelectors...),
 		},
 		// TODO(rfranzke): This network policy is deprecated and will be removed soon in favor of
 		//  `allow-to-runtime-apiserver`.
@@ -178,46 +180,57 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 			reconcileFunc: func(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
 				return r.reconcileNetworkPolicyAllowToAPIServer(ctx, log, networkPolicy, v1beta1constants.LabelNetworkPolicyToSeedAPIServer)
 			},
-			namespaceSelectors: []labels.Selector{
+			namespaceSelectors: append([]labels.Selector{
 				labels.SelectorFromSet(labels.Set{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
-			},
+			}, r.additionalNamespaceLabelSelectors...),
 		},
 		{
 			name: "allow-to-runtime-apiserver",
 			reconcileFunc: func(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
 				return r.reconcileNetworkPolicyAllowToAPIServer(ctx, log, networkPolicy, v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer)
 			},
-			namespaceSelectors: extendLabelSelectorsIfFeatureGateEnabled([]labels.Selector{
+			namespaceSelectors: append(extendLabelSelectorsIfFeatureGateEnabled([]labels.Selector{
 				labels.SelectorFromSet(labels.Set{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
-			}),
+			}), r.additionalNamespaceLabelSelectors...),
 		},
 		{
 			name:          "allow-to-public-networks",
 			reconcileFunc: r.reconcileNetworkPolicyAllowToPublicNetworks,
-			namespaceSelectors: extendLabelSelectorsIfFeatureGateEnabled([]labels.Selector{
+			namespaceSelectors: append(extendLabelSelectorsIfFeatureGateEnabled([]labels.Selector{
 				labels.SelectorFromSet(labels.Set{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
-			}),
+			}), r.additionalNamespaceLabelSelectors...),
 		},
 		{
 			name:          "allow-to-private-networks",
 			reconcileFunc: r.reconcileNetworkPolicyAllowToPrivateNetworks,
-			namespaceSelectors: extendLabelSelectorsIfFeatureGateEnabled([]labels.Selector{
+			namespaceSelectors: append(extendLabelSelectorsIfFeatureGateEnabled([]labels.Selector{
 				labels.SelectorFromSet(labels.Set{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
-			}),
+			}), r.additionalNamespaceLabelSelectors...),
 		},
 		{
 			name:          "allow-to-blocked-cidrs",
 			reconcileFunc: r.reconcileNetworkPolicyAllowToBlockedCIDRs,
-			namespaceSelectors: extendLabelSelectorsIfFeatureGateEnabled([]labels.Selector{
+			namespaceSelectors: append(extendLabelSelectorsIfFeatureGateEnabled([]labels.Selector{
 				labels.SelectorFromSet(labels.Set{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}),
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
-			}),
+			}), r.additionalNamespaceLabelSelectors...),
+		},
+		{
+			name:          "allow-to-dns",
+			reconcileFunc: r.reconcileNetworkPolicyAllowToDNS,
+			namespaceSelectors: append(extendLabelSelectorsIfFeatureGateEnabled([]labels.Selector{
+				labels.SelectorFromSet(labels.Set{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}),
+				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
+				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem}),
+				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}),
+				labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.LabelExposureClassHandlerName, selection.Exists)),
+			}), r.additionalNamespaceLabelSelectors...),
 		},
 		{
 			name:          "allow-to-shoot-networks",
@@ -225,17 +238,6 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 			namespaceSelectors: []labels.Selector{
 				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
 			},
-		},
-		{
-			name:          "allow-to-dns",
-			reconcileFunc: r.reconcileNetworkPolicyAllowToDNS,
-			namespaceSelectors: extendLabelSelectorsIfFeatureGateEnabled([]labels.Selector{
-				labels.SelectorFromSet(labels.Set{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}),
-				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
-				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem}),
-				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}),
-				labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.LabelExposureClassHandlerName, selection.Exists)),
-			}),
 		},
 	}
 
