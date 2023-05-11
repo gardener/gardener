@@ -56,6 +56,7 @@ var _ = Describe("Config", func() {
 			RegistryBurst:                    pointer.Int32(20),
 			KubeReserved:                     map[string]string{"cpu": "123"},
 			MaxPods:                          pointer.Int32(24),
+			MemorySwap:                       &kubeletconfigv1beta1.MemorySwapConfiguration{SwapBehavior: "UnlimitedSwap"},
 			PodPidsLimit:                     pointer.Int64(101),
 			SystemReserved:                   map[string]string{"memory": "321"},
 			StreamingConnectionIdleTimeout:   &metav1.Duration{Duration: time.Minute * 12},
@@ -230,6 +231,7 @@ var _ = Describe("Config", func() {
 			KubeReserved:                     utils.MergeStringMaps(params.KubeReserved, map[string]string{"memory": "1Gi"}),
 			MaxOpenFiles:                     1000000,
 			MaxPods:                          *params.MaxPods,
+			MemorySwap:                       *params.MemorySwap,
 			PodsPerCore:                      0,
 			PodPidsLimit:                     params.PodPidsLimit,
 			ProtectKernelDefaults:            true,
@@ -259,7 +261,8 @@ var _ = Describe("Config", func() {
 				mutateExpectConfigFn(expectation)
 			}
 
-			Expect(kubelet.Config(semver.MustParse(kubernetesVersion), clusterDNSAddress, clusterDomain, params)).To(DeepEqual(expectation))
+			config := kubelet.Config(semver.MustParse(kubernetesVersion), clusterDNSAddress, clusterDomain, params)
+			Expect(config).To(DeepEqual(expectation))
 		},
 
 		Entry(
@@ -272,6 +275,7 @@ var _ = Describe("Config", func() {
 			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
 				cfg.RotateCertificates = true
 				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
+				cfg.MemorySwap = kubeletconfigv1beta1.MemorySwapConfiguration{}
 			},
 		),
 		Entry(
@@ -297,6 +301,7 @@ var _ = Describe("Config", func() {
 			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
 				cfg.RotateCertificates = true
 				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
+				cfg.MemorySwap = kubeletconfigv1beta1.MemorySwapConfiguration{}
 			},
 		),
 		Entry(

@@ -16,6 +16,7 @@ package components
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/pointer"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -61,6 +62,7 @@ type ConfigurableKubeletConfigParameters struct {
 	RegistryBurst                    *int32
 	KubeReserved                     map[string]string
 	MaxPods                          *int32
+	MemorySwap                       *kubeletconfigv1beta1.MemorySwapConfiguration
 	PodPidsLimit                     *int64
 	ProtectKernelDefaults            *bool
 	SystemReserved                   map[string]string
@@ -196,6 +198,9 @@ func KubeletConfigParametersFromCoreV1beta1KubeletConfig(kubeletConfig *gardenco
 			}
 		}
 
+		if kubeletConfig.MemorySwap != nil && kubeletConfig.MemorySwap.SwapBehavior != nil {
+			out.MemorySwap = &kubeletconfigv1beta1.MemorySwapConfiguration{SwapBehavior: string(*kubeletConfig.MemorySwap.SwapBehavior)}
+		}
 	}
 
 	return out

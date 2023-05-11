@@ -110,6 +110,10 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		VolumePluginDir:      pathVolumePluginDirectory,
 	}
 
+	if params.MemorySwap != nil {
+		config.MemorySwap = *params.MemorySwap
+	}
+
 	return config
 }
 
