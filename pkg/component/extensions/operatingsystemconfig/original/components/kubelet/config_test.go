@@ -261,8 +261,7 @@ var _ = Describe("Config", func() {
 				mutateExpectConfigFn(expectation)
 			}
 
-			config := kubelet.Config(semver.MustParse(kubernetesVersion), clusterDNSAddress, clusterDomain, params)
-			Expect(config).To(DeepEqual(expectation))
+			Expect(kubelet.Config(semver.MustParse(kubernetesVersion), clusterDNSAddress, clusterDomain, params)).To(DeepEqual(expectation))
 		},
 
 		Entry(
