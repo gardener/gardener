@@ -78,6 +78,8 @@ var _ = Describe("Garden controller tests", func() {
 			&kubeapiserver.IntervalWaitForDeployment, 100*time.Millisecond,
 			&kubeapiserver.TimeoutWaitForDeployment, 500*time.Millisecond,
 			&resourcemanager.SkipWebhookDeployment, true,
+			&resourcemanager.IntervalWaitForDeployment, 100*time.Millisecond,
+			&resourcemanager.TimeoutWaitForDeployment, 500*time.Millisecond,
 		))
 
 		By("Create test Namespace")
@@ -160,7 +162,7 @@ var _ = Describe("Garden controller tests", func() {
 		})
 
 		DeferCleanup(test.WithVar(&gardencontroller.NewClientFromSecretObject, func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
-			Expect(secret.Name).To(HavePrefix("user-kubeconfig"))
+			Expect(secret.Name).To(Equal("gardener-internal"))
 			Expect(secret.Namespace).To(Equal(testNamespace.Name))
 			return kubernetesfake.NewClientSetBuilder().WithClient(testClient).Build(), nil
 		}))
@@ -425,6 +427,124 @@ var _ = Describe("Garden controller tests", func() {
 			g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
 		}).Should(Succeed())
 
+		By("Bootstrapping virtual-garden-gardener-resource-manager")
+		Eventually(func(g Gomega) []appsv1.Deployment {
+			deploymentList := &appsv1.DeploymentList{}
+			g.Expect(testClient.List(ctx, deploymentList, client.InNamespace(testNamespace.Name))).To(Succeed())
+			return deploymentList.Items
+		}).Should(ContainElements(
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("virtual-garden-gardener-resource-manager")})}),
+		))
+
+		// The secret with the bootstrap certificate indicates that the bootstrapping of virtual-garden-gardener-resource-manager started.
+		Eventually(func(g Gomega) []corev1.Secret {
+			secretList := &corev1.SecretList{}
+			g.Expect(testClient.List(ctx, secretList, client.InNamespace(testNamespace.Name))).To(Succeed())
+			return secretList.Items
+		}).Should(ContainElements(
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": ContainSubstring("shoot-access-gardener-resource-manager-bootstrap-")})}),
+		))
+
+		// virtual-garden-gardener-resource manager usually sets the token-renew-timestamp when it reconciled the secret.
+		// It is not running here, so we have to patch the secret by ourselves.
+		Eventually(func(g Gomega) {
+			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-gardener-resource-manager", Namespace: testNamespace.Name}}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+
+			patch := client.MergeFrom(secret.DeepCopy())
+			secret.Annotations["serviceaccount.resources.gardener.cloud/token-renew-timestamp"] = "2999-01-01T00:00:00Z"
+			g.Expect(testClient.Patch(ctx, secret, patch)).To(Succeed())
+		}).Should(Succeed())
+
+		Eventually(func(g Gomega) []resourcesv1alpha1.ManagedResource {
+			managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
+			g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
+			return managedResourceList.Items
+		}).Should(ContainElements(
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("shoot-core-gardener-resource-manager")})}),
+		))
+
+		// The garden controller waits for the shoot-core-gardener-resource-manager ManagedResources to be healthy, but virtual-garden-gardener-resource-manager is not really running in
+		// this test, so let's fake this here.
+		By("Patch shoot-core-gardener-resource-manager ManagedResources to report healthiness")
+		Eventually(func(g Gomega) {
+			mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "shoot-core-gardener-resource-manager", Namespace: testNamespace.Name}}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
+
+			patch := client.MergeFrom(mr.DeepCopy())
+			mr.Status.ObservedGeneration = mr.Generation
+			mr.Status.Conditions = []gardencorev1beta1.Condition{
+				{
+					Type:               "ResourcesHealthy",
+					Status:             "True",
+					LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
+					LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
+				},
+				{
+					Type:               "ResourcesApplied",
+					Status:             "True",
+					LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
+					LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
+				},
+			}
+			g.Expect(testClient.Status().Patch(ctx, mr, patch)).To(Succeed())
+		}).Should(Succeed())
+
+		// The secret with the bootstrap certificate should be gone when virtual-garden-gardener-resource-manager was bootstrapped.
+		Eventually(func(g Gomega) []corev1.Secret {
+			secretList := &corev1.SecretList{}
+			g.Expect(testClient.List(ctx, secretList, client.InNamespace(testNamespace.Name))).To(Succeed())
+			return secretList.Items
+		}).ShouldNot(ContainElements(
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": ContainSubstring("shoot-access-gardener-resource-manager-bootstrap-")})}),
+		))
+
+		// The garden controller waits for the virtual-garden-gardener-resource-manager Deployment to be healthy, so let's fake this here.
+		By("Patch virtual-garden-gardener-resource-manager deployment to report healthiness")
+		Eventually(func(g Gomega) {
+			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "virtual-garden-gardener-resource-manager", Namespace: testNamespace.Name}}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+			// Don't patch bootstrapping deployment but wait for final deployment
+			g.Expect(deployment.Spec.Template.Spec.Volumes).ShouldNot(ContainElements(
+				MatchFields(IgnoreExtras, Fields{"Name": Equal("kubeconfig-bootstrap")}),
+			))
+
+			patch := client.MergeFrom(deployment.DeepCopy())
+			deployment.Status.ObservedGeneration = deployment.Generation
+			deployment.Status.Conditions = []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue}}
+			g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
+		}).Should(Succeed())
+
+		By("Patch gardener-internal kubeconfig secret to add the token usually added by virtual-garden-gardener-resource-manager")
+		Eventually(func(g Gomega) {
+			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "gardener-internal", Namespace: testNamespace.Name}}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+
+			patch := client.MergeFrom(secret.DeepCopy())
+			kubeconfig := `apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: AAAA
+    server: https://api-virtual-garden.local.gardener.cloud
+  name: garden
+contexts:
+- context:
+    cluster: garden
+    user: garden
+  name: garden
+current-context: garden
+kind: Config
+preferences: {}
+users:
+- name: garden
+  user:
+    token: foobar
+`
+			secret.Data = map[string][]byte{"kubeconfig": []byte(kubeconfig)}
+			g.Expect(testClient.Patch(ctx, secret, patch)).To(Succeed())
+		}).Should(Succeed())
+
 		By("Wait for Reconciled condition to be set to True")
 		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
@@ -441,6 +561,7 @@ var _ = Describe("Garden controller tests", func() {
 			return deploymentList.Items
 		}).ShouldNot(ContainElements(
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("virtual-garden-kube-apiserver")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("virtual-garden-gardener-resource-manager")})}),
 		))
 
 		Eventually(func(g Gomega) []druidv1alpha1.Etcd {

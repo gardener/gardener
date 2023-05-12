@@ -39,11 +39,14 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/gardeneraccess"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardensystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	sharedcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/shared"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
@@ -57,7 +60,7 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 		defaultUnreachableTolerationSeconds = nodeToleration.DefaultUnreachableTolerationSeconds
 	}
 
-	return sharedcomponent.NewGardenerResourceManager(
+	return sharedcomponent.NewRuntimeGardenerResourceManager(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		r.RuntimeVersion,
@@ -72,6 +75,27 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 		helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 		features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster),
 		garden.Spec.RuntimeCluster.Provider.Zones,
+	)
+}
+
+func (r *Reconciler) newVirtualGardenGardenerResourceManager(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (resourcemanager.Interface, error) {
+	return sharedcomponent.NewTargetGardenerResourceManager(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		r.ImageVector,
+		secretsManager,
+		nil,
+		nil,
+		nil,
+		r.RuntimeVersion,
+		r.Config.LogLevel, r.Config.LogFormat,
+		namePrefix,
+		false,
+		v1beta1constants.PriorityClassNameGardenSystem500,
+		nil,
+		operatorv1alpha1.SecretNameCARuntime,
+		nil,
+		false,
 	)
 }
 
@@ -312,7 +336,7 @@ func (r *Reconciler) newKubeAPIServer(
 		kubeapiserver.VPNConfig{Enabled: false},
 		v1beta1constants.PriorityClassNameGardenSystem500,
 		true,
-		pointer.Bool(true),
+		pointer.Bool(false),
 		auditWebhookConfig,
 		authenticationWebhookConfig,
 		authorizationWebhookConfig,
@@ -436,5 +460,17 @@ func (r *Reconciler) newIstio(garden *operatorv1alpha1.Garden) (istio.Interface,
 		false,
 		false,
 		garden.Spec.RuntimeCluster.Provider.Zones,
+	)
+}
+
+func (r *Reconciler) newGardenerAccess(secretsManager secretsmanager.Interface, domain string) component.Deployer {
+	return gardeneraccess.New(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		secretsManager,
+		gardeneraccess.Values{
+			ServerInCluster:    fmt.Sprintf("%s%s.%s.svc.cluster.local", namePrefix, v1beta1constants.DeploymentNameKubeAPIServer, r.GardenNamespace),
+			ServerOutOfCluster: gardenerutils.GetAPIServerDomain(domain),
+		},
 	)
 }

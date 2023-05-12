@@ -98,6 +98,11 @@ func (r *Reconciler) delete(
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+	virtualGardenGardenerResourceManager, err := r.newVirtualGardenGardenerResourceManager(garden, secretsManager)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	virtualGardenGardenerAccess := r.newGardenerAccess(secretsManager, garden.Spec.VirtualCluster.DNS.Domain)
 
 	// observability components
 	kubeStateMetrics, err := r.newKubeStateMetrics()
@@ -111,6 +116,15 @@ func (r *Reconciler) delete(
 		_ = g.Add(flow.Task{
 			Name: "Destroying Kube State Metrics",
 			Fn:   component.OpDestroyAndWait(kubeStateMetrics).Destroy,
+		})
+		destroyVirtualGardenGardenerAccess = g.Add(flow.Task{
+			Name: "Destroying Gardener virtual garden access resources",
+			Fn:   virtualGardenGardenerAccess.Destroy,
+		})
+		destroyVirtualGardenGardenerResourceManager = g.Add(flow.Task{
+			Name:         "Destroying gardener-resource-manager for virtual garden",
+			Fn:           component.OpDestroyAndWait(virtualGardenGardenerResourceManager).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyVirtualGardenGardenerAccess),
 		})
 		destroyKubeAPIServerService = g.Add(flow.Task{
 			Name: "Destroying Kubernetes API Server service",
@@ -128,8 +142,17 @@ func (r *Reconciler) delete(
 			),
 			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer),
 		})
+		cleanupGenericTokenKubeconfig = g.Add(flow.Task{
+			Name:         "Cleaning up generic token kubeconfig",
+			Fn:           func(ctx context.Context) error { return r.cleanupGenericTokenKubeconfig(ctx, secretsManager) },
+			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer, destroyVirtualGardenGardenerResourceManager),
+		})
 		syncPointVirtualGardenControlPlaneDestroyed = flow.NewTaskIDs(
+			cleanupGenericTokenKubeconfig,
+			destroyVirtualGardenGardenerAccess,
+			destroyVirtualGardenGardenerResourceManager,
 			destroyKubeAPIServerService,
+			destroyKubeAPIServer,
 			destroyEtcd,
 		)
 
@@ -241,7 +264,7 @@ func (r *Reconciler) checkIfManagedResourcesExist() func(context.Context) error 
 
 		return &reconcilerutils.RequeueAfterError{
 			RequeueAfter: 5 * time.Second,
-			Cause:        errors.New("At least one ManagedResource still exists"),
+			Cause:        errors.New("at least one ManagedResource still exists"),
 		}
 	}
 }

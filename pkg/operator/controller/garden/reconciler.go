@@ -41,6 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -271,6 +272,19 @@ func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *o
 	}
 
 	return r.RuntimeClientSet.Client().Status().Update(ctx, garden)
+}
+
+func (r *Reconciler) generateGenericTokenKubeconfig(ctx context.Context, secretsManager secretsmanager.Interface) error {
+	_, err := tokenrequest.GenerateGenericTokenKubeconfig(ctx, secretsManager, r.GardenNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer)
+	return err
+}
+
+func (r *Reconciler) cleanupGenericTokenKubeconfig(ctx context.Context, secretsManager secretsmanager.Interface) error {
+	secret, exists := secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+	if !exists {
+		return nil
+	}
+	return client.IgnoreNotFound(r.RuntimeClientSet.Client().Delete(ctx, secret))
 }
 
 func startRotationCA(garden *operatorv1alpha1.Garden, now *metav1.Time) {

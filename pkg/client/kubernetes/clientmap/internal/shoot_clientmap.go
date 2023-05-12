@@ -20,8 +20,6 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
-	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	componentbaseconfig "k8s.io/component-base/config"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
 )
 
 // shootClientMap is a ClientMap for requesting and storing clients for Shoot clusters.
@@ -83,7 +82,7 @@ func (f *ShootClientSetFactory) NewClientSet(ctx context.Context, k clientmap.Cl
 
 	// Kubeconfig secrets are created with empty authinfo and it's expected that gardener-resource-manager eventually
 	// populates a token, so let's check whether the read secret already contains authinfo
-	tokenPopulated, err := isTokenPopulated(kubeconfigSecret)
+	tokenPopulated, err := tokenrequest.IsTokenPopulated(kubeconfigSecret)
 	if err != nil {
 		return nil, "", err
 	}
@@ -201,30 +200,4 @@ type ShootClientSetKey struct {
 // Key returns the string representation of the ClientSetKey.
 func (k ShootClientSetKey) Key() string {
 	return k.Namespace + "/" + k.Name
-}
-
-func isTokenPopulated(secret *corev1.Secret) (bool, error) {
-	kubeconfig := &clientcmdv1.Config{}
-	if _, _, err := clientcmdlatest.Codec.Decode(secret.Data[kubernetes.KubeConfig], nil, kubeconfig); err != nil {
-		return false, err
-	}
-
-	var userName string
-	for _, namedContext := range kubeconfig.Contexts {
-		if namedContext.Name == kubeconfig.CurrentContext {
-			userName = namedContext.Context.AuthInfo
-			break
-		}
-	}
-
-	for _, users := range kubeconfig.AuthInfos {
-		if users.Name == userName {
-			if len(users.AuthInfo.Token) > 0 {
-				return true, nil
-			}
-			return false, nil
-		}
-	}
-
-	return false, nil
 }

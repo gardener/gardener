@@ -258,14 +258,20 @@ users:
 
 	Describe("#Destroy", func() {
 		It("should successfully delete all the resources", func() {
+			expectedGardenerSecret.ResourceVersion = ""
+			expectedGardenerInternalSecret.ResourceVersion = ""
 			expectedManagedResourceSecret.ResourceVersion = ""
 			expectedManagedResource.ResourceVersion = ""
 
+			Expect(fakeClient.Create(ctx, expectedGardenerSecret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, expectedGardenerInternalSecret)).To(Succeed())
 			Expect(fakeClient.Create(ctx, expectedManagedResourceSecret)).To(Succeed())
 			Expect(fakeClient.Create(ctx, expectedManagedResource)).To(Succeed())
 
 			Expect(access.Destroy(ctx)).To(Succeed())
 
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedGardenerSecret), expectedGardenerSecret)).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedGardenerInternalSecret), expectedGardenerInternalSecret)).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedManagedResourceSecret), expectedManagedResourceSecret)).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedManagedResource), expectedManagedResource)).To(BeNotFoundError())
 		})

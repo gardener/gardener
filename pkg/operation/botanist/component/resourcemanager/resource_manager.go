@@ -161,39 +161,41 @@ var (
 		Verbs:     []string{"*"},
 	}}
 
-	allowManagedResources = []rbacv1.PolicyRule{
-		{
-			APIGroups: []string{"resources.gardener.cloud"},
-			Resources: []string{"managedresources", "managedresources/status"},
-			Verbs:     []string{"get", "list", "watch", "update", "patch"},
-		},
-		{
-			APIGroups: []string{""},
-			Resources: []string{"secrets"},
-			Verbs:     []string{"get", "list", "watch", "update", "patch"},
-		},
-		{
-			APIGroups: []string{""},
-			Resources: []string{"configmaps", "events"},
-			Verbs:     []string{"create"},
-		},
-		{
-			APIGroups:     []string{""},
-			Resources:     []string{"configmaps"},
-			ResourceNames: []string{"gardener-resource-manager"},
-			Verbs:         []string{"get", "watch", "update", "patch"},
-		},
-		{
-			APIGroups: []string{"coordination.k8s.io"},
-			Resources: []string{"leases"},
-			Verbs:     []string{"create"},
-		},
-		{
-			APIGroups:     []string{"coordination.k8s.io"},
-			Resources:     []string{"leases"},
-			ResourceNames: []string{"gardener-resource-manager"},
-			Verbs:         []string{"get", "watch", "update"},
-		},
+	allowManagedResources = func(namePrefix string) []rbacv1.PolicyRule {
+		return []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{"resources.gardener.cloud"},
+				Resources: []string{"managedresources", "managedresources/status"},
+				Verbs:     []string{"get", "list", "watch", "update", "patch"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"secrets"},
+				Verbs:     []string{"get", "list", "watch", "update", "patch"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"configmaps", "events"},
+				Verbs:     []string{"create"},
+			},
+			{
+				APIGroups:     []string{""},
+				Resources:     []string{"configmaps"},
+				ResourceNames: []string{namePrefix + configMapNamePrefix},
+				Verbs:         []string{"get", "watch", "update", "patch"},
+			},
+			{
+				APIGroups: []string{"coordination.k8s.io"},
+				Resources: []string{"leases"},
+				Verbs:     []string{"create"},
+			},
+			{
+				APIGroups:     []string{"coordination.k8s.io"},
+				Resources:     []string{"leases"},
+				ResourceNames: []string{namePrefix + v1beta1constants.DeploymentNameGardenerResourceManager},
+				Verbs:         []string{"get", "watch", "update"},
+			},
+		}
 	}
 	allowMachines = []rbacv1.PolicyRule{
 		{
@@ -274,6 +276,8 @@ type Values struct {
 	MaxConcurrentTokenRequestorWorkers *int
 	// MaxConcurrentCSRApproverWorkers configures the number of worker threads for concurrent kubelet CSR approver reconciliations
 	MaxConcurrentCSRApproverWorkers *int
+	// NamePrefix is the prefix for the resource names.
+	NamePrefix string
 	// PriorityClassName is the name of the priority class.
 	PriorityClassName string
 	// Replicas is the number of replicas for the gardener-resource-manager deployment.
@@ -440,14 +444,14 @@ func (r *resourceManager) ensureCustomResourceDefinition(ctx context.Context) er
 func (r *resourceManager) ensureRBAC(ctx context.Context) error {
 	if r.values.TargetDiffersFromSourceCluster {
 		if r.values.WatchedNamespace == nil {
-			if err := r.ensureClusterRole(ctx, allowManagedResources); err != nil {
+			if err := r.ensureClusterRole(ctx, allowManagedResources(r.values.NamePrefix)); err != nil {
 				return err
 			}
 			if err := r.ensureClusterRoleBinding(ctx); err != nil {
 				return err
 			}
 		} else {
-			if err := r.ensureRoleInWatchedNamespace(ctx, append(allowManagedResources, allowMachines...)...); err != nil {
+			if err := r.ensureRoleInWatchedNamespace(ctx, append(allowManagedResources(r.values.NamePrefix), allowMachines...)...); err != nil {
 				return err
 			}
 			if err := r.ensureRoleBinding(ctx); err != nil {
@@ -476,7 +480,7 @@ func (r *resourceManager) ensureClusterRole(ctx context.Context, policies []rbac
 }
 
 func (r *resourceManager) emptyClusterRole() *rbacv1.ClusterRole {
-	return &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}
+	return &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: r.values.NamePrefix + clusterRoleName}}
 }
 
 func (r *resourceManager) ensureClusterRoleBinding(ctx context.Context) error {
@@ -486,11 +490,11 @@ func (r *resourceManager) ensureClusterRoleBinding(ctx context.Context) error {
 		clusterRoleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     clusterRoleName,
+			Name:     r.values.NamePrefix + clusterRoleName,
 		}
 		clusterRoleBinding.Subjects = []rbacv1.Subject{{
 			Kind:      rbacv1.ServiceAccountKind,
-			Name:      serviceAccountName,
+			Name:      r.values.NamePrefix + serviceAccountName,
 			Namespace: r.namespace,
 		}}
 		return nil
@@ -499,7 +503,7 @@ func (r *resourceManager) ensureClusterRoleBinding(ctx context.Context) error {
 }
 
 func (r *resourceManager) emptyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
-	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}
+	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: r.values.NamePrefix + clusterRoleName}}
 }
 
 func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1.ConfigMap) error {
@@ -509,6 +513,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 		},
 		LeaderElection: componentbaseconfigv1alpha1.LeaderElectionConfiguration{
 			LeaderElect:       pointer.Bool(true),
+			ResourceName:      r.values.NamePrefix + v1beta1constants.DeploymentNameGardenerResourceManager,
 			ResourceNamespace: r.namespace,
 		},
 		Server: resourcemanagerv1alpha1.ServerConfiguration{
@@ -646,7 +651,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 }
 
 func (r *resourceManager) emptyConfigMap() *corev1.ConfigMap {
-	return &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: configMapNamePrefix, Namespace: r.namespace}}
+	return &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: r.values.NamePrefix + configMapNamePrefix, Namespace: r.namespace}}
 }
 
 func (r *resourceManager) ensureRoleInWatchedNamespace(ctx context.Context, policies ...rbacv1.PolicyRule) error {
@@ -660,7 +665,7 @@ func (r *resourceManager) ensureRoleInWatchedNamespace(ctx context.Context, poli
 }
 
 func (r *resourceManager) emptyRoleInWatchedNamespace() *rbacv1.Role {
-	return &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: roleName, Namespace: *r.values.WatchedNamespace}}
+	return &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: r.values.NamePrefix + roleName, Namespace: *r.values.WatchedNamespace}}
 }
 
 func (r *resourceManager) ensureRoleBinding(ctx context.Context) error {
@@ -670,11 +675,11 @@ func (r *resourceManager) ensureRoleBinding(ctx context.Context) error {
 		roleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "Role",
-			Name:     roleName,
+			Name:     r.values.NamePrefix + roleName,
 		}
 		roleBinding.Subjects = []rbacv1.Subject{{
 			Kind:      rbacv1.ServiceAccountKind,
-			Name:      serviceAccountName,
+			Name:      r.values.NamePrefix + serviceAccountName,
 			Namespace: r.namespace,
 		}}
 		return nil
@@ -683,7 +688,7 @@ func (r *resourceManager) ensureRoleBinding(ctx context.Context) error {
 }
 
 func (r *resourceManager) emptyRoleBindingInWatchedNamespace() *rbacv1.RoleBinding {
-	return &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: *r.values.WatchedNamespace}}
+	return &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: r.values.NamePrefix + roleName, Namespace: *r.values.WatchedNamespace}}
 }
 
 func (r *resourceManager) ensureService(ctx context.Context) error {
@@ -711,7 +716,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 		topologyAwareRoutingEnabled := r.values.TopologyAwareRoutingEnabled && r.values.TargetDiffersFromSourceCluster
 		gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, topologyAwareRoutingEnabled)
 
-		service.Spec.Selector = appLabel()
+		service.Spec.Selector = r.appLabel()
 		service.Spec.Type = corev1.ServiceTypeClusterIP
 		desiredPorts := []corev1.ServicePort{
 			{
@@ -738,16 +743,16 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 }
 
 func (r *resourceManager) emptyService() *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: resourcemanagerconstants.ServiceName, Namespace: r.namespace}}
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: r.values.NamePrefix + resourcemanagerconstants.ServiceName, Namespace: r.namespace}}
 }
 
 func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev1.ConfigMap) error {
 	deployment := r.emptyDeployment()
 
 	secretServer, err := r.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
-		Name:                        secretNameServer,
-		CommonName:                  v1beta1constants.DeploymentNameGardenerResourceManager,
-		DNSNames:                    kubernetesutils.DNSNamesForService(resourcemanagerconstants.ServiceName, r.namespace),
+		Name:                        r.values.NamePrefix + secretNameServer,
+		CommonName:                  r.values.NamePrefix + v1beta1constants.DeploymentNameGardenerResourceManager,
+		DNSNames:                    kubernetesutils.DNSNamesForService(r.values.NamePrefix+resourcemanagerconstants.ServiceName, r.namespace),
 		CertType:                    secrets.ServerCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(r.values.SecretNameServerCA, secretsmanager.UseCurrentCA), secretsmanager.Rotate(secretsmanager.InPlace))
@@ -778,7 +783,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 
 		deployment.Spec.Replicas = r.values.Replicas
 		deployment.Spec.RevisionHistoryLimit = pointer.Int32(2)
-		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: appLabel()}
+		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: r.appLabel()}
 
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
@@ -793,7 +798,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 						Type: corev1.SeccompProfileTypeRuntimeDefault,
 					},
 				},
-				ServiceAccountName: serviceAccountName,
+				ServiceAccountName: r.values.NamePrefix + serviceAccountName,
 				Containers: []corev1.Container{
 					{
 						Name:            containerName,
@@ -1008,7 +1013,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 }
 
 func (r *resourceManager) emptyDeployment() *appsv1.Deployment {
-	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameGardenerResourceManager, Namespace: r.namespace}}
+	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: r.values.NamePrefix + v1beta1constants.DeploymentNameGardenerResourceManager, Namespace: r.namespace}}
 }
 
 func (r *resourceManager) ensureServiceAccount(ctx context.Context) error {
@@ -1022,7 +1027,7 @@ func (r *resourceManager) ensureServiceAccount(ctx context.Context) error {
 }
 
 func (r *resourceManager) emptyServiceAccount() *corev1.ServiceAccount {
-	return &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: serviceAccountName, Namespace: r.namespace}}
+	return &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: r.values.NamePrefix + serviceAccountName, Namespace: r.namespace}}
 }
 
 func (r *resourceManager) ensureVPA(ctx context.Context) error {
@@ -1035,7 +1040,7 @@ func (r *resourceManager) ensureVPA(ctx context.Context) error {
 		vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
 			APIVersion: appsv1.SchemeGroupVersion.String(),
 			Kind:       "Deployment",
-			Name:       v1beta1constants.DeploymentNameGardenerResourceManager,
+			Name:       r.values.NamePrefix + v1beta1constants.DeploymentNameGardenerResourceManager,
 		}
 		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
 			UpdateMode: &vpaUpdateMode,
@@ -1093,7 +1098,7 @@ func (r *resourceManager) ensurePodDisruptionBudget(ctx context.Context) error {
 
 func (r *resourceManager) emptyPodDisruptionBudget() client.Object {
 	pdbObjectMeta := metav1.ObjectMeta{
-		Name:      "gardener-resource-manager",
+		Name:      r.values.NamePrefix + v1beta1constants.DeploymentNameGardenerResourceManager,
 		Namespace: r.namespace,
 	}
 
@@ -1120,7 +1125,7 @@ func (r *resourceManager) ensureMutatingWebhookConfiguration(ctx context.Context
 	}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, mutatingWebhookConfiguration, func() error {
-		mutatingWebhookConfiguration.Labels = utils.MergeStringMaps(appLabel(), map[string]string{
+		mutatingWebhookConfiguration.Labels = utils.MergeStringMaps(r.appLabel(), map[string]string{
 			v1beta1constants.LabelExcludeWebhookFromRemediation: "true",
 		})
 		mutatingWebhookConfiguration.Webhooks = r.getMutatingWebhookConfigurationWebhooks(secretServerCA, r.buildWebhookClientConfig)
@@ -1134,7 +1139,7 @@ func (r *resourceManager) emptyMutatingWebhookConfiguration() *admissionregistra
 	if r.values.TargetDiffersFromSourceCluster {
 		suffix = "-shoot"
 	}
-	return &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager" + suffix, Namespace: r.namespace}}
+	return &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: r.values.NamePrefix + v1beta1constants.DeploymentNameGardenerResourceManager + suffix, Namespace: r.namespace}}
 }
 
 func (r *resourceManager) ensureValidatingWebhookConfiguration(ctx context.Context) error {
@@ -1150,7 +1155,7 @@ func (r *resourceManager) ensureValidatingWebhookConfiguration(ctx context.Conte
 	}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, validatingWebhookConfiguration, func() error {
-		validatingWebhookConfiguration.Labels = utils.MergeStringMaps(appLabel(), map[string]string{
+		validatingWebhookConfiguration.Labels = utils.MergeStringMaps(r.appLabel(), map[string]string{
 			v1beta1constants.LabelExcludeWebhookFromRemediation: "true",
 		})
 		validatingWebhookConfiguration.Webhooks = r.getValidatingWebhookConfigurationWebhooks(secretServerCA, r.buildWebhookClientConfig)
@@ -1160,7 +1165,7 @@ func (r *resourceManager) ensureValidatingWebhookConfiguration(ctx context.Conte
 }
 
 func (r *resourceManager) emptyValidatingWebhookConfiguration() *admissionregistrationv1.ValidatingWebhookConfiguration {
-	return &admissionregistrationv1.ValidatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: r.namespace}}
+	return &admissionregistrationv1.ValidatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: r.values.NamePrefix + v1beta1constants.DeploymentNameGardenerResourceManager, Namespace: r.namespace}}
 }
 
 func (r *resourceManager) ensureShootResources(ctx context.Context) error {
@@ -1192,7 +1197,7 @@ func (r *resourceManager) ensureShootResources(ctx context.Context) error {
 		}
 	)
 
-	mutatingWebhookConfiguration.Labels = appLabel()
+	mutatingWebhookConfiguration.Labels = r.appLabel()
 	mutatingWebhookConfiguration.Webhooks = r.getMutatingWebhookConfigurationWebhooks(secretServerCA, r.buildWebhookClientConfig)
 
 	data, err := registry.AddAllAndSerialize(
@@ -1229,7 +1234,7 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 
 	webhooks := []admissionregistrationv1.MutatingWebhook{
 		GetTokenInvalidatorMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
-		getProjectedTokenMountMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
+		r.getProjectedTokenMountMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
 		GetHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn),
 	}
 
@@ -1239,7 +1244,7 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 	}
 
 	if r.values.DefaultSeccompProfileEnabled {
-		webhooks = append(webhooks, GetSeccompProfileMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn))
+		webhooks = append(webhooks, GetSeccompProfileMutatingWebhook(r.values.NamePrefix, namespaceSelector, secretServerCA, buildClientConfigFn))
 	}
 
 	if r.values.TargetDiffersFromSourceCluster {
@@ -1251,7 +1256,7 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 	}
 
 	if r.values.PodTopologySpreadConstraintsEnabled {
-		webhooks = append(webhooks, GetPodTopologySpreadConstraintsMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
+		webhooks = append(webhooks, GetPodTopologySpreadConstraintsMutatingWebhook(r.values.NamePrefix, namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
 	return webhooks
@@ -1521,7 +1526,7 @@ func GetExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 	return webhooks
 }
 
-func getProjectedTokenMountMutatingWebhook(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
+func (r *resourceManager) getProjectedTokenMountMutatingWebhook(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
 	var (
 		failurePolicy = admissionregistrationv1.Fail
 		matchPolicy   = admissionregistrationv1.Exact
@@ -1548,7 +1553,7 @@ func getProjectedTokenMountMutatingWebhook(namespaceSelector *metav1.LabelSelect
 				{
 					Key:      v1beta1constants.LabelApp,
 					Operator: metav1.LabelSelectorOpNotIn,
-					Values:   []string{LabelValue},
+					Values:   []string{r.values.NamePrefix + LabelValue},
 				},
 			},
 		},
@@ -1594,6 +1599,7 @@ func GetPodSchedulerNameMutatingWebhook(namespaceSelector *metav1.LabelSelector,
 // GetPodTopologySpreadConstraintsMutatingWebhook returns the TSC mutating webhook for the resourcemanager component for reuse
 // between the component and integration tests.
 func GetPodTopologySpreadConstraintsMutatingWebhook(
+	resourceManagerPrefix string,
 	namespaceSelector *metav1.LabelSelector,
 	objectSelector *metav1.LabelSelector,
 	secretServerCA *corev1.Secret,
@@ -1615,7 +1621,7 @@ func GetPodTopologySpreadConstraintsMutatingWebhook(
 		metav1.LabelSelectorRequirement{
 			Key:      v1beta1constants.LabelApp,
 			Operator: metav1.LabelSelectorOpNotIn,
-			Values:   []string{LabelValue},
+			Values:   []string{resourceManagerPrefix + LabelValue},
 		},
 		metav1.LabelSelectorRequirement{
 			Key:      resourcesv1alpha1.PodTopologySpreadConstraintsSkip,
@@ -1647,6 +1653,7 @@ func GetPodTopologySpreadConstraintsMutatingWebhook(
 // GetSeccompProfileMutatingWebhook returns the seccomp-profile mutating webhook for the resourcemanager component for reuse
 // between the component and integration tests.
 func GetSeccompProfileMutatingWebhook(
+	resourceManagerPrefix string,
 	namespaceSelector *metav1.LabelSelector,
 	secretServerCA *corev1.Secret,
 	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
@@ -1677,7 +1684,7 @@ func GetSeccompProfileMutatingWebhook(
 				{
 					Key:      v1beta1constants.LabelApp,
 					Operator: metav1.LabelSelectorOpNotIn,
-					Values:   []string{LabelValue},
+					Values:   []string{resourceManagerPrefix + LabelValue},
 				},
 			},
 		},
@@ -1868,10 +1875,10 @@ func (r *resourceManager) buildWebhookClientConfig(secretServerCA *corev1.Secret
 	clientConfig := admissionregistrationv1.WebhookClientConfig{CABundle: secretServerCA.Data[secrets.DataKeyCertificateBundle]}
 
 	if r.values.TargetDiffersFromSourceCluster {
-		clientConfig.URL = pointer.String(fmt.Sprintf("https://%s.%s:%d%s", resourcemanagerconstants.ServiceName, r.namespace, serverServicePort, path))
+		clientConfig.URL = pointer.String(fmt.Sprintf("https://%s.%s:%d%s", r.values.NamePrefix+resourcemanagerconstants.ServiceName, r.namespace, serverServicePort, path))
 	} else {
 		clientConfig.Service = &admissionregistrationv1.ServiceReference{
-			Name:      resourcemanagerconstants.ServiceName,
+			Name:      r.values.NamePrefix + resourcemanagerconstants.ServiceName,
 			Namespace: r.namespace,
 			Path:      &path,
 		}
@@ -1882,12 +1889,12 @@ func (r *resourceManager) buildWebhookClientConfig(secretServerCA *corev1.Secret
 
 func (r *resourceManager) getLabels() map[string]string {
 	if r.values.TargetDiffersFromSourceCluster {
-		return utils.MergeStringMaps(appLabel(), map[string]string{
+		return utils.MergeStringMaps(r.appLabel(), map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		})
 	}
 
-	return appLabel()
+	return r.appLabel()
 }
 
 func (r *resourceManager) getDeploymentTemplateLabels() map[string]string {
@@ -1896,7 +1903,7 @@ func (r *resourceManager) getDeploymentTemplateLabels() map[string]string {
 		role = v1beta1constants.GardenRoleControlPlane
 	}
 
-	return utils.MergeStringMaps(appLabel(), map[string]string{
+	return utils.MergeStringMaps(r.appLabel(), map[string]string{
 		v1beta1constants.GardenRole: role,
 	})
 }
@@ -1908,15 +1915,15 @@ func (r *resourceManager) getNetworkPolicyLabels() map[string]string {
 	}
 
 	if r.values.TargetDiffersFromSourceCluster {
-		labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port)] = v1beta1constants.LabelNetworkPolicyAllowed
+		labels[gardenerutils.NetworkPolicyLabel(r.values.NamePrefix+v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port)] = v1beta1constants.LabelNetworkPolicyAllowed
 	}
 
 	return labels
 }
 
-func appLabel() map[string]string {
+func (r *resourceManager) appLabel() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelApp: LabelValue,
+		v1beta1constants.LabelApp: r.values.NamePrefix + LabelValue,
 	}
 }
 

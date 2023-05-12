@@ -148,7 +148,7 @@ func getMutatingWebhookConfigurations(namespaceName string) []*admissionregistra
 				Name: "gardener-resource-manager",
 			},
 			Webhooks: []admissionregistrationv1.MutatingWebhook{
-				resourcemanager.GetSeccompProfileMutatingWebhook(&metav1.LabelSelector{
+				resourcemanager.GetSeccompProfileMutatingWebhook("", &metav1.LabelSelector{
 					MatchLabels: map[string]string{corev1.LabelMetadataName: namespaceName},
 				}, nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
 					return admissionregistrationv1.WebhookClientConfig{

@@ -1,4 +1,4 @@
-// Copyright 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package botanist_test
+package shared_test
 
 import (
 	"context"
@@ -22,7 +22,6 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,17 +33,10 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/operation"
-	. "github.com/gardener/gardener/pkg/operation/botanist"
-	mockkubeapiserver "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/mock"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	mockresourcemanager "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager/mock"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/shared"
-	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
-	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
@@ -53,88 +45,32 @@ import (
 
 var _ = Describe("ResourceManager", func() {
 	var (
-		ctrl     *gomock.Controller
-		botanist *Botanist
+		ctrl *gomock.Controller
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		botanist = &Botanist{Operation: &operation.Operation{}}
 	})
 
 	AfterEach(func() {
 		ctrl.Finish()
 	})
 
-	Describe("#DefaultResourceManager", func() {
-		var (
-			k8sSeedClient kubernetes.Interface
-		)
-
-		BeforeEach(func() {
-			k8sSeedClient = kubernetesfake.NewClientSetBuilder().WithVersion("v1.26.1").Build()
-			botanist.SeedClientSet = k8sSeedClient
-
-			botanist.Seed = &seedpkg.Seed{}
-			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{})
-			botanist.Shoot = &shootpkg.Shoot{}
-			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
-		})
-
-		It("should successfully create a resource-manager component", func() {
-			botanist.ImageVector = imagevector.ImageVector{
-				{Name: "gardener-resource-manager"},
-			}
-
-			resourceManager, err := botanist.DefaultResourceManager()
-			Expect(resourceManager).NotTo(BeNil())
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should return an error because the gardener-resource-manager image cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{}
-
-			resourceManager, err := botanist.DefaultResourceManager()
-			Expect(resourceManager).To(BeNil())
-			Expect(err).To(HaveOccurred())
-		})
-
-		It("should consider node toleration configuration", func() {
-			botanist.ImageVector = imagevector.ImageVector{
-				{Name: "gardener-resource-manager"},
-			}
-
-			notReadyTolerationSeconds := pointer.Int64(60)
-			unreachableTolerationSeconds := pointer.Int64(120)
-
-			botanist.Config = &gardenletconfig.GardenletConfiguration{
-				NodeToleration: &gardenletconfig.NodeToleration{
-					DefaultNotReadyTolerationSeconds:    notReadyTolerationSeconds,
-					DefaultUnreachableTolerationSeconds: unreachableTolerationSeconds,
-				},
-			}
-
-			resourceManager, err := botanist.DefaultResourceManager()
-			Expect(resourceManager).NotTo(BeNil())
-			Expect(err).NotTo(HaveOccurred())
-			Expect(resourceManager.GetValues().DefaultNotReadyToleration).To(Equal(notReadyTolerationSeconds))
-			Expect(resourceManager.GetValues().DefaultUnreachableToleration).To(Equal(unreachableTolerationSeconds))
-		})
-	})
-
 	Describe("#DeployGardenerResourceManager", func() {
 		var (
-			kubeAPIServer   *mockkubeapiserver.MockInterface
 			resourceManager *mockresourcemanager.MockInterface
 			secrets         resourcemanager.Secrets
 
-			ctx           = context.TODO()
-			fakeErr       = fmt.Errorf("fake err")
-			seedNamespace = "fake-seed-ns"
+			ctx       = context.TODO()
+			fakeErr   = fmt.Errorf("fake err")
+			namespace = "fake-ns"
 
 			c             *mockclient.MockClient
 			k8sSeedClient kubernetes.Interface
 			sm            secretsmanager.Interface
+
+			setReplicas         func(ctx context.Context) (int32, error)
+			getAPIServerAddress func() string
 
 			bootstrapKubeconfigSecret *corev1.Secret
 			shootAccessSecret         *corev1.Secret
@@ -142,47 +78,32 @@ var _ = Describe("ResourceManager", func() {
 		)
 
 		BeforeEach(func() {
-			kubeAPIServer = mockkubeapiserver.NewMockInterface(ctrl)
 			resourceManager = mockresourcemanager.NewMockInterface(ctrl)
 
 			c = mockclient.NewMockClient(ctrl)
 			k8sSeedClient = kubernetesfake.NewClientSetBuilder().WithClient(c).Build()
-			sm = fakesecretsmanager.New(c, seedNamespace)
+			sm = fakesecretsmanager.New(c, namespace)
+
+			setReplicas = func(ctx context.Context) (int32, error) {
+				return 2, nil
+			}
+			getAPIServerAddress = func() string { return "kube-apiserver" }
 
 			By("Ensure secrets managed outside of this function for whose secretsmanager.Get() will be called")
-			c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(seedNamespace, "ca"), gomock.AssignableToTypeOf(&corev1.Secret{})).AnyTimes()
-
-			botanist.SeedClientSet = k8sSeedClient
-			botanist.SecretsManager = sm
-			botanist.Shoot = &shootpkg.Shoot{
-				Components: &shootpkg.Components{
-					ControlPlane: &shootpkg.ControlPlane{
-						KubeAPIServer:   kubeAPIServer,
-						ResourceManager: resourceManager,
-					},
-				},
-				SeedNamespace: seedNamespace,
-			}
-			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-				Status: gardencorev1beta1.ShootStatus{
-					LastOperation: &gardencorev1beta1.LastOperation{
-						Type: gardencorev1beta1.LastOperationTypeReconcile,
-					},
-				},
-			})
+			c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, "ca"), gomock.AssignableToTypeOf(&corev1.Secret{})).AnyTimes()
 
 			secrets = resourcemanager.Secrets{}
 
 			bootstrapKubeconfigSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "shoot-access-gardener-resource-manager-bootstrap-905aeb60",
-					Namespace: seedNamespace,
+					Name:      "shoot-access-gardener-resource-manager-bootstrap-d9a4d56e",
+					Namespace: namespace,
 				},
 			}
 			shootAccessSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "shoot-access-gardener-resource-manager",
-					Namespace: seedNamespace,
+					Namespace: namespace,
 					Annotations: map[string]string{
 						"serviceaccount.resources.gardener.cloud/token-renew-timestamp": time.Now().Add(time.Hour).Format(time.RFC3339),
 					},
@@ -191,117 +112,16 @@ var _ = Describe("ResourceManager", func() {
 			managedResource = &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "shoot-core-gardener-resource-manager",
-					Namespace: seedNamespace,
+					Namespace: namespace,
 				},
 			}
 		})
 
 		Context("w/o bootstrapping", func() {
-			Context("when GRM should not be scaled up", func() {
-				AfterEach(func() {
-					gomock.InOrder(
-						// replicas are set to 0, i.e., GRM should not be scaled up
-						resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(0)),
-
-						// set secrets
-						resourceManager.EXPECT().SetSecrets(secrets),
-					)
-
-					resourceManager.EXPECT().Deploy(ctx)
-					Expect(botanist.DeployGardenerResourceManager(ctx)).To(Succeed())
-				})
-
-				It("due to shoot reconciling and hibernated", func() {
-					botanist.Shoot.HibernationEnabled = true
-					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-						Spec: gardencorev1beta1.ShootSpec{
-							Hibernation: &gardencorev1beta1.Hibernation{
-								Enabled: pointer.Bool(true),
-							},
-						},
-						Status: gardencorev1beta1.ShootStatus{
-							LastOperation: &gardencorev1beta1.LastOperation{
-								Type: gardencorev1beta1.LastOperationTypeReconcile,
-							},
-							IsHibernated: true,
-						},
-					})
-
-					gomock.InOrder(
-						resourceManager.EXPECT().GetReplicas(),
-						c.EXPECT().Get(ctx, kubernetesutils.Key(seedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-						resourceManager.EXPECT().SetReplicas(pointer.Int32(0)),
-					)
-				})
-
-				It("due to shoot reconciling and not hibernated but deployment replicas are 0", func() {
-					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-						Status: gardencorev1beta1.ShootStatus{
-							LastOperation: &gardencorev1beta1.LastOperation{
-								Type: gardencorev1beta1.LastOperationTypeReconcile,
-							},
-						},
-					})
-
-					gomock.InOrder(
-						resourceManager.EXPECT().GetReplicas(),
-						kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(pointer.Int32(0)),
-						resourceManager.EXPECT().SetReplicas(pointer.Int32(0)),
-					)
-				})
-
-				It("due to shoot creation and hibernated", func() {
-					botanist.Shoot.HibernationEnabled = true
-					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-						Spec: gardencorev1beta1.ShootSpec{
-							Hibernation: &gardencorev1beta1.Hibernation{
-								Enabled: pointer.Bool(true),
-							},
-						},
-						Status: gardencorev1beta1.ShootStatus{
-							LastOperation: &gardencorev1beta1.LastOperation{
-								Type: gardencorev1beta1.LastOperationTypeCreate,
-							},
-							IsHibernated: true,
-						},
-					})
-
-					gomock.InOrder(
-						resourceManager.EXPECT().GetReplicas(),
-						c.EXPECT().Get(ctx, kubernetesutils.Key(seedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-						resourceManager.EXPECT().SetReplicas(pointer.Int32(0)),
-					)
-				})
-
-				It("due to shoot restoration and hibernated", func() {
-					botanist.Shoot.HibernationEnabled = true
-					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-						Spec: gardencorev1beta1.ShootSpec{
-							Hibernation: &gardencorev1beta1.Hibernation{
-								Enabled: pointer.Bool(true),
-							},
-						},
-						Status: gardencorev1beta1.ShootStatus{
-							LastOperation: &gardencorev1beta1.LastOperation{
-								Type: gardencorev1beta1.LastOperationTypeRestore,
-							},
-							IsHibernated: true,
-						},
-					})
-
-					gomock.InOrder(
-						resourceManager.EXPECT().GetReplicas(),
-						c.EXPECT().Get(ctx, kubernetesutils.Key(seedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-						resourceManager.EXPECT().SetReplicas(pointer.Int32(0)),
-					)
-				})
-			})
-
-			Context("shoot is not hibernated", func() {
+			Context("deploy gardener-resource-manager", func() {
 				BeforeEach(func() {
 					gomock.InOrder(
 						resourceManager.EXPECT().GetReplicas(),
-						kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(pointer.Int32(1)),
 						resourceManager.EXPECT().SetReplicas(pointer.Int32(2)),
 						resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(2)),
 
@@ -319,12 +139,12 @@ var _ = Describe("ResourceManager", func() {
 
 				It("should set the secrets and deploy", func() {
 					resourceManager.EXPECT().Deploy(ctx)
-					Expect(botanist.DeployGardenerResourceManager(ctx)).To(Succeed())
+					Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(Succeed())
 				})
 
 				It("should fail when the deploy function fails", func() {
 					resourceManager.EXPECT().Deploy(ctx).Return(fakeErr)
-					Expect(botanist.DeployGardenerResourceManager(ctx)).To(MatchError(fakeErr))
+					Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(MatchError(fakeErr))
 				})
 			})
 		})
@@ -332,7 +152,7 @@ var _ = Describe("ResourceManager", func() {
 		Context("w/ bootstrapping", func() {
 			Context("with success", func() {
 				AfterEach(func() {
-					defer test.WithVar(&shared.TimeoutWaitForGardenerResourceManagerBootstrapping, time.Second)()
+					defer test.WithVar(&TimeoutWaitForGardenerResourceManagerBootstrapping, time.Second)()
 
 					gomock.InOrder(
 						// create bootstrap kubeconfig
@@ -373,7 +193,7 @@ var _ = Describe("ResourceManager", func() {
 						resourceManager.EXPECT().Deploy(ctx),
 					)
 
-					Expect(botanist.DeployGardenerResourceManager(ctx)).To(Succeed())
+					Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(Succeed())
 				})
 
 				tests := func() {
@@ -431,42 +251,13 @@ var _ = Describe("ResourceManager", func() {
 					})
 				}
 
-				Context("shoot is not hibernated", func() {
+				Context("deploy with 2 replicas", func() {
 					BeforeEach(func() {
-						botanist.Shoot.HibernationEnabled = false
-
 						gomock.InOrder(
 							resourceManager.EXPECT().GetReplicas(),
-							kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(pointer.Int32(1)),
 							resourceManager.EXPECT().SetReplicas(pointer.Int32(2)),
 							resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(2)),
 						)
-					})
-
-					tests()
-				})
-
-				Context("shoot is in the process of being woken-up", func() {
-					BeforeEach(func() {
-						botanist.Shoot.HibernationEnabled = false
-						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{IsHibernated: true}})
-
-						gomock.InOrder(
-							resourceManager.EXPECT().GetReplicas(),
-							kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(pointer.Int32(1)),
-							resourceManager.EXPECT().SetReplicas(pointer.Int32(2)),
-							resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(2)),
-						)
-					})
-
-					tests()
-				})
-
-				Context("shoot is hibernated but GRM should be scaled up", func() {
-					BeforeEach(func() {
-						botanist.Shoot.HibernationEnabled = true
-						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{IsHibernated: true}})
-						resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(2)).Times(2)
 					})
 
 					tests()
@@ -485,7 +276,7 @@ var _ = Describe("ResourceManager", func() {
 						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
 					)
 
-					Expect(botanist.DeployGardenerResourceManager(ctx)).To(MatchError(fakeErr))
+					Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(MatchError(fakeErr))
 				})
 
 				Context("waiting for bootstrapping process", func() {
@@ -503,40 +294,40 @@ var _ = Describe("ResourceManager", func() {
 					})
 
 					It("fails because the shoot access token was not generated", func() {
-						defer test.WithVar(&shared.TimeoutWaitForGardenerResourceManagerBootstrapping, time.Millisecond)()
+						defer test.WithVar(&TimeoutWaitForGardenerResourceManagerBootstrapping, time.Millisecond)()
 
 						c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
 							obj.Annotations = nil
 							return nil
 						})
 
-						Expect(botanist.DeployGardenerResourceManager(ctx)).To(MatchError(ContainSubstring("token not yet generated")))
+						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(MatchError(ContainSubstring("token not yet generated")))
 					})
 
 					It("fails because the shoot access token renew timestamp cannot be parsed", func() {
-						defer test.WithVar(&shared.TimeoutWaitForGardenerResourceManagerBootstrapping, time.Millisecond)()
+						defer test.WithVar(&TimeoutWaitForGardenerResourceManagerBootstrapping, time.Millisecond)()
 
 						c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
 							obj.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": "foo"}
 							return nil
 						})
 
-						Expect(botanist.DeployGardenerResourceManager(ctx).Error()).To(ContainSubstring("could not parse renew timestamp"))
+						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress).Error()).To(ContainSubstring("could not parse renew timestamp"))
 					})
 
 					It("fails because the shoot access token was not renewed", func() {
-						defer test.WithVar(&shared.TimeoutWaitForGardenerResourceManagerBootstrapping, time.Millisecond)()
+						defer test.WithVar(&TimeoutWaitForGardenerResourceManagerBootstrapping, time.Millisecond)()
 
 						c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
 							obj.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": time.Now().Add(-time.Hour).Format(time.RFC3339)}
 							return nil
 						})
 
-						Expect(botanist.DeployGardenerResourceManager(ctx).Error()).To(ContainSubstring("token not yet renewed"))
+						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress).Error()).To(ContainSubstring("token not yet renewed"))
 					})
 
 					It("fails because the managed resource is not getting healthy", func() {
-						defer test.WithVar(&shared.TimeoutWaitForGardenerResourceManagerBootstrapping, time.Millisecond)()
+						defer test.WithVar(&TimeoutWaitForGardenerResourceManagerBootstrapping, time.Millisecond)()
 
 						gomock.InOrder(
 							c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
@@ -549,7 +340,7 @@ var _ = Describe("ResourceManager", func() {
 							}),
 						)
 
-						Expect(botanist.DeployGardenerResourceManager(ctx).Error()).To(ContainSubstring(fmt.Sprintf("managed resource %s/%s is not healthy", seedNamespace, managedResource.Name)))
+						Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress).Error()).To(ContainSubstring(fmt.Sprintf("managed resource %s/%s is not healthy", namespace, managedResource.Name)))
 					})
 				})
 
@@ -589,7 +380,7 @@ var _ = Describe("ResourceManager", func() {
 						}),
 					)
 
-					Expect(botanist.DeployGardenerResourceManager(ctx)).To(MatchError(fakeErr))
+					Expect(DeployGardenerResourceManager(ctx, k8sSeedClient.Client(), sm, resourceManager, namespace, setReplicas, getAPIServerAddress)).To(MatchError(fakeErr))
 				})
 			})
 		})

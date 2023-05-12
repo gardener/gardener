@@ -96,6 +96,8 @@ rules:
   resources:
   - clusterrolebindings
   - clusterroles
+  - rolebindings
+  - roles
   verbs:
   - create
   - delete
@@ -111,6 +113,7 @@ rules:
   - rbac.authorization.k8s.io
   resources:
   - clusterroles
+  - roles
   verbs:
   - bind
   - escalate

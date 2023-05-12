@@ -366,6 +366,7 @@ var _ = Describe("ResourceManager", func() {
 				},
 				LeaderElection: componentbaseconfigv1alpha1.LeaderElectionConfiguration{
 					LeaderElect:       pointer.Bool(true),
+					ResourceName:      "gardener-resource-manager",
 					ResourceNamespace: deployNamespace,
 				},
 				Server: resourcemanagerv1alpha1.ServerConfiguration{

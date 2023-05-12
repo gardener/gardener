@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/test/e2e/operator/garden/internal/rotation"
-	gardenaccess "github.com/gardener/gardener/test/utils/gardens"
 	rotationutils "github.com/gardener/gardener/test/utils/rotation"
 )
 
@@ -41,7 +40,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 
 	It("Create Garden, Rotate Credentials and Delete Garden", Label("credentials-rotation"), func() {
 		By("Create Garden")
-		ctx, cancel := context.WithTimeout(parentCtx, 5*time.Minute)
+		ctx, cancel := context.WithTimeout(parentCtx, 10*time.Minute)
 		defer cancel()
 
 		Expect(runtimeClient.Create(ctx, backupSecret)).To(Succeed())
@@ -83,7 +82,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 
 			// advanced verifiers testing things from the user's perspective
 			&rotationutils.SecretEncryptionVerifier{NewTargetClientFunc: func() (kubernetes.Interface, error) {
-				return gardenaccess.CreateVirtualClusterClientFromStaticTokenKubeconfig(ctx, runtimeClient, namespace)
+				return kubernetes.NewClientFromSecret(ctx, runtimeClient, namespace, "gardener", kubernetes.WithDisabledCachedClient())
 			}},
 		}
 

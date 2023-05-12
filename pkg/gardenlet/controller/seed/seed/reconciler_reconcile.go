@@ -417,7 +417,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 		// Deploy gardener-resource-manager first since it serves central functionality (e.g., projected token mount
 		// webhook) which is required for all other components to start-up.
-		gardenerResourceManager, err := sharedcomponent.NewGardenerResourceManager(
+		gardenerResourceManager, err := sharedcomponent.NewRuntimeGardenerResourceManager(
 			seedClient,
 			r.GardenNamespace,
 			kubernetesVersion,

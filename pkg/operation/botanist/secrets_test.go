@@ -291,50 +291,6 @@ var _ = Describe("Secrets", func() {
 			})
 		})
 	})
-
-	Describe("#RenewShootAccessSecrets", func() {
-		It("should remove the renew-timestamp annotation from all shoot access secrets", func() {
-			var (
-				secret1 = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        "secret1",
-						Namespace:   seedNamespace,
-						Annotations: map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": "foo"},
-					},
-				}
-				secret2 = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        "secret2",
-						Namespace:   seedNamespace,
-						Annotations: map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": "foo"},
-						Labels:      map[string]string{"resources.gardener.cloud/purpose": "token-requestor"},
-					},
-				}
-				secret3 = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        "secret3",
-						Namespace:   seedNamespace,
-						Annotations: map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": "foo"},
-						Labels:      map[string]string{"resources.gardener.cloud/purpose": "token-requestor"},
-					},
-				}
-			)
-
-			Expect(seedClient.Create(ctx, secret1)).To(Succeed())
-			Expect(seedClient.Create(ctx, secret2)).To(Succeed())
-			Expect(seedClient.Create(ctx, secret3)).To(Succeed())
-
-			Expect(botanist.RenewShootAccessSecrets(ctx)).To(Succeed())
-
-			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
-			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
-			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
-
-			Expect(secret1.Annotations).To(HaveKey("serviceaccount.resources.gardener.cloud/token-renew-timestamp"))
-			Expect(secret2.Annotations).NotTo(HaveKey("serviceaccount.resources.gardener.cloud/token-renew-timestamp"))
-			Expect(secret3.Annotations).NotTo(HaveKey("serviceaccount.resources.gardener.cloud/token-renew-timestamp"))
-		})
-	})
 })
 
 func verifyCASecret(name string, secret *corev1.Secret, dataMatcher gomegatypes.GomegaMatcher) {

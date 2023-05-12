@@ -23,7 +23,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -31,12 +30,12 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -215,24 +214,7 @@ func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
 }
 
 func (b *Botanist) generateGenericTokenKubeconfig(ctx context.Context) error {
-	clusterCABundleSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
-	}
-
-	config := &secretsutils.KubeconfigSecretConfig{
-		Name:        v1beta1constants.SecretNameGenericTokenKubeconfig,
-		ContextName: b.Shoot.SeedNamespace,
-		Cluster: clientcmdv1.Cluster{
-			Server:                   b.Shoot.ComputeInClusterAPIServerAddress(true),
-			CertificateAuthorityData: clusterCABundleSecret.Data[secretsutils.DataKeyCertificateBundle],
-		},
-		AuthInfo: clientcmdv1.AuthInfo{
-			TokenFile: gardenerutils.PathShootToken,
-		},
-	}
-
-	genericTokenKubeconfigSecret, err := b.SecretsManager.Generate(ctx, config, secretsmanager.Rotate(secretsmanager.InPlace))
+	genericTokenKubeconfigSecret, err := tokenrequest.GenerateGenericTokenKubeconfig(ctx, b.SecretsManager, b.Shoot.SeedNamespace, b.Shoot.ComputeInClusterAPIServerAddress(true))
 	if err != nil {
 		return err
 	}
@@ -387,30 +369,4 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 		return nil
 	})
 	return err
-}
-
-// RenewShootAccessSecrets drops the serviceaccount.resources.gardener.cloud/token-renew-timestamp annotation from all
-// shoot access secrets. This will make the TokenRequestor controller part of gardener-resource-manager issuing new
-// tokens immediately.
-func (b *Botanist) RenewShootAccessSecrets(ctx context.Context) error {
-	secretList := &corev1.SecretList{}
-	if err := b.SeedClientSet.Client().List(ctx, secretList, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels{
-		resourcesv1alpha1.ResourceManagerPurpose: resourcesv1alpha1.LabelPurposeTokenRequest,
-	}); err != nil {
-		return err
-	}
-
-	var fns []flow.TaskFn
-
-	for _, obj := range secretList.Items {
-		secret := obj
-
-		fns = append(fns, func(ctx context.Context) error {
-			patch := client.MergeFrom(secret.DeepCopy())
-			delete(secret.Annotations, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp)
-			return b.SeedClientSet.Client().Patch(ctx, &secret, patch)
-		})
-	}
-
-	return flow.Parallel(fns...)(ctx)
 }
