@@ -224,10 +224,6 @@ cat <<EOF | sudo tee -a /etc/hosts
 127.0.0.1 api.e2e-update-node.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-update-node-wl.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-update-node-wl.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-update-zone.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-update-zone.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-update-zone-wl.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-update-zone-wl.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-upgrade.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-upgrade.local.internal.local.gardener.cloud
 EOF

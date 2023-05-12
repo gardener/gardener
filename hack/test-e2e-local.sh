@@ -81,6 +81,10 @@ if [[ "$1" != "operator" ]]; then
     printf "\n127.0.0.1 api.e2e-managedseed.garden.external.local.gardener.cloud\n127.0.0.1 api.e2e-managedseed.garden.internal.local.gardener.cloud\n" >>/etc/hosts
   else
     for shoot in "${shoot_names[@]}" ; do
+      if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "zone" && ("$shoot" == "e2e-upgrade-ha.local" || "$shoot" == "e2e-upd-zone.local" || "$shoot" == "e2e-upd-zone-wl.local") ]]; then
+        # Do not check the entry for the e2e-upd-zone test as the target ip is dynamic.
+        continue
+      fi
       for ip in internal external ; do
         if ! grep -q -x "127.0.0.1 api.$shoot.$ip.local.gardener.cloud" /etc/hosts; then
           printf "Hostnames for Shoot $shoot is missing in /etc/hosts. To access shoot clusters and run e2e tests, you have to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster\n\n"
