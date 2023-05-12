@@ -117,12 +117,6 @@ func (r *Reconciler) delete(
 			Name: "Destroying Kube State Metrics",
 			Fn:   component.OpDestroyAndWait(kubeStateMetrics).Destroy,
 		})
-		cleanupGenericTokenKubeconfig = g.Add(flow.Task{
-			Name: "Cleaning up generic token kubeconfig",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return r.cleanupGenericTokenKubeconfig(ctx, secretsManager)
-			}),
-		})
 		destroyVirtualGardenGardenerAccess = g.Add(flow.Task{
 			Name: "Destroying Gardener virtual garden access resources",
 			Fn:   virtualGardenGardenerAccess.Destroy,
@@ -147,6 +141,11 @@ func (r *Reconciler) delete(
 				component.OpDestroyAndWait(etcdEvents).Destroy,
 			),
 			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer),
+		})
+		cleanupGenericTokenKubeconfig = g.Add(flow.Task{
+			Name:         "Cleaning up generic token kubeconfig",
+			Fn:           func(ctx context.Context) error { return r.cleanupGenericTokenKubeconfig(ctx, secretsManager) },
+			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer, destroyVirtualGardenGardenerResourceManager),
 		})
 		syncPointVirtualGardenControlPlaneDestroyed = flow.NewTaskIDs(
 			cleanupGenericTokenKubeconfig,

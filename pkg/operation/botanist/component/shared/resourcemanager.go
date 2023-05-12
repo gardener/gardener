@@ -135,7 +135,10 @@ func NewTargetGardenerResourceManager(
 	secretNameServerCA string,
 	systemComponentsToleration []corev1.Toleration,
 	topologyAwareRoutingEnabled bool,
-) (resourcemanager.Interface, error) {
+) (
+	resourcemanager.Interface,
+	error,
+) {
 	image, err := imageVector.FindImage(images.ImageNameGardenerResourceManager)
 	if err != nil {
 		return nil, err
