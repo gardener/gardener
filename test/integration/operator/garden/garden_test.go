@@ -524,7 +524,7 @@ var _ = Describe("Garden controller tests", func() {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 
 			patch := client.MergeFrom(secret.DeepCopy())
-			kubeconfig := `apiVersion: v1
+			secret.Data = map[string][]byte{"kubeconfig": []byte(`apiVersion: v1
 clusters:
 - cluster:
     certificate-authority-data: AAAA
@@ -542,8 +542,7 @@ users:
 - name: garden
   user:
     token: foobar
-`
-			secret.Data = map[string][]byte{"kubeconfig": []byte(kubeconfig)}
+`)}
 			g.Expect(testClient.Patch(ctx, secret, patch)).To(Succeed())
 		}).Should(Succeed())
 

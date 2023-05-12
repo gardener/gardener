@@ -229,7 +229,7 @@ func (r *Reconciler) reconcile(
 			Fn:           flow.Parallel(etcdMain.Wait, etcdEvents.Wait),
 			Dependencies: flow.NewTaskIDs(deployEtcds),
 		})
-		_ = g.Add(flow.Task{
+		deployKubeAPIServerService = g.Add(flow.Task{
 			Name:         "Deploying and waiting for kube-apiserver service in the runtime cluster",
 			Fn:           component.OpWait(kubeAPIServerService).Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointSystemComponents),
@@ -246,9 +246,9 @@ func (r *Reconciler) reconcile(
 		})
 		deployVirtualGardenGardenerResourceManager = g.Add(flow.Task{
 			Name: "Deploying gardener-resource-manager for virtual garden",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
+			Fn: func(ctx context.Context) error {
 				return r.deployVirtualGardenGardenerResourceManager(ctx, secretsManager, virtualGardenGardenerResourceManager)
-			}),
+			},
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
 		waitUntilVirtualGardenGardenerResourceManagerIsReady = g.Add(flow.Task{
@@ -278,7 +278,7 @@ func (r *Reconciler) reconcile(
 				return err
 			}).
 				RetryUntilTimeout(time.Second, 30*time.Second),
-			Dependencies: flow.NewTaskIDs(deployVirtualGardenGardenerAccess, renewVirtualClusterAccess),
+			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService, deployVirtualGardenGardenerAccess, renewVirtualClusterAccess),
 		})
 		rewriteSecretsAddLabel = g.Add(flow.Task{
 			Name: "Labeling secrets to encrypt them with new ETCD encryption key",
