@@ -29,6 +29,9 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -523,26 +526,20 @@ var _ = Describe("Garden controller tests", func() {
 			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "gardener-internal", Namespace: testNamespace.Name}}
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 
+			kubeconfigRaw, ok := secret.Data["kubeconfig"]
+			g.Expect(ok).To(BeTrue())
+
+			existingKubeconfig := &clientcmdv1.Config{}
+			_, _, err := clientcmdlatest.Codec.Decode(kubeconfigRaw, nil, existingKubeconfig)
+			g.Expect(err).NotTo(HaveOccurred())
+
+			existingKubeconfig.AuthInfos[0].AuthInfo.Token = "foobar"
+
+			kubeconfigRaw, err = runtime.Encode(clientcmdlatest.Codec, existingKubeconfig)
+			g.Expect(err).NotTo(HaveOccurred())
+
 			patch := client.MergeFrom(secret.DeepCopy())
-			secret.Data = map[string][]byte{"kubeconfig": []byte(`apiVersion: v1
-clusters:
-- cluster:
-    certificate-authority-data: AAAA
-    server: https://api-virtual-garden.local.gardener.cloud
-  name: garden
-contexts:
-- context:
-    cluster: garden
-    user: garden
-  name: garden
-current-context: garden
-kind: Config
-preferences: {}
-users:
-- name: garden
-  user:
-    token: foobar
-`)}
+			secret.Data["kubeconfig"] = kubeconfigRaw
 			g.Expect(testClient.Patch(ctx, secret, patch)).To(Succeed())
 		}).Should(Succeed())
 
