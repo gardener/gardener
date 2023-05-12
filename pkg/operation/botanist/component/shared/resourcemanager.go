@@ -191,10 +191,16 @@ func NewTargetGardenerResourceManager(
 	), nil
 }
 
-// TimeoutWaitForGardenerResourceManagerBootstrapping is the maximum time the bootstrap process for the
-// gardener-resource-manager may take.
-// Exposed for testing.
-var TimeoutWaitForGardenerResourceManagerBootstrapping = 2 * time.Minute
+var (
+	// TimeoutWaitForGardenerResourceManagerBootstrapping is the maximum time the bootstrap process for the
+	// gardener-resource-manager may take.
+	// Exposed for testing.
+	TimeoutWaitForGardenerResourceManagerBootstrapping = 2 * time.Minute
+	// IntervalWaitForGardenerResourceManagerBootstrapping is the interval how often it's checked whether the bootstrap
+	// process for the gardener-resource-manager has completed.
+	// Exposed for testing.
+	IntervalWaitForGardenerResourceManagerBootstrapping = 5 * time.Second
+)
 
 // DeployGardenerResourceManager deploys the gardener-resource-manager
 func DeployGardenerResourceManager(
@@ -333,7 +339,7 @@ func reconcileGardenerResourceManagerBootstrapKubeconfigSecret(ctx context.Conte
 func waitUntilGardenerResourceManagerBootstrapped(ctx context.Context, c client.Client, namespace string) error {
 	shootAccessSecret := gardenerutils.NewShootAccessSecret(resourcemanager.SecretNameShootAccess, namespace)
 
-	if err := retryutils.Until(ctx, 5*time.Second, func(ctx context.Context) (bool, error) {
+	if err := retryutils.Until(ctx, IntervalWaitForGardenerResourceManagerBootstrapping, func(ctx context.Context) (bool, error) {
 		if err2 := c.Get(ctx, client.ObjectKeyFromObject(shootAccessSecret.Secret), shootAccessSecret.Secret); err2 != nil {
 			if apierrors.IsNotFound(err2) {
 				return retryutils.MinorError(err2)

@@ -48,6 +48,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	gardencontroller "github.com/gardener/gardener/pkg/operator/controller/garden"
@@ -80,6 +81,7 @@ var _ = Describe("Garden controller tests", func() {
 			&resourcemanager.SkipWebhookDeployment, true,
 			&resourcemanager.IntervalWaitForDeployment, 100*time.Millisecond,
 			&resourcemanager.TimeoutWaitForDeployment, 500*time.Millisecond,
+			&shared.IntervalWaitForGardenerResourceManagerBootstrapping, 500*time.Millisecond,
 		))
 
 		By("Create test Namespace")
