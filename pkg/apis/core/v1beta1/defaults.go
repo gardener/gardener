@@ -160,6 +160,13 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
 		}
 
+		if obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds == nil {
+			obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = pointer.Int64(300)
+		}
+		if obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds == nil {
+			obj.Spec.Kubernetes.KubeAPIServer.DefaultUnreachableTolerationSeconds = pointer.Int64(300)
+		}
+
 		if obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
 			obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = calculateDefaultNodeCIDRMaskSize(&obj.Spec)
 		}
@@ -288,13 +295,10 @@ func SetDefaults_KubeAPIServerConfig(obj *KubeAPIServerConfig) {
 	if obj.Logging.Verbosity == nil {
 		obj.Logging.Verbosity = pointer.Int32(2)
 	}
-	if obj.DefaultNotReadyTolerationSeconds == nil {
-		obj.DefaultNotReadyTolerationSeconds = pointer.Int64(300)
-	}
-	if obj.DefaultUnreachableTolerationSeconds == nil {
-		obj.DefaultUnreachableTolerationSeconds = pointer.Int64(300)
-	}
 }
+
+// SetDefaults_KubeControllerManagerConfig sets default values for KubeControllerManagerConfig objects.
+func SetDefaults_KubeControllerManagerConfig(obj *KubeControllerManagerConfig) {}
 
 // SetDefaults_Networking sets default values for Networking objects.
 func SetDefaults_Networking(obj *Networking) {
