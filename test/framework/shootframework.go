@@ -35,7 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	"github.com/gardener/gardener/test/utils/shoots/access"
+	"github.com/gardener/gardener/test/utils/access"
 )
 
 var shootCfg *ShootConfig

@@ -36,7 +36,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
-	"github.com/gardener/gardener/test/utils/shoots/access"
+	"github.com/gardener/gardener/test/utils/access"
 )
 
 const (

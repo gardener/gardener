@@ -40,9 +40,9 @@ import (
 // labelsE2ETestCSRAccess is the set of labels added to all CSRs and ClusterRoleBindings for easy cleanup.
 var labelsE2ETestCSRAccess = map[string]string{"e2e-test": "csr-access"}
 
-// CreateShootClientFromCSR creates and approves a CSR in the shoot and creates a new shoot client from it.
+// CreateTargetClientFromCSR creates and approves a CSR in the shoot and creates a new target client from it.
 // You should call CleanupObjectsFromCSRAccess to clean up the objects created by this function.
-func CreateShootClientFromCSR(ctx context.Context, shootClient kubernetes.Interface, commonName string) (kubernetes.Interface, error) {
+func CreateTargetClientFromCSR(ctx context.Context, targetClient kubernetes.Interface, commonName string) (kubernetes.Interface, error) {
 	// use fake key to avoid building complex retry/update logic
 	privateKey, err := secretsutils.FakeGenerateKey(rand.Reader, 4096)
 	if err != nil {
@@ -55,7 +55,7 @@ func CreateShootClientFromCSR(ctx context.Context, shootClient kubernetes.Interf
 	}
 
 	reqName, reqUID, err := csrutil.RequestCertificate(
-		shootClient.Kubernetes(),
+		targetClient.Kubernetes(),
 		csrData,
 		commonName,
 		certificatesv1.KubeAPIServerClientSignerName,
@@ -72,18 +72,18 @@ func CreateShootClientFromCSR(ctx context.Context, shootClient kubernetes.Interf
 	}
 
 	csr := &certificatesv1.CertificateSigningRequest{}
-	if err = shootClient.Client().Get(ctx, client.ObjectKey{Name: reqName}, csr); err != nil {
+	if err = targetClient.Client().Get(ctx, client.ObjectKey{Name: reqName}, csr); err != nil {
 		return nil, err
 	}
 
 	patch := client.MergeFrom(csr.DeepCopy())
 	csr.Labels = utils.MergeStringMaps(csr.Labels, labelsE2ETestCSRAccess)
-	if err = shootClient.Client().Patch(ctx, csr, patch); err != nil {
+	if err = targetClient.Client().Patch(ctx, csr, patch); err != nil {
 		return nil, err
 	}
 
 	clusterRoleBinding := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: commonName}}
-	if _, err = controllerutils.GetAndCreateOrMergePatch(ctx, shootClient.Client(), clusterRoleBinding, func() error {
+	if _, err = controllerutils.GetAndCreateOrMergePatch(ctx, targetClient.Client(), clusterRoleBinding, func() error {
 		clusterRoleBinding.Labels = utils.MergeStringMaps(clusterRoleBinding.Labels, labelsE2ETestCSRAccess)
 		clusterRoleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
@@ -114,17 +114,17 @@ func CreateShootClientFromCSR(ctx context.Context, shootClient kubernetes.Interf
 			Message: "Auto approving test CertificateSigningRequest",
 			Status:  corev1.ConditionTrue,
 		})
-		if err := shootClient.Client().SubResource("approval").Update(ctx, csr); err != nil {
+		if err := targetClient.Client().SubResource("approval").Update(ctx, csr); err != nil {
 			return nil, err
 		}
 	}
 
-	certData, err := csrutil.WaitForCertificate(ctx, shootClient.Kubernetes(), reqName, reqUID)
+	certData, err := csrutil.WaitForCertificate(ctx, targetClient.Kubernetes(), reqName, reqUID)
 	if err != nil {
 		return nil, err
 	}
 
-	r := shootClient.RESTConfig()
+	r := targetClient.RESTConfig()
 	restConfig := &rest.Config{
 		Host: r.Host,
 		TLSClientConfig: rest.TLSClientConfig{
@@ -137,11 +137,11 @@ func CreateShootClientFromCSR(ctx context.Context, shootClient kubernetes.Interf
 	return kubernetes.NewWithConfig(kubernetes.WithRESTConfig(restConfig), kubernetes.WithDisabledCachedClient())
 }
 
-// CleanupObjectsFromCSRAccess cleans up all objects in the shoot created by all calls to CreateShootClientFromCSR.
-func CleanupObjectsFromCSRAccess(ctx context.Context, shootClient kubernetes.Interface) error {
+// CleanupObjectsFromCSRAccess cleans up all objects in the target created by all calls to CreateTargetClientFromCSR.
+func CleanupObjectsFromCSRAccess(ctx context.Context, targetClient kubernetes.Interface) error {
 	return flow.Parallel(func(ctx context.Context) error {
-		return shootClient.Client().DeleteAllOf(ctx, &certificatesv1.CertificateSigningRequest{}, client.MatchingLabels(labelsE2ETestCSRAccess))
+		return targetClient.Client().DeleteAllOf(ctx, &certificatesv1.CertificateSigningRequest{}, client.MatchingLabels(labelsE2ETestCSRAccess))
 	}, func(ctx context.Context) error {
-		return shootClient.Client().DeleteAllOf(ctx, &rbacv1.ClusterRoleBinding{}, client.MatchingLabels(labelsE2ETestCSRAccess))
+		return targetClient.Client().DeleteAllOf(ctx, &rbacv1.ClusterRoleBinding{}, client.MatchingLabels(labelsE2ETestCSRAccess))
 	})(ctx)
 }

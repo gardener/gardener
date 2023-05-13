@@ -38,7 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	"github.com/gardener/gardener/test/framework"
-	"github.com/gardener/gardener/test/utils/shoots/access"
+	"github.com/gardener/gardener/test/utils/access"
 	"github.com/gardener/gardener/test/utils/shoots/update/highavailability"
 )
 
