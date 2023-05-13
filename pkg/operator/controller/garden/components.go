@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"time"
 
@@ -44,6 +45,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	sharedcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -78,7 +80,7 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 	)
 }
 
-func (r *Reconciler) newVirtualGardenGardenerResourceManager(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (resourcemanager.Interface, error) {
+func (r *Reconciler) newVirtualGardenGardenerResourceManager(secretsManager secretsmanager.Interface) (resourcemanager.Interface, error) {
 	return sharedcomponent.NewTargetGardenerResourceManager(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
@@ -91,7 +93,7 @@ func (r *Reconciler) newVirtualGardenGardenerResourceManager(garden *operatorv1a
 		r.Config.LogLevel, r.Config.LogFormat,
 		namePrefix,
 		false,
-		v1beta1constants.PriorityClassNameGardenSystem500,
+		v1beta1constants.PriorityClassNameGardenSystem400,
 		nil,
 		operatorv1alpha1.SecretNameCARuntime,
 		nil,
@@ -426,6 +428,58 @@ func fetchKubeconfigFromSecret(ctx context.Context, c client.Client, key client.
 	}
 
 	return kubeconfig, nil
+}
+
+func (r *Reconciler) newKubeControllerManager(
+	log logr.Logger,
+	garden *operatorv1alpha1.Garden,
+	secretsManager secretsmanager.Interface,
+	targetVersion *semver.Version,
+) (
+	kubecontrollermanager.Interface,
+	error,
+) {
+	var (
+		config                     *gardencorev1beta1.KubeControllerManagerConfig
+		certificateSigningDuration *time.Duration
+	)
+
+	if controllerManager := garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager; controllerManager != nil {
+		config = controllerManager.KubeControllerManagerConfig
+		certificateSigningDuration = pointer.Duration(controllerManager.CertificateSigningDuration.Duration)
+	}
+
+	_, services, err := net.ParseCIDR(garden.Spec.VirtualCluster.Networking.Services)
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse service network CIDR: %w", err)
+	}
+
+	return sharedcomponent.NewKubeControllerManager(
+		log,
+		r.RuntimeClientSet,
+		r.GardenNamespace,
+		r.RuntimeVersion,
+		targetVersion,
+		r.ImageVector,
+		secretsManager,
+		namePrefix,
+		config,
+		v1beta1constants.PriorityClassNameGardenSystem300,
+		true,
+		&kubecontrollermanager.HVPAConfig{Enabled: hvpaEnabled()},
+		nil,
+		services,
+		certificateSigningDuration,
+		kubecontrollermanager.ControllerWorkers{
+			GarbageCollector:    pointer.Int(250),
+			Namespace:           pointer.Int(100),
+			ResourceQuota:       pointer.Int(100),
+			ServiceAccountToken: pointer.Int(0),
+		},
+		kubecontrollermanager.ControllerSyncPeriods{
+			ResourceQuota: pointer.Duration(time.Minute),
+		},
+	)
 }
 
 func (r *Reconciler) newKubeStateMetrics() (component.DeployWaiter, error) {

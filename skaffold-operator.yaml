@@ -75,6 +75,7 @@ build:
         - pkg/operation/botanist/component/kubeapiserver
         - pkg/operation/botanist/component/kubeapiserver/constants
         - pkg/operation/botanist/component/kubeapiserverexposure
+        - pkg/operation/botanist/component/kubecontrollermanager
         - pkg/operation/botanist/component/kubescheduler
         - pkg/operation/botanist/component/kubestatemetrics
         - pkg/operation/botanist/component/nginxingress

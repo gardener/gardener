@@ -724,7 +724,7 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		command = append(command, fmt.Sprintf("--concurrent-serviceaccount-token-syncs=%d", v))
 	}
 
-	if len(k.values.Config.FeatureGates) > 0 {
+	if k.values.Config != nil && len(k.values.Config.FeatureGates) > 0 {
 		command = append(command, kubernetesutils.FeatureGatesToCommandLineParameter(k.values.Config.FeatureGates))
 	}
 
@@ -766,7 +766,7 @@ func (k *kubeControllerManager) getHorizontalPodAutoscalerConfig() gardencorev1b
 		Tolerance:               &defaultHPATolerance,
 	}
 
-	if k.values.Config.HorizontalPodAutoscalerConfig != nil {
+	if k.values.Config != nil && k.values.Config.HorizontalPodAutoscalerConfig != nil {
 		if v := k.values.Config.HorizontalPodAutoscalerConfig.CPUInitializationPeriod; v != nil {
 			horizontalPodAutoscalerConfig.CPUInitializationPeriod = v
 		}

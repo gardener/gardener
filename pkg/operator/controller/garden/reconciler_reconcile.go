@@ -145,7 +145,11 @@ func (r *Reconciler) reconcile(
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	virtualGardenGardenerResourceManager, err := r.newVirtualGardenGardenerResourceManager(garden, secretsManager)
+	kubeControllerManager, err := r.newKubeControllerManager(log, garden, secretsManager, targetVersion)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	virtualGardenGardenerResourceManager, err := r.newVirtualGardenGardenerResourceManager(secretsManager)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -243,6 +247,14 @@ func (r *Reconciler) reconcile(
 			Name:         "Waiting until Kubernetes API server rolled out",
 			Fn:           kubeAPIServer.Wait,
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying Kubernetes Controller Manager",
+			Fn: func(ctx context.Context) error {
+				kubeControllerManager.SetReplicaCount(1)
+				return component.OpWait(kubeControllerManager).Deploy(ctx)
+			},
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
 		deployVirtualGardenGardenerResourceManager = g.Add(flow.Task{
 			Name: "Deploying gardener-resource-manager for virtual garden",
