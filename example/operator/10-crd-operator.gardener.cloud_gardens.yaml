@@ -765,6 +765,78 @@ spec:
                                 type: array
                             type: object
                         type: object
+                      kubeControllerManager:
+                        description: KubeControllerManager contains configuration
+                          settings for the kube-controller-manager.
+                        properties:
+                          certificateSigningDuration:
+                            default: 48h
+                            description: CertificateSigningDuration is the maximum
+                              length of duration signed certificates will be given.
+                              Individual CSRs may request shorter certs by setting
+                              `spec.expirationSeconds`.
+                            pattern: ^([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$
+                            type: string
+                          featureGates:
+                            additionalProperties:
+                              type: boolean
+                            description: FeatureGates contains information about enabled
+                              feature gates.
+                            type: object
+                          horizontalPodAutoscaler:
+                            description: HorizontalPodAutoscalerConfig contains horizontal
+                              pod autoscaler configuration settings for the kube-controller-manager.
+                            properties:
+                              cpuInitializationPeriod:
+                                description: The period after which a ready pod transition
+                                  is considered to be the first.
+                                type: string
+                              downscaleStabilization:
+                                description: The configurable window at which the
+                                  controller will choose the highest recommendation
+                                  for autoscaling.
+                                type: string
+                              initialReadinessDelay:
+                                description: The configurable period at which the
+                                  horizontal pod autoscaler considers a Pod “not yet
+                                  ready” given that it’s unready and it has  transitioned
+                                  to unready during that time.
+                                type: string
+                              syncPeriod:
+                                description: The period for syncing the number of
+                                  pods in horizontal pod autoscaler.
+                                type: string
+                              tolerance:
+                                description: The minimum change (from 1.0) in the
+                                  desired-to-actual metrics ratio for the horizontal
+                                  pod autoscaler to consider scaling.
+                                type: number
+                            type: object
+                          nodeCIDRMaskSize:
+                            description: NodeCIDRMaskSize defines the mask size for
+                              node cidr in cluster (default is 24). This field is
+                              immutable.
+                            format: int32
+                            type: integer
+                          nodeMonitorGracePeriod:
+                            description: NodeMonitorGracePeriod defines the grace
+                              period before an unresponsive node is marked unhealthy.
+                            type: string
+                          podEvictionTimeout:
+                            description: "PodEvictionTimeout defines the grace period
+                              for deleting pods on failed nodes. Defaults to 2m. \n
+                              Deprecated: The corresponding kube-controller-manager
+                              flag `--pod-eviction-timeout` is deprecated in favor
+                              of the kube-apiserver flags `--default-not-ready-toleration-seconds`
+                              and `--default-unreachable-toleration-seconds`. The
+                              `--pod-eviction-timeout` flag does not have effect when
+                              the taint besed eviction is enabled. The taint based
+                              eviction is beta (enabled by default) since Kubernetes
+                              1.13 and GA since Kubernetes 1.18. Hence, instead of
+                              setting this field, set the `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds`
+                              and `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`."
+                            type: string
+                        type: object
                       version:
                         description: Version is the semantic Kubernetes version to
                           use for the virtual garden cluster.
