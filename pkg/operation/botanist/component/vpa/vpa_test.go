@@ -831,6 +831,9 @@ var _ = Describe("VPA", func() {
 			if clusterType == "seed" {
 				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-world-to-ports", `[{"protocol":"TCP","port":10250}]`)
 			}
+			if clusterType == "shoot" {
+				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports", `[{"protocol":"TCP","port":10250}]`)
+			}
 
 			if topologyAwareRoutingEnabled {
 				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "service.kubernetes.io/topology-aware-hints", "auto")

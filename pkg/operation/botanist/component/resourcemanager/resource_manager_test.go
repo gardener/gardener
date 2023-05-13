@@ -277,7 +277,8 @@ var _ = Describe("ResourceManager", func() {
 				Namespace: deployNamespace,
 				Labels:    defaultLabels,
 				Annotations: map[string]string{
-					"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8080}]`,
+					"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports":  `[{"protocol":"TCP","port":8080}]`,
+					"networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports": `[{"protocol":"TCP","port":10250}]`,
 				},
 			},
 			Spec: corev1.ServiceSpec{
@@ -2083,6 +2084,7 @@ subjects:
 			BeforeEach(func() {
 				clusterRole.Rules = allowAll
 				delete(service.Annotations, "networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports")
+				delete(service.Annotations, "networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports")
 				service.Annotations["networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports"] = `[{"protocol":"TCP","port":8080}]`
 				service.Annotations["networking.resources.gardener.cloud/from-world-to-ports"] = `[{"protocol":"TCP","port":10250}]`
 				configMap = configMapFor(&watchedNamespace, nil)
