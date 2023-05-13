@@ -542,6 +542,47 @@ var _ = Describe("Garden controller tests", func() {
 			g.Expect(testClient.Patch(ctx, secret, patch)).To(Succeed())
 		}).Should(Succeed())
 
+		By("Ensure virtual-garden-kube-controller-manager was deployed")
+		Eventually(func(g Gomega) []appsv1.Deployment {
+			deploymentList := &appsv1.DeploymentList{}
+			g.Expect(testClient.List(ctx, deploymentList, client.InNamespace(testNamespace.Name))).To(Succeed())
+			return deploymentList.Items
+		}).Should(ContainElements(
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("virtual-garden-kube-controller-manager")})}),
+		))
+
+		// The garden controller waits for the virtual-garden-kube-controller-manager Deployment to be healthy, so let's fake this here.
+		By("Patch virtual-garden-kube-controller-manager deployment to report healthiness")
+		Eventually(func(g Gomega) {
+			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "virtual-garden-kube-controller-manager", Namespace: testNamespace.Name}}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+			podList := &corev1.PodList{}
+			g.Expect(testClient.List(ctx, podList, client.InNamespace(testNamespace.Name), client.MatchingLabels(map[string]string{"app": "kubernetes", "role": "controller-manager"}))).To(Succeed())
+
+			if desiredReplicas := int(pointer.Int32Deref(deployment.Spec.Replicas, 1)); len(podList.Items) != desiredReplicas {
+				g.Expect(testClient.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(testNamespace.Name), client.MatchingLabels(map[string]string{"app": "kubernetes", "role": "controller-manager"}))).To(Succeed())
+				for i := 0; i < desiredReplicas; i++ {
+					g.Expect(testClient.Create(ctx, &corev1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("virtual-garden-kube-controller-manager-%d", i),
+							Namespace: testNamespace.Name,
+							Labels:    map[string]string{"app": "kubernetes", "role": "controller-manager"},
+						},
+						Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app", Image: "app"}}},
+					})).To(Succeed(), fmt.Sprintf("create virtual-garden-kube-apiserver pod number %d", i))
+				}
+			}
+
+			patch := client.MergeFrom(deployment.DeepCopy())
+			deployment.Status.ObservedGeneration = deployment.Generation
+			deployment.Status.Conditions = []appsv1.DeploymentCondition{
+				{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue},
+				{Type: appsv1.DeploymentProgressing, Status: corev1.ConditionTrue, Reason: "NewReplicaSetAvailable"},
+			}
+			g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
+		}).Should(Succeed())
+
 		By("Wait for Reconciled condition to be set to True")
 		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
@@ -558,6 +599,7 @@ var _ = Describe("Garden controller tests", func() {
 			return deploymentList.Items
 		}).ShouldNot(ContainElements(
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("virtual-garden-kube-apiserver")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("virtual-garden-kube-controller-manager")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("virtual-garden-gardener-resource-manager")})}),
 		))
 
