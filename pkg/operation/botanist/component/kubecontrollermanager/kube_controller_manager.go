@@ -136,8 +136,12 @@ type Values struct {
 	Image string
 	// Replicas is the number of replicas for the kube-controller-manager deployment.
 	Replicas int32
+	// PriorityClassName is the name of the priority class.
+	PriorityClassName string
 	// Config is the configuration of the kube-controller-manager.
 	Config *gardencorev1beta1.KubeControllerManagerConfig
+	// NamePrefix is the prefix for the resource names.
+	NamePrefix string
 	// HVPAConfig is the configuration for HVPA.
 	HVPAConfig *HVPAConfig
 	// IsWorkerless specifies whether the cluster has worker nodes.
@@ -200,8 +204,8 @@ const (
 func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 	serverSecret, err := k.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 		Name:                        secretNameServer,
-		CommonName:                  v1beta1constants.DeploymentNameKubeControllerManager,
-		DNSNames:                    kubernetesutils.DNSNamesForService(serviceName, k.namespace),
+		CommonName:                  k.values.NamePrefix + v1beta1constants.DeploymentNameKubeControllerManager,
+		DNSNames:                    kubernetesutils.DNSNamesForService(k.values.NamePrefix+serviceName, k.namespace),
 		CertType:                    secrets.ServerCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster), secretsmanager.Rotate(secretsmanager.InPlace))
@@ -325,12 +329,12 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 					v1beta1constants.GardenRole:                 v1beta1constants.GardenRoleControlPlane,
 					v1beta1constants.LabelPodMaintenanceRestart: "true",
 					v1beta1constants.LabelNetworkPolicyToDNS:    v1beta1constants.LabelNetworkPolicyAllowed,
-					gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
+					gardenerutils.NetworkPolicyLabel(k.values.NamePrefix+v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
 				}),
 			},
 			Spec: corev1.PodSpec{
 				AutomountServiceAccountToken: pointer.Bool(false),
-				PriorityClassName:            v1beta1constants.PriorityClassNameShootControlPlane300,
+				PriorityClassName:            k.values.PriorityClassName,
 				Containers: []corev1.Container{
 					{
 						Name:            containerName,
@@ -527,7 +531,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			hvpa.Spec.TargetRef = &autoscalingv2beta1.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "Deployment",
-				Name:       v1beta1constants.DeploymentNameKubeControllerManager,
+				Name:       k.values.NamePrefix + v1beta1constants.DeploymentNameKubeControllerManager,
 			}
 			return nil
 		}); err != nil {
@@ -544,7 +548,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "Deployment",
-				Name:       v1beta1constants.DeploymentNameKubeControllerManager,
+				Name:       k.values.NamePrefix + v1beta1constants.DeploymentNameKubeControllerManager,
 			}
 			vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
 				UpdateMode: &vpaUpdateMode,
@@ -564,23 +568,23 @@ func (k *kubeControllerManager) SetReplicaCount(replicas int32)  { k.values.Repl
 func (k *kubeControllerManager) Destroy(_ context.Context) error { return nil }
 
 func (k *kubeControllerManager) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
-	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager-vpa", Namespace: k.namespace}}
+	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: k.values.NamePrefix + "kube-controller-manager-vpa", Namespace: k.namespace}}
 }
 
 func (k *kubeControllerManager) emptyHVPA() *hvpav1alpha1.Hvpa {
-	return &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeControllerManager, Namespace: k.namespace}}
+	return &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: k.values.NamePrefix + v1beta1constants.DeploymentNameKubeControllerManager, Namespace: k.namespace}}
 }
 
 func (k *kubeControllerManager) emptyService() *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: k.namespace}}
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: k.values.NamePrefix + serviceName, Namespace: k.namespace}}
 }
 
 func (k *kubeControllerManager) emptyDeployment() *appsv1.Deployment {
-	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeControllerManager, Namespace: k.namespace}}
+	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: k.values.NamePrefix + v1beta1constants.DeploymentNameKubeControllerManager, Namespace: k.namespace}}
 }
 
 func (k *kubeControllerManager) emptyPodDisruptionBudget() client.Object {
-	objectMeta := metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeControllerManager, Namespace: k.namespace}
+	objectMeta := metav1.ObjectMeta{Name: k.values.NamePrefix + v1beta1constants.DeploymentNameKubeControllerManager, Namespace: k.namespace}
 
 	if versionutils.ConstraintK8sGreaterEqual121.Check(k.values.RuntimeVersion) {
 		return &policyv1.PodDisruptionBudget{ObjectMeta: objectMeta}

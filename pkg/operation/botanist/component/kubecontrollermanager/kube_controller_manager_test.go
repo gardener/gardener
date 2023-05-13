@@ -83,6 +83,7 @@ var _ = Describe("KubeControllerManager", func() {
 		hvpaConfigEnabled             = &HVPAConfig{Enabled: true}
 		hvpaConfigEnabledScaleDownOff = &HVPAConfig{Enabled: true, ScaleDownUpdateMode: pointer.String(hvpav1alpha1.UpdateModeOff)}
 		isWorkerless                  = false
+		priorityClassName             = v1beta1constants.PriorityClassNameShootControlPlane300
 
 		hpaConfig = gardencorev1beta1.HorizontalPodAutoscalerConfig{
 			CPUInitializationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
@@ -162,14 +163,15 @@ var _ = Describe("KubeControllerManager", func() {
 		Context("Tests expecting a failure", func() {
 			BeforeEach(func() {
 				values = Values{
-					RuntimeVersion: runtimeKubernetesVersion,
-					TargetVersion:  semverVersion,
-					Image:          image,
-					Config:         &kcmConfig,
-					HVPAConfig:     hvpaConfigDisabled,
-					IsWorkerless:   isWorkerless,
-					PodNetwork:     podCIDR,
-					ServiceNetwork: serviceCIDR,
+					RuntimeVersion:    runtimeKubernetesVersion,
+					TargetVersion:     semverVersion,
+					Image:             image,
+					Config:            &kcmConfig,
+					PriorityClassName: priorityClassName,
+					HVPAConfig:        hvpaConfigDisabled,
+					IsWorkerless:      isWorkerless,
+					PodNetwork:        podCIDR,
+					ServiceNetwork:    serviceCIDR,
 				}
 				kubeControllerManager = New(
 					testLogger,
@@ -532,7 +534,7 @@ var _ = Describe("KubeControllerManager", func() {
 								},
 								Spec: corev1.PodSpec{
 									AutomountServiceAccountToken: pointer.Bool(false),
-									PriorityClassName:            v1beta1constants.PriorityClassNameShootControlPlane300,
+									PriorityClassName:            priorityClassName,
 									Containers: []corev1.Container{
 										{
 											Name:            "kube-controller-manager",
@@ -713,6 +715,7 @@ subjects:
 						TargetVersion:          semverVersion,
 						Image:                  image,
 						Config:                 config,
+						PriorityClassName:      priorityClassName,
 						HVPAConfig:             hvpaConfig,
 						IsWorkerless:           isWorkerless,
 						PodNetwork:             podCIDR,
@@ -826,6 +829,7 @@ subjects:
 						TargetVersion:          semverVersion,
 						Image:                  image,
 						Config:                 config,
+						PriorityClassName:      priorityClassName,
 						HVPAConfig:             hvpaConfig,
 						IsWorkerless:           isWorkerless,
 						PodNetwork:             podCIDR,
