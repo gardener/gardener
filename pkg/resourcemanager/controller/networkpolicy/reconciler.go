@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -25,6 +26,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -37,6 +39,14 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
+
+var fromPolicyRegexp *regexp.Regexp
+
+func init() {
+	var err error
+	fromPolicyRegexp, err = regexp.Compile(resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + "(.*)" + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix)
+	utilruntime.Must(err)
+}
 
 // Reconciler reconciles Service objects and creates NetworkPolicy objects.
 type Reconciler struct {
@@ -218,12 +228,13 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, service *core
 	}
 
 	for k, allowedPorts := range service.Annotations {
-		if !strings.HasPrefix(k, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix) || !strings.HasSuffix(k, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix) {
+		match := fromPolicyRegexp.FindStringSubmatch(k)
+		if len(match) != 2 {
 			continue
 		}
 
 		var (
-			customPodLabelSelector = strings.TrimSuffix(strings.TrimPrefix(k, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix), resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix)
+			customPodLabelSelector = match[1]
 			ports                  []networkingv1.NetworkPolicyPort
 		)
 

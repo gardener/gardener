@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -150,10 +149,11 @@ func fromPolicyAnnotationsChanged(oldAnnotations, newAnnotations map[string]stri
 
 		getPolicies = func(annotations, into map[string]string) {
 			for k, allowedPorts := range annotations {
-				if !strings.HasPrefix(k, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix) || !strings.HasSuffix(k, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix) {
+				match := fromPolicyRegexp.FindStringSubmatch(k)
+				if len(match) != 2 {
 					continue
 				}
-				customPodLabelSelector := strings.TrimSuffix(strings.TrimPrefix(k, resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix), resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix)
+				customPodLabelSelector := match[1]
 				into[customPodLabelSelector] = allowedPorts
 			}
 		}
