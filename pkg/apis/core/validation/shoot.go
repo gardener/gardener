@@ -779,7 +779,7 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 	}
 
 	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, false, fldPath.Child("kubeAPIServer"))...)
-	allErrs = append(allErrs, validateKubeControllerManager(kubernetes.KubeControllerManager, networking, kubernetes.Version, workerless, fldPath.Child("kubeControllerManager"))...)
+	allErrs = append(allErrs, ValidateKubeControllerManager(kubernetes.KubeControllerManager, networking, kubernetes.Version, workerless, fldPath.Child("kubeControllerManager"))...)
 
 	if workerless {
 		allErrs = append(allErrs, validateKubernetesForWorkerlessShoot(kubernetes, fldPath)...)
@@ -1164,7 +1164,8 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 	return allErrs
 }
 
-func validateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networking *core.Networking, version string, workerless bool, fldPath *field.Path) field.ErrorList {
+// ValidateKubeControllerManager validates KubeControllerManagerConfig.
+func ValidateKubeControllerManager(kcm *core.KubeControllerManagerConfig, networking *core.Networking, version string, workerless bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if kcm == nil {
