@@ -485,6 +485,7 @@ operator-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
 operator-debug: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(SKAFFOLD) debug
 operator-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	$(KUBECTL) annotate garden --all confirmation.gardener.cloud/deletion=true
 	$(KUBECTL) delete garden --all --ignore-not-found --wait --timeout 5m
 	$(SKAFFOLD) delete
 
