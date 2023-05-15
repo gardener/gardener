@@ -476,8 +476,7 @@ var _ = Describe("KubeControllerManager", func() {
 								"role": "controller-manager",
 							},
 							Annotations: map[string]string{
-								"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
-								"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":10257}]`,
+								"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":10257}]`,
 							},
 						},
 						Spec: corev1.ServiceSpec{

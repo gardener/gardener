@@ -689,15 +689,16 @@ For a component which initiates the connection to many other components, it's so
 For example, let's say a component `foo` talks to `bar{0..9}` on ports `tcp/808{0..9}`.
 `foo` would need to have the ten `networking.resources.gardener.cloud/to-bar{0..9}-tcp-808{0..9}=allowed` labels.
 
-As an alternative and to simplify this, it is also possible to annotate the targeted `Service`s with `networking.resources.gardener.cloud/from-policy-pod-label-selector=<some-alias>`.
+As an alternative and to simplify this, it is also possible to annotate the targeted `Service`s with `networking.resources.gardener.cloud/from-<some-alias>-allowed-ports`.
 For our example, `<some-alias>` could be `all-bars`.
 
 As a result, component `foo` just needs to have the label `networking.resources.gardener.cloud/to-all-bars=allowed` instead of all the other ten explicit labels.
 
-⚠️ Note that this also requires to specify the list of allowed container ports since the pod selector label will no longer be specific for a dedicated service/port.
-For our example, the `Service` for `barX` with `X` in `{0..9}` needs to be annotated with `networking.resources.gardener.cloud/from-policy-allowed-ports=[{"port":808X,"protocol":"TCP"}]` in addition.
+⚠️ Note that this also requires to specify the list of allowed container ports as annotation value since the pod selector label will no longer be specific for a dedicated service/port.
+For our example, the `Service` for `barX` with `X` in `{0..9}` needs to be annotated with `networking.resources.gardener.cloud/from-all-bars-allowed-ports=[{"port":808X,"protocol":"TCP"}]` in addition.
 
 > Real-world examples for this scenario are the `Prometheis` in seed clusters which initiate the communication to a lot of components in order to scrape their metrics.
+> Another example is the `kube-apiserver` which initiates the communication to webhook servers (potentially of extension components that are not known by Gardener itself).
 
 #### Ingress From Everywhere
 

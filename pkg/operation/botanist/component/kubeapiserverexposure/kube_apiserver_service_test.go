@@ -306,11 +306,10 @@ var _ = Describe("#Service", func() {
 				expected.Annotations = map[string]string{
 					"foo":                          "bar",
 					"networking.istio.io/exportTo": "*",
-					"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
-					"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443}]`,
-					"networking.resources.gardener.cloud/from-world-to-ports":            `[{"protocol":"TCP","port":443}]`,
-					"networking.resources.gardener.cloud/namespace-selectors":            `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}}]`,
-					"service.kubernetes.io/topology-aware-hints":                         "auto",
+					"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":443}]`,
+					"networking.resources.gardener.cloud/from-world-to-ports":                   `[{"protocol":"TCP","port":443}]`,
+					"networking.resources.gardener.cloud/namespace-selectors":                   `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}}]`,
+					"service.kubernetes.io/topology-aware-hints":                                "auto",
 				}
 				expected.Labels = map[string]string{
 					"app": "kubernetes",
@@ -374,19 +373,17 @@ var _ = Describe("#Service", func() {
 
 func netpolAnnotations() map[string]string {
 	return map[string]string{
-		"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":443}]`,
-		"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
-		"networking.resources.gardener.cloud/from-world-to-ports":            `[{"protocol":"TCP","port":443}]`,
-		"networking.resources.gardener.cloud/namespace-selectors":            `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}}]`,
+		"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":443}]`,
+		"networking.resources.gardener.cloud/from-world-to-ports":                   `[{"protocol":"TCP","port":443}]`,
+		"networking.resources.gardener.cloud/namespace-selectors":                   `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}}]`,
 	}
 }
 
 func shootNetpolAnnotations() map[string]string {
 	return map[string]string{
-		"networking.resources.gardener.cloud/from-policy-allowed-ports":          `[{"protocol":"TCP","port":443}]`,
-		"networking.resources.gardener.cloud/from-policy-pod-label-selector":     "all-scrape-targets",
-		"networking.resources.gardener.cloud/from-world-to-ports":                `[{"protocol":"TCP","port":443}]`,
-		"networking.resources.gardener.cloud/namespace-selectors":                `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}},{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchExpressions":[{"key":"handler.exposureclass.gardener.cloud/name","operator":"Exists"}]},{"matchLabels":{"gardener.cloud/role":"extension"}}]`,
-		"networking.resources.gardener.cloud/pod-label-selector-namespace-alias": "all-shoots",
+		"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":443}]`,
+		"networking.resources.gardener.cloud/from-world-to-ports":                   `[{"protocol":"TCP","port":443}]`,
+		"networking.resources.gardener.cloud/namespace-selectors":                   `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}},{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchExpressions":[{"key":"handler.exposureclass.gardener.cloud/name","operator":"Exists"}]},{"matchLabels":{"gardener.cloud/role":"extension"}}]`,
+		"networking.resources.gardener.cloud/pod-label-selector-namespace-alias":    "all-shoots",
 	}
 }

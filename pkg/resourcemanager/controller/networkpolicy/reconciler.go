@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -37,6 +38,12 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
+
+var fromPolicyRegexp *regexp.Regexp
+
+func init() {
+	fromPolicyRegexp = regexp.MustCompile(resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + "(.*)" + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix)
+}
 
 // Reconciler reconciles Service objects and creates NetworkPolicy objects.
 type Reconciler struct {
@@ -203,8 +210,31 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, service *core
 		addTasksForRelevantNamespacesAndPort(networkingv1.NetworkPolicyPort{Protocol: &port.Protocol, Port: &port.TargetPort}, "")
 	}
 
-	if customPodLabelSelector, allowedPorts := service.Annotations[resourcesv1alpha1.NetworkingFromPolicyPodLabelSelector], service.Annotations[resourcesv1alpha1.NetworkingFromPolicyAllowedPorts]; customPodLabelSelector != "" && allowedPorts != "" {
-		var ports []networkingv1.NetworkPolicyPort
+	// TODO(rfranzke): The following block is deprecated and should be removed as soon as v1.82 has been released.
+	{
+		if customPodLabelSelector, allowedPorts := service.Annotations[resourcesv1alpha1.NetworkingFromPolicyPodLabelSelector], service.Annotations[resourcesv1alpha1.NetworkingFromPolicyAllowedPorts]; customPodLabelSelector != "" && allowedPorts != "" {
+			var ports []networkingv1.NetworkPolicyPort
+			if err := json.Unmarshal([]byte(allowedPorts), &ports); err != nil {
+				return nil, nil, fmt.Errorf("failed unmarshaling %s: %w", allowedPorts, err)
+			}
+
+			for _, port := range ports {
+				addTasksForRelevantNamespacesAndPort(port, customPodLabelSelector)
+			}
+		}
+	}
+
+	for k, allowedPorts := range service.Annotations {
+		match := fromPolicyRegexp.FindStringSubmatch(k)
+		if len(match) != 2 {
+			continue
+		}
+
+		var (
+			customPodLabelSelector = match[1]
+			ports                  []networkingv1.NetworkPolicyPort
+		)
+
 		if err := json.Unmarshal([]byte(allowedPorts), &ports); err != nil {
 			return nil, nil, fmt.Errorf("failed unmarshaling %s: %w", allowedPorts, err)
 		}

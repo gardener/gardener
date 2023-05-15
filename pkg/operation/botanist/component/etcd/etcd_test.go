@@ -158,10 +158,9 @@ var _ = Describe("Etcd", func() {
 			clientService := &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						"networking.resources.gardener.cloud/from-policy-pod-label-selector":     "all-scrape-targets",
-						"networking.resources.gardener.cloud/from-policy-allowed-ports":          `[{"protocol":"TCP","port":2379},{"protocol":"TCP","port":8080}]`,
-						"networking.resources.gardener.cloud/namespace-selectors":                `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`,
-						"networking.resources.gardener.cloud/pod-label-selector-namespace-alias": "all-shoots",
+						"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":2379},{"protocol":"TCP","port":8080}]`,
+						"networking.resources.gardener.cloud/namespace-selectors":                   `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`,
+						"networking.resources.gardener.cloud/pod-label-selector-namespace-alias":    "all-shoots",
 					},
 				},
 			}

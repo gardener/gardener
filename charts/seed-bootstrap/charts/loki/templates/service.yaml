@@ -9,11 +9,10 @@ metadata:
 {{ toYaml .Values.labels | indent 4 }}
 {{- if or .Values.annotations .Values.clusterType }}
   annotations:
-    networking.resources.gardener.cloud/from-policy-allowed-ports: '[{"port":{{ .Values.service.port }},"protocol":"TCP"}{{ if .Values.rbacSidecarEnabled }},{"port":{{ .Values.telegraf.port }},"protocol":"TCP"}{{ end }}]'
 {{- if eq .Values.clusterType "seed" }}
-    networking.resources.gardener.cloud/from-policy-pod-label-selector: all-seed-scrape-targets
+    networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports: '[{"port":{{ .Values.service.port }},"protocol":"TCP"}{{ if .Values.rbacSidecarEnabled }},{"port":{{ .Values.telegraf.port }},"protocol":"TCP"}{{ end }}]'
 {{- else if eq .Values.clusterType "shoot" }}
-    networking.resources.gardener.cloud/from-policy-pod-label-selector: all-scrape-targets
+    networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports: '[{"port":{{ .Values.service.port }},"protocol":"TCP"}{{ if .Values.rbacSidecarEnabled }},{"port":{{ .Values.telegraf.port }},"protocol":"TCP"}{{ end }}]'
     networking.resources.gardener.cloud/pod-label-selector-namespace-alias: all-shoots
     networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]'
 {{- end }}

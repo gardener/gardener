@@ -198,14 +198,11 @@ var _ = Describe("KubeStateMetrics", func() {
 				},
 			}
 
-			obj.Annotations = map[string]string{
-				"networking.resources.gardener.cloud/from-policy-allowed-ports": `[{"protocol":"TCP","port":8080}]`,
-			}
 			if clusterType == component.ClusterTypeSeed {
-				obj.Annotations["networking.resources.gardener.cloud/from-policy-pod-label-selector"] = "all-seed-scrape-targets"
+				obj.Annotations = map[string]string{"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8080}]`}
 			}
 			if clusterType == component.ClusterTypeShoot {
-				obj.Annotations["networking.resources.gardener.cloud/from-policy-pod-label-selector"] = "all-scrape-targets"
+				obj.Annotations = map[string]string{"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8080}]`}
 			}
 
 			return obj

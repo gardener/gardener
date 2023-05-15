@@ -88,8 +88,7 @@ metadata:
   name: istiod
   namespace: test
   annotations:
-    networking.resources.gardener.cloud/from-policy-allowed-ports: '[{"port":15014,"protocol":"TCP"}]'
-    networking.resources.gardener.cloud/from-policy-pod-label-selector: all-seed-scrape-targets
+    networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports: '[{"port":15014,"protocol":"TCP"}]'
     networking.resources.gardener.cloud/from-world-to-ports: '[{"port":10250,"protocol":"TCP"}]'
     networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchExpressions":[{"key":"handler.exposureclass.gardener.cloud/name","operator":"Exists"}]},{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]'` + additionalAnnotation + `
   labels:
@@ -1770,8 +1769,7 @@ metadata:
     networking.resources.gardener.cloud/from-world-to-ports: '[{"port":8132,"protocol":"TCP"},{"port":8443,"protocol":"TCP"},{"port":9443,"protocol":"TCP"}]'
     networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"shoot"}},{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]'
     networking.resources.gardener.cloud/pod-label-selector-namespace-alias: all-istio-ingresses
-    networking.resources.gardener.cloud/from-policy-allowed-ports: '[{"port":15020,"protocol":"TCP"}]'
-    networking.resources.gardener.cloud/from-policy-pod-label-selector: all-seed-scrape-targets
+    networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports: '[{"port":15020,"protocol":"TCP"}]'
     foo: bar
     
   labels:

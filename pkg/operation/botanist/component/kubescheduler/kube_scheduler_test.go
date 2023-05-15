@@ -176,8 +176,7 @@ var _ = Describe("KubeScheduler", func() {
 						"role": "scheduler",
 					},
 					Annotations: map[string]string{
-						"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
-						"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":10259}]`,
+						"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":10259}]`,
 					},
 				},
 				Spec: corev1.ServiceSpec{

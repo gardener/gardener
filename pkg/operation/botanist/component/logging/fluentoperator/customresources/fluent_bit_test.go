@@ -24,7 +24,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/logging/fluentoperator/customresources"
 )
 
@@ -169,8 +168,7 @@ var _ = Describe("Logging", func() {
 						Service: fluentbitv1alpha2.FluentBitService{
 							Name: name,
 							Annotations: map[string]string{
-								resourcesv1alpha1.NetworkingFromPolicyPodLabelSelector: "all-seed-scrape-targets",
-								resourcesv1alpha1.NetworkingFromPolicyAllowedPorts:     `[{"port":"2020","protocol":"TCP"},{"port":"2021","protocol":"TCP"}]`,
+								"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": `[{"port":"2020","protocol":"TCP"},{"port":"2021","protocol":"TCP"}]`,
 							},
 							Labels: labels,
 						},

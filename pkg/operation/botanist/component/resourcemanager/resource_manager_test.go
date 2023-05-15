@@ -277,8 +277,8 @@ var _ = Describe("ResourceManager", func() {
 				Namespace: deployNamespace,
 				Labels:    defaultLabels,
 				Annotations: map[string]string{
-					"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-scrape-targets",
-					"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":8080}]`,
+					"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports":  `[{"protocol":"TCP","port":8080}]`,
+					"networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports": `[{"protocol":"TCP","port":10250}]`,
 				},
 			},
 			Spec: corev1.ServiceSpec{
@@ -2083,7 +2083,9 @@ subjects:
 		Context("target cluster = source cluster", func() {
 			BeforeEach(func() {
 				clusterRole.Rules = allowAll
-				service.Annotations["networking.resources.gardener.cloud/from-policy-pod-label-selector"] = "all-seed-scrape-targets"
+				delete(service.Annotations, "networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports")
+				delete(service.Annotations, "networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports")
+				service.Annotations["networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports"] = `[{"protocol":"TCP","port":8080}]`
 				service.Annotations["networking.resources.gardener.cloud/from-world-to-ports"] = `[{"protocol":"TCP","port":10250}]`
 				configMap = configMapFor(&watchedNamespace, nil)
 				deployment = deploymentFor(configMap.Name, cfg.KubernetesVersion, &watchedNamespace, nil, false, nil)

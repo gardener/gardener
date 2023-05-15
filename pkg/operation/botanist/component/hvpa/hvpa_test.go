@@ -208,8 +208,7 @@ var _ = Describe("HVPA", func() {
 					"app":                 "hvpa-controller",
 				},
 				Annotations: map[string]string{
-					"networking.resources.gardener.cloud/from-policy-allowed-ports":      `[{"protocol":"TCP","port":9569}]`,
-					"networking.resources.gardener.cloud/from-policy-pod-label-selector": "all-seed-scrape-targets",
+					"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":9569}]`,
 				},
 			},
 			Spec: corev1.ServiceSpec{
