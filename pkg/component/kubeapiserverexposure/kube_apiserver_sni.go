@@ -44,12 +44,32 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
+var (
+	//go:embed templates/envoyfilter.yaml
+	envoyFilterSpecTemplateContent string
+	envoyFilterSpecTemplate        *template.Template
+)
+
+func init() {
+	var err error
+	envoyFilterSpecTemplate, err = template.
+		New("envoy-filter-spec").
+		Funcs(sprig.TxtFuncMap()).
+		Parse(envoyFilterSpecTemplateContent)
+	utilruntime.Must(err)
+}
+
 // SNIValues configure the kube-apiserver service SNI.
 type SNIValues struct {
 	Hosts               []string
-	NamespaceUID        types.UID
-	APIServerClusterIP  string
+	APIServerProxy      *APIServerProxy
 	IstioIngressGateway IstioIngressGateway
+}
+
+// APIServerProxy contains values for the APIServer proxy protocol configuration.
+type APIServerProxy struct {
+	NamespaceUID       types.UID
+	APIServerClusterIP string
 }
 
 // IstioIngressGateway contains the values for istio ingress gateway configuration.
@@ -86,11 +106,12 @@ type sni struct {
 }
 
 type envoyFilterTemplateValues struct {
-	*SNIValues
-	Name      string
-	Namespace string
-	Host      string
-	Port      int
+	*APIServerProxy
+	IngressGatewayLabels map[string]string
+	Name                 string
+	Namespace            string
+	Host                 string
+	Port                 int
 }
 
 func (s *sni) Deploy(ctx context.Context) error {
@@ -105,11 +126,12 @@ func (s *sni) Deploy(ctx context.Context) error {
 	)
 
 	if err := envoyFilterSpecTemplate.Execute(&envoyFilterSpec, envoyFilterTemplateValues{
-		SNIValues: s.valuesFunc(),
-		Name:      envoyFilter.Name,
-		Namespace: envoyFilter.Namespace,
-		Host:      hostName,
-		Port:      kubeapiserverconstants.Port,
+		APIServerProxy:       s.valuesFunc().APIServerProxy,
+		IngressGatewayLabels: s.valuesFunc().IstioIngressGateway.Labels,
+		Name:                 envoyFilter.Name,
+		Namespace:            envoyFilter.Namespace,
+		Host:                 hostName,
+		Port:                 kubeapiserverconstants.Port,
 	}); err != nil {
 		return err
 	}
@@ -244,19 +266,4 @@ func AnyDeployedSNI(ctx context.Context, c client.Client) (bool, error) {
 	}
 
 	return len(l.Items) > 0, nil
-}
-
-var (
-	//go:embed templates/envoyfilter.yaml
-	envoyFilterSpecTemplateContent string
-	envoyFilterSpecTemplate        *template.Template
-)
-
-func init() {
-	var err error
-	envoyFilterSpecTemplate, err = template.
-		New("envoy-filter-spec").
-		Funcs(sprig.TxtFuncMap()).
-		Parse(envoyFilterSpecTemplateContent)
-	utilruntime.Must(err)
 }

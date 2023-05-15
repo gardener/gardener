@@ -14,7 +14,7 @@ metadata:
 spec:
   workloadSelector:
     labels:
-{{- range $k, $v := .IstioIngressGateway.Labels }}
+{{- range $k, $v := .IngressGatewayLabels }}
       {{ $k }}: {{ $v }}
 {{- end }}
   configPatches:

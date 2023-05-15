@@ -136,11 +136,13 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 		b.Shoot.SeedNamespace,
 		func() *kubeapiserverexposure.SNIValues {
 			return &kubeapiserverexposure.SNIValues{
-				APIServerClusterIP: clusterIP,
-				NamespaceUID:       b.SeedNamespaceObject.UID,
 				Hosts: []string{
 					gardenerutils.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
 					gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+				},
+				APIServerProxy: &kubeapiserverexposure.APIServerProxy{
+					APIServerClusterIP: clusterIP,
+					NamespaceUID:       b.SeedNamespaceObject.UID,
 				},
 				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
 					Namespace: b.IstioNamespace(),

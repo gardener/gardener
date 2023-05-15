@@ -204,13 +204,15 @@ var _ = Describe("#SNI", func() {
 	JustBeforeEach(func() {
 		defaultDepWaiter = NewSNI(c, applier, namespace, func() *SNIValues {
 			return &SNIValues{
-				Hosts:              hosts,
-				APIServerClusterIP: "1.1.1.1",
+				Hosts: hosts,
+				APIServerProxy: &APIServerProxy{
+					APIServerClusterIP: "1.1.1.1",
+					NamespaceUID:       namespaceUID,
+				},
 				IstioIngressGateway: IstioIngressGateway{
 					Namespace: istioNamespace,
 					Labels:    istioLabels,
 				},
-				NamespaceUID: namespaceUID,
 			}
 		})
 	})
