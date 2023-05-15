@@ -130,6 +130,7 @@ func (r *Reconciler) reconcile(
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+	kubeAPIServerSNI := r.newSNI(garden, istio.GetValues().IngressGateway[0])
 
 	// virtual garden control plane components
 	etcdMain, err := r.newEtcd(log, garden, secretsManager, v1beta1constants.ETCDRoleMain, etcd.ClassImportant)
@@ -237,6 +238,11 @@ func (r *Reconciler) reconcile(
 			Name:         "Deploying and waiting for kube-apiserver service in the runtime cluster",
 			Fn:           component.OpWait(kubeAPIServerService).Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointSystemComponents),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Kubernetes API server service SNI",
+			Fn:           kubeAPIServerSNI.Deploy,
+			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService),
 		})
 		deployKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API Server",

@@ -135,8 +135,7 @@ func (r *Reconciler) remediateAllocatedNodePorts(ctx context.Context, log logr.L
 				port.NodePort == nodePortIngress ||
 				port.NodePort == nodePortIstioIngressGatewayZone0 ||
 				port.NodePort == nodePortIstioIngressGatewayZone1 ||
-				port.NodePort == nodePortIstioIngressGatewayZone2 ||
-				port.NodePort == nodePortVirtualGardenKubeAPIServer {
+				port.NodePort == nodePortIstioIngressGatewayZone2 {
 
 				var (
 					min, max    = 30000, 32767

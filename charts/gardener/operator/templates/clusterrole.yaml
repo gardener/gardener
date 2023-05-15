@@ -187,6 +187,9 @@ rules:
   - networking.istio.io
   resources:
   - envoyfilters
+  - gateways
+  - virtualservices
+  - destinationrules
   verbs:
   - create
   - get

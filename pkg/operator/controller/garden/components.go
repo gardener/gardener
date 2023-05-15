@@ -259,7 +259,10 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 		func() client.ObjectKey {
 			return client.ObjectKey{Name: namePrefix + v1beta1constants.DeploymentNameKubeAPIServer, Namespace: r.GardenNamespace}
 		},
-		nil,
+		// TODO(timuthy): This function should return the Istio-Ingress service as soon as the Kube-Apiserver LoadBalancer service was switched to 'ClusterIP'. This is planned for release v1.73.
+		func() client.ObjectKey {
+			return client.ObjectKey{Name: namePrefix + v1beta1constants.DeploymentNameKubeAPIServer, Namespace: r.GardenNamespace}
+		},
 		nil,
 		nil,
 		nil,
@@ -520,6 +523,23 @@ func (r *Reconciler) newIstio(garden *operatorv1alpha1.Garden) (istio.Interface,
 		false,
 		garden.Spec.RuntimeCluster.Provider.Zones,
 	)
+}
+
+func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, istioValues istio.IngressGatewayValues) component.Deployer {
+	return kubeapiserverexposure.NewSNI(
+		r.RuntimeClientSet.Client(),
+		r.RuntimeClientSet.Applier(),
+		namePrefix+v1beta1constants.DeploymentNameKubeAPIServer,
+		r.GardenNamespace,
+		func() *kubeapiserverexposure.SNIValues {
+			return &kubeapiserverexposure.SNIValues{
+				Hosts: []string{gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domain)},
+				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
+					Namespace: istioValues.Namespace,
+					Labels:    istioValues.Labels,
+				},
+			}
+		})
 }
 
 func (r *Reconciler) newGardenerAccess(secretsManager secretsmanager.Interface, domain string) component.Deployer {

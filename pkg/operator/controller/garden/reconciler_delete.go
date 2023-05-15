@@ -93,6 +93,7 @@ func (r *Reconciler) delete(
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+	kubeAPIServerSNI := r.newSNI(garden, istio.GetValues().IngressGateway[0])
 	kubeAPIServerService := r.newKubeAPIServerService(log, garden)
 	kubeAPIServer, err := r.newKubeAPIServer(ctx, garden, secretsManager, targetVersion)
 	if err != nil {
@@ -134,9 +135,14 @@ func (r *Reconciler) delete(
 			Name: "Destroying Kubernetes Controller Manager Server",
 			Fn:   component.OpDestroyAndWait(kubeControllerManager).Destroy,
 		})
+		destroyKubeAPIServerSNI = g.Add(flow.Task{
+			Name: "Destroying Kubernetes API server service SNI",
+			Fn:   component.OpDestroyAndWait(kubeAPIServerSNI).Destroy,
+		})
 		destroyKubeAPIServerService = g.Add(flow.Task{
-			Name: "Destroying Kubernetes API Server service",
-			Fn:   component.OpDestroyAndWait(kubeAPIServerService).Destroy,
+			Name:         "Destroying Kubernetes API Server service",
+			Fn:           component.OpDestroyAndWait(kubeAPIServerService).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyKubeAPIServerSNI),
 		})
 		destroyKubeAPIServer = g.Add(flow.Task{
 			Name: "Destroying Kubernetes API Server",
@@ -160,6 +166,7 @@ func (r *Reconciler) delete(
 			destroyVirtualGardenGardenerAccess,
 			destroyVirtualGardenGardenerResourceManager,
 			destroyKubeControllerManager,
+			destroyKubeAPIServerSNI,
 			destroyKubeAPIServerService,
 			destroyKubeAPIServer,
 			destroyEtcd,
