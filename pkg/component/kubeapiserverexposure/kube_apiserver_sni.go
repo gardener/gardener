@@ -46,11 +46,10 @@ import (
 
 // SNIValues configure the kube-apiserver service SNI.
 type SNIValues struct {
-	Hosts                    []string
-	NamespaceUID             types.UID
-	APIServerClusterIP       string
-	APIServerInternalDNSName string
-	IstioIngressGateway      IstioIngressGateway
+	Hosts               []string
+	NamespaceUID        types.UID
+	APIServerClusterIP  string
+	IstioIngressGateway IstioIngressGateway
 }
 
 // IstioIngressGateway contains the values for istio ingress gateway configuration.

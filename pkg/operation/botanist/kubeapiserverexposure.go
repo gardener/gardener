@@ -82,7 +82,6 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 					Namespace: b.IstioNamespace(),
 					Labels:    b.IstioLabels(),
 				},
-				APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
 			}
 		},
 	))
@@ -147,7 +146,6 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 					Namespace: b.IstioNamespace(),
 					Labels:    b.IstioLabels(),
 				},
-				APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
 			}
 		},
 	)
