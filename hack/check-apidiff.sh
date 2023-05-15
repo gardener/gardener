@@ -32,22 +32,24 @@ echo "invoking: go-apidiff ${PULL_BASE_SHA:-master} --repo-path=."
 go-apidiff ${PULL_BASE_SHA:-master} --repo-path=. >${tmpDir}/output.txt || true
 
 exported_pkg=(
-  "gardener/gardener/extensions/"
-  "gardener/gardener/pkg/api/"
-  "gardener/gardener/pkg/apis/"
-  "gardener/gardener/pkg/chartrenderer/"
-  "gardener/gardener/pkg/client/"
-  "gardener/gardener/pkg/controllerutils/"
-  "gardener/gardener/pkg/extensions/"
-  "gardener/gardener/pkg/gardenlet/apis/config/"
-  "gardener/gardener/pkg/logger/"
-  "gardener/gardener/pkg/mock/controller-runtime/client/"
-  "gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/"
-  "gardener/gardener/pkg/operator/apis/config/"
-  "gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references/"
-  "gardener/gardener/pkg/scheduler/"
-  "gardener/gardener/pkg/utils/"
-  "gardener/gardener/test/framework/"
+  gardener/gardener/extensions/
+  gardener/gardener/pkg/api/
+  gardener/gardener/pkg/apis/.*/v1alpha1
+  gardener/gardener/pkg/apis/.*/v1beta1
+  gardener/gardener/pkg/apis/extensions/validation
+  gardener/gardener/pkg/chartrenderer/
+  gardener/gardener/pkg/client/
+  gardener/gardener/pkg/controllerutils/
+  gardener/gardener/pkg/extensions/
+  gardener/gardener/pkg/gardenlet/apis/config/v1alpha1
+  gardener/gardener/pkg/logger/
+  gardener/gardener/pkg/mock/controller-runtime/client/
+  gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/
+  gardener/gardener/pkg/operator/apis/config/v1alpha1
+  gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references/
+  gardener/gardener/pkg/scheduler/
+  gardener/gardener/pkg/utils/
+  gardener/gardener/test/framework/
 )
 
 # check the changes only for the package that is in the exported_pkg list
