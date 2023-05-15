@@ -63,7 +63,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 		test(f)
 	})
 
-	Context("Workerless Shoot", func() {
+	Context("Workerless Shoot", Label("workerless"), func() {
 		f := defaultShootCreationFramework()
 		f.Shoot = e2e.DefaultShoot("e2e-migrate", true)
 

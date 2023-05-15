@@ -308,7 +308,7 @@ verify-extended: check-generate check format test-cov test-cov-clean test-integr
 #####################################################################
 
 kind-% kind2-% gardener-%: export IPFAMILY := $(IPFAMILY)
-kind-up kind-down gardener-up gardener-dev gardener-debug gardener-down register-local-env tear-down-local-env register-kind2-env tear-down-kind2-env test-e2e-local-simple test-e2e-local-migration test-e2e-local ci-e2e-kind ci-e2e-kind-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
+kind-up kind-down gardener-up gardener-dev gardener-debug gardener-down register-local-env tear-down-local-env register-kind2-env tear-down-kind2-env test-e2e-local-simple test-e2e-local-migration test-e2e-local-workerless test-e2e-local ci-e2e-kind ci-e2e-kind-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
 kind-extensions-up kind-extensions-down gardener-extensions-up gardener-extensions-down: export KUBECONFIG = $(GARDENER_EXTENSIONS_KUBECONFIG)
 kind-ha-single-zone-up kind-ha-single-zone-down gardener-ha-single-zone-up gardener-ha-single-zone-down register-kind-ha-single-zone-env tear-down-kind-ha-single-zone-env register-kind2-ha-single-zone-env tear-down-kind2-ha-single-zone-env test-e2e-local-ha-single-zone test-e2e-local-migration-ha-single-zone ci-e2e-kind-ha-single-zone ci-e2e-kind-ha-single-zone-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG)
@@ -491,6 +491,8 @@ operator-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 
 test-e2e-local: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="default" ./test/e2e/gardener/...
+test-e2e-local-workerless: $(GINKGO)
+	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter="default && workerless" ./test/e2e/gardener/...
 test-e2e-local-simple: $(GINKGO)
 	./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "Shoot && simple" ./test/e2e/gardener/...
 test-e2e-local-migration: $(GINKGO)
