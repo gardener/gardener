@@ -24,7 +24,7 @@
 
 {{- define "extraPortMappings.gardener.operator.virtualGarden" -}}
 {{- if .Values.gardener.garden.deployed -}}
-- containerPort: 31443
+- containerPort: 30443
   hostPort: 443
 {{- end -}}
 {{- end -}}

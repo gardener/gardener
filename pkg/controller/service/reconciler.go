@@ -39,12 +39,11 @@ var (
 )
 
 const (
-	nodePortIstioIngressGateway        int32 = 30443
-	nodePortIstioIngressGatewayZone0   int32 = 30444
-	nodePortIstioIngressGatewayZone1   int32 = 30445
-	nodePortIstioIngressGatewayZone2   int32 = 30446
-	nodePortIngress                    int32 = 30448
-	nodePortVirtualGardenKubeAPIServer int32 = 31443
+	nodePortIstioIngressGateway      int32 = 30443
+	nodePortIstioIngressGatewayZone0 int32 = 30444
+	nodePortIstioIngressGatewayZone1 int32 = 30445
+	nodePortIstioIngressGatewayZone2 int32 = 30446
+	nodePortIngress                  int32 = 30448
 )
 
 // Reconciler is a reconciler for Service resources.
@@ -82,7 +81,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	for i, servicePort := range service.Spec.Ports {
 		switch {
-		case key == keyIstioIngressGateway && servicePort.Name == "tcp":
+		case (key == keyIstioIngressGateway || key == keyVirtualGardenIstioIngressGateway) && servicePort.Name == "tcp":
 			service.Spec.Ports[i].NodePort = nodePortIstioIngressGateway
 			ip = r.HostIP
 		case key == keyIstioIngressGatewayZone0 && servicePort.Name == "tcp":
@@ -98,9 +97,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			service.Spec.Ports[i].NodePort = nodePortIngress
 			ip = r.HostIP
 		case key == keyVirtualGardenKubeAPIServer && servicePort.Name == "kube-apiserver":
-			service.Spec.Ports[i].NodePort = nodePortVirtualGardenKubeAPIServer
-			ip = r.HostIP
-		case key == keyVirtualGardenIstioIngressGateway:
 			ip = r.HostIP
 		}
 	}
