@@ -149,7 +149,7 @@ func (v *vpa) reconcileAdmissionControllerClusterRoleBinding(clusterRoleBinding 
 
 func (v *vpa) reconcileAdmissionControllerService(service *corev1.Service) {
 	topologAwareRoutingEnabled := v.values.AdmissionController.TopologyAwareRoutingEnabled && v.values.ClusterType == component.ClusterTypeShoot
-	gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, topologAwareRoutingEnabled)
+	gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, topologAwareRoutingEnabled, v.values.RuntimeKubernetesVersion)
 
 	if v.values.ClusterType == component.ClusterTypeSeed {
 		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, vpaconstants.AdmissionControllerPort))
