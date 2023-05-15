@@ -122,7 +122,7 @@ This document provides a checklist for them that you can walk through.
 
    To ensure smooth rolling update behaviour, consider the definition of [liveness and/or readiness probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/).
 
-5. **Mark node-critical components** ([example](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/component/kubeproxy/resources.go#L325-L328))
+5. **Mark node-critical components** ([example](https://github.com/gardener/gardener/blob/ec6f410d180868fded06122f53be16ed9892353f/pkg/operation/botanist/component/kubeproxy/resources.go#L325-L328))
 
    To ensure user workload pods are only scheduled to `Nodes` where all node-critical components are ready, these components need to tolerate the `node.gardener.cloud/critical-components-not-ready` taint (`NoSchedule` effect). 
    Also, such `DaemonSets` and the included `PodTemplates` need to be labelled with `node.gardener.cloud/critical-component=true`.
