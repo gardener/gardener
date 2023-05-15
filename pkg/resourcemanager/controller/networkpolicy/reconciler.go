@@ -26,7 +26,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -43,9 +42,7 @@ import (
 var fromPolicyRegexp *regexp.Regexp
 
 func init() {
-	var err error
-	fromPolicyRegexp, err = regexp.Compile(resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + "(.*)" + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix)
-	utilruntime.Must(err)
+	fromPolicyRegexp = regexp.MustCompile(resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + "(.*)" + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix)
 }
 
 // Reconciler reconciles Service objects and creates NetworkPolicy objects.
