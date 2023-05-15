@@ -252,7 +252,7 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 		r.RuntimeClientSet.Client(),
 		&kubeapiserverexposure.ServiceValues{
 			AnnotationsFunc:             func() map[string]string { return annotations },
-			SNIPhase:                    component.PhaseDisabled,
+			SNIPhase:                    component.PhaseEnabling,
 			TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 			RuntimeKubernetesVersion:    r.RuntimeVersion,
 		},
