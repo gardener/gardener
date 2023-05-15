@@ -327,12 +327,12 @@ func ShootReconciliationSuccessful(shoot *gardencorev1beta1.Shoot) (bool, string
 		gardencorev1beta1.ShootAPIServerAvailable,
 		gardencorev1beta1.ShootControlPlaneHealthy,
 		gardencorev1beta1.ShootObservabilityComponentsHealthy,
+		gardencorev1beta1.ShootSystemComponentsHealthy,
 	)
 
 	if !v1beta1helper.IsWorkerless(shoot) {
 		shootConditions.Insert(
 			gardencorev1beta1.ShootEveryNodeReady,
-			gardencorev1beta1.ShootSystemComponentsHealthy,
 		)
 	}
 

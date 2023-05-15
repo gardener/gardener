@@ -219,6 +219,10 @@ func appendShootConditionsToShoot(shoot *gardencorev1beta1.Shoot) {
 			Type:   gardencorev1beta1.ShootObservabilityComponentsHealthy,
 			Status: gardencorev1beta1.ConditionTrue,
 		},
+		{
+			Type:   gardencorev1beta1.ShootSystemComponentsHealthy,
+			Status: gardencorev1beta1.ConditionTrue,
+		},
 	}...,
 	)
 
@@ -226,10 +230,6 @@ func appendShootConditionsToShoot(shoot *gardencorev1beta1.Shoot) {
 		shoot.Status.Conditions = append(shoot.Status.Conditions, []gardencorev1beta1.Condition{
 			{
 				Type:   gardencorev1beta1.ShootEveryNodeReady,
-				Status: gardencorev1beta1.ConditionTrue,
-			},
-			{
-				Type:   gardencorev1beta1.ShootSystemComponentsHealthy,
 				Status: gardencorev1beta1.ConditionTrue,
 			},
 		}...,

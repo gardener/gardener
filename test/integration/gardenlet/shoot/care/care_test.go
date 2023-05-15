@@ -270,6 +270,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 					ContainCondition(OfType(gardencorev1beta1.ShootAPIServerAvailable), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("ConditionCheckError"), WithMessageSubstrings("operation could not be initialized")),
 					ContainCondition(OfType(gardencorev1beta1.ShootControlPlaneHealthy), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("ConditionCheckError"), WithMessageSubstrings("operation could not be initialized")),
 					ContainCondition(OfType(gardencorev1beta1.ShootObservabilityComponentsHealthy), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("ConditionCheckError"), WithMessageSubstrings("operation could not be initialized")),
+					ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("ConditionCheckError"), WithMessageSubstrings("operation could not be initialized")),
 				))
 			})
 		})
@@ -382,6 +383,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 						ContainCondition(OfType(gardencorev1beta1.ShootAPIServerAvailable), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("APIServerDown")),
 						ContainCondition(OfType(gardencorev1beta1.ShootControlPlaneHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [gardener-resource-manager kube-apiserver kube-controller-manager]")),
 						ContainCondition(OfType(gardencorev1beta1.ShootObservabilityComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [plutono]")),
+						ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("ConditionCheckError"), WithMessageSubstrings("Shoot control plane has not been fully created yet.")),
 					))
 				})
 			})
@@ -426,6 +428,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 						ContainCondition(OfType(gardencorev1beta1.ShootAPIServerAvailable), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("APIServerDown")),
 						ContainCondition(OfType(gardencorev1beta1.ShootControlPlaneHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [kube-apiserver]")),
 						ContainCondition(OfType(gardencorev1beta1.ShootObservabilityComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [plutono]")),
+						ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("ConditionCheckError"), WithMessageSubstrings("Shoot control plane has not been fully created yet.")),
 					))
 				})
 			})
@@ -523,16 +526,38 @@ var _ = Describe("Shoot Care controller tests", func() {
 				})
 			})
 
-			It("SystemComponentsHealthy condition should not fail because all relevant Managed Resources are healthy", func() {
-				By("Expect conditions to be set")
-				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-					return shoot.Status.Conditions
-				}).Should(And(
-					// here SystemComponentsHealthy condition is not healthy because for SystemComponentsHealthy to be healthy a tunnel connection is required
-					// which can't be faked, if it would have been failing because of MangedResource is not healthy then the reason will not be `NoTunnelDeployed`.
-					ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("NoTunnelDeployed"), WithMessageSubstrings("no tunnels are currently deployed to perform health-check on")),
-				))
+			Context("Shoot with workers", func() {
+				It("SystemComponentsHealthy condition should not fail because all relevant Managed Resources are healthy", func() {
+					By("Expect conditions to be set")
+					Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+						return shoot.Status.Conditions
+					}).Should(And(
+						// here SystemComponentsHealthy condition is not healthy because for SystemComponentsHealthy to be healthy a tunnel connection is required
+						// which can't be faked, if it would have been failing because of MangedResource is not healthy then the reason will not be `NoTunnelDeployed`.
+						ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("NoTunnelDeployed"), WithMessageSubstrings("no tunnels are currently deployed to perform health-check on")),
+					))
+				})
+			})
+
+			Context("Workerless Shoot", func() {
+				BeforeEach(func() {
+					shoot.Spec.Provider.Workers = nil
+					shoot.Spec.SecretBindingName = nil
+					shoot.Spec.Networking = &gardencorev1beta1.Networking{
+						Services: pointer.String("10.0.0.0/16"),
+					}
+				})
+
+				It("SystemComponentsHealthy condition should not fail because all relevant Managed Resources are healthy", func() {
+					By("Expect conditions to be set")
+					Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+						return shoot.Status.Conditions
+					}).Should(And(
+						ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("SystemComponentsRunning"), WithMessageSubstrings("All system components are healthy.")),
+					))
+				})
 			})
 		})
 
@@ -604,14 +629,36 @@ var _ = Describe("Shoot Care controller tests", func() {
 				})
 			})
 
-			It("SystemComponentsHealthy condition should fail because of ManagedResource is not healthy", func() {
-				By("Expect conditions to be set")
-				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-					return shoot.Status.Conditions
-				}).Should(And(
-					ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("ApplyFailed"), WithMessageSubstrings("Resources failed to get applied")),
-				))
+			Context("Shoot with workers", func() {
+				It("SystemComponentsHealthy condition should fail because of ManagedResource is not healthy", func() {
+					By("Expect conditions to be set")
+					Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+						return shoot.Status.Conditions
+					}).Should(And(
+						ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("ApplyFailed"), WithMessageSubstrings("Resources failed to get applied")),
+					))
+				})
+			})
+
+			Context("Workerless Shoot", func() {
+				BeforeEach(func() {
+					shoot.Spec.Provider.Workers = nil
+					shoot.Spec.SecretBindingName = nil
+					shoot.Spec.Networking = &gardencorev1beta1.Networking{
+						Services: pointer.String("10.0.0.0/16"),
+					}
+				})
+
+				It("SystemComponentsHealthy condition should fail because of ManagedResource is not healthy", func() {
+					By("Expect conditions to be set")
+					Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+						return shoot.Status.Conditions
+					}).Should(And(
+						ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("ApplyFailed"), WithMessageSubstrings("Resources failed to get applied")),
+					))
+				})
 			})
 		})
 	})
