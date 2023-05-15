@@ -17,6 +17,7 @@ package kubeapiserverexposure_test
 import (
 	"context"
 
+	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -288,6 +289,7 @@ var _ = Describe("#Service", func() {
 						AnnotationsFunc:             func() map[string]string { return map[string]string{"foo": "bar"} },
 						SNIPhase:                    sniPhase,
 						TopologyAwareRoutingEnabled: true,
+						RuntimeKubernetesVersion:    semver.MustParse("1.26.1"),
 					},
 					func() client.ObjectKey { return serviceObjKey },
 					func() client.ObjectKey { return sniServiceObjKey },

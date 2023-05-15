@@ -35,6 +35,7 @@ func (b *Botanist) newKubeAPIServiceServiceComponent(sniPhase component.Phase) c
 			AnnotationsFunc:             func() map[string]string { return b.IstioLoadBalancerAnnotations() },
 			SNIPhase:                    sniPhase,
 			TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled,
+			RuntimeKubernetesVersion:    b.Seed.KubernetesVersion,
 		},
 		func() client.ObjectKey {
 			return client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}
