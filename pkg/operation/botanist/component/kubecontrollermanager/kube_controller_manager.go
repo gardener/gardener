@@ -563,9 +563,21 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 	return k.reconcileShootResources(ctx, shootAccessSecret.ServiceAccountName)
 }
 
-func (k *kubeControllerManager) SetShootClient(c client.Client)  { k.shootClient = c }
-func (k *kubeControllerManager) SetReplicaCount(replicas int32)  { k.values.Replicas = replicas }
-func (k *kubeControllerManager) Destroy(_ context.Context) error { return nil }
+func (k *kubeControllerManager) Destroy(ctx context.Context) error {
+	return kubernetesutils.DeleteObjects(ctx, k.seedClient.Client(),
+		k.emptyManagedResource(),
+		k.emptyManagedResourceSecret(),
+		k.emptyVPA(),
+		k.emptyHVPA(),
+		k.emptyService(),
+		k.emptyPodDisruptionBudget(),
+		k.emptyDeployment(),
+		k.newShootAccessSecret().Secret,
+	)
+}
+
+func (k *kubeControllerManager) SetShootClient(c client.Client) { k.shootClient = c }
+func (k *kubeControllerManager) SetReplicaCount(replicas int32) { k.values.Replicas = replicas }
 
 func (k *kubeControllerManager) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: k.values.NamePrefix + "kube-controller-manager-vpa", Namespace: k.namespace}}

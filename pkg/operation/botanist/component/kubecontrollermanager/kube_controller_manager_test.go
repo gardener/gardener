@@ -147,6 +147,25 @@ var _ = Describe("KubeControllerManager", func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 		sm = fakesecretsmanager.New(fakeClient, namespace)
 
+		values = Values{
+			RuntimeVersion:    runtimeKubernetesVersion,
+			TargetVersion:     semverVersion,
+			Image:             image,
+			Config:            &kcmConfig,
+			PriorityClassName: priorityClassName,
+			HVPAConfig:        hvpaConfigDisabled,
+			IsWorkerless:      isWorkerless,
+			PodNetwork:        podCIDR,
+			ServiceNetwork:    serviceCIDR,
+		}
+		kubeControllerManager = New(
+			testLogger,
+			fakeInterface,
+			namespace,
+			sm,
+			values,
+		)
+
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
@@ -161,27 +180,6 @@ var _ = Describe("KubeControllerManager", func() {
 
 	Describe("#Deploy", func() {
 		Context("Tests expecting a failure", func() {
-			BeforeEach(func() {
-				values = Values{
-					RuntimeVersion:    runtimeKubernetesVersion,
-					TargetVersion:     semverVersion,
-					Image:             image,
-					Config:            &kcmConfig,
-					PriorityClassName: priorityClassName,
-					HVPAConfig:        hvpaConfigDisabled,
-					IsWorkerless:      isWorkerless,
-					PodNetwork:        podCIDR,
-					ServiceNetwork:    serviceCIDR,
-				}
-				kubeControllerManager = New(
-					testLogger,
-					fakeInterface,
-					namespace,
-					sm,
-					values,
-				)
-			})
-
 			It("should fail when the service cannot be created", func() {
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
@@ -938,7 +936,26 @@ subjects:
 	})
 
 	Describe("#Destroy", func() {
-		It("should return nil as it's not implemented as of now", func() {
+		It("should successfully destroy all resources", func() {
+			kubeControllerManager = New(
+				testLogger,
+				fakeInterface,
+				namespace,
+				sm,
+				values,
+			)
+
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretName, Namespace: namespace}}),
+				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace}}),
+				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: namespace}}),
+				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: namespace}}),
+				c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: pdbName, Namespace: namespace}}),
+				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: namespace}}),
+			)
+
 			Expect(kubeControllerManager.Destroy(ctx)).To(Succeed())
 		})
 	})
