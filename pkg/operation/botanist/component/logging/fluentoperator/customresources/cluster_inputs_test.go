@@ -49,7 +49,7 @@ var _ = Describe("Logging", func() {
 								RefreshIntervalSeconds: pointer.Int64(10),
 								MemBufLimit:            "30MB",
 								SkipLongLines:          pointer.Bool(true),
-								DB:                     "/opt/fluentbit/flb_kube.db",
+								DB:                     "/var/fluentbit/flb_kube.db",
 								IgnoreOlder:            "30m",
 							},
 						},
