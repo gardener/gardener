@@ -28,8 +28,8 @@ retval=0
 temp=0
 
 # PULL_BASE_SHA env variable is set by default in prow presubmit jobs
-echo "invoking: go-apidiff ${PULL_BASE_SHA:-master} --print-compatible --repo-path=."
-go-apidiff ${PULL_BASE_SHA:-master} --print-compatible --repo-path=. >${tmpDir}/output.txt || true
+echo "invoking: go-apidiff ${PULL_BASE_SHA:-master} --repo-path=."
+go-apidiff ${PULL_BASE_SHA:-master} --repo-path=. >${tmpDir}/output.txt || true
 
 exported_pkg=(
   "gardener/gardener/extensions/"
