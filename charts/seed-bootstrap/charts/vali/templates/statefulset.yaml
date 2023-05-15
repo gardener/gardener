@@ -65,7 +65,7 @@ spec:
         - -c
         - |
           set -x
-          # TODO (istvanballok): remove in a future release
+          # TODO (istvanballok): remove in release v1.72
           if [[ -d /data/loki ]]; then
             echo "Renaming loki folder to vali"
             time mv /data/loki /data/vali

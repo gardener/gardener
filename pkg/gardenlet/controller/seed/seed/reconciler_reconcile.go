@@ -797,7 +797,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
-	//TODO(rickardsjp, istvanballok): Remove in the next release once the Loki to Vali migration is complete.
+	//TODO(rickardsjp, istvanballok): Remove in release v1.72 once the Loki to Vali migration is complete.
 	if exists, err := common.LokiPvcExists(ctx, seedClient, r.GardenNamespace, log); err != nil {
 		return err
 	} else if exists {

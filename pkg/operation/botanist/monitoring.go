@@ -402,7 +402,7 @@ func (b *Botanist) DeploySeedPlutono(ctx context.Context) error {
 		return kubernetesutils.DeleteObject(ctx, b.GardenClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}})
 	}
 
-	//TODO(rickardsjp, istvanballok): Remove in the next release once the Grafana to Plutono migration is complete.
+	//TODO(rickardsjp, istvanballok): Remove in release v1.72 once the Grafana to Plutono migration is complete.
 	if err := b.DeleteGrafana(ctx); err != nil {
 		return err
 	}

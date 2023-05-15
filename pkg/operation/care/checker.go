@@ -76,7 +76,7 @@ var (
 	)
 )
 
-// TODO(rickardsjp, istvanballok): remove in a future release
+// TODO(rickardsjp, istvanballok): remove in release v1.72
 var versionConstraintLessThan171 *semver.Constraints
 
 func init() {
@@ -539,7 +539,7 @@ func (b *HealthChecker) CheckMonitoringControlPlane(
 		return nil, err
 	}
 
-	// TODO(rickardsjp, istvanballok): remove in a future release
+	// TODO(rickardsjp, istvanballok): remove in release v1.72
 	requiredDeployments := requiredMonitoringSeedDeployments
 	if versionConstraintLessThan171.Check(b.gardenerVersion) {
 		requiredDeployments = requiredMonitoringSeedDeploymentsBefore171
@@ -584,7 +584,7 @@ func (b *HealthChecker) CheckLoggingControlPlane(
 			return nil, err
 		}
 
-		// TODO(rickardsjp, istvanballok): remove in a future release
+		// TODO(rickardsjp, istvanballok): remove in release v1.72
 		requiredStatefulSets := requiredLoggingStatefulSets
 		if versionConstraintLessThan171.Check(b.gardenerVersion) {
 			requiredStatefulSets = requiredLoggingStatefulSetsBefore171
