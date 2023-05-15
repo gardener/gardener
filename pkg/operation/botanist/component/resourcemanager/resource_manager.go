@@ -297,8 +297,8 @@ type Values struct {
 	// WatchedNamespace restricts the gardener-resource-manager to only watch ManagedResources in the defined namespace.
 	// If not set the gardener-resource-manager controller watches for ManagedResources in all namespaces
 	WatchedNamespace *string
-	// KubernetesVersion is the Kubernetes version for the Kubernetes components.
-	KubernetesVersion *semver.Version
+	// RuntimeKubernetesVersion is the Kubernetes version of the runtime cluster.
+	RuntimeKubernetesVersion *semver.Version
 	// VPA contains information for configuring VerticalPodAutoscaler settings for the gardener-resource-manager deployment.
 	VPA *VPAConfig
 	// SchedulingProfile is the kube-scheduler profile configured for the Shoot.
@@ -714,7 +714,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 		}
 
 		topologyAwareRoutingEnabled := r.values.TopologyAwareRoutingEnabled && r.values.TargetDiffersFromSourceCluster
-		gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, topologyAwareRoutingEnabled)
+		gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, topologyAwareRoutingEnabled, r.values.RuntimeKubernetesVersion)
 
 		service.Spec.Selector = r.appLabel()
 		service.Spec.Type = corev1.ServiceTypeClusterIP
@@ -1102,7 +1102,7 @@ func (r *resourceManager) emptyPodDisruptionBudget() client.Object {
 		Namespace: r.namespace,
 	}
 
-	if version.ConstraintK8sGreaterEqual121.Check(r.values.KubernetesVersion) {
+	if version.ConstraintK8sGreaterEqual121.Check(r.values.RuntimeKubernetesVersion) {
 		return &policyv1.PodDisruptionBudget{
 			ObjectMeta: pdbObjectMeta,
 		}
