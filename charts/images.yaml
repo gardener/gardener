@@ -407,8 +407,8 @@ images:
       comment: no data is stored or processed by the installer
 - name: loki
   sourceRepository: github.com/credativ/vali
-  repository: eu.gcr.io/gardener-project/3rd/grafana/loki
-  tag: "2.2.1"
+  repository: ghcr.io/credativ/vali
+  tag: "v2.2.5"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -447,8 +447,8 @@ images:
       comment: kube-rbac-proxy is an authentication proxy working with credentials
 - name: promtail
   sourceRepository: github.com/credativ/vali
-  repository: eu.gcr.io/gardener-project/3rd/grafana/promtail
-  tag: "2.2.1"
+  repository: ghcr.io/credativ/valitail
+  tag: "v2.2.5"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
