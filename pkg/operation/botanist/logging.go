@@ -45,7 +45,7 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		return b.destroyShootLoggingStack(ctx)
 	}
 
-	//TODO(rickardsjp, istvanballok): Remove in release v1.72 once the Loki to Vali migration is complete.
+	//TODO(rickardsjp, istvanballok): Remove in release v1.77 once the Loki to Vali migration is complete.
 	if exists, err := b.lokiPvcExists(ctx); err != nil {
 		return err
 	} else if exists {

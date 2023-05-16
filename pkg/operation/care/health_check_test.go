@@ -224,7 +224,7 @@ var _ = Describe("health check", func() {
 			etcdEvents,
 		}
 
-		// TODO(rickardsjp, istvanballok): Remove in release v1.72
+		// TODO(rickardsjp, istvanballok): Remove in release v1.77
 		grafanaDeployment               = newDeployment(seedNamespace, v1beta1constants.DeploymentNameGrafana, v1beta1constants.GardenRoleMonitoring, true)
 		plutonoDeployment               = newDeployment(seedNamespace, v1beta1constants.DeploymentNamePlutono, v1beta1constants.GardenRoleMonitoring, true)
 		kubeStateMetricsShootDeployment = newDeployment(seedNamespace, v1beta1constants.DeploymentNameKubeStateMetrics, v1beta1constants.GardenRoleMonitoring, true)
