@@ -122,7 +122,7 @@ func getPromtailUnit(execStartPre, execStart string) extensionsv1alpha1.Unit {
 		Enable:  pointer.Bool(true),
 		Content: pointer.String(`[Unit]
 Description=promtail daemon
-Documentation=https://grafana.com/docs/loki/latest/clients/promtail/
+Documentation=https://github.com/credativ/plutono
 After=` + unitNameFetchToken + `
 [Install]
 WantedBy=multi-user.target

@@ -75,7 +75,7 @@ This will build `Log query` and execute it.
 This approach is convenient when you don't know the labels names or they values.
 ![](images/explore-button-usage.png)
 
-Once you feel comfortable, you can start to use the [LogQL](https://grafana.com/docs/loki/latest/logql/log_queries/) language to search for logs.
+Once you feel comfortable, you can start to use the [LogQL](https://github.com/credativ/plutono) language to search for logs.
 Next to the `Log browser >` button is the place where you can type log queries.
 
 Examples:
@@ -98,7 +98,7 @@ Examples:
 
     ```{job="systemd-combine-journal",nodename="ip-10-222-31-182.eu-central-1.compute.internal"} | unpack | unit="cloud-config-downloader.service" |~ "last execution was"```
 
-> **Note:** `{job="systemd-combine-journal",nodename="<node name>"}` stream [pack](https://grafana.com/docs/loki/latest/clients/promtail/stages/pack/) all logs from systemd services except `docker`, `containerd`, `kubelet`, and `kernel`. To filter those log by unit, you have to [unpack](https://grafana.com/docs/loki/latest/logql/log_queries/#unpack) them first.
+> **Note:** `{job="systemd-combine-journal",nodename="<node name>"}` stream [pack](https://github.com/credativ/plutono) all logs from systemd services except `docker`, `containerd`, `kubelet`, and `kernel`. To filter those log by unit, you have to [unpack](https://github.com/credativ/plutono) them first.
 
 4. Retrieving events:
 

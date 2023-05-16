@@ -65,7 +65,7 @@ var _ = Describe("Promtail", func() {
 					Enable:  pointer.Bool(true),
 					Content: pointer.String(`[Unit]
 Description=promtail daemon
-Documentation=https://grafana.com/docs/loki/latest/clients/promtail/
+Documentation=https://github.com/credativ/plutono
 After=promtail-fetch-token.service
 [Install]
 WantedBy=multi-user.target
@@ -315,7 +315,7 @@ exit $?
 					Enable:  pointer.Bool(true),
 					Content: pointer.String(`[Unit]
 Description=promtail daemon
-Documentation=https://grafana.com/docs/loki/latest/clients/promtail/
+Documentation=https://github.com/credativ/plutono
 After=promtail-fetch-token.service
 [Install]
 WantedBy=multi-user.target
