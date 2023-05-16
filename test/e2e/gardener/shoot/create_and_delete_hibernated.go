@@ -23,12 +23,13 @@ import (
 	"k8s.io/utils/pointer"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/framework"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	var test = func(f *framework.ShootCreationFramework) {
+	test := func(f *framework.ShootCreationFramework) {
 		f.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 			Enabled: pointer.Bool(true),
 		}
@@ -40,7 +41,9 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 			f.Verify()
 
-			Expect(f.GardenerFramework.VerifyNoRunningPods(ctx, f.Shoot)).To(Succeed())
+			if !v1beta1helper.IsWorkerless(f.Shoot) {
+				Expect(f.GardenerFramework.VerifyNoRunningPods(ctx, f.Shoot)).To(Succeed())
+			}
 
 			By("Delete Shoot")
 			ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
@@ -51,14 +54,14 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 	Context("Shoot with workers", func() {
 		f := defaultShootCreationFramework()
-		f.Shoot = e2e.DefaultShoot("e2e-hib", false)
+		f.Shoot = e2e.DefaultShoot("e2e-hib")
 
 		test(f)
 	})
 
 	Context("Workerless Shoot", Label("workerless"), func() {
 		f := defaultShootCreationFramework()
-		f.Shoot = e2e.DefaultShoot("e2e-hib", true)
+		f.Shoot = e2e.DefaultWorkerlessShoot("e2e-hib")
 
 		test(f)
 	})

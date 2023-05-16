@@ -36,7 +36,7 @@ import (
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	var test = func(f *framework.ShootCreationFramework) {
+	test := func(f *framework.ShootCreationFramework) {
 		// Explicitly enable the static token kubeconfig to test the kubeconfig rotation.
 		f.Shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
 
@@ -147,14 +147,14 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 	Context("Shoot with workers", func() {
 		f := defaultShootCreationFramework()
-		f.Shoot = e2e.DefaultShoot("e2e-rotate", false)
+		f.Shoot = e2e.DefaultShoot("e2e-rotate")
 
 		test(f)
 	})
 
 	Context("Workerless Shoot", Label("workerless"), func() {
 		f := defaultShootCreationFramework()
-		f.Shoot = e2e.DefaultShoot("e2e-rotate", true)
+		f.Shoot = e2e.DefaultWorkerlessShoot("e2e-rotate")
 
 		test(f)
 	})

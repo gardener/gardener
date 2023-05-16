@@ -30,7 +30,7 @@ import (
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func() {
-	var test = func(f *framework.ShootCreationFramework) {
+	test := func(f *framework.ShootCreationFramework) {
 		// Assign seedName so that shoot does not get scheduled to the seed that will be used as target.
 		f.Shoot.Spec.SeedName = pointer.String(getSeedName(false))
 
@@ -58,14 +58,14 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 
 	Context("Shoot with workers", func() {
 		f := defaultShootCreationFramework()
-		f.Shoot = e2e.DefaultShoot("e2e-migrate", false)
+		f.Shoot = e2e.DefaultShoot("e2e-migrate")
 
 		test(f)
 	})
 
 	Context("Workerless Shoot", Label("workerless"), func() {
 		f := defaultShootCreationFramework()
-		f.Shoot = e2e.DefaultShoot("e2e-migrate", true)
+		f.Shoot = e2e.DefaultWorkerlessShoot("e2e-migrate")
 
 		test(f)
 	})

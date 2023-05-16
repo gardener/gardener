@@ -21,13 +21,14 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/node"
 	"github.com/gardener/gardener/test/framework"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	var test = func(f *framework.ShootCreationFramework) {
+	test := func(f *framework.ShootCreationFramework) {
 		It("Create, Hibernate, Wake up and Delete Shoot", Offset(1), func() {
 			By("Create Shoot")
 			ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
@@ -35,13 +36,15 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 			f.Verify()
 
-			By("Verify Bootstrapping of Nodes with node-critical components")
-			// We verify the node readiness feature in this specific e2e test because it uses a single-node shoot cluster.
-			// The default shoot e2e test deals with multiple nodes, deleting all of them and waiting for them to be recreated
-			// might increase the test duration undesirably.
-			ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
-			defer cancel()
-			node.VerifyNodeCriticalComponentsBootstrapping(ctx, f.ShootFramework)
+			if !v1beta1helper.IsWorkerless(f.Shoot) {
+				By("Verify Bootstrapping of Nodes with node-critical components")
+				// We verify the node readiness feature in this specific e2e test because it uses a single-node shoot cluster.
+				// The default shoot e2e test deals with multiple nodes, deleting all of them and waiting for them to be recreated
+				// might increase the test duration undesirably.
+				ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
+				defer cancel()
+				node.VerifyNodeCriticalComponentsBootstrapping(ctx, f.ShootFramework)
+			}
 
 			By("Hibernate Shoot")
 			ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
@@ -63,7 +66,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Context("Shoot with workers", func() {
 		f := defaultShootCreationFramework()
 
-		f.Shoot = e2e.DefaultShoot("e2e-wake-up", false)
+		f.Shoot = e2e.DefaultShoot("e2e-wake-up")
 
 		test(f)
 	})
@@ -71,7 +74,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Context("Workerless Shoot", Label("workerless"), func() {
 		f := defaultShootCreationFramework()
 
-		f.Shoot = e2e.DefaultShoot("e2e-wake-up", true)
+		f.Shoot = e2e.DefaultWorkerlessShoot("e2e-wake-up")
 
 		test(f)
 	})

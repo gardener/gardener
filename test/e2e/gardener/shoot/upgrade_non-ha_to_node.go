@@ -28,7 +28,7 @@ import (
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "high-availability", "upgrade-to-node"), func() {
-	var test = func(f *framework.ShootCreationFramework) {
+	test := func(f *framework.ShootCreationFramework) {
 		f.Shoot.Spec.ControlPlane = nil
 
 		It("Create, Upgrade (non-HA to HA with failure tolerance type 'node') and Delete Shoot", Offset(1), func() {
@@ -53,14 +53,14 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability", "upgrade-to-
 
 	Context("Shoot with workers", func() {
 		f := defaultShootCreationFramework()
-		f.Shoot = e2e.DefaultShoot("e2e-upd-node", false)
+		f.Shoot = e2e.DefaultShoot("e2e-upd-node")
 
 		test(f)
 	})
 
 	Context("Workerless Shoot", Label("workerless"), func() {
 		f := defaultShootCreationFramework()
-		f.Shoot = e2e.DefaultShoot("e2e-upd-node", true)
+		f.Shoot = e2e.DefaultWorkerlessShoot("e2e-upd-node")
 
 		test(f)
 	})

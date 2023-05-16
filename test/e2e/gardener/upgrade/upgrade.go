@@ -46,7 +46,7 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 			parentCtx = context.Background()
 			job       *batchv1.Job
 			err       error
-			shootTest = e2e.DefaultShoot("e2e-upgrade", false)
+			shootTest = e2e.DefaultShoot("e2e-upgrade")
 			f         = framework.NewShootCreationFramework(&framework.ShootCreationConfig{GardenerConfig: e2e.DefaultGardenConfig(projectNamespace)})
 		)
 
@@ -125,7 +125,7 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 		var (
 			parentCtx = context.Background()
 			f         = framework.NewShootCreationFramework(&framework.ShootCreationConfig{GardenerConfig: e2e.DefaultGardenConfig(projectNamespace)})
-			shootTest = e2e.DefaultShoot("e2e-upgrade-ha", false)
+			shootTest = e2e.DefaultShoot("e2e-upgrade-ha")
 			err       error
 		)
 
@@ -181,7 +181,7 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 			f         = framework.NewShootCreationFramework(&framework.ShootCreationConfig{
 				GardenerConfig: e2e.DefaultGardenConfig(projectNamespace),
 			})
-			shootTest = e2e.DefaultShoot("e2e-upgrade-hib", false)
+			shootTest = e2e.DefaultShoot("e2e-upgrade-hib")
 			err       error
 		)
 		shootTest.Namespace = projectNamespace

@@ -37,7 +37,7 @@ import (
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	var test = func(f *framework.ShootCreationFramework) {
+	test := func(f *framework.ShootCreationFramework) {
 		// explicitly use one version below the latest supported minor version so that Kubernetes version update test can be
 		// performed
 		// TODO(ary1992): Update to 1.26.0 after the merge of https://github.com/gardener/gardener/pull/7883 has been merged and released (after 1.71 has been released).
@@ -149,14 +149,14 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 	Context("Shoot with workers", func() {
 		f := defaultShootCreationFramework()
-		f.Shoot = e2e.DefaultShoot("e2e-default", false)
+		f.Shoot = e2e.DefaultShoot("e2e-default")
 
 		test(f)
 	})
 
 	Context("Workerless Shoot", Label("workerless"), func() {
 		f := defaultShootCreationFramework()
-		f.Shoot = e2e.DefaultShoot("e2e-default", true)
+		f.Shoot = e2e.DefaultWorkerlessShoot("e2e-default")
 
 		test(f)
 	})
