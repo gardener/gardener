@@ -175,8 +175,8 @@ func (h *Health) retrieveExtensions(ctx context.Context) ([]runtime.Object, erro
 
 	if !h.shoot.IsWorkerless {
 		extensionObjectList = append(extensionObjectList,
-			&extensionsv1alpha1.ControlPlaneList{},
 			&extensionsv1alpha1.ContainerRuntimeList{},
+			&extensionsv1alpha1.ControlPlaneList{},
 			&extensionsv1alpha1.InfrastructureList{},
 			&extensionsv1alpha1.NetworkList{},
 			&extensionsv1alpha1.OperatingSystemConfigList{},

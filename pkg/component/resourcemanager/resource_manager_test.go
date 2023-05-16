@@ -399,7 +399,7 @@ var _ = Describe("ResourceManager", func() {
 						SyncPeriod:      &healthSyncPeriod,
 					},
 					KubeletCSRApprover: resourcemanagerv1alpha1.KubeletCSRApproverControllerConfig{
-						Enabled:         true && !isWorkerless,
+						Enabled:         !isWorkerless,
 						ConcurrentSyncs: &maxConcurrentCSRApproverWorkers,
 					},
 					ManagedResource: resourcemanagerv1alpha1.ManagedResourceControllerConfig{
@@ -421,7 +421,7 @@ var _ = Describe("ResourceManager", func() {
 				},
 				Webhooks: resourcemanagerv1alpha1.ResourceManagerWebhookConfiguration{
 					HighAvailabilityConfig: resourcemanagerv1alpha1.HighAvailabilityConfigWebhookConfig{
-						Enabled:                             true && !isWorkerless,
+						Enabled:                             !isWorkerless,
 						DefaultNotReadyTolerationSeconds:    defaultNotReadyTolerationSeconds,
 						DefaultUnreachableTolerationSeconds: defaultUnreachableTolerationSeconds,
 					},
@@ -429,10 +429,10 @@ var _ = Describe("ResourceManager", func() {
 						Enabled: false,
 					},
 					PodTopologySpreadConstraints: resourcemanagerv1alpha1.PodTopologySpreadConstraintsWebhookConfig{
-						Enabled: true && !isWorkerless,
+						Enabled: !isWorkerless,
 					},
 					ProjectedTokenMount: resourcemanagerv1alpha1.ProjectedTokenMountWebhookConfig{
-						Enabled: true && !isWorkerless,
+						Enabled: !isWorkerless,
 					},
 					SystemComponentsConfig: resourcemanagerv1alpha1.SystemComponentsConfigWebhookConfig{
 						Enabled: false,
@@ -451,13 +451,13 @@ var _ = Describe("ResourceManager", func() {
 					DisableCachedClient: &targetDisableCache,
 				}
 
-				config.Controllers.Node.Enabled = true && !isWorkerless
+				config.Controllers.Node.Enabled = !isWorkerless
 				config.Webhooks.PodSchedulerName = resourcemanagerv1alpha1.PodSchedulerNameWebhookConfig{
-					Enabled:       true && !isWorkerless,
+					Enabled:       !isWorkerless,
 					SchedulerName: pointer.String("bin-packing-scheduler"),
 				}
 				config.Webhooks.SystemComponentsConfig = resourcemanagerv1alpha1.SystemComponentsConfigWebhookConfig{
-					Enabled: true && !isWorkerless,
+					Enabled: !isWorkerless,
 					NodeSelector: map[string]string{
 						"worker.gardener.cloud/system-components": "true",
 					},

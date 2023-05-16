@@ -21,7 +21,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -175,7 +174,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 	})
 
 	JustBeforeEach(func() {
-		defer test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true)()
+		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.WorkerlessShoots, true))
 
 		// Typically, GCM creates the seed-specific namespace, but it doesn't run in this test, hence we have to do it.
 		By("Create seed-specific namespace")
@@ -271,6 +270,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 					ContainCondition(OfType(gardencorev1beta1.ShootControlPlaneHealthy), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("ConditionCheckError"), WithMessageSubstrings("operation could not be initialized")),
 					ContainCondition(OfType(gardencorev1beta1.ShootObservabilityComponentsHealthy), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("ConditionCheckError"), WithMessageSubstrings("operation could not be initialized")),
 					ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("ConditionCheckError"), WithMessageSubstrings("operation could not be initialized")),
+					Not(ContainCondition(OfType(gardencorev1beta1.ShootEveryNodeReady))),
 				))
 			})
 		})
@@ -384,6 +384,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 						ContainCondition(OfType(gardencorev1beta1.ShootControlPlaneHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [gardener-resource-manager kube-apiserver kube-controller-manager]")),
 						ContainCondition(OfType(gardencorev1beta1.ShootObservabilityComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [plutono]")),
 						ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("ConditionCheckError"), WithMessageSubstrings("Shoot control plane has not been fully created yet.")),
+						Not(ContainCondition(OfType(gardencorev1beta1.ShootEveryNodeReady))),
 					))
 				})
 			})
@@ -429,6 +430,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 						ContainCondition(OfType(gardencorev1beta1.ShootControlPlaneHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [kube-apiserver]")),
 						ContainCondition(OfType(gardencorev1beta1.ShootObservabilityComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [plutono]")),
 						ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("ConditionCheckError"), WithMessageSubstrings("Shoot control plane has not been fully created yet.")),
+						Not(ContainCondition(OfType(gardencorev1beta1.ShootEveryNodeReady))),
 					))
 				})
 			})
