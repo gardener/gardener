@@ -8,12 +8,12 @@ tests:
   external_labels:
     seed: aws
   input_series:
-  # LokiDown
+  # ValiDown
   - series: 'up{app="vali"}'
     values: '0+0x30'
   alert_rule_test:
   - eval_time: 30m
-    alertname: LokiDown
+    alertname: ValiDown
     exp_alerts:
     - exp_labels:
         service: logging
@@ -22,5 +22,5 @@ tests:
         visibility: operator
       exp_annotations:
         description: "There are no vali pods running on seed: aws. No logs will be collected."
-        summary: Loki is down
+        summary: Vali is down
 

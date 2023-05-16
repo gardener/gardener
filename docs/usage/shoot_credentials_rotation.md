@@ -141,7 +141,7 @@ Hence, most of the components need to be restarted (including etcd and `kube-api
 
 ### Observability Password(s) For Plutono and Prometheus
 
-For `Shoot`s with `.spec.purpose!=testing`, Gardener deploys an observability stack with Prometheus for monitoring, Alertmanager for alerting (optional), Loki for logging, and Plutono for visualization.
+For `Shoot`s with `.spec.purpose!=testing`, Gardener deploys an observability stack with Prometheus for monitoring, Alertmanager for alerting (optional), Vali for logging, and Plutono for visualization.
 The Plutono instance is exposed via `Ingress` and accessible for end-users via basic authentication credentials generated and managed by Gardener.
 
 Those credentials are stored in a `Secret` with the name `<shoot-name>.monitoring` in the project namespace in the garden cluster and has multiple data keys:

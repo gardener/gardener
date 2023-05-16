@@ -66,7 +66,7 @@ func init() {
 func getPromtailConfigurationFile(ctx components.Context) (extensionsv1alpha1.File, error) {
 	var config bytes.Buffer
 
-	if ctx.LokiIngress == "" {
+	if ctx.ValiIngress == "" {
 		return extensionsv1alpha1.File{}, fmt.Errorf("vali ingress url is missing")
 	}
 
@@ -76,9 +76,9 @@ func getPromtailConfigurationFile(ctx components.Context) (extensionsv1alpha1.Fi
 	}
 
 	if err := tplPromtail.Execute(&config, map[string]interface{}{
-		"clientURL":         "https://" + ctx.LokiIngress + "/vali/api/v1/push",
+		"clientURL":         "https://" + ctx.ValiIngress + "/vali/api/v1/push",
 		"pathCACert":        PathCACert,
-		"valiIngress":       ctx.LokiIngress,
+		"valiIngress":       ctx.ValiIngress,
 		"pathAuthToken":     PathAuthToken,
 		"APIServerURL":      ctx.APIServerURL,
 		"APIServerHostname": apiServerURL.Hostname(),

@@ -95,8 +95,8 @@ func GenerateAddonConfig(values map[string]interface{}, enabled bool) map[string
 	return v
 }
 
-// DeleteLoki  deletes all resources of the Loki in a given namespace.
-func DeleteLoki(ctx context.Context, k8sClient client.Client, namespace string) error {
+// DeleteVali  deletes all resources of the Vali in a given namespace.
+func DeleteVali(ctx context.Context, k8sClient client.Client, namespace string) error {
 	resources := []client.Object{
 		&hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: namespace}},
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "vali-config", Namespace: namespace}},

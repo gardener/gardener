@@ -46,8 +46,8 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	}
 
 	seedImages, err := b.InjectSeedSeedImages(map[string]interface{}{},
-		images.ImageNameLoki,
-		images.ImageNameLokiCurator,
+		images.ImageNameVali,
+		images.ImageNameValiCurator,
 		images.ImageNameKubeRbacProxy,
 		images.ImageNameTelegraf,
 		images.ImageNameTune2fs,
@@ -73,13 +73,13 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	}
 
 	// check if vali is enabled in gardenlet config, default is true
-	if !gardenlethelper.IsLokiEnabled(b.Config) {
-		// Because ShootNodeLogging is installed as part of the Loki pod
+	if !gardenlethelper.IsValiEnabled(b.Config) {
+		// Because ShootNodeLogging is installed as part of the Vali pod
 		// we have to delete it too in case it was previously deployed
 		if err := b.destroyShootNodeLogging(ctx); err != nil {
 			return err
 		}
-		return common.DeleteLoki(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
+		return common.DeleteVali(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
 	}
 
 	hvpaValues := make(map[string]interface{})
@@ -105,9 +105,9 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 
 		ingressTLSSecret, err := b.SecretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 			Name:                        "vali-tls",
-			CommonName:                  b.ComputeLokiHost(),
+			CommonName:                  b.ComputeValiHost(),
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:                    b.ComputeLokiHosts(),
+			DNSNames:                    b.ComputeValiHosts(),
 			CertType:                    secrets.ServerCert,
 			Validity:                    &ingressTLSCertificateValidity,
 			SkipPublishingCACertificate: true,
@@ -121,7 +121,7 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 			"class": ingressClass,
 			"hosts": []map[string]interface{}{
 				{
-					"hostName":    b.ComputeLokiHost(),
+					"hostName":    b.ComputeValiHost(),
 					"secretName":  ingressTLSSecret.Name,
 					"serviceName": "vali",
 					"servicePort": 8080,
@@ -165,7 +165,7 @@ func (b *Botanist) destroyShootLoggingStack(ctx context.Context) error {
 		return err
 	}
 
-	return common.DeleteLoki(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
+	return common.DeleteVali(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
 }
 
 func (b *Botanist) destroyShootNodeLogging(ctx context.Context) error {
@@ -181,7 +181,7 @@ func (b *Botanist) destroyShootNodeLogging(ctx context.Context) error {
 
 func (b *Botanist) isShootNodeLoggingEnabled() bool {
 	if b.Shoot != nil && !b.Shoot.IsWorkerless && b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) &&
-		gardenlethelper.IsLokiEnabled(b.Config) && b.Config != nil &&
+		gardenlethelper.IsValiEnabled(b.Config) && b.Config != nil &&
 		b.Config.Logging != nil && b.Config.Logging.ShootNodeLogging != nil {
 
 		for _, purpose := range b.Config.Logging.ShootNodeLogging.ShootPurposes {

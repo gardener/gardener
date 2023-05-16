@@ -490,7 +490,7 @@ func (g *garden) migrateAllShootServicesForNetworkPolicies(ctx context.Context, 
 		}
 	}
 
-	taskFns = append(taskFns, migrationTasksForLokiServices(g.mgr.GetClient(), serviceList.Items)...)
+	taskFns = append(taskFns, migrationTasksForValiServices(g.mgr.GetClient(), serviceList.Items)...)
 
 	// prometheus namespaces
 	serviceList = &corev1.ServiceList{}
@@ -550,7 +550,7 @@ func migrationTasksForServices(cl client.Client, services []corev1.Service, port
 	return taskFns
 }
 
-func migrationTasksForLokiServices(cl client.Client, services []corev1.Service) []flow.TaskFn {
+func migrationTasksForValiServices(cl client.Client, services []corev1.Service) []flow.TaskFn {
 	var taskFns []flow.TaskFn
 
 	for _, svc := range services {

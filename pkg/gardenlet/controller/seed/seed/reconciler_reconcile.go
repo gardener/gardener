@@ -359,8 +359,8 @@ func (r *Reconciler) runReconcileSeedFlow(
 			images.ImageNameAlertmanager,
 			images.ImageNameAlpine,
 			images.ImageNameConfigmapReloader,
-			images.ImageNameLoki,
-			images.ImageNameLokiCurator,
+			images.ImageNameVali,
+			images.ImageNameValiCurator,
 			images.ImageNameTune2fs,
 			images.ImageNamePlutono,
 			images.ImageNamePrometheus,
@@ -496,15 +496,15 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 	if loggingEnabled {
 		// check if vali is disabled in gardenlet config
-		if !gardenlethelper.IsLokiEnabled(&r.Config) {
+		if !gardenlethelper.IsValiEnabled(&r.Config) {
 			valiValues["enabled"] = false
-			if err := common.DeleteLoki(ctx, seedClient, gardenNamespace.Name); err != nil {
+			if err := common.DeleteVali(ctx, seedClient, gardenNamespace.Name); err != nil {
 				return err
 			}
 		} else {
 			valiValues["authEnabled"] = false
-			valiValues["storage"] = loggingConfig.Loki.Garden.Storage
-			if err := ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, log, seedClient, *loggingConfig.Loki.Garden.Storage); err != nil {
+			valiValues["storage"] = loggingConfig.Vali.Garden.Storage
+			if err := ResizeOrDeleteValiDataVolumeIfStorageNotTheSame(ctx, log, seedClient, *loggingConfig.Vali.Garden.Storage); err != nil {
 				return err
 			}
 
@@ -538,15 +538,15 @@ func (r *Reconciler) runReconcileSeedFlow(
 					},
 				}
 
-				currentResources, err := kubernetesutils.GetContainerResourcesInStatefulSet(ctx, seedClient, kubernetesutils.Key(r.GardenNamespace, v1beta1constants.StatefulSetNameLoki))
+				currentResources, err := kubernetesutils.GetContainerResourcesInStatefulSet(ctx, seedClient, kubernetesutils.Key(r.GardenNamespace, v1beta1constants.StatefulSetNameVali))
 				if err != nil {
 					return err
 				}
-				if len(currentResources) != 0 && currentResources[v1beta1constants.StatefulSetNameLoki] != nil {
+				if len(currentResources) != 0 && currentResources[v1beta1constants.StatefulSetNameVali] != nil {
 					valiValues["resources"] = map[string]interface{}{
 						// Copy requests only, effectively removing limits
-						v1beta1constants.StatefulSetNameLoki: &corev1.ResourceRequirements{
-							Requests: currentResources[v1beta1constants.StatefulSetNameLoki].Requests,
+						v1beta1constants.StatefulSetNameVali: &corev1.ResourceRequirements{
+							Requests: currentResources[v1beta1constants.StatefulSetNameVali].Requests,
 						},
 					}
 				}
@@ -612,7 +612,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			}
 		}
 	} else {
-		if err := common.DeleteLoki(ctx, seedClient, v1beta1constants.GardenNamespace); err != nil {
+		if err := common.DeleteVali(ctx, seedClient, v1beta1constants.GardenNamespace); err != nil {
 			return err
 		}
 	}
@@ -1065,9 +1065,9 @@ func deployBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Clie
 	return err
 }
 
-// ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame updates the garden Loki PVC if passed storage value is not the same as the current one.
+// ResizeOrDeleteValiDataVolumeIfStorageNotTheSame updates the garden Vali PVC if passed storage value is not the same as the current one.
 // Caution: If the passed storage capacity is less than the current one the existing PVC and its PV will be deleted.
-func ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx context.Context, log logr.Logger, k8sClient client.Client, newStorageQuantity resource.Quantity) error {
+func ResizeOrDeleteValiDataVolumeIfStorageNotTheSame(ctx context.Context, log logr.Logger, k8sClient client.Client, newStorageQuantity resource.Quantity) error {
 	// Check if we need resizing
 	pvc := &corev1.PersistentVolumeClaim{}
 	if err := k8sClient.Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, "vali-vali-0"), pvc); err != nil {
@@ -1081,7 +1081,7 @@ func ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx context.Context, log lo
 		return nil
 	}
 
-	statefulSetKey := client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: v1beta1constants.StatefulSetNameLoki}
+	statefulSetKey := client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: v1beta1constants.StatefulSetNameVali}
 	log.Info("Scaling StatefulSet to zero in order to detach PVC", "statefulSet", statefulSetKey)
 	if err := kubernetes.ScaleStatefulSetAndWaitUntilScaled(ctx, k8sClient, statefulSetKey, 0); client.IgnoreNotFound(err) != nil {
 		return err
@@ -1104,7 +1104,7 @@ func ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx context.Context, log lo
 		}
 	}
 
-	valiSts := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.StatefulSetNameLoki, Namespace: v1beta1constants.GardenNamespace}}
+	valiSts := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.StatefulSetNameVali, Namespace: v1beta1constants.GardenNamespace}}
 	return client.IgnoreNotFound(k8sClient.Delete(ctx, valiSts))
 }
 

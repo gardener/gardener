@@ -30,8 +30,8 @@ const (
 	// AlertManagerPrefix is a constant for a prefix used for the AlertManager instance.
 	AlertManagerPrefix = "au"
 
-	// LokiPrefix is a constant for a prefix used for the Loki instance.
-	LokiPrefix = "l"
+	// ValiPrefix is a constant for a prefix used for the Vali instance.
+	ValiPrefix = "l"
 
 	// ManagedResourceShootCoreName is the name of the shoot core managed resource.
 	ManagedResourceShootCoreName = "shoot-core"

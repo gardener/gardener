@@ -101,11 +101,11 @@ func IsLoggingEnabled(c *config.GardenletConfiguration) bool {
 	return false
 }
 
-// IsLokiEnabled return true if the vali is enabled
-func IsLokiEnabled(c *config.GardenletConfiguration) bool {
+// IsValiEnabled return true if the vali is enabled
+func IsValiEnabled(c *config.GardenletConfiguration) bool {
 	if c != nil && c.Logging != nil &&
-		c.Logging.Loki != nil && c.Logging.Loki.Enabled != nil {
-		return *c.Logging.Loki.Enabled
+		c.Logging.Vali != nil && c.Logging.Vali.Enabled != nil {
+		return *c.Logging.Vali.Enabled
 	}
 	return true
 }

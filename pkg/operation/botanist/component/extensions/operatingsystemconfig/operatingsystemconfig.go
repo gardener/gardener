@@ -124,8 +124,8 @@ type OriginalValues struct {
 	SSHAccessEnabled bool
 	// PromtailEnabled states whether Promtail shall be enabled.
 	PromtailEnabled bool
-	// LokiIngressHostName is the ingress host name of the shoot's Loki.
-	LokiIngressHostName string
+	// ValiIngressHostName is the ingress host name of the shoot's Vali.
+	ValiIngressHostName string
 	// NodeLocalDNSEnabled indicates whether node local dns is enabled or not.
 	NodeLocalDNSEnabled bool
 }
@@ -518,7 +518,7 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		kubernetesVersion:       kubernetesVersion,
 		sshPublicKeys:           o.values.SSHPublicKeys,
 		sshAccessEnabled:        o.values.SSHAccessEnabled,
-		valiIngressHostName:     o.values.LokiIngressHostName,
+		valiIngressHostName:     o.values.ValiIngressHostName,
 		valitailEnabled:         o.values.PromtailEnabled,
 		nodeLocalDNSEnabled:     o.values.NodeLocalDNSEnabled,
 	}, nil
@@ -630,7 +630,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			SSHPublicKeys:           d.sshPublicKeys,
 			SSHAccessEnabled:        d.sshAccessEnabled,
 			PromtailEnabled:         d.valitailEnabled,
-			LokiIngress:             d.valiIngressHostName,
+			ValiIngress:             d.valiIngressHostName,
 			APIServerURL:            d.apiServerURL,
 			Sysctls:                 d.worker.Sysctls,
 		})

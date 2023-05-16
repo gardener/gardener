@@ -47,8 +47,8 @@ func (f *ShootFramework) ShootKubeconfigSecretName() string {
 	return fmt.Sprintf("%s.kubeconfig", f.Shoot.GetName())
 }
 
-// GetLokiLogs gets logs from the last 1 hour for <key>, <value> from the vali instance in <valiNamespace>
-func (f *ShootFramework) GetLokiLogs(ctx context.Context, valiLabels map[string]string, tenant, valiNamespace, key, value string, client kubernetes.Interface) (*SearchResponse, error) {
+// GetValiLogs gets logs from the last 1 hour for <key>, <value> from the vali instance in <valiNamespace>
+func (f *ShootFramework) GetValiLogs(ctx context.Context, valiLabels map[string]string, tenant, valiNamespace, key, value string, client kubernetes.Interface) (*SearchResponse, error) {
 	valiLabelsSelector := labels.SelectorFromSet(labels.Set(valiLabels))
 
 	if tenant == "" {

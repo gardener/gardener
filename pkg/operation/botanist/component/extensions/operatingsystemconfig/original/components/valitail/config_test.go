@@ -50,7 +50,7 @@ var _ = Describe("Promtail", func() {
 				Images: map[string]*imagevector.Image{
 					images.ImageNamePromtail: valitailImage,
 				},
-				LokiIngress:     valiIngress,
+				ValiIngress:     valiIngress,
 				PromtailEnabled: true,
 				APIServerURL:    apiServerURL,
 			}
@@ -301,7 +301,7 @@ exit $?
 				Images: map[string]*imagevector.Image{
 					images.ImageNamePromtail: valitailImage,
 				},
-				LokiIngress:     valiIngress,
+				ValiIngress:     valiIngress,
 				PromtailEnabled: false,
 			}
 
@@ -365,7 +365,7 @@ ExecStart=/bin/sh -c "rm -f /var/lib/valitail/auth-token; echo service valitail-
 					images.ImageNamePromtail: valitailImage,
 				},
 				PromtailEnabled: true,
-				LokiIngress:     "",
+				ValiIngress:     "",
 			}
 
 			units, files, err := New().Config(ctx)

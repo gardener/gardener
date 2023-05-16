@@ -32,10 +32,10 @@ const (
 
 	// PathDirectory is the path for the valitail's directory.
 	PathDirectory = "/var/lib/valitail"
-	// PathFetchTokenScript is the path to a script which fetches valitail's token for communication with the Loki
+	// PathFetchTokenScript is the path to a script which fetches valitail's token for communication with the Vali
 	// sidecar proxy.
 	PathFetchTokenScript = PathDirectory + "/scripts/fetch-token.sh"
-	// PathAuthToken is the path for the file containing valitail's authentication token for communication with the Loki
+	// PathAuthToken is the path for the file containing valitail's authentication token for communication with the Vali
 	// sidecar proxy.
 	PathAuthToken = PathDirectory + "/auth-token"
 	// PathConfig is the path for the valitail's configuration file.

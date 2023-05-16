@@ -452,17 +452,17 @@ func SetDefaults_Logging(obj *Logging) {
 	if obj.Enabled == nil {
 		obj.Enabled = pointer.Bool(false)
 	}
-	if obj.Loki == nil {
-		obj.Loki = &Loki{}
+	if obj.Vali == nil {
+		obj.Vali = &Vali{}
 	}
-	if obj.Loki.Enabled == nil {
-		obj.Loki.Enabled = obj.Enabled
+	if obj.Vali.Enabled == nil {
+		obj.Vali.Enabled = obj.Enabled
 	}
-	if obj.Loki.Garden == nil {
-		obj.Loki.Garden = &GardenLoki{}
+	if obj.Vali.Garden == nil {
+		obj.Vali.Garden = &GardenVali{}
 	}
-	if obj.Loki.Garden.Storage == nil {
-		obj.Loki.Garden.Storage = &DefaultCentralLokiStorage
+	if obj.Vali.Garden.Storage == nil {
+		obj.Vali.Garden.Storage = &DefaultCentralValiStorage
 	}
 	if obj.ShootEventLogging == nil {
 		obj.ShootEventLogging = &ShootEventLogging{}

@@ -2,7 +2,7 @@
     "annotations": {
       "list": []
     },
-    "description": "Loki logs panel with prometheus variables ",
+    "description": "Vali logs panel with prometheus variables ",
     "editable": true,
     "gnetId": 12019,
     "graphTooltip": 0,
