@@ -362,7 +362,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			images.ImageNameLoki,
 			images.ImageNameLokiCurator,
 			images.ImageNameTune2fs,
-			images.ImageNameGrafana,
+			images.ImageNamePlutono,
 			images.ImageNamePrometheus,
 		},
 		imagevector.RuntimeVersion(kubernetesVersion.String()),

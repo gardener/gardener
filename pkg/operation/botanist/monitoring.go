@@ -127,7 +127,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		return err
 	}
 
-	// Need stable order before passing the dashboards to Grafana config to avoid unnecessary changes
+	// Need stable order before passing the dashboards to Plutono config to avoid unnecessary changes
 	kubernetesutils.ByName().Sort(existingConfigMaps)
 
 	// Read extension monitoring configurations
@@ -390,11 +390,11 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	return common.DeleteAlertmanager(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
 }
 
-// DeploySeedGrafana deploys the plutono charts to the Seed cluster.
-func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
+// DeploySeedPlutono deploys the plutono charts to the Seed cluster.
+func (b *Botanist) DeploySeedPlutono(ctx context.Context) error {
 	// disable monitoring if shoot has purpose testing or monitoring and vali is disabled
-	if !b.Operation.WantsGrafana() {
-		if err := b.DeleteGrafana(ctx); err != nil {
+	if !b.Operation.WantsPlutono() {
+		if err := b.DeletePlutono(ctx); err != nil {
 			return err
 		}
 
@@ -422,15 +422,15 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		return err
 	}
 
-	// Need stable order before passing the dashboards to Grafana config to avoid unnecessary changes
+	// Need stable order before passing the dashboards to Plutono config to avoid unnecessary changes
 	kubernetesutils.ByName().Sort(existingConfigMaps)
 
 	// Read extension monitoring configurations
 	for _, cm := range existingConfigMaps.Items {
-		if operatorsDashboard, ok := cm.Data[v1beta1constants.GrafanaConfigMapOperatorDashboard]; ok && operatorsDashboard != "" {
+		if operatorsDashboard, ok := cm.Data[v1beta1constants.PlutonoConfigMapOperatorDashboard]; ok && operatorsDashboard != "" {
 			dashboards.WriteString(fmt.Sprintln(operatorsDashboard))
 		}
-		if usersDashboard, ok := cm.Data[v1beta1constants.GrafanaConfigMapUserDashboard]; ok && usersDashboard != "" {
+		if usersDashboard, ok := cm.Data[v1beta1constants.PlutonoConfigMapUserDashboard]; ok && usersDashboard != "" {
 			dashboards.WriteString(fmt.Sprintln(usersDashboard))
 		}
 	}
@@ -443,7 +443,7 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 			Name:                        "plutono-tls",
 			CommonName:                  "plutono",
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:                    b.ComputeGrafanaHosts(),
+			DNSNames:                    b.ComputePlutonoHosts(),
 			CertType:                    secrets.ServerCert,
 			Validity:                    &ingressTLSCertificateValidity,
 			SkipPublishingCACertificate: true,
@@ -454,7 +454,7 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		ingressTLSSecretName = ingressTLSSecret.Name
 	}
 
-	if err := b.deployGrafanaCharts(ctx, credentialsSecret, dashboards.String(), common.GrafanaUsersPrefix, ingressTLSSecretName); err != nil {
+	if err := b.deployPlutonoCharts(ctx, credentialsSecret, dashboards.String(), common.PlutonoUsersPrefix, ingressTLSSecretName); err != nil {
 		return err
 	}
 
@@ -472,7 +472,7 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		ctx,
 		gardenerutils.ShootProjectSecretSuffixMonitoring,
 		map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring},
-		map[string]string{"url": "https://" + b.ComputeGrafanaHost()},
+		map[string]string{"url": "https://" + b.ComputePlutonoHost()},
 		credentialsSecret.Data,
 	)
 }
@@ -554,7 +554,7 @@ func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretK
 	return configs, nil
 }
 
-func (b *Botanist) deployGrafanaCharts(ctx context.Context, credentialsSecret *corev1.Secret, dashboards, subDomain, ingressTLSSecretName string) error {
+func (b *Botanist) deployPlutonoCharts(ctx context.Context, credentialsSecret *corev1.Secret, dashboards, subDomain, ingressTLSSecretName string) error {
 	ingressClass, err := gardenerutils.ComputeNginxIngressClassForSeed(b.Seed.GetInfo(), b.Seed.GetInfo().Status.KubernetesVersion)
 	if err != nil {
 		return err
@@ -586,7 +586,7 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, credentialsSecret *c
 			"highAvailabilityEnabled": b.Shoot.VPNHighAvailabilityEnabled,
 		},
 		"workerless": b.Shoot.IsWorkerless,
-	}, images.ImageNameGrafana)
+	}, images.ImageNamePlutono)
 	if err != nil {
 		return err
 	}
@@ -594,9 +594,9 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, credentialsSecret *c
 	return b.SeedClientSet.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-monitoring", "charts", "plutono"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(values))
 }
 
-// DeleteGrafana will delete all plutono resources from the seed cluster.
-func (b *Botanist) DeleteGrafana(ctx context.Context) error {
-	return common.DeleteGrafana(ctx, b.SeedClientSet, b.Shoot.SeedNamespace)
+// DeletePlutono will delete all plutono resources from the seed cluster.
+func (b *Botanist) DeletePlutono(ctx context.Context) error {
+	return common.DeletePlutono(ctx, b.SeedClientSet, b.Shoot.SeedNamespace)
 }
 
 // DeleteSeedMonitoring will delete the monitoring stack from the Seed cluster to avoid phantom alerts

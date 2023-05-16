@@ -361,7 +361,7 @@ func (h *Health) checkControlPlane(
 	return &c, nil
 }
 
-// checkObservabilityComponents checks whether the  observability components of the Shoot control plane (Prometheus, Loki, Grafana..) are healthy.
+// checkObservabilityComponents checks whether the  observability components of the Shoot control plane (Prometheus, Loki, Plutono..) are healthy.
 func (h *Health) checkObservabilityComponents(
 	ctx context.Context,
 	checker *HealthChecker,

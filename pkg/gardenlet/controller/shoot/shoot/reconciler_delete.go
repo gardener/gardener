@@ -571,15 +571,15 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:           flow.TaskFn(botanist.DestroyExternalDNSRecord).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilKubeAPIServerDeleted),
 		})
-		deleteGrafana = g.Add(flow.Task{
-			Name:         "Deleting Grafana in Seed",
-			Fn:           flow.TaskFn(botanist.DeleteGrafana).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		deletePlutono = g.Add(flow.Task{
+			Name:         "Deleting Plutono in Seed",
+			Fn:           flow.TaskFn(botanist.DeletePlutono).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureDeleted),
 		})
 
 		syncPoint = flow.NewTaskIDs(
 			deleteSeedMonitoring,
-			deleteGrafana,
+			deletePlutono,
 			waitUntilKubeAPIServerDeleted,
 			waitUntilControlPlaneDeleted,
 			waitUntilControlPlaneExposureDeleted,

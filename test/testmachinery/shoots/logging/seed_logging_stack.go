@@ -126,7 +126,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		shootLokiPriorityClassName := shootLokiSts.Spec.Template.Spec.PriorityClassName
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: shootLokiPriorityClassName}, shootLokiPriorityClass))
 		// Get the plutono Ingress
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNameGrafana}, plutonoIngress))
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNamePlutono}, plutonoIngress))
 	}, initializationTimeout)
 
 	f.Beta().Serial().CIt("should get container logs from vali for all namespaces", func(ctx context.Context) {

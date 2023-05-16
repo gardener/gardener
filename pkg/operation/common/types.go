@@ -21,8 +21,8 @@ const (
 	// KubeAPIServerPrefix is a constant for a prefix used for the KubeAPIServer instance which uses a TLS certificate from a trusted origin.
 	KubeAPIServerPrefix = "api"
 
-	// GrafanaUsersPrefix is a constant for a prefix used for the users Grafana instance.
-	GrafanaUsersPrefix = "gu"
+	// PlutonoUsersPrefix is a constant for a prefix used for the users Plutono instance.
+	PlutonoUsersPrefix = "gu"
 
 	// PrometheusPrefix is a constant for a prefix used for the Prometheus instance.
 	PrometheusPrefix = "p"

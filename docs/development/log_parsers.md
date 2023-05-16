@@ -1,6 +1,6 @@
 # How to Create Log Parser for Container into fluent-bit
 
-If our log message is parsed correctly, it has to be showed in Grafana like this:
+If our log message is parsed correctly, it has to be showed in Plutono like this:
 
 ```jsonc
   {"log":"OpenAPI AggregationController: Processing item v1beta1.metrics.k8s.io","pid":"1","severity":"INFO","source":"controller.go:107"}

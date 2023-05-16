@@ -39,7 +39,7 @@ Gardener creates a wildcard DNS record pointing to this load balancer.
 
 ### Seed Ingress
 
-If `.spec.ingress` is configured in the Seed, Gardener deploys the ingress controller mentioned in `.spec.ingress.controller.kind` to the seed cluster. Currently, the only supported kind is "nginx". If the ingress field is set, then `.spec.dns.provider` must also be set. Gardener creates a wildcard DNS record pointing to the load balancer of the ingress controller. The `Ingress` resources of components like Grafana and Prometheus in the `garden` namespace and the shoot namespaces use this wildcard DNS record to expose their underlying applications. 
+If `.spec.ingress` is configured in the Seed, Gardener deploys the ingress controller mentioned in `.spec.ingress.controller.kind` to the seed cluster. Currently, the only supported kind is "nginx". If the ingress field is set, then `.spec.dns.provider` must also be set. Gardener creates a wildcard DNS record pointing to the load balancer of the ingress controller. The `Ingress` resources of components like Plutono and Prometheus in the `garden` namespace and the shoot namespaces use this wildcard DNS record to expose their underlying applications. 
 
 ## What needs to be implemented to support a new DNS provider?
 
