@@ -9,10 +9,10 @@ metadata:
     nginx.ingress.kubernetes.io/auth-secret: {{ .Values.ingress.authSecretName }}
     nginx.ingress.kubernetes.io/auth-type: basic
     nginx.ingress.kubernetes.io/configuration-snippet: "proxy_set_header X-Scope-OrgID operator;"
-  name: grafana
+  name: plutono
   namespace: {{ .Release.Namespace }}
   labels:
-    component: grafana
+    component: plutono
 spec:
 {{- if semverCompare ">= 1.22-0" .Capabilities.KubeVersion.GitVersion }}
   ingressClassName: {{ .Values.ingress.class }}
@@ -30,9 +30,9 @@ spec:
       paths:
       - backend:
           service:
-            name: grafana
+            name: plutono
             port:
-              number: {{ required ".ports.grafana is required" $.Values.ports.grafana }}
+              number: {{ required ".ports.plutono is required" $.Values.ports.plutono }}
         path: /
         pathType: Prefix
   {{- end }}

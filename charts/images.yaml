@@ -229,7 +229,7 @@ images:
       integrity_requirement: high
       availability_requirement: low
       comment: the node-exporter is also deployed to the shoot cluster
-- name: grafana
+- name: plutono
   sourceRepository: github.com/credativ/plutono
   repository: ghcr.io/credativ/plutono
   tag: "v7.5.21"

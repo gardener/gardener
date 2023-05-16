@@ -199,8 +199,8 @@ The main specifications there are:
 
 ### Grafana
 
-The Grafana configurations can be found on `charts/seed-bootstrap/charts/templates/grafana/grafana-datasources-configmap.yaml` and
-`charts/seed-monitoring/charts/grafana/tempates/grafana-datasources-configmap.yaml`
+The Grafana configurations can be found on `charts/seed-bootstrap/charts/templates/plutono/plutono-datasources-configmap.yaml` and
+`charts/seed-monitoring/charts/plutono/tempates/plutono-datasources-configmap.yaml`
 
 This is the Loki configuration that Grafana uses:
 

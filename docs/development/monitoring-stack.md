@@ -161,7 +161,7 @@ If you want to add alert tests:
 
 ## Adding Grafana Dashboards
 
-The dashboard definition files are located in `charts/seed-monitoring/charts/grafana/dashboards`. Every dashboard needs its own file.
+The dashboard definition files are located in `charts/seed-monitoring/charts/plutono/dashboards`. Every dashboard needs its own file.
 
 If you are adding a new component dashboard please also update the overview dashboard by adding a chart for its current up/down status and with a drill down option to the component dashboard.
 

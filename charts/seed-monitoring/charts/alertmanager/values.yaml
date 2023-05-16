@@ -6,7 +6,7 @@ ingress:
   class: nginx
   hosts:
     - hostName: a.seed-1.example.com
-      secretName: grafana-tls
+      secretName: plutono-tls
   # admin : admin base64 encoded
   authSecretName: auth-secret-name
 

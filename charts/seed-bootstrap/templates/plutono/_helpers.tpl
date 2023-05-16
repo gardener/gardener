@@ -1,4 +1,4 @@
-{{- define "grafana.providers.data" -}}
+{{- define "plutono.providers.data" -}}
 default.yaml: |-
   apiVersion: 1
   providers:
@@ -9,14 +9,14 @@ default.yaml: |-
     disableDeletion: false
     editable: false
     options:
-      path: /var/lib/grafana/dashboards
+      path: /var/lib/plutono/dashboards
 {{- end -}}
 
-{{- define "grafana.providers.name" -}}
-grafana-dashboard-providers-{{ include "grafana.providers.data" . | sha256sum | trunc 8 }}
+{{- define "plutono.providers.name" -}}
+plutono-dashboard-providers-{{ include "plutono.providers.data" . | sha256sum | trunc 8 }}
 {{- end }}
 
-{{- define "grafana.datasources.data" -}}
+{{- define "plutono.datasources.data" -}}
 datasources.yaml: |-
   # config file version
   apiVersion: 1
@@ -56,27 +56,27 @@ datasources.yaml: |-
       maxLines: 5000
 {{- end -}}
 
-{{- define "grafana.datasources.name" -}}
-grafana-datasources-{{ include "grafana.datasources.data" . | sha256sum | trunc 8 }}
+{{- define "plutono.datasources.name" -}}
+plutono-datasources-{{ include "plutono.datasources.data" . | sha256sum | trunc 8 }}
 {{- end }}
 
-{{- define "grafana.toCompactedJson" -}}
+{{- define "plutono.toCompactedJson" -}}
 {{ . | fromJson | toJson}}
 {{- end }}
 
-{{- define "grafana.dashboards.data" -}}
+{{- define "plutono.dashboards.data" -}}
 {{ range $name, $bytes := .Files.Glob "dashboards/**.json" }}
 {{ base $name }}: |-
-{{ toString $bytes | include "grafana.toCompactedJson" | indent 2}}
+{{ toString $bytes | include "plutono.toCompactedJson" | indent 2}}
 {{ end }}
 {{ if .Values.istio.enabled }}
 {{ range $name, $bytes := .Files.Glob "dashboards/istio/**.json" }}
 {{ base $name }}: |-
-{{ toString $bytes | include "grafana.toCompactedJson" | indent 2}}
+{{ toString $bytes | include "plutono.toCompactedJson" | indent 2}}
 {{ end }}
 {{- end }}
 {{- end -}}
 
-{{- define "grafana.dashboards.name" -}}
-grafana-dashboards-{{ include "grafana.dashboards.data" . | sha256sum | trunc 8 }}
+{{- define "plutono.dashboards.name" -}}
+plutono-dashboards-{{ include "plutono.dashboards.data" . | sha256sum | trunc 8 }}
 {{- end }}

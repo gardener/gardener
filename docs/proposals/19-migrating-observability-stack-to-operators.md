@@ -31,7 +31,7 @@ reviewers:
     - [Shoot Monitoring](#shoot-monitoring)
     - [Seed Monitoring](#seed-monitoring)
     - [BYOMC (Bring your own monitoring configuration)](#byomc-bring-your-own-monitoring-configuration)
-    - [Grafana Sidecar](#grafana-sidecar)
+    - [Grafana Sidecar](#plutono-sidecar)
     - [Fluent-bit Operator CRDs](#fluent-bit-operator-crds)
     - [Fluent-bit Filters and Parsers](#fluent-bit-filters-and-parsers)
     - [BYOLC (Bring Your Own Logging Configuration)](#byolc-bring-your-own-logging-configuration)
@@ -447,7 +447,7 @@ similar to the shoot monitoring.
 
 ### Grafana Sidecar
 
-Add a [sidecar][grafana-sidecar] to Grafana that will pickup dashboards and provision them. Each dashboard gets its own configmap.
+Add a [sidecar][plutono-sidecar] to Grafana that will pickup dashboards and provision them. Each dashboard gets its own configmap.
 
 - Grafana in the control plane
 
@@ -473,7 +473,7 @@ Add a [sidecar][grafana-sidecar] to Grafana that will pickup dashboards and prov
     - Each specific dashboard will be deployed in the shoot namespace. The
       configmap will use the same label scheme.
 
-    - The Grafana [sidecar][grafana-sidecar] must be [configured][sidecar-configuration] with:
+    - The Grafana [sidecar][plutono-sidecar] must be [configured][sidecar-configuration] with:
 
     ```yaml
       env:
@@ -641,7 +641,7 @@ Since fluent-bit uses [input-tail] plugin and reads any container output under `
 [apiserver-example]: https://github.com/gardener/gardener/blob/0f4d22270927e2aee8b821f858fb76162ccd8a86/charts/seed-monitoring/charts/core/charts/prometheus/templates/config.yaml#L311
 [extension-contract]: https://github.com/gardener/gardener/blob/master/docs/extensions/logging-and-monitoring.md
 [gardener-resource-manager]: https://github.com/gardener/gardener/blob/eec37223cb90475ec3e023136a7d5ba28ad48f0d/pkg/operation/botanist/component/resourcemanager/monitoring.go
-[grafana-sidecar]: https://github.com/kiwigrid/k8s-sidecar
+[plutono-sidecar]: https://github.com/kiwigrid/k8s-sidecar
 [prom-config]: https://github.com/gardener/gardener/blob/201673c1f8a356a63b21505ca9c7f6efe725bd48/charts/seed-bootstrap/charts/monitoring/templates/config.yaml#L14-L36
 [prom-crd-bundle]: https://github.com/prometheus-operator/prometheus-operator/blob/main/bundle.yaml
 [prom-crds]: https://github.com/prometheus-operator/prometheus-operator#customresourcedefinitions

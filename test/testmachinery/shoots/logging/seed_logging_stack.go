@@ -85,7 +85,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		shootLokiPriorityClass = &schedulingv1.PriorityClass{}
 		shootLokiConfMap       = &corev1.ConfigMap{}
 
-		grafanaIngress client.Object = &networkingv1.Ingress{}
+		plutonoIngress client.Object = &networkingv1.Ingress{}
 		// This shoot is used as seed for this test only
 		shootClient     kubernetes.Interface
 		shootLokiLabels = map[string]string{
@@ -125,8 +125,8 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: getConfigMapName(shootLokiSts.Spec.Template.Spec.Volumes, lokiConfigDiskName)}, shootLokiConfMap))
 		shootLokiPriorityClassName := shootLokiSts.Spec.Template.Spec.PriorityClassName
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: shootLokiPriorityClassName}, shootLokiPriorityClass))
-		// Get the grafana Ingress
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNameGrafana}, grafanaIngress))
+		// Get the plutono Ingress
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNameGrafana}, plutonoIngress))
 	}, initializationTimeout)
 
 	f.Beta().Serial().CIt("should get container logs from loki for all namespaces", func(ctx context.Context) {
@@ -143,7 +143,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		)
 
 		ginkgo.By("Get Loki tenant IDs")
-		id := getXScopeOrgID(grafanaIngress.GetAnnotations())
+		id := getXScopeOrgID(plutonoIngress.GetAnnotations())
 
 		ginkgo.By("Deploy the garden Namespace")
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), newGardenNamespace(v1beta1constants.GardenNamespace)))

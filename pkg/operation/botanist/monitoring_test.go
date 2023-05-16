@@ -164,7 +164,7 @@ var _ = Describe("Monitoring", func() {
 					},
 				},
 				ImageVector: imagevector.ImageVector{
-					{Name: "grafana"},
+					{Name: "plutono"},
 					{Name: "prometheus"},
 					{Name: "configmap-reloader"},
 					{Name: "blackbox-exporter"},

@@ -1,4 +1,4 @@
 apiVersion: v1
 description: Grafana chart for Kubernetes
-name: grafana
+name: plutono
 version: 0.1.0

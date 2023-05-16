@@ -57,8 +57,8 @@ const (
 	ImageNameGardenerResourceManager = "gardener-resource-manager"
 	// ImageNameGardenlet is a constant for an image in the image vector with name 'gardenlet'.
 	ImageNameGardenlet = "gardenlet"
-	// ImageNameGrafana is a constant for an image in the image vector with name 'grafana'.
-	ImageNameGrafana = "grafana"
+	// ImageNameGrafana is a constant for an image in the image vector with name 'plutono'.
+	ImageNameGrafana = "plutono"
 	// ImageNameHvpaController is a constant for an image in the image vector with name 'hvpa-controller'.
 	ImageNameHvpaController = "hvpa-controller"
 	// ImageNameHyperkube is a constant for an image in the image vector with name 'hyperkube'.

@@ -329,7 +329,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 				}).Should(And(
 					ContainCondition(OfType(gardencorev1beta1.ShootAPIServerAvailable), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("APIServerDown")),
 					ContainCondition(OfType(gardencorev1beta1.ShootControlPlaneHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [gardener-resource-manager kube-apiserver kube-controller-manager kube-scheduler]")),
-					ContainCondition(OfType(gardencorev1beta1.ShootObservabilityComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [grafana kube-state-metrics]")),
+					ContainCondition(OfType(gardencorev1beta1.ShootObservabilityComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("DeploymentMissing"), WithMessageSubstrings("Missing required deployments: [plutono kube-state-metrics]")),
 					ContainCondition(OfType(gardencorev1beta1.ShootEveryNodeReady), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("ConditionCheckError"), WithMessageSubstrings("Shoot control plane has not been fully created yet.")),
 					ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionUnknown), WithReason("ConditionCheckError"), WithMessageSubstrings("Shoot control plane has not been fully created yet.")),
 				))
@@ -338,7 +338,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 
 		Context("when some control plane deployments for the Shoot are present", func() {
 			JustBeforeEach(func() {
-				createDeployment([]string{"gardener-resource-manager", "kube-controller-manager", "kube-scheduler", "grafana"})
+				createDeployment([]string{"gardener-resource-manager", "kube-controller-manager", "kube-scheduler", "plutono"})
 			})
 
 			It("should set conditions", func() {
@@ -598,7 +598,7 @@ func getRole(name string) string {
 	switch name {
 	case "gardener-resource-manager", "kube-controller-manager", "kube-scheduler":
 		return v1beta1constants.GardenRoleControlPlane
-	case "grafana":
+	case "plutono":
 		return v1beta1constants.GardenRoleMonitoring
 	}
 	return ""

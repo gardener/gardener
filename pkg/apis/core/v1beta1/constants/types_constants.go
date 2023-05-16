@@ -124,8 +124,8 @@ const (
 	// DeploymentNameGardenerResourceManager is a constant for the name of a Kubernetes deployment object that contains
 	// the gardener-resource-manager pod.
 	DeploymentNameGardenerResourceManager = "gardener-resource-manager"
-	// DeploymentNameGrafana is a constant for the name of a Kubernetes deployment object that contains the grafana pod.
-	DeploymentNameGrafana = "grafana"
+	// DeploymentNameGrafana is a constant for the name of a Kubernetes deployment object that contains the plutono pod.
+	DeploymentNameGrafana = "plutono"
 	// DeploymentNameEventLogger is a constant for the name of a Kubernetes deployment object that contains
 	// the event-logger pod.
 	DeploymentNameEventLogger = "event-logger"

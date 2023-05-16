@@ -540,7 +540,7 @@ func (o *Operation) DeleteClusterResourceFromSeed(ctx context.Context) error {
 	return client.IgnoreNotFound(o.SeedClientSet.Client().Delete(ctx, &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}))
 }
 
-// ComputeGrafanaHosts computes the host for grafana.
+// ComputeGrafanaHosts computes the host for plutono.
 func (o *Operation) ComputeGrafanaHosts() []string {
 	return []string{
 		o.ComputeGrafanaHost(),

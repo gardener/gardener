@@ -63,7 +63,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 	f := framework.NewShootFramework(nil)
 
 	var (
-		grafanaIngress client.Object = &networkingv1.Ingress{}
+		plutonoIngress client.Object = &networkingv1.Ingress{}
 
 		shootNamespace           = &corev1.Namespace{}
 		shootNamespaceLabelKey   = "gardener.cloud/test"
@@ -74,8 +74,8 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		checkRequiredResources(ctx, f.SeedClient)
 		// Get shoot namespace name
 		shootNamespace.ObjectMeta.Name = f.ShootSeedNamespace()
-		// Get the grafana Ingress
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNameGrafana}, grafanaIngress))
+		// Get the plutono Ingress
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNameGrafana}, plutonoIngress))
 		// Set label to the testing namespace
 		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, f.SeedClient.Client(), shootNamespace, func() error {
 			metav1.SetMetaDataLabel(&shootNamespace.ObjectMeta, shootNamespaceLabelKey, shootNamespaceLabelValue)
@@ -114,7 +114,7 @@ epFdd1fXLwuwn7fvPMmJqD3HtLalX1AZmPk+BI8ezfAiVcVqnTJQMXlYPpYe9A==
 		loggerRegex := fullLoggerName + "-.*"
 
 		ginkgo.By("Get Loki tenant IDs")
-		id := getXScopeOrgID(grafanaIngress.GetAnnotations())
+		id := getXScopeOrgID(plutonoIngress.GetAnnotations())
 
 		ginkgo.By("Wait until Loki StatefulSet is ready")
 		framework.ExpectNoError(f.WaitUntilStatefulSetIsRunning(ctx, lokiName, f.ShootSeedNamespace(), f.SeedClient))

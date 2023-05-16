@@ -8,23 +8,23 @@ metadata:
     nginx.ingress.kubernetes.io/auth-realm: Authentication Required
     nginx.ingress.kubernetes.io/auth-secret: {{ .Values.ingress.authSecretName }}
     nginx.ingress.kubernetes.io/auth-type: basic
-  name: grafana
+  name: plutono
   namespace: {{ .Release.Namespace }}
 spec:
 {{- if semverCompare ">= 1.22-0" .Capabilities.KubeVersion.GitVersion }}
   ingressClassName: {{ .Values.global.ingressClass }}
 {{- end }}
   tls:
-  - secretName: {{ .Values.grafana.secretName }}
+  - secretName: {{ .Values.plutono.secretName }}
     hosts:
-    - {{ .Values.grafana.hostName }}
+    - {{ .Values.plutono.hostName }}
   rules:
-  - host: {{ .Values.grafana.hostName }}
+  - host: {{ .Values.plutono.hostName }}
     http:
       paths:
       - backend:
           service:
-            name: grafana
+            name: plutono
             port:
               number: 3000
         path: /

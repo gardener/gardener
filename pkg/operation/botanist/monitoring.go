@@ -390,7 +390,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	return common.DeleteAlertmanager(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
 }
 
-// DeploySeedGrafana deploys the grafana charts to the Seed cluster.
+// DeploySeedGrafana deploys the plutono charts to the Seed cluster.
 func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 	// disable monitoring if shoot has purpose testing or monitoring and loki is disabled
 	if !b.Operation.WantsGrafana() {
@@ -440,8 +440,8 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		ingressTLSSecretName = b.ControlPlaneWildcardCert.GetName()
 	} else {
 		ingressTLSSecret, err := b.SecretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
-			Name:                        "grafana-tls",
-			CommonName:                  "grafana",
+			Name:                        "plutono-tls",
+			CommonName:                  "plutono",
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:                    b.ComputeGrafanaHosts(),
 			CertType:                    secrets.ServerCert,
@@ -591,10 +591,10 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, credentialsSecret *c
 		return err
 	}
 
-	return b.SeedClientSet.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-monitoring", "charts", "grafana"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(values))
+	return b.SeedClientSet.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-monitoring", "charts", "plutono"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(values))
 }
 
-// DeleteGrafana will delete all grafana resources from the seed cluster.
+// DeleteGrafana will delete all plutono resources from the seed cluster.
 func (b *Botanist) DeleteGrafana(ctx context.Context) error {
 	return common.DeleteGrafana(ctx, b.SeedClientSet, b.Shoot.SeedNamespace)
 }

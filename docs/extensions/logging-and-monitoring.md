@@ -142,7 +142,7 @@ The two types of Grafana instances found in a seed cluster are configured to exp
   - Kube Scheduler
   - Cluster Autoscaler
   - VPA components
-  - [Kubernetes Pods](../../charts/seed-monitoring/charts/grafana/dashboards/owners/kubernetes-pods-dashboard.json)
+  - [Kubernetes Pods](../../charts/seed-monitoring/charts/plutono/dashboards/owners/kubernetes-pods-dashboard.json)
 
 If the type of logs exposed in the Grafana instances needs to be changed, it is necessary to update the corresponding instance dashboard configurations.
 
