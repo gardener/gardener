@@ -66,8 +66,6 @@ var _ = Describe("validator", func() {
 			servicesCIDR = "100.64.0.0/13"
 			nodesCIDR    = "10.250.0.0/16"
 
-			falseVar = false
-
 			seedName      = "seed"
 			namespaceName = "garden-my-project"
 			projectName   = "my-project"
@@ -145,13 +143,14 @@ var _ = Describe("validator", func() {
 							GPU:          resource.MustParse("0"),
 							Memory:       resource.MustParse("100Gi"),
 							Architecture: pointer.String("amd64"),
+							Usable:       pointer.Bool(true),
 						},
 						{
 							Name:         "machine-type-old",
 							CPU:          resource.MustParse("2"),
 							GPU:          resource.MustParse("0"),
 							Memory:       resource.MustParse("100Gi"),
-							Usable:       &falseVar,
+							Usable:       pointer.Bool(false),
 							Architecture: pointer.String("amd64"),
 						},
 						{
@@ -164,6 +163,7 @@ var _ = Describe("validator", func() {
 								MinSize: &minVolSizeMachine,
 							},
 							Architecture: pointer.String("amd64"),
+							Usable:       pointer.Bool(true),
 						},
 						{
 							Name:         "machine-type-3",
@@ -171,17 +171,20 @@ var _ = Describe("validator", func() {
 							GPU:          resource.MustParse("0"),
 							Memory:       resource.MustParse("100Gi"),
 							Architecture: pointer.String("arm64"),
+							Usable:       pointer.Bool(true),
 						},
 					},
 					VolumeTypes: []core.VolumeType{
 						{
-							Name:  volumeType,
-							Class: "super-premium",
+							Name:   volumeType,
+							Class:  "super-premium",
+							Usable: pointer.Bool(true),
 						},
 						{
 							Name:    volumeType2,
 							Class:   "super-premium",
 							MinSize: &minVolSize,
+							Usable:  pointer.Bool(true),
 						},
 					},
 					Regions: []core.Region{
@@ -2202,6 +2205,7 @@ var _ = Describe("validator", func() {
 						GPU:          resource.MustParse("0"),
 						Memory:       resource.MustParse("5Gi"),
 						Architecture: pointer.String("amd64"),
+						Usable:       pointer.Bool(true),
 					}
 
 					kubeletConfig = &core.KubeletConfig{
@@ -2440,14 +2444,18 @@ var _ = Describe("validator", func() {
 			})
 
 			Context("machine architecture check", func() {
-				It("should reject due to invalid architecture", func() {
-					shoot.Spec.Provider.Workers[0].Machine.Architecture = pointer.String("foo")
+				BeforeEach(func() {
 					shoot.Spec.Provider.Workers[0].Machine.Image.Version = "1.2.0"
+					shoot.Spec.Provider.Workers[0].Machine.Type = "machine-type-1"
 
 					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				})
+
+				It("should reject due to invalid architecture", func() {
+					shoot.Spec.Provider.Workers[0].Machine.Architecture = pointer.String("foo")
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
@@ -2455,6 +2463,19 @@ var _ = Describe("validator", func() {
 					Expect(err).To(BeForbiddenError())
 					Expect(err).To(MatchError(
 						ContainSubstring("shoots.core.gardener.cloud \"shoot\" is forbidden: [spec.provider.workers[0].machine.architecture: Unsupported value: \"foo\": supported values: \"amd64\", \"arm64\"]"),
+					))
+				})
+
+				It("should reject because the machine in the cloud provider doesn't support the architecture in the Shoot", func() {
+					shoot.Spec.Provider.Workers[0].Machine.Architecture = pointer.String("arm64")
+					shoot.Spec.Provider.Workers[0].Machine.Image.Version = "1.2.0"
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(
+						ContainSubstring("machine type %q does not support CPU architecture %q, supported types are [%s]", shoot.Spec.Provider.Workers[0].Machine.Type, *shoot.Spec.Provider.Workers[0].Machine.Architecture, "machine-type-3"),
 					))
 				})
 			})
@@ -2475,7 +2496,7 @@ var _ = Describe("validator", func() {
 
 					cloudProfileMachineImages = []core.MachineImage{
 						{
-							Name: imageName1,
+							Name: validMachineImageName,
 							Versions: []core.MachineImageVersion{
 								{
 									ExpirableVersion: core.ExpirableVersion{
@@ -2566,6 +2587,11 @@ var _ = Describe("validator", func() {
 
 				BeforeEach(func() {
 					cloudProfile.Spec.MachineImages = cloudProfileMachineImages
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 				})
 
 				Context("create Shoot", func() {
@@ -2589,21 +2615,17 @@ var _ = Describe("validator", func() {
 						})
 					})
 
-					It("should reject due to an invalid machine image", func() {
+					It("should reject due to an invalid machine image (not present in cloudprofile)", func() {
 						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
 							Name:    "not-supported",
 							Version: "not-supported",
 						}
 
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(BeForbiddenError())
+						Expect(err.Error()).To(ContainSubstring("machine image version is not supported"))
 					})
 
 					It("should reject due to an invalid machine image (version unset)", func() {
@@ -2611,33 +2633,93 @@ var _ = Describe("validator", func() {
 							Name: "not-supported",
 						}
 
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(ContainSubstring("image name \"not-supported\" is not supported"))
+						Expect(err.Error()).To(ContainSubstring("spec.provider.workers[0]: Invalid value: %q: image is not supported", "not-supported"))
 					})
 
 					It("should reject due to a machine image with expiration date in the past", func() {
 						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-							Name:    imageName1,
+							Name:    validMachineImageName,
 							Version: expiredVersion,
 						}
-
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(BeForbiddenError())
+						Expect(err).To(MatchError(ContainSubstring("machine image version 'some-machineimage:1.1.1' is expired")))
+					})
+
+					It("should reject due to a machine image version with non-supported architecture", func() {
+						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+							Name:    validMachineImageName,
+							Version: nonExpiredVersion1,
+						}
+						shoot.Spec.Provider.Workers[0].Machine.Architecture = pointer.String(v1beta1constants.ArchitectureAMD64)
+
+						cloudProfile.Spec.MachineImages = []core.MachineImage{
+							{
+								Name: validMachineImageName,
+								Versions: []core.MachineImageVersion{
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version: nonExpiredVersion1,
+										},
+										Architectures: []string{"arm64"},
+									},
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version: nonExpiredVersion2,
+										},
+										Architectures: []string{"amd64", "arm64"},
+									},
+								},
+							},
+						}
+
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).To(BeForbiddenError())
+						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' does not support CPU architecture %q, supported machine image versions are: [%s]]", fmt.Sprintf("%s:%s", validMachineImageName, nonExpiredVersion1), "amd64", fmt.Sprintf("%s:%s", validMachineImageName, nonExpiredVersion2))))
+					})
+
+					It("should reject due to a machine image version with non-supported architecture and expired version", func() {
+						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+							Name:    validMachineImageName,
+							Version: expiredVersion,
+						}
+						shoot.Spec.Provider.Workers[0].Machine.Architecture = pointer.String(v1beta1constants.ArchitectureAMD64)
+
+						cloudProfile.Spec.MachineImages = []core.MachineImage{
+							{
+								Name: validMachineImageName,
+								Versions: []core.MachineImageVersion{
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version:        expiredVersion,
+											ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
+										},
+										Architectures: []string{"arm64"},
+									},
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version: nonExpiredVersion2,
+										},
+										Architectures: []string{"amd64", "arm64"},
+									},
+								},
+							},
+						}
+
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).To(BeForbiddenError())
+						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' does not support CPU architecture %q, is expired, supported machine image versions are: [%s]]", fmt.Sprintf("%s:%s", validMachineImageName, expiredVersion), "amd64", fmt.Sprintf("%s:%s", validMachineImageName, nonExpiredVersion2))))
 					})
 
 					It("should reject due to a machine image that does not match the kubeletVersionConstraint when the control plane K8s version does not match", func() {
@@ -2670,11 +2752,6 @@ var _ = Describe("validator", func() {
 								},
 							},
 						}
-
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 						err := admissionHandler.Admit(ctx, attrs, nil)
@@ -2717,11 +2794,6 @@ var _ = Describe("validator", func() {
 							},
 						}
 
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
@@ -2732,11 +2804,6 @@ var _ = Describe("validator", func() {
 					It("should default version to latest non-preview version as shoot does not specify one", func() {
 						shoot.Spec.Provider.Workers[0].Machine.Image = nil
 						shoot.Spec.Provider.Workers[1].Machine.Image = nil
-
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 						err := admissionHandler.Admit(ctx, attrs, nil)
@@ -2759,11 +2826,6 @@ var _ = Describe("validator", func() {
 						shoot.Spec.Provider.Workers[1].Machine.Image = &core.ShootMachineImage{
 							Name: imageName1,
 						}
-
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 						err := admissionHandler.Admit(ctx, attrs, nil)
@@ -2827,11 +2889,6 @@ var _ = Describe("validator", func() {
 								},
 							})
 
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
@@ -2850,6 +2907,7 @@ var _ = Describe("validator", func() {
 									},
 								},
 								Machine: core.Machine{
+									Type: "machine-type-1",
 									Image: &core.ShootMachineImage{
 										Name:    "cr-image-name",
 										Version: "1.2.3",
@@ -2885,11 +2943,6 @@ var _ = Describe("validator", func() {
 								},
 							})
 
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
@@ -2910,6 +2963,7 @@ var _ = Describe("validator", func() {
 									},
 								},
 								Machine: core.Machine{
+									Type: "machine-type-1",
 									Image: &core.ShootMachineImage{
 										Name:    "cr-image-name",
 										Version: "1.2.3",
@@ -2940,11 +2994,6 @@ var _ = Describe("validator", func() {
 									},
 								},
 							})
-
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 						err := admissionHandler.Admit(ctx, attrs, nil)
@@ -2994,10 +3043,6 @@ var _ = Describe("validator", func() {
 							Version: latestNonExpiredVersion,
 						}
 
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-
 						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
@@ -3041,10 +3086,6 @@ var _ = Describe("validator", func() {
 							Version: "2.3.4",
 						}
 
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-
 						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
@@ -3083,11 +3124,6 @@ var _ = Describe("validator", func() {
 						}
 						newShoot := shoot.DeepCopy()
 						newShoot.Spec.Kubernetes.Version = "1.26.0"
-
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 
 						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 						err := admissionHandler.Admit(ctx, attrs, nil)
@@ -3132,11 +3168,6 @@ var _ = Describe("validator", func() {
 						newShoot := shoot.DeepCopy()
 						newShoot.Spec.Provider.Workers[0].Kubernetes.Version = pointer.String("1.25.0")
 
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-
 						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
@@ -3147,10 +3178,6 @@ var _ = Describe("validator", func() {
 					It("should keep machine image of the old shoot (unset in new shoot)", func() {
 						newShoot := shoot.DeepCopy()
 						newShoot.Spec.Provider.Workers[0].Machine.Image = nil
-
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 
 						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 						err := admissionHandler.Admit(ctx, attrs, nil)
@@ -3164,11 +3191,6 @@ var _ = Describe("validator", func() {
 						newShoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
 							Name: imageName1,
 						}
-
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-
 						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
@@ -3209,10 +3231,6 @@ var _ = Describe("validator", func() {
 						newWorker2.Machine.Architecture = pointer.String("arm64")
 						newShoot.Spec.Provider.Workers = append(newShoot.Spec.Provider.Workers, *newWorker, *newWorker2)
 
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-
 						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
@@ -3244,10 +3262,6 @@ var _ = Describe("validator", func() {
 						}
 						newShoot.Spec.Provider.Workers = append(newShoot.Spec.Provider.Workers, *newWorker, *newWorker2)
 
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-
 						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
@@ -3269,10 +3283,6 @@ var _ = Describe("validator", func() {
 						newShoot.Spec.Provider.Workers[0].Machine.Image = nil
 						newShoot.Spec.Provider.Workers[0].Machine.Architecture = pointer.String("arm64")
 
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-
 						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
@@ -3292,10 +3302,6 @@ var _ = Describe("validator", func() {
 							Version: nonExpiredVersion1,
 						}
 						newShoot.Spec.Provider.Workers = append(newShoot.Spec.Provider.Workers, *newWorker)
-
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 
 						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 						err := admissionHandler.Admit(ctx, attrs, nil)
@@ -3319,10 +3325,6 @@ var _ = Describe("validator", func() {
 							Name: imageName2,
 						}
 
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-
 						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
@@ -3345,10 +3347,6 @@ var _ = Describe("validator", func() {
 							Version: nonExpiredVersion2,
 						}
 
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-
 						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
@@ -3367,10 +3365,6 @@ var _ = Describe("validator", func() {
 							Version: expiredVersion,
 						}
 
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-
 						attrs := admission.NewAttributesRecord(nil, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
@@ -3380,7 +3374,7 @@ var _ = Describe("validator", func() {
 			})
 
 			Context("machine type checks", func() {
-				It("should not reject due to an usable machine type", func() {
+				BeforeEach(func() {
 					shoot.Spec.Provider.Workers = []core.Worker{
 						{
 							Machine: core.Machine{
@@ -3394,6 +3388,10 @@ var _ = Describe("validator", func() {
 					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				})
+
+				It("should not reject due to an usable machine type", func() {
+					shoot.Spec.Provider.Workers[0].Machine.Type = "machine-type-1"
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
@@ -3402,49 +3400,112 @@ var _ = Describe("validator", func() {
 				})
 
 				It("should reject due to a not usable machine type", func() {
-					shoot.Spec.Provider.Workers = []core.Worker{
-						{
-							Machine: core.Machine{
-								Type:         "machine-type-old",
-								Architecture: pointer.String("amd64"),
-							},
-						},
-					}
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					shoot.Spec.Provider.Workers[0].Machine.Type = "machine-type-old"
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("machine type %q is unusable", shoot.Spec.Provider.Workers[0].Machine.Type)))
 				})
 
 				It("should reject due to an invalid machine type", func() {
-					shoot.Spec.Provider.Workers = []core.Worker{
-						{
-							Machine: core.Machine{
-								Type:         "not-allowed",
-								Architecture: pointer.String("amd64"),
-							},
-						},
-					}
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					shoot.Spec.Provider.Workers[0].Machine.Type = "not-present-in-cloudprofile"
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("Unsupported value: %q: supported values: %q, %q]", "not-present-in-cloudprofile", "machine-type-1", "machine-type-2")))
+				})
+
+				It("should reject if the machine is unavailable in atleast one zone", func() {
+					unavailableMachine := "unavailable-machine"
+					zone := "some-zone"
+					shoot.Spec.Provider.Workers[0].Machine.Type = unavailableMachine
+					shoot.Spec.Provider.Workers[0].Zones = []string{
+						zone,
+					}
+
+					cloudProfile.Spec.MachineTypes = append(cloudProfile.Spec.MachineTypes,
+						core.MachineType{
+							Name:         unavailableMachine,
+							Architecture: pointer.String("amd64"),
+							Usable:       pointer.Bool(true),
+						},
+					)
+					cloudProfile.Spec.Regions = append(cloudProfile.Spec.Regions,
+						core.Region{
+							Name: shoot.Spec.Region,
+							Zones: []core.AvailabilityZone{
+								{
+									Name: zone,
+									UnavailableMachineTypes: []string{
+										unavailableMachine,
+									},
+								},
+							},
+						},
+					)
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("machine type %q is unavailable in at least one zone", unavailableMachine)))
+				})
+
+				It("should reject if the machine is not usable, is not having the same architecture mentioned in the cloudprofile and is not available in all zones", func() {
+					zone := "some-zone"
+					architecture := "amd64"
+					shoot.Spec.Provider.Workers[0].Machine.Type = "machine-type-1"
+					shoot.Spec.Provider.Workers[0].Machine.Architecture = &architecture
+					shoot.Spec.Provider.Workers[0].Zones = []string{
+						zone,
+					}
+
+					cloudProfile.Spec.MachineTypes = []core.MachineType{
+						{
+							Name:         "machine-type-1",
+							Architecture: pointer.String("arm64"),
+							Usable:       pointer.Bool(false),
+						},
+						{
+							Name:         "machine-type-2",
+							Architecture: pointer.String("amd64"),
+							Usable:       pointer.Bool(true),
+						},
+					}
+					cloudProfile.Spec.Regions = append(cloudProfile.Spec.Regions,
+						core.Region{
+							Name: shoot.Spec.Region,
+							Zones: []core.AvailabilityZone{
+								{
+									Name: zone,
+									UnavailableMachineTypes: []string{
+										"machine-type-1",
+									},
+								},
+							},
+						},
+					)
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("machine type %q is unusable, is unavailable in at least one zone, does not support CPU architecture %q, supported types are [%s]", "machine-type-1", architecture, "machine-type-2")))
 				})
 			})
 
 			Context("volume checks", func() {
+				BeforeEach(func() {
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				})
+
 				It("should reject due to an invalid volume type", func() {
 					notAllowed := "not-allowed"
 					shoot.Spec.Provider.Workers = []core.Worker{
@@ -3459,25 +3520,147 @@ var _ = Describe("validator", func() {
 						},
 					}
 
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("Unsupported value: %q", notAllowed)))
+				})
+
+				It("should reject if the volume is unavailable in atleast one zone", func() {
+					unavailableVolume := "unavailable-volume"
+					zone := "europe-a"
+
+					cloudProfile.Spec.VolumeTypes = []core.VolumeType{
+						{
+							Name:   unavailableVolume,
+							Class:  "super-premium",
+							Usable: pointer.Bool(true),
+						},
+						{
+							Name:    volumeType2,
+							Class:   "super-premium",
+							MinSize: &minVolSize,
+							Usable:  pointer.Bool(true),
+						},
+					}
+
+					cloudProfile.Spec.Regions = []core.Region{{
+						Name: shoot.Spec.Region,
+						Zones: []core.AvailabilityZone{
+							{
+								Name:                   zone,
+								UnavailableVolumeTypes: []string{unavailableVolume},
+							},
+						},
+					}}
+
+					shoot.Spec.Provider.Workers = []core.Worker{
+						{
+							Machine: core.Machine{
+								Type:         "machine-type-1",
+								Architecture: pointer.String("amd64"),
+							},
+							Volume: &core.Volume{
+								Type: &unavailableVolume,
+							},
+							Zones: []string{zone},
+						},
+					}
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("volume type %q is unavailable in at least one zone, supported types are [%s]", unavailableVolume, volumeType2)))
+				})
+
+				It("should reject if the volume is unusable and unavailable in atleast one zone", func() {
+					unavailableVolume := "unavailable-volume"
+					zone := "europe-a"
+
+					cloudProfile.Spec.VolumeTypes = []core.VolumeType{
+						{
+							Name:   unavailableVolume,
+							Class:  "super-premium",
+							Usable: pointer.Bool(false),
+						},
+						{
+							Name:    volumeType2,
+							Class:   "super-premium",
+							MinSize: &minVolSize,
+							Usable:  pointer.Bool(true),
+						},
+					}
+
+					cloudProfile.Spec.Regions = []core.Region{{
+						Name: shoot.Spec.Region,
+						Zones: []core.AvailabilityZone{
+							{
+								Name:                   zone,
+								UnavailableVolumeTypes: []string{unavailableVolume},
+							},
+						},
+					}}
+
+					shoot.Spec.Provider.Workers = []core.Worker{
+						{
+							Machine: core.Machine{
+								Type:         "machine-type-1",
+								Architecture: pointer.String("amd64"),
+							},
+							Volume: &core.Volume{
+								Type: &unavailableVolume,
+							},
+							Zones: []string{zone},
+						},
+					}
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("volume type %q is unusable, is unavailable in at least one zone, supported types are [%s]", unavailableVolume, volumeType2)))
+				})
+
+				It("should reject because volume type is unusable", func() {
+					cloudProfile.Spec.VolumeTypes = []core.VolumeType{
+						{
+							Name:   volumeType,
+							Class:  "super-premium",
+							Usable: pointer.Bool(false),
+						},
+						{
+							Name:    volumeType2,
+							Class:   "super-premium",
+							MinSize: &minVolSize,
+							Usable:  pointer.Bool(true),
+						},
+					}
+
+					shoot.Spec.Provider.Workers = []core.Worker{
+						{
+							Machine: core.Machine{
+								Type:         "machine-type-1",
+								Architecture: pointer.String("amd64"),
+							},
+							Volume: &core.Volume{
+								Type: &volumeType,
+							},
+						},
+					}
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("volume type %q is unusable, supported types are [%s]", volumeType, volumeType2)))
 				})
 
 				It("should allow volume removal", func() {
 					oldShoot := shoot.DeepCopy()
 					shoot.Spec.Provider.Workers[0].Volume = nil
 					oldShoot.Spec.Provider.Workers[0].Volume.VolumeSize = "20Gi"
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 
 					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(ctx, attrs, nil)
@@ -3524,11 +3707,6 @@ var _ = Describe("validator", func() {
 							},
 						},
 					}
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)

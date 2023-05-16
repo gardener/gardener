@@ -40,7 +40,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
-	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
@@ -193,6 +192,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		shoot               = &core.Shoot{}
 		oldShoot            = &core.Shoot{}
 		convertIsSuccessful bool
+		allErrs             field.ErrorList
 	)
 
 	if a.GetOperation() == admission.Delete {
@@ -276,15 +276,14 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	if err := validationContext.validateShootHibernation(a); err != nil {
 		return err
 	}
-	if err := validationContext.ensureMachineImages(); err != nil {
-		return err
+	if allErrs = validationContext.ensureMachineImages(); len(allErrs) > 0 {
+		return admission.NewForbidden(a, fmt.Errorf("%+v", allErrs))
 	}
 
 	validationContext.addMetadataAnnotations(a)
 
-	var allErrs field.ErrorList
 	allErrs = append(allErrs, validationContext.validateAPIVersionForRawExtensions()...)
-	allErrs = append(allErrs, validationContext.validateShootNetworks(gardencorehelper.IsWorkerless(shoot))...)
+	allErrs = append(allErrs, validationContext.validateShootNetworks(helper.IsWorkerless(shoot))...)
 	allErrs = append(allErrs, validationContext.validateKubernetes(a)...)
 	allErrs = append(allErrs, validationContext.validateRegion()...)
 	allErrs = append(allErrs, validationContext.validateProvider(a)...)
@@ -600,18 +599,22 @@ func (c *validationContext) validateShootHibernation(a admission.Attributes) err
 	return nil
 }
 
-func (c *validationContext) ensureMachineImages() error {
+func (c *validationContext) ensureMachineImages() field.ErrorList {
+	allErrs := field.ErrorList{}
+
 	if c.shoot.DeletionTimestamp == nil {
 		for idx, worker := range c.shoot.Spec.Provider.Workers {
-			image, err := ensureMachineImage(c.oldShoot.Spec.Provider.Workers, worker, c.cloudProfile.Spec.MachineImages)
+			fldPath := field.NewPath("spec", "provider", "workers").Index(idx)
+			image, err := ensureMachineImage(c.oldShoot.Spec.Provider.Workers, worker, c.cloudProfile.Spec.MachineImages, fldPath)
 			if err != nil {
-				return err
+				allErrs = append(allErrs, err)
+				continue
 			}
 			c.shoot.Spec.Provider.Workers[idx].Machine.Image = image
 		}
 	}
 
-	return nil
+	return allErrs
 }
 
 func (c *validationContext) addMetadataAnnotations(a admission.Attributes) {
@@ -776,14 +779,38 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 		if worker.Machine.Architecture != nil && !slices.Contains(v1beta1constants.ValidArchitectures, *worker.Machine.Architecture) {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machine", "architecture"), *worker.Machine.Architecture, v1beta1constants.ValidArchitectures))
 		} else {
-			if ok, validMachineTypes := validateMachineTypes(c.cloudProfile.Spec.MachineTypes, worker.Machine, oldWorker.Machine, c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, worker.Zones); !ok {
-				detail := fmt.Sprintf("machine type '%s' does not support CPU architecture '%s' or is unavailable in at least one zone, supported machine types are: %+v", worker.Machine.Type, *worker.Machine.Architecture, validMachineTypes)
-				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "type"), worker.Machine.Type, detail))
+			var (
+				isMachinePresentInCloudprofile, architectureSupported, availableInAllZones, isUsableMachine, supportedMachineTypes = validateMachineTypes(c.cloudProfile.Spec.MachineTypes, worker.Machine, oldWorker.Machine, c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, worker.Zones)
+				detail                                                                                                             = fmt.Sprintf("machine type %q ", worker.Machine.Type)
+			)
+
+			if !isMachinePresentInCloudprofile {
+				allErrs = append(allErrs, field.NotSupported(idxPath.Child("machine", "type"), worker.Machine.Type, supportedMachineTypes))
+			} else if !architectureSupported || !availableInAllZones || !isUsableMachine {
+				if !isUsableMachine {
+					detail += "is unusable, "
+				}
+				if !availableInAllZones {
+					detail += "is unavailable in at least one zone, "
+				}
+				if !architectureSupported {
+					detail += fmt.Sprintf("does not support CPU architecture %q, ", *worker.Machine.Architecture)
+				}
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "type"), worker.Machine.Type, fmt.Sprintf("%ssupported types are %+v", detail, supportedMachineTypes)))
 			}
 
-			if ok, validMachineImages := validateMachineImagesConstraints(c.cloudProfile.Spec.MachineImages, worker.Machine, oldWorker.Machine); !ok {
-				detail := fmt.Sprintf("machine image '%s' does not support CPU architecture '%s' or is expired; valid machine images are: %+v", worker.Machine.Image, *worker.Machine.Architecture, validMachineImages)
-				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, detail))
+			isMachineImagePresentInCloudprofile, architectureSupported, activeMachineImageVersion, validMachineImageversions := validateMachineImagesConstraints(c.cloudProfile.Spec.MachineImages, worker.Machine, oldWorker.Machine)
+			if !isMachineImagePresentInCloudprofile {
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, fmt.Sprintf("machine image version is not supported, supported machine image versions are: %+v", validMachineImageversions)))
+			} else if !architectureSupported || !activeMachineImageVersion {
+				detail := fmt.Sprintf("machine image version '%s:%s' ", worker.Machine.Image.Name, worker.Machine.Image.Version)
+				if !architectureSupported {
+					detail += fmt.Sprintf("does not support CPU architecture %q, ", *worker.Machine.Architecture)
+				}
+				if !activeMachineImageVersion {
+					detail += "is expired, "
+				}
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, fmt.Sprintf("%ssupported machine image versions are: %+v", detail, validMachineImageversions)))
 			} else {
 				allErrs = append(allErrs, validateContainerRuntimeConstraints(c.cloudProfile.Spec.MachineImages, worker, oldWorker, idxPath.Child("cri"))...)
 
@@ -798,8 +825,18 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 				}
 			}
 		}
-		if ok, validVolumeTypes := validateVolumeTypes(c.cloudProfile.Spec.VolumeTypes, worker.Volume, oldWorker.Volume, c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, worker.Zones); !ok {
-			allErrs = append(allErrs, field.NotSupported(idxPath.Child("volume", "type"), worker.Volume, validVolumeTypes))
+		isVolumePresentInCloudprofile, availableInAllZones, isUsableVolume, supportedVolumeTypes := validateVolumeTypes(c.cloudProfile.Spec.VolumeTypes, worker.Volume, oldWorker.Volume, c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, worker.Zones)
+		if !isVolumePresentInCloudprofile {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("volume", "type"), pointer.StringDeref(worker.Volume.Type, ""), supportedVolumeTypes))
+		} else if !availableInAllZones || !isUsableVolume {
+			detail := fmt.Sprintf("volume type %q ", *worker.Volume.Type)
+			if !isUsableVolume {
+				detail += "is unusable, "
+			}
+			if !availableInAllZones {
+				detail += "is unavailable in at least one zone, "
+			}
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("volume", "type"), *worker.Volume.Type, fmt.Sprintf("%ssupported types are %+v", detail, supportedVolumeTypes)))
 		}
 		if ok, minSize := validateVolumeSize(c.cloudProfile.Spec.VolumeTypes, c.cloudProfile.Spec.MachineTypes, worker.Machine.Type, worker.Volume); !ok {
 			allErrs = append(allErrs, field.Invalid(idxPath.Child("volume", "size"), worker.Volume.VolumeSize, fmt.Sprintf("size must be >= %s", minSize)))
@@ -1058,15 +1095,41 @@ func validateKubernetesVersionConstraints(constraints []core.ExpirableVersion, s
 	return false, defaultToLatestPatchVersion, validValues, nil
 }
 
-func validateMachineTypes(constraints []core.MachineType, machine, oldMachine core.Machine, regions []core.Region, region string, zones []string) (bool, []string) {
+func validateMachineTypes(constraints []core.MachineType, machine, oldMachine core.Machine, regions []core.Region, region string, zones []string) (bool, bool, bool, bool, []string) {
 	if machine.Type == oldMachine.Type && pointer.StringEqual(machine.Architecture, oldMachine.Architecture) {
-		return true, nil
+		return true, true, true, true, nil
 	}
 
-	validValues := []string{}
+	var (
+		isMachinePresentInCloudprofile    = false
+		machinesWithSupportedArchitecture = sets.New[string]()
+		machinesAvailableInAllZones       = sets.New[string]()
+		usableMachines                    = sets.New[string]()
+	)
 
-	var unavailableInAtLeastOneZone bool
-top:
+	for _, t := range constraints {
+		if pointer.StringEqual(t.Architecture, machine.Architecture) {
+			machinesWithSupportedArchitecture.Insert(t.Name)
+		}
+		if pointer.BoolDeref(t.Usable, false) {
+			usableMachines.Insert(t.Name)
+		}
+		if !isUnavailableInAtleastOneZone(regions, region, zones, t.Name, func(zone core.AvailabilityZone) []string { return zone.UnavailableMachineTypes }) {
+			machinesAvailableInAllZones.Insert(t.Name)
+		}
+		if t.Name == machine.Type {
+			isMachinePresentInCloudprofile = true
+		}
+	}
+
+	return isMachinePresentInCloudprofile,
+		machinesWithSupportedArchitecture.Has(machine.Type),
+		machinesAvailableInAllZones.Has(machine.Type),
+		usableMachines.Has(machine.Type),
+		sets.List(machinesWithSupportedArchitecture.Intersection(machinesAvailableInAllZones).Intersection(usableMachines))
+}
+
+func isUnavailableInAtleastOneZone(regions []core.Region, region string, zones []string, t string, unavailableTypes func(zone core.AvailabilityZone) []string) bool {
 	for _, r := range regions {
 		if r.Name != region {
 			continue
@@ -1078,33 +1141,15 @@ top:
 					continue
 				}
 
-				for _, t := range z.UnavailableMachineTypes {
-					if t == machine.Type {
-						unavailableInAtLeastOneZone = true
-						break top
+				for _, unavailableType := range unavailableTypes(z) {
+					if t == unavailableType {
+						return true
 					}
 				}
 			}
 		}
 	}
-
-	for _, t := range constraints {
-		if !pointer.StringEqual(t.Architecture, machine.Architecture) {
-			continue
-		}
-		if t.Usable != nil && !*t.Usable {
-			continue
-		}
-		if unavailableInAtLeastOneZone {
-			continue
-		}
-		validValues = append(validValues, t.Name)
-		if t.Name == machine.Type {
-			return true, nil
-		}
-	}
-
-	return false, validValues
+	return false
 }
 
 func validateKubeletConfig(fldPath *field.Path, machineTypes []core.MachineType, workerMachineType string, kubeletConfig *core.KubeletConfig) field.ErrorList {
@@ -1153,9 +1198,9 @@ func validateKubeletConfig(fldPath *field.Path, machineTypes []core.MachineType,
 	return allErrs
 }
 
-func validateVolumeTypes(constraints []core.VolumeType, volume, oldVolume *core.Volume, regions []core.Region, region string, zones []string) (bool, []string) {
+func validateVolumeTypes(constraints []core.VolumeType, volume, oldVolume *core.Volume, regions []core.Region, region string, zones []string) (bool, bool, bool, []string) {
 	if volume == nil || volume.Type == nil || (volume != nil && oldVolume != nil && volume.Type != nil && oldVolume.Type != nil && *volume.Type == *oldVolume.Type) {
-		return true, nil
+		return true, true, true, nil
 	}
 
 	var volumeType string
@@ -1163,45 +1208,28 @@ func validateVolumeTypes(constraints []core.VolumeType, volume, oldVolume *core.
 		volumeType = *volume.Type
 	}
 
-	validValues := []string{}
-
-	var unavailableInAtLeastOneZone bool
-top:
-	for _, r := range regions {
-		if r.Name != region {
-			continue
-		}
-
-		for _, zoneName := range zones {
-			for _, z := range r.Zones {
-				if z.Name != zoneName {
-					continue
-				}
-
-				for _, t := range z.UnavailableVolumeTypes {
-					if t == volumeType {
-						unavailableInAtLeastOneZone = true
-						break top
-					}
-				}
-			}
-		}
-	}
+	var (
+		isVolumePresentInCloudprofile = false
+		volumesAvailableInAllZones    = sets.New[string]()
+		usableVolumes                 = sets.New[string]()
+	)
 
 	for _, v := range constraints {
-		if v.Usable != nil && !*v.Usable {
-			continue
+		if pointer.BoolDeref(v.Usable, false) {
+			usableVolumes.Insert(v.Name)
 		}
-		if unavailableInAtLeastOneZone {
-			continue
+		if !isUnavailableInAtleastOneZone(regions, region, zones, v.Name, func(zone core.AvailabilityZone) []string { return zone.UnavailableVolumeTypes }) {
+			volumesAvailableInAllZones.Insert(v.Name)
 		}
-		validValues = append(validValues, v.Name)
 		if v.Name == volumeType {
-			return true, nil
+			isVolumePresentInCloudprofile = true
 		}
 	}
 
-	return false, validValues
+	return isVolumePresentInCloudprofile,
+		volumesAvailableInAllZones.Has(volumeType),
+		usableVolumes.Has(volumeType),
+		sets.List(usableVolumes.Intersection(volumesAvailableInAllZones))
 }
 
 func (c *validationContext) validateRegion() field.ErrorList {
@@ -1270,9 +1298,9 @@ func validateZone(constraints []core.Region, region, zone string) (bool, []strin
 }
 
 // getDefaultMachineImage determines the latest non-preview machine image version from the first machine image in the CloudProfile and considers that as the default image
-func getDefaultMachineImage(machineImages []core.MachineImage, imageName string, arch *string) (*core.ShootMachineImage, error) {
+func getDefaultMachineImage(machineImages []core.MachineImage, imageName string, arch *string, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
 	if len(machineImages) == 0 {
-		return nil, errors.New("the cloud profile does not contain any machine image - cannot create shoot cluster")
+		return nil, field.Invalid(fldPath, imageName, "the cloud profile does not contain any machine image - cannot create shoot cluster")
 	}
 
 	var defaultImage *core.MachineImage
@@ -1285,7 +1313,7 @@ func getDefaultMachineImage(machineImages []core.MachineImage, imageName string,
 			}
 		}
 		if defaultImage == nil {
-			return nil, fmt.Errorf("image name %q is not supported", imageName)
+			return nil, field.Invalid(fldPath, imageName, "image is not supported")
 		}
 	} else {
 		// select the first image which support the required architecture type
@@ -1301,7 +1329,7 @@ func getDefaultMachineImage(machineImages []core.MachineImage, imageName string,
 			}
 		}
 		if defaultImage == nil {
-			return nil, fmt.Errorf("no valid machine image found that support architecture `%s`", *arch)
+			return nil, field.Invalid(fldPath, imageName, fmt.Sprintf("no valid machine image found that support architecture `%s`", *arch))
 		}
 	}
 
@@ -1315,58 +1343,46 @@ func getDefaultMachineImage(machineImages []core.MachineImage, imageName string,
 
 	latestMachineImageVersion, err := helper.DetermineLatestMachineImageVersion(validVersions, true)
 	if err != nil {
-		return nil, fmt.Errorf("failed to determine latest machine image from cloud profile: %s", err.Error())
+		return nil, field.Invalid(fldPath, imageName, fmt.Sprintf("failed to determine latest machine image from cloud profile: %s", err.Error()))
 	}
 	return &core.ShootMachineImage{Name: defaultImage.Name, Version: latestMachineImageVersion.Version}, nil
 }
 
-func validateMachineImagesConstraints(constraints []core.MachineImage, machine, oldMachine core.Machine) (bool, []string) {
-	if oldMachine.Image == nil ||
-		(apiequality.Semantic.DeepEqual(machine.Image, oldMachine.Image) && pointer.StringEqual(machine.Architecture, oldMachine.Architecture)) {
-		return true, nil
+func validateMachineImagesConstraints(constraints []core.MachineImage, machine, oldMachine core.Machine) (bool, bool, bool, []string) {
+	if apiequality.Semantic.DeepEqual(machine.Image, oldMachine.Image) && pointer.StringEqual(machine.Architecture, oldMachine.Architecture) {
+		return true, true, true, nil
 	}
 
-	validValues := []string{}
-	if machine.Image == nil {
-		for _, machineImage := range constraints {
-			for _, machineVersion := range machineImage.Versions {
-				if machineVersion.ExpirationDate != nil && machineVersion.ExpirationDate.Time.UTC().Before(time.Now().UTC()) {
-					continue
-				}
-				if !slices.Contains(machineVersion.Architectures, *machine.Architecture) {
-					continue
-				}
-
-				validValues = append(validValues, fmt.Sprintf("machineImage(%s:%s)", machineImage.Name, machineVersion.Version))
-			}
-		}
-
-		return false, validValues
-	}
-
-	if len(machine.Image.Version) == 0 {
-		return true, nil
-	}
+	var (
+		machineImageVersionsInCloudProfile            = sets.New[string]()
+		activeMachineImageVersions                    = sets.New[string]()
+		machineImageVersionsWithSupportedArchitecture = sets.New[string]()
+	)
 
 	for _, machineImage := range constraints {
-		if machineImage.Name == machine.Image.Name {
-			for _, machineVersion := range machineImage.Versions {
-				if machineVersion.ExpirationDate != nil && machineVersion.ExpirationDate.Time.UTC().Before(time.Now().UTC()) {
-					continue
-				}
-				if !slices.Contains(machineVersion.Architectures, *machine.Architecture) {
-					continue
-				}
+		for _, machineVersion := range machineImage.Versions {
+			machineImageVersion := fmt.Sprintf("%s:%s", machineImage.Name, machineVersion.Version)
 
-				validValues = append(validValues, fmt.Sprintf("machineImage(%s:%s)", machineImage.Name, machineVersion.Version))
-
-				if machineVersion.Version == machine.Image.Version {
-					return true, nil
-				}
+			if machineVersion.ExpirationDate == nil || machineVersion.ExpirationDate.Time.UTC().After(time.Now().UTC()) {
+				activeMachineImageVersions.Insert(machineImageVersion)
 			}
+			if slices.Contains(machineVersion.Architectures, *machine.Architecture) {
+				machineImageVersionsWithSupportedArchitecture.Insert(machineImageVersion)
+			}
+			machineImageVersionsInCloudProfile.Insert(machineImageVersion)
 		}
 	}
-	return false, validValues
+
+	supportedMachineImageVersions := sets.List(activeMachineImageVersions.Intersection(machineImageVersionsWithSupportedArchitecture))
+	if machine.Image == nil || len(machine.Image.Version) == 0 {
+		return false, false, false, supportedMachineImageVersions
+	}
+
+	shootMachineImageVersion := fmt.Sprintf("%s:%s", machine.Image.Name, machine.Image.Version)
+	return machineImageVersionsInCloudProfile.Has(shootMachineImageVersion),
+		machineImageVersionsWithSupportedArchitecture.Has(shootMachineImageVersion),
+		activeMachineImageVersions.Has(shootMachineImageVersion),
+		supportedMachineImageVersions
 }
 
 func validateContainerRuntimeConstraints(constraints []core.MachineImage, worker, oldWorker core.Worker, fldPath *field.Path) field.ErrorList {
@@ -1455,7 +1471,7 @@ func validateKubeletVersionConstraint(constraints []core.MachineImage, worker co
 	return nil
 }
 
-func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []core.MachineImage) (*core.ShootMachineImage, error) {
+func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []core.MachineImage, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
 	// General approach with machine image defaulting in this code: Try to keep the machine image
 	// from the old shoot object to not accidentally update it to the default machine image.
 	// This should only happen in the maintenance time window of shoots and is performed by the
@@ -1491,7 +1507,7 @@ func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []c
 		imageName = worker.Machine.Image.Name
 	}
 
-	return getDefaultMachineImage(images, imageName, worker.Machine.Architecture)
+	return getDefaultMachineImage(images, imageName, worker.Machine.Architecture, fldPath)
 }
 
 func addInfrastructureDeploymentTask(shoot *core.Shoot) {
