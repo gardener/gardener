@@ -335,11 +335,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.region"),
 				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.provider.workers"),
-					"Detail": ContainSubstring("must provide at least one worker pool when WorkerlessShoots feature gate is disabled"),
-				})),
 			))
 		})
 
@@ -880,31 +875,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should not return any errors", func() {
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(BeEmpty())
-			})
-
-			It("should forbid an empty worker list if WorkerlessShoots featuregate is disabled", func() {
-				shoot.Spec.Provider.Workers = []core.Worker{}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("spec.provider.workers"),
-					"Detail": ContainSubstring("must provide at least one worker pool when WorkerlessShoots feature gate is disabled"),
-				}))))
-			})
-
-			It("should allow an empty worker list if WorkerlessShoots featuregate is enabled", func() {
-				DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true))
-				shoot.Spec.Provider.Workers = []core.Worker{}
-				shoot.Spec.Addons = nil
-				shoot.Spec.Kubernetes.KubeControllerManager = nil
-				shoot.Spec.SecretBindingName = nil
-				shoot.Spec.Networking = nil
-
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(BeEmpty())

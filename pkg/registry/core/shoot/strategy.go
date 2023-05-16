@@ -31,6 +31,7 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/api/core/shoot"
@@ -176,7 +177,11 @@ func (shootStrategy) Validate(ctx context.Context, obj runtime.Object) field.Err
 	shoot := obj.(*core.Shoot)
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, validation.ValidateShoot(shoot)...)
-	if !gardencorehelper.IsWorkerless(shoot) && shoot.Spec.Networking != nil {
+	if gardencorehelper.IsWorkerless(shoot) {
+		if !utilfeature.DefaultFeatureGate.Enabled(features.WorkerlessShoots) {
+			allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "provider", "workers"), "must provide at least one worker pool when WorkerlessShoots feature gate is disabled"))
+		}
+	} else if shoot.Spec.Networking != nil {
 		allErrs = append(allErrs, validation.ValidateTotalNodeCountWithPodCIDR(shoot)...)
 	}
 	return allErrs
