@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/provider-local/local"
 )
 
 // ControllerName is the name of the controller.
@@ -55,5 +56,14 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 func IsShootNamespace() predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		return strings.HasPrefix(obj.GetName(), v1beta1constants.TechnicalIDPrefix)
+	})
+}
+
+// IsShootProviderLocal returns a predicate that returns true if the provider of the shoot is of type "local".
+func IsShootProviderLocal() predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		value, hasLabel := obj.GetLabels()[v1beta1constants.LabelShootProvider]
+
+		return hasLabel && value == local.Type
 	})
 }

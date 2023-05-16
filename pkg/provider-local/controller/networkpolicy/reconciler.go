@@ -32,11 +32,12 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
+// Reconciler creates the required networkpolicies in the shoot namespace.
 type Reconciler struct {
 	Client client.Client
 }
 
-// Reconcile the extension resource.
+// Reconcile creates the required networkpolicies in the shoot namespace.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 

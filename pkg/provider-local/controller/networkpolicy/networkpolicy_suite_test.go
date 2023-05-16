@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestBackupBucket(t *testing.T) {
+func TestNetworkPolicy(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Provider-local Controller NetworkPolicy Suite")
+	RunSpecs(t, "Provider-Local Controller NetworkPolicy Suite")
 }
