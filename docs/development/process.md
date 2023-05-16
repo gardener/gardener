@@ -127,6 +127,24 @@ before filing your pull request.
 The guide applies for both changes to the `master` and to any `release-*` branch.
 All changes must be submitted via a pull request and be reviewed and approved by at least one code owner.
 
+### TODO Statements
+
+Sometimes, TODO statements are being introduced when one cannot follow up immediately with certain tasks or when temporary migration code is required.
+In order to properly follow-up with such TODOs and to prevent them from piling up without getting attention, the following rules should be followed:
+
+- Each TODO statement should have an associated person and state when it can be removed.
+  Example:
+  ```golang
+  // TODO(<github-username>): Remove this code after v1.75 has been released.
+  ```
+- When the task depends on a certain implementation, a GitHub issue should be opened and referenced in the statement.
+  Example:
+  ```golang
+  // TODO(<github-username>): Remove this code after https://github.com/gardener/gardener/issues/<issue-number> has been implemented.
+  ```
+  The associated person should actively drive the implementation of the referenced issue (unless it cannot be done because of third-party dependencies or conditions) so that the TODO statement does not get stale.
+- TODO statements without actionable tasks or those that are unlikely to ever be implemented (maybe because of very low priorities) should not be specified in the first place. If a TODO is specified, the associated person should make sure to actively follow-up.
+
 ## Cherry Picks
 
 This section explains how to initiate cherry picks on release branches within the `gardener/gardener` repository.
