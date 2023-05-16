@@ -65,7 +65,6 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 
 // DeployGardenerResourceManager deploys the gardener-resource-manager
 func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
-
 	return shared.DeployGardenerResourceManager(
 		ctx,
 		b.SeedClientSet.Client(),

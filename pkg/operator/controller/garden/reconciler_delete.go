@@ -98,7 +98,11 @@ func (r *Reconciler) delete(
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	virtualGardenGardenerResourceManager, err := r.newVirtualGardenGardenerResourceManager(garden, secretsManager)
+	kubeControllerManager, err := r.newKubeControllerManager(log, garden, secretsManager, targetVersion)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	virtualGardenGardenerResourceManager, err := r.newVirtualGardenGardenerResourceManager(secretsManager)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -126,6 +130,10 @@ func (r *Reconciler) delete(
 			Fn:           component.OpDestroyAndWait(virtualGardenGardenerResourceManager).Destroy,
 			Dependencies: flow.NewTaskIDs(destroyVirtualGardenGardenerAccess),
 		})
+		destroyKubeControllerManager = g.Add(flow.Task{
+			Name: "Destroying Kubernetes Controller Manager Server",
+			Fn:   component.OpDestroyAndWait(kubeControllerManager).Destroy,
+		})
 		destroyKubeAPIServerService = g.Add(flow.Task{
 			Name: "Destroying Kubernetes API Server service",
 			Fn:   component.OpDestroyAndWait(kubeAPIServerService).Destroy,
@@ -151,6 +159,7 @@ func (r *Reconciler) delete(
 			cleanupGenericTokenKubeconfig,
 			destroyVirtualGardenGardenerAccess,
 			destroyVirtualGardenGardenerResourceManager,
+			destroyKubeControllerManager,
 			destroyKubeAPIServerService,
 			destroyKubeAPIServer,
 			destroyEtcd,

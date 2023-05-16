@@ -25,18 +25,12 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // DefaultKubeControllerManager returns a deployer for the kube-controller-manager.
 func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interface, error) {
-	image, err := b.ImageVector.FindImage(images.ImageNameKubeControllerManager, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
-	if err != nil {
-		return nil, err
-	}
-
 	hvpaEnabled := features.DefaultFeatureGate.Enabled(features.HVPA)
 	if b.ManagedSeed != nil {
 		hvpaEnabled = features.DefaultFeatureGate.Enabled(features.HVPAForShootedSeed)
@@ -53,25 +47,28 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interfa
 		pods = b.Shoot.Networks.Pods
 	}
 
-	return kubecontrollermanager.New(
-		b.Logger.WithValues("component", "kube-controller-manager"),
+	return shared.NewKubeControllerManager(
+		b.Logger,
 		b.SeedClientSet,
 		b.Shoot.SeedNamespace,
+		b.Seed.KubernetesVersion,
+		b.Shoot.KubernetesVersion,
+		b.ImageVector,
 		b.SecretsManager,
-		kubecontrollermanager.Values{
-			RuntimeVersion: b.Seed.KubernetesVersion,
-			TargetVersion:  b.Shoot.KubernetesVersion,
-			Image:          image.String(),
-			Config:         b.Shoot.GetInfo().Spec.Kubernetes.KubeControllerManager,
-			HVPAConfig: &kubecontrollermanager.HVPAConfig{
-				Enabled:             hvpaEnabled,
-				ScaleDownUpdateMode: &scaleDownUpdateMode,
-			},
-			IsWorkerless:   b.Shoot.IsWorkerless,
-			PodNetwork:     pods,
-			ServiceNetwork: services,
+		"",
+		b.Shoot.GetInfo().Spec.Kubernetes.KubeControllerManager,
+		v1beta1constants.PriorityClassNameShootControlPlane300,
+		b.Shoot.IsWorkerless,
+		&kubecontrollermanager.HVPAConfig{
+			Enabled:             hvpaEnabled,
+			ScaleDownUpdateMode: &scaleDownUpdateMode,
 		},
-	), nil
+		pods,
+		services,
+		nil,
+		kubecontrollermanager.ControllerWorkers{},
+		kubecontrollermanager.ControllerSyncPeriods{},
+	)
 }
 
 // DeployKubeControllerManager deploys the Kubernetes Controller Manager.

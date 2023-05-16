@@ -245,6 +245,9 @@ type Kubernetes struct {
 	// KubeAPIServer contains configuration settings for the kube-apiserver.
 	// +optional
 	KubeAPIServer *KubeAPIServerConfig `json:"kubeAPIServer,omitempty"`
+	// KubeControllerManager contains configuration settings for the kube-controller-manager.
+	// +optional
+	KubeControllerManager *KubeControllerManagerConfig `json:"kubeControllerManager,omitempty"`
 	// Version is the semantic Kubernetes version to use for the virtual garden cluster.
 	// +kubebuilder:validation:MinLength=1
 	Version string `json:"version"`
@@ -373,6 +376,20 @@ type Networking struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Services string `json:"services"`
+}
+
+// KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.
+type KubeControllerManagerConfig struct {
+	// KubeControllerManagerConfig contains all configuration values not specific to the virtual garden cluster.
+	// +optional
+	*gardencorev1beta1.KubeControllerManagerConfig `json:",inline"`
+	// CertificateSigningDuration is the maximum length of duration signed certificates will be given. Individual CSRs
+	// may request shorter certs by setting `spec.expirationSeconds`.
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$"
+	// +kubebuilder:default=`48h`
+	// +optional
+	CertificateSigningDuration *metav1.Duration `json:"certificateSigningDuration,omitempty"`
 }
 
 // GardenStatus is the status of a garden environment.

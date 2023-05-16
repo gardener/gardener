@@ -84,6 +84,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			&rotationutils.SecretEncryptionVerifier{NewTargetClientFunc: func() (kubernetes.Interface, error) {
 				return kubernetes.NewClientFromSecret(ctx, runtimeClient, namespace, "gardener", kubernetes.WithDisabledCachedClient())
 			}},
+			&rotation.VirtualGardenAccessVerifier{RuntimeClient: runtimeClient, Namespace: namespace},
 		}
 
 		DeferCleanup(func() {

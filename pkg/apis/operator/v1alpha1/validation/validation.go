@@ -117,6 +117,17 @@ func validateVirtualCluster(virtualCluster operatorv1alpha1.VirtualCluster, runt
 		allErrs = append(allErrs, gardencorevalidation.ValidateKubeAPIServer(coreKubeAPIServerConfig, virtualCluster.Kubernetes.Version, true, path)...)
 	}
 
+	if kubeControllerManager := virtualCluster.Kubernetes.KubeControllerManager; kubeControllerManager != nil && kubeControllerManager.KubeControllerManagerConfig != nil {
+		path := fldPath.Child("kubernetes", "kubeControllerManager")
+
+		coreKubeControllerManagerConfig := &gardencore.KubeControllerManagerConfig{}
+		if err := gardenCoreScheme.Convert(kubeControllerManager.KubeControllerManagerConfig, coreKubeControllerManagerConfig, nil); err != nil {
+			allErrs = append(allErrs, field.InternalError(path, err))
+		}
+
+		allErrs = append(allErrs, gardencorevalidation.ValidateKubeControllerManager(coreKubeControllerManagerConfig, nil, virtualCluster.Kubernetes.Version, true, path)...)
+	}
+
 	if _, _, err := net.ParseCIDR(virtualCluster.Networking.Services); err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services"), virtualCluster.Networking.Services, fmt.Sprintf("cannot parse service network cidr: %s", err.Error())))
 	}

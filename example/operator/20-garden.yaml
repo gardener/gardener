@@ -135,6 +135,10 @@ spec:
     #   resourcesToStoreInETCDEvents:
     #   - group: networking.k8s.io
     #     resources: networkpolicies
+    # kubeControllerManager:
+    #   featureGates:
+    #     SomeKubernetesFeature: true
+    #   certificateSigningDuration: 48h
     maintenance:
       timeWindow:
         begin: 220000+0100

@@ -29,8 +29,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/rotation"
+	"github.com/gardener/gardener/test/utils/access"
 	rotationutils "github.com/gardener/gardener/test/utils/rotation"
-	"github.com/gardener/gardener/test/utils/shoots/access"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {

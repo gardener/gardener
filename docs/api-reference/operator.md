@@ -943,6 +943,55 @@ SNI
 </tr>
 </tbody>
 </table>
+<h3 id="operator.gardener.cloud/v1alpha1.KubeControllerManagerConfig">KubeControllerManagerConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Kubernetes">Kubernetes</a>)
+</p>
+<p>
+<p>KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>KubeControllerManagerConfig</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeControllerManagerConfig
+</em>
+</td>
+<td>
+<p>
+(Members of <code>KubeControllerManagerConfig</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>KubeControllerManagerConfig contains all configuration values not specific to the virtual garden cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>certificateSigningDuration</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CertificateSigningDuration is the maximum length of duration signed certificates will be given. Individual CSRs
+may request shorter certs by setting <code>spec.expirationSeconds</code>.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.Kubernetes">Kubernetes
 </h3>
 <p>
@@ -973,6 +1022,20 @@ KubeAPIServerConfig
 <td>
 <em>(Optional)</em>
 <p>KubeAPIServer contains configuration settings for the kube-apiserver.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubeControllerManager</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.KubeControllerManagerConfig">
+KubeControllerManagerConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeControllerManager contains configuration settings for the kube-controller-manager.</p>
 </td>
 </tr>
 <tr>

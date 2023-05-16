@@ -90,6 +90,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				healthyManagedResource("vpa"),
 				healthyManagedResource("etcd-druid"),
 				healthyManagedResource("kube-state-metrics"),
+				healthyManagedResource("shoot-core-kube-controller-manager"),
 				healthyManagedResource("shoot-core-gardener-resource-manager"),
 				healthyManagedResource("shoot-core-gardeneraccess"),
 			))

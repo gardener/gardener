@@ -128,6 +128,7 @@ rules:
   - virtual-garden-etcd-events
   - virtual-garden-etcd-main
   - virtual-garden-kube-apiserver
+  - virtual-garden-kube-controller-manager
   verbs:
   - delete
   - patch

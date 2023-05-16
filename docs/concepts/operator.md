@@ -89,11 +89,7 @@ Please refer to [this document](../usage/shoot_credentials_rotation.md#gardener-
 - ETCD encryption key
 - `ServiceAccount` token signing key
 
-⚠️ Since `kube-controller-manager` is not yet deployed by `gardener-operator`, rotation of static `ServiceAccount` secrets is not supported and must be performed manually after the `Garden` has reached `Prepared` phase before completing the rotation.
-
-⚠️ Rotation of the static kubeconfig (which is enabled unconditionally) is not support for now.
-The reason is that it such static kubeconfig will be disabled without configuration option in the near future.
-Instead, we'll implement an approach similar to the [`adminkubeconfig` subresource on `Shoot`s](../usage/shoot_access.md#shootsadminkubeconfig-subresource) which can be used to retrieve a temporary kubeconfig for the virtual garden cluster.
+⚠️ Rotation of static `ServiceAccount` secrets is not supported since the `kube-controller-manager` does not enable the `serviceaccount-token` controller.
 
 ## Local Development
 
@@ -110,8 +106,7 @@ This command sets up a new KinD cluster named `gardener-local` and stores the ku
 > It might be helpful to copy this file to `$HOME/.kube/config`, since you will need to target this KinD cluster multiple times.
 Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind/operator/kubeconfig` for all future steps via `export KUBECONFIG=example/gardener-local/kind/operator/kubeconfig`.
  
-All of the following steps assume that you are using this kubeconfig.
-
+All the following steps assume that you are using this kubeconfig.
 
 ### Setting Up Gardener Operator
 
@@ -177,9 +172,11 @@ EOF
 To access the virtual garden, you can acquire a `kubeconfig` by
 
 ```shell
-kubectl -n garden get secret -l name=user-kubeconfig -o jsonpath={..data.kubeconfig} | base64 -d > /tmp/virtual-garden-kubeconfig
+kubectl -n garden get secret gardener -o jsonpath={.data.kubeconfig} | base64 -d > /tmp/virtual-garden-kubeconfig
 kubectl --kubeconfig /tmp/virtual-garden-kubeconfig get namespaces
 ```
+
+Note that this kubeconfig uses a token that has validity of `12h` only, hence it might expire and causing you to re-download the kubeconfig.
 
 ### Deleting the `Garden`
 
@@ -237,6 +234,8 @@ The virtual garden control plane components are:
 - `virtual-garden-etcd-main`
 - `virtual-garden-etcd-events`
 - `virtual-garden-kube-apiserver`
+- `virtual-garden-kube-controller-manager`
+- `virtual-garden-gardener-resource-manager`
 
 If the `.spec.virtualCluster.controlPlane.highAvailability={}` is set then these components will be deployed in a "highly available" mode.
 For ETCD, this means that there will be 3 replicas each.
@@ -246,10 +245,16 @@ The `gardener-resource-manager`'s [HighAvailabilityConfig webhook](resource-mana
 > If once set, removing `.spec.virtualCluster.controlPlane.highAvailability` again is not supported.
 
 The `virtual-garden-kube-apiserver` `Deployment` is exposed via a `Service` of type `LoadBalancer` with the same name.
-In the future, we might switch to exposing it via Istio, similar to how the `kube-apiservers` of shoot clusters are exposed.
+In the future, we will switch to exposing it via Istio, similar to how the `kube-apiservers` of shoot clusters are exposed.
 
 Similar to the `Shoot` API, the version of the virtual garden cluster is controlled via `.spec.virtualCluster.kubernetes.version`.
-Likewise, specific configuration for the control plane components can be provided in the same section, e.g. via `.spec.virtualCluster.kubernetes.kubeAPIServer` for the `kube-apiserver`.
+Likewise, specific configuration for the control plane components can be provided in the same section, e.g. via `.spec.virtualCluster.kubernetes.kubeAPIServer` for the `kube-apiserver` or `.spec.virtualCluster.kubernetes.kubeControllerManager` for the `kube-controller-manager`.
+
+The `kube-controller-manager` only runs a very few controllers that are necessary in the scenario of the virtual garden.
+Most prominently, **the `serviceaccount-token` controller is unconditionally disabled**.
+Hence, the usage of static `ServiceAccount` secrets is not supported generally.
+Instead, the [`TokenRequest` API](https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-request-v1/) should be used.
+Third-party components that need to communicate with the virtual cluster can leverage the [`gardener-resource-manager`'s `TokenRequestor` controller](resource-manager.md#tokenrequestor-controller) and the generic kubeconfig, just like it works for `Shoot`s.
 
 For the virtual cluster, it is essential to provide a DNS domain via `.spec.virtualCluster.dns.domain`.
 **The respective DNS record is not managed by `gardener-operator` and should be manually created and pointed to the load balancer IP of the `virtual-garden-kube-apiserver` `Service`.**

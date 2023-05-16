@@ -41,11 +41,11 @@ const namespaceE2ETestServiceAccountTokenAccess = metav1.NamespaceDefault
 // ClusterRoleBindings for easy cleanup.
 var labelsE2ETestDynamicServiceAccountTokenAccess = map[string]string{"e2e-test": "serviceaccount-dynamic-access"}
 
-// CreateShootClientFromDynamicServiceAccountToken creates a ServiceAccount, uses the kube-apiserver's TokenRequest API
-// to request a token for it, and then creates a new shoot client from it.
+// CreateTargetClientFromDynamicServiceAccountToken creates a ServiceAccount, uses the kube-apiserver's TokenRequest API
+// to request a token for it, and then creates a new target client from it.
 // You should call CleanupObjectsFromDynamicServiceAccountTokenAccess to clean up the objects created by this function.
-func CreateShootClientFromDynamicServiceAccountToken(ctx context.Context, shootClient kubernetes.Interface, name string) (kubernetes.Interface, error) {
-	return createShootClientFromServiceAccount(ctx, shootClient, name, labelsE2ETestDynamicServiceAccountTokenAccess, func(serviceAccount *corev1.ServiceAccount) (string, error) {
+func CreateTargetClientFromDynamicServiceAccountToken(ctx context.Context, targetClient kubernetes.Interface, name string) (kubernetes.Interface, error) {
+	return createTargetClientFromServiceAccount(ctx, targetClient, name, labelsE2ETestDynamicServiceAccountTokenAccess, func(serviceAccount *corev1.ServiceAccount) (string, error) {
 		tokenRequest := &authenticationv1.TokenRequest{
 			Spec: authenticationv1.TokenRequestSpec{
 				Audiences:         []string{v1beta1constants.GardenerAudience},
@@ -53,7 +53,7 @@ func CreateShootClientFromDynamicServiceAccountToken(ctx context.Context, shootC
 			},
 		}
 
-		if err := shootClient.Client().SubResource("token").Create(ctx, serviceAccount, tokenRequest); err != nil {
+		if err := targetClient.Client().SubResource("token").Create(ctx, serviceAccount, tokenRequest); err != nil {
 			return "", err
 		}
 
@@ -61,13 +61,13 @@ func CreateShootClientFromDynamicServiceAccountToken(ctx context.Context, shootC
 	})
 }
 
-// CleanupObjectsFromDynamicServiceAccountTokenAccess cleans up all objects in the shoot created by all calls to
-// CreateShootClientFromDynamicServiceAccountToken.
-func CleanupObjectsFromDynamicServiceAccountTokenAccess(ctx context.Context, shootClient kubernetes.Interface) error {
+// CleanupObjectsFromDynamicServiceAccountTokenAccess cleans up all objects in the target created by all calls to
+// CreateTargetClientFromDynamicServiceAccountToken.
+func CleanupObjectsFromDynamicServiceAccountTokenAccess(ctx context.Context, targetClient kubernetes.Interface) error {
 	return flow.Parallel(func(ctx context.Context) error {
-		return shootClient.Client().DeleteAllOf(ctx, &corev1.ServiceAccount{}, client.InNamespace(namespaceE2ETestServiceAccountTokenAccess), client.MatchingLabels(labelsE2ETestDynamicServiceAccountTokenAccess))
+		return targetClient.Client().DeleteAllOf(ctx, &corev1.ServiceAccount{}, client.InNamespace(namespaceE2ETestServiceAccountTokenAccess), client.MatchingLabels(labelsE2ETestDynamicServiceAccountTokenAccess))
 	}, func(ctx context.Context) error {
-		return shootClient.Client().DeleteAllOf(ctx, &rbacv1.ClusterRoleBinding{}, client.MatchingLabels(labelsE2ETestDynamicServiceAccountTokenAccess))
+		return targetClient.Client().DeleteAllOf(ctx, &rbacv1.ClusterRoleBinding{}, client.MatchingLabels(labelsE2ETestDynamicServiceAccountTokenAccess))
 	})(ctx)
 }
 
@@ -79,7 +79,7 @@ var labelsE2ETestStaticServiceAccountToken = map[string]string{"e2e-test": "serv
 // by kube-controller-manager), and then creates a new shoot client from it.
 // You should call CleanupObjectsFromStaticServiceAccountTokenAccess to clean up the objects created by this function.
 func CreateShootClientFromStaticServiceAccountToken(ctx context.Context, shootClient kubernetes.Interface, name string) (kubernetes.Interface, error) {
-	return createShootClientFromServiceAccount(ctx, shootClient, name, labelsE2ETestStaticServiceAccountToken, func(serviceAccount *corev1.ServiceAccount) (string, error) {
+	return createTargetClientFromServiceAccount(ctx, shootClient, name, labelsE2ETestStaticServiceAccountToken, func(serviceAccount *corev1.ServiceAccount) (string, error) {
 		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: serviceAccount.Namespace}}
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, shootClient.Client(), secret, func() error {
 			secret.Labels = utils.MergeStringMaps(secret.Labels, labelsE2ETestStaticServiceAccountToken)
@@ -123,9 +123,9 @@ func CleanupObjectsFromStaticServiceAccountTokenAccess(ctx context.Context, shoo
 	})(ctx)
 }
 
-func createShootClientFromServiceAccount(
+func createTargetClientFromServiceAccount(
 	ctx context.Context,
-	shootClient kubernetes.Interface,
+	targetClient kubernetes.Interface,
 	name string,
 	labels map[string]string,
 	getTokenForServiceAccount func(*corev1.ServiceAccount) (string, error),
@@ -134,7 +134,7 @@ func createShootClientFromServiceAccount(
 	error,
 ) {
 	serviceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespaceE2ETestServiceAccountTokenAccess}}
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, shootClient.Client(), serviceAccount, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, targetClient.Client(), serviceAccount, func() error {
 		serviceAccount.Labels = utils.MergeStringMaps(serviceAccount.Labels, labels)
 		return nil
 	}); err != nil {
@@ -142,7 +142,7 @@ func createShootClientFromServiceAccount(
 	}
 
 	clusterRoleBinding := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: name}}
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, shootClient.Client(), clusterRoleBinding, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, targetClient.Client(), clusterRoleBinding, func() error {
 		clusterRoleBinding.Labels = utils.MergeStringMaps(serviceAccount.Labels, labels)
 		clusterRoleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
@@ -164,7 +164,7 @@ func createShootClientFromServiceAccount(
 		return nil, err
 	}
 
-	r := shootClient.RESTConfig()
+	r := targetClient.RESTConfig()
 	restConfig := &rest.Config{
 		Host:            r.Host,
 		TLSClientConfig: rest.TLSClientConfig{CAData: r.CAData},

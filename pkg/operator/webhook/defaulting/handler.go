@@ -37,9 +37,21 @@ func (h *Handler) Default(_ context.Context, obj runtime.Object) error {
 		return fmt.Errorf("expected *operatorv1alpha1.Garden but got %T", obj)
 	}
 
-	if kubeAPIServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; kubeAPIServer != nil {
-		gardencorev1beta1.SetDefaults_KubeAPIServerConfig(kubeAPIServer.KubeAPIServerConfig)
+	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer == nil {
+		garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{}
 	}
+	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig == nil {
+		garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig = &gardencorev1beta1.KubeAPIServerConfig{}
+	}
+	gardencorev1beta1.SetDefaults_KubeAPIServerConfig(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig)
+
+	if garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager == nil {
+		garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager = &operatorv1alpha1.KubeControllerManagerConfig{}
+	}
+	if garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager.KubeControllerManagerConfig == nil {
+		garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager.KubeControllerManagerConfig = &gardencorev1beta1.KubeControllerManagerConfig{}
+	}
+	gardencorev1beta1.SetDefaults_KubeControllerManagerConfig(garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager.KubeControllerManagerConfig)
 
 	return nil
 }
