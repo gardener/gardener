@@ -133,11 +133,11 @@ func (i *infrastructure) deploy(ctx context.Context, operation string) (extensio
 	}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, i.infrastructure, func() error {
-		if i.values.AnnotateOperation {
+		if i.values.AnnotateOperation || i.lastOperationNotSuccessful() {
 			metav1.SetMetaDataAnnotation(&i.infrastructure.ObjectMeta, v1beta1constants.GardenerOperation, operation)
+			metav1.SetMetaDataAnnotation(&i.infrastructure.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 		}
 
-		metav1.SetMetaDataAnnotation(&i.infrastructure.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 		i.infrastructure.Spec = extensionsv1alpha1.InfrastructureSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type:           i.values.Type,
@@ -255,4 +255,8 @@ func (i *infrastructure) NodesCIDR() *string {
 func (i *infrastructure) extractStatus(status extensionsv1alpha1.InfrastructureStatus) {
 	i.providerStatus = status.ProviderStatus
 	i.nodesCIDR = status.NodesCIDR
+}
+
+func (i *infrastructure) lastOperationNotSuccessful() bool {
+	return i.infrastructure.Status.LastOperation != nil && i.infrastructure.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded
 }

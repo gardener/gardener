@@ -168,10 +168,8 @@ var _ = Describe("#Interface", func() {
 
 			actual := &extensionsv1alpha1.Infrastructure{}
 			expected.Spec.SSHPublicKey = []byte("")
+			expected.Annotations = map[string]string{}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(expected), actual)).To(Succeed())
-			expected.SetAnnotations(map[string]string{
-				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
-			})
 			Expect(actual).To(DeepEqual(expected))
 		})
 
@@ -188,6 +186,43 @@ var _ = Describe("#Interface", func() {
 			actual := &extensionsv1alpha1.Infrastructure{}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(expected), actual)).To(Succeed())
 			Expect(actual).To(DeepEqual(expected))
+		})
+
+		It("should deploy the Infrastructure with operation annotation if it is in error state", func() {
+			defer test.WithVars(
+				&infrastructure.TimeNow, mockNow.Do,
+			)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+			existingInfra := expected.DeepCopy()
+			existingInfra.ResourceVersion = ""
+			delete(existingInfra.Annotations, v1beta1constants.GardenerOperation)
+			metav1.SetMetaDataAnnotation(&existingInfra.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).Format(time.RFC3339Nano))
+			existingInfra.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State: gardencorev1beta1.LastOperationStateError,
+			}
+
+			expected.ResourceVersion = "2"
+			expected.Status = extensionsv1alpha1.InfrastructureStatus{
+				DefaultStatus: extensionsv1alpha1.DefaultStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						State: gardencorev1beta1.LastOperationStateError,
+					},
+				},
+			}
+
+			Expect(c.Create(ctx, existingInfra)).To(Succeed())
+			values.AnnotateOperation = false
+			deployWaiter = infrastructure.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+			deployWaiter.SetSSHPublicKey(sshPublicKey)
+			Expect(deployWaiter.Deploy(ctx)).To(Succeed())
+
+			deployedInfra := &extensionsv1alpha1.Infrastructure{ObjectMeta: metav1.ObjectMeta{
+				Name:      existingInfra.Name,
+				Namespace: existingInfra.Namespace,
+			}}
+			err := c.Get(ctx, client.ObjectKeyFromObject(deployedInfra), deployedInfra)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(deployedInfra).To(DeepEqual(expected))
 		})
 	})
 
@@ -253,7 +288,8 @@ var _ = Describe("#Interface", func() {
 				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
 			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
-				State: gardencorev1beta1.LastOperationStateSucceeded,
+				State:          gardencorev1beta1.LastOperationStateSucceeded,
+				LastUpdateTime: metav1.Time{Time: now.UTC().Add(time.Second)},
 			}
 			expected.Status.NodesCIDR = nodesCIDR
 			expected.Status.ProviderStatus = providerStatus

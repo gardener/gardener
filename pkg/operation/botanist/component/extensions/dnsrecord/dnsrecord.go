@@ -132,116 +132,109 @@ type dnsRecord struct {
 }
 
 // Deploy uses the seed client to create or update the DNSRecord resource.
-func (c *dnsRecord) Deploy(ctx context.Context) error {
-	_, err := c.deploy(ctx, v1beta1constants.GardenerOperationReconcile)
+func (d *dnsRecord) Deploy(ctx context.Context) error {
+	_, err := d.deploy(ctx, v1beta1constants.GardenerOperationReconcile)
 	return err
 }
 
-func (c *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {
-	if err := c.deploySecret(ctx); err != nil {
+func (d *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {
+	if err := d.deploySecret(ctx); err != nil {
 		return nil, err
 	}
 
 	mutateFn := func() error {
-		if c.values.AnnotateOperation || c.valuesDontMatchDNSRecord() {
-			metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerOperation, operation)
+		if d.values.AnnotateOperation || d.valuesDontMatchDNSRecord() || d.lastOperationNotSuccessful() {
+			metav1.SetMetaDataAnnotation(&d.dnsRecord.ObjectMeta, v1beta1constants.GardenerOperation, operation)
+			metav1.SetMetaDataAnnotation(&d.dnsRecord.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 		}
-		metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 
-		c.dnsRecord.Spec = extensionsv1alpha1.DNSRecordSpec{
+		d.dnsRecord.Spec = extensionsv1alpha1.DNSRecordSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
-				Type: c.values.Type,
+				Type: d.values.Type,
 			},
 			SecretRef: corev1.SecretReference{
-				Name:      c.secret.Name,
-				Namespace: c.secret.Namespace,
+				Name:      d.secret.Name,
+				Namespace: d.secret.Namespace,
 			},
-			Zone:       c.values.Zone,
-			Name:       c.values.DNSName,
-			RecordType: c.values.RecordType,
-			Values:     c.values.Values,
-			TTL:        c.values.TTL,
+			Zone:       d.values.Zone,
+			Name:       d.values.DNSName,
+			RecordType: d.values.RecordType,
+			Values:     d.values.Values,
+			TTL:        d.values.TTL,
 		}
 
 		return nil
 	}
 
-	if c.values.ReconcileOnlyOnChangeOrError {
-		if err := c.client.Get(ctx, client.ObjectKeyFromObject(c.dnsRecord), c.dnsRecord); err != nil {
+	if d.values.ReconcileOnlyOnChangeOrError {
+		if err := d.client.Get(ctx, client.ObjectKeyFromObject(d.dnsRecord), d.dnsRecord); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return nil, err
 			}
 
 			// DNSRecord doesn't exist yet, create it.
 			_ = mutateFn()
-			if err := c.client.Create(ctx, c.dnsRecord); err != nil {
+			if err := d.client.Create(ctx, d.dnsRecord); err != nil {
 				return nil, err
 			}
 		} else {
-			patch := client.MergeFrom(c.dnsRecord.DeepCopy())
-			if c.dnsRecord.Status.LastOperation != nil && c.dnsRecord.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
-				// If the DNSRecord is not yet Succeeded, reconcile it again.
+			patch := client.MergeFrom(d.dnsRecord.DeepCopy())
+			if d.valuesDontMatchDNSRecord() || d.lastOperationNotSuccessful() {
+				// If the DNSRecord is not yet Succeeded or values have changed, reconcile it again.
 				_ = mutateFn()
-			} else if c.valuesDontMatchDNSRecord() {
-				_ = mutateFn()
-			} else {
-				// Otherwise, just update the timestamp annotation.
-				// If the object is still annotated with the operation annotation (e.g. not reconciled yet) this will send a watch
-				// event to the extension controller triggering a new reconciliation.
-				metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 			}
-			if err := c.client.Patch(ctx, c.dnsRecord, patch); err != nil {
+			if err := d.client.Patch(ctx, d.dnsRecord, patch); err != nil {
 				return nil, err
 			}
 		}
 	} else {
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, c.dnsRecord, mutateFn); err != nil {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, d.client, d.dnsRecord, mutateFn); err != nil {
 			return nil, err
 		}
 	}
 
-	return c.dnsRecord, nil
+	return d.dnsRecord, nil
 }
 
-func (c *dnsRecord) deploySecret(ctx context.Context) error {
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, c.secret, func() error {
-		c.secret.Type = corev1.SecretTypeOpaque
-		c.secret.Data = c.values.SecretData
+func (d *dnsRecord) deploySecret(ctx context.Context) error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, d.client, d.secret, func() error {
+		d.secret.Type = corev1.SecretTypeOpaque
+		d.secret.Data = d.values.SecretData
 		return nil
 	})
 	return err
 }
 
 // Restore uses the seed client and the ShootState to create the DNSRecord resource and restore its state.
-func (c *dnsRecord) Restore(ctx context.Context, shootState *gardencorev1beta1.ShootState) error {
+func (d *dnsRecord) Restore(ctx context.Context, shootState *gardencorev1beta1.ShootState) error {
 	return extensions.RestoreExtensionWithDeployFunction(
 		ctx,
-		c.client,
+		d.client,
 		shootState,
 		extensionsv1alpha1.DNSRecordResource,
-		c.deploy,
+		d.deploy,
 	)
 }
 
 // Migrate migrates the DNSRecord resource.
-func (c *dnsRecord) Migrate(ctx context.Context) error {
+func (d *dnsRecord) Migrate(ctx context.Context) error {
 	return extensions.MigrateExtensionObject(
 		ctx,
-		c.client,
-		c.dnsRecord,
+		d.client,
+		d.dnsRecord,
 	)
 }
 
 // Destroy deletes the DNSRecord resource.
-func (c *dnsRecord) Destroy(ctx context.Context) error {
-	if err := c.deploySecret(ctx); err != nil {
+func (d *dnsRecord) Destroy(ctx context.Context) error {
+	if err := d.deploySecret(ctx); err != nil {
 		return err
 	}
 
 	return extensions.DeleteExtensionObject(
 		ctx,
-		c.client,
-		c.dnsRecord,
+		d.client,
+		d.dnsRecord,
 	)
 }
 
@@ -249,63 +242,67 @@ func (c *dnsRecord) Destroy(ctx context.Context) error {
 var WaitUntilExtensionObjectReady = extensions.WaitUntilExtensionObjectReady
 
 // Wait waits until the DNSRecord resource is ready.
-func (c *dnsRecord) Wait(ctx context.Context) error {
+func (d *dnsRecord) Wait(ctx context.Context) error {
 	return WaitUntilExtensionObjectReady(
 		ctx,
-		c.client,
-		c.log,
-		c.dnsRecord,
+		d.client,
+		d.log,
+		d.dnsRecord,
 		extensionsv1alpha1.DNSRecordResource,
-		c.waitInterval,
-		c.waitSevereThreshold,
-		c.waitTimeout,
+		d.waitInterval,
+		d.waitSevereThreshold,
+		d.waitTimeout,
 		nil,
 	)
 }
 
 // WaitMigrate waits until the DNSRecord resource is migrated successfully.
-func (c *dnsRecord) WaitMigrate(ctx context.Context) error {
+func (d *dnsRecord) WaitMigrate(ctx context.Context) error {
 	return extensions.WaitUntilExtensionObjectMigrated(
 		ctx,
-		c.client,
-		c.dnsRecord,
+		d.client,
+		d.dnsRecord,
 		extensionsv1alpha1.DNSRecordResource,
-		c.waitInterval,
-		c.waitTimeout,
+		d.waitInterval,
+		d.waitTimeout,
 	)
 }
 
 // WaitCleanup waits until the DNSRecord resource is deleted.
-func (c *dnsRecord) WaitCleanup(ctx context.Context) error {
+func (d *dnsRecord) WaitCleanup(ctx context.Context) error {
 	return extensions.WaitUntilExtensionObjectDeleted(
 		ctx,
-		c.client,
-		c.log,
-		c.dnsRecord,
+		d.client,
+		d.log,
+		d.dnsRecord,
 		extensionsv1alpha1.DNSRecordResource,
-		c.waitInterval,
-		c.waitTimeout,
+		d.waitInterval,
+		d.waitTimeout,
 	)
 }
 
 // GetValues returns the current configuration values of the deployer.
-func (c *dnsRecord) GetValues() *Values {
-	return c.values
+func (d *dnsRecord) GetValues() *Values {
+	return d.values
 }
 
 // SetRecordType sets the record type in the values.
-func (c *dnsRecord) SetRecordType(recordType extensionsv1alpha1.DNSRecordType) {
-	c.values.RecordType = recordType
+func (d *dnsRecord) SetRecordType(recordType extensionsv1alpha1.DNSRecordType) {
+	d.values.RecordType = recordType
 }
 
 // SetValues sets the values in the values.
-func (c *dnsRecord) SetValues(values []string) {
-	c.values.Values = values
+func (d *dnsRecord) SetValues(values []string) {
+	d.values.Values = values
 }
 
-func (c *dnsRecord) valuesDontMatchDNSRecord() bool {
-	return c.values.SecretName != c.dnsRecord.Spec.SecretRef.Name ||
-		!pointer.StringEqual(c.values.Zone, c.dnsRecord.Spec.Zone) ||
-		!reflect.DeepEqual(c.values.Values, c.dnsRecord.Spec.Values) ||
-		!pointer.Int64Equal(c.values.TTL, c.dnsRecord.Spec.TTL)
+func (d *dnsRecord) valuesDontMatchDNSRecord() bool {
+	return d.values.SecretName != d.dnsRecord.Spec.SecretRef.Name ||
+		!pointer.StringEqual(d.values.Zone, d.dnsRecord.Spec.Zone) ||
+		!reflect.DeepEqual(d.values.Values, d.dnsRecord.Spec.Values) ||
+		!pointer.Int64Equal(d.values.TTL, d.dnsRecord.Spec.TTL)
+}
+
+func (d *dnsRecord) lastOperationNotSuccessful() bool {
+	return d.dnsRecord.Status.LastOperation != nil && d.dnsRecord.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded
 }

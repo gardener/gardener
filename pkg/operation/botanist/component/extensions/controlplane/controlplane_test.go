@@ -236,7 +236,8 @@ var _ = Describe("ControlPlane", func() {
 				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
 			cp.Status.LastOperation = &gardencorev1beta1.LastOperation{
-				State: gardencorev1beta1.LastOperationStateSucceeded,
+				State:          gardencorev1beta1.LastOperationStateSucceeded,
+				LastUpdateTime: metav1.Time{Time: now.UTC().Add(time.Second)},
 			}
 			Expect(c.Patch(ctx, cp, patch)).To(Succeed(), "patching controlplane succeeds")
 
@@ -290,7 +291,8 @@ var _ = Describe("ControlPlane", func() {
 				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
 			cp.Status.LastOperation = &gardencorev1beta1.LastOperation{
-				State: gardencorev1beta1.LastOperationStateSucceeded,
+				State:          gardencorev1beta1.LastOperationStateSucceeded,
+				LastUpdateTime: metav1.Time{Time: now.UTC().Add(time.Second)},
 			}
 			Expect(c.Patch(ctx, cp, patch)).To(Succeed(), "patching controlplane succeeds")
 

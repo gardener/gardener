@@ -83,11 +83,6 @@ var defaultControllerPredicate = predicate.Funcs{
 			return true
 		}
 
-		// If the last operation does not indicate success and the object's timestamp changes then we admit reconciliation.
-		if lastOperationNotSuccessful(e.ObjectNew) && e.ObjectOld.GetAnnotations()[v1beta1constants.GardenerTimestamp] != e.ObjectNew.GetAnnotations()[v1beta1constants.GardenerTimestamp] {
-			return true
-		}
-
 		// If none of the above conditions applies then reconciliation is not allowed.
 		return false
 	},

@@ -614,7 +614,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 					}
 					// set last operation
 					expected[i].Status.LastOperation = &gardencorev1beta1.LastOperation{
-						State: gardencorev1beta1.LastOperationStateSucceeded,
+						State:          gardencorev1beta1.LastOperationStateSucceeded,
+						LastUpdateTime: metav1.Time{Time: now.UTC().Add(time.Second)},
 					}
 					// set cloud-config secret information
 					expected[i].Status.CloudConfig = &extensionsv1alpha1.CloudConfig{

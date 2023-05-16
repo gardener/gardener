@@ -230,7 +230,8 @@ var _ = Describe("#ContainerRuntime", func() {
 				}
 				// set last operation
 				expected[i].Status.LastOperation = &gardencorev1beta1.LastOperation{
-					State: gardencorev1beta1.LastOperationStateSucceeded,
+					State:          gardencorev1beta1.LastOperationStateSucceeded,
+					LastUpdateTime: metav1.Time{Time: now.UTC().Add(time.Second)},
 				}
 				Expect(c.Patch(ctx, expected[i], patch)).ToNot(HaveOccurred(), "patching containerruntime succeeds")
 			}
