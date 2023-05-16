@@ -32,5 +32,5 @@ trap "
 " EXIT
 
 make operator-up
-make test-e2e-local-operator PARALLEL_E2E_TESTS=10
+make test-e2e-local-operator
 make operator-down

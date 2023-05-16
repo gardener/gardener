@@ -42,7 +42,7 @@ SEED_KUBECONFIG                            := $(REPO_ROOT)/example/provider-exte
 DEV_SETUP_WITH_WEBHOOKS                    := false
 KIND_ENV                                   := "skaffold"
 IPFAMILY                                   := ipv4
-PARALLEL_E2E_TESTS                         := 5
+PARALLEL_E2E_TESTS                         := 15
 GARDENER_RELEASE_DOWNLOAD_PATH             := $(REPO_ROOT)/dev
 
 ifneq ($(SEED_NAME),provider-extensions)
