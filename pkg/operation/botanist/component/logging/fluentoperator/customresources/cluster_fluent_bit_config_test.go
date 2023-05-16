@@ -47,7 +47,7 @@ var _ = Describe("Logging", func() {
 						Service: &fluentbitv1alpha2.Service{
 							FlushSeconds: pointer.Int64(30),
 							Daemon:       pointer.Bool(false),
-							LogLevel:     "info",
+							LogLevel:     "error",
 							ParsersFile:  "parsers.conf",
 							HttpServer:   pointer.Bool(true),
 							HttpListen:   "0.0.0.0",
