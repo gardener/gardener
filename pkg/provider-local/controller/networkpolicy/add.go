@@ -45,7 +45,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(&corev1.Namespace{}, builder.WithPredicates(IsShootNamespace())).
+		For(&corev1.Namespace{}, builder.WithPredicates(IsShootNamespace(), IsShootProviderLocal())).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 5,
 		}).
