@@ -100,10 +100,10 @@ func GetFluentBit(labels map[string]string, fluentBitName, namespace, image, ini
 					},
 				},
 				{
-					Name: "optfluent",
+					Name: "varfluent",
 					VolumeSource: corev1.VolumeSource{
 						HostPath: &corev1.HostPathVolumeSource{
-							Path: "/opt/fluentbit",
+							Path: "/var/fluentbit",
 						},
 					},
 				},
@@ -120,8 +120,8 @@ func GetFluentBit(labels map[string]string, fluentBitName, namespace, image, ini
 					MountPath: "/run/log/journal",
 				},
 				{
-					Name:      "optfluent",
-					MountPath: "/opt/fluentbit",
+					Name:      "varfluent",
+					MountPath: "/var/fluentbit",
 				},
 				{
 					Name:      "plugins",

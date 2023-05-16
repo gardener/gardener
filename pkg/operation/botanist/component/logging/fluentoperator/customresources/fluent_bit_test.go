@@ -113,10 +113,10 @@ var _ = Describe("Logging", func() {
 								},
 							},
 							{
-								Name: "optfluent",
+								Name: "varfluent",
 								VolumeSource: corev1.VolumeSource{
 									HostPath: &corev1.HostPathVolumeSource{
-										Path: "/opt/fluentbit",
+										Path: "/var/fluentbit",
 									},
 								},
 							},
@@ -133,8 +133,8 @@ var _ = Describe("Logging", func() {
 								MountPath: "/run/log/journal",
 							},
 							{
-								Name:      "optfluent",
-								MountPath: "/opt/fluentbit",
+								Name:      "varfluent",
+								MountPath: "/var/fluentbit",
 							},
 							{
 								Name:      "plugins",
