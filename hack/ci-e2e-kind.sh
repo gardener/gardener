@@ -32,5 +32,5 @@ trap '{
 }' EXIT
 
 make gardener-up
-make test-e2e-local PARALLEL_E2E_TESTS=10
+make test-e2e-local PARALLEL_E2E_TESTS=15
 make gardener-down
