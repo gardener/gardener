@@ -31,7 +31,7 @@ reviewers:
     - [Shoot Monitoring](#shoot-monitoring)
     - [Seed Monitoring](#seed-monitoring)
     - [BYOMC (Bring your own monitoring configuration)](#byomc-bring-your-own-monitoring-configuration)
-    - [Plutono Sidecar](#plutono-sidecar)
+    - [Grafana Sidecar](#grafana-sidecar)
     - [Fluent-bit Operator CRDs](#fluent-bit-operator-crds)
     - [Fluent-bit Filters and Parsers](#fluent-bit-filters-and-parsers)
     - [BYOLC (Bring Your Own Logging Configuration)](#byolc-bring-your-own-logging-configuration)
@@ -91,7 +91,7 @@ be more difficult to give Prometheus or Fluent-Bit apps an invalid config.
   Currently, there are many ways that monitoring configuration is being deployed
   and this should be unified.
 
-- Improve how dashboards are discovered and provisioned for Plutono. Currently,
+- Improve how dashboards are discovered and provisioned for Grafana. Currently,
   all dashboards are appended into a single configmap. This can be an issue if
   the maximum configmap size of 1MiB is ever exceeded.
 
@@ -445,55 +445,55 @@ similar to the shoot monitoring.
     support with a `PodMonitor` that will scrape any pod in a specified
     namespace with these labels.
 
-### Plutono Sidecar
+### Grafana Sidecar
 
-Add a [sidecar][plutono-sidecar] to Plutono that will pickup dashboards and provision them. Each dashboard gets its own configmap.
+Add a [sidecar][grafana-sidecar] to Grafana that will pickup dashboards and provision them. Each dashboard gets its own configmap.
 
-- Plutono in the control plane
+- Grafana in the control plane
 
-  - Most dashboards provisioned by Plutono are the same for each shoot
+  - Most dashboards provisioned by Grafana are the same for each shoot
     cluster. To avoid unnecessary duplication of configmaps, the dashboards
     could be added once in a single namespace. These "common" dashboards can
-    then be discovered by each Plutono and provisioned.
+    then be discovered by each Grafana and provisioned.
 
   - In some cases, dashboards are more "specific" because they are related to
     a certain Kubernetes version.
 
-  - Contract between dashboards in configmaps and the Plutono sidecar.
+  - Contract between dashboards in configmaps and the Grafana sidecar.
 
     - Label schema: `monitoring.gardener.cloud/dashboard-{seed,shoot,shoot-user}=true`
 
     - Each common dashboard will be deployed in the `monitoring` namespace
       as a configmap. If the dashboard should be provisioned by the user
-      Plutono in a shoot cluster it should have the label
+      Grafana in a shoot cluster it should have the label
       `monitoring.gardener.cloud/dashboard-shoot-user=true`. For dashboards
-      that should be provisioned by the operator Plutono the label
+      that should be provisioned by the operator Grafana the label
       `monitoring.gardener.cloud/dashboard-shoot=true` is required.
 
     - Each specific dashboard will be deployed in the shoot namespace. The
       configmap will use the same label scheme.
 
-    - The Plutono [sidecar][plutono-sidecar] must be [configured][sidecar-configuration] with:
+    - The Grafana [sidecar][grafana-sidecar] must be [configured][sidecar-configuration] with:
 
     ```yaml
       env:
       - name: METHOD
         value: WATCH
       - name: LABEL
-        value: monitoring.gardener.cloud/dashboard-shoot # monitoring.gardener.cloud/dashboard-shoot-user for user Plutono
+        value: monitoring.gardener.cloud/dashboard-shoot # monitoring.gardener.cloud/dashboard-shoot-user for user Grafana
       - name: FOLDER
         value: /tmp/dashboards
       - name: NAMESPACE
         value: monitoring,<shoot namespace>
     ```
 
-- Plutono in the seed
+- Grafana in the seed
 
-  - There is also a Plutono deployed in the seed. This Plutono will be
+  - There is also a Grafana deployed in the seed. This Grafana will be
     configured in a very similar way, except it will discover dashboards
     with a different label.
 
-  - The seed Plutono can discover configmaps labeled with
+  - The seed Grafana can discover configmaps labeled with
     `monitoring.gardener.cloud/dashboard-seed`.
 
   - The sidecar will be configured in a similar way:
@@ -510,7 +510,7 @@ Add a [sidecar][plutono-sidecar] to Plutono that will pickup dashboards and prov
       value: monitoring,garden
   ```
 
-- Dashboards can have multiple labels and be provisioned in a seed and/or shoot Plutono.
+- Dashboards can have multiple labels and be provisioned in a seed and/or shoot Grafana.
 
 ### Fluent-bit Operator CRDs
 
@@ -641,7 +641,7 @@ Since fluent-bit uses [input-tail] plugin and reads any container output under `
 [apiserver-example]: https://github.com/gardener/gardener/blob/0f4d22270927e2aee8b821f858fb76162ccd8a86/charts/seed-monitoring/charts/core/charts/prometheus/templates/config.yaml#L311
 [extension-contract]: https://github.com/gardener/gardener/blob/master/docs/extensions/logging-and-monitoring.md
 [gardener-resource-manager]: https://github.com/gardener/gardener/blob/eec37223cb90475ec3e023136a7d5ba28ad48f0d/pkg/operation/botanist/component/resourcemanager/monitoring.go
-[plutono-sidecar]: https://github.com/kiwigrid/k8s-sidecar
+[grafana-sidecar]: https://github.com/kiwigrid/k8s-sidecar
 [prom-config]: https://github.com/gardener/gardener/blob/201673c1f8a356a63b21505ca9c7f6efe725bd48/charts/seed-bootstrap/charts/monitoring/templates/config.yaml#L14-L36
 [prom-crd-bundle]: https://github.com/prometheus-operator/prometheus-operator/blob/main/bundle.yaml
 [prom-crds]: https://github.com/prometheus-operator/prometheus-operator#customresourcedefinitions
