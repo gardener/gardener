@@ -67,12 +67,12 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, runtimeCluster cluster.Cl
 		r.ResolverUpdate = make(chan event.GenericEvent)
 	}
 	for _, l := range r.AdditionalNamespaceSelectors {
-		labelSelector := l
-		labelMap, err := metav1.LabelSelectorAsMap(&labelSelector)
+		namespaceSelector := l
+		selector, err := metav1.LabelSelectorAsSelector(&namespaceSelector)
 		if err != nil {
-			return fmt.Errorf("could not convert additional namespace selector %s into map: %w", labelSelector, err)
+			return fmt.Errorf("failed parsing namespace selector %s to labels.Selector: %w", namespaceSelector, err)
 		}
-		r.additionalNamespaceLabelSelectors = append(r.additionalNamespaceLabelSelectors, labels.SelectorFromSet(labelMap))
+		r.additionalNamespaceLabelSelectors = append(r.additionalNamespaceLabelSelectors, selector)
 	}
 
 	c, err := builder.

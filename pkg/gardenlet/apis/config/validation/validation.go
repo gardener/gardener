@@ -59,22 +59,22 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 
 	if cfg.Controllers != nil {
 		if cfg.Controllers.BackupEntry != nil {
-			allErrs = append(allErrs, ValidateBackupEntryControllerConfiguration(cfg.Controllers.BackupEntry, fldPath.Child("controllers", "backupEntry"))...)
+			allErrs = append(allErrs, validateBackupEntryControllerConfiguration(cfg.Controllers.BackupEntry, fldPath.Child("controllers", "backupEntry"))...)
 		}
 		if cfg.Controllers.Bastion != nil {
-			allErrs = append(allErrs, ValidateBastionControllerConfiguration(cfg.Controllers.Bastion, fldPath.Child("controllers", "bastion"))...)
+			allErrs = append(allErrs, validateBastionControllerConfiguration(cfg.Controllers.Bastion, fldPath.Child("controllers", "bastion"))...)
 		}
 		if cfg.Controllers.Shoot != nil {
-			allErrs = append(allErrs, ValidateShootControllerConfiguration(cfg.Controllers.Shoot, fldPath.Child("controllers", "shoot"))...)
+			allErrs = append(allErrs, validateShootControllerConfiguration(cfg.Controllers.Shoot, fldPath.Child("controllers", "shoot"))...)
 		}
 		if cfg.Controllers.ShootCare != nil {
-			allErrs = append(allErrs, ValidateShootCareControllerConfiguration(cfg.Controllers.ShootCare, fldPath.Child("controllers", "shootCare"))...)
+			allErrs = append(allErrs, validateShootCareControllerConfiguration(cfg.Controllers.ShootCare, fldPath.Child("controllers", "shootCare"))...)
 		}
 		if cfg.Controllers.ManagedSeed != nil {
-			allErrs = append(allErrs, ValidateManagedSeedControllerConfiguration(cfg.Controllers.ManagedSeed, fldPath.Child("controllers", "managedSeed"))...)
+			allErrs = append(allErrs, validateManagedSeedControllerConfiguration(cfg.Controllers.ManagedSeed, fldPath.Child("controllers", "managedSeed"))...)
 		}
 		if cfg.Controllers.NetworkPolicy != nil {
-			allErrs = append(allErrs, ValidateNetworkPolicyControllerConfiguration(cfg.Controllers.NetworkPolicy, fldPath.Child("controllers", "networkPolicy"))...)
+			allErrs = append(allErrs, validateNetworkPolicyControllerConfiguration(cfg.Controllers.NetworkPolicy, fldPath.Child("controllers", "networkPolicy"))...)
 		}
 	}
 
@@ -159,8 +159,7 @@ func ValidateGardenletConfigurationUpdate(newCfg, oldCfg *config.GardenletConfig
 	return allErrs
 }
 
-// ValidateShootControllerConfiguration validates the shoot controller configuration.
-func ValidateShootControllerConfiguration(cfg *config.ShootControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateShootControllerConfiguration(cfg *config.ShootControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if cfg.ConcurrentSyncs != nil {
@@ -193,8 +192,7 @@ func ValidateShootControllerConfiguration(cfg *config.ShootControllerConfigurati
 	return allErrs
 }
 
-// ValidateShootCareControllerConfiguration validates the shootCare controller configuration.
-func ValidateShootCareControllerConfiguration(cfg *config.ShootCareControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateShootCareControllerConfiguration(cfg *config.ShootCareControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if cfg.ConcurrentSyncs != nil {
@@ -220,8 +218,7 @@ func ValidateShootCareControllerConfiguration(cfg *config.ShootCareControllerCon
 	return allErrs
 }
 
-// ValidateManagedSeedControllerConfiguration validates the managed seed controller configuration.
-func ValidateManagedSeedControllerConfiguration(cfg *config.ManagedSeedControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateManagedSeedControllerConfiguration(cfg *config.ManagedSeedControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if cfg.ConcurrentSyncs != nil {
@@ -240,8 +237,7 @@ func ValidateManagedSeedControllerConfiguration(cfg *config.ManagedSeedControlle
 	return allErrs
 }
 
-// ValidateNetworkPolicyControllerConfiguration validates the network policy controller configuration.
-func ValidateNetworkPolicyControllerConfiguration(cfg *config.NetworkPolicyControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateNetworkPolicyControllerConfiguration(cfg *config.NetworkPolicyControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if cfg.ConcurrentSyncs != nil {
@@ -264,8 +260,7 @@ var availableShootPurposes = sets.New(
 	string(gardencore.ShootPurposeProduction),
 )
 
-// ValidateBackupEntryControllerConfiguration validates the BackupEntry controller configuration.
-func ValidateBackupEntryControllerConfiguration(cfg *config.BackupEntryControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateBackupEntryControllerConfiguration(cfg *config.BackupEntryControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(cfg.DeletionGracePeriodShootPurposes) > 0 && (cfg.DeletionGracePeriodHours == nil || *cfg.DeletionGracePeriodHours <= 0) {
@@ -281,8 +276,7 @@ func ValidateBackupEntryControllerConfiguration(cfg *config.BackupEntryControlle
 	return allErrs
 }
 
-// ValidateBastionControllerConfiguration validates the bastion configuration.
-func ValidateBastionControllerConfiguration(cfg *config.BastionControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateBastionControllerConfiguration(cfg *config.BastionControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if cfg.ConcurrentSyncs != nil {
