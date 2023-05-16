@@ -602,28 +602,51 @@ status:
 			defer func() { TimeoutWaitForManagedResource = oldTimeout }()
 			TimeoutWaitForManagedResource = time.Millisecond
 
-			c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(
-				func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-					(&resourcesv1alpha1.ManagedResource{
-						ObjectMeta: metav1.ObjectMeta{
-							Generation: 1,
-						},
-						Status: resourcesv1alpha1.ManagedResourceStatus{
-							ObservedGeneration: 1,
-							Conditions: []gardencorev1beta1.Condition{
-								{
-									Type:   resourcesv1alpha1.ResourcesApplied,
-									Status: gardencorev1beta1.ConditionTrue,
-								},
-								{
-									Type:   resourcesv1alpha1.ResourcesHealthy,
-									Status: gardencorev1beta1.ConditionTrue,
-								},
-							},
-						},
-					}).DeepCopyInto(obj.(*resourcesv1alpha1.ManagedResource))
-					return nil
+			expectedChecksum := "fcde2b2edba56bf408601fb721fe9b5c338d10ee429ea04fae5511b68fbf8fb9"
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret1",
+					Namespace: namespace,
 				},
+				Data: map[string][]byte{
+					"foo": []byte("bar"),
+				},
+			}
+			gomock.InOrder(
+				c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(
+					func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+						(&resourcesv1alpha1.ManagedResource{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace:  namespace,
+								Generation: 1,
+							},
+							Spec: resourcesv1alpha1.ManagedResourceSpec{
+								SecretRefs: []corev1.LocalObjectReference{{Name: secret.Name}},
+							},
+							Status: resourcesv1alpha1.ManagedResourceStatus{
+								ObservedGeneration: 1,
+								Conditions: []gardencorev1beta1.Condition{
+									{
+										Type:   resourcesv1alpha1.ResourcesApplied,
+										Status: gardencorev1beta1.ConditionTrue,
+									},
+									{
+										Type:   resourcesv1alpha1.ResourcesHealthy,
+										Status: gardencorev1beta1.ConditionTrue,
+									},
+								},
+								SecretsDataChecksum: &expectedChecksum,
+							},
+						}).DeepCopyInto(obj.(*resourcesv1alpha1.ManagedResource))
+						return nil
+					},
+				),
+				c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+					func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+						(secret).DeepCopyInto(obj.(*corev1.Secret))
+						return nil
+					},
+				),
 			)
 
 			Expect(bootstrapper.Wait(ctx)).To(Succeed())

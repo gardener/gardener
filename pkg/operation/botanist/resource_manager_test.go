@@ -334,6 +334,17 @@ var _ = Describe("ResourceManager", func() {
 				AfterEach(func() {
 					defer test.WithVar(&shared.TimeoutWaitForGardenerResourceManagerBootstrapping, time.Second)()
 
+					expectedChecksum := "fcde2b2edba56bf408601fb721fe9b5c338d10ee429ea04fae5511b68fbf8fb9"
+					mrSecret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "mrSecret",
+							Namespace: managedResource.Namespace,
+						},
+						Data: map[string][]byte{
+							"foo": []byte("bar"),
+						},
+					}
+
 					gomock.InOrder(
 						// create bootstrap kubeconfig
 						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, s *corev1.Secret, _ ...client.CreateOption) error {
@@ -353,13 +364,23 @@ var _ = Describe("ResourceManager", func() {
 							return nil
 						}),
 						c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(managedResource), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *resourcesv1alpha1.ManagedResource, _ ...client.GetOption) error {
+							obj.ObjectMeta.Namespace = managedResource.Namespace
+							obj.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: mrSecret.Name}}
 							obj.Status.ObservedGeneration = obj.Generation
 							obj.Status.Conditions = []gardencorev1beta1.Condition{
 								{Type: "ResourcesApplied", Status: gardencorev1beta1.ConditionTrue},
 								{Type: "ResourcesHealthy", Status: gardencorev1beta1.ConditionTrue},
 							}
+							obj.Status.SecretsDataChecksum = &expectedChecksum
 							return nil
 						}),
+
+						c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: mrSecret.Namespace, Name: mrSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+							func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+								(mrSecret).DeepCopyInto(obj.(*corev1.Secret))
+								return nil
+							},
+						),
 
 						// delete bootstrap kubeconfig
 						c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj *corev1.Secret, opts ...client.DeleteOption) error {
@@ -554,6 +575,17 @@ var _ = Describe("ResourceManager", func() {
 				})
 
 				It("fails because the bootstrap kubeconfig cannot be deleted", func() {
+					expectedChecksum := "fcde2b2edba56bf408601fb721fe9b5c338d10ee429ea04fae5511b68fbf8fb9"
+					mrSecret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "mrSecret",
+							Namespace: managedResource.Namespace,
+						},
+						Data: map[string][]byte{
+							"foo": []byte("bar"),
+						},
+					}
+
 					gomock.InOrder(
 						// create bootstrap kubeconfig
 						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, s *corev1.Secret, _ ...client.CreateOption) error {
@@ -573,13 +605,23 @@ var _ = Describe("ResourceManager", func() {
 							return nil
 						}),
 						c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(managedResource), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *resourcesv1alpha1.ManagedResource, _ ...client.GetOption) error {
+							obj.ObjectMeta.Namespace = managedResource.Namespace
+							obj.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: mrSecret.Name}}
 							obj.Status.ObservedGeneration = obj.Generation
 							obj.Status.Conditions = []gardencorev1beta1.Condition{
 								{Type: "ResourcesApplied", Status: gardencorev1beta1.ConditionTrue},
 								{Type: "ResourcesHealthy", Status: gardencorev1beta1.ConditionTrue},
 							}
+							obj.Status.SecretsDataChecksum = &expectedChecksum
 							return nil
 						}),
+
+						c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: mrSecret.Namespace, Name: mrSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+							func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+								(mrSecret).DeepCopyInto(obj.(*corev1.Secret))
+								return nil
+							},
+						),
 
 						// delete bootstrap kubeconfig
 						c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj *corev1.Secret, opts ...client.DeleteOption) error {

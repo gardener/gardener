@@ -996,8 +996,9 @@ status: {}
 
 	Context("waiting functions", func() {
 		var (
-			fakeOps   *retryfake.Ops
-			resetVars func()
+			fakeOps          *retryfake.Ops
+			resetVars        func()
+			expectedChecksum = "fcde2b2edba56bf408601fb721fe9b5c338d10ee429ea04fae5511b68fbf8fb9"
 		)
 
 		BeforeEach(func() {
@@ -1124,11 +1125,24 @@ status: {}
 			It("should successfully wait for the managed resource to become healthy", func() {
 				fakeOps.MaxAttempts = 2
 
+				secret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      managedResourceCentral.Name + "secret",
+						Namespace: namespace,
+					},
+					Data: map[string][]byte{
+						"foo": []byte("bar"),
+					},
+				}
+				Expect(c.Create(ctx, secret)).To(Succeed())
 				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       managedResourceCentral.Name,
 						Namespace:  namespace,
 						Generation: 1,
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						SecretRefs: []corev1.LocalObjectReference{{Name: secret.Name}},
 					},
 					Status: resourcesv1alpha1.ManagedResourceStatus{
 						ObservedGeneration: 1,
@@ -1142,17 +1156,31 @@ status: {}
 								Status: gardencorev1beta1.ConditionTrue,
 							},
 						},
+						SecretsDataChecksum: &expectedChecksum,
 					},
 				})).To(Succeed())
 
 				for _, pool := range values.WorkerPools {
 					By(pool.Name)
 
+					secret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      managedResourceForPool(pool).Name + "secret",
+							Namespace: namespace,
+						},
+						Data: map[string][]byte{
+							"foo": []byte("bar"),
+						},
+					}
+					Expect(c.Create(ctx, secret)).To(Succeed())
 					Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:       managedResourceForPool(pool).Name,
 							Namespace:  namespace,
 							Generation: 1,
+						},
+						Spec: resourcesv1alpha1.ManagedResourceSpec{
+							SecretRefs: []corev1.LocalObjectReference{{Name: secret.Name}},
 						},
 						Status: resourcesv1alpha1.ManagedResourceStatus{
 							ObservedGeneration: 1,
@@ -1166,6 +1194,7 @@ status: {}
 									Status: gardencorev1beta1.ConditionTrue,
 								},
 							},
+							SecretsDataChecksum: &expectedChecksum,
 						},
 					})).To(Succeed())
 				}
@@ -1175,12 +1204,24 @@ status: {}
 
 			It("should successfully wait for the managed resource to become healthy despite undesired managed resource unhealthy", func() {
 				fakeOps.MaxAttempts = 2
-
+				secret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      managedResourceCentral.Name + "secret",
+						Namespace: namespace,
+					},
+					Data: map[string][]byte{
+						"foo": []byte("bar"),
+					},
+				}
+				Expect(c.Create(ctx, secret)).To(Succeed())
 				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       managedResourceCentral.Name,
 						Namespace:  namespace,
 						Generation: 1,
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						SecretRefs: []corev1.LocalObjectReference{{Name: secret.Name}},
 					},
 					Status: resourcesv1alpha1.ManagedResourceStatus{
 						ObservedGeneration: 1,
@@ -1194,6 +1235,7 @@ status: {}
 								Status: gardencorev1beta1.ConditionTrue,
 							},
 						},
+						SecretsDataChecksum: &expectedChecksum,
 					},
 				})).To(Succeed())
 
@@ -1222,11 +1264,24 @@ status: {}
 				for _, pool := range values.WorkerPools {
 					By(pool.Name)
 
+					secret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      managedResourceForPool(pool).Name + "secret",
+							Namespace: namespace,
+						},
+						Data: map[string][]byte{
+							"foo": []byte("bar"),
+						},
+					}
+					Expect(c.Create(ctx, secret)).To(Succeed())
 					Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:       managedResourceForPool(pool).Name,
 							Namespace:  namespace,
 							Generation: 1,
+						},
+						Spec: resourcesv1alpha1.ManagedResourceSpec{
+							SecretRefs: []corev1.LocalObjectReference{{Name: secret.Name}},
 						},
 						Status: resourcesv1alpha1.ManagedResourceStatus{
 							ObservedGeneration: 1,
@@ -1240,6 +1295,7 @@ status: {}
 									Status: gardencorev1beta1.ConditionTrue,
 								},
 							},
+							SecretsDataChecksum: &expectedChecksum,
 						},
 					})).To(Succeed())
 				}

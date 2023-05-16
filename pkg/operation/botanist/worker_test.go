@@ -357,6 +357,9 @@ var _ = Describe("Worker", func() {
 
 			namespace = "shoot--foo--bar"
 			name      = "shoot-cloud-config-execution"
+
+			expectedChecksum = "fcde2b2edba56bf408601fb721fe9b5c338d10ee429ea04fae5511b68fbf8fb9"
+			mrSecret         *corev1.Secret
 		)
 
 		BeforeEach(func() {
@@ -365,6 +368,16 @@ var _ = Describe("Worker", func() {
 					SeedNamespace: namespace,
 				},
 			}}
+
+			mrSecret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "mrSecret",
+					Namespace: namespace,
+				},
+				Data: map[string][]byte{
+					"foo": []byte("bar"),
+				},
+			}
 
 			seedInterface = kubernetesmock.NewMockInterface(ctrl)
 			seedClient = mockclient.NewMockClient(ctrl)
@@ -412,7 +425,11 @@ var _ = Describe("Worker", func() {
 				seedInterface.EXPECT().Client().Return(seedClient),
 				seedClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
+						Namespace:  namespace,
 						Generation: 1,
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						SecretRefs: []corev1.LocalObjectReference{{Name: mrSecret.Name}},
 					},
 					Status: resourcesv1alpha1.ManagedResourceStatus{
 						ObservedGeneration: 1,
@@ -426,8 +443,15 @@ var _ = Describe("Worker", func() {
 								Status: gardencorev1beta1.ConditionTrue,
 							},
 						},
+						SecretsDataChecksum: &expectedChecksum,
 					},
 				})),
+				seedClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: mrSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+					func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+						(mrSecret).DeepCopyInto(obj.(*corev1.Secret))
+						return nil
+					},
+				),
 				shootInterface.EXPECT().Client().Return(shootClient).AnyTimes(),
 				shootClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.NodeList{})).DoAndReturn(func(_ context.Context, list *corev1.NodeList, _ ...client.ListOption) error {
 					*list = corev1.NodeList{Items: []corev1.Node{{
@@ -477,7 +501,11 @@ var _ = Describe("Worker", func() {
 				seedInterface.EXPECT().Client().Return(seedClient),
 				seedClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
+						Namespace:  namespace,
 						Generation: 1,
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						SecretRefs: []corev1.LocalObjectReference{{Name: mrSecret.Name}},
 					},
 					Status: resourcesv1alpha1.ManagedResourceStatus{
 						ObservedGeneration: 1,
@@ -491,8 +519,15 @@ var _ = Describe("Worker", func() {
 								Status: gardencorev1beta1.ConditionTrue,
 							},
 						},
+						SecretsDataChecksum: &expectedChecksum,
 					},
 				})),
+				seedClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: mrSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+					func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+						(mrSecret).DeepCopyInto(obj.(*corev1.Secret))
+						return nil
+					},
+				),
 				shootInterface.EXPECT().Client().Return(shootClient).AnyTimes(),
 				shootClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.NodeList{})).DoAndReturn(func(_ context.Context, list *corev1.NodeList, _ ...client.ListOption) error {
 					*list = corev1.NodeList{Items: []corev1.Node{{

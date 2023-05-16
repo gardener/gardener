@@ -650,15 +650,18 @@ var _ = Describe("managedresources", func() {
 				finalStatus,
 			}
 
-			go func(statuses []resourcesv1alpha1.ManagedResourceStatus) {
+			go func(statuses []resourcesv1alpha1.ManagedResourceStatus, namespace, name string) {
 				defer GinkgoRecover()
 				for _, status := range statuses {
 					time.Sleep(IntervalWait * 5) // give some time so that the wait function can retry a couple of times
-					patch := client.MergeFrom(managedResource.DeepCopy())
-					managedResource.Status = status
-					Expect(fakeClient.Patch(ctx, managedResource, patch)).To(Succeed())
+					mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
+
+					patch := client.MergeFrom(mr.DeepCopy())
+					mr.Status = status
+					Expect(fakeClient.Patch(ctx, mr, patch)).To(Succeed())
 				}
-			}(statuses)
+			}(statuses, managedResource.Namespace, managedResource.Name)
 
 			cancelCtx, cancel := context.WithTimeout(ctx, time.Second)
 			defer cancel()

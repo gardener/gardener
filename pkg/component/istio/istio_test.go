@@ -2693,11 +2693,25 @@ spec:
 				fakeOps.MaxAttempts = 2
 
 				for _, mr := range []string{managedResourceIstioName, managedResourceIstioSystemName} {
+					expectedChecksum := "fcde2b2edba56bf408601fb721fe9b5c338d10ee429ea04fae5511b68fbf8fb9"
+					secret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      mr + "secret",
+							Namespace: deployNS,
+						},
+						Data: map[string][]byte{
+							"foo": []byte("bar"),
+						},
+					}
+					Expect(c.Create(ctx, secret)).To(Succeed())
 					Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:       mr,
 							Namespace:  deployNS,
 							Generation: 1,
+						},
+						Spec: resourcesv1alpha1.ManagedResourceSpec{
+							SecretRefs: []corev1.LocalObjectReference{{Name: secret.Name}},
 						},
 						Status: resourcesv1alpha1.ManagedResourceStatus{
 							ObservedGeneration: 1,
@@ -2711,6 +2725,7 @@ spec:
 									Status: gardencorev1beta1.ConditionTrue,
 								},
 							},
+							SecretsDataChecksum: &expectedChecksum,
 						},
 					})).To(Succeed())
 				}
