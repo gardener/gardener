@@ -482,7 +482,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 			// For kube-apiserver version 1.24 there is a deadlock that can occur during shutdown that prevents the
 			// graceful termination of the kube-apiserver container to complete when the --audit-log-mode setting
 			// is set to batch. For more information check
-			// https://github.com/gardener/gardener/blob/a63e23a27dabc6a25fb470128a52f8585cd136ff/pkg/component/kubeapiserver/deployment.go#L677-L683
+			// https://github.com/gardener/gardener/blob/a63e23a27dabc6a25fb470128a52f8585cd136ff/pkg/operation/botanist/component/kubeapiserver/deployment.go#L677-L683
 			k.handleWatchdogSidecar(deployment, configMapTerminationHandler, healthCheckToken)
 		}
 
