@@ -30,6 +30,23 @@ Here, the `kubeconfig-request.json` has the following content:
 }
 ```
 
+You also can use controller-runtime `client` (>= v0.14.3) to create such a kubeconfig from your go code like so:
+
+```go
+expiration := 8*time.Hour
+expirationSeconds := int64(expiration.Seconds())
+adminKubeconfigRequest := &authenticationv1alpha1.AdminKubeconfigRequest{
+  Spec: authenticationv1alpha1.AdminKubeconfigRequestSpec{
+    ExpirationSeconds: &expirationSeconds,
+  },
+}
+err := client.SubResource("adminkubeconfig").Create(ctx, shoot, adminKubeconfigRequest)
+if err != nil {
+  return err
+}
+config = adminKubeconfigRequest.Status.Kubeconfig
+```
+
 > **Note:** The [`gardenctl-v2`](https://github.com/gardener/gardenctl-v2/) tool makes it easy to target shoot clusters and automatically renews such `kubeconfig` when required.
 
 ## OpenID Connect
@@ -55,7 +72,7 @@ Shoots have to "opt-in" for such defaulting by using the `oidc=enable` label.
 
 For further information on `(Cluster)OpenIDConnectPreset`, refer to [ClusterOpenIDConnectPreset and OpenIDConnectPreset](openidconnect-presets.md).
 
-## Static Token kubeconfig 
+## Static Token kubeconfig
 
 > **Note:** Static token kubeconfig is not available for Shoot clusters using Kubernetes version >= 1.27. The [`shoots/adminkubeconfig` subresource](#shootsadminkubeconfig-subresource) should be used instead.
 
