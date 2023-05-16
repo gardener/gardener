@@ -788,7 +788,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		nginxLBReady = g.Add(flow.Task{
 			Name: "Waiting until nginx ingress LoadBalancer is ready",
 			Fn: func(ctx context.Context) error {
-				dnsRecord, err = waitForNginxIngressServiceAndGetDNSComponent(ctx, log, seed, r.GardenClient, seedClient, r.ImageVector, kubernetesVersion, r.GardenNamespace)
+				dnsRecord, err = waitForNginxIngressServiceAndGetDNSComponent(ctx, log, seed, r.GardenClient, seedClient, r.ImageVector, kubernetesVersion, r.GardenNamespace, seedIsGarden)
 				return err
 			},
 		})
@@ -1186,6 +1186,7 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 	imageVector imagevector.ImageVector,
 	kubernetesVersion *semver.Version,
 	gardenNamespaceName string,
+	seedIsGarden bool,
 ) (
 	component.DeployMigrateWaiter,
 	error,
@@ -1196,19 +1197,24 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 	}
 
 	var ingressLoadBalancerAddress string
-	providerConfig, err := getConfig(seed.GetInfo())
-	if err != nil {
-		return nil, err
-	}
+	// If the seed is a Garden cluster then the gardener-operator is responsible for nginx-ingress reconciliation and we only need the LoadBalancer address
+	// If the seed isn't a Garden cluster and nginx-ingress controller configuration is set then the ingress must be reconciled
+	if seedIsGarden || v1beta1helper.SeedUsesNginxIngressController(seed.GetInfo()) {
+		if !seedIsGarden {
+			providerConfig, err := getConfig(seed.GetInfo())
+			if err != nil {
+				return nil, err
+			}
 
-	nginxIngress, err := defaultNginxIngress(seedClient, imageVector, kubernetesVersion, providerConfig, seed.GetLoadBalancerServiceAnnotations(), gardenNamespaceName)
-	if err != nil {
-		return nil, err
-	}
+			nginxIngress, err := sharedcomponent.NewNginxIngress(seedClient, imageVector, kubernetesVersion, v1beta1constants.SeedNginxIngressClass, providerConfig, seed.GetLoadBalancerServiceAnnotations(), gardenNamespaceName, v1beta1constants.PriorityClassNameSeedSystem600)
+			if err != nil {
+				return nil, err
+			}
 
-	if err = component.OpWait(nginxIngress).Deploy(ctx); err != nil {
-		return nil, err
-	}
+			if err = component.OpWait(nginxIngress).Deploy(ctx); err != nil {
+				return nil, err
+			}
+		}
 
 	ingressLoadBalancerAddress, err = WaitUntilLoadBalancerIsReady(
 		ctx,

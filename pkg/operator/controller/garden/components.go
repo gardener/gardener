@@ -69,6 +69,7 @@ type components struct {
 	hvpaController          component.DeployWaiter
 	etcdDruid               component.DeployWaiter
 	istio                   istio.Interface
+	nginxIngressController  component.DeployWaiter
 
 	etcdMain                             etcd.Interface
 	etcdEvents                           etcd.Interface
@@ -121,6 +122,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.istio, err = r.newIstio(garden)
+	if err != nil {
+		return
+	}
+	c.nginxIngressController, err = r.newNginxIngressController()
 	if err != nil {
 		return
 	}
@@ -692,4 +697,22 @@ func getAPIServerDomains(domains []string) []string {
 		apiServerDomains = append(apiServerDomains, "gardener."+domain)
 	}
 	return apiServerDomains
+}
+
+func (r *Reconciler) newNginxIngressController() (component.DeployWaiter, error) {
+	return sharedcomponent.NewNginxIngress(
+		r.RuntimeClientSet.Client(),
+		r.ImageVector,
+		r.RuntimeVersion,
+		v1beta1constants.NginxIngressClass,
+		map[string]string{
+			"enable-vts-status":            "false",
+			"server-name-hash-bucket-size": "256",
+			"use-proxy-protocol":           "false",
+			"worker-processes":             "2",
+			"allow-snippet-annotations":    "false",
+		},
+		nil,
+		r.GardenNamespace,
+		"system-cluster-critical")
 }

@@ -18,56 +18,17 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
-	"github.com/gardener/gardener/pkg/component/nginxingress"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
-func defaultNginxIngress(
-	c client.Client,
-	imageVector imagevector.ImageVector,
-	kubernetesVersion *semver.Version,
-	config map[string]string,
-	loadBalancerAnnotations map[string]string,
-	gardenNamespaceName string,
-) (
-	component.DeployWaiter,
-	error,
-) {
-	imageController, err := imageVector.FindImage(images.ImageNameNginxIngressControllerSeed, imagevector.TargetVersion(kubernetesVersion.String()))
-	if err != nil {
-		return nil, err
-	}
-	imageDefaultBackend, err := imageVector.FindImage(images.ImageNameIngressDefaultBackend, imagevector.TargetVersion(kubernetesVersion.String()))
-	if err != nil {
-		return nil, err
-	}
-
-	values := nginxingress.Values{
-		ClusterType:             component.ClusterTypeSeed,
-		TargetNamespace:         gardenNamespaceName,
-		IngressClass:            v1beta1constants.SeedNginxIngressClass,
-		ImageController:         imageController.String(),
-		ImageDefaultBackend:     imageDefaultBackend.String(),
-		PriorityClassName:       v1beta1constants.PriorityClassNameSeedSystem600,
-		ConfigData:              config,
-		LoadBalancerAnnotations: loadBalancerAnnotations,
-		PSPDisabled:             true,
-		VPAEnabled:              true,
-	}
-
-	return nginxingress.New(c, gardenNamespaceName, values), nil
-}
+const annotationSeedIngressClass = "seed.gardener.cloud/ingress-class"
 
 func getManagedIngressDNSRecord(
 	log logr.Logger,

@@ -109,6 +109,8 @@ type Values struct {
 	VPAEnabled bool
 	// PSPDisabled marks whether the PodSecurityPolicy admission plugin is disabled.
 	PSPDisabled bool
+	// PriorityClassName is the priority class name of the nginx-ingress controller.
+	PriorityClassName string
 }
 
 // New creates a new instance of DeployWaiter for nginx-ingress
@@ -447,7 +449,10 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 					},
 					Spec: corev1.PodSpec{
 						PriorityClassName: n.values.PriorityClassName,
+<<<<<<< HEAD
 						NodeSelector:      nodeSelector,
+=======
+>>>>>>> 4c45a43a4 (Install nginx-ingress through gardener-operator)
 						SecurityContext: &corev1.PodSecurityContext{
 							RunAsUser: pointer.Int64(65534),
 							FSGroup:   pointer.Int64(65534),
@@ -509,8 +514,11 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 					},
 					Spec: corev1.PodSpec{
 						PriorityClassName: n.values.PriorityClassName,
+<<<<<<< HEAD
 						SchedulerName:     schedulerName,
 						NodeSelector:      nodeSelector,
+=======
+>>>>>>> 4c45a43a4 (Install nginx-ingress through gardener-operator)
 						Containers: []corev1.Container{{
 							Name:            n.getName("Container", false),
 							Image:           n.values.ImageController,
