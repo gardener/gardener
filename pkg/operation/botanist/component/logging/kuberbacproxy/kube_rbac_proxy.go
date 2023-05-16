@@ -35,11 +35,11 @@ const (
 	kubeRBACProxyName = "kube-rbac-proxy"
 	clusterRoleName   = "gardener.cloud:logging:kube-rbac-proxy"
 
-	promtailName     = "gardener-promtail"
-	promtailRBACName = "gardener.cloud:logging:promtail"
+	valitailName     = "gardener-valitail"
+	valitailRBACName = "gardener.cloud:logging:valitail"
 	// PromtailTokenSecretName is the name of a secret in the kube-system namespace in the target cluster containing
-	// promtail's token for communication with the kube-apiserver.
-	PromtailTokenSecretName = promtailName
+	// valitail's token for communication with the kube-apiserver.
+	PromtailTokenSecretName = valitailName
 )
 
 // New creates a new instance of kubeRBACProxy for the kube-rbac-proxy.
@@ -68,8 +68,8 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	promtailShootAccessSecret := k.newPromtailShootAccessSecret()
-	if err := promtailShootAccessSecret.Reconcile(ctx, k.client); err != nil {
+	valitailShootAccessSecret := k.newPromtailShootAccessSecret()
+	if err := valitailShootAccessSecret.Reconcile(ctx, k.client); err != nil {
 		return err
 	}
 
@@ -91,9 +91,9 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 			}},
 		}
 
-		promtailClusterRole = &rbacv1.ClusterRole{
+		valitailClusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   promtailRBACName,
+				Name:   valitailRBACName,
 				Labels: getPromtailLabels(),
 			},
 			Rules: []rbacv1.PolicyRule{
@@ -125,19 +125,19 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 			},
 		}
 
-		promtailClusterRoleBinding = &rbacv1.ClusterRoleBinding{
+		valitailClusterRoleBinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   promtailRBACName,
+				Name:   valitailRBACName,
 				Labels: getPromtailLabels(),
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,
 				Kind:     "ClusterRole",
-				Name:     promtailClusterRole.Name,
+				Name:     valitailClusterRole.Name,
 			},
 			Subjects: []rbacv1.Subject{{
 				Kind:      rbacv1.ServiceAccountKind,
-				Name:      promtailShootAccessSecret.ServiceAccountName,
+				Name:      valitailShootAccessSecret.ServiceAccountName,
 				Namespace: metav1.NamespaceSystem,
 			}},
 		}
@@ -147,8 +147,8 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 
 	resources, err := registry.AddAllAndSerialize(
 		kubeRBACProxyClusterRolebinding,
-		promtailClusterRole,
-		promtailClusterRoleBinding,
+		valitailClusterRole,
+		valitailClusterRoleBinding,
 	)
 	if err != nil {
 		return err
@@ -173,8 +173,8 @@ func (k *kubeRBACProxy) newKubeRBACProxyShootAccessSecret() *gardenerutils.Shoot
 }
 
 func (k *kubeRBACProxy) newPromtailShootAccessSecret() *gardenerutils.ShootAccessSecret {
-	return gardenerutils.NewShootAccessSecret("promtail", k.namespace).
-		WithServiceAccountName(promtailName).
+	return gardenerutils.NewShootAccessSecret("valitail", k.namespace).
+		WithServiceAccountName(valitailName).
 		WithTargetSecret(PromtailTokenSecretName, metav1.NamespaceSystem)
 }
 
@@ -186,6 +186,6 @@ func getKubeRBACProxyLabels() map[string]string {
 
 func getPromtailLabels() map[string]string {
 	return map[string]string{
-		"app": promtailName,
+		"app": valitailName,
 	}
 }

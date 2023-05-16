@@ -519,7 +519,7 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		sshPublicKeys:           o.values.SSHPublicKeys,
 		sshAccessEnabled:        o.values.SSHAccessEnabled,
 		valiIngressHostName:     o.values.LokiIngressHostName,
-		promtailEnabled:         o.values.PromtailEnabled,
+		valitailEnabled:         o.values.PromtailEnabled,
 		nodeLocalDNSEnabled:     o.values.NodeLocalDNSEnabled,
 	}, nil
 }
@@ -580,7 +580,7 @@ type deployer struct {
 	sshPublicKeys           []string
 	sshAccessEnabled        bool
 	valiIngressHostName     string
-	promtailEnabled         bool
+	valitailEnabled         bool
 	nodeLocalDNSEnabled     bool
 }
 
@@ -629,7 +629,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			KubernetesVersion:       d.kubernetesVersion,
 			SSHPublicKeys:           d.sshPublicKeys,
 			SSHAccessEnabled:        d.sshAccessEnabled,
-			PromtailEnabled:         d.promtailEnabled,
+			PromtailEnabled:         d.valitailEnabled,
 			LokiIngress:             d.valiIngressHostName,
 			APIServerURL:            d.apiServerURL,
 			Sysctls:                 d.worker.Sysctls,

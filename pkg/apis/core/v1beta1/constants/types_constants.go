@@ -596,10 +596,10 @@ const (
 	OperatingSystemConfigFilePathKernelSettings = "/etc/sysctl.d/99-k8s-general.conf"
 	// OperatingSystemConfigFilePathKubeletConfig is a constant for a path to a file in the operating system config that contains the kubelet configuration.
 	OperatingSystemConfigFilePathKubeletConfig = "/var/lib/kubelet/config/kubelet"
-	// OperatingSystemConfigUnitNamePromtailService is a constant for a unit in the operating system config that contains the promtail service.
-	OperatingSystemConfigUnitNamePromtailService = "promtail.service"
+	// OperatingSystemConfigUnitNamePromtailService is a constant for a unit in the operating system config that contains the valitail service.
+	OperatingSystemConfigUnitNamePromtailService = "valitail.service"
 	// OperatingSystemConfigFilePathPromtailConfig is a constant for a path to a file in the operating system config that contains the kubelet configuration.
-	OperatingSystemConfigFilePathPromtailConfig = "/var/lib/promtail/config/config"
+	OperatingSystemConfigFilePathPromtailConfig = "/var/lib/valitail/config/config"
 	// OperatingSystemConfigFilePathBinaries is a constant for a path to a directory in the operating system config that contains the binaries.
 	OperatingSystemConfigFilePathBinaries = "/opt/bin"
 

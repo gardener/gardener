@@ -105,8 +105,8 @@ const (
 	ImageNamePauseContainer = "pause-container"
 	// ImageNamePrometheus is a constant for an image in the image vector with name 'prometheus'.
 	ImageNamePrometheus = "prometheus"
-	// ImageNamePromtail is a constant for an image in the image vector with name 'promtail'.
-	ImageNamePromtail = "promtail"
+	// ImageNamePromtail is a constant for an image in the image vector with name 'valitail'.
+	ImageNamePromtail = "valitail"
 	// ImageNameTelegraf is a constant for an image in the image vector with name 'telegraf'.
 	ImageNameTelegraf = "telegraf"
 	// ImageNameTune2fs is a constant for an image in the image vector with name 'tune2fs'.

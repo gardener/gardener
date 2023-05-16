@@ -93,7 +93,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			sshPublicKeys           = []string{"ssh-public-key", "ssh-public-key-b"}
 			kubernetesVersion       = semver.MustParse("1.2.3")
 			workerKubernetesVersion = "4.5.6"
-			promtailEnabled         = false
+			valitailEnabled         = false
 
 			ccdUnitContent = "ccd-unit-content"
 
@@ -201,7 +201,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					KubeletConfig:     kubeletConfig,
 					MachineTypes:      machineTypes,
 					SSHPublicKeys:     sshPublicKeys,
-					PromtailEnabled:   promtailEnabled,
+					PromtailEnabled:   valitailEnabled,
 				},
 			}
 
@@ -249,7 +249,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					KubeletDataVolumeName: &kubeletDataVolumeName,
 					KubernetesVersion:     k8sVersion,
 					SSHPublicKeys:         sshPublicKeys,
-					PromtailEnabled:       promtailEnabled,
+					PromtailEnabled:       valitailEnabled,
 				})
 
 				oscDownloader := &extensionsv1alpha1.OperatingSystemConfig{

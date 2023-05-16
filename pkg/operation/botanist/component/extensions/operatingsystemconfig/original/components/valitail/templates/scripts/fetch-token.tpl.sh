@@ -12,7 +12,7 @@ if ! SECRET="$(wget \
   --ca-certificate "{{ .pathCredentialsCACert }}" \
   "$(cat "{{ .pathCredentialsServer }}")/api/v1/namespaces/kube-system/secrets/{{ .secretName }}")"; then
 
-  echo "Could not retrieve the promtail token secret"
+  echo "Could not retrieve the valitail token secret"
   exit 1
 fi
 

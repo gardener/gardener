@@ -90,7 +90,7 @@ telegraf.conf: |+
 start.sh: |+
   #/bin/bash
 
-  iptables -A INPUT -p tcp --dport {{ .Values.kubeRBACProxy.port }}  -j ACCEPT -m comment --comment "promtail"
+  iptables -A INPUT -p tcp --dport {{ .Values.kubeRBACProxy.port }}  -j ACCEPT -m comment --comment "valitail"
   /usr/bin/telegraf --config /etc/telegraf/telegraf.conf
 {{- end -}}
 

@@ -60,9 +60,9 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 		clusterDNSAddress = nodelocaldnsconstants.IPVSAddress
 	}
 
-	promtailEnabled, valiIngressHost := false, ""
+	valitailEnabled, valiIngressHost := false, ""
 	if b.isShootNodeLoggingEnabled() {
-		promtailEnabled, valiIngressHost = true, b.ComputeLokiHost()
+		valitailEnabled, valiIngressHost = true, b.ComputeLokiHost()
 	}
 
 	return operatingsystemconfig.New(
@@ -80,7 +80,7 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 				KubeletConfig:       b.Shoot.GetInfo().Spec.Kubernetes.Kubelet,
 				MachineTypes:        b.Shoot.CloudProfile.Spec.MachineTypes,
 				SSHAccessEnabled:    v1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo()),
-				PromtailEnabled:     promtailEnabled,
+				PromtailEnabled:     valitailEnabled,
 				LokiIngressHostName: valiIngressHost,
 				NodeLocalDNSEnabled: v1beta1helper.IsNodeLocalDNSEnabled(b.Shoot.GetInfo().Spec.SystemComponents, b.Shoot.GetInfo().Annotations),
 			},

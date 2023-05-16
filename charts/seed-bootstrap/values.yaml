@@ -162,7 +162,7 @@ allowedMetrics:
   - fluentbit_filter_drop_records_total
 
   fluentbitOutputPlugin:
-  - promtail_dropped_entries_total
+  - valitail_dropped_entries_total
   - fluentbit_vali_gardener_errors_total
   - fluentbit_vali_gardener_logs_without_metadata_total
   - fluentbit_vali_gardener_incoming_logs_total

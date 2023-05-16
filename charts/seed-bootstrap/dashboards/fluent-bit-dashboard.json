@@ -640,7 +640,7 @@
           "refId": "F"
         },
         {
-          "expr": "sum(rate(promtail_dropped_entries_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(valitail_dropped_entries_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "interval": "",
           "legendFormat": "Promtail dropped-{{pod}}",
           "refId": "G"
@@ -948,7 +948,7 @@
     },
     {
       "datasource": null,
-      "description": "Table which shows the total dropped entries by promtail per hour",
+      "description": "Table which shows the total dropped entries by valitail per hour",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -1001,7 +1001,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(promtail_dropped_entries_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
+          "expr": "sum(increase(valitail_dropped_entries_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
           "format": "time_series",
           "instant": false,
           "interval": "",

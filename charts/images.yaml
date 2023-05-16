@@ -445,7 +445,7 @@ images:
       integrity_requirement: 'high'
       availability_requirement: 'low'
       comment: kube-rbac-proxy is an authentication proxy working with credentials
-- name: promtail
+- name: valitail
   sourceRepository: github.com/credativ/vali
   repository: ghcr.io/credativ/valitail
   tag: "v2.2.5"

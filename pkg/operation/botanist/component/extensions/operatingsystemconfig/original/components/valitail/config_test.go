@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package promtail
+package valitail
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -32,13 +32,13 @@ var _ = Describe("Promtail", func() {
 			cABundle           = "malskjdvbfnasufbaus"
 			clusterDomain      = "testClusterDomain.com"
 			apiServerURL       = "https://api.test-cluster.com"
-			promtailImageName  = "Promtail"
-			promtailRepository = "github.com/promtail"
-			promtailImageTag   = "v0.1.0"
-			promtailImage      = &imagevector.Image{
-				Name:       promtailImageName,
-				Repository: promtailRepository,
-				Tag:        &promtailImageTag,
+			valitailImageName  = "Promtail"
+			valitailRepository = "github.com/valitail"
+			valitailImageTag   = "v0.1.0"
+			valitailImage      = &imagevector.Image{
+				Name:       valitailImageName,
+				Repository: valitailRepository,
+				Tag:        &valitailImageTag,
 			}
 			valiIngress = "ingress.vali.testClusterDomain"
 		)
@@ -48,7 +48,7 @@ var _ = Describe("Promtail", func() {
 				CABundle:      &cABundle,
 				ClusterDomain: clusterDomain,
 				Images: map[string]*imagevector.Image{
-					images.ImageNamePromtail: promtailImage,
+					images.ImageNamePromtail: valitailImage,
 				},
 				LokiIngress:     valiIngress,
 				PromtailEnabled: true,
@@ -64,9 +64,9 @@ var _ = Describe("Promtail", func() {
 					Command: pointer.String("start"),
 					Enable:  pointer.Bool(true),
 					Content: pointer.String(`[Unit]
-Description=promtail daemon
+Description=valitail daemon
 Documentation=https://github.com/credativ/plutono
-After=promtail-fetch-token.service
+After=valitail-fetch-token.service
 [Install]
 WantedBy=multi-user.target
 [Service]
@@ -82,15 +82,15 @@ Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
 ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"
-ExecStartPre=/usr/bin/docker run --rm -v /opt/bin:/opt/bin:rw --entrypoint /bin/sh ` + promtailRepository + ":" + promtailImageTag + " -c " + "\"cp /usr/bin/promtail /opt/bin\"" + `
-ExecStart=/opt/bin/promtail -config.file=` + PathConfig),
+ExecStartPre=/usr/bin/docker run --rm -v /opt/bin:/opt/bin:rw --entrypoint /bin/sh ` + valitailRepository + ":" + valitailImageTag + " -c " + "\"cp /usr/bin/valitail /opt/bin\"" + `
+ExecStart=/opt/bin/valitail -config.file=` + PathConfig),
 				},
 				extensionsv1alpha1.Unit{
-					Name:    "promtail-fetch-token.service",
+					Name:    "valitail-fetch-token.service",
 					Command: pointer.String("start"),
 					Enable:  pointer.Bool(true),
 					Content: pointer.String(`[Unit]
-Description=promtail token fetcher
+Description=valitail token fetcher
 After=cloud-config-downloader.service
 [Install]
 WantedBy=multi-user.target
@@ -99,13 +99,13 @@ Restart=always
 RestartSec=300
 RuntimeMaxSec=120
 EnvironmentFile=/etc/environment
-ExecStart=/var/lib/promtail/scripts/fetch-token.sh`),
+ExecStart=/var/lib/valitail/scripts/fetch-token.sh`),
 				},
 			))
 
 			Expect(files).To(ConsistOf(
 				extensionsv1alpha1.File{
-					Path:        "/var/lib/promtail/config/config",
+					Path:        "/var/lib/valitail/config/config",
 					Permissions: pointer.Int32(0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
@@ -118,9 +118,9 @@ client:
   url: https://ingress.vali.testClusterDomain/vali/api/v1/push
   batchwait: 10s
   batchsize: 1536000
-  bearer_token_file: /var/lib/promtail/auth-token
+  bearer_token_file: /var/lib/valitail/auth-token
   tls_config:
-    ca_file: /var/lib/promtail/ca.crt
+    ca_file: /var/lib/valitail/ca.crt
     server_name: ingress.vali.testClusterDomain
 positions:
   filename: /var/log/positions.yaml
@@ -188,8 +188,8 @@ scrape_configs:
     api_server: https://api.test-cluster.com
     tls_config:
       server_name: api.test-cluster.com
-      ca_file: /var/lib/promtail/ca.crt
-    bearer_token_file: /var/lib/promtail/auth-token
+      ca_file: /var/lib/valitail/ca.crt
+    bearer_token_file: /var/lib/valitail/auth-token
     namespaces:
       names: ['kube-system']
   relabel_configs:
@@ -250,7 +250,7 @@ scrape_configs:
 					},
 				},
 				extensionsv1alpha1.File{
-					Path:        "/var/lib/promtail/scripts/fetch-token.sh",
+					Path:        "/var/lib/valitail/scripts/fetch-token.sh",
 					Permissions: pointer.Int32(0744),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
@@ -267,13 +267,13 @@ if ! SECRET="$(wget \
   --header         "Accept: application/yaml" \
   --header         "Authorization: Bearer $(cat "/var/lib/cloud-config-downloader/credentials/token")" \
   --ca-certificate "/var/lib/cloud-config-downloader/credentials/ca.crt" \
-  "$(cat "/var/lib/cloud-config-downloader/credentials/server")/api/v1/namespaces/kube-system/secrets/gardener-promtail")"; then
+  "$(cat "/var/lib/cloud-config-downloader/credentials/server")/api/v1/namespaces/kube-system/secrets/gardener-valitail")"; then
 
-  echo "Could not retrieve the promtail token secret"
+  echo "Could not retrieve the valitail token secret"
   exit 1
 fi
 
-echo "$SECRET" | sed -rn "s/  token: (.*)/\1/p" | base64 -d > "/var/lib/promtail/auth-token"
+echo "$SECRET" | sed -rn "s/  token: (.*)/\1/p" | base64 -d > "/var/lib/valitail/auth-token"
 
 exit $?
 }
@@ -282,7 +282,7 @@ exit $?
 					},
 				},
 				extensionsv1alpha1.File{
-					Path:        "/var/lib/promtail/ca.crt",
+					Path:        "/var/lib/valitail/ca.crt",
 					Permissions: pointer.Int32(0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
@@ -299,7 +299,7 @@ exit $?
 				CABundle:      &cABundle,
 				ClusterDomain: clusterDomain,
 				Images: map[string]*imagevector.Image{
-					images.ImageNamePromtail: promtailImage,
+					images.ImageNamePromtail: valitailImage,
 				},
 				LokiIngress:     valiIngress,
 				PromtailEnabled: false,
@@ -310,13 +310,13 @@ exit $?
 
 			Expect(units).To(ConsistOf(
 				extensionsv1alpha1.Unit{
-					Name:    "promtail.service",
+					Name:    "valitail.service",
 					Command: pointer.String("start"),
 					Enable:  pointer.Bool(true),
 					Content: pointer.String(`[Unit]
-Description=promtail daemon
+Description=valitail daemon
 Documentation=https://github.com/credativ/plutono
-After=promtail-fetch-token.service
+After=valitail-fetch-token.service
 [Install]
 WantedBy=multi-user.target
 [Service]
@@ -332,15 +332,15 @@ Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
 ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"
-ExecStartPre=/bin/systemctl disable promtail.service
-ExecStart=/bin/sh -c "echo service promtail.service is removed!; while true; do sleep 86400; done"`),
+ExecStartPre=/bin/systemctl disable valitail.service
+ExecStart=/bin/sh -c "echo service valitail.service is removed!; while true; do sleep 86400; done"`),
 				},
 				extensionsv1alpha1.Unit{
-					Name:    "promtail-fetch-token.service",
+					Name:    "valitail-fetch-token.service",
 					Command: pointer.String("start"),
 					Enable:  pointer.Bool(true),
 					Content: pointer.String(`[Unit]
-Description=promtail token fetcher
+Description=valitail token fetcher
 After=cloud-config-downloader.service
 [Install]
 WantedBy=multi-user.target
@@ -349,8 +349,8 @@ Restart=always
 RestartSec=300
 RuntimeMaxSec=120
 EnvironmentFile=/etc/environment
-ExecStartPre=/bin/systemctl disable promtail-fetch-token.service
-ExecStart=/bin/sh -c "rm -f /var/lib/promtail/auth-token; echo service promtail-fetch-token.service is removed!; while true; do sleep 86400; done"`),
+ExecStartPre=/bin/systemctl disable valitail-fetch-token.service
+ExecStart=/bin/sh -c "rm -f /var/lib/valitail/auth-token; echo service valitail-fetch-token.service is removed!; while true; do sleep 86400; done"`),
 				},
 			))
 
@@ -362,7 +362,7 @@ ExecStart=/bin/sh -c "rm -f /var/lib/promtail/auth-token; echo service promtail-
 				CABundle:      &cABundle,
 				ClusterDomain: clusterDomain,
 				Images: map[string]*imagevector.Image{
-					images.ImageNamePromtail: promtailImage,
+					images.ImageNamePromtail: valitailImage,
 				},
 				PromtailEnabled: true,
 				LokiIngress:     "",

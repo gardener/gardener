@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package promtail
+package valitail
 
 import (
 	"bytes"
@@ -39,7 +39,7 @@ var (
 	tplFetchToken        *template.Template
 
 	tplNamePromtail = "fetch-token"
-	//go:embed templates/promtail-config.tpl.yaml
+	//go:embed templates/valitail-config.tpl.yaml
 	tplContentPromtail string
 	tplPromtail        *template.Template
 )
@@ -121,7 +121,7 @@ func getPromtailUnit(execStartPre, execStart string) extensionsv1alpha1.Unit {
 		Command: pointer.String("start"),
 		Enable:  pointer.Bool(true),
 		Content: pointer.String(`[Unit]
-Description=promtail daemon
+Description=valitail daemon
 Documentation=https://github.com/credativ/plutono
 After=` + unitNameFetchToken + `
 [Install]
@@ -171,7 +171,7 @@ func getFetchTokenScriptFile() (extensionsv1alpha1.File, error) {
 
 func getFetchTokenScriptUnit(execStartPre, execStart string) extensionsv1alpha1.Unit {
 	unitContent := `[Unit]
-Description=promtail token fetcher
+Description=valitail token fetcher
 After=` + downloader.UnitName + `
 [Install]
 WantedBy=multi-user.target

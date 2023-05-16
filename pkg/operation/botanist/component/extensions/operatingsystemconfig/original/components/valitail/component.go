@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package promtail
+package valitail
 
 import (
 	"fmt"
@@ -26,24 +26,24 @@ import (
 )
 
 const (
-	// UnitName is the name of the promtail service.
+	// UnitName is the name of the valitail service.
 	UnitName           = v1beta1constants.OperatingSystemConfigUnitNamePromtailService
-	unitNameFetchToken = "promtail-fetch-token.service"
+	unitNameFetchToken = "valitail-fetch-token.service"
 
-	// PathDirectory is the path for the promtail's directory.
-	PathDirectory = "/var/lib/promtail"
-	// PathFetchTokenScript is the path to a script which fetches promtail's token for communication with the Loki
+	// PathDirectory is the path for the valitail's directory.
+	PathDirectory = "/var/lib/valitail"
+	// PathFetchTokenScript is the path to a script which fetches valitail's token for communication with the Loki
 	// sidecar proxy.
 	PathFetchTokenScript = PathDirectory + "/scripts/fetch-token.sh"
-	// PathAuthToken is the path for the file containing promtail's authentication token for communication with the Loki
+	// PathAuthToken is the path for the file containing valitail's authentication token for communication with the Loki
 	// sidecar proxy.
 	PathAuthToken = PathDirectory + "/auth-token"
-	// PathConfig is the path for the promtail's configuration file.
+	// PathConfig is the path for the valitail's configuration file.
 	PathConfig = v1beta1constants.OperatingSystemConfigFilePathPromtailConfig
 	// PathCACert is the path for the vali-tls certificate authority.
 	PathCACert = PathDirectory + "/ca.crt"
 
-	// ServerPort is the promtail listening port.
+	// ServerPort is the valitail listening port.
 	ServerPort = 3001
 	// PositionFile is the path for storing the scraped file offsets.
 	PositionFile = "/var/log/positions.yaml"
@@ -51,13 +51,13 @@ const (
 
 type component struct{}
 
-// New returns a new promtail component.
+// New returns a new valitail component.
 func New() *component {
 	return &component{}
 }
 
 func (component) Name() string {
-	return "promtail"
+	return "valitail"
 }
 
 func execStartPreCopyBinaryFromContainer(binaryName string, image *imagevector.Image) string {
@@ -78,7 +78,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		}, nil, nil
 	}
 
-	promtailConfigFile, err := getPromtailConfigurationFile(ctx)
+	valitailConfigFile, err := getPromtailConfigurationFile(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -90,8 +90,8 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 
 	return []extensionsv1alpha1.Unit{
 			getPromtailUnit(
-				execStartPreCopyBinaryFromContainer("promtail", ctx.Images[images.ImageNamePromtail]),
-				v1beta1constants.OperatingSystemConfigFilePathBinaries+`/promtail -config.file=`+PathConfig,
+				execStartPreCopyBinaryFromContainer("valitail", ctx.Images[images.ImageNamePromtail]),
+				v1beta1constants.OperatingSystemConfigFilePathBinaries+`/valitail -config.file=`+PathConfig,
 			),
 			getFetchTokenScriptUnit(
 				"",
@@ -99,7 +99,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 			),
 		},
 		[]extensionsv1alpha1.File{
-			promtailConfigFile,
+			valitailConfigFile,
 			fetchTokenScriptFile,
 			getPromtailCAFile(ctx),
 		}, nil
