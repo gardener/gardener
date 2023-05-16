@@ -26,13 +26,13 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
-var _ = Describe("Promtail", func() {
+var _ = Describe("Valitail", func() {
 	Describe("#Config", func() {
 		var (
 			cABundle           = "malskjdvbfnasufbaus"
 			clusterDomain      = "testClusterDomain.com"
 			apiServerURL       = "https://api.test-cluster.com"
-			valitailImageName  = "Promtail"
+			valitailImageName  = "Valitail"
 			valitailRepository = "github.com/valitail"
 			valitailImageTag   = "v0.1.0"
 			valitailImage      = &imagevector.Image{
@@ -48,10 +48,10 @@ var _ = Describe("Promtail", func() {
 				CABundle:      &cABundle,
 				ClusterDomain: clusterDomain,
 				Images: map[string]*imagevector.Image{
-					images.ImageNamePromtail: valitailImage,
+					images.ImageNameValitail: valitailImage,
 				},
 				ValiIngress:     valiIngress,
-				PromtailEnabled: true,
+				ValitailEnabled: true,
 				APIServerURL:    apiServerURL,
 			}
 
@@ -299,10 +299,10 @@ exit $?
 				CABundle:      &cABundle,
 				ClusterDomain: clusterDomain,
 				Images: map[string]*imagevector.Image{
-					images.ImageNamePromtail: valitailImage,
+					images.ImageNameValitail: valitailImage,
 				},
 				ValiIngress:     valiIngress,
-				PromtailEnabled: false,
+				ValitailEnabled: false,
 			}
 
 			units, files, err := New().Config(ctx)
@@ -362,9 +362,9 @@ ExecStart=/bin/sh -c "rm -f /var/lib/valitail/auth-token; echo service valitail-
 				CABundle:      &cABundle,
 				ClusterDomain: clusterDomain,
 				Images: map[string]*imagevector.Image{
-					images.ImageNamePromtail: valitailImage,
+					images.ImageNameValitail: valitailImage,
 				},
-				PromtailEnabled: true,
+				ValitailEnabled: true,
 				ValiIngress:     "",
 			}
 

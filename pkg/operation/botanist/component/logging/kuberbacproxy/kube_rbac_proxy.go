@@ -37,9 +37,9 @@ const (
 
 	valitailName     = "gardener-valitail"
 	valitailRBACName = "gardener.cloud:logging:valitail"
-	// PromtailTokenSecretName is the name of a secret in the kube-system namespace in the target cluster containing
+	// ValitailTokenSecretName is the name of a secret in the kube-system namespace in the target cluster containing
 	// valitail's token for communication with the kube-apiserver.
-	PromtailTokenSecretName = valitailName
+	ValitailTokenSecretName = valitailName
 )
 
 // New creates a new instance of kubeRBACProxy for the kube-rbac-proxy.
@@ -68,7 +68,7 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	valitailShootAccessSecret := k.newPromtailShootAccessSecret()
+	valitailShootAccessSecret := k.newValitailShootAccessSecret()
 	if err := valitailShootAccessSecret.Reconcile(ctx, k.client); err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 		valitailClusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   valitailRBACName,
-				Labels: getPromtailLabels(),
+				Labels: getValitailLabels(),
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
@@ -128,7 +128,7 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 		valitailClusterRoleBinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   valitailRBACName,
-				Labels: getPromtailLabels(),
+				Labels: getValitailLabels(),
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,
@@ -164,7 +164,7 @@ func (k *kubeRBACProxy) Destroy(ctx context.Context) error {
 
 	return kubernetesutils.DeleteObjects(ctx, k.client,
 		k.newKubeRBACProxyShootAccessSecret().Secret,
-		k.newPromtailShootAccessSecret().Secret,
+		k.newValitailShootAccessSecret().Secret,
 	)
 }
 
@@ -172,10 +172,10 @@ func (k *kubeRBACProxy) newKubeRBACProxyShootAccessSecret() *gardenerutils.Shoot
 	return gardenerutils.NewShootAccessSecret(kubeRBACProxyName, k.namespace)
 }
 
-func (k *kubeRBACProxy) newPromtailShootAccessSecret() *gardenerutils.ShootAccessSecret {
+func (k *kubeRBACProxy) newValitailShootAccessSecret() *gardenerutils.ShootAccessSecret {
 	return gardenerutils.NewShootAccessSecret("valitail", k.namespace).
 		WithServiceAccountName(valitailName).
-		WithTargetSecret(PromtailTokenSecretName, metav1.NamespaceSystem)
+		WithTargetSecret(ValitailTokenSecretName, metav1.NamespaceSystem)
 }
 
 func getKubeRBACProxyLabels() map[string]string {
@@ -184,7 +184,7 @@ func getKubeRBACProxyLabels() map[string]string {
 	}
 }
 
-func getPromtailLabels() map[string]string {
+func getValitailLabels() map[string]string {
 	return map[string]string{
 		"app": valitailName,
 	}

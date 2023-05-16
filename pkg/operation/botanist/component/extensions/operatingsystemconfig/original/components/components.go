@@ -45,7 +45,7 @@ type Context struct {
 	SSHPublicKeys           []string
 	SSHAccessEnabled        bool
 	ValiIngress             string
-	PromtailEnabled         bool
+	ValitailEnabled         bool
 	APIServerURL            string
 	Sysctls                 map[string]string
 }

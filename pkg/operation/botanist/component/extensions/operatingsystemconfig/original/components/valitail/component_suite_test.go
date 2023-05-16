@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestPromtail(t *testing.T) {
+func TestValitail(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Extensions OperatingSystemConfig Original Components Promtail Suite")
+	RunSpecs(t, "Botanist Component Extensions OperatingSystemConfig Original Components Valitail Suite")
 }

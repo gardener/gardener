@@ -27,7 +27,7 @@ import (
 
 const (
 	// UnitName is the name of the valitail service.
-	UnitName           = v1beta1constants.OperatingSystemConfigUnitNamePromtailService
+	UnitName           = v1beta1constants.OperatingSystemConfigUnitNameValitailService
 	unitNameFetchToken = "valitail-fetch-token.service"
 
 	// PathDirectory is the path for the valitail's directory.
@@ -39,7 +39,7 @@ const (
 	// sidecar proxy.
 	PathAuthToken = PathDirectory + "/auth-token"
 	// PathConfig is the path for the valitail's configuration file.
-	PathConfig = v1beta1constants.OperatingSystemConfigFilePathPromtailConfig
+	PathConfig = v1beta1constants.OperatingSystemConfigFilePathValitailConfig
 	// PathCACert is the path for the vali-tls certificate authority.
 	PathCACert = PathDirectory + "/ca.crt"
 
@@ -65,9 +65,9 @@ func execStartPreCopyBinaryFromContainer(binaryName string, image *imagevector.I
 }
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-	if !ctx.PromtailEnabled {
+	if !ctx.ValitailEnabled {
 		return []extensionsv1alpha1.Unit{
-			getPromtailUnit(
+			getValitailUnit(
 				"/bin/systemctl disable "+UnitName,
 				fmt.Sprintf(`/bin/sh -c "echo service %s is removed!; while true; do sleep 86400; done"`, UnitName),
 			),
@@ -78,7 +78,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		}, nil, nil
 	}
 
-	valitailConfigFile, err := getPromtailConfigurationFile(ctx)
+	valitailConfigFile, err := getValitailConfigurationFile(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -89,8 +89,8 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	}
 
 	return []extensionsv1alpha1.Unit{
-			getPromtailUnit(
-				execStartPreCopyBinaryFromContainer("valitail", ctx.Images[images.ImageNamePromtail]),
+			getValitailUnit(
+				execStartPreCopyBinaryFromContainer("valitail", ctx.Images[images.ImageNameValitail]),
 				v1beta1constants.OperatingSystemConfigFilePathBinaries+`/valitail -config.file=`+PathConfig,
 			),
 			getFetchTokenScriptUnit(
@@ -101,6 +101,6 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		[]extensionsv1alpha1.File{
 			valitailConfigFile,
 			fetchTokenScriptFile,
-			getPromtailCAFile(ctx),
+			getValitailCAFile(ctx),
 		}, nil
 }

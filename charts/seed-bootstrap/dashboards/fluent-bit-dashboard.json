@@ -519,7 +519,7 @@
         {
           "expr": "sum(rate(fluentbit_vali_gardener_forwarded_logs_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "interval": "",
-          "legendFormat": "Transferred to Promtail-{{pod}}",
+          "legendFormat": "Transferred to Valitail-{{pod}}",
           "refId": "C"
         }
       ],
@@ -642,7 +642,7 @@
         {
           "expr": "sum(rate(valitail_dropped_entries_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "interval": "",
-          "legendFormat": "Promtail dropped-{{pod}}",
+          "legendFormat": "Valitail dropped-{{pod}}",
           "refId": "G"
         }
       ],
@@ -782,7 +782,7 @@
     },
     {
       "datasource": null,
-      "description": "Table which shows the total incoming logs with attached endpoint and are ready to be forwarded to the Promtail client",
+      "description": "Table which shows the total incoming logs with attached endpoint and are ready to be forwarded to the Valitail client",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -873,7 +873,7 @@
     },
     {
       "datasource": null,
-      "description": "Table which shows the transferred logs from Output plugin to the Promtail per hour.",
+      "description": "Table which shows the transferred logs from Output plugin to the Valitail per hour.",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -920,7 +920,7 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "[Output Plugin] Transferred Logs to Promtail",
+      "title": "[Output Plugin] Transferred Logs to Valitail",
       "transformations": [
         {
           "id": "reduce",
@@ -1011,7 +1011,7 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "[Promtail] Dropped Logs",
+      "title": "[Valitail] Dropped Logs",
       "transformations": [
         {
           "id": "reduce",
