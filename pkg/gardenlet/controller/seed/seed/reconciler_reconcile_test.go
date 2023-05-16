@@ -41,8 +41,8 @@ var _ = Describe("Reconcile", func() {
 
 	Describe("#ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame", func() {
 		const (
-			lokiPVCName         = "loki-loki-0"
-			lokiStatefulSetName = "loki"
+			valiPVCName         = "vali-vali-0"
+			valiStatefulSetName = "vali"
 			gardenNamespace     = "garden"
 		)
 
@@ -52,12 +52,12 @@ var _ = Describe("Reconcile", func() {
 			sw                *mockclient.MockSubResourceClient
 			ctx               = context.TODO()
 			log               = logr.Discard()
-			lokiPVCObjectMeta = metav1.ObjectMeta{
-				Name:      lokiPVCName,
+			valiPVCObjectMeta = metav1.ObjectMeta{
+				Name:      valiPVCName,
 				Namespace: gardenNamespace,
 			}
-			lokiPVC = &corev1.PersistentVolumeClaim{
-				ObjectMeta: lokiPVCObjectMeta,
+			valiPVC = &corev1.PersistentVolumeClaim{
+				ObjectMeta: valiPVCObjectMeta,
 				Spec: corev1.PersistentVolumeClaimSpec{
 					Resources: corev1.ResourceRequirements{
 						Requests: map[corev1.ResourceName]resource.Quantity{
@@ -66,16 +66,16 @@ var _ = Describe("Reconcile", func() {
 					},
 				},
 			}
-			patch       = client.MergeFrom(lokiPVC.DeepCopy())
+			patch       = client.MergeFrom(valiPVC.DeepCopy())
 			statefulset = &appsv1.StatefulSet{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      lokiStatefulSetName,
+					Name:      valiStatefulSetName,
 					Namespace: gardenNamespace,
 				},
 			}
 			scaledToZeroLokiStatefulset = appsv1.StatefulSet{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:       lokiStatefulSetName,
+					Name:       valiStatefulSetName,
 					Namespace:  gardenNamespace,
 					Generation: 2,
 				},
@@ -94,10 +94,10 @@ var _ = Describe("Reconcile", func() {
 			new200GiStorageQuantity = resource.MustParse("200Gi")
 			new100GiStorageQuantity = resource.MustParse("100Gi")
 			new80GiStorageQuantity  = resource.MustParse("80Gi")
-			lokiPVCKey              = kubernetesutils.Key("garden", "loki-loki-0")
-			lokiStatefulSetKey      = kubernetesutils.Key("garden", "loki")
+			valiPVCKey              = kubernetesutils.Key("garden", "vali-vali-0")
+			valiStatefulSetKey      = kubernetesutils.Key("garden", "vali")
 			funcGetLokiPVC          = func(_ context.Context, _ types.NamespacedName, pvc *corev1.PersistentVolumeClaim, _ ...client.GetOption) error {
-				*pvc = *lokiPVC
+				*pvc = *valiPVC
 				return nil
 			}
 			funcGetScaledToZeroLokiStatefulset = func(_ context.Context, _ types.NamespacedName, sts *appsv1.StatefulSet, _ ...client.GetOption) error {
@@ -125,108 +125,108 @@ var _ = Describe("Reconcile", func() {
 			ctrl.Finish()
 		})
 
-		It("should patch garden/loki's PVC when new size is greater than the current one", func() {
-			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
+		It("should patch garden/vali's PVC when new size is greater than the current one", func() {
+			runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
 			sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
-			runtimeClient.EXPECT().Get(gomock.Any(), lokiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
+			runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
 			runtimeClient.EXPECT().Patch(ctx, objectOfTypePVC, gomock.AssignableToTypeOf(patch)).DoAndReturn(funcPatchTo200GiStorage)
 			runtimeClient.EXPECT().Delete(ctx, statefulset)
 			Expect(ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, log, runtimeClient, new200GiStorageQuantity)).To(Succeed())
 		})
 
-		It("should delete garden/loki's PVC when new size is less than the current one", func() {
-			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
+		It("should delete garden/vali's PVC when new size is less than the current one", func() {
+			runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
 			sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
-			runtimeClient.EXPECT().Get(gomock.Any(), lokiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
-			runtimeClient.EXPECT().Delete(ctx, lokiPVC)
+			runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
+			runtimeClient.EXPECT().Delete(ctx, valiPVC)
 			runtimeClient.EXPECT().Delete(ctx, statefulset)
 			Expect(ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, log, runtimeClient, new80GiStorageQuantity)).To(Succeed())
 		})
 
-		It("shouldn't do anything when garden/loki's PVC is missing", func() {
-			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).Return(errNotFound)
+		It("shouldn't do anything when garden/vali's PVC is missing", func() {
+			runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).Return(errNotFound)
 			Expect(ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, log, runtimeClient, new80GiStorageQuantity)).To(Succeed())
 		})
 
-		It("shouldn't do anything when garden/loki's PVC storage is the same as the new one", func() {
-			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
+		It("shouldn't do anything when garden/vali's PVC storage is the same as the new one", func() {
+			runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
 			Expect(ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, log, runtimeClient, new100GiStorageQuantity)).To(Succeed())
 		})
 
-		It("should proceed with the garden/loki's PVC resizing when Loki StatefulSet is missing", func() {
-			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
+		It("should proceed with the garden/vali's PVC resizing when Loki StatefulSet is missing", func() {
+			runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
 			sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch).Return(errNotFound)
 			runtimeClient.EXPECT().Patch(ctx, objectOfTypePVC, gomock.AssignableToTypeOf(patch)).DoAndReturn(funcPatchTo200GiStorage)
 			runtimeClient.EXPECT().Delete(ctx, statefulset).Return(errNotFound)
 			Expect(ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, log, runtimeClient, new200GiStorageQuantity)).To(Succeed())
 		})
 
-		It("should succeed with the garden/loki's PVC resizing when Loki StatefulSet was deleted during function execution", func() {
-			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
+		It("should succeed with the garden/vali's PVC resizing when Loki StatefulSet was deleted during function execution", func() {
+			runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
 			sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
-			runtimeClient.EXPECT().Get(gomock.Any(), lokiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
+			runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
 			runtimeClient.EXPECT().Patch(ctx, objectOfTypePVC, gomock.AssignableToTypeOf(patch)).DoAndReturn(funcPatchTo200GiStorage)
 			runtimeClient.EXPECT().Delete(ctx, statefulset).Return(errNotFound)
 			Expect(ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, log, runtimeClient, new200GiStorageQuantity)).To(Succeed())
 		})
 
-		It("should not fail with patching garden/loki's PVC when the PVC itself was deleted during function execution", func() {
-			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
+		It("should not fail with patching garden/vali's PVC when the PVC itself was deleted during function execution", func() {
+			runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
 			sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
-			runtimeClient.EXPECT().Get(gomock.Any(), lokiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
+			runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
 			runtimeClient.EXPECT().Patch(ctx, objectOfTypePVC, gomock.AssignableToTypeOf(patch)).Return(errNotFound)
 			runtimeClient.EXPECT().Delete(ctx, statefulset)
 			Expect(ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, log, runtimeClient, new200GiStorageQuantity)).To(Succeed())
 		})
 
-		It("should not fail with deleting garden/loki's PVC when the PVC itself was deleted during function execution", func() {
-			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
+		It("should not fail with deleting garden/vali's PVC when the PVC itself was deleted during function execution", func() {
+			runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
 			sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
-			runtimeClient.EXPECT().Get(gomock.Any(), lokiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
-			runtimeClient.EXPECT().Delete(ctx, lokiPVC).Return(errNotFound)
+			runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
+			runtimeClient.EXPECT().Delete(ctx, valiPVC).Return(errNotFound)
 			runtimeClient.EXPECT().Delete(ctx, statefulset)
 			Expect(ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, log, runtimeClient, new80GiStorageQuantity)).To(Succeed())
 		})
 
-		It("should not neglect errors when getting garden/loki's PVC", func() {
-			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).Return(errForbidden)
+		It("should not neglect errors when getting garden/vali's PVC", func() {
+			runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).Return(errForbidden)
 			Expect(ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, log, runtimeClient, new80GiStorageQuantity)).ToNot(Succeed())
 		})
 
-		It("should not neglect errors when patching garden/loki's StatefulSet", func() {
-			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
+		It("should not neglect errors when patching garden/vali's StatefulSet", func() {
+			runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
 			sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch).Return(errForbidden)
 			Expect(ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, log, runtimeClient, new80GiStorageQuantity)).ToNot(Succeed())
 		})
 
-		It("should not neglect errors when getting garden/loki's StatefulSet", func() {
-			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
+		It("should not neglect errors when getting garden/vali's StatefulSet", func() {
+			runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
 			sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
-			runtimeClient.EXPECT().Get(gomock.Any(), lokiStatefulSetKey, objectOfTypeSTS).Return(errForbidden)
+			runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).Return(errForbidden)
 			Expect(ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, log, runtimeClient, new80GiStorageQuantity)).ToNot(Succeed())
 		})
 
-		It("should not neglect errors when patching garden/loki's PVC", func() {
-			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
+		It("should not neglect errors when patching garden/vali's PVC", func() {
+			runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
 			sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
-			runtimeClient.EXPECT().Get(gomock.Any(), lokiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
+			runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
 			runtimeClient.EXPECT().Patch(ctx, objectOfTypePVC, gomock.AssignableToTypeOf(patch)).Return(errForbidden)
 			Expect(ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, log, runtimeClient, new200GiStorageQuantity)).ToNot(Succeed())
 		})
 
-		It("should not neglect errors when deleting garden/loki's PVC", func() {
-			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
+		It("should not neglect errors when deleting garden/vali's PVC", func() {
+			runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
 			sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
-			runtimeClient.EXPECT().Get(gomock.Any(), lokiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
-			runtimeClient.EXPECT().Delete(ctx, lokiPVC).Return(errForbidden)
+			runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
+			runtimeClient.EXPECT().Delete(ctx, valiPVC).Return(errForbidden)
 			Expect(ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, log, runtimeClient, new80GiStorageQuantity)).ToNot(Succeed())
 		})
 
-		It("should not neglect errors when deleting garden/loki's StatefulSet", func() {
-			runtimeClient.EXPECT().Get(ctx, lokiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
+		It("should not neglect errors when deleting garden/vali's StatefulSet", func() {
+			runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetLokiPVC)
 			sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch)
-			runtimeClient.EXPECT().Get(gomock.Any(), lokiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
-			runtimeClient.EXPECT().Delete(ctx, lokiPVC)
+			runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroLokiStatefulset)
+			runtimeClient.EXPECT().Delete(ctx, valiPVC)
 			runtimeClient.EXPECT().Delete(ctx, statefulset).Return(errForbidden)
 			Expect(ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, log, runtimeClient, new80GiStorageQuantity)).ToNot(Succeed())
 		})

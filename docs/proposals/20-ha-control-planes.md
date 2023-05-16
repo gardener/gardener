@@ -534,7 +534,7 @@ _Pros:_
 
 _Cons:_
 * Existing recovery mechanisms are leveraged:
-  * For the affected StatefulSet Pods, the replacement Pods will fail to be scheduled due to their affinity rules (`etcd` Pods) or volume requirements (`prometheus` and `loki` Pods) to run in the outage zone and will not recover. However, the `etcd` will still be operational because of its quorum. Downtime of the monitoring and logging components for the time of an ongoing availability zone outage is acceptable for now.
+  * For the affected StatefulSet Pods, the replacement Pods will fail to be scheduled due to their affinity rules (`etcd` Pods) or volume requirements (`prometheus` and `vali` Pods) to run in the outage zone and will not recover. However, the `etcd` will still be operational because of its quorum. Downtime of the monitoring and logging components for the time of an ongoing availability zone outage is acceptable for now.
 * The etcd cluster will run with one less member, resulting in no tolerance to any further failure. If it takes a long time to recover a zone, then the etcd cluster is now susceptible to a quorum loss, if any further failure happens.
 * Any zero downtime maintenance is disabled during this time.
 * If the recovery of the zone takes a long time, then it is possible that the difference revision between the leader and the follower (which was in the zone that is not available) becomes large. When the AZ is restored and the etcd pod is deployed again, then there will be an additional load on the etcd leader to synchronize this etcd member.
@@ -897,7 +897,7 @@ kubectl get po -n <shoot-control-ns> # list of pods in the shoot control plane
 | kube-controller-manager-6b94bcbc4-9bz8q     | 1/1   | Running | ip-10-242-20-17.eu-west-1.compute.internal |
 | kube-scheduler-7f855ffbc4-8c9pg     | 1/1   | Running | ip-10-242-20-17.eu-west-1.compute.internal |
 | kube-state-metrics-5446bb6d56-xqqnt     | 1/1   | Running | ip-10-242-20-17.eu-west-1.compute.internal |
-| loki-0     | 4/4   | Running | ip-10-242-60-155.eu-west-1.compute.internal |
+| vali-0     | 4/4   | Running | ip-10-242-60-155.eu-west-1.compute.internal |
 | machine-controller-manager-967bc89b5-kgdwx     | 2/2   | Running | ip-10-242-20-17.eu-west-1.compute.internal |
 | prometheus-0     | 3/3   | Running | ip-10-242-60-155.eu-west-1.compute.internal |
 | shoot-dns-service-75768bd764-4957h     | 1/1   | Running | ip-10-242-20-17.eu-west-1.compute.internal |
@@ -967,7 +967,7 @@ kubectl get po -n <shoot-control-ns> # list of pods in the shoot control plane
 | kube-controller-manager-6b94bcbc4-49v5x     | 1/1   | Running | ip-10-242-60-155.eu-west-1.compute.internal |
 | kube-scheduler-7f855ffbc4-6xnbk     | 1/1   | Running | ip-10-242-73-89.eu-west-1.compute.internal |
 | kube-state-metrics-5446bb6d56-g8wkp     | 1/1   | Running | ip-10-242-73-89.eu-west-1.compute.internal  |
-| loki-0     | 4/4   | Running | ip-10-242-73-89.eu-west-1.compute.internal |
+| vali-0     | 4/4   | Running | ip-10-242-73-89.eu-west-1.compute.internal |
 | machine-controller-manager-967bc89b5-rr96r     | 2/2   | Running | ip-10-242-60-155.eu-west-1.compute.internal |
 | prometheus-0     | 3/3   | Running | ip-10-242-60-155.eu-west-1.compute.internal |
 | shoot-dns-service-75768bd764-7xhrw     | 1/1   | Running | ip-10-242-73-89.eu-west-1.compute.internal  |

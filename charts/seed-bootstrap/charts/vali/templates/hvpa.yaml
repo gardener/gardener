@@ -4,7 +4,7 @@
 apiVersion: autoscaling.k8s.io/v1alpha1
 kind: Hvpa
 metadata:
-  name: loki
+  name: vali
   namespace: {{ .Release.Namespace }}
   labels:
 {{ toYaml .Values.labels | indent 4 }}
@@ -17,12 +17,12 @@ spec:
   hpa:
     selector:
       matchLabels:
-        role: loki-hpa
+        role: vali-hpa
     deploy: false
     template:
       metadata:
         labels:
-          role: loki-hpa
+          role: vali-hpa
       spec:
         maxReplicas: {{ .Values.replicas }}
         minReplicas: {{ .Values.replicas }}
@@ -38,7 +38,7 @@ spec:
   vpa:
     selector:
       matchLabels:
-        role: loki-vpa
+        role: vali-vpa
     deploy: true
     scaleUp:
       updatePolicy:
@@ -63,11 +63,11 @@ spec:
     template:
       metadata:
         labels:
-          role: loki-vpa
+          role: vali-vpa
       spec:
         resourcePolicy:
           containerPolicies:
-            - containerName: loki
+            - containerName: vali
               controlledValues: RequestsOnly
               maxAllowed:
                 memory: {{ .Values.hvpa.maxAllowed.memory }}
@@ -92,6 +92,6 @@ spec:
   targetRef:
     apiVersion:  {{ include "statefulsetversion" . }}
     kind: StatefulSet
-    name: loki
+    name: vali
 {{ end }}
 {{ end }}

@@ -42,7 +42,7 @@ groups:
       expr: |
         sum by (pod) (
           increase(
-            fluentbit_loki_gardener_logs_without_metadata_total[4m]
+            fluentbit_vali_gardener_logs_without_metadata_total[4m]
           )
         ) > 0
       labels:
@@ -78,7 +78,7 @@ groups:
       expr: |
         sum by (pod) (
           increase(
-            fluentbit_loki_gardener_errors_total[4m]
+            fluentbit_vali_gardener_errors_total[4m]
           )
         ) > 0
       labels:

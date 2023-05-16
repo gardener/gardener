@@ -36,6 +36,6 @@ const (
 	// PodAntiAffinityDeploymentName is the name of the pod anti affinity deployment template
 	PodAntiAffinityDeploymentName = "pod-anti-affinity-deployment.yaml.tpl"
 
-	// BlockLokiValidatingWebhookConfiguration is the name of loki's ValidatingWebhookConfiguration
-	BlockLokiValidatingWebhookConfiguration = "block-loki-validatingwebhookconfiguration.yaml.tpl"
+	// BlockLokiValidatingWebhookConfiguration is the name of vali's ValidatingWebhookConfiguration
+	BlockLokiValidatingWebhookConfiguration = "block-vali-validatingwebhookconfiguration.yaml.tpl"
 )

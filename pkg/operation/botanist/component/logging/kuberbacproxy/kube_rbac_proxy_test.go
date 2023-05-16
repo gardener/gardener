@@ -172,7 +172,7 @@ var _ = Describe("KubeRBACProxy", func() {
 					},
 					{
 						NonResourceURLs: []string{
-							"/loki/api/v1/push",
+							"/vali/api/v1/push",
 						},
 						Verbs: []string{
 							"create",

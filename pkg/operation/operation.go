@@ -561,7 +561,7 @@ func (o *Operation) ComputeAlertManagerHosts() []string {
 	}
 }
 
-// ComputeLokiHosts computes the host for loki.
+// ComputeLokiHosts computes the host for vali.
 func (o *Operation) ComputeLokiHosts() []string {
 	return []string{
 		o.ComputeLokiHost(),
@@ -573,7 +573,7 @@ func (o *Operation) IsShootMonitoringEnabled() bool {
 	return helper.IsMonitoringEnabled(o.Config) && o.Shoot.Purpose != gardencorev1beta1.ShootPurposeTesting
 }
 
-// WantsGrafana returns true if shoot is not of purpose testing and either shoot monitoring or loki is enabled.
+// WantsGrafana returns true if shoot is not of purpose testing and either shoot monitoring or vali is enabled.
 func (o *Operation) WantsGrafana() bool {
 	return o.Shoot.Purpose != gardencorev1beta1.ShootPurposeTesting && (helper.IsMonitoringEnabled(o.Config) || helper.IsLokiEnabled(o.Config))
 }
@@ -598,7 +598,7 @@ func (o *Operation) ComputePrometheusHost() string {
 	return o.ComputeIngressHost(common.PrometheusPrefix)
 }
 
-// ComputeLokiHost computes the host for loki.
+// ComputeLokiHost computes the host for vali.
 func (o *Operation) ComputeLokiHost() string {
 	return o.ComputeIngressHost(common.LokiPrefix)
 }

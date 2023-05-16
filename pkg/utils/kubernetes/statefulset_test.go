@@ -56,7 +56,7 @@ var _ = Describe("Statefulset.", func() {
 			ctrl = gomock.NewController(GinkgoT())
 			c = mockclient.NewMockClient(ctrl)
 			testNamespace = "test-namespace"
-			testStatefulset = "test-loki"
+			testStatefulset = "test-vali"
 
 			statefulSet = &appsv1.StatefulSet{
 				ObjectMeta: metav1.ObjectMeta{

@@ -1,7 +1,7 @@
 global:
   images:
-    loki: image-repository:image-tag
-    loki-curator: image-repository:image-tag
+    vali: image-repository:image-tag
+    vali-curator: image-repository:image-tag
     kube-rbac-proxy: image-repository:image-tag
     telegraf: image-repository:image-tag
     tune2fs: image-repository:image-tag
@@ -21,7 +21,7 @@ genericTokenKubeconfigSecretName: generic-token-kubeconfig
 
 labels:
   gardener.cloud/role: logging
-  app: loki
+  app: vali
   role: logging
 
 prometheus:
@@ -51,7 +51,7 @@ readinessProbe:
 replicas: 1
 
 resources:
-  loki:
+  vali:
     limits:
 # TODO(vlvasilev): After fixing the following issue https://github.com/gardener/gardener/issues/5757, set the memory limit to 10Gi.
       memory: 3Gi
@@ -101,11 +101,11 @@ telegraf:
 ingress:
   class: nginx
   hosts: 
-  - hostName: loki.ingress.example.com 
-    secretName: loki-tls
-    serviceName: loki
+  - hostName: vali.ingress.example.com 
+    secretName: vali-tls
+    serviceName: vali
     servicePort: 8080
-    backendPath: "/loki/api/v1/push"
+    backendPath: "/vali/api/v1/push"
 
 hvpa:
   enabled: false

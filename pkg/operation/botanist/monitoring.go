@@ -219,10 +219,10 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 					"alertmanager": map[string]interface{}{
 						"enabled": b.Shoot.WantsAlertmanager,
 					},
-					"loki": map[string]interface{}{
+					"vali": map[string]interface{}{
 						"enabled": gardenlethelper.IsLoggingEnabled(b.Config),
 					},
-					"lokiTelegraf": map[string]interface{}{
+					"valiTelegraf": map[string]interface{}{
 						"enabled": b.isShootNodeLoggingEnabled(),
 					},
 				},
@@ -392,7 +392,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 
 // DeploySeedGrafana deploys the plutono charts to the Seed cluster.
 func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
-	// disable monitoring if shoot has purpose testing or monitoring and loki is disabled
+	// disable monitoring if shoot has purpose testing or monitoring and vali is disabled
 	if !b.Operation.WantsGrafana() {
 		if err := b.DeleteGrafana(ctx); err != nil {
 			return err

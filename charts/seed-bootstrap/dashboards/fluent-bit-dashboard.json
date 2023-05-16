@@ -503,21 +503,21 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(fluentbit_loki_gardener_incoming_logs_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(fluentbit_vali_gardener_incoming_logs_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "instant": false,
           "interval": "",
           "legendFormat": "Incoming logs-{{pod}}",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(fluentbit_loki_gardener_incoming_logs_with_endpoint_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(fluentbit_vali_gardener_incoming_logs_with_endpoint_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "instant": false,
           "interval": "",
           "legendFormat": "Incoming logs with endpoint-{{pod}}",
           "refId": "B"
         },
         {
-          "expr": "sum(rate(fluentbit_loki_gardener_forwarded_logs_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(fluentbit_vali_gardener_forwarded_logs_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "interval": "",
           "legendFormat": "Transferred to Promtail-{{pod}}",
           "refId": "C"
@@ -616,7 +616,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(fluentbit_loki_gardener_dropped_logs_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(fluentbit_vali_gardener_dropped_logs_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "interval": "",
           "legendFormat": "Dropped logs-{{pod}}",
           "refId": "C"
@@ -628,13 +628,13 @@
           "refId": "D"
         },
         {
-          "expr": "sum(rate(fluentbit_loki_gardener_logs_without_metadata_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(fluentbit_vali_gardener_logs_without_metadata_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "interval": "",
           "legendFormat": "Missing metadata-{{pod}}",
           "refId": "E"
         },
         {
-          "expr": "sum(rate(fluentbit_loki_gardener_errors_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(fluentbit_vali_gardener_errors_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "interval": "",
           "legendFormat": "Errors-{{pod}}",
           "refId": "F"
@@ -732,7 +732,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(fluentbit_loki_gardener_incoming_logs_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
+          "expr": "sum(increase(fluentbit_vali_gardener_incoming_logs_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -823,7 +823,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(fluentbit_loki_gardener_incoming_logs_with_endpoint_total{pod=~\"$pod\"}[$__rate_interval])  != 0) by (host)",
+          "expr": "sum(increase(fluentbit_vali_gardener_incoming_logs_with_endpoint_total{pod=~\"$pod\"}[$__rate_interval])  != 0) by (host)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -911,7 +911,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(fluentbit_loki_gardener_forwarded_logs_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
+          "expr": "sum(increase(fluentbit_vali_gardener_forwarded_logs_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
           "instant": false,
           "interval": "",
           "legendFormat": "{{host}}",
@@ -1080,7 +1080,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(fluentbit_loki_gardener_dropped_logs_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
+          "expr": "sum(increase(fluentbit_vali_gardener_dropped_logs_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -1155,7 +1155,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(fluentbit_loki_gardener_logs_without_metadata_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
+          "expr": "sum(increase(fluentbit_vali_gardener_logs_without_metadata_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -1219,7 +1219,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(fluentbit_loki_gardener_errors_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
+          "expr": "sum(increase(fluentbit_vali_gardener_errors_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
           "format": "time_series",
           "instant": false,
           "interval": "",

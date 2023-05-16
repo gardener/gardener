@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package loki_test
+package vali_test
 
 import (
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
-	. "github.com/gardener/gardener/pkg/operation/botanist/component/logging/loki"
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/logging/vali"
 )
 
 var _ = Describe("Logging", func() {
@@ -36,16 +36,16 @@ var _ = Describe("Logging", func() {
 				[]*fluentbitv1alpha2.ClusterFilter{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "loki--loki",
+							Name:   "vali--vali",
 							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
 						},
 						Spec: fluentbitv1alpha2.FilterSpec{
-							Match: "kubernetes.*loki*loki*",
+							Match: "kubernetes.*vali*vali*",
 							FilterItems: []fluentbitv1alpha2.FilterItem{
 								{
 									Parser: &fluentbitv1alpha2filter.Parser{
 										KeyName:     "log",
-										Parser:      "loki-parser",
+										Parser:      "vali-parser",
 										ReserveData: pointer.Bool(true),
 									},
 								},
@@ -54,11 +54,11 @@ var _ = Describe("Logging", func() {
 					},
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "loki--curator",
+							Name:   "vali--curator",
 							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
 						},
 						Spec: fluentbitv1alpha2.FilterSpec{
-							Match: "kubernetes.*loki*curator*",
+							Match: "kubernetes.*vali*curator*",
 							FilterItems: []fluentbitv1alpha2.FilterItem{
 								{
 									Parser: &fluentbitv1alpha2filter.Parser{
@@ -76,7 +76,7 @@ var _ = Describe("Logging", func() {
 				[]*fluentbitv1alpha2.ClusterParser{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "loki-parser",
+							Name:   "vali-parser",
 							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
 						},
 						Spec: fluentbitv1alpha2.ParserSpec{

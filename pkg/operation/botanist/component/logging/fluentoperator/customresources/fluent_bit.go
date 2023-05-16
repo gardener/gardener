@@ -40,7 +40,7 @@ func GetFluentBit(labels map[string]string, fluentBitName, namespace, image, ini
 			Command: []string{
 				"/fluent-bit/bin/fluent-bit-watcher",
 				"-e",
-				"/fluent-bit/plugins/out_loki.so",
+				"/fluent-bit/plugins/out_vali.so",
 				"-c",
 				"/fluent-bit/config/fluent-bit.conf",
 			},

@@ -240,10 +240,10 @@ var _ = Describe("health check", func() {
 			prometheusStatefulSet,
 		}
 
-		lokiStatefulSet = newStatefulSet(seedNamespace, v1beta1constants.StatefulSetNameLoki, v1beta1constants.GardenRoleLogging, true)
+		valiStatefulSet = newStatefulSet(seedNamespace, v1beta1constants.StatefulSetNameLoki, v1beta1constants.GardenRoleLogging, true)
 
 		requiredLoggingControlPlaneStatefulSets = []*appsv1.StatefulSet{
-			lokiStatefulSet,
+			valiStatefulSet,
 		}
 
 		eventLoggerDepployment = newDeployment(seedNamespace, v1beta1constants.DeploymentNameEventLogger, v1beta1constants.GardenRoleLogging, true)
@@ -887,7 +887,7 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#CheckLoggingControlPlane",
-		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, isTestingShoot, eventLoggingEnabled, lokiEnabled bool, conditionMatcher types.GomegaMatcher, gardenerVersion *semver.Version) {
+		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, isTestingShoot, eventLoggingEnabled, valiEnabled bool, conditionMatcher types.GomegaMatcher, gardenerVersion *semver.Version) {
 			for _, obj := range deployments {
 				Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating deployment "+client.ObjectKeyFromObject(obj).String())
 			}
@@ -897,7 +897,7 @@ var _ = Describe("health check", func() {
 
 			checker := care.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion, gardenerVersion)
 
-			exitCondition, err := checker.CheckLoggingControlPlane(ctx, seedNamespace, isTestingShoot, eventLoggingEnabled, lokiEnabled, condition)
+			exitCondition, err := checker.CheckLoggingControlPlane(ctx, seedNamespace, isTestingShoot, eventLoggingEnabled, valiEnabled, condition)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
@@ -931,7 +931,7 @@ var _ = Describe("health check", func() {
 		Entry("stateful set unhealthy",
 			requiredLoggingControlPlaneDeployments,
 			[]*appsv1.StatefulSet{
-				newStatefulSet(lokiStatefulSet.Namespace, lokiStatefulSet.Name, roleOf(lokiStatefulSet), false),
+				newStatefulSet(valiStatefulSet.Namespace, valiStatefulSet.Name, roleOf(valiStatefulSet), false),
 			},
 			false,
 			true,
@@ -959,7 +959,7 @@ var _ = Describe("health check", func() {
 			BeNil(),
 			gardenerVersion,
 		),
-		Entry("loki is disabled in gardenlet config, omit stateful set check",
+		Entry("vali is disabled in gardenlet config, omit stateful set check",
 			requiredLoggingControlPlaneDeployments,
 			[]*appsv1.StatefulSet{},
 			false,

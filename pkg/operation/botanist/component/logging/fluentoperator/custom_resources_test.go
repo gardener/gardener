@@ -123,7 +123,7 @@ var _ = Describe("Fluent Operator Custom Resources", func() {
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterfilter____zz-modify-severity.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterparser____docker-parser.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterparser____containerd-parser.yaml"))
-			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusteroutput____gardener-loki.yaml"))
+			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusteroutput____gardener-vali.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusteroutput____journald.yaml"))
 		})
 	})

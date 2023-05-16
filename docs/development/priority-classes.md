@@ -38,7 +38,7 @@ When using the `gardener-operator` for managing the garden runtime and virtual c
 | `gardener-system-900`              | 999998900 | Extensions, `reversed-vpn-auth-server`                                                                                                                                             |
 | `gardener-system-800`              | 999998800 | `dependency-watchdog-endpoint`, `dependency-watchdog-probe`, `etcd-druid`, `(auditlog-)mutator`, `vpa-admission-controller`                                                        |
 | `gardener-system-700`              | 999998700 | `auditlog-seed-controller`, `hvpa-controller`, `vpa-recommender`, `vpa-updater`                                                                                                    |
-| `gardener-system-600`              | 999998600 | `aggregate-alertmanager`, `alertmanager`, `fluent-bit`, `plutono`, `kube-state-metrics`, `nginx-ingress-controller`, `nginx-k8s-backend`, `prometheus`, `loki`,  `seed-prometheus` |
+| `gardener-system-600`              | 999998600 | `aggregate-alertmanager`, `alertmanager`, `fluent-bit`, `plutono`, `kube-state-metrics`, `nginx-ingress-controller`, `nginx-k8s-backend`, `prometheus`, `vali`,  `seed-prometheus` |
 | `gardener-reserve-excess-capacity` | -5        | `reserve-excess-capacity` ([ref](https://github.com/gardener/gardener/pull/6135))                                                                                                  |
 
 ### `PriorityClass`es for Shoot Control Plane Components
@@ -49,7 +49,7 @@ When using the `gardener-operator` for managing the garden runtime and virtual c
 | `gardener-system-400` | 999998400 | `gardener-resource-manager`                                                                                                                                                            |
 | `gardener-system-300` | 999998300 | `cloud-controller-manager`, `cluster-autoscaler`, `csi-driver-controller`, `kube-controller-manager`, `kube-scheduler`, `machine-controller-manager`, `terraformer`, `vpn-seed-server` |
 | `gardener-system-200` | 999998200 | `csi-snapshot-controller`, `csi-snapshot-validation`, `cert-controller-manager`, `shoot-dns-service`, `vpa-admission-controller`, `vpa-recommender`, `vpa-updater`                     |
-| `gardener-system-100` | 999998100 | `alertmanager`, `plutono`, `kube-state-metrics`, `prometheus`, `loki`, `event-logger`                                                                       |
+| `gardener-system-100` | 999998100 | `alertmanager`, `plutono`, `kube-state-metrics`, `prometheus`, `vali`, `event-logger`                                                                       |
 
 ## Shoot Clusters
 

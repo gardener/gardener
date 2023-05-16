@@ -40,7 +40,7 @@ const (
 	PathAuthToken = PathDirectory + "/auth-token"
 	// PathConfig is the path for the promtail's configuration file.
 	PathConfig = v1beta1constants.OperatingSystemConfigFilePathPromtailConfig
-	// PathCACert is the path for the loki-tls certificate authority.
+	// PathCACert is the path for the vali-tls certificate authority.
 	PathCACert = PathDirectory + "/ca.crt"
 
 	// ServerPort is the promtail listening port.

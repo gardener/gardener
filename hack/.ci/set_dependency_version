@@ -121,7 +121,7 @@ elif name == 'vpn2':
 elif name == 'external-dns-management':
     names = ['dns-controller-manager']
 elif name == 'logging':
-    names = ['fluent-bit-plugin-installer', 'loki-curator', 'telegraf', 'event-logger', 'tune2fs']
+    names = ['fluent-bit-plugin-installer', 'vali-curator', 'telegraf', 'event-logger', 'tune2fs']
 elif name == 'etcd-custom-image':
     names = ['etcd']
 elif name == 'egress-filter-refresher':

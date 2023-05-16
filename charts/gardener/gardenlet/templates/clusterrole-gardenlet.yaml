@@ -90,7 +90,7 @@ rules:
   - persistentvolumeclaims
   resourceNames:
   - alertmanager-db-alertmanager-0
-  - loki-loki-0
+  - vali-vali-0
   - prometheus-db-prometheus-0
   verbs:
   - delete
@@ -214,7 +214,7 @@ rules:
   - kube-controller-manager
   - aggregate-prometheus
   - prometheus
-  - loki
+  - vali
   verbs:
   - delete
   - patch

@@ -40,7 +40,7 @@ var _ = Describe("Promtail", func() {
 				Repository: promtailRepository,
 				Tag:        &promtailImageTag,
 			}
-			lokiIngress = "ingress.loki.testClusterDomain"
+			valiIngress = "ingress.vali.testClusterDomain"
 		)
 
 		It("should return the expected units and files when shoot logging is enabled", func() {
@@ -50,7 +50,7 @@ var _ = Describe("Promtail", func() {
 				Images: map[string]*imagevector.Image{
 					images.ImageNamePromtail: promtailImage,
 				},
-				LokiIngress:     lokiIngress,
+				LokiIngress:     valiIngress,
 				PromtailEnabled: true,
 				APIServerURL:    apiServerURL,
 			}
@@ -115,13 +115,13 @@ ExecStart=/var/lib/promtail/scripts/fetch-token.sh`),
   log_level: info
   http_listen_port: 3001
 client:
-  url: https://ingress.loki.testClusterDomain/loki/api/v1/push
+  url: https://ingress.vali.testClusterDomain/vali/api/v1/push
   batchwait: 10s
   batchsize: 1536000
   bearer_token_file: /var/lib/promtail/auth-token
   tls_config:
     ca_file: /var/lib/promtail/ca.crt
-    server_name: ingress.loki.testClusterDomain
+    server_name: ingress.vali.testClusterDomain
 positions:
   filename: /var/log/positions.yaml
 scrape_configs:
@@ -301,7 +301,7 @@ exit $?
 				Images: map[string]*imagevector.Image{
 					images.ImageNamePromtail: promtailImage,
 				},
-				LokiIngress:     lokiIngress,
+				LokiIngress:     valiIngress,
 				PromtailEnabled: false,
 			}
 
@@ -357,7 +357,7 @@ ExecStart=/bin/sh -c "rm -f /var/lib/promtail/auth-token; echo service promtail-
 			Expect(files).To(BeNil())
 		})
 
-		It("should return error when loki ingress is not specified", func() {
+		It("should return error when vali ingress is not specified", func() {
 			ctx := components.Context{
 				CABundle:      &cABundle,
 				ClusterDomain: clusterDomain,
@@ -369,7 +369,7 @@ ExecStart=/bin/sh -c "rm -f /var/lib/promtail/auth-token; echo service promtail-
 			}
 
 			units, files, err := New().Config(ctx)
-			Expect(err).To(MatchError(ContainSubstring("loki ingress url is missing")))
+			Expect(err).To(MatchError(ContainSubstring("vali ingress url is missing")))
 			Expect(units).To(BeNil())
 			Expect(files).To(BeNil())
 		})

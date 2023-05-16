@@ -2,7 +2,7 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  name: block-loki-updates
+  name: block-vali-updates
 webhooks:
 - admissionReviewVersions:
   - v1beta1
@@ -13,7 +13,7 @@ webhooks:
       namespace: unreal-namespace
   failurePolicy: Fail
   matchPolicy: Exact
-  name: block.loki.seed.admission.core.gardener.cloud
+  name: block.vali.seed.admission.core.gardener.cloud
   namespaceSelector:
     matchLabels:
       {{ .NamespaceLabelKey }}: {{ .NamespaceLabelValue }}
@@ -22,7 +22,7 @@ webhooks:
     - key: app
       operator: In
       values:
-      - loki
+      - vali
     - key: role
       operator: In
       values:

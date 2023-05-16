@@ -39,8 +39,8 @@ datasources.yaml: |-
     editable: false
     jsonData:
       timeInterval: 1m
-  - name: loki
-    type: loki
+  - name: vali
+    type: vali
     access: proxy
     url: http://logging.{{ .Release.Namespace }}.svc:3100
     jsonData:

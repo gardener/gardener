@@ -24,9 +24,9 @@ const (
 	// KubeconfigSecretKeyName ist the name of the key in a secret that holds the kubeconfig of a shoot
 	KubeconfigSecretKeyName = "kubeconfig"
 
-	// LoggingUserName is the admin user name for the loki instance of a shoot
-	lokiLogging = "loki"
-	lokiPort    = 3100
+	// LoggingUserName is the admin user name for the vali instance of a shoot
+	valiLogging = "vali"
+	valiPort    = 3100
 
 	// IntegrationTestPrefix is the default prefix that will be used for test shoots if none other is specified
 	IntegrationTestPrefix = "itest-"
@@ -45,7 +45,7 @@ const (
 	SeedTaintTestRun = "test.gardener.cloud/test-run"
 )
 
-// SearchResponse represents the response from a search query to loki
+// SearchResponse represents the response from a search query to vali
 type SearchResponse struct {
 	Data struct {
 		Result []struct {

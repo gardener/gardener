@@ -54,7 +54,7 @@ tests:
     seed: aws
   input_series:
   # FluentBitReceivesLogsWithoutMetadata
-  - series: 'fluentbit_loki_gardener_logs_without_metadata_total{pod="fluent-bit-test"}'
+  - series: 'fluentbit_vali_gardener_logs_without_metadata_total{pod="fluent-bit-test"}'
     values: '0+0x3 0+1x30'
   alert_rule_test:
   - eval_time: 22m
@@ -100,7 +100,7 @@ tests:
     seed: aws
   input_series:
   # FluentBitGardenerLokiPluginErrors
-  - series: 'fluentbit_loki_gardener_errors_total{pod="fluent-bit-test"}'
+  - series: 'fluentbit_vali_gardener_errors_total{pod="fluent-bit-test"}'
     values: '0+0x3 0+1x30'
   alert_rule_test:
   - eval_time: 22m

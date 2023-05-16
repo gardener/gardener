@@ -207,7 +207,7 @@ var _ = Describe("helper", func() {
 			Expect(IsLokiEnabled(gardenletConfig)).To(BeTrue())
 		})
 
-		It("should return false when the loki is not enabled", func() {
+		It("should return false when the vali is not enabled", func() {
 			gardenletConfig := &config.GardenletConfiguration{
 				Logging: &config.Logging{
 					Loki: &config.Loki{
@@ -219,7 +219,7 @@ var _ = Describe("helper", func() {
 			Expect(IsLokiEnabled(gardenletConfig)).To(BeFalse())
 		})
 
-		It("should return true when the loki is enabled", func() {
+		It("should return true when the vali is enabled", func() {
 			gardenletConfig := &config.GardenletConfiguration{
 				Logging: &config.Logging{
 					Loki: &config.Loki{

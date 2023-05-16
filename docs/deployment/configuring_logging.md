@@ -29,14 +29,14 @@ The dedicated labels are `unit`, `syslog_identifier`, and `nodename` in the `Exp
 ## Configuring Central Loki Storage Capacity
 
 By default, the central Loki has `100Gi` of storage capacity.
-To overwrite the current central Loki storage capacity, the `logging.loki.garden.storage` setting in the gardenlet's component configuration should be altered.
+To overwrite the current central Loki storage capacity, the `logging.vali.garden.storage` setting in the gardenlet's component configuration should be altered.
 If you need to increase it, you can do so without losing the current data by specifying a higher capacity. By doing so, the Loki's `PersistentVolume` capacity will be increased instead of deleting the current PV.
 However, if you specify less capacity, then the `PersistentVolume` will be deleted and with it the logs, too.
 
 ```yaml
 logging:
   enabled: true
-  loki:
+  vali:
     garden:
       storage: "200Gi"
 ```

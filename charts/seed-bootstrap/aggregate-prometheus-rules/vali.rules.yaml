@@ -1,8 +1,8 @@
 groups:
-- name: loki.rules
+- name: vali.rules
   rules:
   - alert: LokiDown
-    expr: absent(up{app="loki"} == 1)
+    expr: absent(up{app="vali"} == 1)
     for: 30m
     labels:
       service: logging
@@ -10,5 +10,5 @@ groups:
       type: seed
       visibility: operator
     annotations:
-      description: "There are no loki pods running on seed: {{ .ExternalLabels.seed }}. No logs will be collected."
+      description: "There are no vali pods running on seed: {{ .ExternalLabels.seed }}. No logs will be collected."
       summary: Loki is down

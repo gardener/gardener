@@ -9,7 +9,7 @@ client:
   bearer_token_file: {{ .pathAuthToken }}
   tls_config:
     ca_file: {{ .pathCACert }}
-    server_name: {{ .lokiIngress }}
+    server_name: {{ .valiIngress }}
 positions:
   filename: /var/log/positions.yaml
 scrape_configs:

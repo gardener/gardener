@@ -478,7 +478,7 @@ type Logging struct {
 	Enabled *bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 	// Loki contains configuration for the Loki
 	// +optional
-	Loki *Loki `json:"loki,omitempty" yaml:"loki,omitempty"`
+	Loki *Loki `json:"vali,omitempty" yaml:"vali,omitempty"`
 	// ShootNodeLogging contains configurations for the shoot node logging
 	// +optional
 	ShootNodeLogging *ShootNodeLogging `json:"shootNodeLogging,omitempty" yaml:"shootNodeLogging,omitempty"`
@@ -691,7 +691,7 @@ const (
 // DefaultControllerSyncPeriod is a default value for sync period for controllers.
 var DefaultControllerSyncPeriod = metav1.Duration{Duration: time.Minute}
 
-// DefaultCentralLokiStorage is a default value for garden/loki's storage.
+// DefaultCentralLokiStorage is a default value for garden/vali's storage.
 var DefaultCentralLokiStorage = resource.MustParse("100Gi")
 
 // NodeToleration contains information about node toleration options.

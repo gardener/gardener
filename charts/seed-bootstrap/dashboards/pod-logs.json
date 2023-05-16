@@ -15,7 +15,7 @@
         "bars": true,
         "dashLength": 10,
         "dashes": false,
-        "datasource": "loki",
+        "datasource": "vali",
         "fieldConfig": {
           "defaults": {
             "custom": {}
@@ -103,7 +103,7 @@
         }
       },
       {
-        "datasource": "loki",
+        "datasource": "vali",
         "fieldConfig": {
           "defaults": {
             "custom": {}
@@ -148,7 +148,7 @@
             "text": "",
             "value": ""
           },
-          "datasource": "loki",
+          "datasource": "vali",
           "definition": "label_values(pod_name)",
           "hide": 0,
           "includeAll": false,

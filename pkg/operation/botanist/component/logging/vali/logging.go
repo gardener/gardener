@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package loki
+package vali
 
 import (
 	"fmt"
@@ -28,7 +28,7 @@ import (
 )
 
 var (
-	lokiName    = "loki"
+	valiName    = "vali"
 	curatorName = "curator"
 )
 
@@ -41,16 +41,16 @@ func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
 	return []*fluentbitv1alpha2.ClusterFilter{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   fmt.Sprintf("%s--%s", lokiName, lokiName),
+				Name:   fmt.Sprintf("%s--%s", valiName, valiName),
 				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 			},
 			Spec: fluentbitv1alpha2.FilterSpec{
-				Match: fmt.Sprintf("kubernetes.*%s*%s*", lokiName, lokiName),
+				Match: fmt.Sprintf("kubernetes.*%s*%s*", valiName, valiName),
 				FilterItems: []fluentbitv1alpha2.FilterItem{
 					{
 						Parser: &fluentbitv1alpha2filter.Parser{
 							KeyName:     "log",
-							Parser:      lokiName + "-parser",
+							Parser:      valiName + "-parser",
 							ReserveData: pointer.Bool(true),
 						},
 					},
@@ -59,11 +59,11 @@ func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   fmt.Sprintf("%s--%s", lokiName, curatorName),
+				Name:   fmt.Sprintf("%s--%s", valiName, curatorName),
 				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 			},
 			Spec: fluentbitv1alpha2.FilterSpec{
-				Match: fmt.Sprintf("kubernetes.*%s*%s*", lokiName, curatorName),
+				Match: fmt.Sprintf("kubernetes.*%s*%s*", valiName, curatorName),
 				FilterItems: []fluentbitv1alpha2.FilterItem{
 					{
 						Parser: &fluentbitv1alpha2filter.Parser{
@@ -82,7 +82,7 @@ func generateClusterParsers() []*fluentbitv1alpha2.ClusterParser {
 	return []*fluentbitv1alpha2.ClusterParser{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   lokiName + "-parser",
+				Name:   valiName + "-parser",
 				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 			},
 			Spec: fluentbitv1alpha2.ParserSpec{

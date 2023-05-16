@@ -1,5 +1,5 @@
-{{- define "loki.statefulset.annotations" -}}
-reference.resources.gardener.cloud/configmap-{{ include "loki.config.name" . | sha256sum | trunc 8 }}: {{ include "loki.config.name" . }}
+{{- define "vali.statefulset.annotations" -}}
+reference.resources.gardener.cloud/configmap-{{ include "vali.config.name" . | sha256sum | trunc 8 }}: {{ include "vali.config.name" . }}
 {{- if .Values.rbacSidecarEnabled }}
 reference.resources.gardener.cloud/configmap-{{ include "telegraf.config.name" . | sha256sum | trunc 8 }}: {{ include "telegraf.config.name" . }}
 {{- end }}
@@ -8,10 +8,10 @@ reference.resources.gardener.cloud/configmap-{{ include "telegraf.config.name" .
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: loki
+  name: vali
   namespace: {{ .Release.Namespace }}
   annotations:
-{{ include "loki.statefulset.annotations" . | indent 4 }}
+{{ include "vali.statefulset.annotations" . | indent 4 }}
 {{- if .Values.annotations }}
 {{ toYaml .Values.annotations | indent 4 }}
 {{- end }}
@@ -35,7 +35,7 @@ spec:
 {{- end }}
 {{- end }}
       annotations:
-{{ include "loki.statefulset.annotations" . | indent 8 }}
+{{ include "vali.statefulset.annotations" . | indent 8 }}
     spec:
       automountServiceAccountToken: false
       securityContext:
@@ -46,7 +46,7 @@ spec:
       - command:
           - bash
           - -c
-          - /loki-init.sh || true
+          - /vali-init.sh || true
         image: {{ index .Values.global.images "tune2fs" }}
         name: init-large-dir
         securityContext:
@@ -56,10 +56,10 @@ spec:
           runAsGroup: 0
         volumeMounts:
         - mountPath: /data
-          name: loki
+          name: vali
         - name: config
-          mountPath: /loki-init.sh
-          subPath: loki-init.sh
+          mountPath: /vali-init.sh
+          subPath: vali-init.sh
       containers:
 {{- if .Values.rbacSidecarEnabled }}
         - name: kube-rbac-proxy
@@ -110,17 +110,17 @@ spec:
               subPath: start.sh
               readOnly: true
 {{- end}}
-        - name: loki
-          image: {{ index .Values.global.images "loki" }}
+        - name: vali
+          image: {{ index .Values.global.images "vali" }}
           args:
-            - "-config.file=/etc/loki/loki.yaml"
+            - "-config.file=/etc/vali/vali.yaml"
           {{- range $key, $value := .Values.extraArgs }}
             - "-{{ $key }}={{ $value }}"
           {{- end }}
           volumeMounts:
             - name: config
-              mountPath: /etc/loki
-            - name: loki
+              mountPath: /etc/vali
+            - name: vali
               mountPath: "/data"
           ports:
             - name: metrics
@@ -131,7 +131,7 @@ spec:
           readinessProbe:
             {{- toYaml .Values.readinessProbe | nindent 12 }}
           resources:
-            {{- toYaml .Values.resources.loki | nindent 12 }}
+            {{- toYaml .Values.resources.vali | nindent 12 }}
           securityContext:
 {{- toYaml .Values.securityContext | nindent 12 }}
             readOnlyRootFilesystem: true
@@ -144,9 +144,9 @@ spec:
               value: "{{ .Values.tracing.jaegerAgentHost }}"
             {{- end }}
         - name: curator
-          image: {{ index .Values.global.images "loki-curator" }}
+          image: {{ index .Values.global.images "vali-curator" }}
           args:
-            - "-config=/etc/loki/curator.yaml"
+            - "-config=/etc/vali/curator.yaml"
           ports:
           - name: metrics
             containerPort: {{ .Values.curator.port }}
@@ -155,8 +155,8 @@ spec:
             {{- toYaml .Values.resources.curator | nindent 12 }}
           volumeMounts:
             - name: config
-              mountPath: /etc/loki              
-            - name: loki
+              mountPath: /etc/vali              
+            - name: vali
               mountPath: "/data"
           securityContext:
 {{- toYaml .Values.securityContext | nindent 12 }}
@@ -164,7 +164,7 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: {{ include "loki.config.name" . }}
+            name: {{ include "vali.config.name" . }}
             defaultMode: 0520
 {{- if .Values.rbacSidecarEnabled }}
         - name: kubeconfig
@@ -189,7 +189,7 @@ spec:
 {{- end }}
   volumeClaimTemplates:
     - metadata:
-        name: loki
+        name: vali
       spec:
         accessModes:
         - ReadWriteOnce

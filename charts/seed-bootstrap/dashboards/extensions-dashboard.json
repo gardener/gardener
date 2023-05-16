@@ -192,7 +192,7 @@
       }
     },
     {
-      "datasource": "loki",
+      "datasource": "vali",
       "gridPos": {
         "h": 11,
         "w": 24,
@@ -233,7 +233,7 @@
           "text": "",
           "value": ""
         },
-        "datasource": "loki",
+        "datasource": "vali",
         "definition": "label_values(container_name)",
         "hide": 0,
         "includeAll": false,

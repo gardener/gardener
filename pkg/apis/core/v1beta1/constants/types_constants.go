@@ -171,8 +171,8 @@ const (
 	// ETCDEvents is a constant for the name of etcd-events Etcd object.
 	ETCDEvents = "etcd-" + ETCDRoleEvents
 	// StatefulSetNameLoki is a constant for the name of a Kubernetes stateful set object that contains
-	// the loki pod.
-	StatefulSetNameLoki = "loki"
+	// the vali pod.
+	StatefulSetNameLoki = "vali"
 	// StatefulSetNamePrometheus is a constant for the name of a Kubernetes stateful set object that contains
 	// the prometheus pod.
 	StatefulSetNamePrometheus = "prometheus"

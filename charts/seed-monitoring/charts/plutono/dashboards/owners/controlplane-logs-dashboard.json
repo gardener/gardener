@@ -329,7 +329,7 @@
         }
       },
       {
-        "datasource": "loki",
+        "datasource": "vali",
         "fieldConfig": {
           "defaults": {},
           "overrides": []
@@ -383,7 +383,7 @@
               ".*"
             ]
           },
-          "datasource": "loki",
+          "datasource": "vali",
           "definition": "label_values(pod_name)",
           "description": null,
           "error": null,
@@ -451,7 +451,7 @@
               "$__all"
             ]
           },
-          "datasource": "loki",
+          "datasource": "vali",
           "definition": "label_values(severity)",
           "description": null,
           "error": null,

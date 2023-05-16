@@ -132,7 +132,7 @@ There are six different specifications:
 
 ### Loki
 
-The Loki configurations can be found on `charts/seed-bootstrap/charts/loki/templates/loki-configmap.yaml`
+The Loki configurations can be found on `charts/seed-bootstrap/charts/vali/templates/vali-configmap.yaml`
 
 The main specifications there are:
 
@@ -205,8 +205,8 @@ The Grafana configurations can be found on `charts/seed-bootstrap/charts/templat
 This is the Loki configuration that Grafana uses:
 
 ```
-    - name: loki
-      type: loki
+    - name: vali
+      type: vali
       access: proxy
       url: http://logging.{{ .Release.Namespace }}.svc:3100
       jsonData:

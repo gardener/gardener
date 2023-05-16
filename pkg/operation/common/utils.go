@@ -98,12 +98,12 @@ func GenerateAddonConfig(values map[string]interface{}, enabled bool) map[string
 // DeleteLoki  deletes all resources of the Loki in a given namespace.
 func DeleteLoki(ctx context.Context, k8sClient client.Client, namespace string) error {
 	resources := []client.Object{
-		&hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "loki-config", Namespace: namespace}},
-		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
+		&hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: namespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "vali-config", Namespace: namespace}},
+		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: namespace}},
 		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "logging", Namespace: namespace}},
-		&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
-		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "loki-loki-0", Namespace: namespace}},
+		&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "vali-vali-0", Namespace: namespace}},
 	}
 
 	return kubernetesutils.DeleteObjects(ctx, k8sClient, resources...)

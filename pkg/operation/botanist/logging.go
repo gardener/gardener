@@ -39,7 +39,7 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
-// DeploySeedLogging will install the Helm release "seed-bootstrap/charts/loki" in the Seed clusters.
+// DeploySeedLogging will install the Helm release "seed-bootstrap/charts/vali" in the Seed clusters.
 func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	if !b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) {
 		return b.destroyShootLoggingStack(ctx)
@@ -66,13 +66,13 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		}
 	}
 
-	lokiValues := map[string]interface{}{
+	valiValues := map[string]interface{}{
 		"global":      seedImages,
 		"replicas":    b.Shoot.GetReplicas(1),
 		"clusterType": "shoot",
 	}
 
-	// check if loki is enabled in gardenlet config, default is true
+	// check if vali is enabled in gardenlet config, default is true
 	if !gardenlethelper.IsLokiEnabled(b.Config) {
 		// Because ShootNodeLogging is installed as part of the Loki pod
 		// we have to delete it too in case it was previously deployed
@@ -104,7 +104,7 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		}
 
 		ingressTLSSecret, err := b.SecretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
-			Name:                        "loki-tls",
+			Name:                        "vali-tls",
 			CommonName:                  b.ComputeLokiHost(),
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:                    b.ComputeLokiHosts(),
@@ -116,20 +116,20 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 			return err
 		}
 
-		lokiValues["rbacSidecarEnabled"] = true
-		lokiValues["ingress"] = map[string]interface{}{
+		valiValues["rbacSidecarEnabled"] = true
+		valiValues["ingress"] = map[string]interface{}{
 			"class": ingressClass,
 			"hosts": []map[string]interface{}{
 				{
 					"hostName":    b.ComputeLokiHost(),
 					"secretName":  ingressTLSSecret.Name,
-					"serviceName": "loki",
+					"serviceName": "vali",
 					"servicePort": 8080,
-					"backendPath": "/loki/api/v1/push",
+					"backendPath": "/vali/api/v1/push",
 				},
 			},
 		}
-		lokiValues["genericTokenKubeconfigSecretName"] = genericTokenKubeconfigSecret.Name
+		valiValues["genericTokenKubeconfigSecretName"] = genericTokenKubeconfigSecret.Name
 	} else {
 		if err := b.destroyShootNodeLogging(ctx); err != nil {
 			return err
@@ -137,23 +137,23 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	}
 
 	hvpaValues["enabled"] = hvpaEnabled
-	lokiValues["hvpa"] = hvpaValues
-	lokiValues["priorityClassName"] = v1beta1constants.PriorityClassNameShootControlPlane100
+	valiValues["hvpa"] = hvpaValues
+	valiValues["priorityClassName"] = v1beta1constants.PriorityClassNameShootControlPlane100
 
 	if hvpaEnabled {
-		currentResources, err := kubernetesutils.GetContainerResourcesInStatefulSet(ctx, b.SeedClientSet.Client(), kubernetesutils.Key(b.Shoot.SeedNamespace, "loki"))
+		currentResources, err := kubernetesutils.GetContainerResourcesInStatefulSet(ctx, b.SeedClientSet.Client(), kubernetesutils.Key(b.Shoot.SeedNamespace, "vali"))
 		if err != nil {
 			return err
 		}
-		if len(currentResources) != 0 && currentResources["loki"] != nil {
-			lokiValues["resources"] = map[string]interface{}{
+		if len(currentResources) != 0 && currentResources["vali"] != nil {
+			valiValues["resources"] = map[string]interface{}{
 				// Copy requests only, effectively removing limits
-				"loki": &corev1.ResourceRequirements{Requests: currentResources["loki"].Requests},
+				"vali": &corev1.ResourceRequirements{Requests: currentResources["vali"].Requests},
 			}
 		}
 	}
 
-	return b.SeedClientSet.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "loki"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-logging", b.Shoot.SeedNamespace), kubernetes.Values(lokiValues))
+	return b.SeedClientSet.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "vali"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-logging", b.Shoot.SeedNamespace), kubernetes.Values(valiValues))
 }
 
 func (b *Botanist) destroyShootLoggingStack(ctx context.Context) error {
@@ -174,7 +174,7 @@ func (b *Botanist) destroyShootNodeLogging(ctx context.Context) error {
 	}
 
 	return kubernetesutils.DeleteObjects(ctx, b.SeedClientSet.Client(),
-		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: b.Shoot.SeedNamespace}},
+		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: b.Shoot.SeedNamespace}},
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: b.Shoot.SeedNamespace}},
 	)
 }

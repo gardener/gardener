@@ -892,7 +892,7 @@ build:
         - pkg/operation/botanist/component/logging/kuberbacproxy
         - pkg/operation/botanist/component/logging/fluentoperator
         - pkg/operation/botanist/component/logging/fluentoperator/customresources
-        - pkg/operation/botanist/component/logging/loki
+        - pkg/operation/botanist/component/logging/vali
         - pkg/operation/botanist/component/metricsserver
         - pkg/operation/botanist/component/monitoring
         - pkg/operation/botanist/component/namespaces

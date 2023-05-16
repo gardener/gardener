@@ -197,13 +197,13 @@ var _ = Describe("common", func() {
 		)
 
 		resources := []client.Object{
-			&hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
-			&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "loki-config", Namespace: v1beta1constants.GardenNamespace}},
-			&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
+			&hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: v1beta1constants.GardenNamespace}},
+			&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "vali-config", Namespace: v1beta1constants.GardenNamespace}},
+			&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: v1beta1constants.GardenNamespace}},
 			&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "logging",
 				Namespace: v1beta1constants.GardenNamespace}},
-			&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
-			&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "loki-loki-0", Namespace: v1beta1constants.GardenNamespace}},
+			&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: v1beta1constants.GardenNamespace}},
+			&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "vali-vali-0", Namespace: v1beta1constants.GardenNamespace}},
 		}
 
 		BeforeEach(func() {
@@ -217,7 +217,7 @@ var _ = Describe("common", func() {
 			ctrl.Finish()
 		})
 
-		It("should delete all loki resources", func() {
+		It("should delete all vali resources", func() {
 			for _, resource := range resources {
 				c.EXPECT().Delete(ctx, resource)
 			}

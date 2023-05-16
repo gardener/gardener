@@ -37,14 +37,14 @@ var _ = Describe("Logging", func() {
 				[]*fluentbitv1alpha2.ClusterOutput{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "gardener-loki",
+							Name:   "gardener-vali",
 							Labels: labels,
 						},
 						Spec: fluentbitv1alpha2.OutputSpec{
 							CustomPlugin: &custom.CustomPlugin{
-								Config: `Name gardenerloki
+								Config: `Name gardenervali
 			Match kubernetes.*
-			Url http://logging.garden.svc:3100/loki/api/v1/push
+			Url http://logging.garden.svc:3100/vali/api/v1/push
 			LogLevel info
 			BatchWait 60s
 			BatchSize 30720
@@ -58,7 +58,7 @@ var _ = Describe("Logging", func() {
 			LabelMapPath {"kubernetes": {"container_name":"container_name","container_id":"container_id","namespace_name":"namespace_name","pod_name":"pod_name"},"severity": "severity","job": "job"}
 			DynamicHostPath {"kubernetes": {"namespace_name": "namespace"}}
 			DynamicHostPrefix http://logging.
-			DynamicHostSuffix .svc:3100/loki/api/v1/push
+			DynamicHostSuffix .svc:3100/vali/api/v1/push
 			DynamicHostRegex ^shoot-
 			DynamicTenant user gardenuser user
 			HostnameKeyValue nodename ${NODE_NAME}
@@ -90,9 +90,9 @@ var _ = Describe("Logging", func() {
 						},
 						Spec: fluentbitv1alpha2.OutputSpec{
 							CustomPlugin: &custom.CustomPlugin{
-								Config: `Name gardenerloki
+								Config: `Name gardenervali
 			Match journald.*
-			Url http://logging.garden.svc:3100/loki/api/v1/push
+			Url http://logging.garden.svc:3100/vali/api/v1/push
 			LogLevel info
 			BatchWait 60s
 			BatchSize 30720

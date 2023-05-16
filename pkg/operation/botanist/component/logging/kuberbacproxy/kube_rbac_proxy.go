@@ -116,7 +116,7 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 				},
 				{
 					NonResourceURLs: []string{
-						"/loki/api/v1/push",
+						"/vali/api/v1/push",
 					},
 					Verbs: []string{
 						"create",

@@ -1,4 +1,4 @@
-# This service duplicates the soon to be removed loki service.
+# This service duplicates the soon to be removed vali service.
 # That serves the migration plan described at https://github.com/gardener/gardener/issues/7585
 apiVersion: v1
 kind: Service

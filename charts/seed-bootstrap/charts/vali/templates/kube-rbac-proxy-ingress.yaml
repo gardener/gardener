@@ -7,7 +7,7 @@ metadata:
     kubernetes.io/ingress.class: {{ .Values.ingress.class }}
 {{- end }}
     nginx.ingress.kubernetes.io/configuration-snippet: "proxy_set_header X-Scope-OrgID operator;"
-  name: loki
+  name: vali
   namespace: {{ .Release.Namespace }}
   labels:
 {{ toYaml .Values.labels | indent 4 }}

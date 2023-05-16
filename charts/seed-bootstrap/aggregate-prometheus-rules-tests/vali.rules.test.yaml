@@ -1,5 +1,5 @@
 rule_files:
-- ../aggregate-prometheus-rules/loki.rules.yaml
+- ../aggregate-prometheus-rules/vali.rules.yaml
 
 evaluation_interval: 30s
 
@@ -9,7 +9,7 @@ tests:
     seed: aws
   input_series:
   # LokiDown
-  - series: 'up{app="loki"}'
+  - series: 'up{app="vali"}'
     values: '0+0x30'
   alert_rule_test:
   - eval_time: 30m
@@ -21,6 +21,6 @@ tests:
         type: seed
         visibility: operator
       exp_annotations:
-        description: "There are no loki pods running on seed: aws. No logs will be collected."
+        description: "There are no vali pods running on seed: aws. No logs will be collected."
         summary: Loki is down
 

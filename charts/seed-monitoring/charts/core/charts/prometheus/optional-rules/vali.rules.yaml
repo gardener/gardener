@@ -1,14 +1,14 @@
 groups:
-- name: loki.rules
+- name: vali.rules
   rules:
   - alert: LokiDown
-    expr: absent(up{job="loki"} == 1)
+    expr: absent(up{job="vali"} == 1)
     for: 20m
     labels:
-      service: loki
+      service: vali
       severity: warning
       type: seed
       visibility: operator
     annotations:
-      description: There are no running loki pods. No logs will be collected.
+      description: There are no running vali pods. No logs will be collected.
       summary: Loki is down

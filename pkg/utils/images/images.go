@@ -85,10 +85,10 @@ const (
 	ImageNameKubernetesDashboard = "kubernetes-dashboard"
 	// ImageNameKubernetesDashboardMetricsScraper is a constant for an image in the image vector with name 'kubernetes-dashboard-metrics-scraper'.
 	ImageNameKubernetesDashboardMetricsScraper = "kubernetes-dashboard-metrics-scraper"
-	// ImageNameLoki is a constant for an image in the image vector with name 'loki'.
-	ImageNameLoki = "loki"
-	// ImageNameLokiCurator is a constant for an image in the image vector with name 'loki-curator'.
-	ImageNameLokiCurator = "loki-curator"
+	// ImageNameLoki is a constant for an image in the image vector with name 'vali'.
+	ImageNameLoki = "vali"
+	// ImageNameLokiCurator is a constant for an image in the image vector with name 'vali-curator'.
+	ImageNameLokiCurator = "vali-curator"
 	// ImageNameMetricsServer is a constant for an image in the image vector with name 'metrics-server'.
 	ImageNameMetricsServer = "metrics-server"
 	// ImageNameNginxIngressController is a constant for an image in the image vector with name 'nginx-ingress-controller'.

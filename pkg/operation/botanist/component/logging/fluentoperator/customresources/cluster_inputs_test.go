@@ -45,7 +45,7 @@ var _ = Describe("Logging", func() {
 							Tail: &fluentbitv1alpha2input.Tail{
 								Tag:                    "kubernetes.*",
 								Path:                   "/var/log/containers/*.log",
-								ExcludePath:            "*_garden_fluent-bit-*.log,*_garden_loki-*.log",
+								ExcludePath:            "*_garden_fluent-bit-*.log,*_garden_vali-*.log",
 								RefreshIntervalSeconds: pointer.Int64(10),
 								MemBufLimit:            "30MB",
 								SkipLongLines:          pointer.Bool(true),

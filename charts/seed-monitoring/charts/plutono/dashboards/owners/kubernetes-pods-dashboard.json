@@ -724,7 +724,7 @@
       }
     },
     {
-      "datasource": "loki",
+      "datasource": "vali",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
