@@ -24,10 +24,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	mockcontrolplane "github.com/gardener/gardener/pkg/component/extensions/controlplane/mock"
+	mockdnsrecord "github.com/gardener/gardener/pkg/component/extensions/dnsrecord/mock"
+	mockinfrastructure "github.com/gardener/gardener/pkg/component/extensions/infrastructure/mock"
 	"github.com/gardener/gardener/pkg/operation"
-	mockcontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane/mock"
-	mockdnsrecord "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord/mock"
-	mockinfrastructure "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/infrastructure/mock"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 )
 

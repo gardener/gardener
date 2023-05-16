@@ -28,7 +28,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	mocketcd "github.com/gardener/gardener/pkg/operation/botanist/component/etcd/mock"
+	mocketcd "github.com/gardener/gardener/pkg/component/etcd/mock"
 	. "github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"

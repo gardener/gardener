@@ -18,8 +18,8 @@ import (
 	"context"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
+	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/dependencywatchdog"
 )
 
 // DefaultDependencyWatchdogAccess returns an instance of the Deployer which reconciles the resources so that DependencyWatchdogAccess can access a

@@ -15,8 +15,8 @@
 package botanist
 
 import (
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/gardeneraccess"
+	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/gardeneraccess"
 )
 
 // DefaultGardenerAccess returns an instance of the Deployer which reconciles the resources so that GardenerAccess can access a

@@ -20,7 +20,7 @@ The reasons for that will become evident later.
 
 Gardener installs a few components onto every worker machine in order to allow it to join the shoot cluster.
 There is the `kubelet` process, some scripts for continuously checking the health of `kubelet` and `docker`, but also configuration for log rotation, CA certificates, etc.
-The complete configuration you can find [at the components folder](../../pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components). We are calling this the "original" user-data.
+The complete configuration you can find [at the components folder](../../pkg/component/extensions/operatingsystemconfig/original/components). We are calling this the "original" user-data.
 
 ## How does Gardener bootstrap the machines?
 
@@ -230,6 +230,6 @@ If CRI configurations are not supported, it is recommended to create a validatin
 ## References and Additional Resources
 
 * [`OperatingSystemConfig` API (Golang Specification)](../../pkg/apis/extensions/v1alpha1/types_operatingsystemconfig.go)
-* [`downloader` Script](../../pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader/templates/scripts/download-cloud-config.tpl.sh) (fetching the "original" user-data and the execution script)
-* [Original User-Data Templates](../../pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components)
-* [Execution Script](../../pkg/operation/botanist/component/extensions/operatingsystemconfig/executor/templates/scripts/execute-cloud-config.tpl.sh) (applying the "original" user-data)
+* [`downloader` Script](../../pkg/component/extensions/operatingsystemconfig/downloader/templates/scripts/download-cloud-config.tpl.sh) (fetching the "original" user-data and the execution script)
+* [Original User-Data Templates](../../pkg/component/extensions/operatingsystemconfig/original/components)
+* [Execution Script](../../pkg/component/extensions/operatingsystemconfig/executor/templates/scripts/execute-cloud-config.tpl.sh) (applying the "original" user-data)

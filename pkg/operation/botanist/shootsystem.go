@@ -15,8 +15,8 @@
 package botanist
 
 import (
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/shootsystem"
+	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/shootsystem"
 )
 
 // DefaultShootSystem returns a deployer for the shoot system resources.

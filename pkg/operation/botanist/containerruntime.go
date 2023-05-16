@@ -17,7 +17,7 @@ package botanist
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/containerruntime"
+	"github.com/gardener/gardener/pkg/component/extensions/containerruntime"
 )
 
 // DefaultContainerRuntime creates the default deployer for the ContainerRuntime custom resource.

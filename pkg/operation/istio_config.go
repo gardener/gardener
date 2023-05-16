@@ -20,8 +20,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	sharedcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )

@@ -32,11 +32,11 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	extensionpkg "github.com/gardener/gardener/pkg/component/extensions/extension"
+	mockextension "github.com/gardener/gardener/pkg/component/extensions/extension/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
-	extensionpkg "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/extension"
-	mockextension "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/extension/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 )
 

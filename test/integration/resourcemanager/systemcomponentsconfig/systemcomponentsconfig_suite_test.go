@@ -34,8 +34,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/systemcomponentsconfig"
 	"github.com/gardener/gardener/pkg/utils"

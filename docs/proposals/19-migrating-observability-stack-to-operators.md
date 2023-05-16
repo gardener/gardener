@@ -640,7 +640,7 @@ Since fluent-bit uses [input-tail] plugin and reads any container output under `
 [API]: https://github.com/prometheus-operator/prometheus-operator/tree/main/pkg/apis/monitoring
 [apiserver-example]: https://github.com/gardener/gardener/blob/0f4d22270927e2aee8b821f858fb76162ccd8a86/charts/seed-monitoring/charts/core/charts/prometheus/templates/config.yaml#L311
 [extension-contract]: https://github.com/gardener/gardener/blob/master/docs/extensions/logging-and-monitoring.md
-[gardener-resource-manager]: https://github.com/gardener/gardener/blob/eec37223cb90475ec3e023136a7d5ba28ad48f0d/pkg/operation/botanist/component/resourcemanager/monitoring.go
+[gardener-resource-manager]: https://github.com/gardener/gardener/blob/eec37223cb90475ec3e023136a7d5ba28ad48f0d/pkg/component/resourcemanager/monitoring.go
 [grafana-sidecar]: https://github.com/kiwigrid/k8s-sidecar
 [prom-config]: https://github.com/gardener/gardener/blob/201673c1f8a356a63b21505ca9c7f6efe725bd48/charts/seed-bootstrap/charts/monitoring/templates/config.yaml#L14-L36
 [prom-crd-bundle]: https://github.com/prometheus-operator/prometheus-operator/blob/main/bundle.yaml
@@ -658,4 +658,4 @@ Since fluent-bit uses [input-tail] plugin and reads any container output under `
 [shoot-alertmanager]: https://github.com/gardener/gardener/tree/master/charts/seed-monitoring/charts/alertmanager
 [shoot-monitoring]: https://github.com/gardener/gardener/tree/master/charts/seed-monitoring/charts
 [sidecar-configuration]: https://github.com/kiwigrid/k8s-sidecar#configuration-environment-variables
-[vpa]: https://github.com/gardener/gardener/tree/master/pkg/operation/botanist/component/vpa
+[vpa]: https://github.com/gardener/gardener/tree/master/pkg/component/vpa

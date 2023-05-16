@@ -26,7 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy"
+	"github.com/gardener/gardener/pkg/component/kubeproxy"
 )
 
 type mutator struct {

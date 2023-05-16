@@ -32,9 +32,9 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	mockclusteridentity "github.com/gardener/gardener/pkg/component/clusteridentity/mock"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
-	mockclusteridentity "github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )

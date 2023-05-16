@@ -17,8 +17,8 @@ package botanist
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/network"
+	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/extensions/network"
 )
 
 // DefaultNetwork creates the default deployer for the Network custom resource.

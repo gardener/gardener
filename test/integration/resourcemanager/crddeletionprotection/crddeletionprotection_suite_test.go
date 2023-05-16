@@ -34,8 +34,8 @@ import (
 
 	cmdutils "github.com/gardener/gardener/cmd/utils"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/crddeletionprotection"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"

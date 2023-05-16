@@ -23,8 +23,8 @@ import (
 	"k8s.io/utils/pointer"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/component/etcd"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 )
 

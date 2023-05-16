@@ -24,7 +24,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/etcdcopybackupstask"
+	"github.com/gardener/gardener/pkg/component/etcdcopybackupstask"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
