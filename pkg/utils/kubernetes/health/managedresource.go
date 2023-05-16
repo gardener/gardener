@@ -49,10 +49,10 @@ func CheckManagedResourceApplied(mr *resourcesv1alpha1.ManagedResource, expected
 	if *status.SecretsDataChecksum != expectedSecretsDataChecksum {
 		return fmt.Errorf(
 			"observed secrets data checksum for managed resource %s/%s is outdated - expected: %s actual: %s",
-			expectedSecretsDataChecksum,
-			*status.SecretsDataChecksum,
 			mr.GetNamespace(),
 			mr.GetName(),
+			expectedSecretsDataChecksum,
+			*status.SecretsDataChecksum,
 		)
 	}
 
