@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 // Reconciler reconciles ControllerInstallations, checks their health status and reports it via conditions.
@@ -98,7 +99,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	if err := health.CheckManagedResourceApplied(managedResource); err != nil {
+	expectedSecretsDataChecksum, err := managedresources.ComputeExpectedSecretsDataChecksum(ctx, r.SeedClient, managedResource)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := health.CheckManagedResourceApplied(managedResource, expectedSecretsDataChecksum); err != nil {
 		conditionControllerInstallationInstalled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionControllerInstallationInstalled, gardencorev1beta1.ConditionFalse, "InstallationPending", err.Error())
 	} else {
 		conditionControllerInstallationInstalled = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionControllerInstallationInstalled, gardencorev1beta1.ConditionTrue, "InstallationSuccessful", "The controller was successfully installed in the seed cluster.")

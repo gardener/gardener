@@ -26,10 +26,15 @@ import (
 )
 
 var _ = Describe("Managedresource", func() {
+	var (
+		expectedChecksum = "123"
+		wrongChecksum    = "wrongchecksum"
+	)
+
 	Context("#CheckManagedResource", func() {
 		DescribeTable("managedresource",
-			func(mr resourcesv1alpha1.ManagedResource, matcher types.GomegaMatcher) {
-				err := health.CheckManagedResource(&mr)
+			func(mr resourcesv1alpha1.ManagedResource, expectedChecksum string, matcher types.GomegaMatcher) {
+				err := health.CheckManagedResource(&mr, expectedChecksum)
 				Expect(err).To(matcher)
 			},
 			Entry("applied condition not true", resourcesv1alpha1.ManagedResource{
@@ -46,8 +51,9 @@ var _ = Describe("Managedresource", func() {
 							Status: gardencorev1beta1.ConditionTrue,
 						},
 					},
+					SecretsDataChecksum: &expectedChecksum,
 				},
-			}, HaveOccurred()),
+			}, expectedChecksum, HaveOccurred()),
 			Entry("healthy condition not true", resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Status: resourcesv1alpha1.ManagedResourceStatus{
@@ -62,8 +68,9 @@ var _ = Describe("Managedresource", func() {
 							Status: gardencorev1beta1.ConditionFalse,
 						},
 					},
+					SecretsDataChecksum: &expectedChecksum,
 				},
-			}, HaveOccurred()),
+			}, expectedChecksum, HaveOccurred()),
 			Entry("conditions true", resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Status: resourcesv1alpha1.ManagedResourceStatus{
@@ -78,8 +85,9 @@ var _ = Describe("Managedresource", func() {
 							Status: gardencorev1beta1.ConditionTrue,
 						},
 					},
+					SecretsDataChecksum: &expectedChecksum,
 				},
-			}, Not(HaveOccurred())),
+			}, expectedChecksum, Not(HaveOccurred())),
 			Entry("no applied condition", resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Status: resourcesv1alpha1.ManagedResourceStatus{
@@ -90,8 +98,9 @@ var _ = Describe("Managedresource", func() {
 							Status: gardencorev1beta1.ConditionTrue,
 						},
 					},
+					SecretsDataChecksum: &expectedChecksum,
 				},
-			}, HaveOccurred()),
+			}, expectedChecksum, HaveOccurred()),
 			Entry("no healthy condition", resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Status: resourcesv1alpha1.ManagedResourceStatus{
@@ -102,30 +111,66 @@ var _ = Describe("Managedresource", func() {
 							Status: gardencorev1beta1.ConditionTrue,
 						},
 					},
+					SecretsDataChecksum: &expectedChecksum,
 				},
-			}, HaveOccurred()),
+			}, expectedChecksum, HaveOccurred()),
 			Entry("no conditions", resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Status: resourcesv1alpha1.ManagedResourceStatus{
-					ObservedGeneration: 1,
+					ObservedGeneration:  1,
+					SecretsDataChecksum: &expectedChecksum,
 				},
-			}, HaveOccurred()),
+			}, expectedChecksum, HaveOccurred()),
 			Entry("outdated generation", resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{Generation: 2},
 				Status: resourcesv1alpha1.ManagedResourceStatus{
-					ObservedGeneration: 1,
+					ObservedGeneration:  1,
+					SecretsDataChecksum: &expectedChecksum,
 				},
-			}, HaveOccurred()),
+			}, expectedChecksum, HaveOccurred()),
 			Entry("no status", resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{Generation: 2},
-			}, HaveOccurred()),
+			}, expectedChecksum, HaveOccurred()),
+			Entry("no checksum", resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+				Status: resourcesv1alpha1.ManagedResourceStatus{
+					ObservedGeneration: 1,
+					Conditions: []gardencorev1beta1.Condition{
+						{
+							Type:   resourcesv1alpha1.ResourcesApplied,
+							Status: gardencorev1beta1.ConditionTrue,
+						},
+						{
+							Type:   resourcesv1alpha1.ResourcesHealthy,
+							Status: gardencorev1beta1.ConditionTrue,
+						},
+					},
+				},
+			}, expectedChecksum, HaveOccurred()),
+			Entry("wrong checksum", resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+				Status: resourcesv1alpha1.ManagedResourceStatus{
+					ObservedGeneration: 1,
+					Conditions: []gardencorev1beta1.Condition{
+						{
+							Type:   resourcesv1alpha1.ResourcesApplied,
+							Status: gardencorev1beta1.ConditionTrue,
+						},
+						{
+							Type:   resourcesv1alpha1.ResourcesHealthy,
+							Status: gardencorev1beta1.ConditionTrue,
+						},
+					},
+					SecretsDataChecksum: &wrongChecksum,
+				},
+			}, expectedChecksum, HaveOccurred()),
 		)
 	})
 
 	Context("#CheckManagedResourceApplied", func() {
 		DescribeTable("managedresource",
-			func(mr resourcesv1alpha1.ManagedResource, matcher types.GomegaMatcher) {
-				err := health.CheckManagedResourceApplied(&mr)
+			func(mr resourcesv1alpha1.ManagedResource, expectedChecksum string, matcher types.GomegaMatcher) {
+				err := health.CheckManagedResourceApplied(&mr, expectedChecksum)
 				Expect(err).To(matcher)
 			},
 			Entry("applied condition not true", resourcesv1alpha1.ManagedResource{
@@ -138,8 +183,9 @@ var _ = Describe("Managedresource", func() {
 							Status: gardencorev1beta1.ConditionFalse,
 						},
 					},
+					SecretsDataChecksum: &expectedChecksum,
 				},
-			}, HaveOccurred()),
+			}, expectedChecksum, HaveOccurred()),
 			Entry("condition true", resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Status: resourcesv1alpha1.ManagedResourceStatus{
@@ -150,30 +196,59 @@ var _ = Describe("Managedresource", func() {
 							Status: gardencorev1beta1.ConditionTrue,
 						},
 					},
+					SecretsDataChecksum: &expectedChecksum,
 				},
-			}, Not(HaveOccurred())),
+			}, expectedChecksum, Not(HaveOccurred())),
 			Entry("no applied condition", resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Status: resourcesv1alpha1.ManagedResourceStatus{
-					ObservedGeneration: 1,
-					Conditions:         []gardencorev1beta1.Condition{},
+					ObservedGeneration:  1,
+					Conditions:          []gardencorev1beta1.Condition{},
+					SecretsDataChecksum: &expectedChecksum,
 				},
-			}, HaveOccurred()),
+			}, expectedChecksum, HaveOccurred()),
 			Entry("no conditions", resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Status: resourcesv1alpha1.ManagedResourceStatus{
-					ObservedGeneration: 1,
+					ObservedGeneration:  1,
+					SecretsDataChecksum: &expectedChecksum,
 				},
-			}, HaveOccurred()),
+			}, expectedChecksum, HaveOccurred()),
 			Entry("outdated generation", resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{Generation: 2},
 				Status: resourcesv1alpha1.ManagedResourceStatus{
-					ObservedGeneration: 1,
+					ObservedGeneration:  1,
+					SecretsDataChecksum: &expectedChecksum,
 				},
-			}, HaveOccurred()),
+			}, expectedChecksum, HaveOccurred()),
 			Entry("no status", resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{Generation: 2},
-			}, HaveOccurred()),
+			}, expectedChecksum, HaveOccurred()),
+			Entry("no checksum", resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+				Status: resourcesv1alpha1.ManagedResourceStatus{
+					ObservedGeneration: 1,
+					Conditions: []gardencorev1beta1.Condition{
+						{
+							Type:   resourcesv1alpha1.ResourcesApplied,
+							Status: gardencorev1beta1.ConditionTrue,
+						},
+					},
+				},
+			}, expectedChecksum, HaveOccurred()),
+			Entry("wrong checksum", resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+				Status: resourcesv1alpha1.ManagedResourceStatus{
+					ObservedGeneration: 1,
+					Conditions: []gardencorev1beta1.Condition{
+						{
+							Type:   resourcesv1alpha1.ResourcesApplied,
+							Status: gardencorev1beta1.ConditionTrue,
+						},
+					},
+					SecretsDataChecksum: &wrongChecksum,
+				},
+			}, expectedChecksum, HaveOccurred()),
 		)
 	})
 

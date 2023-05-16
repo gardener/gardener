@@ -16,11 +16,15 @@ package managedresources
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
@@ -220,7 +224,7 @@ func deleteWithSecretNamePrefix(ctx context.Context, client client.Client, names
 var IntervalWait = 2 * time.Second
 
 // WaitUntilHealthy waits until the given managed resource is healthy.
-func WaitUntilHealthy(ctx context.Context, client client.Client, namespace, name string) error {
+func WaitUntilHealthy(ctx context.Context, c client.Client, namespace, name string) error {
 	obj := &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -229,11 +233,21 @@ func WaitUntilHealthy(ctx context.Context, client client.Client, namespace, name
 	}
 
 	return retry.Until(ctx, IntervalWait, func(ctx context.Context) (done bool, err error) {
-		if err := client.Get(ctx, kubernetesutils.Key(namespace, name), obj); err != nil {
+		if err := c.Get(ctx, kubernetesutils.Key(namespace, name), obj); err != nil {
 			return retry.SevereError(err)
 		}
 
-		if err := health.CheckManagedResource(obj); err != nil {
+		secrets := make([]*corev1.Secret, len(obj.Spec.SecretRefs))
+		for i, ref := range obj.Spec.SecretRefs {
+			secrets[i] = &corev1.Secret{}
+			if err := c.Get(ctx, client.ObjectKey{Namespace: obj.Namespace, Name: ref.Name}, secrets[i]); err != nil {
+				return retry.SevereError(err)
+			}
+		}
+
+		secretsDataChecksum := ComputeSecretsDataChecksum(secrets)
+
+		if err := health.CheckManagedResource(obj, secretsDataChecksum); err != nil {
 			return retry.MinorError(fmt.Errorf("managed resource %s/%s is not healthy", namespace, name))
 		}
 
@@ -344,4 +358,35 @@ func CheckIfManagedResourcesExist(ctx context.Context, c client.Client, class *s
 	}
 
 	return false, nil
+}
+
+// ComputeSecretsDataChecksum computes the checksum of the secrets data.
+func ComputeSecretsDataChecksum(secrets []*corev1.Secret) string {
+	hash := sha256.New()
+	for _, secret := range secrets {
+		// Sort secret's data key to keep consistent ordering while calculating checksum
+		secretKeys := make([]string, 0, len(secret.Data))
+		for secretKey := range secret.Data {
+			secretKeys = append(secretKeys, secretKey)
+		}
+		sort.Strings(secretKeys)
+
+		for _, secretKey := range secretKeys {
+			value := secret.Data[secretKey]
+			hash.Write(value)
+		}
+	}
+	return hex.EncodeToString(hash.Sum(nil))
+}
+
+// ComputeExpectedSecretsDataChecksum computes the checksum that is expected to be reported by the resourcesv1alpha1.ManagedResource controller in the resource status.
+func ComputeExpectedSecretsDataChecksum(ctx context.Context, c client.Client, mr *resourcesv1alpha1.ManagedResource) (string, error) {
+	secrets := make([]*corev1.Secret, len(mr.Spec.SecretRefs))
+	for i, ref := range mr.Spec.SecretRefs {
+		secrets[i] = &corev1.Secret{}
+		if err := c.Get(ctx, client.ObjectKey{Namespace: mr.Namespace, Name: ref.Name}, secrets[i]); err != nil {
+			return "", err
+		}
+	}
+	return ComputeSecretsDataChecksum(secrets), nil
 }

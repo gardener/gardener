@@ -17,12 +17,9 @@ package managedresource
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -63,6 +60,7 @@ import (
 	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 var (
@@ -147,8 +145,6 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 		forceOverwriteAnnotations bool
 
 		decodingErrors []*decodingError
-
-		hash = sha256.New()
 	)
 
 	if v := mr.Spec.ForceOverwriteLabels; v != nil {
@@ -164,26 +160,24 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 	// Initialize condition based on the current status.
 	conditionResourcesApplied := v1beta1helper.GetOrInitConditionWithClock(r.Clock, mr.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
 
-	for _, ref := range mr.Spec.SecretRefs {
-		secret := &corev1.Secret{}
-		if err := r.SourceClient.Get(reconcileCtx, client.ObjectKey{Namespace: mr.Namespace, Name: ref.Name}, secret); err != nil {
+	// fetch all referenced secrets
+	referencedSecrets := make([]*corev1.Secret, len(mr.Spec.SecretRefs))
+	for i, ref := range mr.Spec.SecretRefs {
+		referencedSecrets[i] = &corev1.Secret{}
+		if err := r.SourceClient.Get(reconcileCtx, client.ObjectKey{Namespace: mr.Namespace, Name: ref.Name}, referencedSecrets[i]); err != nil {
 			conditionResourcesApplied = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionResourcesApplied, gardencorev1beta1.ConditionFalse, "CannotReadSecret", err.Error())
 			if err := updateConditions(ctx, r.SourceClient, mr, conditionResourcesApplied); err != nil {
 				return reconcile.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
 			}
 
-			return reconcile.Result{}, fmt.Errorf("could not read secret '%s': %+v", secret.Name, err)
+			return reconcile.Result{}, fmt.Errorf("could not read secret '%s': %+v", referencedSecrets[i].Name, err)
 		}
+	}
 
-		// Sort secret's data key to keep consistent ordering while calculating checksum
-		secretKeys := make([]string, 0, len(secret.Data))
-		for secretKey := range secret.Data {
-			secretKeys = append(secretKeys, secretKey)
-		}
-		sort.Strings(secretKeys)
+	secretsDataChecksum := managedresources.ComputeSecretsDataChecksum(referencedSecrets)
 
-		for _, secretKey := range secretKeys {
-			value := secret.Data[secretKey]
+	for _, secret := range referencedSecrets {
+		for secretKey, value := range secret.Data {
 			var (
 				decoder    = yaml.NewYAMLOrJSONDecoder(bytes.NewReader(value), 1024)
 				decodedObj map[string]interface{}
@@ -276,15 +270,11 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 					continue
 				}
 
-				hash.Write(value)
 				newResourcesObjects = append(newResourcesObjects, newObj)
 				newResourcesObjectReferences = append(newResourcesObjectReferences, objectReference)
 			}
 		}
 	}
-
-	// calculate the checksum for the referenced secrets data.
-	secretsDataChecksum := hex.EncodeToString(hash.Sum(nil))
 
 	// sort object references before updating status, to keep consistent ordering
 	// (otherwise, the order will be different on each update)

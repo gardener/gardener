@@ -29,6 +29,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 // ManagedResourceHealthChecker contains all the information for the ManagedResource HealthCheck
@@ -77,7 +78,13 @@ func (healthChecker *ManagedResourceHealthChecker) Check(ctx context.Context, re
 		healthChecker.logger.Error(err, "Health check failed")
 		return nil, err
 	}
-	if isHealthy, err := managedResourceIsHealthy(mcmDeployment); !isHealthy {
+
+	expectedSecretsDataChecksum, err := managedresources.ComputeExpectedSecretsDataChecksum(ctx, healthChecker.seedClient, mcmDeployment)
+	if err != nil {
+		return nil, err
+	}
+
+	if isHealthy, err := managedResourceIsHealthy(mcmDeployment, expectedSecretsDataChecksum); !isHealthy {
 		healthChecker.logger.Error(err, "Health check failed")
 
 		var (
@@ -101,8 +108,8 @@ func (healthChecker *ManagedResourceHealthChecker) Check(ctx context.Context, re
 	}, nil
 }
 
-func managedResourceIsHealthy(managedResource *resourcesv1alpha1.ManagedResource) (bool, error) {
-	if err := health.CheckManagedResource(managedResource); err != nil {
+func managedResourceIsHealthy(managedResource *resourcesv1alpha1.ManagedResource, expectedSecretsDataChecksum string) (bool, error) {
+	if err := health.CheckManagedResource(managedResource, expectedSecretsDataChecksum); err != nil {
 		err := fmt.Errorf("managed resource %q in namespace %q is unhealthy: %w", managedResource.Name, managedResource.Namespace, err)
 		return false, err
 	}

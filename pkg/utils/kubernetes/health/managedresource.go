@@ -23,9 +23,10 @@ import (
 )
 
 // CheckManagedResource checks if all conditions of a ManagedResource ('ResourcesApplied' and 'ResourcesHealthy')
-// are True and .status.observedGeneration matches the current .metadata.generation
-func CheckManagedResource(mr *resourcesv1alpha1.ManagedResource) error {
-	if err := CheckManagedResourceApplied(mr); err != nil {
+// are True, .status.observedGeneration matches the current .metadata.generation
+// and .status.secretsDataChecksum matches the passed expectedSecretsDataChecksum
+func CheckManagedResource(mr *resourcesv1alpha1.ManagedResource, expectedSecretsDataChecksum string) error {
+	if err := CheckManagedResourceApplied(mr, expectedSecretsDataChecksum); err != nil {
 		return err
 	}
 
@@ -33,11 +34,26 @@ func CheckManagedResource(mr *resourcesv1alpha1.ManagedResource) error {
 }
 
 // CheckManagedResourceApplied checks if the condition 'ResourcesApplied' of a ManagedResource
-// is True and the .status.observedGeneration matches the current .metadata.generation
-func CheckManagedResourceApplied(mr *resourcesv1alpha1.ManagedResource) error {
+// is True, .status.observedGeneration matches the current .metadata.generation
+// and .status.secretsDataChecksum matches the passed expectedSecretsDataChecksum
+func CheckManagedResourceApplied(mr *resourcesv1alpha1.ManagedResource, expectedSecretsDataChecksum string) error {
 	status := mr.Status
 	if status.ObservedGeneration != mr.GetGeneration() {
 		return fmt.Errorf("observed generation of managed resource %s/%s outdated (%d/%d)", mr.GetNamespace(), mr.GetName(), status.ObservedGeneration, mr.GetGeneration())
+	}
+
+	if status.SecretsDataChecksum == nil {
+		return fmt.Errorf("secrets data checksum for managed resource %s/%s is not reported yet", mr.GetNamespace(), mr.GetName())
+	}
+
+	if *status.SecretsDataChecksum != expectedSecretsDataChecksum {
+		return fmt.Errorf(
+			"observed secrets data checksum for managed resource %s/%s is outdated - expected: %s actual: %s",
+			expectedSecretsDataChecksum,
+			*status.SecretsDataChecksum,
+			mr.GetNamespace(),
+			mr.GetName(),
+		)
 	}
 
 	conditionApplied := v1beta1helper.GetCondition(status.Conditions, resourcesv1alpha1.ResourcesApplied)
