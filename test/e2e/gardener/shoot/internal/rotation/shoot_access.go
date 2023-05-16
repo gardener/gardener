@@ -30,7 +30,7 @@ type clients struct {
 	staticToken, adminKubeconfig, clientCert, serviceAccountDynamic, serviceAccountStatic kubernetes.Interface
 }
 
-// ShootAccessVerifier uses the static token and admin kubeconfig to access the Shoot.
+// ShootAccessVerifier uses the various access methods to access the Shoot.
 type ShootAccessVerifier struct {
 	*framework.ShootCreationFramework
 

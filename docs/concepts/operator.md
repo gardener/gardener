@@ -172,9 +172,11 @@ EOF
 To access the virtual garden, you can acquire a `kubeconfig` by
 
 ```shell
-kubectl -n garden get secret -l name=user-kubeconfig -o jsonpath={..data.kubeconfig} | base64 -d > /tmp/virtual-garden-kubeconfig
+kubectl -n garden get secret gardener -o jsonpath={.data.kubeconfig} | base64 -d > /tmp/virtual-garden-kubeconfig
 kubectl --kubeconfig /tmp/virtual-garden-kubeconfig get namespaces
 ```
+
+Note that this kubeconfig uses a token that has validity of `12h` only, hence it might expire and causing you to re-download the kubeconfig.
 
 ### Deleting the `Garden`
 

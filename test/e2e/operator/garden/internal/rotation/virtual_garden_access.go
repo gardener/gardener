@@ -30,7 +30,7 @@ type clients struct {
 	accessSecret, clientCert, serviceAccountDynamic kubernetes.Interface
 }
 
-// VirtualGardenAccessVerifier uses the static token and admin kubeconfig to access the virtual garden.
+// VirtualGardenAccessVerifier uses the various access methods to access the virtual garden.
 type VirtualGardenAccessVerifier struct {
 	RuntimeClient client.Client
 	Namespace     string
