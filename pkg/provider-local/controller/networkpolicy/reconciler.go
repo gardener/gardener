@@ -16,103 +16,50 @@ package networkpolicy
 
 import (
 	"context"
-	"time"
+	"fmt"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/gardener/gardener/extensions/pkg/controller/extension"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
-const (
-	// ApplicationName is the name of the application.
-	ApplicationName string = "provider-local-networkpolicy"
-	// ManagedResourceName is the name for the managedResource.
-	ManagedResourceName string = ApplicationName
-)
-
-type actuator struct {
-	client client.Client
-}
-
-// NewActuator returns an actuator responsible for Extension resources.
-func NewActuator() extension.Actuator {
-	return &actuator{}
-}
-
-// InjectClient injects the controller runtime client into the reconciler.
-func (a *actuator) InjectClient(client client.Client) error {
-	a.client = client
-	return nil
+type Reconciler struct {
+	Client client.Client
 }
 
 // Reconcile the extension resource.
-func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) error {
-	var namespace = ex.Namespace
+func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
 
-	cluster, err := extensions.GetCluster(ctx, a.client, namespace)
+	namespace := &corev1.Namespace{}
+	if err := r.Client.Get(ctx, request.NamespacedName, namespace); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.V(1).Info("Object is gone, stop reconciling")
+			return reconcile.Result{}, nil
+		}
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
+	}
+
+	cluster, err := extensions.GetCluster(ctx, r.Client, namespace.Name)
 	if err != nil {
-		return err
+		return reconcile.Result{}, err
 	}
 
-	seedResources, err := getSeedResources(cluster, namespace)
-	if err != nil {
-		return err
-	}
-
-	if err := managedresources.CreateForSeed(ctx, a.client, namespace, ManagedResourceName, false, seedResources); err != nil {
-		return err
-	}
-
-	twoMinutes := 2 * time.Minute
-	timeoutSeedCtx, cancelSeedCtx := context.WithTimeout(ctx, twoMinutes)
-	defer cancelSeedCtx()
-	return managedresources.WaitUntilHealthy(timeoutSeedCtx, a.client, namespace, ManagedResourceName)
-}
-
-// Delete the extension resource.
-func (a *actuator) Delete(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) error {
-	namespace := ex.GetNamespace()
-	twoMinutes := 2 * time.Minute
-
-	timeoutSeedCtx, cancelSeedCtx := context.WithTimeout(ctx, twoMinutes)
-	defer cancelSeedCtx()
-
-	if err := managedresources.DeleteForSeed(ctx, a.client, namespace, ManagedResourceName); err != nil {
-		return err
-	}
-
-	return managedresources.WaitUntilDeleted(timeoutSeedCtx, a.client, namespace, ManagedResourceName)
-}
-
-// Migrate the extension resource.
-func (a *actuator) Migrate(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) error {
-	return a.Delete(ctx, log, ex)
-}
-
-// Restore the extension resource.
-func (a *actuator) Restore(ctx context.Context, log logr.Logger, ex *extensionsv1alpha1.Extension) error {
-	return a.Reconcile(ctx, log, ex)
-}
-
-func getSeedResources(cluster *extensions.Cluster, namespace string) (map[string][]byte, error) {
 	var (
-		registry    = managedresources.NewRegistry(kubernetesclient.SeedScheme, kubernetesclient.SeedCodec, kubernetesclient.SeedSerializer)
 		protocolTCP = corev1.ProtocolTCP
 		protocolUDP = corev1.ProtocolUDP
 	)
 
-	networkPolicyAllowToProviderLocalCoreDNS := emptyNetworkPolicy("allow-to-provider-local-coredns", namespace)
+	networkPolicyAllowToProviderLocalCoreDNS := emptyNetworkPolicy("allow-to-provider-local-coredns", namespace.Name)
 	networkPolicyAllowToProviderLocalCoreDNS.Spec = networkingv1.NetworkPolicySpec{
 		Egress: []networkingv1.NetworkPolicyEgressRule{{
 			To: []networkingv1.NetworkPolicyPeer{{
@@ -130,7 +77,7 @@ func getSeedResources(cluster *extensions.Cluster, namespace string) (map[string
 		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 	}
 
-	networkPolicyAllowToIstioIngressGateway := emptyNetworkPolicy("allow-to-istio-ingress-gateway", namespace)
+	networkPolicyAllowToIstioIngressGateway := emptyNetworkPolicy("allow-to-istio-ingress-gateway", namespace.Name)
 	networkPolicyAllowToIstioIngressGateway.Spec = networkingv1.NetworkPolicySpec{
 		Egress: []networkingv1.NetworkPolicyEgressRule{{
 			To: []networkingv1.NetworkPolicyPeer{{
@@ -163,10 +110,16 @@ func getSeedResources(cluster *extensions.Cluster, namespace string) (map[string
 		}
 	}
 
-	return registry.AddAllAndSerialize(
+	for _, obj := range []client.Object{
 		networkPolicyAllowToProviderLocalCoreDNS,
 		networkPolicyAllowToIstioIngressGateway,
-	)
+	} {
+		if err := r.Client.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
+	return reconcile.Result{}, nil
 }
 
 func emptyNetworkPolicy(name, namespace string) *networkingv1.NetworkPolicy {

@@ -622,12 +622,12 @@ build:
         - pkg/provider-local/controller/backupoptions
         - pkg/provider-local/controller/controlplane
         - pkg/provider-local/controller/dnsrecord
-        - pkg/provider-local/controller/extension/networkpolicy
         - pkg/provider-local/controller/extension/seed
         - pkg/provider-local/controller/extension/shoot
         - pkg/provider-local/controller/healthcheck
         - pkg/provider-local/controller/infrastructure
         - pkg/provider-local/controller/ingress
+        - pkg/provider-local/controller/networkpolicy
         - pkg/provider-local/controller/operatingsystemconfig
         - pkg/provider-local/controller/service
         - pkg/provider-local/controller/worker
