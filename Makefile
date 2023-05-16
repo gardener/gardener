@@ -402,23 +402,23 @@ tear-down-local-env tear-down-kind-ha-single-zone-env tear-down-kind-ha-multi-zo
 
 gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug gardenlet-kind2-down register-kind2-env tear-down-kind2-env: export SKAFFOLD_PREFIX_NAME = kind2
 gardenlet-kind2-ha-single-zone-up gardenlet-kind2-ha-single-zone-dev gardenlet-kind2-ha-single-zone-debug gardenlet-kind2-ha-single-zone-down register-kind2-ha-single-zone-env tear-down-kind2-ha-single-zone-env: export SKAFFOLD_PREFIX_NAME = kind2-ha-single-zone
-gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug gardenlet-kind2-down register-kind2-env tear-down-kind2-env: export SKAFFOLD_KUBECONFIG := $(GARDENER_LOCAL_KUBECONFIG)
-gardenlet-kind2-ha-single-zone-up gardenlet-kind2-ha-single-zone-dev gardenlet-kind2-ha-single-zone-debug gardenlet-kind2-ha-single-zone-down register-kind2-ha-single-zone-env tear-down-kind2-ha-single-zone-env: export SKAFFOLD_KUBECONFIG := $(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG)
+gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug gardenlet-kind2-down register-kind2-env tear-down-kind2-env: export SKAFFOLD_COMMAND_KUBECONFIG := $(GARDENER_LOCAL_KUBECONFIG)
+gardenlet-kind2-ha-single-zone-up gardenlet-kind2-ha-single-zone-dev gardenlet-kind2-ha-single-zone-debug gardenlet-kind2-ha-single-zone-down register-kind2-ha-single-zone-env tear-down-kind2-ha-single-zone-env: export SKAFFOLD_COMMAND_KUBECONFIG := $(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG)
 
 gardenlet-kind2-up gardenlet-kind2-ha-single-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) deploy -m $(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME) --kubeconfig=$(SKAFFOLD_KUBECONFIG)
+	$(SKAFFOLD) deploy -m $(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME) --kubeconfig=$(SKAFFOLD_COMMAND_KUBECONFIG)
 	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
-	GARDENER_LOCAL_KUBECONFIG=$(SKAFFOLD_KUBECONFIG) $(SKAFFOLD) run -m gardenlet -p $(SKAFFOLD_PREFIX_NAME)
+	GARDENER_LOCAL_KUBECONFIG=$(SKAFFOLD_COMMAND_KUBECONFIG) $(SKAFFOLD) run -m gardenlet -p $(SKAFFOLD_PREFIX_NAME)
 gardenlet-kind2-dev gardenlet-kind2-ha-single-zone-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) deploy -m $(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME) --kubeconfig=$(SKAFFOLD_KUBECONFIG)
+	$(SKAFFOLD) deploy -m $(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME) --kubeconfig=$(SKAFFOLD_COMMAND_KUBECONFIG)
 	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
-	GARDENER_LOCAL_KUBECONFIG=$(SKAFFOLD_KUBECONFIG) $(SKAFFOLD) dev -m gardenlet -p $(SKAFFOLD_PREFIX_NAME)
+	GARDENER_LOCAL_KUBECONFIG=$(SKAFFOLD_COMMAND_KUBECONFIG) $(SKAFFOLD) dev -m gardenlet -p $(SKAFFOLD_PREFIX_NAME)
 gardenlet-kind2-debug gardenlet-kind2-ha-single-zone-debug: $(SKAFFOLD) $(HELM)
-	$(SKAFFOLD) deploy -m $(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME) --kubeconfig=$(SKAFFOLD_KUBECONFIG)
+	$(SKAFFOLD) deploy -m $(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME) --kubeconfig=$(SKAFFOLD_COMMAND_KUBECONFIG)
 	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
-	GARDENER_LOCAL_KUBECONFIG=$(SKAFFOLD_KUBECONFIG) $(SKAFFOLD) debug -m gardenlet -p $(SKAFFOLD_PREFIX_NAME)
+	GARDENER_LOCAL_KUBECONFIG=$(SKAFFOLD_COMMAND_KUBECONFIG) $(SKAFFOLD) debug -m gardenlet -p $(SKAFFOLD_PREFIX_NAME)
 gardenlet-kind2-down gardenlet-kind2-ha-single-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) delete -m $(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME) --kubeconfig=$(SKAFFOLD_KUBECONFIG)
+	$(SKAFFOLD) delete -m $(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME) --kubeconfig=$(SKAFFOLD_COMMAND_KUBECONFIG)
 	$(SKAFFOLD) delete -m gardenlet,$(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME)
 register-kind2-env register-kind2-ha-single-zone-env: $(KUBECTL)
 	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-$(SKAFFOLD_PREFIX_NAME)/local
