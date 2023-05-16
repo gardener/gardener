@@ -1,4 +1,7 @@
 config:
+  # loki is unable to cope with IPv6, hence disable logging entirely
+  logging:
+    enabled: false
   seedConfig:
     spec:
       networks:
