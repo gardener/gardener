@@ -51,6 +51,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		Complete(r)
 }
 
+// IsShootNamespace returns a predicate that returns true if the namespace is a shoot namespace.
 func IsShootNamespace() predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		return strings.HasPrefix(obj.GetName(), v1beta1constants.TechnicalIDPrefix)
