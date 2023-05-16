@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -56,6 +57,8 @@ type ServiceValues struct {
 	SNIPhase component.Phase
 	// TopologyAwareRoutingEnabled indicates whether topology-aware routing is enabled for the kube-apiserver service.
 	TopologyAwareRoutingEnabled bool
+	// RuntimeKubernetesVersion is the Kubernetes version of the runtime cluster.
+	RuntimeKubernetesVersion *semver.Version
 }
 
 // serviceValues configure the kube-apiserver service.
@@ -67,6 +70,7 @@ type serviceValues struct {
 	enableSNI                   bool
 	gardenerManaged             bool
 	topologyAwareRoutingEnabled bool
+	runtimeKubernetesVersion    *semver.Version
 	fullNetworkPolicies         bool
 	clusterIP                   string
 }
@@ -134,6 +138,7 @@ func NewService(
 
 		internalValues.annotationsFunc = values.AnnotationsFunc
 		internalValues.topologyAwareRoutingEnabled = values.TopologyAwareRoutingEnabled
+		internalValues.runtimeKubernetesVersion = values.RuntimeKubernetesVersion
 	}
 
 	return &service{
@@ -199,7 +204,7 @@ func (s *service) Deploy(ctx context.Context) error {
 			delete(obj.Labels, v1beta1constants.LabelAPIServerExposure)
 		}
 
-		gardenerutils.ReconcileTopologyAwareRoutingMetadata(obj, s.values.topologyAwareRoutingEnabled)
+		gardenerutils.ReconcileTopologyAwareRoutingMetadata(obj, s.values.topologyAwareRoutingEnabled, s.values.runtimeKubernetesVersion)
 
 		obj.Spec.Type = s.values.serviceType
 		obj.Spec.Selector = getLabels()

@@ -159,6 +159,7 @@ type Values struct {
 	DefragmentationSchedule     *string
 	CARotationPhase             gardencorev1beta1.CredentialsRotationPhase
 	KubernetesVersion           *semver.Version
+	RuntimeKubernetesVersion    *semver.Version
 	BackupConfig                *BackupConfig
 	HvpaConfig                  *HVPAConfig
 	PriorityClassName           string
@@ -270,7 +271,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	))
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(clientService, metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}}))
 	metav1.SetMetaDataAnnotation(&clientService.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
-	gardenerutils.ReconcileTopologyAwareRoutingMetadata(clientService, e.values.TopologyAwareRoutingEnabled)
+	gardenerutils.ReconcileTopologyAwareRoutingMetadata(clientService, e.values.TopologyAwareRoutingEnabled, e.values.RuntimeKubernetesVersion)
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, e.etcd, func() error {
 		metav1.SetMetaDataAnnotation(&e.etcd.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)

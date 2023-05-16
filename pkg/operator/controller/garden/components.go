@@ -207,14 +207,15 @@ func (r *Reconciler) newEtcd(
 		r.GardenNamespace,
 		secretsManager,
 		etcd.Values{
-			NamePrefix:              namePrefix,
-			Role:                    role,
-			Class:                   class,
-			Replicas:                replicas,
-			StorageCapacity:         storageCapacity,
-			StorageClassName:        storageClassName,
-			DefragmentationSchedule: &defragmentationSchedule,
-			CARotationPhase:         helper.GetCARotationPhase(garden.Status.Credentials),
+			NamePrefix:               namePrefix,
+			Role:                     role,
+			Class:                    class,
+			Replicas:                 replicas,
+			StorageCapacity:          storageCapacity,
+			StorageClassName:         storageClassName,
+			DefragmentationSchedule:  &defragmentationSchedule,
+			CARotationPhase:          helper.GetCARotationPhase(garden.Status.Credentials),
+			RuntimeKubernetesVersion: r.RuntimeVersion,
 			HvpaConfig: &etcd.HVPAConfig{
 				Enabled:               hvpaEnabled(),
 				MaintenanceTimeWindow: garden.Spec.VirtualCluster.Maintenance.TimeWindow,
@@ -248,6 +249,7 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 			AnnotationsFunc:             func() map[string]string { return annotations },
 			SNIPhase:                    component.PhaseDisabled,
 			TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
+			RuntimeKubernetesVersion:    r.RuntimeVersion,
 		},
 		func() client.ObjectKey {
 			return client.ObjectKey{Name: namePrefix + v1beta1constants.DeploymentNameKubeAPIServer, Namespace: r.GardenNamespace}

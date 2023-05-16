@@ -151,7 +151,7 @@ func (v *vpa) reconcileAdmissionControllerClusterRoleBinding(clusterRoleBinding 
 
 func (v *vpa) reconcileAdmissionControllerService(service *corev1.Service) {
 	topologAwareRoutingEnabled := v.values.AdmissionController.TopologyAwareRoutingEnabled && v.values.ClusterType == component.ClusterTypeShoot
-	gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, topologAwareRoutingEnabled)
+	gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, topologAwareRoutingEnabled, v.values.RuntimeKubernetesVersion)
 
 	switch v.values.ClusterType {
 	case component.ClusterTypeSeed:

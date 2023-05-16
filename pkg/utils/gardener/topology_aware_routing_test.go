@@ -15,6 +15,7 @@
 package gardener_test
 
 import (
+	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -25,26 +26,50 @@ import (
 
 var _ = Describe("TopologyAwareRouting", func() {
 	Describe("#ReconcileTopologyAwareRoutingMetadata", func() {
-		It("should add the required annotation and label when topology-aware routing is enabled", func() {
-			service := &corev1.Service{}
+		Context("when K8s version < 1.27", func() {
+			It("should add the required annotation and label when topology-aware routing is enabled", func() {
+				service := &corev1.Service{}
 
-			ReconcileTopologyAwareRoutingMetadata(service, true)
+				ReconcileTopologyAwareRoutingMetadata(service, true, semver.MustParse("1.26.1"))
 
-			Expect(service.Annotations).To(HaveKeyWithValue("service.kubernetes.io/topology-aware-hints", "auto"))
-			Expect(service.Labels).To(HaveKeyWithValue("endpoint-slice-hints.resources.gardener.cloud/consider", "true"))
+				Expect(service.Annotations).To(HaveKeyWithValue("service.kubernetes.io/topology-aware-hints", "auto"))
+				Expect(service.Labels).To(HaveKeyWithValue("endpoint-slice-hints.resources.gardener.cloud/consider", "true"))
+			})
 		})
 
-		It("should remove the annotation and label when topology-aware routing is disabled", func() {
+		Context("when K8s version >= 1.27", func() {
+			It("should add the required annotation and label when topology-aware routing is enabled", func() {
+				service := &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							"service.kubernetes.io/topology-aware-hints": "auto",
+						},
+					},
+				}
+
+				ReconcileTopologyAwareRoutingMetadata(service, true, semver.MustParse("1.27.1"))
+
+				Expect(service.Annotations).To(HaveKeyWithValue("service.kubernetes.io/topology-mode", "auto"))
+				Expect(service.Annotations).NotTo(HaveKey("service.kubernetes.io/topology-aware-hints"))
+				Expect(service.Labels).To(HaveKeyWithValue("endpoint-slice-hints.resources.gardener.cloud/consider", "true"))
+			})
+		})
+
+		It("should remove the annotations and label when topology-aware routing is disabled", func() {
 			service := &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{"service.kubernetes.io/topology-aware-hints": "auto"},
-					Labels:      map[string]string{"endpoint-slice-hints.resources.gardener.cloud/consider": "true"},
+					Annotations: map[string]string{
+						"service.kubernetes.io/topology-aware-hints": "auto",
+						"service.kubernetes.io/topology-mode":        "auto",
+					},
+					Labels: map[string]string{"endpoint-slice-hints.resources.gardener.cloud/consider": "true"},
 				},
 			}
 
-			ReconcileTopologyAwareRoutingMetadata(service, false)
+			ReconcileTopologyAwareRoutingMetadata(service, false, semver.MustParse("1.25.1"))
 
 			Expect(service.Annotations).NotTo(HaveKey("service.kubernetes.io/topology-aware-hints"))
+			Expect(service.Annotations).NotTo(HaveKey("service.kubernetes.io/topology-mode"))
 			Expect(service.Labels).NotTo(HaveKey("endpoint-slice-hints.resources.gardener.cloud/consider"))
 		})
 	})

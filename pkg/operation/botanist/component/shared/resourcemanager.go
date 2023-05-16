@@ -106,7 +106,7 @@ func NewRuntimeGardenerResourceManager(
 		ResourceClass:                       pointer.String(v1beta1constants.SeedResourceManagerClass),
 		SecretNameServerCA:                  secretNameServerCA,
 		SyncPeriod:                          &metav1.Duration{Duration: time.Hour},
-		KubernetesVersion:                   runtimeVersion,
+		RuntimeKubernetesVersion:            runtimeVersion,
 		VPA: &resourcemanager.VPAConfig{
 			MinAllowed: corev1.ResourceList{
 				corev1.ResourceMemory: resource.MustParse("64Mi"),
@@ -173,7 +173,7 @@ func NewTargetGardenerResourceManager(
 		SystemComponentTolerations:           systemComponentsToleration,
 		TargetDiffersFromSourceCluster:       true,
 		TargetDisableCache:                   pointer.Bool(true),
-		KubernetesVersion:                    kubernetesVersion,
+		RuntimeKubernetesVersion:             kubernetesVersion,
 		VPA: &resourcemanager.VPAConfig{
 			MinAllowed: corev1.ResourceList{
 				corev1.ResourceMemory: resource.MustParse("30Mi"),

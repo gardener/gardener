@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Masterminds/semver"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
@@ -1461,6 +1462,7 @@ var _ = Describe("Etcd", func() {
 					StorageClassName:            &storageClassName,
 					DefragmentationSchedule:     &defragmentationSchedule,
 					CARotationPhase:             "",
+					RuntimeKubernetesVersion:    semver.MustParse("1.26.1"),
 					PriorityClassName:           priorityClassName,
 					TopologyAwareRoutingEnabled: true,
 				})

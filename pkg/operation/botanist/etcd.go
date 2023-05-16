@@ -65,6 +65,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 			DefragmentationSchedule:     &defragmentationSchedule,
 			CARotationPhase:             v1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials),
 			KubernetesVersion:           b.Shoot.KubernetesVersion,
+			RuntimeKubernetesVersion:    b.Seed.KubernetesVersion,
 			PriorityClassName:           v1beta1constants.PriorityClassNameShootControlPlane500,
 			HighAvailabilityEnabled:     v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()),
 			TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled,

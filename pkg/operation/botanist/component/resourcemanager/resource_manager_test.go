@@ -326,7 +326,7 @@ var _ = Describe("ResourceManager", func() {
 			SyncPeriod:                           &syncPeriod,
 			TargetDiffersFromSourceCluster:       true,
 			TargetDisableCache:                   &targetDisableCache,
-			KubernetesVersion:                    version,
+			RuntimeKubernetesVersion:             version,
 			WatchedNamespace:                     &watchedNamespace,
 			VPA: &VPAConfig{
 				MinAllowed: corev1.ResourceList{
@@ -1793,7 +1793,7 @@ subjects:
 			JustBeforeEach(func() {
 				role.Namespace = watchedNamespace
 				configMap = configMapFor(&watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig))
-				deployment = deploymentFor(configMap.Name, cfg.KubernetesVersion, &watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), true, nil)
+				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, &watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), true, nil)
 				resourceManager = New(c, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)
 			})
@@ -1853,7 +1853,7 @@ subjects:
 
 				Context("Kubernetes version >= 1.21", func() {
 					BeforeEach(func() {
-						cfg.KubernetesVersion = semver.MustParse("1.24.0")
+						cfg.RuntimeKubernetesVersion = semver.MustParse("1.24.0")
 					})
 
 					It("should successfully deploy all resources (w/ shoot access secret)", func() {
@@ -1869,7 +1869,7 @@ subjects:
 
 				Context("Kubernetes version < 1.21", func() {
 					BeforeEach(func() {
-						cfg.KubernetesVersion = semver.MustParse("1.20.0")
+						cfg.RuntimeKubernetesVersion = semver.MustParse("1.20.0")
 					})
 
 					It("should successfully deploy all resources (w/ shoot access secret)", func() {
@@ -1892,7 +1892,7 @@ subjects:
 					resourceManager = New(c, deployNamespace, sm, cfg)
 					resourceManager.SetSecrets(secrets)
 
-					deployment = deploymentFor(configMap.Name, cfg.KubernetesVersion, &watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), true, &secretNameBootstrapKubeconfig)
+					deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, &watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), true, &secretNameBootstrapKubeconfig)
 
 					gomock.InOrder(
 						c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
@@ -1947,7 +1947,7 @@ subjects:
 
 				Context("Kubernetes version >= 1.21", func() {
 					BeforeEach(func() {
-						cfg.KubernetesVersion = semver.MustParse("1.24.0")
+						cfg.RuntimeKubernetesVersion = semver.MustParse("1.24.0")
 					})
 
 					It("should successfully deploy all resources (w/ bootstrap kubeconfig)", func() {
@@ -1963,7 +1963,7 @@ subjects:
 
 				Context("Kubernetes version < 1.21", func() {
 					BeforeEach(func() {
-						cfg.KubernetesVersion = semver.MustParse("1.20.0")
+						cfg.RuntimeKubernetesVersion = semver.MustParse("1.20.0")
 					})
 
 					It("should successfully deploy all resources (w/ bootstrap kubeconfig)", func() {
@@ -1985,7 +1985,7 @@ subjects:
 				cfg.TargetDiffersFromSourceCluster = true
 				cfg.WatchedNamespace = nil
 				configMap = configMapFor(nil, pointer.String(gardenerutils.PathGenericKubeconfig))
-				deployment = deploymentFor(configMap.Name, cfg.KubernetesVersion, nil, pointer.String(gardenerutils.PathGenericKubeconfig), true, nil)
+				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, nil, pointer.String(gardenerutils.PathGenericKubeconfig), true, nil)
 
 				resourceManager = New(c, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)
@@ -2088,7 +2088,7 @@ subjects:
 				service.Annotations["networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports"] = `[{"protocol":"TCP","port":8080}]`
 				service.Annotations["networking.resources.gardener.cloud/from-world-to-ports"] = `[{"protocol":"TCP","port":10250}]`
 				configMap = configMapFor(&watchedNamespace, nil)
-				deployment = deploymentFor(configMap.Name, cfg.KubernetesVersion, &watchedNamespace, nil, false, nil)
+				deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, &watchedNamespace, nil, false, nil)
 
 				deployment.Spec.Template.Spec.Volumes = deployment.Spec.Template.Spec.Volumes[:len(deployment.Spec.Template.Spec.Volumes)-2]
 				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = deployment.Spec.Template.Spec.Containers[0].VolumeMounts[:len(deployment.Spec.Template.Spec.Containers[0].VolumeMounts)-2]
@@ -2203,7 +2203,7 @@ subjects:
 
 				Context("Kubernetes version >= v1.21", func() {
 					BeforeEach(func() {
-						cfg.KubernetesVersion = semver.MustParse("1.22")
+						cfg.RuntimeKubernetesVersion = semver.MustParse("1.22")
 					})
 					It("should delete all created resources", func() {
 						c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}})
@@ -2214,7 +2214,7 @@ subjects:
 
 				Context("Kubernetes version < v1.21", func() {
 					BeforeEach(func() {
-						cfg.KubernetesVersion = semver.MustParse("1.20")
+						cfg.RuntimeKubernetesVersion = semver.MustParse("1.20")
 					})
 					It("should delete all created resources", func() {
 						c.EXPECT().Delete(ctx, &policyv1beta1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}})
@@ -2388,7 +2388,7 @@ subjects:
 	Describe("#Wait", func() {
 		BeforeEach(func() {
 			configMap = configMapFor(&watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig))
-			deployment = deploymentFor(configMap.Name, cfg.KubernetesVersion, &watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), false, nil)
+			deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, &watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), false, nil)
 			resourceManager = New(fakeClient, deployNamespace, nil, cfg)
 		})
 
