@@ -1126,7 +1126,7 @@ func validateMachineTypes(constraints []core.MachineType, machine, oldMachine co
 		machinesWithSupportedArchitecture.Has(machine.Type),
 		machinesAvailableInAllZones.Has(machine.Type),
 		usableMachines.Has(machine.Type),
-		machinesWithSupportedArchitecture.Intersection(machinesAvailableInAllZones).Intersection(usableMachines).UnsortedList()
+		sets.List(machinesWithSupportedArchitecture.Intersection(machinesAvailableInAllZones).Intersection(usableMachines))
 }
 
 func isUnavailableInAtleastOneZone(regions []core.Region, region string, zones []string, t string, unavailableTypes func(zone core.AvailabilityZone) []string) bool {
@@ -1229,7 +1229,7 @@ func validateVolumeTypes(constraints []core.VolumeType, volume, oldVolume *core.
 	return isVolumePresentInCloudprofile,
 		volumesAvailableInAllZones.Has(volumeType),
 		usableVolumes.Has(volumeType),
-		usableVolumes.Intersection(volumesAvailableInAllZones).UnsortedList()
+		sets.List(usableVolumes.Intersection(volumesAvailableInAllZones))
 }
 
 func (c *validationContext) validateRegion() field.ErrorList {
@@ -1373,7 +1373,7 @@ func validateMachineImagesConstraints(constraints []core.MachineImage, machine, 
 		}
 	}
 
-	supportedMachineImageVersions := activeMachineImageVersions.Intersection(machineImageVersionsWithSupportedArchitecture).UnsortedList()
+	supportedMachineImageVersions := sets.List(activeMachineImageVersions.Intersection(machineImageVersionsWithSupportedArchitecture))
 	if machine.Image == nil || len(machine.Image.Version) == 0 {
 		return false, false, false, supportedMachineImageVersions
 	}
