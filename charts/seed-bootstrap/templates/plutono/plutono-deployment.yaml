@@ -40,19 +40,19 @@ spec:
         image: {{ index .Values.global.images "plutono" }}
         imagePullPolicy: IfNotPresent
         env:
-        - name: GF_AUTH_BASIC_ENABLED
+        - name: PL_AUTH_BASIC_ENABLED
           value: "true"
-        - name: GF_AUTH_DISABLE_LOGIN_FORM
+        - name: PL_AUTH_DISABLE_LOGIN_FORM
           value: "false"
-        - name: GF_AUTH_ANONYMOUS_ENABLED
+        - name: PL_AUTH_ANONYMOUS_ENABLED
           value: "true"
-        - name: GF_USERS_VIEWERS_CAN_EDIT
+        - name: PL_USERS_VIEWERS_CAN_EDIT
           value: "true"
-        - name: GF_SNAPSHOTS_EXTERNAL_ENABLED
+        - name: PL_SNAPSHOTS_EXTERNAL_ENABLED
           value: "false"
-        - name: GF_ALERTING_ENABLED
+        - name: PL_ALERTING_ENABLED
           value: "false"
-        - name: GF_DATE_FORMATS_DEFAULT_TIMEZONE
+        - name: PL_DATE_FORMATS_DEFAULT_TIMEZONE
           value: "UTC"
         volumeMounts:
         - name: plutono-storage
