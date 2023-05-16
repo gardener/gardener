@@ -1035,6 +1035,9 @@ func commandForKubernetesVersion(
 	}
 
 	nodeMonitorGracePeriodSetting := "2m0s"
+	if versionutils.ConstraintK8sGreaterEqual127.Check(semver.MustParse(version)) {
+		nodeMonitorGracePeriodSetting = "40s"
+	}
 	if nodeMonitorGracePeriod != nil {
 		nodeMonitorGracePeriodSetting = nodeMonitorGracePeriod.Duration.String()
 	}
@@ -1067,8 +1070,11 @@ func commandForKubernetesVersion(
 			fmt.Sprintf("--horizontal-pod-autoscaler-tolerance=%v", *horizontalPodAutoscalerConfig.Tolerance),
 			"--leader-elect=true",
 			fmt.Sprintf("--node-monitor-grace-period=%s", nodeMonitorGracePeriodSetting),
-			fmt.Sprintf("--pod-eviction-timeout=%s", podEvictionTimeoutSetting),
 		)
+
+		if versionutils.ConstraintK8sLess127.Check(semver.MustParse(version)) {
+			command = append(command, fmt.Sprintf("--pod-eviction-timeout=%s", podEvictionTimeoutSetting))
+		}
 
 		if v := controllerWorkers.Deployment; v == nil {
 			command = append(command, "--concurrent-deployment-syncs=50")

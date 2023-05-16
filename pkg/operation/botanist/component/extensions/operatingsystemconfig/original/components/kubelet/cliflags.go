@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // CLIFlags returns a list of kubelet CLI flags based on the provided parameters and for the provided Kubernetes version.
@@ -46,10 +47,12 @@ func CLIFlags(kubernetesVersion *semver.Version, nodeLabels map[string]string, c
 
 	if criName == extensionsv1alpha1.CRINameContainerD {
 		flags = append(flags,
-			"--container-runtime=remote",
 			"--container-runtime-endpoint="+containerd.PathSocketEndpoint,
 			"--runtime-cgroups="+containerd.CgroupPath,
 		)
+		if versionutils.ConstraintK8sLess127.Check(kubernetesVersion) {
+			flags = append(flags, "--container-runtime=remote")
+		}
 	} else if criName == extensionsv1alpha1.CRINameDocker {
 		flags = append(flags,
 			"--network-plugin=cni",
