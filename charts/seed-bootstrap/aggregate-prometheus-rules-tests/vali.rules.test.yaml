@@ -1,0 +1,26 @@
+rule_files:
+- ../aggregate-prometheus-rules/vali.rules.yaml
+
+evaluation_interval: 30s
+
+tests:
+- interval: 30s
+  external_labels:
+    seed: aws
+  input_series:
+  # ValiDown
+  - series: 'up{app="vali"}'
+    values: '0+0x30'
+  alert_rule_test:
+  - eval_time: 30m
+    alertname: ValiDown
+    exp_alerts:
+    - exp_labels:
+        service: logging
+        severity: warning
+        type: seed
+        visibility: operator
+      exp_annotations:
+        description: "There are no vali pods running on seed: aws. No logs will be collected."
+        summary: Vali is down
+

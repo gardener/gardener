@@ -126,6 +126,8 @@ const (
 	DeploymentNameGardenerResourceManager = "gardener-resource-manager"
 	// DeploymentNameGrafana is a constant for the name of a Kubernetes deployment object that contains the grafana pod.
 	DeploymentNameGrafana = "grafana"
+	// DeploymentNamePlutono is a constant for the name of a Kubernetes deployment object that contains the plutono pod.
+	DeploymentNamePlutono = "plutono"
 	// DeploymentNameEventLogger is a constant for the name of a Kubernetes deployment object that contains
 	// the event-logger pod.
 	DeploymentNameEventLogger = "event-logger"
@@ -173,6 +175,9 @@ const (
 	// StatefulSetNameLoki is a constant for the name of a Kubernetes stateful set object that contains
 	// the loki pod.
 	StatefulSetNameLoki = "loki"
+	// StatefulSetNameVali is a constant for the name of a Kubernetes stateful set object that contains
+	// the vali pod.
+	StatefulSetNameVali = "vali"
 	// StatefulSetNamePrometheus is a constant for the name of a Kubernetes stateful set object that contains
 	// the prometheus pod.
 	StatefulSetNamePrometheus = "prometheus"
@@ -596,10 +601,10 @@ const (
 	OperatingSystemConfigFilePathKernelSettings = "/etc/sysctl.d/99-k8s-general.conf"
 	// OperatingSystemConfigFilePathKubeletConfig is a constant for a path to a file in the operating system config that contains the kubelet configuration.
 	OperatingSystemConfigFilePathKubeletConfig = "/var/lib/kubelet/config/kubelet"
-	// OperatingSystemConfigUnitNamePromtailService is a constant for a unit in the operating system config that contains the promtail service.
-	OperatingSystemConfigUnitNamePromtailService = "promtail.service"
-	// OperatingSystemConfigFilePathPromtailConfig is a constant for a path to a file in the operating system config that contains the kubelet configuration.
-	OperatingSystemConfigFilePathPromtailConfig = "/var/lib/promtail/config/config"
+	// OperatingSystemConfigUnitNameValitailService is a constant for a unit in the operating system config that contains the valitail service.
+	OperatingSystemConfigUnitNameValitailService = "valitail.service"
+	// OperatingSystemConfigFilePathValitailConfig is a constant for a path to a file in the operating system config that contains the kubelet configuration.
+	OperatingSystemConfigFilePathValitailConfig = "/var/lib/valitail/config/config"
 	// OperatingSystemConfigFilePathBinaries is a constant for a path to a directory in the operating system config that contains the binaries.
 	OperatingSystemConfigFilePathBinaries = "/opt/bin"
 
@@ -611,10 +616,10 @@ const (
 	PrometheusConfigMapAlertingRules = "alerting_rules"
 	// PrometheusConfigMapScrapeConfig is a constant for the Prometheus scrape config tag in provider-specific monitoring configuration
 	PrometheusConfigMapScrapeConfig = "scrape_config"
-	// GrafanaConfigMapUserDashboard is a constant for the Grafana user dashboard tag in provider-specific monitoring configuration
-	GrafanaConfigMapUserDashboard = "dashboard_users"
-	// GrafanaConfigMapOperatorDashboard is a constant for the Grafana operator dashboard tag in provider-specific monitoring configuration
-	GrafanaConfigMapOperatorDashboard = "dashboard_operators"
+	// PlutonoConfigMapUserDashboard is a constant for the Plutono user dashboard tag in provider-specific monitoring configuration
+	PlutonoConfigMapUserDashboard = "dashboard_users"
+	// PlutonoConfigMapOperatorDashboard is a constant for the Plutono operator dashboard tag in provider-specific monitoring configuration
+	PlutonoConfigMapOperatorDashboard = "dashboard_operators"
 
 	// LabelControllerRegistrationName is the key of a label on extension namespaces that indicates the controller registration name.
 	LabelControllerRegistrationName = "controllerregistration.core.gardener.cloud/name"

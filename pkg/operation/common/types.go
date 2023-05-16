@@ -21,8 +21,8 @@ const (
 	// KubeAPIServerPrefix is a constant for a prefix used for the KubeAPIServer instance which uses a TLS certificate from a trusted origin.
 	KubeAPIServerPrefix = "api"
 
-	// GrafanaUsersPrefix is a constant for a prefix used for the users Grafana instance.
-	GrafanaUsersPrefix = "gu"
+	// PlutonoUsersPrefix is a constant for a prefix used for the users Plutono instance.
+	PlutonoUsersPrefix = "gu"
 
 	// PrometheusPrefix is a constant for a prefix used for the Prometheus instance.
 	PrometheusPrefix = "p"
@@ -30,8 +30,8 @@ const (
 	// AlertManagerPrefix is a constant for a prefix used for the AlertManager instance.
 	AlertManagerPrefix = "au"
 
-	// LokiPrefix is a constant for a prefix used for the Loki instance.
-	LokiPrefix = "l"
+	// ValiPrefix is a constant for a prefix used for the Vali instance.
+	ValiPrefix = "v"
 
 	// ManagedResourceShootCoreName is the name of the shoot core managed resource.
 	ManagedResourceShootCoreName = "shoot-core"

@@ -223,7 +223,7 @@ func GenerateRBACResourcesData(secretNames []string) (map[string][]byte, error) 
 				{
 					APIGroups:     []string{""},
 					Resources:     []string{"secrets"},
-					ResourceNames: append(secretNames, Name, kuberbacproxy.PromtailTokenSecretName),
+					ResourceNames: append(secretNames, Name, kuberbacproxy.ValitailTokenSecretName),
 					Verbs:         []string{"get"},
 				},
 			},

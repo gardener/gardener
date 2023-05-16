@@ -50,7 +50,7 @@ Deployed in the shoot control plane namespace. Important scrape targets:
 - shoot nodes (node-exporter)
 - blackbox-exporter used to measure [connectivity](connectivity.md)
 
-**Purpose**: Monitor all relevant components belonging to a shoot cluster managed by Gardener. Shoot owners can view the metrics in Grafana dashboards and receive [alerts](user_alerts.md) based on these metrics. Gardener operators will receive a different set of [alerts](operator_alerts.md). For alerting internals refer to [this](alerting.md) document.
+**Purpose**: Monitor all relevant components belonging to a shoot cluster managed by Gardener. Shoot owners can view the metrics in Plutono dashboards and receive [alerts](user_alerts.md) based on these metrics. Gardener operators will receive a different set of [alerts](operator_alerts.md). For alerting internals refer to [this](alerting.md) document.
 
 ## Collect all Shoot Prometheus with remote write
 

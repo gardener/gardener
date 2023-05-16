@@ -89,7 +89,7 @@ func getWarningsForDueCredentialsRotations(shoot *core.Shoot, credentialsRotatio
 
 	if (shoot.Spec.Purpose == nil || *shoot.Spec.Purpose != core.ShootPurposeTesting) &&
 		(rotation.Observability == nil || initiationDue(rotation.Observability.LastInitiationTime, credentialsRotationInterval)) {
-		warnings = append(warnings, "you should consider rotating the observability passwords, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_credentials_rotation.md#observability-passwords-for-grafana for details")
+		warnings = append(warnings, "you should consider rotating the observability passwords, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_credentials_rotation.md#observability-passwords-for-plutono for details")
 	}
 
 	if rotation.ServiceAccountKey == nil || initiationDue(rotation.ServiceAccountKey.LastInitiationTime, credentialsRotationInterval) {

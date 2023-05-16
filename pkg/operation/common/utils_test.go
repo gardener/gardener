@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -189,7 +190,7 @@ var _ = Describe("common", func() {
 		})
 	})
 
-	Describe("#DeleteLoki", func() {
+	Describe("#DeleteVali", func() {
 		var (
 			ctrl *gomock.Controller
 			c    *mockclient.MockClient
@@ -197,13 +198,14 @@ var _ = Describe("common", func() {
 		)
 
 		resources := []client.Object{
-			&hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
-			&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "loki-config", Namespace: v1beta1constants.GardenNamespace}},
-			&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
+			&hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: v1beta1constants.GardenNamespace}},
+			&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: v1beta1constants.GardenNamespace}},
+			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-valitail", Namespace: v1beta1constants.GardenNamespace}},
+			&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: v1beta1constants.GardenNamespace}},
 			&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "logging",
 				Namespace: v1beta1constants.GardenNamespace}},
-			&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
-			&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "loki-loki-0", Namespace: v1beta1constants.GardenNamespace}},
+			&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: v1beta1constants.GardenNamespace}},
+			&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "vali-vali-0", Namespace: v1beta1constants.GardenNamespace}},
 		}
 
 		BeforeEach(func() {
@@ -217,12 +219,20 @@ var _ = Describe("common", func() {
 			ctrl.Finish()
 		})
 
-		It("should delete all loki resources", func() {
+		It("should delete all vali resources", func() {
 			for _, resource := range resources {
 				c.EXPECT().Delete(ctx, resource)
 			}
 
-			err := DeleteLoki(ctx, c, v1beta1constants.GardenNamespace)
+			deleteOptions := []interface{}{
+				client.InNamespace(v1beta1constants.GardenNamespace),
+				client.MatchingLabels{
+					v1beta1constants.GardenRole: "logging",
+					v1beta1constants.LabelApp:   "vali",
+				}}
+			c.EXPECT().DeleteAllOf(ctx, &corev1.ConfigMap{}, deleteOptions...)
+
+			err := DeleteVali(ctx, c, v1beta1constants.GardenNamespace)
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})

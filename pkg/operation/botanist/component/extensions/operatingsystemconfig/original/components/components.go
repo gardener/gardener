@@ -44,8 +44,8 @@ type Context struct {
 	KubernetesVersion       *semver.Version
 	SSHPublicKeys           []string
 	SSHAccessEnabled        bool
-	LokiIngress             string
-	PromtailEnabled         bool
+	ValiIngress             string
+	ValitailEnabled         bool
 	APIServerURL            string
 	Sysctls                 map[string]string
 }

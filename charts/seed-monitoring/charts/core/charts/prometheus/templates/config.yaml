@@ -416,8 +416,8 @@ data:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.blackboxExporter | indent 8 }}
 {{- end }}
 
-{{- if  (index .Values.rules.optional "loki" ).enabled }}
-    - job_name: loki
+{{- if  (index .Values.rules.optional "vali" ).enabled }}
+    - job_name: vali
       honor_labels: false
       kubernetes_sd_configs:
       - role: endpoints
@@ -435,11 +435,11 @@ data:
       - source_labels: [ __meta_kubernetes_pod_name ]
         target_label: pod
       metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.loki | indent 6 }}
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.vali | indent 6 }}
 {{- end }}
 
-{{- if  (index .Values.rules.optional "lokiTelegraf" ).enabled }}
-    - job_name: loki-telegraf
+{{- if  (index .Values.rules.optional "valiTelegraf" ).enabled }}
+    - job_name: vali-telegraf
       honor_labels: false
       kubernetes_sd_configs:
       - role: endpoints

@@ -602,8 +602,8 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerStatusUpdate, deployManagedResourcesForAddons, deployManagedResourceForCloudConfigExecutor),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Reconciling Grafana for Shoot in Seed for the logging stack",
-			Fn:           flow.TaskFn(botanist.DeploySeedGrafana).RetryUntilTimeout(defaultInterval, 2*time.Minute),
+			Name:         "Reconciling Plutono for Shoot in Seed for the logging stack",
+			Fn:           flow.TaskFn(botanist.DeploySeedPlutono).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(deploySeedLogging),
 		})
 		waitUntilWorkerReady = g.Add(flow.Task{
@@ -664,8 +664,8 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(deploySeedMonitoring),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Reconciling Grafana for Shoot in Seed for the monitoring stack",
-			Fn:           flow.TaskFn(botanist.DeploySeedGrafana).RetryUntilTimeout(defaultInterval, 2*time.Minute),
+			Name:         "Reconciling Plutono for Shoot in Seed for the monitoring stack",
+			Fn:           flow.TaskFn(botanist.DeploySeedPlutono).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(deploySeedMonitoring),
 		})
 

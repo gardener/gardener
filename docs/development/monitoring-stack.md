@@ -14,7 +14,7 @@ Each Shoot cluster comes with its own monitoring stack. The following components
 
 * Seed
   * [Prometheus](https://github.com/prometheus/prometheus)
-  * [Grafana](https://github.com/grafana/grafana)
+  * [Plutono](https://github.com/credativ/plutono)
   * [blackbox-exporter](https://github.com/prometheus/blackbox_exporter)
   * [kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) (Seed metrics)
   * [kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) (Shoot metrics)
@@ -159,9 +159,9 @@ If you want to add alert tests:
 
 2. Make sure that newly added tests succeed. See above.
 
-## Adding Grafana Dashboards
+## Adding Plutono Dashboards
 
-The dashboard definition files are located in `charts/seed-monitoring/charts/grafana/dashboards`. Every dashboard needs its own file.
+The dashboard definition files are located in `charts/seed-monitoring/charts/plutono/dashboards`. Every dashboard needs its own file.
 
 If you are adding a new component dashboard please also update the overview dashboard by adding a chart for its current up/down status and with a drill down option to the component dashboard.
 

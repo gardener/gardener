@@ -20,6 +20,19 @@ rules:
   - get
   - list
   - watch
+- apiGroups: # TODO (istvanballok,rickardsjp): remove in release v1.77. Patching persistent volumes is needed for the Loki -> Vali migration.
+  - ""
+  resources:
+  - persistentvolumes
+  verbs:
+  - delete
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumeclaims
+  verbs:
+  - create
 - apiGroups:
   - ""
   resources:
@@ -90,6 +103,7 @@ rules:
   - persistentvolumeclaims
   resourceNames:
   - alertmanager-db-alertmanager-0
+  - vali-vali-0
   - loki-loki-0
   - prometheus-db-prometheus-0
   verbs:
@@ -214,6 +228,7 @@ rules:
   - kube-controller-manager
   - aggregate-prometheus
   - prometheus
+  - vali
   - loki
   verbs:
   - delete

@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -31,9 +32,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/mock"
@@ -89,12 +92,13 @@ var _ = Describe("Logging", func() {
 
 		botanist = &Botanist{
 			Operation: &operation.Operation{
+				Logger:         logr.Discard(),
 				SecretsManager: fakeSecretManager,
 				SeedClientSet:  k8sSeedClient,
 				Config: &config.GardenletConfiguration{
 					Logging: &config.Logging{
 						Enabled: pointer.Bool(true),
-						Loki: &config.Loki{
+						Vali: &config.Vali{
 							Enabled: pointer.Bool(true),
 						},
 						ShootNodeLogging: &config.ShootNodeLogging{
@@ -120,8 +124,9 @@ var _ = Describe("Logging", func() {
 					IsWorkerless: false,
 				},
 				ImageVector: imagevector.ImageVector{
-					{Name: "loki"},
-					{Name: "loki-curator"},
+					{Name: "alpine"},
+					{Name: "vali"},
+					{Name: "vali-curator"},
 					{Name: "kube-rbac-proxy"},
 					{Name: "telegraf"},
 					{Name: "tune2fs"},
@@ -159,40 +164,150 @@ var _ = Describe("Logging", func() {
 			gomock.InOrder(
 				// Destroying the Shoot Node Logging
 				shootRBACProxyDeployer.EXPECT().Destroy(ctx),
-				c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: seedNamespace}}),
 				// Destroying the Shoot Event Logging
 				shootEventLoggerDeployer.EXPECT().Destroy(ctx),
-				// Delete Loki
-				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
-				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "loki-config", Namespace: seedNamespace}}),
-				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
+				// Delete Vali
+				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "logging",
 					Namespace: seedNamespace}}),
-				c.EXPECT().Delete(ctx, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
-				c.EXPECT().Delete(ctx, &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "loki-loki-0", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-valitail", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "vali-vali-0", Namespace: seedNamespace}}),
 			)
+
+			deleteOptions := []interface{}{
+				client.InNamespace(seedNamespace),
+				client.MatchingLabels{
+					v1beta1constants.GardenRole: "logging",
+					v1beta1constants.LabelApp:   "vali",
+				}}
+			c.EXPECT().DeleteAllOf(ctx, &corev1.ConfigMap{}, deleteOptions...)
 
 			Expect(botanist.DeploySeedLogging(ctx)).To(Succeed())
 		})
 
 		It("should successfully delete the logging stack when it is disabled", func() {
 			*botanist.Config.Logging.Enabled = false
+			deleteOptions := []interface{}{
+				client.InNamespace(seedNamespace),
+				client.MatchingLabels{
+					v1beta1constants.GardenRole: "logging",
+					v1beta1constants.LabelApp:   "vali",
+				}}
 			gomock.InOrder(
 				// Destroying the Shoot Node Logging
 				shootRBACProxyDeployer.EXPECT().Destroy(ctx),
-				c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: seedNamespace}}),
 				// Destroying the Shoot Event Logging
 				shootEventLoggerDeployer.EXPECT().Destroy(ctx),
-				// Delete Loki
-				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
-				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "loki-config", Namespace: seedNamespace}}),
-				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
+				// Delete Vali
+				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "logging",
 					Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-valitail", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "vali-vali-0", Namespace: seedNamespace}}),
+				c.EXPECT().DeleteAllOf(ctx, &corev1.ConfigMap{}, deleteOptions...),
+			)
+
+			Expect(botanist.DeploySeedLogging(ctx)).To(Succeed())
+		})
+
+		It("should successfully clean up the existing Loki based deployment and deploy all of the components in the logging stack when it is enabled", func() {
+			deleteOptions := []interface{}{
+				client.InNamespace(seedNamespace),
+				client.MatchingLabels{
+					v1beta1constants.GardenRole: "logging",
+					v1beta1constants.LabelApp:   "loki",
+				}}
+			gomock.InOrder(
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(nil),
+
+				// Destroying the Shoot Node Logging
+				shootRBACProxyDeployer.EXPECT().Destroy(ctx),
+				c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-prometheus-to-loki-telegraf", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: seedNamespace}}),
+				// Delete Vali
+				c.EXPECT().Delete(ctx, &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "loki-0", Namespace: seedNamespace}}, client.GracePeriodSeconds(5)),
+
+				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-loki", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-loki", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
-				c.EXPECT().Delete(ctx, &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "loki-loki-0", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-promtail", Namespace: seedNamespace}}),
+				c.EXPECT().DeleteAllOf(ctx, &corev1.ConfigMap{}, deleteOptions...),
+
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Do(func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					pvc := obj.(*corev1.PersistentVolumeClaim)
+					pvc.Spec.VolumeName = "volumeIDofLoki"
+					return nil
+				}),
+
+				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: seedNamespace, Name: "loki-0"}, gomock.AssignableToTypeOf(&corev1.Pod{})).Return(nil),
+				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: seedNamespace, Name: "loki-0"}, gomock.AssignableToTypeOf(&corev1.Pod{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Pod"}, "loki-0")),
+
+				c.EXPECT().Get(ctx, client.ObjectKey{Name: "volumeIDofLoki"}, gomock.AssignableToTypeOf(&corev1.PersistentVolume{})).Do(func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					pv := obj.(*corev1.PersistentVolume)
+					pv.Spec.PersistentVolumeReclaimPolicy = corev1.PersistentVolumeReclaimDelete
+					return nil
+				}),
+
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.PersistentVolume{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+					pv := obj.(*corev1.PersistentVolume)
+					Expect(pv.Spec.PersistentVolumeReclaimPolicy).To(Equal(corev1.PersistentVolumeReclaimRetain))
+					return nil
+				}),
+
+				c.EXPECT().Delete(ctx, &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "loki-loki-0", Namespace: seedNamespace}, Spec: corev1.PersistentVolumeClaimSpec{VolumeName: "volumeIDofLoki"}}),
+
+				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(nil),
+				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
+
+				c.EXPECT().Get(ctx, client.ObjectKey{Name: "volumeIDofLoki"}, gomock.AssignableToTypeOf(&corev1.PersistentVolume{})).Return(nil),
+
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.PersistentVolume{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+					pv := obj.(*corev1.PersistentVolume)
+					Expect(pv.Spec.ClaimRef).To(BeNil())
+					return nil
+				}),
+
+				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Do(func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+					pvc := obj.(*corev1.PersistentVolumeClaim)
+					Expect(pvc.ObjectMeta.Name).To(Equal("vali-vali-0"))
+					return nil
+				}),
+
+				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: seedNamespace, Name: "vali-vali-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "vali-vali-0")),
+				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: seedNamespace, Name: "vali-vali-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(nil),
+				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: seedNamespace, Name: "vali-vali-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Do(func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					pvc := obj.(*corev1.PersistentVolumeClaim)
+					pvc.Status.Phase = corev1.ClaimBound
+					return nil
+				}),
+
+				c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&corev1.PersistentVolume{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+					pv := obj.(*corev1.PersistentVolume)
+					Expect(pv.Spec.PersistentVolumeReclaimPolicy).To(Equal(corev1.PersistentVolumeReclaimDelete))
+					return nil
+				}),
+
+				// deploy Shoot Event Logging
+				shootEventLoggerDeployer.EXPECT().Deploy(ctx),
+				shootRBACProxyDeployer.EXPECT().Deploy(ctx),
+				c.EXPECT().Get(gomock.AssignableToTypeOf(context.TODO()), kubernetesutils.Key(seedNamespace, "generic-token-kubeconfig"), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
+				// deploy Vali
+				chartApplier.EXPECT().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "vali"), seedNamespace, fmt.Sprintf("%s-logging", seedNamespace), gomock.AssignableToTypeOf(kubernetes.Values(map[string]interface{}{"Vali": "image"}))),
 			)
 
 			Expect(botanist.DeploySeedLogging(ctx)).To(Succeed())
@@ -200,13 +315,14 @@ var _ = Describe("Logging", func() {
 
 		It("should successfully deploy all of the components in the logging stack when it is enabled", func() {
 			gomock.InOrder(
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 				// deploy Shoot Event Logging
 				shootEventLoggerDeployer.EXPECT().Deploy(ctx),
 				shootRBACProxyDeployer.EXPECT().Deploy(ctx),
 				c.EXPECT().Get(gomock.AssignableToTypeOf(context.TODO()), kubernetesutils.Key(seedNamespace, "generic-token-kubeconfig"), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
-				// deploy Loki
-				chartApplier.EXPECT().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "loki"), seedNamespace, fmt.Sprintf("%s-logging", seedNamespace), gomock.AssignableToTypeOf(kubernetes.Values(map[string]interface{}{"Loki": "image"}))),
+				// deploy Vali
+				chartApplier.EXPECT().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "vali"), seedNamespace, fmt.Sprintf("%s-logging", seedNamespace), gomock.AssignableToTypeOf(kubernetes.Values(map[string]interface{}{"Vali": "image"}))),
 			)
 
 			Expect(botanist.DeploySeedLogging(ctx)).To(Succeed())
@@ -215,14 +331,15 @@ var _ = Describe("Logging", func() {
 		It("should not deploy event logger when it is disabled", func() {
 			*botanist.Config.Logging.ShootEventLogging.Enabled = false
 			gomock.InOrder(
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 				// destroy Shoot Event Logging
 				shootEventLoggerDeployer.EXPECT().Destroy(ctx),
 				// deploy Shoot Node Logging
 				shootRBACProxyDeployer.EXPECT().Deploy(ctx),
 				c.EXPECT().Get(gomock.AssignableToTypeOf(context.TODO()), kubernetesutils.Key(seedNamespace, "generic-token-kubeconfig"), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
-				// deploy Loki
-				chartApplier.EXPECT().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "loki"), seedNamespace, fmt.Sprintf("%s-logging", seedNamespace), gomock.AssignableToTypeOf(kubernetes.Values(map[string]interface{}{"Loki": "image"}))),
+				// deploy Vali
+				chartApplier.EXPECT().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "vali"), seedNamespace, fmt.Sprintf("%s-logging", seedNamespace), gomock.AssignableToTypeOf(kubernetes.Values(map[string]interface{}{"Vali": "image"}))),
 			)
 
 			Expect(botanist.DeploySeedLogging(ctx)).To(Succeed())
@@ -231,14 +348,15 @@ var _ = Describe("Logging", func() {
 		It("should not deploy shoot node logging for workerless shoot", func() {
 			botanist.Shoot.IsWorkerless = true
 			gomock.InOrder(
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 				// deploy Shoot Event Logging
 				shootEventLoggerDeployer.EXPECT().Deploy(ctx),
 				// destroy Shoot Node Logging
 				shootRBACProxyDeployer.EXPECT().Destroy(ctx),
-				c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: seedNamespace}}),
-				// deploy Loki
-				chartApplier.EXPECT().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "loki"), seedNamespace, fmt.Sprintf("%s-logging", seedNamespace), gomock.AssignableToTypeOf(kubernetes.Values(map[string]interface{}{"Loki": "image"}))),
+				// deploy Vali
+				chartApplier.EXPECT().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "vali"), seedNamespace, fmt.Sprintf("%s-logging", seedNamespace), gomock.AssignableToTypeOf(kubernetes.Values(map[string]interface{}{"Vali": "image"}))),
 			)
 
 			Expect(botanist.DeploySeedLogging(ctx)).To(Succeed())
@@ -247,36 +365,46 @@ var _ = Describe("Logging", func() {
 		It("should not deploy shoot node logging when it is disabled", func() {
 			botanist.Config.Logging.ShootNodeLogging = nil
 			gomock.InOrder(
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 				// deploy Shoot Event Logging
 				shootEventLoggerDeployer.EXPECT().Deploy(ctx),
 				// destroy Shoot Node Logging
 				shootRBACProxyDeployer.EXPECT().Destroy(ctx),
-				c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: seedNamespace}}),
-				// deploy Loki
-				chartApplier.EXPECT().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "loki"), seedNamespace, fmt.Sprintf("%s-logging", seedNamespace), gomock.AssignableToTypeOf(kubernetes.Values(map[string]interface{}{"Loki": "image"}))),
+				// deploy Vali
+				chartApplier.EXPECT().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "vali"), seedNamespace, fmt.Sprintf("%s-logging", seedNamespace), gomock.AssignableToTypeOf(kubernetes.Values(map[string]interface{}{"Vali": "image"}))),
 			)
 
 			Expect(botanist.DeploySeedLogging(ctx)).To(Succeed())
 		})
 
-		It("should not deploy shoot node logging and Loki when Loki is disabled", func() {
-			*botanist.Config.Logging.Loki.Enabled = false
+		It("should not deploy shoot node logging and Vali when Vali is disabled", func() {
+			*botanist.Config.Logging.Vali.Enabled = false
+			deleteOptions := []interface{}{
+				client.InNamespace(seedNamespace),
+				client.MatchingLabels{
+					v1beta1constants.GardenRole: "logging",
+					v1beta1constants.LabelApp:   "vali",
+				}}
 			gomock.InOrder(
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 				// deploy Shoot Event Logging
 				shootEventLoggerDeployer.EXPECT().Deploy(ctx),
 				// destroy Shoot Node Logging
 				shootRBACProxyDeployer.EXPECT().Destroy(ctx),
-				c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: seedNamespace}}),
-				// destroy Loki
-				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
-				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "loki-config", Namespace: seedNamespace}}),
-				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
+				// destroy Vali
+				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "logging",
 					Namespace: seedNamespace}}),
-				c.EXPECT().Delete(ctx, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
-				c.EXPECT().Delete(ctx, &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "loki-loki-0", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-valitail", Namespace: seedNamespace}}),
+				c.EXPECT().Delete(ctx, &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "vali-vali-0", Namespace: seedNamespace}}),
+				c.EXPECT().DeleteAllOf(ctx, &corev1.ConfigMap{}, deleteOptions...),
 			)
 
 			Expect(botanist.DeploySeedLogging(ctx)).To(Succeed())
@@ -294,7 +422,7 @@ var _ = Describe("Logging", func() {
 				gomock.InOrder(
 					// Destroying the Shoot Node Logging
 					shootRBACProxyDeployer.EXPECT().Destroy(ctx),
-					c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}).Return(fakeErr),
+					c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}).Return(fakeErr),
 				)
 
 				Expect(botanist.DeploySeedLogging(ctx)).ToNot(Succeed())
@@ -305,7 +433,7 @@ var _ = Describe("Logging", func() {
 				gomock.InOrder(
 					// Destroying the Shoot Node Logging
 					shootRBACProxyDeployer.EXPECT().Destroy(ctx),
-					c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
+					c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
 					c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: seedNamespace}}),
 					// Destroying the Shoot Event Logging
 					shootEventLoggerDeployer.EXPECT().Destroy(ctx).Return(fakeErr),
@@ -319,30 +447,32 @@ var _ = Describe("Logging", func() {
 				gomock.InOrder(
 					// Destroying the Shoot Node Logging
 					shootRBACProxyDeployer.EXPECT().Destroy(ctx),
-					c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}),
+					c.EXPECT().Delete(ctx, &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}),
 					c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: seedNamespace}}),
 					// Destroying the Shoot Event Logging
 					shootEventLoggerDeployer.EXPECT().Destroy(ctx),
-					// Delete Loki
-					c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: seedNamespace}}).Return(fakeErr),
+					// Delete Vali
+					c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: seedNamespace}}).Return(fakeErr),
 				)
 
 				Expect(botanist.DeploySeedLogging(ctx)).ToNot(Succeed())
 			})
 
-			It("should fail when can't find Loki image", func() {
+			It("should fail when can't find Vali image", func() {
 				botanist.Operation.ImageVector = imagevector.ImageVector{
-					{Name: "loki-curator"},
+					{Name: "vali-curator"},
 					{Name: "kube-rbac-proxy"},
 					{Name: "telegraf"},
 					{Name: "tune2fs"},
 				}
 
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0"))
 				Expect(botanist.DeploySeedLogging(ctx)).ToNot(Succeed())
 			})
 
 			It("should fail when can't find generic-token-kubeconfig", func() {
 				gomock.InOrder(
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 					shootEventLoggerDeployer.EXPECT().Deploy(ctx),
 					shootRBACProxyDeployer.EXPECT().Deploy(ctx),
 					c.EXPECT().Get(gomock.AssignableToTypeOf(context.TODO()), kubernetesutils.Key(seedNamespace, "generic-token-kubeconfig"), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(gr, "generic-token-kubeconfig")),
@@ -352,6 +482,7 @@ var _ = Describe("Logging", func() {
 
 			It("should fail to deploy the logging stack when ShootEventLoggerDeployer Deploy returns an error", func() {
 				gomock.InOrder(
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 					shootEventLoggerDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
 				)
 
@@ -360,6 +491,7 @@ var _ = Describe("Logging", func() {
 
 			It("should fail to deploy the logging stack when deploying of the shoot event logging fails", func() {
 				gomock.InOrder(
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 					// deploy Shoot Event Logging
 					shootEventLoggerDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
 				)
@@ -369,6 +501,7 @@ var _ = Describe("Logging", func() {
 
 			It("should fail to deploy the logging stack when KubeRBACProxyDeployer Deploy returns an error", func() {
 				gomock.InOrder(
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 					shootEventLoggerDeployer.EXPECT().Deploy(ctx),
 					shootRBACProxyDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
 				)
@@ -376,8 +509,9 @@ var _ = Describe("Logging", func() {
 				Expect(botanist.DeploySeedLogging(ctx)).ToNot(Succeed())
 			})
 
-			It("should fail to deploy the logging stack when generation of the Loki ingress TLS Secret fails", func() {
+			It("should fail to deploy the logging stack when generation of the Vali ingress TLS Secret fails", func() {
 				gomock.InOrder(
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 					shootEventLoggerDeployer.EXPECT().Deploy(ctx),
 					shootRBACProxyDeployer.EXPECT().Deploy(ctx),
 					c.EXPECT().Get(gomock.AssignableToTypeOf(context.TODO()), kubernetesutils.Key(seedNamespace, "generic-token-kubeconfig"), gomock.AssignableToTypeOf(&corev1.Secret{})),
@@ -387,13 +521,14 @@ var _ = Describe("Logging", func() {
 				Expect(botanist.DeploySeedLogging(ctx)).ToNot(Succeed())
 			})
 
-			It("should fail to deploy the logging stack Loki charts failed to be applied", func() {
+			It("should fail to deploy the logging stack Vali charts failed to be applied", func() {
 				gomock.InOrder(
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "loki-loki-0"}, gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "PersistentVolumeClaim"}, "loki-loki-0")),
 					shootEventLoggerDeployer.EXPECT().Deploy(ctx),
 					shootRBACProxyDeployer.EXPECT().Deploy(ctx),
 					c.EXPECT().Get(gomock.AssignableToTypeOf(context.TODO()), kubernetesutils.Key(seedNamespace, "generic-token-kubeconfig"), gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
-					chartApplier.EXPECT().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "loki"), seedNamespace, fmt.Sprintf("%s-logging", seedNamespace), gomock.AssignableToTypeOf(kubernetes.Values(map[string]interface{}{"Loki": "image"}))).Return(fakeErr),
+					chartApplier.EXPECT().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "vali"), seedNamespace, fmt.Sprintf("%s-logging", seedNamespace), gomock.AssignableToTypeOf(kubernetes.Values(map[string]interface{}{"Vali": "image"}))).Return(fakeErr),
 				)
 
 				Expect(botanist.DeploySeedLogging(ctx)).ToNot(Succeed())

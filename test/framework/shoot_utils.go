@@ -47,9 +47,9 @@ func (f *ShootFramework) ShootKubeconfigSecretName() string {
 	return fmt.Sprintf("%s.kubeconfig", f.Shoot.GetName())
 }
 
-// GetLokiLogs gets logs from the last 1 hour for <key>, <value> from the loki instance in <lokiNamespace>
-func (f *ShootFramework) GetLokiLogs(ctx context.Context, lokiLabels map[string]string, tenant, lokiNamespace, key, value string, client kubernetes.Interface) (*SearchResponse, error) {
-	lokiLabelsSelector := labels.SelectorFromSet(labels.Set(lokiLabels))
+// GetValiLogs gets logs from the last 1 hour for <key>, <value> from the vali instance in <valiNamespace>
+func (f *ShootFramework) GetValiLogs(ctx context.Context, valiLabels map[string]string, tenant, valiNamespace, key, value string, client kubernetes.Interface) (*SearchResponse, error) {
+	valiLabelsSelector := labels.SelectorFromSet(labels.Set(valiLabels))
 
 	if tenant == "" {
 		tenant = "fake"
@@ -57,12 +57,12 @@ func (f *ShootFramework) GetLokiLogs(ctx context.Context, lokiLabels map[string]
 
 	query := fmt.Sprintf("query=count_over_time({%s=~\"%s\"}[1h])", key, value)
 
-	command := fmt.Sprintf("wget 'http://localhost:%d/loki/api/v1/query' -O- '--header=X-Scope-OrgID: %s' --post-data='%s'", lokiPort, tenant, query)
+	command := fmt.Sprintf("wget 'http://localhost:%d/vali/api/v1/query' -O- '--header=X-Scope-OrgID: %s' --post-data='%s'", valiPort, tenant, query)
 
 	var reader io.Reader
 	err := retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (bool, error) {
 		var err error
-		reader, err = PodExecByLabel(ctx, lokiLabelsSelector, lokiLogging, command, lokiNamespace, client)
+		reader, err = PodExecByLabel(ctx, valiLabelsSelector, valiLogging, command, valiNamespace, client)
 
 		if err != nil {
 			f.Logger.Error(err, "Error exec'ing into pod")

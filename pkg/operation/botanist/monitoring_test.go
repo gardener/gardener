@@ -164,7 +164,7 @@ var _ = Describe("Monitoring", func() {
 					},
 				},
 				ImageVector: imagevector.ImageVector{
-					{Name: "grafana"},
+					{Name: "plutono"},
 					{Name: "prometheus"},
 					{Name: "configmap-reloader"},
 					{Name: "blackbox-exporter"},
@@ -197,11 +197,11 @@ var _ = Describe("Monitoring", func() {
 		ctrl.Finish()
 	})
 
-	Describe("#DeploySeedGrafana", func() {
+	Describe("#DeploySeedPlutono", func() {
 		It("should generate two ingress secrets", func() {
 			defer test.WithVar(&ChartsPath, filepath.Join("..", "..", "..", "charts"))()
 
-			Expect(botanist.DeploySeedGrafana(ctx)).To(Succeed())
+			Expect(botanist.DeploySeedPlutono(ctx)).To(Succeed())
 
 			secretList := &corev1.SecretList{}
 			Expect(seedClient.List(ctx, secretList, client.InNamespace(seedNamespace), client.MatchingLabels{
@@ -217,7 +217,7 @@ var _ = Describe("Monitoring", func() {
 
 			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(BeNotFoundError())
 
-			Expect(botanist.DeploySeedGrafana(ctx)).To(Succeed())
+			Expect(botanist.DeploySeedPlutono(ctx)).To(Succeed())
 
 			secret := &corev1.Secret{}
 			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), secret)).To(Succeed())
@@ -231,12 +231,12 @@ var _ = Describe("Monitoring", func() {
 
 			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(BeNotFoundError())
 
-			Expect(botanist.DeploySeedGrafana(ctx)).To(Succeed())
+			Expect(botanist.DeploySeedPlutono(ctx)).To(Succeed())
 			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(Succeed())
 			Expect(*botanist.Shoot.GetInfo().Spec.Purpose == shootPurposeEvaluation).To(BeTrue())
 
 			botanist.Shoot.Purpose = shootPurposeTesting
-			Expect(botanist.DeploySeedGrafana(ctx)).To(Succeed())
+			Expect(botanist.DeploySeedPlutono(ctx)).To(Succeed())
 
 			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(BeNotFoundError())
 		})

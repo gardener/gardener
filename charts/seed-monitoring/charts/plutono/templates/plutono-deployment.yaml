@@ -1,0 +1,86 @@
+{{- define "plutono.deployment.annotations" -}}
+reference.resources.gardener.cloud/configmap-{{ include "plutono.providers.name" . | sha256sum | trunc 8 }}: {{ include "plutono.providers.name" . }}
+reference.resources.gardener.cloud/configmap-{{ include "plutono.datasources.name" . | sha256sum | trunc 8 }}: {{ include "plutono.datasources.name" . }}
+reference.resources.gardener.cloud/configmap-{{ include "plutono.dashboards.name" . | sha256sum | trunc 8 }}: {{ include "plutono.dashboards.name" . }}
+{{- end -}}
+---
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: plutono
+  namespace: {{ .Release.Namespace }}
+  labels:
+    gardener.cloud/role: monitoring
+    component: plutono
+  annotations:
+{{ include "plutono.deployment.annotations" . | indent 4 }}
+spec:
+  revisionHistoryLimit: 1
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      component: plutono
+  template:
+    metadata:
+      annotations:
+{{ include "plutono.deployment.annotations" . | indent 8 }}
+      labels:
+        gardener.cloud/role: monitoring
+        component: plutono
+        networking.gardener.cloud/to-dns: allowed
+        networking.resources.gardener.cloud/to-logging-tcp-3100: allowed
+        networking.resources.gardener.cloud/to-prometheus-web-tcp-9090: allowed
+    spec:
+      priorityClassName: gardener-system-100
+      containers:
+      - name: plutono
+        image: {{ index .Values.images "plutono" }}
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: PL_ALERTING_ENABLED
+          value: "false"
+        - name: PL_AUTH_ANONYMOUS_ENABLED
+          value: "true"
+        - name: PL_AUTH_BASIC_ENABLED
+          value: "false"
+        - name: PL_AUTH_DISABLE_LOGIN_FORM
+          value: "true"
+        - name: PL_AUTH_DISABLE_SIGNOUT_MENU
+          value: "true"
+        - name: PL_DATE_FORMATS_DEFAULT_TIMEZONE
+          value: "UTC"
+        - name: PL_SNAPSHOTS_EXTERNAL_ENABLED
+          value: "false"
+        - name: PL_USERS_VIEWERS_CAN_EDIT
+          value: "true"
+        volumeMounts:
+        - name: plutono-storage
+          mountPath: /var/lib/plutono
+        - name: plutono-dashboards
+          mountPath: /var/lib/plutono/dashboards
+        - name: plutono-datasources
+          mountPath: /etc/plutono/provisioning/datasources
+        - name: plutono-dashboard-providers
+          mountPath: /etc/plutono/provisioning/dashboards
+        ports:
+        - name: web
+          containerPort: {{ required ".ports.plutono is required" .Values.ports.plutono }}
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            memory: 400Mi
+      volumes:
+      - name: plutono-storage
+        emptyDir:
+          sizeLimit: 100Mi
+      - name: plutono-dashboards
+        configMap:
+          name: {{ include "plutono.dashboards.name" . }}
+      - name: plutono-datasources
+        configMap:
+          name: {{ include "plutono.datasources.name" . }}
+      - name: plutono-dashboard-providers
+        configMap:
+          name: {{ include "plutono.providers.name" . }}

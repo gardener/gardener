@@ -503,23 +503,23 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(fluentbit_loki_gardener_incoming_logs_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(fluentbit_vali_gardener_incoming_logs_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "instant": false,
           "interval": "",
           "legendFormat": "Incoming logs-{{pod}}",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(fluentbit_loki_gardener_incoming_logs_with_endpoint_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(fluentbit_vali_gardener_incoming_logs_with_endpoint_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "instant": false,
           "interval": "",
           "legendFormat": "Incoming logs with endpoint-{{pod}}",
           "refId": "B"
         },
         {
-          "expr": "sum(rate(fluentbit_loki_gardener_forwarded_logs_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(fluentbit_vali_gardener_forwarded_logs_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "interval": "",
-          "legendFormat": "Transferred to Promtail-{{pod}}",
+          "legendFormat": "Transferred to Valitail-{{pod}}",
           "refId": "C"
         }
       ],
@@ -616,7 +616,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(fluentbit_loki_gardener_dropped_logs_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(fluentbit_vali_gardener_dropped_logs_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "interval": "",
           "legendFormat": "Dropped logs-{{pod}}",
           "refId": "C"
@@ -628,21 +628,21 @@
           "refId": "D"
         },
         {
-          "expr": "sum(rate(fluentbit_loki_gardener_logs_without_metadata_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(fluentbit_vali_gardener_logs_without_metadata_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "interval": "",
           "legendFormat": "Missing metadata-{{pod}}",
           "refId": "E"
         },
         {
-          "expr": "sum(rate(fluentbit_loki_gardener_errors_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(fluentbit_vali_gardener_errors_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "interval": "",
           "legendFormat": "Errors-{{pod}}",
           "refId": "F"
         },
         {
-          "expr": "sum(rate(promtail_dropped_entries_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(valitail_dropped_entries_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "interval": "",
-          "legendFormat": "Promtail dropped-{{pod}}",
+          "legendFormat": "Valitail dropped-{{pod}}",
           "refId": "G"
         }
       ],
@@ -732,7 +732,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(fluentbit_loki_gardener_incoming_logs_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
+          "expr": "sum(increase(fluentbit_vali_gardener_incoming_logs_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -782,7 +782,7 @@
     },
     {
       "datasource": null,
-      "description": "Table which shows the total incoming logs with attached endpoint and are ready to be forwarded to the Promtail client",
+      "description": "Table which shows the total incoming logs with attached endpoint and are ready to be forwarded to the Valitail client",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -823,7 +823,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(fluentbit_loki_gardener_incoming_logs_with_endpoint_total{pod=~\"$pod\"}[$__rate_interval])  != 0) by (host)",
+          "expr": "sum(increase(fluentbit_vali_gardener_incoming_logs_with_endpoint_total{pod=~\"$pod\"}[$__rate_interval])  != 0) by (host)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -873,7 +873,7 @@
     },
     {
       "datasource": null,
-      "description": "Table which shows the transferred logs from Output plugin to the Promtail per hour.",
+      "description": "Table which shows the transferred logs from Output plugin to the Valitail per hour.",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -911,7 +911,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(fluentbit_loki_gardener_forwarded_logs_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
+          "expr": "sum(increase(fluentbit_vali_gardener_forwarded_logs_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
           "instant": false,
           "interval": "",
           "legendFormat": "{{host}}",
@@ -920,7 +920,7 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "[Output Plugin] Transferred Logs to Promtail",
+      "title": "[Output Plugin] Transferred Logs to Valitail",
       "transformations": [
         {
           "id": "reduce",
@@ -948,7 +948,7 @@
     },
     {
       "datasource": null,
-      "description": "Table which shows the total dropped entries by promtail per hour",
+      "description": "Table which shows the total dropped entries by valitail per hour",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -1001,7 +1001,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(promtail_dropped_entries_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
+          "expr": "sum(increase(valitail_dropped_entries_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -1011,7 +1011,7 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "[Promtail] Dropped Logs",
+      "title": "[Valitail] Dropped Logs",
       "transformations": [
         {
           "id": "reduce",
@@ -1080,7 +1080,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(fluentbit_loki_gardener_dropped_logs_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
+          "expr": "sum(increase(fluentbit_vali_gardener_dropped_logs_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -1155,7 +1155,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(fluentbit_loki_gardener_logs_without_metadata_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
+          "expr": "sum(increase(fluentbit_vali_gardener_logs_without_metadata_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -1219,7 +1219,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(fluentbit_loki_gardener_errors_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
+          "expr": "sum(increase(fluentbit_vali_gardener_errors_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
           "format": "time_series",
           "instant": false,
           "interval": "",

@@ -77,7 +77,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/logging/fluentoperator"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/logging/loki"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/logging/vali"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/monitoring"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
@@ -229,7 +229,7 @@ func (r *Reconciler) checkMinimumK8SVersion(version string) (string, error) {
 const (
 	seedBootstrapChartName        = "seed-bootstrap"
 	kubeAPIServerPrefix           = "api-seed"
-	grafanaPrefix                 = "g-seed"
+	plutonoPrefix                 = "g-seed"
 	prometheusPrefix              = "p-seed"
 	ingressTLSCertificateValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
 )
@@ -359,10 +359,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 			images.ImageNameAlertmanager,
 			images.ImageNameAlpine,
 			images.ImageNameConfigmapReloader,
-			images.ImageNameLoki,
-			images.ImageNameLokiCurator,
+			images.ImageNameVali,
+			images.ImageNameValiCurator,
 			images.ImageNameTune2fs,
-			images.ImageNameGrafana,
+			images.ImageNamePlutono,
 			images.ImageNamePrometheus,
 		},
 		imagevector.RuntimeVersion(kubernetesVersion.String()),
@@ -486,25 +486,25 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 	// Logging feature gate
 	var (
-		lokiValues = map[string]interface{}{}
+		valiValues = map[string]interface{}{}
 
 		inputs  []*fluentbitv1alpha2.ClusterInput
 		filters []*fluentbitv1alpha2.ClusterFilter
 		parsers []*fluentbitv1alpha2.ClusterParser
 	)
-	lokiValues["enabled"] = loggingEnabled
+	valiValues["enabled"] = loggingEnabled
 
 	if loggingEnabled {
-		// check if loki is disabled in gardenlet config
-		if !gardenlethelper.IsLokiEnabled(&r.Config) {
-			lokiValues["enabled"] = false
-			if err := common.DeleteLoki(ctx, seedClient, gardenNamespace.Name); err != nil {
+		// check if vali is disabled in gardenlet config
+		if !gardenlethelper.IsValiEnabled(&r.Config) {
+			valiValues["enabled"] = false
+			if err := common.DeleteVali(ctx, seedClient, gardenNamespace.Name); err != nil {
 				return err
 			}
 		} else {
-			lokiValues["authEnabled"] = false
-			lokiValues["storage"] = loggingConfig.Loki.Garden.Storage
-			if err := ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx, log, seedClient, *loggingConfig.Loki.Garden.Storage); err != nil {
+			valiValues["authEnabled"] = false
+			valiValues["storage"] = loggingConfig.Vali.Garden.Storage
+			if err := ResizeOrDeleteValiDataVolumeIfStorageNotTheSame(ctx, log, seedClient, *loggingConfig.Vali.Garden.Storage); err != nil {
 				return err
 			}
 
@@ -530,7 +530,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 					maintenanceEnd = shootMaintenanceEnd.Add(1, 0, 0).Formatted()
 				}
 
-				lokiValues["hvpa"] = map[string]interface{}{
+				valiValues["hvpa"] = map[string]interface{}{
 					"enabled": true,
 					"maintenanceTimeWindow": map[string]interface{}{
 						"begin": maintenanceBegin,
@@ -538,21 +538,21 @@ func (r *Reconciler) runReconcileSeedFlow(
 					},
 				}
 
-				currentResources, err := kubernetesutils.GetContainerResourcesInStatefulSet(ctx, seedClient, kubernetesutils.Key(r.GardenNamespace, v1beta1constants.StatefulSetNameLoki))
+				currentResources, err := kubernetesutils.GetContainerResourcesInStatefulSet(ctx, seedClient, kubernetesutils.Key(r.GardenNamespace, v1beta1constants.StatefulSetNameVali))
 				if err != nil {
 					return err
 				}
-				if len(currentResources) != 0 && currentResources[v1beta1constants.StatefulSetNameLoki] != nil {
-					lokiValues["resources"] = map[string]interface{}{
+				if len(currentResources) != 0 && currentResources[v1beta1constants.StatefulSetNameVali] != nil {
+					valiValues["resources"] = map[string]interface{}{
 						// Copy requests only, effectively removing limits
-						v1beta1constants.StatefulSetNameLoki: &corev1.ResourceRequirements{
-							Requests: currentResources[v1beta1constants.StatefulSetNameLoki].Requests,
+						v1beta1constants.StatefulSetNameVali: &corev1.ResourceRequirements{
+							Requests: currentResources[v1beta1constants.StatefulSetNameVali].Requests,
 						},
 					}
 				}
 			}
 
-			lokiValues["priorityClassName"] = v1beta1constants.PriorityClassNameSeedSystem600
+			valiValues["priorityClassName"] = v1beta1constants.PriorityClassNameSeedSystem600
 		}
 
 		componentsFunctions := []component.CentralLoggingConfiguration{
@@ -566,7 +566,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			dependencywatchdog.CentralLoggingConfiguration,
 			resourcemanager.CentralLoggingConfiguration,
 			monitoring.CentralLoggingConfiguration,
-			loki.CentralLoggingConfiguration,
+			vali.CentralLoggingConfiguration,
 			// shoot control plane components
 			etcd.CentralLoggingConfiguration,
 			clusterautoscaler.CentralLoggingConfiguration,
@@ -612,7 +612,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			}
 		}
 	} else {
-		if err := common.DeleteLoki(ctx, seedClient, v1beta1constants.GardenNamespace); err != nil {
+		if err := common.DeleteVali(ctx, seedClient, v1beta1constants.GardenNamespace); err != nil {
 			return err
 		}
 	}
@@ -666,7 +666,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			// Apply status from old Object to retain status information
 			new.Object["status"] = old.Object["status"]
 		}
-		grafanaHost    = seed.GetIngressFQDN(grafanaPrefix)
+		plutonoHost    = seed.GetIngressFQDN(plutonoPrefix)
 		prometheusHost = seed.GetIngressFQDN(prometheusPrefix)
 	)
 
@@ -680,19 +680,19 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 
 	var (
-		grafanaIngressTLSSecretName    string
+		plutonoIngressTLSSecretName    string
 		prometheusIngressTLSSecretName string
 	)
 
 	if wildcardCert != nil {
-		grafanaIngressTLSSecretName = wildcardCert.GetName()
+		plutonoIngressTLSSecretName = wildcardCert.GetName()
 		prometheusIngressTLSSecretName = wildcardCert.GetName()
 	} else {
-		grafanaIngressTLSSecret, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-			Name:                        "grafana-tls",
-			CommonName:                  "grafana",
+		plutonoIngressTLSSecret, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
+			Name:                        "plutono-tls",
+			CommonName:                  "plutono",
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:                    []string{seed.GetIngressFQDN(grafanaPrefix)},
+			DNSNames:                    []string{seed.GetIngressFQDN(plutonoPrefix)},
 			CertType:                    secretsutils.ServerCert,
 			Validity:                    pointer.Duration(ingressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
@@ -714,7 +714,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			return err
 		}
 
-		grafanaIngressTLSSecretName = grafanaIngressTLSSecret.Name
+		plutonoIngressTLSSecretName = plutonoIngressTLSSecret.Name
 		prometheusIngressTLSSecretName = prometheusIngressTLSSecret.Name
 	}
 
@@ -763,11 +763,11 @@ func (r *Reconciler) runReconcileSeedFlow(
 			"secretName":              prometheusIngressTLSSecretName,
 			"additionalScrapeConfigs": aggregateScrapeConfigs.String(),
 		},
-		"grafana": map[string]interface{}{
-			"hostName":   grafanaHost,
-			"secretName": grafanaIngressTLSSecretName,
+		"plutono": map[string]interface{}{
+			"hostName":   plutonoHost,
+			"secretName": plutonoIngressTLSSecretName,
 		},
-		"loki":         lokiValues,
+		"vali":         valiValues,
 		"alertmanager": alertManagerConfig,
 		"hvpa": map[string]interface{}{
 			"enabled": hvpaEnabled,
@@ -779,6 +779,35 @@ func (r *Reconciler) runReconcileSeedFlow(
 			"authSecretName": globalMonitoringSecretSeed.Name,
 		},
 	})
+
+	// Delete Grafana artifacts.
+	if err := common.DeleteGrafana(ctx, r.SeedClientSet, r.GardenNamespace); err != nil {
+		return err
+	}
+
+	// Delete Grafana ingress which doesn't have the component label in the garden namespace.
+	if err := seedClient.Delete(
+		ctx,
+		&networkingv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "grafana",
+				Namespace: r.GardenNamespace,
+			}},
+	); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+
+	//TODO(rickardsjp, istvanballok): Remove in release v1.77 once the Loki to Vali migration is complete.
+	if exists, err := common.LokiPvcExists(ctx, seedClient, r.GardenNamespace, log); err != nil {
+		return err
+	} else if exists {
+		if err := common.DeleteLokiRetainPvc(ctx, seedClient, r.GardenNamespace, log); err != nil {
+			return err
+		}
+		if err := common.RenameLokiPvcToValiPvc(ctx, seedClient, r.GardenNamespace, log); err != nil {
+			return err
+		}
+	}
 
 	if err := chartApplier.Apply(ctx, filepath.Join(r.ChartsPath, seedBootstrapChartName), r.GardenNamespace, seedBootstrapChartName, values, applierOptions); err != nil {
 		return err
@@ -1065,12 +1094,12 @@ func deployBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Clie
 	return err
 }
 
-// ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame updates the garden Loki PVC if passed storage value is not the same as the current one.
+// ResizeOrDeleteValiDataVolumeIfStorageNotTheSame updates the garden Vali PVC if passed storage value is not the same as the current one.
 // Caution: If the passed storage capacity is less than the current one the existing PVC and its PV will be deleted.
-func ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx context.Context, log logr.Logger, k8sClient client.Client, newStorageQuantity resource.Quantity) error {
+func ResizeOrDeleteValiDataVolumeIfStorageNotTheSame(ctx context.Context, log logr.Logger, k8sClient client.Client, newStorageQuantity resource.Quantity) error {
 	// Check if we need resizing
 	pvc := &corev1.PersistentVolumeClaim{}
-	if err := k8sClient.Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, "loki-loki-0"), pvc); err != nil {
+	if err := k8sClient.Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, "vali-vali-0"), pvc); err != nil {
 		return client.IgnoreNotFound(err)
 	}
 
@@ -1081,7 +1110,7 @@ func ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx context.Context, log lo
 		return nil
 	}
 
-	statefulSetKey := client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: v1beta1constants.StatefulSetNameLoki}
+	statefulSetKey := client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: v1beta1constants.StatefulSetNameVali}
 	log.Info("Scaling StatefulSet to zero in order to detach PVC", "statefulSet", statefulSetKey)
 	if err := kubernetes.ScaleStatefulSetAndWaitUntilScaled(ctx, k8sClient, statefulSetKey, 0); client.IgnoreNotFound(err) != nil {
 		return err
@@ -1104,8 +1133,8 @@ func ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx context.Context, log lo
 		}
 	}
 
-	lokiSts := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.StatefulSetNameLoki, Namespace: v1beta1constants.GardenNamespace}}
-	return client.IgnoreNotFound(k8sClient.Delete(ctx, lokiSts))
+	valiSts := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.StatefulSetNameVali, Namespace: v1beta1constants.GardenNamespace}}
+	return client.IgnoreNotFound(k8sClient.Delete(ctx, valiSts))
 }
 
 func cleanupOrphanExposureClassHandlerResources(

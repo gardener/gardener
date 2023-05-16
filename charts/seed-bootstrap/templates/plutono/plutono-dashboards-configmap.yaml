@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "plutono.dashboards.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    component: plutono
+    resources.gardener.cloud/garbage-collectable-reference: "true"
+immutable: true
+data:
+{{ include "plutono.dashboards.data" . | indent 2 }}

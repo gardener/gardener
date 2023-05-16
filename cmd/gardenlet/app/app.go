@@ -477,20 +477,20 @@ func (g *garden) migrateAllShootServicesForNetworkPolicies(ctx context.Context, 
 		taskFns = append(taskFns, migrationTasksForServices(g.mgr.GetClient(), serviceList.Items, vpnseedserver.MetricsPort, false)...)
 	}
 
-	// loki services
+	// vali services
 	serviceList := &corev1.ServiceList{}
-	if err := g.mgr.GetClient().List(ctx, serviceList, client.MatchingLabels{"app": "loki", "role": "logging"}); err != nil {
+	if err := g.mgr.GetClient().List(ctx, serviceList, client.MatchingLabels{"app": "vali", "role": "logging"}); err != nil {
 		return err
 	}
 
-	// drop loki services of non-shoot namespaces since they should not be mutated
+	// drop vali services of non-shoot namespaces since they should not be mutated
 	for i := len(serviceList.Items) - 1; i >= 0; i-- {
 		if !strings.HasPrefix(serviceList.Items[i].Namespace, v1beta1constants.TechnicalIDPrefix) {
 			serviceList.Items = append(serviceList.Items[:i], serviceList.Items[i+1:]...)
 		}
 	}
 
-	taskFns = append(taskFns, migrationTasksForLokiServices(g.mgr.GetClient(), serviceList.Items)...)
+	taskFns = append(taskFns, migrationTasksForValiServices(g.mgr.GetClient(), serviceList.Items)...)
 
 	// prometheus namespaces
 	serviceList = &corev1.ServiceList{}
@@ -550,7 +550,7 @@ func migrationTasksForServices(cl client.Client, services []corev1.Service, port
 	return taskFns
 }
 
-func migrationTasksForLokiServices(cl client.Client, services []corev1.Service) []flow.TaskFn {
+func migrationTasksForValiServices(cl client.Client, services []corev1.Service) []flow.TaskFn {
 	var taskFns []flow.TaskFn
 
 	for _, svc := range services {

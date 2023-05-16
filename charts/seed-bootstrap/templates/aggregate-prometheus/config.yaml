@@ -96,7 +96,7 @@ data:
         action: keep
         regex: ^{{ .Release.Namespace }}$
 
-    - job_name: loki
+    - job_name: vali
       honor_labels: false
       kubernetes_sd_configs:
       - role: endpoints
@@ -114,7 +114,7 @@ data:
       - source_labels: [ __meta_kubernetes_pod_name ]
         target_label: pod
       metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.loki | indent 6 }}
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.vali | indent 6 }}
 
     - job_name: fluent-bit
       honor_labels: false

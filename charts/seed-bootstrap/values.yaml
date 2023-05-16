@@ -100,9 +100,9 @@ aggregatePrometheus:
         value: 2Gi
         percentage: 80
 
-grafana:
+plutono:
   hostName: p.seed-1.example.com
-  secretName: grafana-tls
+  secretName: plutono-tls
 
 allowedMetrics:
   alertmanager: []
@@ -162,39 +162,39 @@ allowedMetrics:
   - fluentbit_filter_drop_records_total
 
   fluentbitOutputPlugin:
-  - promtail_dropped_entries_total
-  - fluentbit_loki_gardener_errors_total
-  - fluentbit_loki_gardener_logs_without_metadata_total
-  - fluentbit_loki_gardener_incoming_logs_total
-  - fluentbit_loki_gardener_incoming_logs_with_endpoint_total
-  - fluentbit_loki_gardener_forwarded_logs_total
-  - fluentbit_loki_gardener_dropped_logs_total
+  - valitail_dropped_entries_total
+  - fluentbit_vali_gardener_errors_total
+  - fluentbit_vali_gardener_logs_without_metadata_total
+  - fluentbit_vali_gardener_incoming_logs_total
+  - fluentbit_vali_gardener_incoming_logs_with_endpoint_total
+  - fluentbit_vali_gardener_forwarded_logs_total
+  - fluentbit_vali_gardener_dropped_logs_total
 
-  loki:
-  - loki_ingester_blocks_per_chunk_sum
-  - loki_ingester_blocks_per_chunk_count
-  - loki_ingester_chunk_age_seconds_sum
-  - loki_ingester_chunk_age_seconds_count
-  - loki_ingester_chunk_bounds_hours_sum
-  - loki_ingester_chunk_bounds_hours_count
-  - loki_ingester_chunk_compression_ratio_sum
-  - loki_ingester_chunk_compression_ratio_count
-  - loki_ingester_chunk_encode_time_seconds_sum
-  - loki_ingester_chunk_encode_time_seconds_count
-  - loki_ingester_chunk_entries_sum
-  - loki_ingester_chunk_entries_count
-  - loki_ingester_chunk_size_bytes_sum
-  - loki_ingester_chunk_size_bytes_count
-  - loki_ingester_chunk_utilization_sum
-  - loki_ingester_chunk_utilization_count
-  - loki_ingester_memory_chunks
-  - loki_ingester_received_chunks
-  - loki_ingester_samples_per_chunk_sum
-  - loki_ingester_samples_per_chunk_count
-  - loki_ingester_sent_chunks
-  - loki_panic_total
-  - loki_logql_querystats_duplicates_total
-  - loki_logql_querystats_ingester_sent_lines_total
+  vali:
+  - vali_ingester_blocks_per_chunk_sum
+  - vali_ingester_blocks_per_chunk_count
+  - vali_ingester_chunk_age_seconds_sum
+  - vali_ingester_chunk_age_seconds_count
+  - vali_ingester_chunk_bounds_hours_sum
+  - vali_ingester_chunk_bounds_hours_count
+  - vali_ingester_chunk_compression_ratio_sum
+  - vali_ingester_chunk_compression_ratio_count
+  - vali_ingester_chunk_encode_time_seconds_sum
+  - vali_ingester_chunk_encode_time_seconds_count
+  - vali_ingester_chunk_entries_sum
+  - vali_ingester_chunk_entries_count
+  - vali_ingester_chunk_size_bytes_sum
+  - vali_ingester_chunk_size_bytes_count
+  - vali_ingester_chunk_utilization_sum
+  - vali_ingester_chunk_utilization_count
+  - vali_ingester_memory_chunks
+  - vali_ingester_received_chunks
+  - vali_ingester_samples_per_chunk_sum
+  - vali_ingester_samples_per_chunk_count
+  - vali_ingester_sent_chunks
+  - vali_panic_total
+  - vali_logql_querystats_duplicates_total
+  - vali_logql_querystats_ingester_sent_lines_total
   - prometheus_target_scrapes_sample_out_of_order_total
 
 ingress:
@@ -206,11 +206,11 @@ global:
     alertmanager: image-repository:image-tag
     alpine: image-repository:image-tag
     configmap-reloader: image-repository:image-tag
-    loki: image-repository:image-tag
-    grafana: image-repository:image-tag
+    vali: image-repository:image-tag
+    plutono: image-repository:image-tag
     prometheus: image-repository:image-tag
 
-loki:
+vali:
   enabled: true
 
 alertmanager:

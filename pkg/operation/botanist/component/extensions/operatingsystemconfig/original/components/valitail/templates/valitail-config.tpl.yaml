@@ -1,0 +1,135 @@
+server:
+  disable: true
+  log_level: info
+  http_listen_port: 3001
+client:
+  url: {{ .clientURL }}
+  batchwait: 10s
+  batchsize: 1536000
+  bearer_token_file: {{ .pathAuthToken }}
+  tls_config:
+    ca_file: {{ .pathCACert }}
+    server_name: {{ .valiIngress }}
+positions:
+  filename: /var/log/positions.yaml
+scrape_configs:
+- job_name: journal
+  journal:
+    json: false
+    labels:
+      job: systemd-journal
+      origin: systemd-journal
+    max_age: 12h
+  relabel_configs:
+  - action: drop
+    regex: ^localhost$
+    source_labels: ['__journal__hostname']
+  - action: replace
+    regex: '(.+)'
+    replacement: $1
+    source_labels: ['__journal__systemd_unit']
+    target_label: '__journal_syslog_identifier'
+  - action: keep
+    regex: ^kernel|kubelet\.service|docker\.service|containerd\.service$
+    source_labels: ['__journal_syslog_identifier']
+  - source_labels: ['__journal_syslog_identifier']
+    target_label: unit
+  - source_labels: ['__journal__hostname']
+    target_label: nodename
+- job_name: combine-journal
+  journal:
+    json: false
+    labels:
+      job: systemd-combine-journal
+      origin: systemd-journal
+    max_age: 12h
+  relabel_configs:
+  - action: drop
+    regex: ^localhost$
+    source_labels: ['__journal__hostname']
+  - action: replace
+    regex: '(.+)'
+    replacement: $1
+    source_labels: ['__journal__systemd_unit']
+    target_label: '__journal_syslog_identifier'
+  - action: drop
+    regex: ^kernel|kubelet\.service|docker\.service|containerd\.service$
+    source_labels: ['__journal_syslog_identifier']
+  - source_labels: ['__journal_syslog_identifier']
+    target_label: unit
+  - source_labels: ['__journal__hostname']
+    target_label: nodename
+  pipeline_stages:
+  - pack:
+     labels:
+     - unit
+     ingest_timestamp: true
+- job_name: kubernetes-pods-name
+  pipeline_stages:
+  - cri: {}
+  - labeldrop:
+    - filename
+    - stream
+    - pod_uid
+  kubernetes_sd_configs:
+  - role: pod
+    api_server: {{ .APIServerURL }}
+    tls_config:
+      server_name: {{ .APIServerHostname }}
+      ca_file: {{ .pathCACert }}
+    bearer_token_file: {{ .pathAuthToken }}
+    namespaces:
+      names: ['kube-system']
+  relabel_configs:
+  - action: drop
+    regex: ''
+    separator: ''
+    source_labels:
+    - __meta_kubernetes_pod_label_gardener_cloud_role
+    - __meta_kubernetes_pod_label_origin
+    - __meta_kubernetes_pod_label_resources_gardener_cloud_managed_by
+  - action: replace
+    regex: '.+'
+    replacement: "gardener"
+    source_labels: ['__meta_kubernetes_pod_label_gardener_cloud_role']
+    target_label: __meta_kubernetes_pod_label_origin
+  - action: replace
+    regex: 'gardener'
+    replacement: "gardener"
+    source_labels: ['__meta_kubernetes_pod_label_resources_gardener_cloud_managed_by']
+    target_label: __meta_kubernetes_pod_label_origin
+  - action: keep
+    regex: 'gardener'
+    source_labels: ['__meta_kubernetes_pod_label_origin']
+  - action: replace
+    regex: ''
+    replacement: 'default'
+    source_labels: ['__meta_kubernetes_pod_label_gardener_cloud_role']
+    target_label: __meta_kubernetes_pod_label_gardener_cloud_role
+  - source_labels: ['__meta_kubernetes_pod_node_name']
+    target_label: '__host__'
+  - source_labels: ['__meta_kubernetes_pod_node_name']
+    target_label: 'nodename'
+  - action: replace
+    source_labels: ['__meta_kubernetes_namespace']
+    target_label: namespace_name
+  - action: replace
+    source_labels: ['__meta_kubernetes_pod_name']
+    target_label: pod_name
+  - action: replace
+    source_labels: ['__meta_kubernetes_pod_uid']
+    target_label: pod_uid
+  - action: replace
+    source_labels: ['__meta_kubernetes_pod_container_name']
+    target_label: container_name
+  - replacement: /var/log/pods/*$1/*.log
+    separator: /
+    source_labels:
+    - __meta_kubernetes_pod_uid
+    - __meta_kubernetes_pod_container_name
+    target_label: __path__
+  - source_labels: ['__meta_kubernetes_pod_label_gardener_cloud_role']
+    target_label: gardener_cloud_role
+  - source_labels: ['__meta_kubernetes_pod_label_origin']
+    replacement: 'shoot_system'
+    target_label: origin

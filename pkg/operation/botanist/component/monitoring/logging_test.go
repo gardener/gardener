@@ -108,16 +108,16 @@ var _ = Describe("Logging", func() {
 					},
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "grafana",
+							Name:   "plutono",
 							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
 						},
 						Spec: fluentbitv1alpha2.FilterSpec{
-							Match: "kubernetes.*grafana*grafana*",
+							Match: "kubernetes.*plutono*plutono*",
 							FilterItems: []fluentbitv1alpha2.FilterItem{
 								{
 									Parser: &fluentbitv1alpha2filter.Parser{
 										KeyName:     "log",
-										Parser:      "grafana-parser",
+										Parser:      "plutono-parser",
 										ReserveData: pointer.Bool(true),
 									},
 								},
@@ -169,7 +169,7 @@ var _ = Describe("Logging", func() {
 					},
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "grafana-parser",
+							Name:   "plutono-parser",
 							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
 						},
 						Spec: fluentbitv1alpha2.ParserSpec{

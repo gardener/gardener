@@ -28,7 +28,7 @@ Those include:
 
 - kubeconfig (if enabled)
 - certificate authorities (and related server and client certificates)
-- observability passwords for Grafana
+- observability passwords for Plutono
 - SSH key pair for worker nodes
 - ETCD encryption key
 - `ServiceAccount` token signing key
@@ -139,10 +139,10 @@ Hence, most of the components need to be restarted (including etcd and `kube-api
 >
 > ⚠️ In stage one, all worker nodes of the `Shoot` will be rolled out to ensure that the `Pod`s as well as the `kubelet`s get the updated credentials as well.
 
-### Observability Password(s) For Grafana and Prometheus
+### Observability Password(s) For Plutono and Prometheus
 
-For `Shoot`s with `.spec.purpose!=testing`, Gardener deploys an observability stack with Prometheus for monitoring, Alertmanager for alerting (optional), Loki for logging, and Grafana for visualization.
-The Grafana instance is exposed via `Ingress` and accessible for end-users via basic authentication credentials generated and managed by Gardener.
+For `Shoot`s with `.spec.purpose!=testing`, Gardener deploys an observability stack with Prometheus for monitoring, Alertmanager for alerting (optional), Vali for logging, and Plutono for visualization.
+The Plutono instance is exposed via `Ingress` and accessible for end-users via basic authentication credentials generated and managed by Gardener.
 
 Those credentials are stored in a `Secret` with the name `<shoot-name>.monitoring` in the project namespace in the garden cluster and has multiple data keys:
 

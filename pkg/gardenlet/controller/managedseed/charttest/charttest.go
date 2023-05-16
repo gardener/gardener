@@ -183,6 +183,16 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			},
 			{
 				APIGroups: []string{""},
+				Resources: []string{"persistentvolumes"},
+				Verbs:     []string{"delete", "patch"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"persistentvolumeclaims"},
+				Verbs:     []string{"create"},
+			},
+			{
+				APIGroups: []string{""},
 				Resources: []string{"endpoints", "persistentvolumes"},
 				Verbs:     []string{"get", "list", "watch"},
 			},
@@ -219,7 +229,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			{
 				APIGroups:     []string{""},
 				Resources:     []string{"persistentvolumeclaims"},
-				ResourceNames: []string{"alertmanager-db-alertmanager-0", "loki-loki-0", "prometheus-db-prometheus-0"},
+				ResourceNames: []string{"alertmanager-db-alertmanager-0", "vali-vali-0", "loki-loki-0", "prometheus-db-prometheus-0"},
 				Verbs:         []string{"delete"},
 			},
 			{
@@ -290,7 +300,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			{
 				APIGroups:     []string{"autoscaling.k8s.io"},
 				Resources:     []string{"hvpas"},
-				ResourceNames: []string{"etcd-events", "etcd-main", "kube-apiserver", "kube-controller-manager", "aggregate-prometheus", "prometheus", "loki"},
+				ResourceNames: []string{"etcd-events", "etcd-main", "kube-apiserver", "kube-controller-manager", "aggregate-prometheus", "prometheus", "vali", "loki"},
 				Verbs:         []string{"delete", "patch", "update"},
 			},
 			{
@@ -665,7 +675,7 @@ func ComputeExpectedGardenletConfiguration(
 		logFormatJson             = "json"
 		lockObjectName            = "gardenlet-leader-election"
 		lockObjectNamespace       = "garden"
-		defaultCentralLokiStorage = resource.MustParse("100Gi")
+		defaultCentralValiStorage = resource.MustParse("100Gi")
 	)
 
 	config := gardenletv1alpha1.GardenletConfiguration{
@@ -828,10 +838,10 @@ func ComputeExpectedGardenletConfiguration(
 		LogFormat: logFormatJson,
 		Logging: &gardenletv1alpha1.Logging{
 			Enabled: pointer.Bool(false),
-			Loki: &gardenletv1alpha1.Loki{
+			Vali: &gardenletv1alpha1.Vali{
 				Enabled: pointer.Bool(false),
-				Garden: &gardenletv1alpha1.GardenLoki{
-					Storage: &defaultCentralLokiStorage,
+				Garden: &gardenletv1alpha1.GardenVali{
+					Storage: &defaultCentralValiStorage,
 				},
 			},
 			ShootEventLogging: &gardenletv1alpha1.ShootEventLogging{

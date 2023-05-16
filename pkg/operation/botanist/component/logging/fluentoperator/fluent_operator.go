@@ -48,7 +48,7 @@ const (
 
 var (
 	protocolTCP = utils.ProtocolPtr(corev1.ProtocolTCP)
-	lokiPort    = utils.IntStrPtrFromInt(3100)
+	valiPort    = utils.IntStrPtrFromInt(3100)
 )
 
 // Values keeps values for the Fluent Operator.
@@ -347,6 +347,7 @@ func getFluentBitLabels() map[string]string {
 		v1beta1constants.LabelNetworkPolicyToDNS:                          v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:             v1beta1constants.LabelNetworkPolicyAllowed,
 		"networking.resources.gardener.cloud/to-logging-tcp-3100":         v1beta1constants.LabelNetworkPolicyAllowed,
+		"networking.resources.gardener.cloud/to-all-shoots-vali-tcp-3100": v1beta1constants.LabelNetworkPolicyAllowed,
 		"networking.resources.gardener.cloud/to-all-shoots-loki-tcp-3100": v1beta1constants.LabelNetworkPolicyAllowed,
 	}
 }

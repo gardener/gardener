@@ -46,8 +46,8 @@ func hasRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interfac
 		return false, err
 	}
 
-	loki := &appsv1.StatefulSet{}
-	if err := k8sSeedClient.Client().Get(ctx, client.ObjectKey{Namespace: garden, Name: lokiName}, loki); err != nil {
+	vali := &appsv1.StatefulSet{}
+	if err := k8sSeedClient.Client().Get(ctx, client.ObjectKey{Namespace: garden, Name: valiName}, vali); err != nil {
 		return false, err
 	}
 
@@ -62,10 +62,10 @@ func checkRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interf
 	}
 }
 
-// WaitUntilLokiReceivesLogs waits until the loki instance in <lokiNamespace> receives <expected> logs for <key>=<value>
-func WaitUntilLokiReceivesLogs(ctx context.Context, interval time.Duration, f *framework.ShootFramework, lokiLabels map[string]string, tenant, lokiNamespace, key, value string, expected, delta int, c kubernetes.Interface) error {
+// WaitUntilValiReceivesLogs waits until the vali instance in <valiNamespace> receives <expected> logs for <key>=<value>
+func WaitUntilValiReceivesLogs(ctx context.Context, interval time.Duration, f *framework.ShootFramework, valiLabels map[string]string, tenant, valiNamespace, key, value string, expected, delta int, c kubernetes.Interface) error {
 	err := retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {
-		search, err := f.GetLokiLogs(ctx, lokiLabels, tenant, lokiNamespace, key, value, c)
+		search, err := f.GetValiLogs(ctx, valiLabels, tenant, valiNamespace, key, value, c)
 		if err != nil {
 			return retry.SevereError(err)
 		}
@@ -100,8 +100,8 @@ func WaitUntilLokiReceivesLogs(ctx context.Context, interval time.Duration, f *f
 		dumpLogsCtx, dumpLogsCancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		defer dumpLogsCancel()
 
-		f.Logger.Info("Dump Loki logs")
-		if dumpError := f.DumpLogsForPodInNamespace(dumpLogsCtx, c, lokiNamespace, "loki-0"); dumpError != nil {
+		f.Logger.Info("Dump Vali logs")
+		if dumpError := f.DumpLogsForPodInNamespace(dumpLogsCtx, c, valiNamespace, "vali-0"); dumpError != nil {
 			f.Logger.Error(dumpError, "Error dumping logs for pod")
 		}
 
@@ -231,12 +231,12 @@ func getSecretNameFromVolume(volumes []corev1.Volume, wantedVolumeName string) s
 }
 
 func newEmptyDirVolume(name, size string) corev1.Volume {
-	lokiDataVolumeSize := resource.MustParse(size)
+	valiDataVolumeSize := resource.MustParse(size)
 	return corev1.Volume{
 		Name: name,
 		VolumeSource: corev1.VolumeSource{
 			EmptyDir: &corev1.EmptyDirVolumeSource{
-				SizeLimit: &lokiDataVolumeSize,
+				SizeLimit: &valiDataVolumeSize,
 			},
 		},
 	}

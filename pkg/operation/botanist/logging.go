@@ -39,18 +39,32 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
-// DeploySeedLogging will install the Helm release "seed-bootstrap/charts/loki" in the Seed clusters.
+// DeploySeedLogging will install the Helm release "seed-bootstrap/charts/vali" in the Seed clusters.
 func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	if !b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) {
 		return b.destroyShootLoggingStack(ctx)
 	}
 
+	//TODO(rickardsjp, istvanballok): Remove in release v1.77 once the Loki to Vali migration is complete.
+	if exists, err := b.lokiPvcExists(ctx); err != nil {
+		return err
+	} else if exists {
+		if err := b.destroyLokiBasedShootLoggingStackRetainingPvc(ctx); err != nil {
+			return err
+		}
+		// If a Loki PVC exists, rename it to Vali.
+		if err := b.renameLokiPvcToVali(ctx); err != nil {
+			return err
+		}
+	}
+
 	seedImages, err := b.InjectSeedSeedImages(map[string]interface{}{},
-		images.ImageNameLoki,
-		images.ImageNameLokiCurator,
+		images.ImageNameVali,
+		images.ImageNameValiCurator,
 		images.ImageNameKubeRbacProxy,
 		images.ImageNameTelegraf,
 		images.ImageNameTune2fs,
+		images.ImageNameAlpine,
 	)
 	if err != nil {
 		return err
@@ -66,20 +80,20 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		}
 	}
 
-	lokiValues := map[string]interface{}{
+	valiValues := map[string]interface{}{
 		"global":      seedImages,
 		"replicas":    b.Shoot.GetReplicas(1),
 		"clusterType": "shoot",
 	}
 
-	// check if loki is enabled in gardenlet config, default is true
-	if !gardenlethelper.IsLokiEnabled(b.Config) {
-		// Because ShootNodeLogging is installed as part of the Loki pod
+	// check if vali is enabled in gardenlet config, default is true
+	if !gardenlethelper.IsValiEnabled(b.Config) {
+		// Because ShootNodeLogging is installed as part of the Vali pod
 		// we have to delete it too in case it was previously deployed
 		if err := b.destroyShootNodeLogging(ctx); err != nil {
 			return err
 		}
-		return common.DeleteLoki(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
+		return common.DeleteVali(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
 	}
 
 	hvpaValues := make(map[string]interface{})
@@ -104,10 +118,10 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		}
 
 		ingressTLSSecret, err := b.SecretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
-			Name:                        "loki-tls",
-			CommonName:                  b.ComputeLokiHost(),
+			Name:                        "vali-tls",
+			CommonName:                  b.ComputeValiHost(),
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:                    b.ComputeLokiHosts(),
+			DNSNames:                    b.ComputeValiHosts(),
 			CertType:                    secrets.ServerCert,
 			Validity:                    &ingressTLSCertificateValidity,
 			SkipPublishingCACertificate: true,
@@ -116,20 +130,20 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 			return err
 		}
 
-		lokiValues["rbacSidecarEnabled"] = true
-		lokiValues["ingress"] = map[string]interface{}{
+		valiValues["rbacSidecarEnabled"] = true
+		valiValues["ingress"] = map[string]interface{}{
 			"class": ingressClass,
 			"hosts": []map[string]interface{}{
 				{
-					"hostName":    b.ComputeLokiHost(),
+					"hostName":    b.ComputeValiHost(),
 					"secretName":  ingressTLSSecret.Name,
-					"serviceName": "loki",
+					"serviceName": "vali",
 					"servicePort": 8080,
-					"backendPath": "/loki/api/v1/push",
+					"backendPath": "/vali/api/v1/push",
 				},
 			},
 		}
-		lokiValues["genericTokenKubeconfigSecretName"] = genericTokenKubeconfigSecret.Name
+		valiValues["genericTokenKubeconfigSecretName"] = genericTokenKubeconfigSecret.Name
 	} else {
 		if err := b.destroyShootNodeLogging(ctx); err != nil {
 			return err
@@ -137,23 +151,23 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	}
 
 	hvpaValues["enabled"] = hvpaEnabled
-	lokiValues["hvpa"] = hvpaValues
-	lokiValues["priorityClassName"] = v1beta1constants.PriorityClassNameShootControlPlane100
+	valiValues["hvpa"] = hvpaValues
+	valiValues["priorityClassName"] = v1beta1constants.PriorityClassNameShootControlPlane100
 
 	if hvpaEnabled {
-		currentResources, err := kubernetesutils.GetContainerResourcesInStatefulSet(ctx, b.SeedClientSet.Client(), kubernetesutils.Key(b.Shoot.SeedNamespace, "loki"))
+		currentResources, err := kubernetesutils.GetContainerResourcesInStatefulSet(ctx, b.SeedClientSet.Client(), kubernetesutils.Key(b.Shoot.SeedNamespace, "vali"))
 		if err != nil {
 			return err
 		}
-		if len(currentResources) != 0 && currentResources["loki"] != nil {
-			lokiValues["resources"] = map[string]interface{}{
+		if len(currentResources) != 0 && currentResources["vali"] != nil {
+			valiValues["resources"] = map[string]interface{}{
 				// Copy requests only, effectively removing limits
-				"loki": &corev1.ResourceRequirements{Requests: currentResources["loki"].Requests},
+				"vali": &corev1.ResourceRequirements{Requests: currentResources["vali"].Requests},
 			}
 		}
 	}
 
-	return b.SeedClientSet.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "loki"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-logging", b.Shoot.SeedNamespace), kubernetes.Values(lokiValues))
+	return b.SeedClientSet.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "vali"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-logging", b.Shoot.SeedNamespace), kubernetes.Values(valiValues))
 }
 
 func (b *Botanist) destroyShootLoggingStack(ctx context.Context) error {
@@ -165,7 +179,31 @@ func (b *Botanist) destroyShootLoggingStack(ctx context.Context) error {
 		return err
 	}
 
-	return common.DeleteLoki(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
+	return common.DeleteVali(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
+}
+
+func (b *Botanist) lokiPvcExists(ctx context.Context) (bool, error) {
+	return common.LokiPvcExists(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.Logger)
+}
+
+func (b *Botanist) renameLokiPvcToVali(ctx context.Context) error {
+	if err := common.RenameLokiPvcToValiPvc(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.Logger); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *Botanist) destroyLokiBasedShootLoggingStackRetainingPvc(ctx context.Context) error {
+	if err := b.destroyLokiBasedShootNodeLogging(ctx); err != nil {
+		return err
+	}
+
+	// The EventLogger is not dependent on Loki/Vali and therefore doesn't need to be deleted.
+	// if err := b.Shoot.Components.Logging.ShootEventLogger.Destroy(ctx); err != nil {
+	// 	return err
+	// }
+
+	return common.DeleteLokiRetainPvc(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.Logger)
 }
 
 func (b *Botanist) destroyShootNodeLogging(ctx context.Context) error {
@@ -174,14 +212,26 @@ func (b *Botanist) destroyShootNodeLogging(ctx context.Context) error {
 	}
 
 	return kubernetesutils.DeleteObjects(ctx, b.SeedClientSet.Client(),
+		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: b.Shoot.SeedNamespace}},
+	)
+}
+
+func (b *Botanist) destroyLokiBasedShootNodeLogging(ctx context.Context) error {
+	if err := b.Shoot.Components.Logging.ShootRBACProxy.Destroy(ctx); err != nil {
+		return err
+	}
+
+	return kubernetesutils.DeleteObjects(ctx, b.SeedClientSet.Client(),
 		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: b.Shoot.SeedNamespace}},
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-prometheus-to-loki-telegraf", Namespace: b.Shoot.SeedNamespace}},
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: b.Shoot.SeedNamespace}},
 	)
 }
 
 func (b *Botanist) isShootNodeLoggingEnabled() bool {
 	if b.Shoot != nil && !b.Shoot.IsWorkerless && b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) &&
-		gardenlethelper.IsLokiEnabled(b.Config) && b.Config != nil &&
+		gardenlethelper.IsValiEnabled(b.Config) && b.Config != nil &&
 		b.Config.Logging != nil && b.Config.Logging.ShootNodeLogging != nil {
 
 		for _, purpose := range b.Config.Logging.ShootNodeLogging.ShootPurposes {

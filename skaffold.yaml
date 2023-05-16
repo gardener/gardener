@@ -871,7 +871,7 @@ build:
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker/logrotate
-        - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/promtail
+        - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/valitail
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/rootcertificates
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/sshdensurer
         - pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/varlibmount
@@ -892,7 +892,7 @@ build:
         - pkg/operation/botanist/component/logging/kuberbacproxy
         - pkg/operation/botanist/component/logging/fluentoperator
         - pkg/operation/botanist/component/logging/fluentoperator/customresources
-        - pkg/operation/botanist/component/logging/loki
+        - pkg/operation/botanist/component/logging/vali
         - pkg/operation/botanist/component/metricsserver
         - pkg/operation/botanist/component/monitoring
         - pkg/operation/botanist/component/namespaces

@@ -40,7 +40,7 @@ var _ = Describe("KubeRBACProxy", func() {
 		namespace           = "shoot--foo--bar"
 		managedResourceName = "shoot-node-logging"
 		kubeRBACProxyName   = "kube-rbac-proxy"
-		promtailName        = "gardener-promtail"
+		valitailName        = "gardener-valitail"
 	)
 
 	var (
@@ -141,15 +141,15 @@ var _ = Describe("KubeRBACProxy", func() {
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Data).To(HaveLen(3))
 
-			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_logging_promtail.yaml"])).To(Equal(test.Serialize(&rbacv1.ClusterRole{
+			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_logging_valitail.yaml"])).To(Equal(test.Serialize(&rbacv1.ClusterRole{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: rbacv1.SchemeGroupVersion.String(),
 					Kind:       "ClusterRole",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "gardener.cloud:logging:promtail",
+					Name: "gardener.cloud:logging:valitail",
 					Labels: map[string]string{
-						"app": promtailName,
+						"app": valitailName,
 					},
 				},
 				Rules: []rbacv1.PolicyRule{
@@ -172,7 +172,7 @@ var _ = Describe("KubeRBACProxy", func() {
 					},
 					{
 						NonResourceURLs: []string{
-							"/loki/api/v1/push",
+							"/vali/api/v1/push",
 						},
 						Verbs: []string{
 							"create",
@@ -198,21 +198,21 @@ var _ = Describe("KubeRBACProxy", func() {
 					Namespace: metav1.NamespaceSystem,
 				}},
 			})))
-			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_logging_promtail.yaml"])).To(Equal(test.Serialize(&rbacv1.ClusterRoleBinding{
+			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_logging_valitail.yaml"])).To(Equal(test.Serialize(&rbacv1.ClusterRoleBinding{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "gardener.cloud:logging:promtail",
+					Name: "gardener.cloud:logging:valitail",
 					Labels: map[string]string{
-						"app": promtailName,
+						"app": valitailName,
 					},
 				},
 				RoleRef: rbacv1.RoleRef{
 					APIGroup: rbacv1.GroupName,
 					Kind:     "ClusterRole",
-					Name:     "gardener.cloud:logging:promtail",
+					Name:     "gardener.cloud:logging:valitail",
 				},
 				Subjects: []rbacv1.Subject{{
 					Kind:      rbacv1.ServiceAccountKind,
-					Name:      promtailName,
+					Name:      valitailName,
 					Namespace: metav1.NamespaceSystem,
 				}},
 			})))

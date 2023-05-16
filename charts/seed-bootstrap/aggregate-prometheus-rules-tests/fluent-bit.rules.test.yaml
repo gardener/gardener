@@ -54,7 +54,7 @@ tests:
     seed: aws
   input_series:
   # FluentBitReceivesLogsWithoutMetadata
-  - series: 'fluentbit_loki_gardener_logs_without_metadata_total{pod="fluent-bit-test"}'
+  - series: 'fluentbit_vali_gardener_logs_without_metadata_total{pod="fluent-bit-test"}'
     values: '0+0x3 0+1x30'
   alert_rule_test:
   - eval_time: 22m
@@ -92,19 +92,19 @@ tests:
       exp_annotations:
         description: >
           fluent-bit-test on seed: aws sends OutOfOrder logs
-          to the Loki. These logs will be dropped.
+          to the Vali. These logs will be dropped.
         summary: Fluent-bit sends OoO logs
 
 - interval: 1m
   external_labels:
     seed: aws
   input_series:
-  # FluentBitGardenerLokiPluginErrors
-  - series: 'fluentbit_loki_gardener_errors_total{pod="fluent-bit-test"}'
+  # FluentBitGardenerValiPluginErrors
+  - series: 'fluentbit_vali_gardener_errors_total{pod="fluent-bit-test"}'
     values: '0+0x3 0+1x30'
   alert_rule_test:
   - eval_time: 22m
-    alertname: FluentBitGardenerLokiPluginErrors
+    alertname: FluentBitGardenerValiPluginErrors
     exp_alerts:
     - exp_labels:
         pod: fluent-bit-test
@@ -114,7 +114,7 @@ tests:
         visibility: operator
       exp_annotations:
         description: >
-          There are errors in the fluent-bit-test GardenerLoki plugin on seed:
+          There are errors in the fluent-bit-test GardenerVali plugin on seed:
           aws.
-        summary: Errors in Fluent-bit GardenerLoki plugin
+        summary: Errors in Fluent-bit GardenerVali plugin
 

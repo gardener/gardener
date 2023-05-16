@@ -42,7 +42,7 @@ groups:
       expr: |
         sum by (pod) (
           increase(
-            fluentbit_loki_gardener_logs_without_metadata_total[4m]
+            fluentbit_vali_gardener_logs_without_metadata_total[4m]
           )
         ) > 0
       labels:
@@ -72,13 +72,13 @@ groups:
         summary: Fluent-bit sends OoO logs
         description: >
           {{$labels.pod}} on seed: {{$externalLabels.seed}} sends OutOfOrder logs
-          to the Loki. These logs will be dropped.
+          to the Vali. These logs will be dropped.
 
-    - alert: FluentBitGardenerLokiPluginErrors
+    - alert: FluentBitGardenerValiPluginErrors
       expr: |
         sum by (pod) (
           increase(
-            fluentbit_loki_gardener_errors_total[4m]
+            fluentbit_vali_gardener_errors_total[4m]
           )
         ) > 0
       labels:
@@ -87,8 +87,8 @@ groups:
         type: seed
         visibility: operator
       annotations:
-        summary: Errors in Fluent-bit GardenerLoki plugin
+        summary: Errors in Fluent-bit GardenerVali plugin
         description: >
-          There are errors in the {{$labels.pod}} GardenerLoki plugin on seed:
+          There are errors in the {{$labels.pod}} GardenerVali plugin on seed:
           {{$externalLabels.seed}}.
 

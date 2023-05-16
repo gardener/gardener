@@ -180,22 +180,22 @@ var _ = Describe("Defaults", func() {
 				SetObjectDefaults_GardenletConfiguration(obj)
 				Expect(obj.Logging).NotTo(BeNil())
 				Expect(obj.Logging.Enabled).To(PointTo(Equal(false)))
-				Expect(obj.Logging.Loki).NotTo(BeNil())
-				Expect(obj.Logging.Loki.Enabled).To(PointTo(Equal(false)))
-				Expect(obj.Logging.Loki.Garden).NotTo(BeNil())
-				Expect(obj.Logging.Loki.Garden.Storage).To(PointTo(Equal(resource.MustParse("100Gi"))))
+				Expect(obj.Logging.Vali).NotTo(BeNil())
+				Expect(obj.Logging.Vali.Enabled).To(PointTo(Equal(false)))
+				Expect(obj.Logging.Vali.Garden).NotTo(BeNil())
+				Expect(obj.Logging.Vali.Garden.Storage).To(PointTo(Equal(resource.MustParse("100Gi"))))
 				Expect(obj.Logging.ShootEventLogging).NotTo(BeNil())
 				Expect(obj.Logging.ShootEventLogging.Enabled).To(PointTo(Equal(false)))
 			})
 
 			It("should not overwrite custom settings", func() {
-				gardenLokiStorage := resource.MustParse("10Gi")
+				gardenValiStorage := resource.MustParse("10Gi")
 				expectedLogging := &Logging{
 					Enabled: pointer.Bool(true),
-					Loki: &Loki{
+					Vali: &Vali{
 						Enabled: pointer.Bool(false),
-						Garden: &GardenLoki{
-							Storage: &gardenLokiStorage,
+						Garden: &GardenVali{
+							Storage: &gardenValiStorage,
 						},
 					},
 					ShootNodeLogging: &ShootNodeLogging{

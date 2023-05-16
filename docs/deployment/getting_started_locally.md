@@ -298,7 +298,7 @@ tmux -u a
 Please refer to the [TMUX documentation](https://github.com/tmux/tmux/wiki) for
 working effectively inside the remote-local-setup pod.
 
-To access Grafana, Prometheus or other components in a browser, two port forwards are needed:
+To access Plutono, Prometheus or other components in a browser, two port forwards are needed:
 
 The port forward from the laptop to the pod:
 
@@ -309,7 +309,7 @@ k port-forward deployment/remote-local-setup 3000
 The port forward in the remote-local-setup pod to the respective component:
 
 ```shell
-k port-forward -n shoot--local--local deployment/grafana 3000
+k port-forward -n shoot--local--local deployment/plutono 3000
 ```
 
 ## Related Links
