@@ -38,12 +38,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/extensions/extension"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation"
-	"github.com/gardener/gardener/pkg/operation/botanist"
-	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 )
 
 type errorClient struct {
@@ -81,14 +77,13 @@ var _ = Describe("Extension", func() {
 		afterName   = "after"
 		beforeName  = "before"
 	)
+
 	var (
-		fakeSeedClient   client.Client
-		fakeGardenClient client.Client
-		b                *botanist.Botanist
-		namespace        *corev1.Namespace
-		ctx              = context.TODO()
-		shootState       = &gardencorev1beta1.ShootState{}
-		log              logr.Logger
+		fakeSeedClient client.Client
+		namespace      *corev1.Namespace
+		ctx            = context.TODO()
+		ext            extension.Interface
+		log            logr.Logger
 
 		defaultExtension *extensionsv1alpha1.Extension
 		beforeExtension  *extensionsv1alpha1.Extension
@@ -99,25 +94,11 @@ var _ = Describe("Extension", func() {
 	)
 
 	BeforeEach(func() {
-		fakeGardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		fakeSeedClientSet := kubernetesfake.NewClientSetBuilder().WithClient(fakeSeedClient).Build()
 		namespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test-namespace"}}
 
 		logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 		log = logf.Log.WithName("extensions")
-
-		b = &botanist.Botanist{Operation: &operation.Operation{
-			GardenClient:  fakeGardenClient,
-			SeedClientSet: fakeSeedClientSet,
-			Logger:        log,
-			Shoot: &shootpkg.Shoot{
-				SeedNamespace: namespace.Name,
-				Components:    &shootpkg.Components{Extensions: &shootpkg.Extensions{}},
-			},
-		}}
-		b.SetShootState(shootState)
-		b.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 
 		defaultExtension = &extensionsv1alpha1.Extension{
 			ObjectMeta: metav1.ObjectMeta{
@@ -184,11 +165,11 @@ var _ = Describe("Extension", func() {
 			},
 		}
 
-		b.Shoot.Components.Extensions.Extension = extension.New(
+		ext = extension.New(
 			log,
-			b.SeedClientSet.Client(),
+			fakeSeedClient,
 			&extension.Values{
-				Namespace:  b.Shoot.SeedNamespace,
+				Namespace:  namespace.Name,
 				Extensions: requiredExtensions,
 			},
 			time.Microsecond*100,
@@ -199,25 +180,25 @@ var _ = Describe("Extension", func() {
 
 	Describe("#DeployBeforeKubeAPIServer", func() {
 		It("should successfully deploy extension resources", func() {
-			Expect(b.Shoot.Components.Extensions.Extension.DeployBeforeKubeAPIServer(ctx)).To(Succeed())
+			Expect(ext.DeployBeforeKubeAPIServer(ctx)).To(Succeed())
 			extensionList := &extensionsv1alpha1.ExtensionList{}
-			Expect(b.SeedClientSet.Client().List(ctx, extensionList, client.InNamespace(namespace.Name))).To(Succeed())
+			Expect(fakeSeedClient.List(ctx, extensionList, client.InNamespace(namespace.Name))).To(Succeed())
 			Expect(extensionList.Items).To(consistOfObjects(beforeName))
 		})
 	})
 
 	Describe("#DeployAfterKubeAPIServer", func() {
 		It("should successfully deploy extension resources", func() {
-			Expect(b.Shoot.Components.Extensions.Extension.DeployAfterKubeAPIServer(ctx)).To(Succeed())
+			Expect(ext.DeployAfterKubeAPIServer(ctx)).To(Succeed())
 			extensionList := &extensionsv1alpha1.ExtensionList{}
-			Expect(b.SeedClientSet.Client().List(ctx, extensionList, client.InNamespace(namespace.Name))).To(Succeed())
+			Expect(fakeSeedClient.List(ctx, extensionList, client.InNamespace(namespace.Name))).To(Succeed())
 			Expect(extensionList.Items).To(consistOfObjects(defaultName, afterName))
 		})
 	})
 
 	Describe("#WaitBeforeKubeAPIServer", func() {
 		It("should return error when no resources are found", func() {
-			Expect(b.Shoot.Components.Extensions.Extension.WaitBeforeKubeAPIServer(ctx)).To(MatchError(ContainSubstring("not found")))
+			Expect(ext.WaitBeforeKubeAPIServer(ctx)).To(MatchError(ContainSubstring("not found")))
 		})
 
 		It("should return error when resource is not ready", func() {
@@ -229,19 +210,19 @@ var _ = Describe("Extension", func() {
 					},
 				},
 			}
-			Expect(b.SeedClientSet.Client().Create(ctx, afterExtension)).To(Succeed())
-			Expect(b.SeedClientSet.Client().Create(ctx, beforeExtension)).To(Succeed())
-			Expect(b.Shoot.Components.Extensions.Extension.WaitBeforeKubeAPIServer(ctx)).To(MatchError(ContainSubstring("Error while waiting for Extension test-namespace/before to become ready: error during reconciliation: "+errDescription)), "extensions indicates error")
+			Expect(fakeSeedClient.Create(ctx, afterExtension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, beforeExtension)).To(Succeed())
+			Expect(ext.WaitBeforeKubeAPIServer(ctx)).To(MatchError(ContainSubstring("Error while waiting for Extension test-namespace/before to become ready: error during reconciliation: "+errDescription)), "extensions indicates error")
 		})
 
 		It("should return error if we haven't observed the latest timestamp annotation", func() {
 			now := time.Now()
 			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
-			Expect(b.Shoot.Components.Extensions.Extension.DeployBeforeKubeAPIServer(ctx)).To(Succeed())
+			Expect(ext.DeployBeforeKubeAPIServer(ctx)).To(Succeed())
 
 			By("Patch object")
-			Expect(b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(beforeExtension), beforeExtension)).To(Succeed())
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(beforeExtension), beforeExtension)).To(Succeed())
 			patch := client.MergeFrom(beforeExtension.DeepCopy())
 			// remove operation annotation, add old timestamp annotation
 			beforeExtension.ObjectMeta.Annotations = map[string]string{
@@ -251,16 +232,16 @@ var _ = Describe("Extension", func() {
 			beforeExtension.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,
 			}
-			Expect(b.SeedClientSet.Client().Patch(ctx, beforeExtension, patch)).ToNot(HaveOccurred(), "patching extension succeeds")
+			Expect(fakeSeedClient.Patch(ctx, beforeExtension, patch)).ToNot(HaveOccurred(), "patching extension succeeds")
 
 			By("Wait")
-			Expect(b.Shoot.Components.Extensions.Extension.WaitBeforeKubeAPIServer(ctx)).NotTo(Succeed())
+			Expect(ext.WaitBeforeKubeAPIServer(ctx)).NotTo(Succeed())
 		})
 	})
 
 	Describe("#WaitAfterKubeAPIServer", func() {
 		It("should return error when no resources are found", func() {
-			Expect(b.Shoot.Components.Extensions.Extension.WaitAfterKubeAPIServer(ctx)).To(MatchError(ContainSubstring("not found")))
+			Expect(ext.WaitAfterKubeAPIServer(ctx)).To(MatchError(ContainSubstring("not found")))
 		})
 
 		It("should return error when resource is not ready", func() {
@@ -279,19 +260,19 @@ var _ = Describe("Extension", func() {
 					},
 				},
 			}
-			Expect(b.SeedClientSet.Client().Create(ctx, defaultExtension)).To(Succeed())
-			Expect(b.SeedClientSet.Client().Create(ctx, beforeExtension)).To(Succeed())
-			Expect(b.Shoot.Components.Extensions.Extension.WaitAfterKubeAPIServer(ctx)).To(MatchError(ContainSubstring("Error while waiting for Extension test-namespace/def to become ready: error during reconciliation: "+errDescription)), "extensions indicates error")
+			Expect(fakeSeedClient.Create(ctx, defaultExtension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, beforeExtension)).To(Succeed())
+			Expect(ext.WaitAfterKubeAPIServer(ctx)).To(MatchError(ContainSubstring("Error while waiting for Extension test-namespace/def to become ready: error during reconciliation: "+errDescription)), "extensions indicates error")
 		})
 
 		It("should return error if we haven't observed the latest timestamp annotation", func() {
 			now := time.Now()
 			By("Deploy")
 			// Deploy should fill internal state with the added timestamp annotation
-			Expect(b.Shoot.Components.Extensions.Extension.DeployAfterKubeAPIServer(ctx)).To(Succeed())
+			Expect(ext.DeployAfterKubeAPIServer(ctx)).To(Succeed())
 
 			By("Patch object")
-			Expect(b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(defaultExtension), defaultExtension)).To(Succeed())
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(defaultExtension), defaultExtension)).To(Succeed())
 			patch := client.MergeFrom(defaultExtension.DeepCopy())
 			// remove operation annotation, add old timestamp annotation
 			defaultExtension.ObjectMeta.Annotations = map[string]string{
@@ -301,48 +282,46 @@ var _ = Describe("Extension", func() {
 			defaultExtension.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,
 			}
-			Expect(b.SeedClientSet.Client().Patch(ctx, defaultExtension, patch)).ToNot(HaveOccurred(), "patching extension succeeds")
+			Expect(fakeSeedClient.Patch(ctx, defaultExtension, patch)).ToNot(HaveOccurred(), "patching extension succeeds")
 
 			By("Wait")
-			Expect(b.Shoot.Components.Extensions.Extension.WaitAfterKubeAPIServer(ctx)).NotTo(Succeed())
+			Expect(ext.WaitAfterKubeAPIServer(ctx)).NotTo(Succeed())
 		})
 	})
 
 	Describe("#DestroyBeforeKubeAPIServer", func() {
 		It("should not return error when not found", func() {
-			Expect(b.Shoot.Components.Extensions.Extension.DestroyBeforeKubeAPIServer(ctx)).To(Succeed())
+			Expect(ext.DestroyBeforeKubeAPIServer(ctx)).To(Succeed())
 		})
 
 		It("should not return error when deleted successfully", func() {
 			for _, e := range allExtensions {
-				Expect(b.SeedClientSet.Client().Create(ctx, e)).To(Succeed())
+				Expect(fakeSeedClient.Create(ctx, e)).To(Succeed())
 			}
-			Expect(b.Shoot.Components.Extensions.Extension.DestroyBeforeKubeAPIServer(ctx)).To(Succeed())
+			Expect(ext.DestroyBeforeKubeAPIServer(ctx)).To(Succeed())
 			extensionList := &extensionsv1alpha1.ExtensionList{}
-			Expect(b.SeedClientSet.Client().List(ctx, extensionList, client.InNamespace(namespace.Name))).To(Succeed())
+			Expect(fakeSeedClient.List(ctx, extensionList, client.InNamespace(namespace.Name))).To(Succeed())
 			Expect(extensionList.Items).To(consistOfObjects(afterName))
 		})
 
 		It("should return error if deletion fails", func() {
 			for _, e := range allExtensions {
-				Expect(b.SeedClientSet.Client().Create(ctx, e)).To(Succeed())
+				Expect(fakeSeedClient.Create(ctx, e)).To(Succeed())
 			}
 			fakeError := errors.New("fake-err")
-			errClient := &errorClient{err: fakeError, Client: b.SeedClientSet.Client()}
-			errClientSet := kubernetesfake.NewClientSetBuilder().WithClient(errClient).Build()
-			b.SeedClientSet = errClientSet
-			b.Shoot.Components.Extensions.Extension = extension.New(
+			errClient := &errorClient{err: fakeError, Client: fakeSeedClient}
+			ext = extension.New(
 				log,
-				b.SeedClientSet.Client(),
+				errClient,
 				&extension.Values{
-					Namespace:  b.Shoot.SeedNamespace,
+					Namespace:  namespace.Name,
 					Extensions: requiredExtensions,
 				},
 				time.Microsecond*100,
 				time.Microsecond*400,
 				time.Second,
 			)
-			Expect(b.Shoot.Components.Extensions.Extension.DestroyBeforeKubeAPIServer(ctx)).To(MatchError(&multierror.Error{
+			Expect(ext.DestroyBeforeKubeAPIServer(ctx)).To(MatchError(&multierror.Error{
 				Errors: []error{fakeError, fakeError},
 			}))
 		})
@@ -350,39 +329,37 @@ var _ = Describe("Extension", func() {
 
 	Describe("#DestroyAfterKubeAPIServer", func() {
 		It("should not return error when not found", func() {
-			Expect(b.Shoot.Components.Extensions.Extension.DestroyAfterKubeAPIServer(ctx)).To(Succeed())
+			Expect(ext.DestroyAfterKubeAPIServer(ctx)).To(Succeed())
 		})
 
 		It("should not return error when deleted successfully", func() {
 			for _, e := range allExtensions {
-				Expect(b.SeedClientSet.Client().Create(ctx, e)).To(Succeed())
+				Expect(fakeSeedClient.Create(ctx, e)).To(Succeed())
 			}
-			Expect(b.Shoot.Components.Extensions.Extension.DestroyAfterKubeAPIServer(ctx)).To(Succeed())
+			Expect(ext.DestroyAfterKubeAPIServer(ctx)).To(Succeed())
 			extensionList := &extensionsv1alpha1.ExtensionList{}
-			Expect(b.SeedClientSet.Client().List(ctx, extensionList, client.InNamespace(namespace.Name))).To(Succeed())
+			Expect(fakeSeedClient.List(ctx, extensionList, client.InNamespace(namespace.Name))).To(Succeed())
 			Expect(extensionList.Items).To(consistOfObjects(defaultName, beforeName))
 		})
 
 		It("should return error if deletion fails", func() {
 			for _, e := range allExtensions {
-				Expect(b.SeedClientSet.Client().Create(ctx, e)).To(Succeed())
+				Expect(fakeSeedClient.Create(ctx, e)).To(Succeed())
 			}
 			fakeError := errors.New("fake-err")
-			errClient := &errorClient{err: fakeError, Client: b.SeedClientSet.Client()}
-			errClientSet := kubernetesfake.NewClientSetBuilder().WithClient(errClient).Build()
-			b.SeedClientSet = errClientSet
-			b.Shoot.Components.Extensions.Extension = extension.New(
+			errClient := &errorClient{err: fakeError, Client: fakeSeedClient}
+			ext = extension.New(
 				log,
-				b.SeedClientSet.Client(),
+				errClient,
 				&extension.Values{
-					Namespace:  b.Shoot.SeedNamespace,
+					Namespace:  namespace.Name,
 					Extensions: requiredExtensions,
 				},
 				time.Microsecond*100,
 				time.Microsecond*400,
 				time.Second,
 			)
-			Expect(b.Shoot.Components.Extensions.Extension.DestroyAfterKubeAPIServer(ctx)).To(MatchError(&multierror.Error{
+			Expect(ext.DestroyAfterKubeAPIServer(ctx)).To(MatchError(&multierror.Error{
 				Errors: []error{fakeError},
 			}))
 		})
@@ -390,36 +367,36 @@ var _ = Describe("Extension", func() {
 
 	Describe("#WaitCleanupBeforeKubeAPIServer", func() {
 		It("should not return error if all resources are gone", func() {
-			Expect(b.SeedClientSet.Client().Create(ctx, afterExtension)).To(Succeed())
-			Expect(b.Shoot.Components.Extensions.Extension.WaitCleanupBeforeKubeAPIServer(ctx)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, afterExtension)).To(Succeed())
+			Expect(ext.WaitCleanupBeforeKubeAPIServer(ctx)).To(Succeed())
 		})
 
 		It("should return error if resources still exist", func() {
-			Expect(b.SeedClientSet.Client().Create(ctx, beforeExtension)).To(Succeed())
-			Expect(b.Shoot.Components.Extensions.Extension.WaitCleanupBeforeKubeAPIServer(ctx)).To(MatchError(ContainSubstring("Extension test-namespace/before is still present")))
+			Expect(fakeSeedClient.Create(ctx, beforeExtension)).To(Succeed())
+			Expect(ext.WaitCleanupBeforeKubeAPIServer(ctx)).To(MatchError(ContainSubstring("Extension test-namespace/before is still present")))
 		})
 	})
 
 	Describe("#WaitCleanupAfterKubeAPIServer", func() {
 		It("should not return error if all resources are gone", func() {
-			Expect(b.SeedClientSet.Client().Create(ctx, beforeExtension)).To(Succeed())
-			Expect(b.Shoot.Components.Extensions.Extension.WaitCleanupAfterKubeAPIServer(ctx)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, beforeExtension)).To(Succeed())
+			Expect(ext.WaitCleanupAfterKubeAPIServer(ctx)).To(Succeed())
 		})
 
 		It("should return error if resources still exist", func() {
-			Expect(b.SeedClientSet.Client().Create(ctx, afterExtension)).To(Succeed())
-			Expect(b.Shoot.Components.Extensions.Extension.WaitCleanupAfterKubeAPIServer(ctx)).To(MatchError(ContainSubstring("Extension test-namespace/after is still present")))
+			Expect(fakeSeedClient.Create(ctx, afterExtension)).To(Succeed())
+			Expect(ext.WaitCleanupAfterKubeAPIServer(ctx)).To(MatchError(ContainSubstring("Extension test-namespace/after is still present")))
 		})
 	})
 
 	Describe("#WaitCleanup", func() {
 		It("should not return error if all resources are gone", func() {
-			Expect(b.Shoot.Components.Extensions.Extension.WaitCleanup(ctx)).To(Succeed())
+			Expect(ext.WaitCleanup(ctx)).To(Succeed())
 		})
 
 		It("should return error if resources still exist", func() {
-			Expect(b.SeedClientSet.Client().Create(ctx, afterExtension)).To(Succeed())
-			Expect(b.Shoot.Components.Extensions.Extension.WaitCleanup(ctx)).To(MatchError(ContainSubstring("Extension test-namespace/after is still present")))
+			Expect(fakeSeedClient.Create(ctx, afterExtension)).To(Succeed())
+			Expect(ext.WaitCleanup(ctx)).To(MatchError(ContainSubstring("Extension test-namespace/after is still present")))
 		})
 	})
 
@@ -446,13 +423,13 @@ var _ = Describe("Extension", func() {
 
 		Describe("#RestoreBeforeKubeAPIServer", func() {
 			It("should properly restore the extensions state if it exists", func() {
-				Expect(b.Shoot.Components.Extensions.Extension.RestoreBeforeKubeAPIServer(ctx, shootState)).To(Succeed())
+				Expect(ext.RestoreBeforeKubeAPIServer(ctx, shootState)).To(Succeed())
 
 				extensionList := &extensionsv1alpha1.ExtensionList{}
-				Expect(b.SeedClientSet.Client().List(ctx, extensionList, client.InNamespace(namespace.Name))).To(Succeed())
+				Expect(fakeSeedClient.List(ctx, extensionList, client.InNamespace(namespace.Name))).To(Succeed())
 				Expect(extensionList.Items).To(consistOfObjects(beforeName))
 
-				Expect(b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(beforeExtension), beforeExtension)).To(Succeed())
+				Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(beforeExtension), beforeExtension)).To(Succeed())
 				Expect(beforeExtension.Status.State).To(Equal(&runtime.RawExtension{Raw: state}))
 				Expect(beforeExtension.Annotations[v1beta1constants.GardenerOperation]).To(Equal(v1beta1constants.GardenerOperationRestore))
 			})
@@ -460,17 +437,17 @@ var _ = Describe("Extension", func() {
 
 		Describe("#RestoreAfterKubeAPIServer", func() {
 			It("should properly restore the extensions state if it exists", func() {
-				Expect(b.Shoot.Components.Extensions.Extension.RestoreAfterKubeAPIServer(ctx, shootState)).To(Succeed())
+				Expect(ext.RestoreAfterKubeAPIServer(ctx, shootState)).To(Succeed())
 
 				extensionList := &extensionsv1alpha1.ExtensionList{}
-				Expect(b.SeedClientSet.Client().List(ctx, extensionList, client.InNamespace(namespace.Name))).To(Succeed())
+				Expect(fakeSeedClient.List(ctx, extensionList, client.InNamespace(namespace.Name))).To(Succeed())
 				Expect(extensionList.Items).To(consistOfObjects(defaultName, afterName))
 
-				Expect(b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(defaultExtension), defaultExtension)).To(Succeed())
+				Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(defaultExtension), defaultExtension)).To(Succeed())
 				Expect(defaultExtension.Status.State).To(Equal(&runtime.RawExtension{Raw: state}))
 				Expect(defaultExtension.Annotations[v1beta1constants.GardenerOperation]).To(Equal(v1beta1constants.GardenerOperationRestore))
 
-				Expect(b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(afterExtension), afterExtension)).To(Succeed())
+				Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(afterExtension), afterExtension)).To(Succeed())
 				Expect(afterExtension.Status.State).To(Equal(&runtime.RawExtension{Raw: state}))
 				Expect(afterExtension.Annotations[v1beta1constants.GardenerOperation]).To(Equal(v1beta1constants.GardenerOperationRestore))
 			})
@@ -479,51 +456,51 @@ var _ = Describe("Extension", func() {
 
 	Describe("#MigrateBeforeKubeAPIServer", func() {
 		It("should migrate the resources", func() {
-			Expect(b.SeedClientSet.Client().Create(ctx, defaultExtension)).To(Succeed())
-			Expect(b.SeedClientSet.Client().Create(ctx, beforeExtension)).To(Succeed())
-			Expect(b.SeedClientSet.Client().Create(ctx, afterExtension)).To(Succeed())
-			Expect(b.Shoot.Components.Extensions.Extension.MigrateBeforeKubeAPIServer(ctx)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, defaultExtension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, beforeExtension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, afterExtension)).To(Succeed())
+			Expect(ext.MigrateBeforeKubeAPIServer(ctx)).To(Succeed())
 
-			Expect(b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(defaultExtension), defaultExtension)).To(Succeed())
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(defaultExtension), defaultExtension)).To(Succeed())
 			Expect(defaultExtension.Annotations[v1beta1constants.GardenerOperation]).To(Equal(v1beta1constants.GardenerOperationMigrate))
 
-			Expect(b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(beforeExtension), beforeExtension)).To(Succeed())
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(beforeExtension), beforeExtension)).To(Succeed())
 			Expect(beforeExtension.Annotations[v1beta1constants.GardenerOperation]).To(Equal(v1beta1constants.GardenerOperationMigrate))
 
-			Expect(b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(afterExtension), afterExtension)).To(Succeed())
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(afterExtension), afterExtension)).To(Succeed())
 			Expect(afterExtension.Annotations[v1beta1constants.GardenerOperation]).To(BeEmpty())
 		})
 
 		It("should not return error if resource does not exist", func() {
-			Expect(b.Shoot.Components.Extensions.Extension.MigrateBeforeKubeAPIServer(ctx)).To(Succeed())
+			Expect(ext.MigrateBeforeKubeAPIServer(ctx)).To(Succeed())
 		})
 	})
 
 	Describe("#MigrateAfterKubeAPIServer", func() {
 		It("should migrate the resources", func() {
-			Expect(b.SeedClientSet.Client().Create(ctx, defaultExtension)).To(Succeed())
-			Expect(b.SeedClientSet.Client().Create(ctx, beforeExtension)).To(Succeed())
-			Expect(b.SeedClientSet.Client().Create(ctx, afterExtension)).To(Succeed())
-			Expect(b.Shoot.Components.Extensions.Extension.MigrateAfterKubeAPIServer(ctx)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, defaultExtension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, beforeExtension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, afterExtension)).To(Succeed())
+			Expect(ext.MigrateAfterKubeAPIServer(ctx)).To(Succeed())
 
-			Expect(b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(defaultExtension), defaultExtension)).To(Succeed())
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(defaultExtension), defaultExtension)).To(Succeed())
 			Expect(defaultExtension.Annotations[v1beta1constants.GardenerOperation]).To(BeEmpty())
 
-			Expect(b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(beforeExtension), beforeExtension)).To(Succeed())
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(beforeExtension), beforeExtension)).To(Succeed())
 			Expect(beforeExtension.Annotations[v1beta1constants.GardenerOperation]).To(BeEmpty())
 
-			Expect(b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(afterExtension), afterExtension)).To(Succeed())
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(afterExtension), afterExtension)).To(Succeed())
 			Expect(afterExtension.Annotations[v1beta1constants.GardenerOperation]).To(Equal(v1beta1constants.GardenerOperationMigrate))
 		})
 
 		It("should not return error if resource does not exist", func() {
-			Expect(b.Shoot.Components.Extensions.Extension.MigrateAfterKubeAPIServer(ctx)).To(Succeed())
+			Expect(ext.MigrateAfterKubeAPIServer(ctx)).To(Succeed())
 		})
 	})
 
 	Describe("#WaitMigrateBeforeKubeAPIServer", func() {
 		It("should not return error when resource is missing", func() {
-			Expect(b.Shoot.Components.Extensions.Extension.WaitMigrateBeforeKubeAPIServer(ctx)).To(Succeed())
+			Expect(ext.WaitMigrateBeforeKubeAPIServer(ctx)).To(Succeed())
 		})
 
 		It("should return error if resource is not yet migrated successfully", func() {
@@ -535,8 +512,8 @@ var _ = Describe("Extension", func() {
 				Type:  gardencorev1beta1.LastOperationTypeMigrate,
 			}
 
-			Expect(b.SeedClientSet.Client().Create(ctx, defaultExtension)).To(Succeed())
-			Expect(b.Shoot.Components.Extensions.Extension.WaitMigrateBeforeKubeAPIServer(ctx)).To(MatchError(ContainSubstring("to be successfully migrated")))
+			Expect(fakeSeedClient.Create(ctx, defaultExtension)).To(Succeed())
+			Expect(ext.WaitMigrateBeforeKubeAPIServer(ctx)).To(MatchError(ContainSubstring("to be successfully migrated")))
 		})
 
 		It("should not return error if resource gets migrated successfully", func() {
@@ -546,9 +523,9 @@ var _ = Describe("Extension", func() {
 				Type:  gardencorev1beta1.LastOperationTypeMigrate,
 			}
 
-			Expect(b.SeedClientSet.Client().Create(ctx, defaultExtension)).To(Succeed())
-			Expect(b.SeedClientSet.Client().Create(ctx, afterExtension)).To(Succeed())
-			Expect(b.Shoot.Components.Extensions.Extension.WaitMigrateBeforeKubeAPIServer(ctx)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, defaultExtension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, afterExtension)).To(Succeed())
+			Expect(ext.WaitMigrateBeforeKubeAPIServer(ctx)).To(Succeed())
 		})
 
 		It("should return error if one resources is not migrated successfully and others are", func() {
@@ -565,15 +542,15 @@ var _ = Describe("Extension", func() {
 				Type:  gardencorev1beta1.LastOperationTypeMigrate,
 			}
 
-			Expect(b.SeedClientSet.Client().Create(ctx, defaultExtension)).To(Succeed())
-			Expect(b.SeedClientSet.Client().Create(ctx, beforeExtension)).To(Succeed())
-			Expect(b.Shoot.Components.Extensions.Extension.WaitMigrateBeforeKubeAPIServer(ctx)).To(MatchError(ContainSubstring("to be successfully migrated")))
+			Expect(fakeSeedClient.Create(ctx, defaultExtension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, beforeExtension)).To(Succeed())
+			Expect(ext.WaitMigrateBeforeKubeAPIServer(ctx)).To(MatchError(ContainSubstring("to be successfully migrated")))
 		})
 	})
 
 	Describe("#WaitMigrateAfterKubeAPIServer", func() {
 		It("should not return error when resource is missing", func() {
-			Expect(b.Shoot.Components.Extensions.Extension.WaitMigrateAfterKubeAPIServer(ctx)).To(Succeed())
+			Expect(ext.WaitMigrateAfterKubeAPIServer(ctx)).To(Succeed())
 		})
 
 		It("should return error if resource is not yet migrated successfully", func() {
@@ -585,8 +562,8 @@ var _ = Describe("Extension", func() {
 				Type:  gardencorev1beta1.LastOperationTypeMigrate,
 			}
 
-			Expect(b.SeedClientSet.Client().Create(ctx, afterExtension)).To(Succeed())
-			Expect(b.Shoot.Components.Extensions.Extension.WaitMigrateAfterKubeAPIServer(ctx)).To(MatchError(ContainSubstring("to be successfully migrated")))
+			Expect(fakeSeedClient.Create(ctx, afterExtension)).To(Succeed())
+			Expect(ext.WaitMigrateAfterKubeAPIServer(ctx)).To(MatchError(ContainSubstring("to be successfully migrated")))
 		})
 
 		It("should not return error if resource gets migrated successfully", func() {
@@ -596,9 +573,9 @@ var _ = Describe("Extension", func() {
 				Type:  gardencorev1beta1.LastOperationTypeMigrate,
 			}
 
-			Expect(b.SeedClientSet.Client().Create(ctx, afterExtension)).To(Succeed())
-			Expect(b.SeedClientSet.Client().Create(ctx, beforeExtension)).To(Succeed())
-			Expect(b.Shoot.Components.Extensions.Extension.WaitMigrateAfterKubeAPIServer(ctx)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, afterExtension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, beforeExtension)).To(Succeed())
+			Expect(ext.WaitMigrateAfterKubeAPIServer(ctx)).To(Succeed())
 		})
 
 		It("should return error if one resources is not migrated successfully and others are", func() {
@@ -627,11 +604,11 @@ var _ = Describe("Extension", func() {
 					Migrate:   &afterKubeAPIServer,
 				},
 			}
-			b.Shoot.Components.Extensions.Extension = extension.New(
+			ext = extension.New(
 				log,
-				b.SeedClientSet.Client(),
+				fakeSeedClient,
 				&extension.Values{
-					Namespace:  b.Shoot.SeedNamespace,
+					Namespace:  namespace.Name,
 					Extensions: requiredExtensions,
 				},
 				time.Microsecond*100,
@@ -639,9 +616,9 @@ var _ = Describe("Extension", func() {
 				time.Second,
 			)
 
-			Expect(b.SeedClientSet.Client().Create(ctx, afterExtension)).To(Succeed())
-			Expect(b.SeedClientSet.Client().Create(ctx, afterExtension1)).To(Succeed())
-			Expect(b.Shoot.Components.Extensions.Extension.WaitMigrateAfterKubeAPIServer(ctx)).To(MatchError(ContainSubstring("to be successfully migrated")))
+			Expect(fakeSeedClient.Create(ctx, afterExtension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, afterExtension1)).To(Succeed())
+			Expect(ext.WaitMigrateAfterKubeAPIServer(ctx)).To(MatchError(ContainSubstring("to be successfully migrated")))
 		})
 	})
 
@@ -650,35 +627,35 @@ var _ = Describe("Extension", func() {
 			staleExtension := defaultExtension.DeepCopy()
 			staleExtension.Name = "new-name"
 			staleExtension.Spec.Type = "new-type"
-			Expect(b.SeedClientSet.Client().Create(ctx, staleExtension)).To(Succeed())
-			Expect(b.SeedClientSet.Client().Create(ctx, defaultExtension)).To(Succeed())
-			Expect(b.SeedClientSet.Client().Create(ctx, beforeExtension)).To(Succeed())
-			Expect(b.SeedClientSet.Client().Create(ctx, afterExtension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, staleExtension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, defaultExtension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, beforeExtension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, afterExtension)).To(Succeed())
 
-			Expect(b.Shoot.Components.Extensions.Extension.DeleteStaleResources(ctx)).To(Succeed())
+			Expect(ext.DeleteStaleResources(ctx)).To(Succeed())
 
 			extensionList := &extensionsv1alpha1.ExtensionList{}
-			Expect(b.SeedClientSet.Client().List(ctx, extensionList)).To(Succeed())
+			Expect(fakeSeedClient.List(ctx, extensionList)).To(Succeed())
 			Expect(extensionList.Items).To(consistOfObjects(defaultName, beforeName, afterName))
 		})
 	})
 	Describe("#WaitCleanupStaleResources", func() {
 		It("should not return error if all resources are gone", func() {
-			Expect(b.Shoot.Components.Extensions.Extension.WaitCleanupStaleResources(ctx)).To(Succeed())
+			Expect(ext.WaitCleanupStaleResources(ctx)).To(Succeed())
 		})
 
 		It("should not return error if wanted resources exist", func() {
-			Expect(b.SeedClientSet.Client().Create(ctx, defaultExtension)).To(Succeed())
-			Expect(b.Shoot.Components.Extensions.Extension.WaitCleanupStaleResources(ctx)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, defaultExtension)).To(Succeed())
+			Expect(ext.WaitCleanupStaleResources(ctx)).To(Succeed())
 		})
 
 		It("should return error if stale resources still exist", func() {
 			staleExtension := defaultExtension
 			staleExtension.Name = "new-name"
 			staleExtension.Spec.Type = "new-type"
-			Expect(b.SeedClientSet.Client().Create(ctx, staleExtension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, staleExtension)).To(Succeed())
 
-			Expect(b.Shoot.Components.Extensions.Extension.WaitCleanupStaleResources(ctx)).To(MatchError(ContainSubstring("Extension test-namespace/new-name is still present")))
+			Expect(ext.WaitCleanupStaleResources(ctx)).To(MatchError(ContainSubstring("Extension test-namespace/new-name is still present")))
 		})
 	})
 })
