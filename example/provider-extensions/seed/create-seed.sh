@@ -22,7 +22,7 @@ usage() {
   echo "Usage:"
   echo "> create-seed.sh [ -h | <garden-kubeconfig> <seed-kubeconfig> <seed-name> ]"
   echo
-  echo ">> For example: create-seed.sh ~/.kube/garden-kubeconfig.yaml ~/.kube/kubeconfig.yaml"
+  echo ">> For example: create-seed.sh ~/.kube/garden-kubeconfig.yaml ~/.kube/kubeconfig.yaml seed-local"
 
   exit 0
 }
