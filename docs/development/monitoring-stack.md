@@ -14,7 +14,7 @@ Each Shoot cluster comes with its own monitoring stack. The following components
 
 * Seed
   * [Prometheus](https://github.com/prometheus/prometheus)
-  * [Grafana](https://github.com/grafana/grafana)
+  * [Grafana](https://github.com/credativ/plutono)
   * [blackbox-exporter](https://github.com/prometheus/blackbox_exporter)
   * [kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) (Seed metrics)
   * [kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) (Shoot metrics)

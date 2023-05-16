@@ -230,7 +230,7 @@ images:
       availability_requirement: low
       comment: the node-exporter is also deployed to the shoot cluster
 - name: grafana
-  sourceRepository: github.com/grafana/grafana
+  sourceRepository: github.com/credativ/plutono
   repository: eu.gcr.io/gardener-project/3rd/grafana/grafana
   tag: "7.5.17"
   labels:
