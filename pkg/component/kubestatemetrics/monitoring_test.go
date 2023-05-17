@@ -54,6 +54,29 @@ var _ = Describe("Monitoring", func() {
 			)
 		})
 	})
+
+	Context("Shoot Monitoring Configuration (Workerless Shoot)", func() {
+		var kubeStateMetrics component.MonitoringComponent
+
+		BeforeEach(func() {
+			kubeStateMetrics = New(nil, "shoot--foo--bar", nil, Values{IsWorkerless: true})
+		})
+
+		It("should return empty for scrape configs", func() {
+			scrapeConfigs, err := kubeStateMetrics.ScrapeConfigs()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(scrapeConfigs).To(BeEmpty())
+		})
+
+		It("should successfully test the alerting rules", func() {
+			test.AlertingRulesWithPromtool(
+				kubeStateMetrics,
+				map[string]string{"kube-state-metrics.rules.yaml": expectedAlertingRulesWorkerlessShoot},
+				filepath.Join("testdata", "monitoring_alertingrules_workerless.yaml"),
+			)
+		})
+	})
 })
 
 const (
@@ -178,5 +201,21 @@ metric_relabel_configs:
 
   - record: kube_pod_container_resource_requests_memory_bytes
     expr: kube_pod_container_resource_requests{resource="memory", unit="byte"}
+`
+
+	expectedAlertingRulesWorkerlessShoot = `groups:
+- name: kube-state-metrics.rules
+  rules:
+  - alert: KubeStateMetricsSeedDown
+    expr: absent(count({exported_job="kube-state-metrics"}))
+    for: 15m
+    labels:
+      service: kube-state-metrics-seed
+      severity: critical
+      visibility: operator
+      type: seed
+    annotations:
+      summary: There are no kube-state-metrics metrics for the control plane
+      description: Kube-state-metrics is scraped by the cache prometheus and federated by the control plane prometheus. Something is broken in that process.
 `
 )

@@ -92,6 +92,7 @@ func (h *Health) Check(
 	conditions []gardencorev1beta1.Condition,
 ) []gardencorev1beta1.Condition {
 	updatedConditions := h.healthChecks(ctx, thresholdMappings, healthCheckOutdatedThreshold, conditions)
+
 	lastOp := h.shoot.GetInfo().Status.LastOperation
 	lastErrors := h.shoot.GetInfo().Status.LastErrors
 	return PardonConditions(h.clock, updatedConditions, lastOp, lastErrors)
@@ -165,17 +166,25 @@ func (h *Health) getAllExtensionConditions(ctx context.Context) ([]ExtensionCond
 }
 
 func (h *Health) retrieveExtensions(ctx context.Context) ([]runtime.Object, error) {
-	var allExtensions []runtime.Object
+	var (
+		allExtensions       []runtime.Object
+		extensionObjectList = []client.ObjectList{
+			&extensionsv1alpha1.ExtensionList{},
+		}
+	)
 
-	for _, listObj := range []client.ObjectList{
-		&extensionsv1alpha1.ContainerRuntimeList{},
-		&extensionsv1alpha1.ControlPlaneList{},
-		&extensionsv1alpha1.ExtensionList{},
-		&extensionsv1alpha1.InfrastructureList{},
-		&extensionsv1alpha1.NetworkList{},
-		&extensionsv1alpha1.OperatingSystemConfigList{},
-		&extensionsv1alpha1.WorkerList{},
-	} {
+	if !h.shoot.IsWorkerless {
+		extensionObjectList = append(extensionObjectList,
+			&extensionsv1alpha1.ContainerRuntimeList{},
+			&extensionsv1alpha1.ControlPlaneList{},
+			&extensionsv1alpha1.InfrastructureList{},
+			&extensionsv1alpha1.NetworkList{},
+			&extensionsv1alpha1.OperatingSystemConfigList{},
+			&extensionsv1alpha1.WorkerList{},
+		)
+	}
+
+	for _, listObj := range extensionObjectList {
 		if err := h.seedClient.Client().List(ctx, listObj, client.InNamespace(h.shoot.SeedNamespace)); err != nil {
 			return nil, err
 		}
@@ -297,40 +306,58 @@ func (h *Health) healthChecks(
 		}
 
 		apiserverAvailability = checker.FailedCondition(apiserverAvailability, "APIServerDown", "Could not reach API server during client initialization.")
-		nodes = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, nodes, message)
-		systemComponents = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, systemComponents, message)
 
 		newControlPlane, err := h.checkControlPlane(ctx, checker, controlPlane, extensionConditionsControlPlaneHealthy)
 		controlPlane = NewConditionOrError(h.clock, controlPlane, newControlPlane, err)
 
 		newObservabilityComponents, err := h.checkObservabilityComponents(ctx, checker, observabilityComponents)
 		observabilityComponents = NewConditionOrError(h.clock, observabilityComponents, newObservabilityComponents, err)
+		systemComponents = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, systemComponents, message)
+
+		if h.shoot.IsWorkerless {
+			return []gardencorev1beta1.Condition{apiserverAvailability, controlPlane, observabilityComponents, systemComponents}
+		}
+
+		nodes = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, nodes, message)
 
 		return []gardencorev1beta1.Condition{apiserverAvailability, controlPlane, observabilityComponents, nodes, systemComponents}
 	}
 
 	h.shootClient = shootClient
+	taskFns := []flow.TaskFn{
+		func(ctx context.Context) error {
+			apiserverAvailability = h.checkAPIServerAvailability(ctx, checker, apiserverAvailability)
+			return nil
+		}, func(ctx context.Context) error {
+			newControlPlane, err := h.checkControlPlane(ctx, checker, controlPlane, extensionConditionsControlPlaneHealthy)
+			controlPlane = NewConditionOrError(h.clock, controlPlane, newControlPlane, err)
+			return nil
+		}, func(ctx context.Context) error {
+			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, checker, observabilityComponents)
+			observabilityComponents = NewConditionOrError(h.clock, observabilityComponents, newObservabilityComponents, err)
+			return nil
+		}, func(ctx context.Context) error {
+			newSystemComponents, err := h.checkSystemComponents(ctx, checker, systemComponents, extensionConditionsSystemComponentsHealthy)
+			systemComponents = NewConditionOrError(h.clock, systemComponents, newSystemComponents, err)
+			return nil
+		},
+	}
 
-	_ = flow.Parallel(func(ctx context.Context) error {
-		apiserverAvailability = h.checkAPIServerAvailability(ctx, checker, apiserverAvailability)
-		return nil
-	}, func(ctx context.Context) error {
-		newControlPlane, err := h.checkControlPlane(ctx, checker, controlPlane, extensionConditionsControlPlaneHealthy)
-		controlPlane = NewConditionOrError(h.clock, controlPlane, newControlPlane, err)
-		return nil
-	}, func(ctx context.Context) error {
-		newObservabilityComponents, err := h.checkObservabilityComponents(ctx, checker, observabilityComponents)
-		observabilityComponents = NewConditionOrError(h.clock, observabilityComponents, newObservabilityComponents, err)
-		return nil
-	}, func(ctx context.Context) error {
-		newNodes, err := h.checkClusterNodes(ctx, h.shootClient.Client(), checker, nodes, extensionConditionsEveryNodeReady)
-		nodes = NewConditionOrError(h.clock, nodes, newNodes, err)
-		return nil
-	}, func(ctx context.Context) error {
-		newSystemComponents, err := h.checkSystemComponents(ctx, checker, systemComponents, extensionConditionsSystemComponentsHealthy)
-		systemComponents = NewConditionOrError(h.clock, systemComponents, newSystemComponents, err)
-		return nil
-	})(ctx)
+	if h.shoot.IsWorkerless {
+		_ = flow.Parallel(taskFns...)(ctx)
+
+		return []gardencorev1beta1.Condition{apiserverAvailability, controlPlane, observabilityComponents, systemComponents}
+	}
+
+	taskFns = append(taskFns,
+		func(ctx context.Context) error {
+			newNodes, err := h.checkClusterNodes(ctx, h.shootClient.Client(), checker, nodes, extensionConditionsEveryNodeReady)
+			nodes = NewConditionOrError(h.clock, nodes, newNodes, err)
+			return nil
+		},
+	)
+
+	_ = flow.Parallel(taskFns...)(ctx)
 
 	return []gardencorev1beta1.Condition{apiserverAvailability, controlPlane, observabilityComponents, nodes, systemComponents}
 }
@@ -369,7 +396,7 @@ func (h *Health) checkObservabilityComponents(
 ) (*gardencorev1beta1.Condition, error) {
 	wantsAlertmanager := h.shoot.WantsAlertmanager
 	wantsShootMonitoring := gardenlethelper.IsMonitoringEnabled(h.gardenletConfiguration) && h.shoot.Purpose != gardencorev1beta1.ShootPurposeTesting
-	if exitCondition, err := checker.CheckMonitoringControlPlane(ctx, h.shoot.SeedNamespace, wantsShootMonitoring, wantsAlertmanager, condition); err != nil || exitCondition != nil {
+	if exitCondition, err := checker.CheckMonitoringControlPlane(ctx, h.shoot.GetInfo(), h.shoot.SeedNamespace, wantsShootMonitoring, wantsAlertmanager, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 
@@ -416,23 +443,25 @@ func (h *Health) checkSystemComponents(
 		return exitCondition, nil
 	}
 
-	podsList := &corev1.PodList{}
-	if err := h.shootClient.Client().List(ctx, podsList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{"type": "tunnel"}); err != nil {
-		return nil, err
-	}
-
-	if len(podsList.Items) == 0 {
-		c := checker.FailedCondition(condition, "NoTunnelDeployed", "no tunnels are currently deployed to perform health-check on")
-		return &c, nil
-	}
-
-	if established, err := botanist.CheckTunnelConnection(ctx, logr.Discard(), h.shootClient, common.VPNTunnel); err != nil || !established {
-		msg := "Tunnel connection has not been established"
-		if err != nil {
-			msg += fmt.Sprintf(" (%+v)", err)
+	if !h.shoot.IsWorkerless {
+		podsList := &corev1.PodList{}
+		if err := h.shootClient.Client().List(ctx, podsList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{"type": "tunnel"}); err != nil {
+			return nil, err
 		}
-		c := checker.FailedCondition(condition, "TunnelConnectionBroken", msg)
-		return &c, nil
+
+		if len(podsList.Items) == 0 {
+			c := checker.FailedCondition(condition, "NoTunnelDeployed", "no tunnels are currently deployed to perform health-check on")
+			return &c, nil
+		}
+
+		if established, err := botanist.CheckTunnelConnection(ctx, logr.Discard(), h.shootClient, common.VPNTunnel); err != nil || !established {
+			msg := "Tunnel connection has not been established"
+			if err != nil {
+				msg += fmt.Sprintf(" (%+v)", err)
+			}
+			c := checker.FailedCondition(condition, "TunnelConnectionBroken", msg)
+			return &c, nil
+		}
 	}
 
 	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy.")

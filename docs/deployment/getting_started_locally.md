@@ -176,6 +176,12 @@ NAME    CLOUDPROFILE   PROVIDER   REGION   K8S VERSION   HIBERNATION   LAST OPER
 local   local          local      local    1.21.0        Awake         Create Processing (43%)   healthy   94s
 ```
 
+If you don't need any worker pools, you can create a workerless `Shoot` by running:
+
+```bash
+kubectl apply -f example/provider-local/shoot-workerless.yaml
+```
+
 (Optional): You could also execute a simple e2e test (creating and deleting a shoot) by running:
 
 ```shell
@@ -202,18 +208,28 @@ cat <<EOF | sudo tee -a /etc/hosts
 127.0.0.1 api.e2e-hibernated.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-unpriv.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-unpriv.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-unpriv-wl.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-unpriv-wl.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-wake-up.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-wake-up.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-wake-up-wl.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-wake-up-wl.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-migrate.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-migrate.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-migrate-wl.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-migrate-wl.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-rotate.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-rotate.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-rotate-wl.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-rotate-wl.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-default.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-default.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-default-wl.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-default-wl.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-update-node.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-update-node.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-update-zone.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-update-zone.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-update-node-wl.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-update-node-wl.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-upgrade.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-upgrade.local.internal.local.gardener.cloud
 EOF

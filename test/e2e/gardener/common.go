@@ -121,6 +121,34 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 	}
 }
 
+// DefaultWorkerlessShoot returns a workerless Shoot object with default values for the e2e tests.
+func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
+	return &gardencorev1beta1.Shoot{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name + "-wl",
+		},
+		Spec: gardencorev1beta1.ShootSpec{
+			ControlPlane:     getShootControlPlane(),
+			Region:           "local",
+			CloudProfileName: "local",
+			Kubernetes: gardencorev1beta1.Kubernetes{
+				Version:                     "1.26.0",
+				EnableStaticTokenKubeconfig: pointer.Bool(false),
+			},
+			Provider: gardencorev1beta1.Provider{
+				Type: "local",
+			},
+			Extensions: []gardencorev1beta1.Extension{
+				{
+					Type: "local-ext-seed",
+				},
+				{
+					Type: "local-ext-shoot",
+				},
+			}},
+	}
+}
+
 // SetupDNSForMultiZoneTest sets the golang DefaultResolver to the CoreDNS server, which is port forwarded to the host 127.0.0.1:5353.
 // Test uses the in-cluster CoreDNS for name resolution and can therefore resolve the API endpoint.
 func SetupDNSForMultiZoneTest() {

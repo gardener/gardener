@@ -1,13 +1,15 @@
 # Contributing to Shoot Health Status Conditions
 
 Gardener checks regularly (every minute by default) the health status of all shoot clusters.
-It categorizes its checks into four different types:
+It categorizes its checks into five different types:
 
 * `APIServerAvailable`: This type indicates whether the shoot's kube-apiserver is available or not.
 * `ControlPlaneHealthy`: This type indicates whether the core components of the Shoot controlplane (ETCD, KAPI, KCM..) are healthy.
 * `EveryNodeReady`: This type indicates whether all `Node`s and all `Machine` objects report healthiness.
 * `ObservabilityComponentsHealthy`: This type indicates whether the  observability components of the Shoot control plane (Prometheus, Vali, Plutono..) are healthy.
 * `SystemComponentsHealthy`: This type indicates whether all system components deployed to the `kube-system` namespace in the shoot do exist and are running fine.
+
+In case of workerless `Shoot`, `EveryNodeReady` condition is not present in the `Shoot`'s conditions since there are no nodes in the cluster.
 
 Every `Shoot` resource has a `status.conditions[]` list that contains the mentioned types, together with a `status` (`True`/`False`) and a descriptive message/explanation of the `status`.
 

@@ -28,8 +28,10 @@ patches:
           reconcile: BeforeKubeAPIServer
           delete: AfterKubeAPIServer
           migrate: AfterKubeAPIServer
+        workerlessSupported: true
     - op: add
       path: /spec/resources/-
       value:
         kind: Extension
         type: local-ext-shoot
+        workerlessSupported: true

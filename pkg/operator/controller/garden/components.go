@@ -99,6 +99,7 @@ func (r *Reconciler) newVirtualGardenGardenerResourceManager(secretsManager secr
 		operatorv1alpha1.SecretNameCARuntime,
 		nil,
 		false,
+		true,
 	)
 }
 

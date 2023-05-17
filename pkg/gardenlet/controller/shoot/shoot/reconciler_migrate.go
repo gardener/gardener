@@ -98,6 +98,9 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			return nil
 		}),
 		errorsutils.ToExecute("Retrieve the infrastructure resource", func() error {
+			if o.Shoot.IsWorkerless {
+				return nil
+			}
 			obj, err := botanist.Shoot.Components.Extensions.Infrastructure.Get(ctx)
 			if err != nil {
 				if apierrors.IsNotFound(err) {
@@ -156,12 +159,14 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		// controller-manager to be updateable due to provider config injection.
 		restoreControlPlane = g.Add(flow.Task{
 			Name:         "Restoring Shoot control plane",
-			Fn:           flow.TaskFn(botanist.RestoreControlPlane).DoIf(cleanupShootResources && controlPlaneRestorationNeeded),
+			Fn:           flow.TaskFn(botanist.RestoreControlPlane).DoIf(cleanupShootResources && controlPlaneRestorationNeeded).SkipIf(o.Shoot.IsWorkerless),
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
 		})
 		waitUntilControlPlaneReady = g.Add(flow.Task{
-			Name:         "Waiting until Shoot control plane has been restored",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.ControlPlane.Wait).DoIf(cleanupShootResources && controlPlaneRestorationNeeded),
+			Name: "Waiting until Shoot control plane has been restored",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.Shoot.Components.Extensions.ControlPlane.Wait(ctx)
+			}).DoIf(cleanupShootResources && controlPlaneRestorationNeeded).SkipIf(o.Shoot.IsWorkerless),
 			Dependencies: flow.NewTaskIDs(restoreControlPlane),
 		})
 		wakeUpKubeAPIServer = g.Add(flow.Task{
@@ -247,18 +252,24 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			Dependencies: flow.NewTaskIDs(deleteStaleExtensionResources),
 		})
 		migrateControlPlane = g.Add(flow.Task{
-			Name:         "Migrating shoot control plane",
-			Fn:           botanist.Shoot.Components.Extensions.ControlPlane.Migrate,
+			Name: "Migrating shoot control plane",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.Shoot.Components.Extensions.ControlPlane.Migrate(ctx)
+			}).SkipIf(o.Shoot.IsWorkerless),
 			Dependencies: flow.NewTaskIDs(waitUntilExtensionResourcesDeleted, waitUntilExtensionsBeforeKubeAPIServerDeleted, waitUntilStaleExtensionResourcesDeleted),
 		})
 		deleteControlPlane = g.Add(flow.Task{
-			Name:         "Deleting shoot control plane",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.ControlPlane.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Name: "Deleting shoot control plane",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.Shoot.Components.Extensions.ControlPlane.Destroy(ctx)
+			}).SkipIf(o.Shoot.IsWorkerless).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(migrateControlPlane),
 		})
 		waitUntilControlPlaneDeleted = g.Add(flow.Task{
-			Name:         "Waiting until shoot control plane has been deleted",
-			Fn:           botanist.Shoot.Components.Extensions.ControlPlane.WaitCleanup,
+			Name: "Waiting until shoot control plane has been deleted",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.Shoot.Components.Extensions.ControlPlane.WaitCleanup(ctx)
+			}).SkipIf(o.Shoot.IsWorkerless),
 			Dependencies: flow.NewTaskIDs(deleteControlPlane),
 		})
 		waitUntilShootManagedResourcesDeleted = g.Add(flow.Task{
@@ -303,23 +314,31 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			Dependencies: flow.NewTaskIDs(waitUntilExtensionsAfterKubeAPIServerMigrated),
 		})
 		migrateInfrastructure = g.Add(flow.Task{
-			Name:         "Migrating shoot infrastructure",
-			Fn:           botanist.Shoot.Components.Extensions.Infrastructure.Migrate,
+			Name: "Migrating shoot infrastructure",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.Shoot.Components.Extensions.Infrastructure.Migrate(ctx)
+			}).SkipIf(o.Shoot.IsWorkerless),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 		waitUntilInfrastructureMigrated = g.Add(flow.Task{
-			Name:         "Waiting until shoot infrastructure has been migrated",
-			Fn:           botanist.Shoot.Components.Extensions.Infrastructure.WaitMigrate,
+			Name: "Waiting until shoot infrastructure has been migrated",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.Shoot.Components.Extensions.Infrastructure.WaitMigrate(ctx)
+			}).SkipIf(o.Shoot.IsWorkerless),
 			Dependencies: flow.NewTaskIDs(migrateInfrastructure),
 		})
 		deleteInfrastructure = g.Add(flow.Task{
-			Name:         "Deleting shoot infrastructure",
-			Fn:           botanist.Shoot.Components.Extensions.Infrastructure.Destroy,
+			Name: "Deleting shoot infrastructure",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.Shoot.Components.Extensions.Infrastructure.Destroy(ctx)
+			}).SkipIf(o.Shoot.IsWorkerless),
 			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureMigrated),
 		})
 		waitUntilInfrastructureDeleted = g.Add(flow.Task{
-			Name:         "Waiting until shoot infrastructure has been deleted",
-			Fn:           botanist.Shoot.Components.Extensions.Infrastructure.WaitCleanup,
+			Name: "Waiting until shoot infrastructure has been deleted",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.Shoot.Components.Extensions.Infrastructure.WaitCleanup(ctx)
+			}).SkipIf(o.Shoot.IsWorkerless),
 			Dependencies: flow.NewTaskIDs(deleteInfrastructure),
 		})
 		migrateIngressDNSRecord = g.Add(flow.Task{

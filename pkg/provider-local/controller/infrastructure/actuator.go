@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,7 +28,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/provider-local/local"
-	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -54,62 +52,6 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 			MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToShootNetworks: v1beta1constants.LabelNetworkPolicyAllowed},
 		},
 		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-	}
-
-	var (
-		protocolTCP = corev1.ProtocolTCP
-		protocolUDP = corev1.ProtocolUDP
-	)
-
-	networkPolicyAllowToProviderLocalCoreDNS := emptyNetworkPolicy("allow-to-provider-local-coredns", infrastructure.Namespace)
-	networkPolicyAllowToProviderLocalCoreDNS.Spec = networkingv1.NetworkPolicySpec{
-		Egress: []networkingv1.NetworkPolicyEgressRule{{
-			To: []networkingv1.NetworkPolicyPeer{{
-				NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "gardener-extension-provider-local-coredns"}},
-				PodSelector:       &metav1.LabelSelector{MatchLabels: map[string]string{"app": "coredns"}},
-			}},
-			Ports: []networkingv1.NetworkPolicyPort{
-				{Port: utils.IntStrPtrFromInt(9053), Protocol: &protocolTCP},
-				{Port: utils.IntStrPtrFromInt(9053), Protocol: &protocolUDP},
-			},
-		}},
-		PodSelector: metav1.LabelSelector{
-			MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed},
-		},
-		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-	}
-
-	networkPolicyAllowToIstioIngressGateway := emptyNetworkPolicy("allow-to-istio-ingress-gateway", infrastructure.Namespace)
-	networkPolicyAllowToIstioIngressGateway.Spec = networkingv1.NetworkPolicySpec{
-		Egress: []networkingv1.NetworkPolicyEgressRule{{
-			To: []networkingv1.NetworkPolicyPeer{{
-				NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "istio-ingress"}},
-				PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
-					"app":   "istio-ingressgateway",
-					"istio": "ingressgateway",
-				}},
-			}},
-			Ports: []networkingv1.NetworkPolicyPort{
-				{Port: utils.IntStrPtrFromInt(8132), Protocol: &protocolTCP},
-				{Port: utils.IntStrPtrFromInt(8443), Protocol: &protocolTCP},
-				{Port: utils.IntStrPtrFromInt(9443), Protocol: &protocolTCP},
-			},
-		}},
-		PodSelector: metav1.LabelSelector{
-			MatchLabels: map[string]string{local.LabelNetworkPolicyToIstioIngressGateway: v1beta1constants.LabelNetworkPolicyAllowed},
-		},
-		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-	}
-	if len(cluster.Seed.Spec.Provider.Zones) > 1 {
-		for _, zone := range cluster.Seed.Spec.Provider.Zones {
-			networkPolicyAllowToIstioIngressGateway.Spec.Egress[0].To = append(networkPolicyAllowToIstioIngressGateway.Spec.Egress[0].To, networkingv1.NetworkPolicyPeer{
-				NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "istio-ingress--" + zone}},
-				PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
-					"app":   "istio-ingressgateway",
-					"istio": "ingressgateway--zone--" + zone,
-				}},
-			})
-		}
 	}
 
 	networkPolicyAllowMachinePods := emptyNetworkPolicy("allow-machine-pods", infrastructure.Namespace)
@@ -149,8 +91,6 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 
 	for _, obj := range []client.Object{
 		networkPolicyAllowToMachinePods,
-		networkPolicyAllowToProviderLocalCoreDNS,
-		networkPolicyAllowToIstioIngressGateway,
 		networkPolicyAllowMachinePods,
 	} {
 		if err := a.Client().Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {

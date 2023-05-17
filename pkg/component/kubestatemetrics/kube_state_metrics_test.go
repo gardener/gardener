@@ -483,6 +483,7 @@ var _ = Describe("KubeStateMetrics", func() {
 					ClusterType:       component.ClusterTypeSeed,
 					Image:             image,
 					PriorityClassName: priorityClassName,
+					IsWorkerless:      false,
 				})
 				managedResourceName = "kube-state-metrics"
 			})
@@ -533,6 +534,7 @@ var _ = Describe("KubeStateMetrics", func() {
 					ClusterType:       component.ClusterTypeShoot,
 					Image:             image,
 					PriorityClassName: priorityClassName,
+					IsWorkerless:      false,
 				})
 				managedResourceName = "shoot-core-kube-state-metrics"
 			})

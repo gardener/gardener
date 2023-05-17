@@ -1,0 +1,13 @@
+apiVersion: core.gardener.cloud/v1beta1
+kind: Shoot
+metadata:
+  name: local-wl
+  namespace: garden-local
+spec:
+  seedName: local
+  cloudProfileName: local
+  region: local
+  provider:
+    type: local
+  kubernetes:
+    version: 1.26.0

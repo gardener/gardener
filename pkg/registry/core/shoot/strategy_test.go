@@ -21,10 +21,13 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/component-base/featuregate"
 	"k8s.io/utils/pointer"
 
@@ -87,6 +90,50 @@ var _ = Describe("Strategy", func() {
 				nil,
 			),
 		)
+	})
+
+	Describe("#Validate", func() {
+		var (
+			shoot *core.Shoot
+		)
+
+		BeforeEach(func() {
+			shoot = &core.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "shoot",
+					Namespace: "my-namespace",
+				},
+				Spec: core.ShootSpec{
+					CloudProfileName: "aws-profile",
+					Region:           "eu-west-1",
+					Kubernetes: core.Kubernetes{
+						Version: "1.20.2",
+					},
+					Provider: core.Provider{
+						Type:    "provider",
+						Workers: []core.Worker{},
+					},
+				},
+			}
+		})
+
+		It("should forbid an empty worker list if WorkerlessShoots featuregate is disabled", func() {
+			errorList := shootregistry.NewStrategy(0).Validate(context.TODO(), shoot)
+
+			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal("spec.provider.workers"),
+				"Detail": ContainSubstring("must provide at least one worker pool when WorkerlessShoots feature gate is disabled"),
+			}))))
+		})
+
+		It("should allow an empty worker list if WorkerlessShoots featuregate is enabled", func() {
+			DeferCleanup(test.WithFeatureGate(utilfeature.DefaultMutableFeatureGate, features.WorkerlessShoots, true))
+
+			errorList := shootregistry.NewStrategy(0).Validate(context.TODO(), shoot)
+
+			Expect(errorList).To(BeEmpty())
+		})
 	})
 
 	Describe("#PrepareForUpdate", func() {

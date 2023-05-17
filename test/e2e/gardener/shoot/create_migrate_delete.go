@@ -25,34 +25,49 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
+	"github.com/gardener/gardener/test/framework"
 	. "github.com/gardener/gardener/test/framework"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func() {
-	f := defaultShootCreationFramework()
-	f.Shoot = e2e.DefaultShoot("e2e-migrate")
-	// Assign seedName so that shoot does not get scheduled to the seed that will be used as target.
-	f.Shoot.Spec.SeedName = pointer.String(getSeedName(false))
+	test := func(f *framework.ShootCreationFramework) {
+		// Assign seedName so that shoot does not get scheduled to the seed that will be used as target.
+		f.Shoot.Spec.SeedName = pointer.String(getSeedName(false))
 
-	It("Create, Migrate and Delete", func() {
-		By("Create Shoot")
-		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
-		defer cancel()
-		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
-		f.Verify()
+		It("Create, Migrate and Delete", Offset(1), func() {
+			By("Create Shoot")
+			ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
+			defer cancel()
+			Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
+			f.Verify()
 
-		By("Migrate Shoot")
-		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
-		defer cancel()
-		t, err := newDefaultShootMigrationTest(ctx, f.Shoot, f.GardenerFramework)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(t.MigrateShoot(ctx)).To(Succeed())
-		Expect(t.VerifyMigration(ctx)).To(Succeed())
+			By("Migrate Shoot")
+			ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
+			defer cancel()
+			t, err := newDefaultShootMigrationTest(ctx, f.Shoot, f.GardenerFramework)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(t.MigrateShoot(ctx)).To(Succeed())
+			Expect(t.VerifyMigration(ctx)).To(Succeed())
 
-		By("Delete Shoot")
-		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
-		defer cancel()
-		Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
+			By("Delete Shoot")
+			ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
+			defer cancel()
+			Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
+		})
+	}
+
+	Context("Shoot with workers", func() {
+		f := defaultShootCreationFramework()
+		f.Shoot = e2e.DefaultShoot("e2e-migrate")
+
+		test(f)
+	})
+
+	Context("Workerless Shoot", Label("workerless"), func() {
+		f := defaultShootCreationFramework()
+		f.Shoot = e2e.DefaultWorkerlessShoot("e2e-migrate")
+
+		test(f)
 	})
 })
 

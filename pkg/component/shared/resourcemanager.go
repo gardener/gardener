@@ -137,6 +137,7 @@ func NewTargetGardenerResourceManager(
 	secretNameServerCA string,
 	systemComponentsToleration []corev1.Toleration,
 	topologyAwareRoutingEnabled bool,
+	isWorkerless bool,
 ) (
 	resourcemanager.Interface,
 	error,
@@ -183,6 +184,7 @@ func NewTargetGardenerResourceManager(
 		},
 		WatchedNamespace:            &namespaceName,
 		TopologyAwareRoutingEnabled: topologyAwareRoutingEnabled,
+		IsWorkerless:                isWorkerless,
 	}
 
 	return resourcemanager.New(

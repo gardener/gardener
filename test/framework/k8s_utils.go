@@ -29,11 +29,13 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -321,12 +323,17 @@ func ShootReconciliationSuccessful(shoot *gardencorev1beta1.Shoot) (bool, string
 		return false, "no conditions and last operation present yet"
 	}
 
-	shootConditions := map[gardencorev1beta1.ConditionType]struct{}{
-		gardencorev1beta1.ShootAPIServerAvailable:             {},
-		gardencorev1beta1.ShootControlPlaneHealthy:            {},
-		gardencorev1beta1.ShootObservabilityComponentsHealthy: {},
-		gardencorev1beta1.ShootEveryNodeReady:                 {},
-		gardencorev1beta1.ShootSystemComponentsHealthy:        {},
+	shootConditions := sets.New(
+		gardencorev1beta1.ShootAPIServerAvailable,
+		gardencorev1beta1.ShootControlPlaneHealthy,
+		gardencorev1beta1.ShootObservabilityComponentsHealthy,
+		gardencorev1beta1.ShootSystemComponentsHealthy,
+	)
+
+	if !v1beta1helper.IsWorkerless(shoot) {
+		shootConditions.Insert(
+			gardencorev1beta1.ShootEveryNodeReady,
+		)
 	}
 
 	for _, condition := range shoot.Status.Conditions {
@@ -335,7 +342,7 @@ func ShootReconciliationSuccessful(shoot *gardencorev1beta1.Shoot) (bool, string
 			// the `gardenlet` that operates the seed has already been shut down as part of the hibernation, the seed conditions will never
 			// be updated to True if they were previously not True.
 			hibernation := shoot.Spec.Hibernation
-			if _, ok := shootConditions[condition.Type]; !ok && hibernation != nil && hibernation.Enabled != nil && *hibernation.Enabled {
+			if !shootConditions.Has(condition.Type) && hibernation != nil && pointer.BoolDeref(hibernation.Enabled, false) {
 				continue
 			}
 			return false, fmt.Sprintf("condition type %s is not true yet, had message %s with reason %s", condition.Type, condition.Message, condition.Reason)

@@ -161,8 +161,27 @@ var _ = Describe("health check", func() {
 		fakeClient client.Client
 		fakeClock  = testclock.NewFakeClock(time.Now())
 
-		condition                gardencorev1beta1.Condition
-		shoot                    = &gardencorev1beta1.Shoot{}
+		condition gardencorev1beta1.Condition
+		shoot     = &gardencorev1beta1.Shoot{
+			Spec: gardencorev1beta1.ShootSpec{
+				Provider: gardencorev1beta1.Provider{
+					Workers: []gardencorev1beta1.Worker{
+						{
+							Name: "worker",
+						},
+					},
+				},
+			},
+		}
+
+		workerlessShoot = &gardencorev1beta1.Shoot{
+			Spec: gardencorev1beta1.ShootSpec{
+				Provider: gardencorev1beta1.Provider{
+					Workers: []gardencorev1beta1.Worker{},
+				},
+			},
+		}
+
 		shootThatNeedsAutoscaler = &gardencorev1beta1.Shoot{
 			Spec: gardencorev1beta1.ShootSpec{
 				Provider: gardencorev1beta1.Provider{
@@ -182,6 +201,13 @@ var _ = Describe("health check", func() {
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
 						Enabled: true,
+					},
+				},
+				Provider: gardencorev1beta1.Provider{
+					Workers: []gardencorev1beta1.Worker{
+						{
+							Name: "foo",
+						},
 					},
 				},
 			},
@@ -303,6 +329,16 @@ var _ = Describe("health check", func() {
 			requiredControlPlaneEtcds,
 			nil,
 			BeNil()),
+		Entry("all healthy (workerless)",
+			workerlessShoot,
+			[]*appsv1.Deployment{
+				gardenerResourceManagerDeployment,
+				kubeAPIServerDeployment,
+				kubeControllerManagerDeployment,
+			},
+			requiredControlPlaneEtcds,
+			nil,
+			BeNil()),
 		Entry("all healthy (needs autoscaler)",
 			shootThatNeedsAutoscaler,
 			[]*appsv1.Deployment{
@@ -346,6 +382,14 @@ var _ = Describe("health check", func() {
 			requiredControlPlaneEtcds,
 			nil,
 			PointTo(beConditionWithMissingRequiredDeployment(withVpaDeployments(gardenerResourceManagerDeployment)))),
+		Entry("missing required deployments (workerless)",
+			workerlessShoot,
+			[]*appsv1.Deployment{
+				kubeAPIServerDeployment,
+			},
+			requiredControlPlaneEtcds,
+			nil,
+			PointTo(beConditionWithMissingRequiredDeployment([]*appsv1.Deployment{gardenerResourceManagerDeployment, kubeControllerManagerDeployment}))),
 		Entry("required deployment unhealthy",
 			shoot,
 			[]*appsv1.Deployment{
@@ -838,7 +882,7 @@ var _ = Describe("health check", func() {
 	gardenerVersion170 := semver.MustParse("1.70.0-mod1")
 	gardenerVersion171 := semver.MustParse("1.71.0")
 	DescribeTable("#CheckMonitoringControlPlane",
-		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, wantsShootMonitoring, wantsAlertmanager bool, gardenerVersion *semver.Version, conditionMatcher types.GomegaMatcher) {
+		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, workerless, wantsShootMonitoring, wantsAlertmanager bool, gardenerVersion *semver.Version, conditionMatcher types.GomegaMatcher) {
 			for _, obj := range deployments {
 				Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating deployment "+client.ObjectKeyFromObject(obj).String())
 			}
@@ -848,13 +892,29 @@ var _ = Describe("health check", func() {
 
 			checker := care.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion, gardenerVersion)
 
-			exitCondition, err := checker.CheckMonitoringControlPlane(ctx, seedNamespace, wantsShootMonitoring, wantsAlertmanager, condition)
+			s := shoot.DeepCopy()
+			if workerless {
+				s = workerlessShoot.DeepCopy()
+			}
+
+			exitCondition, err := checker.CheckMonitoringControlPlane(ctx, s, seedNamespace, wantsShootMonitoring, wantsAlertmanager, condition)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
 		Entry("all healthy (1.70)",
 			requiredMonitoringControlPlaneDeploymentsLessThan171,
 			requiredMonitoringControlPlaneStatefulSets,
+			false,
+			true,
+			true,
+			gardenerVersion170,
+			BeNil()),
+		Entry("all healthy (1.70, workerless)",
+			[]*appsv1.Deployment{
+				grafanaDeployment,
+			},
+			requiredMonitoringControlPlaneStatefulSets,
+			true,
 			true,
 			true,
 			gardenerVersion170,
@@ -862,24 +922,45 @@ var _ = Describe("health check", func() {
 		Entry("all healthy (1.71)",
 			requiredMonitoringControlPlaneDeploymentsGreaterEqual171,
 			requiredMonitoringControlPlaneStatefulSets,
+			false,
+			true,
+			true,
+			gardenerVersion171,
+			BeNil()),
+		Entry("all healthy (1.71, workerless)",
+			[]*appsv1.Deployment{
+				plutonoDeployment,
+			},
+			requiredMonitoringControlPlaneStatefulSets,
+			true,
 			true,
 			true,
 			gardenerVersion171,
 			BeNil()),
 		Entry("required deployment missing",
 			[]*appsv1.Deployment{
-				kubeStateMetricsShootDeployment,
+				plutonoDeployment,
 			},
 			requiredMonitoringControlPlaneStatefulSets,
+			false,
 			true,
 			true,
 			gardenerVersion171,
-			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
+			PointTo(beConditionWithMissingRequiredDeployment([]*appsv1.Deployment{kubeStateMetricsShootDeployment}))),
+		Entry("required deployment missing (workerless Shoot)",
+			[]*appsv1.Deployment{},
+			requiredMonitoringControlPlaneStatefulSets,
+			true,
+			true,
+			true,
+			gardenerVersion171,
+			PointTo(beConditionWithMissingRequiredDeployment([]*appsv1.Deployment{plutonoDeployment}))),
 		Entry("required stateful set set missing",
 			requiredMonitoringControlPlaneDeploymentsGreaterEqual171,
 			[]*appsv1.StatefulSet{
 				prometheusStatefulSet,
 			},
+			false,
 			true,
 			true,
 			gardenerVersion171,
@@ -890,6 +971,7 @@ var _ = Describe("health check", func() {
 				kubeStateMetricsShootDeployment,
 			},
 			requiredMonitoringControlPlaneStatefulSets,
+			false,
 			true,
 			true,
 			gardenerVersion171,
@@ -900,6 +982,7 @@ var _ = Describe("health check", func() {
 				newStatefulSet(alertManagerStatefulSet.Namespace, alertManagerStatefulSet.Name, roleOf(alertManagerStatefulSet), false),
 				prometheusStatefulSet,
 			},
+			false,
 			true,
 			true,
 			gardenerVersion171,
@@ -907,6 +990,7 @@ var _ = Describe("health check", func() {
 		Entry("shoot has monitoring disabled, omit all checks",
 			[]*appsv1.Deployment{},
 			[]*appsv1.StatefulSet{},
+			false,
 			false,
 			true,
 			gardenerVersion171,

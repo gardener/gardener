@@ -37,7 +37,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/strings/slices"
 
@@ -1326,9 +1325,6 @@ func validateProvider(provider core.Provider, kubernetes core.Kubernetes, networ
 	}
 
 	if workerless {
-		if !utilfeature.DefaultFeatureGate.Enabled(features.WorkerlessShoots) {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("workers"), "must provide at least one worker pool when WorkerlessShoots feature gate is disabled"))
-		}
 		if provider.InfrastructureConfig != nil {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("infrastructureConfig"), workerlessErrorMsg))
 		}

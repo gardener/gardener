@@ -127,6 +127,12 @@ var _ = Describe("migration", func() {
 			Expect(botanist.WaitUntilExtensionResourcesMigrated(ctx)).To(Succeed())
 		})
 
+		It("should call the Migrate() func of all the required extension components for workerless Shoot", func() {
+			botanist.Shoot.IsWorkerless = true
+
+			Expect(botanist.WaitUntilExtensionResourcesMigrated(ctx)).To(Succeed())
+		})
+
 		It("should return an error if not all the WaitMigrate() func of all extension components succeed", func() {
 			containerRuntime.EXPECT().WaitMigrate(ctx)
 			controlPlaneExposure.EXPECT().WaitMigrate(ctx)
@@ -147,6 +153,12 @@ var _ = Describe("migration", func() {
 			network.EXPECT().Destroy(ctx)
 			operatingSystemConfig.EXPECT().Destroy(ctx)
 			worker.EXPECT().Destroy(ctx)
+
+			Expect(botanist.DestroyExtensionResourcesInParallel(ctx)).To(Succeed())
+		})
+
+		It("should call the Destroy() func of all required extension components (workerless shoot)", func() {
+			botanist.Shoot.IsWorkerless = true
 
 			Expect(botanist.DestroyExtensionResourcesInParallel(ctx)).To(Succeed())
 		})

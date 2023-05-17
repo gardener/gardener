@@ -31,11 +31,11 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/api/core/shoot"
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
@@ -102,7 +102,7 @@ func defaultNodeMonitorGracePeriod(newShoot, oldShoot *core.Shoot) {
 // dropDisabledFields removes disabled fields from shoot.
 func dropDisabledFields(newShoot, oldShoot *core.Shoot) {
 	// Removes disabled HighAvailability related fields from shoot spec if it is not already used by the old spec
-	oldShootIsHA := oldShoot != nil && helper.IsHAControlPlaneConfigured(oldShoot)
+	oldShootIsHA := oldShoot != nil && gardencorehelper.IsHAControlPlaneConfigured(oldShoot)
 	if !features.DefaultFeatureGate.Enabled(features.HAControlPlanes) && !oldShootIsHA && newShoot.Spec.ControlPlane != nil {
 		newShoot.Spec.ControlPlane.HighAvailability = nil
 	}
@@ -166,7 +166,7 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 
 func mustIncreaseGenerationForSpecChanges(oldShoot, newShoot *core.Shoot) bool {
 	if newShoot.Spec.Maintenance != nil && newShoot.Spec.Maintenance.ConfineSpecUpdateRollout != nil && *newShoot.Spec.Maintenance.ConfineSpecUpdateRollout {
-		return helper.HibernationIsEnabled(oldShoot) != helper.HibernationIsEnabled(newShoot)
+		return gardencorehelper.HibernationIsEnabled(oldShoot) != gardencorehelper.HibernationIsEnabled(newShoot)
 	}
 
 	return !apiequality.Semantic.DeepEqual(oldShoot.Spec, newShoot.Spec)
@@ -176,7 +176,11 @@ func (shootStrategy) Validate(ctx context.Context, obj runtime.Object) field.Err
 	shoot := obj.(*core.Shoot)
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, validation.ValidateShoot(shoot)...)
-	if !gardencorehelper.IsWorkerless(shoot) && shoot.Spec.Networking != nil {
+	if gardencorehelper.IsWorkerless(shoot) {
+		if !utilfeature.DefaultFeatureGate.Enabled(features.WorkerlessShoots) {
+			allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "provider", "workers"), "must provide at least one worker pool when WorkerlessShoots feature gate is disabled"))
+		}
+	} else if shoot.Spec.Networking != nil {
 		allErrs = append(allErrs, validation.ValidateTotalNodeCountWithPodCIDR(shoot)...)
 	}
 	return allErrs

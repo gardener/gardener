@@ -107,9 +107,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		gardencorev1beta1.ShootAPIServerAvailable,
 		gardencorev1beta1.ShootControlPlaneHealthy,
 		gardencorev1beta1.ShootObservabilityComponentsHealthy,
-		gardencorev1beta1.ShootEveryNodeReady,
 		gardencorev1beta1.ShootSystemComponentsHealthy,
 	}
+
+	if !v1beta1helper.IsWorkerless(shoot) {
+		conditionTypes = append(conditionTypes,
+			gardencorev1beta1.ShootEveryNodeReady,
+		)
+	}
+
 	var conditions []gardencorev1beta1.Condition
 	for _, cond := range conditionTypes {
 		conditions = append(conditions, v1beta1helper.GetOrInitConditionWithClock(r.Clock, shoot.Status.Conditions, cond))

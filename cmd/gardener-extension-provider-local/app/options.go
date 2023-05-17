@@ -35,6 +35,7 @@ import (
 	healthcheckcontroller "github.com/gardener/gardener/pkg/provider-local/controller/healthcheck"
 	infrastructurecontroller "github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	ingresscontroller "github.com/gardener/gardener/pkg/provider-local/controller/ingress"
+	networkpolicycontroller "github.com/gardener/gardener/pkg/provider-local/controller/networkpolicy"
 	operatingsystemconfigcontroller "github.com/gardener/gardener/pkg/provider-local/controller/operatingsystemconfig"
 	servicecontroller "github.com/gardener/gardener/pkg/provider-local/controller/service"
 	workercontroller "github.com/gardener/gardener/pkg/provider-local/controller/worker"
@@ -62,6 +63,7 @@ func ControllerSwitchOptions() *extensionscmdcontroller.SwitchOptions {
 		extensionscmdcontroller.Switch(extensionsheartbeatcontroller.ControllerName, extensionsheartbeatcontroller.AddToManager),
 		extensionscmdcontroller.Switch(localextensionseedcontroller.ControllerName, localextensionseedcontroller.AddToManager),
 		extensionscmdcontroller.Switch(localextensionshootcontroller.ControllerName, localextensionshootcontroller.AddToManager),
+		extensionscmdcontroller.Switch(networkpolicycontroller.ControllerName, networkpolicycontroller.AddToManager),
 	)
 }
 
