@@ -143,7 +143,7 @@ func (d *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 	}
 
 	mutateFn := func() error {
-		if d.values.AnnotateOperation || d.valuesDontMatchDNSRecord() || d.lastOperationNotSuccessful() {
+		if d.values.AnnotateOperation || d.valuesDontMatchDNSRecord() || d.lastOperationNotSuccessful() || d.statusIsOutdatedOrTimestampIsInvalid() {
 			metav1.SetMetaDataAnnotation(&d.dnsRecord.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 			metav1.SetMetaDataAnnotation(&d.dnsRecord.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 		}
@@ -179,7 +179,7 @@ func (d *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 			}
 		} else {
 			patch := client.MergeFrom(d.dnsRecord.DeepCopy())
-			if d.valuesDontMatchDNSRecord() || d.lastOperationNotSuccessful() {
+			if d.valuesDontMatchDNSRecord() || d.lastOperationNotSuccessful() || d.statusIsOutdatedOrTimestampIsInvalid() {
 				// If the DNSRecord is not yet Succeeded or values have changed, reconcile it again.
 				_ = mutateFn()
 			}
@@ -305,4 +305,22 @@ func (d *dnsRecord) valuesDontMatchDNSRecord() bool {
 
 func (d *dnsRecord) lastOperationNotSuccessful() bool {
 	return d.dnsRecord.Status.LastOperation != nil && d.dnsRecord.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded
+}
+
+func (d *dnsRecord) statusIsOutdatedOrTimestampIsInvalid() bool {
+	timestamp, ok := d.dnsRecord.Annotations[v1beta1constants.GardenerTimestamp]
+	if ok && d.dnsRecord.Status.LastOperation != nil {
+		parsedTimestamp, err := time.Parse(time.RFC3339Nano, timestamp)
+		if err != nil {
+			// this should not happen
+			// we cannot do anything meaningful about this error so we mark the timestamp invalid
+			return true
+		}
+
+		if parsedTimestamp.Truncate(time.Second).UTC().After(d.dnsRecord.Status.LastOperation.LastUpdateTime.Time.UTC()) {
+			return true
+		}
+	}
+
+	return false
 }
