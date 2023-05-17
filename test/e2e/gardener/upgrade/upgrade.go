@@ -132,19 +132,16 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 
 	// This test will create a non-HA control plane shoot in Gardener version vX.X.X
 	// and then upgrades shoot's control plane to HA once successfully upgraded Gardener version to vY.Y.Y.
-	Context("Shoot::e2e-upgrade-ha", Label("high-availability"), func() {
+	test_e2e_upgrade_ha := func(f *framework.ShootCreationFramework) {
 		var (
 			parentCtx = context.Background()
-			f         = framework.NewShootCreationFramework(&framework.ShootCreationConfig{GardenerConfig: e2e.DefaultGardenConfig(projectNamespace)})
-			shootTest = e2e.DefaultShoot("e2e-upgrade-ha")
 			err       error
 		)
 
-		shootTest.Namespace = projectNamespace
-		shootTest.Spec.ControlPlane = nil
-		f.Shoot = shootTest
+		f.Shoot.Namespace = projectNamespace
+		f.Shoot.Spec.ControlPlane = nil
 
-		When("(Gardener version:'"+gardenerPreviousVersion+"', Git version:'"+gardenerPreviousGitVersion+"')", Ordered, Label("pre-upgrade"), func() {
+		When("(Gardener version:'"+gardenerPreviousVersion+"', Git version:'"+gardenerPreviousGitVersion+"')", Ordered, Offset(1), Label("pre-upgrade"), func() {
 			var (
 				ctx    context.Context
 				cancel context.CancelFunc
@@ -161,7 +158,7 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 			})
 		})
 
-		When("Post-Upgrade (Gardener version:'"+gardenerCurrentVersion+"', Git version:'"+gardenerCurrentGitVersion+"')", Ordered, Label("post-upgrade"), func() {
+		When("Post-Upgrade (Gardener version:'"+gardenerCurrentVersion+"', Git version:'"+gardenerCurrentGitVersion+"')", Ordered, Offset(1), Label("post-upgrade"), func() {
 			var (
 				ctx    context.Context
 				cancel context.CancelFunc
@@ -170,8 +167,8 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 			BeforeAll(func() {
 				ctx, cancel = context.WithTimeout(parentCtx, 60*time.Minute)
 				DeferCleanup(cancel)
-				Expect(f.GetShoot(ctx, shootTest)).To(Succeed())
-				f.ShootFramework, err = f.NewShootFramework(ctx, shootTest)
+				Expect(f.GetShoot(ctx, f.Shoot)).To(Succeed())
+				f.ShootFramework, err = f.NewShootFramework(ctx, f.Shoot)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -184,6 +181,20 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 				Expect(f.GardenerFramework.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
 			})
 		})
+	}
+
+	Context("Shoot with workers::e2e-upgrade-ha", Label("high-availability"), func() {
+		f := framework.NewShootCreationFramework(&framework.ShootCreationConfig{GardenerConfig: e2e.DefaultGardenConfig(projectNamespace)})
+		f.Shoot = e2e.DefaultShoot("e2e-upgrade-ha")
+
+		test_e2e_upgrade_ha(f)
+	})
+
+	Context("Workerless Shoot::e2e-upgrade-ha", Label("high-availability", "workerless"), func() {
+		f := framework.NewShootCreationFramework(&framework.ShootCreationConfig{GardenerConfig: e2e.DefaultGardenConfig(projectNamespace)})
+		f.Shoot = e2e.DefaultWorkerlessShoot("e2e-upgrade-ha")
+
+		test_e2e_upgrade_ha(f)
 	})
 
 	Context("Shoot::e2e-upgrade-hib", func() {
