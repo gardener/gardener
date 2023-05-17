@@ -57,6 +57,7 @@ var _ = Describe("istiod", func() {
 		igw            []IngressGatewayValues
 		igwAnnotations map[string]string
 		labels         map[string]string
+		networkLabels  map[string]string
 
 		managedResourceIstioName   string
 		managedResourceIstio       *resourcesv1alpha1.ManagedResource
@@ -1727,16 +1728,7 @@ metadata:
 automountServiceAccountToken: false
 `
 
-		istioIngressDeployment = func(vpnEnabled bool, replicas *int) string {
-			var additionalLabels string
-			if vpnEnabled {
-				additionalLabels = `
-        networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-tcp-1194: allowed
-        networking.resources.gardener.cloud/to-garden-reversed-vpn-auth-server-tcp-9001: allowed
-        networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-0-tcp-1194: allowed
-        networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-1-tcp-1194: allowed`
-			}
-
+		istioIngressDeployment = func(replicas *int) string {
 			return `apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -1765,11 +1757,10 @@ spec:
         app: istio-ingressgateway
         foo: bar
         
+        to-target: allowed
+        
         service.istio.io/canonical-name: "istio-ingressgateway"
         service.istio.io/canonical-revision: "1.7"
-        networking.gardener.cloud/to-dns: allowed
-        networking.resources.gardener.cloud/to-all-shoots-kube-apiserver-tcp-443: allowed
-        networking.resources.gardener.cloud/to-istio-system-istiod-tcp-15012: allowed` + additionalLabels + `
       annotations:
         sidecar.istio.io/inject: "false"
         checksum/configmap-bootstrap-config-override: a357fe81829c12ad57e92721b93fd6efa1670d19e4cab94dfb7c792f9665c51a
@@ -2047,13 +2038,14 @@ spec:
 		ctx = context.TODO()
 		igwAnnotations = map[string]string{"foo": "bar"}
 		labels = map[string]string{"foo": "bar"}
+		networkLabels = map[string]string{"to-target": "allowed"}
 
 		c = fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		renderer = chartrenderer.NewWithServerVersion(&version.Info{GitVersion: "v1.21.4"})
 
 		gardenletfeatures.RegisterFeatureGates()
 
-		igw = makeIngressGateway(deployNSIngress, igwAnnotations, labels)
+		igw = makeIngressGateway(deployNSIngress, igwAnnotations, labels, networkLabels)
 
 		istiod = NewIstio(
 			c,
@@ -2172,7 +2164,7 @@ spec:
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_rolebindings_test-ingress.yaml"])).To(Equal(istioIngressRoleBinding))
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_service_test-ingress.yaml"])).To(Equal(istioIngressService(nil)))
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_serviceaccount_test-ingress.yaml"])).To(Equal(istioIngressServiceAccount))
-			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment(true, nil)))
+			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment(nil)))
 
 			By("Verify istio-proxy-protocol resources")
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress.yaml"])).To(Equal(istioProxyProtocolEnvoyFilter))
@@ -2293,7 +2285,7 @@ spec:
 			It("should successfully deploy correct autoscaling", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_autoscale_test-ingress.yaml"])).To(Equal(istioIngressAutoscaler(&minReplicas, &maxReplicas)))
-				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment(true, &minReplicas)))
+				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment(&minReplicas)))
 			})
 		})
 
@@ -2378,7 +2370,7 @@ spec:
 
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_vpn-gateway_test-ingress.yaml"])).To(BeEmpty())
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_vpn-envoy-filter_test-ingress.yaml"])).To(BeEmpty())
-				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment(false, nil)))
+				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_deployment_test-ingress.yaml"])).To(Equal(istioIngressDeployment(nil)))
 			})
 		})
 
@@ -2635,14 +2627,15 @@ spec:
 	})
 })
 
-func makeIngressGateway(namespace string, annotations, labels map[string]string) []IngressGatewayValues {
+func makeIngressGateway(namespace string, annotations, labels map[string]string, networkPolicyLabels map[string]string) []IngressGatewayValues {
 	return []IngressGatewayValues{
 		{
-			Image:           "foo/bar",
-			TrustDomain:     "foo.bar",
-			IstiodNamespace: "istio-test-system",
-			Annotations:     annotations,
-			Labels:          labels,
+			Image:               "foo/bar",
+			TrustDomain:         "foo.bar",
+			IstiodNamespace:     "istio-test-system",
+			Annotations:         annotations,
+			Labels:              labels,
+			NetworkPolicyLabels: networkPolicyLabels,
 			Ports: []corev1.ServicePort{
 				{Name: "foo", Port: 999, TargetPort: intstr.FromInt(999)},
 			},

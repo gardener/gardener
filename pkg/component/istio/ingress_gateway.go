@@ -23,7 +23,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
-	"github.com/gardener/gardener/pkg/component/vpnseedserver"
 )
 
 var (
@@ -37,6 +36,7 @@ var (
 type IngressGatewayValues struct {
 	Annotations           map[string]string
 	Labels                map[string]string
+	NetworkPolicyLabels   map[string]string
 	ExternalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType
 	Image                 string
 	IstiodNamespace       string
@@ -62,6 +62,7 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 		values := map[string]interface{}{
 			"trustDomain":           istioIngressGateway.TrustDomain,
 			"labels":                istioIngressGateway.Labels,
+			"networkPolicyLabels":   istioIngressGateway.NetworkPolicyLabels,
 			"annotations":           istioIngressGateway.Annotations,
 			"externalTrafficPolicy": istioIngressGateway.ExternalTrafficPolicy,
 			"deployNamespace":       false,
@@ -74,9 +75,6 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 			"proxyProtocolEnabled":  istioIngressGateway.ProxyProtocolEnabled,
 			"vpn": map[string]interface{}{
 				"enabled": istioIngressGateway.VPNEnabled,
-				// Always pass replicas here since every seed can potentially host shoot clusters with
-				// highly available control-planes.
-				"highAvailabilityReplicas": vpnseedserver.HighAvailabilityReplicaCount,
 			},
 		}
 

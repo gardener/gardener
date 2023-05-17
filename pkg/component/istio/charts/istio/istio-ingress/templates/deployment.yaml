@@ -5,13 +5,13 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app.kubernetes.io/version: {{ .Values.ingressVersion }}
-{{ .Values.labels | toYaml | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
 spec:
   replicas: {{ .Values.replicas }}
   revisionHistoryLimit: 1
   selector:
     matchLabels:
-{{ .Values.labels | toYaml | indent 6 }}
+{{ toYaml .Values.labels | indent 6 }}
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -19,19 +19,10 @@ spec:
   template:
     metadata:
       labels:
-{{ .Values.labels | toYaml | indent 8 }}
+{{ toYaml .Values.labels | indent 8 }}
+{{ toYaml .Values.networkPolicyLabels | indent 8 }}
         service.istio.io/canonical-name: "istio-ingressgateway"
         service.istio.io/canonical-revision: "1.7"
-        networking.gardener.cloud/to-dns: allowed
-        networking.resources.gardener.cloud/to-all-shoots-kube-apiserver-tcp-443: allowed
-        networking.resources.gardener.cloud/to-istio-system-istiod-tcp-15012: allowed
-{{- if .Values.vpn.enabled }}
-        networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-tcp-1194: allowed
-        networking.resources.gardener.cloud/to-garden-reversed-vpn-auth-server-tcp-9001: allowed
-{{- range $i := until (int .Values.vpn.highAvailabilityReplicas) }}
-        networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-{{$i}}-tcp-1194: allowed
-{{- end }}
-{{- end }}
       annotations:
         sidecar.istio.io/inject: "false"
         checksum/configmap-bootstrap-config-override: {{ include (print $.Template.BasePath "/bootstrap-config-override.yaml") . | sha256sum }}

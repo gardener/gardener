@@ -27,7 +27,10 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/component/istio"
+	"github.com/gardener/gardener/pkg/component/vpnauthzserver"
+	"github.com/gardener/gardener/pkg/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
@@ -42,6 +45,7 @@ func NewIstio(
 	priorityClassName string,
 	istiodEnabled bool,
 	labels map[string]string,
+	toKubeAPIServerPolicyLabel string,
 	lbAnnotations map[string]string,
 	externalTrafficPolicy *corev1.ServiceExternalTrafficPolicyType,
 	serviceExternalIP *string,
@@ -79,6 +83,9 @@ func NewIstio(
 		maxReplicas = pointer.Int(len(zones) * 4)
 	}
 
+	policyLabels := commonIstioIngressNetworkPolicyLabels(vpnEnabled)
+	policyLabels[toKubeAPIServerPolicyLabel] = v1beta1constants.LabelNetworkPolicyAllowed
+
 	defaultIngressGatewayConfig := istio.IngressGatewayValues{
 		TrustDomain:           gardencorev1beta1.DefaultDomain,
 		Image:                 igwImage.String(),
@@ -90,6 +97,7 @@ func NewIstio(
 		Ports:                 servicePorts,
 		LoadBalancerIP:        serviceExternalIP,
 		Labels:                labels,
+		NetworkPolicyLabels:   policyLabels,
 		Namespace:             namePrefix + ingressNamespace,
 		PriorityClassName:     priorityClassName,
 		ProxyProtocolEnabled:  proxyProtocolEnabled,
@@ -150,8 +158,9 @@ func AddIstioIngressGateway(
 	}
 
 	istioDeployer.AddIngressGateway(istio.IngressGatewayValues{
-		Annotations:           annotations,
-		Labels:                labels,
+		Annotations:           utils.MergeStringMaps(annotations),
+		Labels:                utils.MergeStringMaps(labels),
+		NetworkPolicyLabels:   utils.MergeStringMaps(templateValues.NetworkPolicyLabels),
 		Namespace:             namespace,
 		MinReplicas:           minReplicas,
 		MaxReplicas:           maxReplicas,
@@ -227,4 +236,21 @@ func IsZonalIstioExtension(labels map[string]string) (bool, string) {
 		}
 	}
 	return false, ""
+}
+
+func commonIstioIngressNetworkPolicyLabels(vpnEnabled bool) map[string]string {
+	labels := map[string]string{
+		v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed,
+		gardenerutils.NetworkPolicyLabel(v1beta1constants.IstioSystemNamespace+"-"+istio.IstiodServiceName, istio.IstiodPort): v1beta1constants.LabelNetworkPolicyAllowed,
+	}
+	if vpnEnabled {
+		labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.DeploymentNameVPNSeedServer, vpnseedserver.OpenVPNPort)] = v1beta1constants.LabelNetworkPolicyAllowed
+		labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-"+vpnauthzserver.Name, vpnauthzserver.ServerPort)] = v1beta1constants.LabelNetworkPolicyAllowed
+
+		for i := 0; i < vpnseedserver.HighAvailabilityReplicaCount; i++ {
+			labels[gardenerutils.NetworkPolicyLabel(fmt.Sprintf("%s-%s-%d", v1beta1constants.LabelNetworkPolicyShootNamespaceAlias, v1beta1constants.DeploymentNameVPNSeedServer, i), vpnseedserver.OpenVPNPort)] = v1beta1constants.LabelNetworkPolicyAllowed
+		}
+	}
+
+	return labels
 }
