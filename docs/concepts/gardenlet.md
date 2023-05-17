@@ -1,5 +1,5 @@
 ---
-title: gardenelet
+title: gardenlet
 ---
 
 # gardenlet
