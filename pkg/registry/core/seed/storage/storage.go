@@ -39,8 +39,8 @@ type SeedStorage struct {
 }
 
 // NewStorage creates a new SeedStorage object.
-func NewStorage(optsGetter generic.RESTOptionsGetter, cloudProfiles rest.StandardStorage) SeedStorage {
-	seedRest, seedStatusRest := NewREST(optsGetter, cloudProfiles)
+func NewStorage(optsGetter generic.RESTOptionsGetter) SeedStorage {
+	seedRest, seedStatusRest := NewREST(optsGetter)
 
 	return SeedStorage{
 		Seed:   seedRest,
@@ -49,9 +49,9 @@ func NewStorage(optsGetter generic.RESTOptionsGetter, cloudProfiles rest.Standar
 }
 
 // NewREST returns a RESTStorage object that will work with Seed objects.
-func NewREST(optsGetter generic.RESTOptionsGetter, cloudProfiles rest.StandardStorage) (*REST, *StatusREST) {
-	strategy := seed.NewStrategy(cloudProfiles)
-	statusStrategy := seed.NewStatusStrategy(cloudProfiles)
+func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
+	strategy := seed.NewStrategy()
+	statusStrategy := seed.NewStatusStrategy()
 
 	store := &genericregistry.Store{
 		NewFunc:                  func() runtime.Object { return &core.Seed{} },
