@@ -22,7 +22,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -35,14 +34,6 @@ func SeedNameFromSeedConfig(seedConfig *config.SeedConfig) string {
 		return ""
 	}
 	return seedConfig.SeedTemplate.Name
-}
-
-// OwnerChecksEnabledInSeedConfig returns false if the given seed config is nil or the 'ownerChecks' setting is enabled.
-func OwnerChecksEnabledInSeedConfig(seedConfig *config.SeedConfig) bool {
-	if seedConfig == nil {
-		return false
-	}
-	return gardencorehelper.SeedSettingOwnerChecksEnabled(seedConfig.Spec.Settings)
 }
 
 // StaleExtensionHealthChecksThreshold returns nil if the given config is nil or the check

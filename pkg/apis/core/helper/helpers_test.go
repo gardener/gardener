@@ -510,17 +510,6 @@ var _ = Describe("helper", func() {
 		Entry("scheduling 'visible' is true", &core.SeedSettings{Scheduling: &core.SeedSettingScheduling{Visible: true}}, true),
 	)
 
-	DescribeTable("#SeedSettingOwnerChecksEnabled",
-		func(settings *core.SeedSettings, expected bool) {
-			Expect(SeedSettingOwnerChecksEnabled(settings)).To(Equal(expected))
-		},
-
-		Entry("no settings", nil, false),
-		Entry("no owner checks setting", &core.SeedSettings{}, false),
-		Entry("owner checks enabled", &core.SeedSettings{OwnerChecks: &core.SeedSettingOwnerChecks{Enabled: true}}, true),
-		Entry("owner checks disabled", &core.SeedSettings{OwnerChecks: &core.SeedSettingOwnerChecks{Enabled: false}}, false),
-	)
-
 	DescribeTable("#SeedSettingTopologyAwareRoutingEnabled",
 		func(settings *core.SeedSettings, expected bool) {
 			Expect(SeedSettingTopologyAwareRoutingEnabled(settings)).To(Equal(expected))

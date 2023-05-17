@@ -406,27 +406,6 @@ var _ = Describe("dnsrecord", func() {
 		})
 	})
 
-	Describe("#DefaultOwnerDNSRecord", func() {
-		It("should create a component with correct values", func() {
-			c := b.DefaultOwnerDNSRecord()
-
-			Expect(c.GetValues()).To(DeepEqual(&dnsrecord.Values{
-				Name:                         b.Shoot.GetInfo().Name + "-owner",
-				SecretName:                   DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
-				Namespace:                    seedNamespace,
-				DNSName:                      "owner." + internalDomain,
-				RecordType:                   "TXT",
-				Values:                       []string{seedClusterIdentity},
-				SecretData:                   b.Garden.InternalDomain.SecretData,
-				Zone:                         &b.Garden.InternalDomain.Zone,
-				TTL:                          pointer.Int64(ttl),
-				Type:                         internalProvider,
-				ReconcileOnlyOnChangeOrError: true,
-				AnnotateOperation:            true,
-			}))
-		})
-	})
-
 	Describe("#DeployOrDestroyExternalDNSRecord", func() {
 		Context("deploy", func() {
 			It("should call Deploy and Wait and succeed if they succeeded", func() {

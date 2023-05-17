@@ -206,20 +206,15 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:           flow.TaskFn(botanist.DeployReferencedResources).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists),
 		})
-		deployOwnerDomainDNSRecord = g.Add(flow.Task{
-			Name:         "Deploying owner domain DNS record",
-			Fn:           flow.TaskFn(botanist.DeployOwnerDNSResources).DoIf(nonTerminatingNamespace),
-			Dependencies: flow.NewTaskIDs(ensureShootStateExists, deployReferencedResources),
-		})
 		deployInternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Deploying internal domain DNS record",
 			Fn:           flow.TaskFn(botanist.DeployOrDestroyInternalDNSRecord).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady, deployOwnerDomainDNSRecord),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady),
 		})
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",
 			Fn:           flow.TaskFn(botanist.DeployEtcd).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, deployOwnerDomainDNSRecord),
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret),
 		})
 		scaleETCD = g.Add(flow.Task{
 			Name:         "Scaling up etcd main and event",
@@ -650,11 +645,6 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:           flow.TaskFn(botanist.DestroyInternalDNSRecord).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(syncPoint),
 		})
-		destroyOwnerDomainDNSRecord = g.Add(flow.Task{
-			Name:         "Destroying owner domain DNS record",
-			Fn:           flow.TaskFn(botanist.DestroyOwnerDNSResources).DoIf(nonTerminatingNamespace),
-			Dependencies: flow.NewTaskIDs(syncPoint),
-		})
 		destroyReferencedResources = g.Add(flow.Task{
 			Name:         "Deleting referenced resources",
 			Fn:           flow.TaskFn(botanist.DestroyReferencedResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -673,7 +663,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		deleteNamespace = g.Add(flow.Task{
 			Name:         "Deleting shoot namespace in Seed",
 			Fn:           flow.TaskFn(botanist.DeleteSeedNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(syncPoint, destroyInternalDomainDNSRecord, destroyOwnerDomainDNSRecord, destroyReferencedResources, waitUntilEtcdDeleted),
+			Dependencies: flow.NewTaskIDs(syncPoint, destroyInternalDomainDNSRecord, destroyReferencedResources, waitUntilEtcdDeleted),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until shoot namespace in Seed has been deleted",

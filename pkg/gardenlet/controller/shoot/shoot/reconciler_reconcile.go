@@ -179,11 +179,6 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.DeployReferencedResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
-		deployOwnerDomainDNSRecord = g.Add(flow.Task{
-			Name:         "Deploying owner domain DNS record",
-			Fn:           botanist.DeployOwnerDNSResources,
-			Dependencies: flow.NewTaskIDs(ensureShootStateExists, deployReferencedResources),
-		})
 		deployInternalDomainDNSRecord = g.Add(flow.Task{
 			Name: "Deploying internal domain DNS record",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
@@ -192,7 +187,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 				}
 				return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskDeployDNSRecordInternal)
 			}).DoIf(!o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady, deployOwnerDomainDNSRecord),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying external domain DNS record",
@@ -202,12 +197,12 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 				}
 				return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskDeployDNSRecordExternal)
 			}).DoIf(!o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady, deployOwnerDomainDNSRecord),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady),
 		})
 		deployInfrastructure = g.Add(flow.Task{
 			Name:         "Deploying Shoot infrastructure",
 			Fn:           flow.TaskFn(botanist.DeployInfrastructure).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsWorkerless),
-			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, deployReferencedResources, deployOwnerDomainDNSRecord),
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, deployReferencedResources),
 		})
 		waitUntilInfrastructureReady = g.Add(flow.Task{
 			Name: "Waiting until shoot infrastructure has been reconciled",
@@ -222,9 +217,8 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(deployInfrastructure),
 		})
 		deploySourceBackupEntry = g.Add(flow.Task{
-			Name:         "Deploying source backup entry",
-			Fn:           flow.TaskFn(botanist.DeploySourceBackupEntry).DoIf(isCopyOfBackupsRequired),
-			Dependencies: flow.NewTaskIDs(deployOwnerDomainDNSRecord),
+			Name: "Deploying source backup entry",
+			Fn:   flow.TaskFn(botanist.DeploySourceBackupEntry).DoIf(isCopyOfBackupsRequired),
 		})
 		waitUntilSourceBackupEntryInGardenReconciled = g.Add(flow.Task{
 			Name:         "Waiting until the source backup entry has been reconciled",
@@ -234,7 +228,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		deployBackupEntryInGarden = g.Add(flow.Task{
 			Name:         "Deploying backup entry",
 			Fn:           flow.TaskFn(botanist.DeployBackupEntry).DoIf(allowBackup),
-			Dependencies: flow.NewTaskIDs(ensureShootStateExists, deployOwnerDomainDNSRecord, waitUntilSourceBackupEntryInGardenReconciled),
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists, waitUntilSourceBackupEntryInGardenReconciled),
 		})
 		waitUntilBackupEntryInGardenReconciled = g.Add(flow.Task{
 			Name:         "Waiting until the backup entry has been reconciled",

@@ -703,8 +703,6 @@ const (
 	DNSRecordInternalName = "internal"
 	// DNSRecordExternalName is a constant for DNSRecord objects used for the external domain name.
 	DNSRecordExternalName = "external"
-	// DNSRecordOwnerName is a constant for DNSRecord objects used for the owner domain name.
-	DNSRecordOwnerName = "owner"
 
 	// ArchitectureAMD64 is a constant for the 'amd64' architecture.
 	ArchitectureAMD64 = "amd64"

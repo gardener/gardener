@@ -48,27 +48,6 @@ var _ = Describe("helper", func() {
 		})
 	})
 
-	Describe("#OwnerChecksEnabledInSeedConfig", func() {
-		It("should return false with nil config", func() {
-			Expect(OwnerChecksEnabledInSeedConfig(nil)).To(BeFalse())
-		})
-
-		It("should return true if owner checks are enabled", func() {
-			config := &config.SeedConfig{
-				SeedTemplate: gardencore.SeedTemplate{
-					Spec: gardencore.SeedSpec{
-						Settings: &gardencore.SeedSettings{
-							OwnerChecks: &gardencore.SeedSettingOwnerChecks{
-								Enabled: true,
-							},
-						},
-					},
-				},
-			}
-			Expect(OwnerChecksEnabledInSeedConfig(config)).To(BeTrue())
-		})
-	})
-
 	Describe("#StaleExtensionHealthChecksThreshold", func() {
 		It("should return nil when the config is nil", func() {
 			Expect(StaleExtensionHealthChecksThreshold(nil)).To(BeNil())
