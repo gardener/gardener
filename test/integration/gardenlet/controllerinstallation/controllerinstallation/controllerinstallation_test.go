@@ -280,8 +280,6 @@ var _ = Describe("ControllerInstallation controller tests", func() {
             enabled: true
         excessCapacityReservation:
           enabled: true
-        ownerChecks:
-          enabled: false
         scheduling:
           visible: true
         topologyAwareRouting:
