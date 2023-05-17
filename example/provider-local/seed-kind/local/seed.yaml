@@ -37,8 +37,6 @@ spec:
   settings:
     excessCapacityReservation:
       enabled: false
-    ownerChecks:
-      enabled: false
     scheduling:
       visible: true
     verticalPodAutoscaler:
