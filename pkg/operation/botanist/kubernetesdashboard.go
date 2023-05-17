@@ -20,7 +20,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubernetesdashboard"
+	"github.com/gardener/gardener/pkg/component/kubernetesdashboard"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )

@@ -28,7 +28,7 @@ missing_license_header_files="$(addlicense \
   -ignore "**/*.yaml" \
   -ignore "**/Dockerfile" \
   -ignore "hack/tools/gomegacheck/**" \
-  -ignore "pkg/operation/botanist/**/*.sh" \
+  -ignore "pkg/component/**/*.sh" \
   .)" || true
 
 if [[ "$missing_license_header_files" ]]; then

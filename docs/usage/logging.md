@@ -120,7 +120,7 @@ Exposing logs for a new component to the User's Plutono is described in the [How
 
 ### Fluent-bit
 
-The Fluent-bit configurations can be found on `pkg/operation/botanist/component/logging/fluentoperator/customresources`
+The Fluent-bit configurations can be found on `pkg/component/logging/fluentoperator/customresources`
 There are six different specifications:
 
 * FluentBit: Defines the fluent-bit DaemonSet specifications

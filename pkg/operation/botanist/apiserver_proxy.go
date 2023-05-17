@@ -17,7 +17,7 @@ package botanist
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/operation/botanist/component/apiserverproxy"
+	"github.com/gardener/gardener/pkg/component/apiserverproxy"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )

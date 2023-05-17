@@ -24,7 +24,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	corebackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/backupentry"
+	corebackupentry "github.com/gardener/gardener/pkg/component/backupentry"
 )
 
 // DefaultCoreBackupEntry creates the default deployer for the core.gardener.cloud/v1beta1.BackupEntry resource.

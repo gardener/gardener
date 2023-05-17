@@ -15,8 +15,8 @@
 package botanist
 
 import (
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
+	"github.com/gardener/gardener/pkg/component/vpnseedserver"
+	"github.com/gardener/gardener/pkg/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )

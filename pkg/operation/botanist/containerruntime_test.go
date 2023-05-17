@@ -23,9 +23,9 @@ import (
 	. "github.com/onsi/gomega"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	mockcontainerruntime "github.com/gardener/gardener/pkg/component/extensions/containerruntime/mock"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
-	mockcontainerruntime "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/containerruntime/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 )
 

@@ -209,7 +209,7 @@ status:
 Currently, the `ssh` key pair for the shoot nodes are created once during shoot cluster creation. These key pairs should be rotated on a regular basis.
 
 ### Rotation Proposal
-- `gardeneruser` original user data [component](../../pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/gardeneruser):
+- `gardeneruser` original user data [component](../../pkg/component/extensions/operatingsystemconfig/original/components/gardeneruser):
     - The `gardeneruser` create script should be changed into a reconcile script, and renamed accordingly. It needs to be adapted so that the `authorized_keys` file will be updated / overwritten with the current and old `ssh` public key from the cloud-config user data.
 - Rotation trigger:
     - Once in the maintenance time window
@@ -221,10 +221,10 @@ Currently, the `ssh` key pair for the shoot nodes are created once during shoot 
         - Generates new `ssh-keypair` secret.
         - The `OperatingSystemConfig` needs to be re-generated and deployed with the new and old `ssh` public key.
     - As usual (for more details, see [Contract: OperatingSystemConfig Resource](../extensions/operatingsystemconfig.md)):
-        - Once the `cloud-config-<X>` secret in the `kube-system` namespace of the shoot cluster is updated, it will be picked up by the [`downloader` script](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader/templates/scripts/download-cloud-config.tpl.sh) (checks every 30s for updates).
-        - The `downloader` runs the ["execution" script](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/executor/templates/scripts/execute-cloud-config.tpl.sh) from the `cloud-config-<X>` secret.
+        - Once the `cloud-config-<X>` secret in the `kube-system` namespace of the shoot cluster is updated, it will be picked up by the [`downloader` script](https://github.com/gardener/gardener/blob/master/pkg/component/extensions/operatingsystemconfig/downloader/templates/scripts/download-cloud-config.tpl.sh) (checks every 30s for updates).
+        - The `downloader` runs the ["execution" script](https://github.com/gardener/gardener/blob/master/pkg/component/extensions/operatingsystemconfig/executor/templates/scripts/execute-cloud-config.tpl.sh) from the `cloud-config-<X>` secret.
         - The "execution" script includes also the original user data script, which it writes to `PATH_CLOUDCONFIG`, compares it against the previous cloud config and runs the script in case it has changed.
-        - Running the [original user data](../../pkg/operation/botanist/component/extensions/operatingsystemconfig/original) script will also run the `gardeneruser` component, where the `authorized_keys` file will be updated.
+        - Running the [original user data](../../pkg/component/extensions/operatingsystemconfig/original) script will also run the `gardeneruser` component, where the `authorized_keys` file will be updated.
         - After the most recent cloud-config user data was applied, the "execution" script annotates the node with `checksum/cloud-config-data: <cloud-config-checksum>` to indicate the success.
 
 ### Limitations

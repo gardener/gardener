@@ -23,9 +23,9 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
+	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/shared"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 

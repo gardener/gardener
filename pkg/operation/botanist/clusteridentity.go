@@ -19,8 +19,8 @@ import (
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/component/clusteridentity"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
 )
 
 // EnsureShootClusterIdentity ensures that Shoot's `status.clusterIdentity` field is set and updates the Cluster resource in
