@@ -60,13 +60,16 @@ if [[ "$1" != "operator" ]]; then
     e2e-upd-zone.local
     e2e-upd-zone-wl.local
     e2e-upgrade.local
-    e2e-upgrade-ha.local
-    e2e-upgrade-hib.local
+    e2e-upgrade-wl.local
+    e2e-upg-ha.local
+    e2e-upg-ha-wl.local
+    e2e-upg-hib.local
+    e2e-upg-hib-wl.local
   )
 
   if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
     for shoot in "${shoot_names[@]}" ; do
-      if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "zone" && ("$shoot" == "e2e-upgrade-ha.local" || "$shoot" == "e2e-upd-zone.local" || "$shoot" == "e2e-upd-zone-wl.local") ]]; then
+      if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "zone" && ("$shoot" == "e2e-upg-ha.local" || "$shoot" == "e2e-upg-ha-wl.local" || "$shoot" == "e2e-upd-zone.local" || "$shoot" == "e2e-upd-zone-wl.local") ]]; then
         # Do not add the entry for the e2e-upd-zone test as the target ip is dynamic.
         # The shoot cluster in e2e-upd-zone is created as single-zone control plane and afterwards updated to a multi-zone control plane.
         # This means that the external loadbalancer IP will change from a zone-specific istio ingress gateway to the default istio ingress gateway.
@@ -81,7 +84,7 @@ if [[ "$1" != "operator" ]]; then
     printf "\n127.0.0.1 api.e2e-managedseed.garden.external.local.gardener.cloud\n127.0.0.1 api.e2e-managedseed.garden.internal.local.gardener.cloud\n" >>/etc/hosts
   else
     for shoot in "${shoot_names[@]}" ; do
-      if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "zone" && ("$shoot" == "e2e-upgrade-ha.local" || "$shoot" == "e2e-upd-zone.local" || "$shoot" == "e2e-upd-zone-wl.local") ]]; then
+      if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "zone" && ("$shoot" == "e2e-upg-ha.local" || "$shoot" == "e2e-upg-ha-wl.local" || "$shoot" == "e2e-upd-zone.local" || "$shoot" == "e2e-upd-zone-wl.local") ]]; then
         # Do not check the entry for the e2e-upd-zone test as the target ip is dynamic.
         continue
       fi

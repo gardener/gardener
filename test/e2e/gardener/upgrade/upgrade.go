@@ -183,16 +183,16 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 		})
 	}
 
-	Context("Shoot with workers::e2e-upgrade-ha", Label("high-availability"), func() {
+	Context("Shoot with workers::e2e-upg-ha", Label("high-availability"), func() {
 		f := framework.NewShootCreationFramework(&framework.ShootCreationConfig{GardenerConfig: e2e.DefaultGardenConfig(projectNamespace)})
-		f.Shoot = e2e.DefaultShoot("e2e-upgrade-ha")
+		f.Shoot = e2e.DefaultShoot("e2e-upg-ha")
 
 		test_e2e_upgrade_ha(f)
 	})
 
-	Context("Workerless Shoot::e2e-upgrade-ha", Label("high-availability", "workerless"), func() {
+	Context("Workerless Shoot::e2e-upg-ha", Label("high-availability", "workerless"), func() {
 		f := framework.NewShootCreationFramework(&framework.ShootCreationConfig{GardenerConfig: e2e.DefaultGardenConfig(projectNamespace)})
-		f.Shoot = e2e.DefaultWorkerlessShoot("e2e-upgrade-ha")
+		f.Shoot = e2e.DefaultWorkerlessShoot("e2e-upg-ha")
 
 		test_e2e_upgrade_ha(f)
 	})
@@ -253,16 +253,16 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 		})
 	}
 
-	Context("Shoot with workers::e2e-upgrade-hib", func() {
+	Context("Shoot with workers::e2e-upg-hib", func() {
 		f := framework.NewShootCreationFramework(&framework.ShootCreationConfig{GardenerConfig: e2e.DefaultGardenConfig(projectNamespace)})
-		f.Shoot = e2e.DefaultShoot("e2e-upgrade-hib")
+		f.Shoot = e2e.DefaultShoot("e2e-upg-hib")
 
 		test_e2e_upgrade_hib(f)
 	})
 
-	Context("Workerless Shoot::e2e-upgrade-hib", Label("workerless"), func() {
+	Context("Workerless Shoot::e2e-upg-hib", Label("workerless"), func() {
 		f := framework.NewShootCreationFramework(&framework.ShootCreationConfig{GardenerConfig: e2e.DefaultGardenConfig(projectNamespace)})
-		f.Shoot = e2e.DefaultWorkerlessShoot("e2e-upgrade-hib")
+		f.Shoot = e2e.DefaultWorkerlessShoot("e2e-upg-hib")
 
 		test_e2e_upgrade_hib(f)
 	})
