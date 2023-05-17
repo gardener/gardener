@@ -54,7 +54,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if err := (&networkpolicy.Reconciler{
-		ConcurrentSyncs: r.Config.ConcurrentSyncs,
+		ConcurrentSyncs:              r.Config.ConcurrentSyncs,
+		AdditionalNamespaceSelectors: r.Config.AdditionalNamespaceSelectors,
 		RuntimeNetworks: networkpolicy.RuntimeNetworkConfig{
 			Nodes:      garden.Spec.RuntimeCluster.Networking.Nodes,
 			Pods:       garden.Spec.RuntimeCluster.Networking.Pods,

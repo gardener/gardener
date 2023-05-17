@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controller/networkpolicy"
@@ -48,7 +49,8 @@ func AddToManager(
 	mgr manager.Manager,
 	gardenletCancel context.CancelFunc,
 	seedCluster cluster.Cluster,
-	cfg config.GardenletConfiguration,
+	cfg config.NetworkPolicyControllerConfiguration,
+	networks gardencore.SeedNetworks,
 	resolver hostnameresolver.HostResolver,
 ) error {
 	seedIsGarden, err := gardenerutils.SeedIsGarden(ctx, seedCluster.GetAPIReader())
@@ -60,13 +62,14 @@ func AddToManager(
 	}
 
 	reconciler := &networkpolicy.Reconciler{
-		ConcurrentSyncs: cfg.Controllers.NetworkPolicy.ConcurrentSyncs,
-		Resolver:        resolver,
+		ConcurrentSyncs:              cfg.ConcurrentSyncs,
+		AdditionalNamespaceSelectors: cfg.AdditionalNamespaceSelectors,
+		Resolver:                     resolver,
 		RuntimeNetworks: networkpolicy.RuntimeNetworkConfig{
-			Pods:       cfg.SeedConfig.Spec.Networks.Pods,
-			Services:   cfg.SeedConfig.Spec.Networks.Services,
-			Nodes:      cfg.SeedConfig.Spec.Networks.Nodes,
-			BlockCIDRs: cfg.SeedConfig.Spec.Networks.BlockCIDRs,
+			Pods:       networks.Pods,
+			Services:   networks.Services,
+			Nodes:      networks.Nodes,
+			BlockCIDRs: networks.BlockCIDRs,
 		},
 	}
 

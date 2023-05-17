@@ -170,7 +170,6 @@ func (s *service) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, obj, func() error {
 		obj.Annotations = utils.MergeStringMaps(obj.Annotations, s.values.annotationsFunc())
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(obj, networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(kubeapiserverconstants.Port), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)}))
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(obj, metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}}))
 		// TODO(rfranzke): Drop this annotation once the APIServerSNI feature gate is dropped (then API servers are only
 		//  exposed indirectly via Istio) and the NetworkPolicy controller in gardener-resource-manager is enabled for
 		//  all relevant namespaces in the seed cluster.
@@ -180,22 +179,26 @@ func (s *service) Deploy(ctx context.Context) error {
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", "*")
 		}
 
+		namespaceSelectors := []metav1.LabelSelector{
+			{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
+			{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyAccessTargetAPIServer: v1beta1constants.LabelNetworkPolicyAllowed}},
+		}
+
 		// For shoot namespaces the kube-apiserver service needs extra labels and annotations to create required network policies
 		// which allow a connection from istio-ingress components to kube-apiserver.
 		if isShootNamespace(obj.Namespace) {
-			namespaceSelectors := []metav1.LabelSelector{
-				{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}},
-				{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
-				{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}},
-			}
+			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
+
+			namespaceSelectors = append(namespaceSelectors,
+				metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}},
+				metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}},
+			)
 
 			if s.values.fullNetworkPolicies {
 				namespaceSelectors = append(namespaceSelectors, metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}})
 			}
-
-			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
-			utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(obj, namespaceSelectors...))
 		}
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(obj, namespaceSelectors...))
 
 		obj.Labels = utils.MergeStringMaps(obj.Labels, getLabels())
 		if s.values.gardenerManaged {

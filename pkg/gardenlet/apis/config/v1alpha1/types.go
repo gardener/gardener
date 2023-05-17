@@ -396,6 +396,10 @@ type NetworkPolicyControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	// AdditionalNamespaceSelectors is a list of label selectors for additional namespaces that should be considered by
+	// the controller.
+	// +optional
+	AdditionalNamespaceSelectors []metav1.LabelSelector `json:"additionalNamespaceSelectors,omitempty"`
 }
 
 // ManagedSeedControllerConfiguration defines the configuration of the ManagedSeed controller.

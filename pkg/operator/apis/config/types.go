@@ -75,6 +75,9 @@ type GardenControllerConfig struct {
 type NetworkPolicyControllerConfiguration struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	ConcurrentSyncs *int
+	// AdditionalNamespaceSelectors is a list of label selectors for additional namespaces that should be considered by
+	// the controller.
+	AdditionalNamespaceSelectors []metav1.LabelSelector
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

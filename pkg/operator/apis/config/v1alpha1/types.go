@@ -82,6 +82,10 @@ type NetworkPolicyControllerConfiguration struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	// AdditionalNamespaceSelectors is a list of label selectors for additional namespaces that should be considered by
+	// the controller.
+	// +optional
+	AdditionalNamespaceSelectors []metav1.LabelSelector `json:"additionalNamespaceSelectors,omitempty"`
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

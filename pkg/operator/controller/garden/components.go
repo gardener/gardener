@@ -76,6 +76,7 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 		features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
 		helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 		features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster),
+		r.Config.Controllers.NetworkPolicy.AdditionalNamespaceSelectors,
 		garden.Spec.RuntimeCluster.Provider.Zones,
 	)
 }

@@ -415,6 +415,11 @@ func (r *Reconciler) runReconcileSeedFlow(
 			defaultUnreachableTolerationSeconds = nodeToleration.DefaultUnreachableTolerationSeconds
 		}
 
+		var additionalNetworkPolicyNamespaceSelectors []metav1.LabelSelector
+		if config := r.Config.Controllers.NetworkPolicy; config != nil {
+			additionalNetworkPolicyNamespaceSelectors = config.AdditionalNamespaceSelectors
+		}
+
 		// Deploy gardener-resource-manager first since it serves central functionality (e.g., projected token mount
 		// webhook) which is required for all other components to start-up.
 		gardenerResourceManager, err := sharedcomponent.NewRuntimeGardenerResourceManager(
@@ -431,6 +436,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
 			v1beta1helper.SeedSettingTopologyAwareRoutingEnabled(seed.GetInfo().Spec.Settings),
 			features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster),
+			additionalNetworkPolicyNamespaceSelectors,
 			seed.GetInfo().Spec.Provider.Zones,
 		)
 		if err != nil {

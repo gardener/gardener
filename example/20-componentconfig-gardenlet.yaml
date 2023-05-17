@@ -33,6 +33,9 @@ controllers:
     concurrentSyncs: 1
   networkPolicy:
     concurrentSyncs: 5
+  # additionalNamespaceSelectors:
+  # - matchLabels:
+  #     foo: bar
   shoot:
     concurrentSyncs: 20
     syncPeriod: 1h

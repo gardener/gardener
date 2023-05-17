@@ -82,6 +82,10 @@ config.yaml: |
       {{- if .Values.config.controllers.networkPolicy.concurrentSyncs }}
       concurrentSyncs: {{ .Values.config.controllers.networkPolicy.concurrentSyncs }}
       {{- end }}
+      {{- if .Values.config.controllers.networkPolicy.additionalNamespaceSelectors }}
+      additionalNamespaceSelectors:
+{{ toYaml .Values.config.controllers.networkPolicy.additionalNamespaceSelectors | indent 6 }}
+      {{- end }}
     {{- end }}
   {{- if .Values.nodeToleration }}
   nodeToleration:

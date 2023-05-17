@@ -6,19 +6,13 @@ This document describes which [Kubernetes `NetworkPolicy`s](https://kubernetes.i
 
 *(via `gardener-operator` and `gardener-resource-manager`)*
 
-N/A (in development)
-
-## Seed Cluster
-
-*(via `gardenlet` and `gardener-resource-manager`)*
-
-The `gardenlet` runs a [`NetworkPolicy` controller](../concepts/gardenlet.md#networkpolicy-controllerpkggardenletcontrollernetworkpolicy) which is responsible for the following namespaces:
+The `gardener-operator` runs a [`NetworkPolicy` controller](../concepts/operator.md#networkpolicy-controller-registrar) which is responsible for the following namespaces:
 
 - `garden`
 - `istio-system`
-- `istio-ingress-*`
+- `*istio-ingress-*`
 - `shoot-*`
-- `extension-*` (only when the [`FullNetworkPoliciesInRuntimeCluster` feature gate](../deployment/feature_gates.md) is enabled)
+- `extension-*` (only when the [`FullNetworkPoliciesInRuntimeCluster` feature gate](../deployment/feature_gates.md) is enabled (in case the garden cluster is a seed cluster at the same time))
 
 It deploys the following so-called "general `NetworkPolicy`s":
 
@@ -32,11 +26,19 @@ It deploys the following so-called "general `NetworkPolicy`s":
 | `allow-to-private-networks`  | Allows egress traffic from pods labeled with `networking.gardener.cloud/allow-to-private-networks=allowed` to the private networks (RFC1918) and carrier-grade NAT (RFC6598) except for cluster-specific networks (configured via `.spec.networks` in the `Seed`).                                                                                                                                                                                                                        | 
 | `allow-to-shoot-networks`    | Allows egress traffic from pods labeled with `networking.gardener.cloud/to-shoot-networks=allowed` to IPv4 blocks belonging to the shoot networks (configured via `.spec.networking` in the `Shoot`). In practice, this should be used by components which use VPN tunnel to communicate to pods in the shoot cluster. Note that this policy only exists in `shoot-*` namespaces.                                                                                                         |
 
-Apart from those, the `gardenlet` also enables the [`NetworkPolicy` controller of `gardener-resource-manager`](../concepts/resource-manager.md#networkpolicy-controllerpkgresourcemanagercontrollernetworkpolicy).
+Apart from those, the `gardener-operator` also enables the [`NetworkPolicy` controller of `gardener-resource-manager`](../concepts/resource-manager.md#networkpolicy-controller).
 Please find more information in the linked document.
 In summary, most of the pods that initiate connections with other pods will have labels with `networking.resources.gardener.cloud/` prefixes.
 This way, they leverage the automatically created `NetworkPolicy`s by the controller.
 As a result, in most cases no special/custom-crafted `NetworkPolicy`s must be created anymore.
+
+## Seed Cluster
+
+*(via `gardenlet` and `gardener-resource-manager`)*
+
+In seed clusters it works the same way as in the garden cluster managed by `gardener-operator`.
+When a seed cluster is the garden cluster at the same time, `gardenlet` does not enable the `NetworkPolicy` controller (since `gardener-operator` already runs it).
+Otherwise, it uses the exact same controller and code like `gardener-operator`, resulting in the same behaviour in both garden and seed clusters.
 
 ### Logging & Monitoring
 
@@ -89,6 +91,42 @@ annotations:
 ```
 
 This automatically allows the network traffic from the API server pods.
+
+## Additional Namespace Coverage in Garden/Seed Cluster
+
+In some cases, garden or seed clusters might run components in dedicated namespaces which are not covered by the controller by default (see list above).
+Still, it might(/should) be desired to also include such "custom namespaces" into the control of the `NetworkPolicy` controllers.
+
+In order to do so, human operators can adapt the component configs of `gardener-operator` or `gardenlet` by providing label selectors for additional namespaces:
+
+```yaml
+controllers:
+  networkPolicy:
+    additionalNamespaceSelectors:
+    - matchLabels:
+        foo: bar
+```
+
+### Communication With `kube-apiserver` For Components In Custom Namespaces
+
+### Egress Traffic
+
+Component running in such custom namespaces might need to initiate the communication with the `kube-apiserver`s of the virtual garden cluster or a shoot cluster.
+In order to achieve this, their custom namespace must be labeled with `networking.gardener.cloud/access-target-apiserver=allowed`.
+This will make the `NetworkPolicy` controllers automatically provisioning the required policies into their namespace.
+
+As a result, the respective component pods just need to be labeled with
+
+- `networking.resources.gardener.cloud/to-garden-virtual-garden-kube-apiserver-tcp-443=allowed` (virtual garden cluster)
+- `networking.resources.gardener.cloud/to-all-shoots-kube-apiserver-tcp-443=allowed` (shoot clusters)
+
+### Ingress Traffic
+
+Components running in such custom namespaces might serve webhook handlers that must be reached by the `kube-apiservers` of the virtual garden cluster or a shoot cluster.
+In order to achieve this, their `Service` must be annotated with `networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports=<ports>` as well as
+
+- `networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]` (virtual garden cluster)
+- `networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"shoot"}}]` (shoot clusters)
 
 ## Shoot Cluster
 

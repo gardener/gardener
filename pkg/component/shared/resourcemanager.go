@@ -63,6 +63,7 @@ func NewRuntimeGardenerResourceManager(
 	defaultSeccompProfileEnabled bool,
 	endpointSliceHintsEnabled bool,
 	fullNetworkPoliciesEnabled bool,
+	additionalNetworkPolicyNamespaceSelectors []metav1.LabelSelector,
 	zones []string,
 ) (
 	component.DeployWaiter,
@@ -80,12 +81,13 @@ func NewRuntimeGardenerResourceManager(
 	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
 	return resourcemanager.New(c, gardenNamespaceName, secretsManager, resourcemanager.Values{
-		ConcurrentSyncs:              pointer.Int(20),
-		DefaultSeccompProfileEnabled: defaultSeccompProfileEnabled,
-		DefaultNotReadyToleration:    defaultNotReadyToleration,
-		DefaultUnreachableToleration: defaultUnreachableToleration,
-		EndpointSliceHintsEnabled:    endpointSliceHintsEnabled,
-		FullNetworkPolicies:          fullNetworkPoliciesEnabled,
+		ConcurrentSyncs:                           pointer.Int(20),
+		DefaultSeccompProfileEnabled:              defaultSeccompProfileEnabled,
+		DefaultNotReadyToleration:                 defaultNotReadyToleration,
+		DefaultUnreachableToleration:              defaultUnreachableToleration,
+		EndpointSliceHintsEnabled:                 endpointSliceHintsEnabled,
+		FullNetworkPolicies:                       fullNetworkPoliciesEnabled,
+		NetworkPolicyAdditionalNamespaceSelectors: additionalNetworkPolicyNamespaceSelectors,
 		NetworkPolicyControllerIngressControllerSelector: &resourcemanagerv1alpha1.IngressControllerSelector{
 			Namespace: v1beta1constants.GardenNamespace,
 			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{

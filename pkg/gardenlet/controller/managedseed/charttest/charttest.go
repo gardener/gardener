@@ -667,7 +667,6 @@ func ComputeExpectedGardenletConfiguration(
 	var (
 		zero   = 0
 		one    = 1
-		three  = 3
 		five   = 5
 		twenty = 20
 
@@ -822,7 +821,7 @@ func ComputeExpectedGardenletConfiguration(
 				ConcurrentSyncs: &one,
 			},
 			NetworkPolicy: &gardenletv1alpha1.NetworkPolicyControllerConfiguration{
-				ConcurrentSyncs: &three,
+				ConcurrentSyncs: &five,
 			},
 		},
 		LeaderElection: &baseconfigv1alpha1.LeaderElectionConfiguration{

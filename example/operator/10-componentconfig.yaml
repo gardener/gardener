@@ -49,6 +49,9 @@ controllers:
     #   etcdConnectionTimeout: 5s
   networkPolicy:
     concurrentSyncs: 5
+  # additionalNamespaceSelectors:
+  # - matchLabels:
+  #     foo: bar
 nodeToleration:
   defaultNotReadyTolerationSeconds: 60
   defaultUnreachableTolerationSeconds: 60

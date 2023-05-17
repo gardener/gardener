@@ -162,23 +162,23 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	DeferCleanup(test.WithVar(&networkpolicy.SeedIsGardenCheckInterval, 500*time.Millisecond))
 	testContext, testCancel = context.WithCancel(ctx)
-	Expect(networkpolicy.AddToManager(ctx, mgr, testCancel, mgr, config.GardenletConfiguration{
-		Controllers: &config.GardenletControllerConfiguration{
-			NetworkPolicy: &config.NetworkPolicyControllerConfiguration{ConcurrentSyncs: pointer.Int(5)},
+	Expect(networkpolicy.AddToManager(
+		ctx,
+		mgr,
+		testCancel,
+		mgr,
+		config.NetworkPolicyControllerConfiguration{
+			ConcurrentSyncs:              pointer.Int(5),
+			AdditionalNamespaceSelectors: []metav1.LabelSelector{{MatchLabels: map[string]string{"custom": "namespace"}}},
 		},
-		SeedConfig: &config.SeedConfig{
-			SeedTemplate: gardencore.SeedTemplate{
-				Spec: gardencore.SeedSpec{
-					Networks: gardencore.SeedNetworks{
-						Pods:       "10.0.0.0/16",
-						Services:   "10.1.0.0/16",
-						Nodes:      pointer.String("10.2.0.0/16"),
-						BlockCIDRs: []string{blockedCIDR},
-					},
-				},
-			},
+		gardencore.SeedNetworks{
+			Pods:       "10.0.0.0/16",
+			Services:   "10.1.0.0/16",
+			Nodes:      pointer.String("10.2.0.0/16"),
+			BlockCIDRs: []string{blockedCIDR},
 		},
-	}, hostnameresolver.NewNoOpProvider())).To(Succeed())
+		hostnameresolver.NewNoOpProvider(),
+	)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

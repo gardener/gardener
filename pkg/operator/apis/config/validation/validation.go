@@ -19,6 +19,7 @@ import (
 
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
@@ -48,8 +49,30 @@ func ValidateOperatorConfiguration(conf *config.OperatorConfiguration) field.Err
 func validateControllerConfiguration(conf config.ControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateConcurrentSyncs(conf.Garden.ConcurrentSyncs, fldPath.Child("garden"))...)
-	allErrs = append(allErrs, validateSyncPeriod(conf.Garden.SyncPeriod, fldPath.Child("garden"))...)
+	allErrs = append(allErrs, validateGardenControllerConfiguration(conf.Garden, fldPath.Child("garden"))...)
+	allErrs = append(allErrs, validateNetworkPolicyControllerConfiguration(conf.NetworkPolicy, fldPath.Child("networkPolicy"))...)
+
+	return allErrs
+}
+
+func validateGardenControllerConfiguration(conf config.GardenControllerConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validateConcurrentSyncs(conf.ConcurrentSyncs, fldPath)...)
+	allErrs = append(allErrs, validateSyncPeriod(conf.SyncPeriod, fldPath)...)
+
+	return allErrs
+}
+
+func validateNetworkPolicyControllerConfiguration(conf config.NetworkPolicyControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validateConcurrentSyncs(conf.ConcurrentSyncs, fldPath)...)
+
+	for i, l := range conf.AdditionalNamespaceSelectors {
+		labelSelector := l
+		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(&labelSelector, metav1validation.LabelSelectorValidationOptions{}, fldPath.Child("additionalNamespaceSelectors").Index(i))...)
+	}
 
 	return allErrs
 }

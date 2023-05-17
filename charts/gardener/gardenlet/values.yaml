@@ -123,6 +123,11 @@ config:
       waitSyncPeriod: 15s
       syncJitterPeriod: 5m
       jitterUpdates: false
+    networkPolicy:
+      concurrentSyncs: 5
+    # additionalNamespaceSelectors:
+    # - matchLabels:
+    #     foo: bar
   resources:
     capacity:
       shoots: 250
