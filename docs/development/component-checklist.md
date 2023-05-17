@@ -85,7 +85,7 @@ This document provides a checklist for them that you can walk through.
 4. **Use [`NetworkPolicy`s](https://kubernetes.io/docs/concepts/services-networking/network-policies/) to restrict network traffic** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/etcd/etcd.go#L293-L339))
 
    You should restrict both ingress and egress traffic to/from your component as much as possible to ensure that it only gets access to/from other components if really needed.
-   Gardener provides a few default policies for typical usage scenarios. For more information, see [`NetworkPolicy`s In Garden, Seed, Shoot Clusters](network_policies.md) and [Shoot Network Policies](../usage/shoot_network_policies.md).
+   Gardener provides a few default policies for typical usage scenarios. For more information, see [`NetworkPolicy`s In Garden, Seed, Shoot Clusters](../usage/network_policies.md).
 
 5. **Do not run components in privileged mode** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/nodelocaldns/nodelocaldns.go#L329-L333), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/nodelocaldns/nodelocaldns.go#L507))
 
