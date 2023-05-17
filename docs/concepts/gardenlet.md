@@ -1,5 +1,5 @@
 ---
-title: gardenelet
+title: gardenlet
 ---
 
 # gardenlet
@@ -302,7 +302,7 @@ The `NetworkPolicy` controller reconciles `NetworkPolicy`s in all relevant names
 
 The controller resolves the IP address of the Kubernetes service in the `default` namespace and creates an egress `NetworkPolicy`s for it.
 
-For more details about `NetworkPolicy`s in Gardener, please see [Network Policies in Gardener](../usage/network_policies.md).
+For more details about `NetworkPolicy`s in Gardener, please see [`NetworkPolicy`s In Garden, Seed, Shoot Clusters](../usage/network_policies.md).
 
 ### [`Seed` Controller](../../pkg/gardenlet/controller/seed)
 
