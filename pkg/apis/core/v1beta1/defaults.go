@@ -64,10 +64,6 @@ func SetDefaults_Seed(obj *Seed) {
 		obj.Spec.Settings.VerticalPodAutoscaler = &SeedSettingVerticalPodAutoscaler{Enabled: true}
 	}
 
-	if obj.Spec.Settings.OwnerChecks == nil {
-		obj.Spec.Settings.OwnerChecks = &SeedSettingOwnerChecks{Enabled: false}
-	}
-
 	if obj.Spec.Settings.DependencyWatchdog == nil {
 		obj.Spec.Settings.DependencyWatchdog = &SeedSettingDependencyWatchdog{}
 	}
