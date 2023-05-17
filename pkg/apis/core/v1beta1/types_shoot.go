@@ -1115,6 +1115,7 @@ type KubeletConfig struct {
 	// +optional
 	StreamingConnectionIdleTimeout *metav1.Duration `json:"streamingConnectionIdleTimeout,omitempty" protobuf:"bytes,25,opt,name=streamingConnectionIdleTimeout"`
 	// MemorySwap configures swap memory available to container workloads.
+	// +optional
 	MemorySwap *MemorySwapConfiguration `json:"memorySwap,omitempty" protobuf:"bytes,26,opt,name=memorySwap"`
 }
 
@@ -1208,6 +1209,7 @@ const (
 type MemorySwapConfiguration struct {
 	// SwapBehavior configures swap memory available to container workloads. May be one of {"LimitedSwap", "UnlimitedSwap"}
 	// defaults to: LimitedSwap
+	// +optional
 	SwapBehavior *SwapBehavior `json:"swapBehavior,omitempty" protobuf:"bytes,1,opt,name=swapBehavior"`
 }
 

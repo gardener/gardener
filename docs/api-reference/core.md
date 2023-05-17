@@ -5711,6 +5711,7 @@ MemorySwapConfiguration
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>MemorySwap configures swap memory available to container workloads.</p>
 </td>
 </tr>
@@ -7172,6 +7173,7 @@ SwapBehavior
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>SwapBehavior configures swap memory available to container workloads. May be one of {&ldquo;LimitedSwap&rdquo;, &ldquo;UnlimitedSwap&rdquo;}
 defaults to: LimitedSwap</p>
 </td>

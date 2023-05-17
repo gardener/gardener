@@ -167,6 +167,71 @@ var _ = Describe("Defaults", func() {
 			})
 		})
 
+		Describe("Worker Swap", func() {
+			It("should default the swap behaviour for a worker pool", func() {
+				falseVar := false
+				obj.Spec.Provider.Workers = []Worker{
+					{
+						Kubernetes: &WorkerKubernetes{
+							Kubelet: &KubeletConfig{},
+						},
+					},
+				}
+				obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = &falseVar
+				obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.MemorySwap).To(Not(BeNil()))
+				Expect(obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.MemorySwap.SwapBehavior).To(PointTo(Equal(LimitedSwap)))
+			})
+
+			It("should not default the swap behaviour for a worker pool because k8s < 1.22", func() {
+				falseVar := false
+				obj.Spec.Provider.Workers = []Worker{
+					{
+						Kubernetes: &WorkerKubernetes{
+							Kubelet: &KubeletConfig{},
+						},
+					},
+				}
+				obj.Spec.Provider.Workers[0].Kubernetes.Version = pointer.String("1.21.1")
+				obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = &falseVar
+				obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.MemorySwap).To(BeNil())
+			})
+
+			It("should not default the swap behaviour for a worker pool because failSwapOn=true (defaulted to true)", func() {
+				obj.Spec.Provider.Workers = []Worker{
+					{
+						Kubernetes: &WorkerKubernetes{
+							Kubelet: &KubeletConfig{},
+						},
+					},
+				}
+				obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.MemorySwap).To(BeNil())
+			})
+
+			It("should not default the swap behaviour for a worker pool because kubelet feature gate NodeSwap is not set", func() {
+				falseVar := false
+				obj.Spec.Provider.Workers = []Worker{
+					{
+						Kubernetes: &WorkerKubernetes{
+							Kubelet: &KubeletConfig{},
+						},
+					},
+				}
+				obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = &falseVar
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.MemorySwap).To(BeNil())
+			})
+		})
+
 		It("should not add the 'protected' toleration if the namespace is not 'garden'", func() {
 			obj.Namespace = "foo"
 			obj.Spec.Tolerations = nil
@@ -195,9 +260,8 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default the failSwapOn field", func() {
-			falseVar := false
 			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-			obj.Spec.Kubernetes.Kubelet.FailSwapOn = &falseVar
+			obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
 
 			SetObjectDefaults_Shoot(obj)
 
@@ -205,14 +269,23 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should default the swap behaviour", func() {
-			falseVar := false
 			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-			obj.Spec.Kubernetes.Kubelet.FailSwapOn = &falseVar
+			obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
 			obj.Spec.Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap).To(Not(BeNil()))
 			Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap.SwapBehavior).To(PointTo(Equal(LimitedSwap)))
+		})
+
+		It("should not default the swap behaviour because k8s < 1.22", func() {
+			obj.Spec.Kubernetes.Version = "1.21.1"
+			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
+			obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
+			obj.Spec.Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap).To(BeNil())
 		})
 
 		It("should not default the swap behaviour because failSwapOn=true", func() {
@@ -226,9 +299,8 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default the swap behaviour because kubelet feature gate NodeSwap is not set", func() {
-			falseVar := true
 			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-			obj.Spec.Kubernetes.Kubelet.FailSwapOn = &falseVar
+			obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
 			SetObjectDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap).To(BeNil())

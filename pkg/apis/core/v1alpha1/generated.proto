@@ -1238,6 +1238,7 @@ message KubeletConfig {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration streamingConnectionIdleTimeout = 25;
 
   // MemorySwap configures swap memory available to container workloads.
+  // +optional
   optional MemorySwapConfiguration memorySwap = 26;
 }
 
@@ -1611,6 +1612,7 @@ message MaintenanceTimeWindow {
 message MemorySwapConfiguration {
   // SwapBehavior configures swap memory available to container workloads. May be one of {"LimitedSwap", "UnlimitedSwap"}
   // defaults to: LimitedSwap
+  // +optional
   optional string swapBehavior = 1;
 }
 
