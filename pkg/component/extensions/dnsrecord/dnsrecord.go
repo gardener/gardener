@@ -143,7 +143,10 @@ func (d *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 	}
 
 	mutateFn := func() error {
-		if d.values.AnnotateOperation || d.valuesDontMatchDNSRecord() || d.lastOperationNotSuccessful() || d.statusIsOutdatedOrTimestampIsInvalid() {
+		if d.values.AnnotateOperation ||
+			d.valuesDontMatchDNSRecord() ||
+			d.lastOperationNotSuccessful() ||
+			d.isTimestampInvalidOrAfterLastUpdateTime() {
 			metav1.SetMetaDataAnnotation(&d.dnsRecord.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 			metav1.SetMetaDataAnnotation(&d.dnsRecord.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 		}
@@ -179,8 +182,12 @@ func (d *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 			}
 		} else {
 			patch := client.MergeFrom(d.dnsRecord.DeepCopy())
-			if d.valuesDontMatchDNSRecord() || d.lastOperationNotSuccessful() || d.statusIsOutdatedOrTimestampIsInvalid() {
+			if d.valuesDontMatchDNSRecord() ||
+				d.lastOperationNotSuccessful() ||
+				d.isTimestampInvalidOrAfterLastUpdateTime() {
 				// If the DNSRecord is not yet Succeeded or values have changed, reconcile it again.
+				// Also check if gardener timestamp is in an invalid format or is after status.LastOperation.LastUpdateTime.
+				// If that is the case health checks for the dnsrecord will fail so we request a reconciliation to correct the current state.
 				_ = mutateFn()
 			}
 			if err := d.client.Patch(ctx, d.dnsRecord, patch); err != nil {
@@ -307,7 +314,9 @@ func (d *dnsRecord) lastOperationNotSuccessful() bool {
 	return d.dnsRecord.Status.LastOperation != nil && d.dnsRecord.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded
 }
 
-func (d *dnsRecord) statusIsOutdatedOrTimestampIsInvalid() bool {
+// isTimestampInvalidOrAfterLastUpdateTime returns true if v1beta1constants.GardenerTimestamp is after status.LastOperation.LastUpdateTime
+// or if v1beta1constants.GardenerTimestamp is in invalid format
+func (d *dnsRecord) isTimestampInvalidOrAfterLastUpdateTime() bool {
 	timestamp, ok := d.dnsRecord.Annotations[v1beta1constants.GardenerTimestamp]
 	if ok && d.dnsRecord.Status.LastOperation != nil {
 		parsedTimestamp, err := time.Parse(time.RFC3339Nano, timestamp)

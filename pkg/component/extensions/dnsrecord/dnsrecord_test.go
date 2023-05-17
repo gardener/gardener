@@ -350,7 +350,7 @@ var _ = Describe("DNSRecord", func() {
 			}))
 		})
 
-		It("should deploy the DNSRecord with operation annotation if status is outdated", func() {
+		It("should deploy the DNSRecord with operation annotation if gardener timestamp is after status.lastOperation.lastUpdateTime", func() {
 			expectedDNSRecord := &extensionsv1alpha1.DNSRecord{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
