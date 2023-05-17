@@ -111,6 +111,14 @@ func (Strategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorLis
 // validation has succeeded but before the object has been persisted.
 // This method may mutate the object.
 func (Strategy) Canonicalize(obj runtime.Object) {
+	seed := obj.(*core.Seed)
+	dropOwnerChecksField(seed)
+}
+
+func dropOwnerChecksField(seed *core.Seed) {
+	if seed.Spec.Settings != nil && seed.Spec.Settings.OwnerChecks != nil {
+		seed.Spec.Settings.OwnerChecks = nil
+	}
 }
 
 // AllowCreateOnUpdate returns true if the object can be created by a PUT.
