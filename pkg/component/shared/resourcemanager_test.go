@@ -75,6 +75,9 @@ var _ = Describe("ResourceManager", func() {
 			bootstrapKubeconfigSecret *corev1.Secret
 			shootAccessSecret         *corev1.Secret
 			managedResource           *resourcesv1alpha1.ManagedResource
+
+			mrSecret         *corev1.Secret
+			expectedChecksum string
 		)
 
 		BeforeEach(func() {
@@ -113,6 +116,16 @@ var _ = Describe("ResourceManager", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "shoot-core-gardener-resource-manager",
 					Namespace: namespace,
+				},
+			}
+			expectedChecksum = "fcde2b2edba56bf408601fb721fe9b5c338d10ee429ea04fae5511b68fbf8fb9"
+			mrSecret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret1",
+					Namespace: namespace,
+				},
+				Data: map[string][]byte{
+					"foo": []byte("bar"),
 				},
 			}
 		})
@@ -173,13 +186,23 @@ var _ = Describe("ResourceManager", func() {
 							return nil
 						}),
 						c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(managedResource), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *resourcesv1alpha1.ManagedResource, _ ...client.GetOption) error {
+							obj.ObjectMeta.Namespace = managedResource.Namespace
+							obj.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: mrSecret.Name}}
 							obj.Status.ObservedGeneration = obj.Generation
 							obj.Status.Conditions = []gardencorev1beta1.Condition{
 								{Type: "ResourcesApplied", Status: gardencorev1beta1.ConditionTrue},
 								{Type: "ResourcesHealthy", Status: gardencorev1beta1.ConditionTrue},
 							}
+							obj.Status.SecretsDataChecksum = &expectedChecksum
 							return nil
 						}),
+
+						c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, mrSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+							func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+								(mrSecret).DeepCopyInto(obj.(*corev1.Secret))
+								return nil
+							},
+						),
 
 						// delete bootstrap kubeconfig
 						c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj *corev1.Secret, opts ...client.DeleteOption) error {
@@ -364,13 +387,23 @@ var _ = Describe("ResourceManager", func() {
 							return nil
 						}),
 						c.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(managedResource), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *resourcesv1alpha1.ManagedResource, _ ...client.GetOption) error {
+							obj.ObjectMeta.Namespace = managedResource.Namespace
+							obj.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: mrSecret.Name}}
 							obj.Status.ObservedGeneration = obj.Generation
 							obj.Status.Conditions = []gardencorev1beta1.Condition{
 								{Type: "ResourcesApplied", Status: gardencorev1beta1.ConditionTrue},
 								{Type: "ResourcesHealthy", Status: gardencorev1beta1.ConditionTrue},
 							}
+							obj.Status.SecretsDataChecksum = &expectedChecksum
 							return nil
 						}),
+
+						c.EXPECT().Get(gomock.Any(), kubernetesutils.Key(namespace, mrSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+							func(ctx context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+								(mrSecret).DeepCopyInto(obj.(*corev1.Secret))
+								return nil
+							},
+						),
 
 						// delete bootstrap kubeconfig
 						c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj *corev1.Secret, opts ...client.DeleteOption) error {
