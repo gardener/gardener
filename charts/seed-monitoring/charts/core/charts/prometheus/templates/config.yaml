@@ -366,10 +366,13 @@ data:
       - source_labels: [ __meta_kubernetes_pod_name ]
         action: keep
         regex: vpn-shoot-(.+)
-      - source_labels: [ __meta_kubernetes_pod_name ]
+      - source_labels: [ __meta_kubernetes_pod_container_name ]
+        action: keep
+        regex: .*?\bvpn-seed\b
+      - source_labels: [__meta_kubernetes_pod_name,__meta_kubernetes_pod_container_name]
         target_label: __param_target
-        regex: (.+)
-        replacement: https://kube-apiserver:443/api/v1/namespaces/kube-system/pods/${1}/log?tailLines=1
+        regex: (.+);(.+)
+        replacement: https://kube-apiserver:443/api/v1/namespaces/kube-system/pods/${1}/log?container=${2}&tailLines=1
         action: replace
       - source_labels: [ __param_target ]
         target_label: instance
