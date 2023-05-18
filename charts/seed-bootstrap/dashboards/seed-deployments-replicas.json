@@ -347,6 +347,7 @@
       },
       "yaxes": [
         {
+          "decimals": 0,
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -425,8 +426,8 @@
       "1d"
     ]
   },
-  "timezone": "Seed Deployments Replicas",
-  "title": "",
+  "timezone": "",
+  "title": "Seed Deployments Replicas",
   "uid": "DaiuYpdZb",
   "version": 1
 }
