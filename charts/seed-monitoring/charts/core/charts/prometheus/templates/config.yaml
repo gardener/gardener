@@ -367,8 +367,9 @@ data:
         action: keep
         regex: vpn-shoot-(.+)
       - source_labels: [ __meta_kubernetes_pod_container_name ]
-        action: keep
-        regex: .*?\bvpn-seed\b
+        regex: ^(vpn-seed)\b(?!.*\bvpn-seed\b).*$
+        replacement: $1
+        action: replace
       - source_labels: [__meta_kubernetes_pod_name,__meta_kubernetes_pod_container_name]
         target_label: __param_target
         regex: (.+);(.+)
