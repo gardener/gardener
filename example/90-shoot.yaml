@@ -74,6 +74,8 @@ spec:
     #     containerLogMaxFiles: 5
     #     cpuCFSQuota: true
     #     failSwapOn: true
+    #     memorySwap:
+    #       swapBehavior: LimitedSwap
     #     cpuManagerPolicy: none
     #     podPidsLimit: 10
     #     imageGCHighThresholdPercent: 50
@@ -230,6 +232,8 @@ spec:
   # kubelet:
   #   cpuCFSQuota: true
   #   failSwapOn: true
+  #   memorySwap:
+  #     swapBehavior: LimitedSwap
   #   cpuManagerPolicy: none
   #   podPidsLimit: 10
   #   imageGCHighThresholdPercent: 50

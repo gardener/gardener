@@ -5701,6 +5701,20 @@ Default:
 &ldquo;5m&rdquo; for Kubernetes &gt;= v1.26.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>memorySwap</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.MemorySwapConfiguration">
+MemorySwapConfiguration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MemorySwap configures swap memory available to container workloads.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeletConfigEviction">KubeletConfigEviction
@@ -7127,6 +7141,41 @@ string
 <td>
 <p>End is the end of the time window in the format HHMMSS+ZONE, e.g. &ldquo;220000+0100&rdquo;.
 If not present, the value will be computed based on the &ldquo;Begin&rdquo; value.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.MemorySwapConfiguration">MemorySwapConfiguration
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.KubeletConfig">KubeletConfig</a>)
+</p>
+<p>
+<p>MemorySwapConfiguration contains kubelet swap configuration
+For more information, please see KEP: 2400-node-swap</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>swapBehavior</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SwapBehavior">
+SwapBehavior
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SwapBehavior configures swap memory available to container workloads. May be one of {&ldquo;LimitedSwap&rdquo;, &ldquo;UnlimitedSwap&rdquo;}
+defaults to: LimitedSwap</p>
 </td>
 </tr>
 </tbody>
@@ -11423,6 +11472,15 @@ ControlPlane
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.SwapBehavior">SwapBehavior
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.MemorySwapConfiguration">MemorySwapConfiguration</a>)
+</p>
+<p>
+<p>SwapBehavior configures swap memory available to container workloads</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.SystemComponents">SystemComponents
 </h3>
 <p>
