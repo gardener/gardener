@@ -57,6 +57,7 @@ import (
 	gardencontroller "github.com/gardener/gardener/pkg/operator/controller/garden"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -323,6 +324,9 @@ var _ = Describe("Garden controller tests", func() {
 				mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "istio-system"}}
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed(), "for "+mr.Name)
 
+				expectedChecksum, err := managedresources.ComputeExpectedSecretsDataChecksum(ctx, testClient, mr)
+				g.Expect(err).ToNot(HaveOccurred())
+
 				patch := client.MergeFrom(mr.DeepCopy())
 				mr.Status.ObservedGeneration = mr.Generation
 				mr.Status.Conditions = []gardencorev1beta1.Condition{
@@ -339,6 +343,7 @@ var _ = Describe("Garden controller tests", func() {
 						LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
 					},
 				}
+				mr.Status.SecretsDataChecksum = &expectedChecksum
 				g.Expect(testClient.Status().Patch(ctx, mr, patch)).To(Succeed(), "for "+mr.Name)
 			}
 		}).Should(Succeed())
@@ -475,6 +480,9 @@ var _ = Describe("Garden controller tests", func() {
 			mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "shoot-core-gardener-resource-manager", Namespace: testNamespace.Name}}
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
 
+			expectedChecksum, err := managedresources.ComputeExpectedSecretsDataChecksum(ctx, testClient, mr)
+			g.Expect(err).ToNot(HaveOccurred())
+
 			patch := client.MergeFrom(mr.DeepCopy())
 			mr.Status.ObservedGeneration = mr.Generation
 			mr.Status.Conditions = []gardencorev1beta1.Condition{
@@ -491,6 +499,7 @@ var _ = Describe("Garden controller tests", func() {
 					LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
 				},
 			}
+			mr.Status.SecretsDataChecksum = &expectedChecksum
 			g.Expect(testClient.Status().Patch(ctx, mr, patch)).To(Succeed())
 		}).Should(Succeed())
 

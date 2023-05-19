@@ -21,6 +21,7 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -73,10 +74,22 @@ var _ = Describe("ControllerInstallation Care controller tests", func() {
 	})
 
 	Context("when ManagedResources for the ControllerInstallation exist", func() {
-		var managedResource *resourcesv1alpha1.ManagedResource
-
+		var (
+			managedResource  *resourcesv1alpha1.ManagedResource
+			mrSecret         *corev1.Secret
+			expectedChecksum = "fcde2b2edba56bf408601fb721fe9b5c338d10ee429ea04fae5511b68fbf8fb9"
+		)
 		BeforeEach(func() {
 			By("Create ManagedResource")
+			mrSecret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret",
+					Namespace: gardenNamespace.Name,
+				},
+				Data: map[string][]byte{
+					"foo": []byte("bar"),
+				},
+			}
 			managedResource = &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       controllerInstallation.Name,
@@ -85,21 +98,23 @@ var _ = Describe("ControllerInstallation Care controller tests", func() {
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					SecretRefs: []corev1.LocalObjectReference{{
-						Name: "foo-secret",
+						Name: mrSecret.Name,
 					}},
 				},
 			}
+			Expect(testClient.Create(ctx, mrSecret)).To(Succeed())
 			Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 			log.Info("Created ManagedResource for test", "managedResource", client.ObjectKeyFromObject(managedResource))
 
 			DeferCleanup(func() {
 				By("Delete ManagedResource")
 				Expect(testClient.Delete(ctx, managedResource)).To(Succeed())
+				Expect(testClient.Delete(ctx, mrSecret)).To(Succeed())
 			})
 		})
 
 		Context("when generation of ManagedResource is outdated", func() {
-			It("shout set Installed condition to False with generation outdated error", func() {
+			It("shoud set Installed condition to False with generation outdated error", func() {
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
 					g.Expect(controllerInstallation.Status.Conditions).To(ContainCondition(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("InstallationPending"), withMessageSubstrings("observed generation of managed resource", "outdated (0/1)")))
@@ -113,7 +128,31 @@ var _ = Describe("ControllerInstallation Care controller tests", func() {
 				Expect(testClient.Status().Update(ctx, managedResource)).To(Succeed())
 			})
 
+			It("shoud set Installed condition to False with not reported checksum error", func() {
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
+					g.Expect(controllerInstallation.Status.Conditions).To(ContainCondition(
+						OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("InstallationPending"), withMessageSubstrings("secrets data checksum", "not reported yet"),
+					))
+				}).Should(Succeed())
+			})
+
+			It("shoud set Installed condition to False with not expected checksum error", func() {
+				managedResource.Status.SecretsDataChecksum = pointer.String("wrong-checksum")
+				Expect(testClient.Status().Update(ctx, managedResource)).To(Succeed())
+
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
+					g.Expect(controllerInstallation.Status.Conditions).To(ContainCondition(
+						OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("InstallationPending"), withMessageSubstrings("observed secrets data checksum", "is outdated"),
+					))
+				}).Should(Succeed())
+			})
+
 			It("should set conditions to failed when ManagedResource conditions do not exist yet", func() {
+				managedResource.Status.SecretsDataChecksum = &expectedChecksum
+				Expect(testClient.Status().Update(ctx, managedResource)).To(Succeed())
+
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
 					g.Expect(controllerInstallation.Status.Conditions).To(ConsistOf(
@@ -130,6 +169,7 @@ var _ = Describe("ControllerInstallation Care controller tests", func() {
 					{Type: resourcesv1alpha1.ResourcesHealthy, Status: gardencorev1beta1.ConditionFalse, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
 					{Type: resourcesv1alpha1.ResourcesProgressing, Status: gardencorev1beta1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
 				}
+				managedResource.Status.SecretsDataChecksum = &expectedChecksum
 				Expect(testClient.Status().Update(ctx, managedResource)).To(Succeed())
 
 				Eventually(func(g Gomega) {
@@ -148,6 +188,7 @@ var _ = Describe("ControllerInstallation Care controller tests", func() {
 					{Type: resourcesv1alpha1.ResourcesHealthy, Status: gardencorev1beta1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
 					{Type: resourcesv1alpha1.ResourcesProgressing, Status: gardencorev1beta1.ConditionFalse, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
 				}
+				managedResource.Status.SecretsDataChecksum = &expectedChecksum
 				Expect(testClient.Status().Update(ctx, managedResource)).To(Succeed())
 
 				Eventually(func(g Gomega) {
