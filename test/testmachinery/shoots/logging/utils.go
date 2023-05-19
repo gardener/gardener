@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -41,9 +42,18 @@ import (
 // Checks whether required logging resources are present.
 // If not, probably the logging feature gate is not enabled.
 func hasRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interface) (bool, error) {
-	fluentBit := &appsv1.DaemonSet{}
-	if err := k8sSeedClient.Client().Get(ctx, client.ObjectKey{Namespace: garden, Name: fluentBitName}, fluentBit); err != nil {
+	daemonSetList := &appsv1.DaemonSetList{}
+	if err := k8sSeedClient.Client().List(ctx,
+		daemonSetList,
+		client.InNamespace(garden),
+		client.MatchingLabels{
+			v1beta1constants.LabelApp: v1beta1constants.DaemonSetNameFluentBit,
+			"gardener.cloud/role":     "logging",
+		}); err != nil {
 		return false, err
+	}
+	if len(daemonSetList.Items) == 0 {
+		return false, fmt.Errorf("fluent-bit daemonset not found")
 	}
 
 	vali := &appsv1.StatefulSet{}
