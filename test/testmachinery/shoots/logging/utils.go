@@ -111,7 +111,7 @@ func WaitUntilValiReceivesLogs(ctx context.Context, interval time.Duration, f *f
 		defer dumpLogsCancel()
 
 		f.Logger.Info("Dump Vali logs")
-		if dumpError := f.DumpLogsForPodInNamespace(dumpLogsCtx, c, valiNamespace, "vali-0"); dumpError != nil {
+		if dumpError := f.DumpLogsForPodInNamespace(dumpLogsCtx, c, valiNamespace, "vali-0", "vali"); dumpError != nil {
 			f.Logger.Error(dumpError, "Error dumping logs for pod")
 		}
 

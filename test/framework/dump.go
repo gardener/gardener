@@ -182,7 +182,7 @@ func (f *CommonFramework) DumpLogsForPodsWithLabelsInNamespace(ctx context.Conte
 
 	var result error
 	for _, pod := range pods.Items {
-		if err := f.DumpLogsForPodInNamespace(ctx, k8sClient, namespace, pod.Name); err != nil {
+		if err := f.DumpLogsForPodInNamespace(ctx, k8sClient, namespace, pod.Name, ""); err != nil {
 			result = multierror.Append(result, err)
 		}
 	}
@@ -190,12 +190,12 @@ func (f *CommonFramework) DumpLogsForPodsWithLabelsInNamespace(ctx context.Conte
 }
 
 // DumpLogsForPodInNamespace prints the logs of the pod with the given namespace and name.
-func (f *CommonFramework) DumpLogsForPodInNamespace(ctx context.Context, k8sClient kubernetes.Interface, namespace, name string) error {
+func (f *CommonFramework) DumpLogsForPodInNamespace(ctx context.Context, k8sClient kubernetes.Interface, namespace, name, containerName string) error {
 	log := f.Logger.WithValues("pod", client.ObjectKey{Namespace: namespace, Name: name})
 	log.Info("Dumping logs for corev1.Pod")
 
 	podIf := k8sClient.Kubernetes().CoreV1().Pods(namespace)
-	logs, err := kubernetes.GetPodLogs(ctx, podIf, name, &corev1.PodLogOptions{})
+	logs, err := kubernetes.GetPodLogs(ctx, podIf, name, &corev1.PodLogOptions{Container: containerName})
 	if err != nil {
 		return err
 	}
