@@ -45,10 +45,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -1392,47 +1390,10 @@ func isOwnedByFluentOperator(obj client.Object) bool {
 // WaitUntilRequiredExtensionsReady checks and waits until all required extensions for a seed exist and are ready.
 func WaitUntilRequiredExtensionsReady(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed, interval, timeout time.Duration) error {
 	return retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
-		if err := RequiredExtensionsReady(ctx, gardenClient, seed); err != nil {
+		if err := gardenerutils.RequiredExtensionsReady(ctx, gardenClient, seed.Name, gardenerutils.ComputeRequiredExtensionsForSeed(seed)); err != nil {
 			return retry.MinorError(err)
 		}
 
 		return retry.Ok()
 	})
-}
-
-// RequiredExtensionsReady checks if all required extensions for a seed exist and are ready.
-func RequiredExtensionsReady(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed) error {
-	controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
-	if err := gardenClient.List(ctx, controllerInstallationList, client.MatchingFields{
-		core.SeedRefName: seed.Name,
-	}); err != nil {
-		return err
-	}
-
-	requiredExtensions := gardenerutils.ComputeRequiredExtensionsForSeed(seed)
-
-	for _, controllerInstallation := range controllerInstallationList.Items {
-		controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
-		if err := gardenClient.Get(ctx, client.ObjectKey{Name: controllerInstallation.Spec.RegistrationRef.Name}, controllerRegistration); err != nil {
-			return err
-		}
-
-		for _, kindType := range requiredExtensions.UnsortedList() {
-			split := strings.Split(kindType, "/")
-			if len(split) != 2 {
-				return fmt.Errorf("unexpected required extension: %q", kindType)
-			}
-			extensionKind, extensionType := split[0], split[1]
-
-			if helper.IsResourceSupported(controllerRegistration.Spec.Resources, extensionKind, extensionType) && helper.IsControllerInstallationSuccessful(controllerInstallation) {
-				requiredExtensions.Delete(kindType)
-			}
-		}
-	}
-
-	if len(requiredExtensions) > 0 {
-		return fmt.Errorf("extension controllers missing or unready: %+v", requiredExtensions)
-	}
-
-	return nil
 }

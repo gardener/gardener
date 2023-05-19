@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -168,7 +169,7 @@ func SeedIsGarden(ctx context.Context, seedClient client.Reader) (bool, error) {
 // ComputeRequiredExtensionsForSeed computes the extension kind/type combinations that are required for the
 // seed reconciliation flow.
 func ComputeRequiredExtensionsForSeed(seed *gardencorev1beta1.Seed) sets.Set[string] {
-	var wantedKindTypeCombinations = sets.New[string]()
+	wantedKindTypeCombinations := sets.New[string]()
 
 	if seed.Spec.DNS.Provider != nil {
 		wantedKindTypeCombinations.Insert(ExtensionsID(extensionsv1alpha1.DNSRecordResource, seed.Spec.DNS.Provider.Type))
@@ -180,4 +181,39 @@ func ComputeRequiredExtensionsForSeed(seed *gardencorev1beta1.Seed) sets.Set[str
 	wantedKindTypeCombinations.Insert(ExtensionsID(extensionsv1alpha1.WorkerResource, seed.Spec.Provider.Type))
 
 	return wantedKindTypeCombinations
+}
+
+// RequiredExtensionsReady checks if all required extensions for a seed exist and are ready.
+func RequiredExtensionsReady(ctx context.Context, gardenClient client.Client, seedName string, requiredExtensions sets.Set[string]) error {
+	controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+	if err := gardenClient.List(ctx, controllerInstallationList, client.MatchingFields{
+		core.SeedRefName: seedName,
+	}); err != nil {
+		return err
+	}
+
+	for _, controllerInstallation := range controllerInstallationList.Items {
+		controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
+		if err := gardenClient.Get(ctx, client.ObjectKey{Name: controllerInstallation.Spec.RegistrationRef.Name}, controllerRegistration); err != nil {
+			return err
+		}
+
+		for _, kindType := range requiredExtensions.UnsortedList() {
+			split := strings.Split(kindType, "/")
+			if len(split) != 2 {
+				return fmt.Errorf("unexpected required extension: %q", kindType)
+			}
+			extensionKind, extensionType := split[0], split[1]
+
+			if helper.IsResourceSupported(controllerRegistration.Spec.Resources, extensionKind, extensionType) && helper.IsControllerInstallationSuccessful(controllerInstallation) {
+				requiredExtensions.Delete(kindType)
+			}
+		}
+	}
+
+	if len(requiredExtensions) > 0 {
+		return fmt.Errorf("extension controllers missing or unready: %+v", requiredExtensions)
+	}
+
+	return nil
 }
