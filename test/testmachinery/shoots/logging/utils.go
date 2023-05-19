@@ -151,6 +151,12 @@ func getCluster(number int) *extensionsv1alpha1.Cluster {
 			},
 			Purpose: (*gardencorev1beta1.ShootPurpose)(pointer.String("evaluation")),
 		},
+		Status: gardencorev1beta1.ShootStatus{
+			LastOperation: &gardencorev1beta1.LastOperation{
+				Progress: 100,
+				Type:     gardencorev1beta1.LastOperationTypeReconcile,
+			},
+		},
 	}
 
 	return &extensionsv1alpha1.Cluster{
