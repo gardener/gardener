@@ -32,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -42,18 +41,8 @@ import (
 // Checks whether required logging resources are present.
 // If not, probably the logging feature gate is not enabled.
 func hasRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interface) (bool, error) {
-	daemonSetList := &appsv1.DaemonSetList{}
-	if err := k8sSeedClient.Client().List(ctx,
-		daemonSetList,
-		client.InNamespace(garden),
-		client.MatchingLabels{
-			v1beta1constants.LabelApp: v1beta1constants.DaemonSetNameFluentBit,
-			"gardener.cloud/role":     "logging",
-		}); err != nil {
+	if _, err := getFluentBitDaemonSet(ctx, k8sSeedClient); err != nil {
 		return false, err
-	}
-	if len(daemonSetList.Items) == 0 {
-		return false, fmt.Errorf("fluent-bit daemonset not found")
 	}
 
 	vali := &appsv1.StatefulSet{}
@@ -111,7 +100,7 @@ func WaitUntilValiReceivesLogs(ctx context.Context, interval time.Duration, f *f
 		defer dumpLogsCancel()
 
 		f.Logger.Info("Dump Vali logs")
-		if dumpError := f.DumpLogsForPodInNamespace(dumpLogsCtx, c, valiNamespace, "vali-0", "vali"); dumpError != nil {
+		if dumpError := f.DumpLogsForPodInNamespace(dumpLogsCtx, c, valiNamespace, "vali-0", &corev1.PodLogOptions{Container: "vali"}); dumpError != nil {
 			f.Logger.Error(dumpError, "Error dumping logs for pod")
 		}
 

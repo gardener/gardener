@@ -105,14 +105,13 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 			Scheme: kubernetes.SeedScheme,
 		}))
 		framework.ExpectNoError(err)
-		fluentBitDaemonSetName, err := getFluentBitDaemonSetName(ctx, f.SeedClient)
+		fluentBit, err = getFluentBitDaemonSet(ctx, f.SeedClient)
 		framework.ExpectNoError(err)
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitDaemonSetName}, fluentBit))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: getSecretNameFromVolume(fluentBit.Spec.Template.Spec.Volumes, fluentBitConfigVolumeName)}, fluentBitSecret))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitName}, fluentBitService))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: "", Name: fluentBitClusterRoleName}, fluentBitClusterRole))
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: "", Name: fluentBitClusterRoleName + "-" + fluentBitDaemonSetName}, fluentBitClusterRoleBinding))
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitDaemonSetName}, fluentBitServiceAccount))
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: "", Name: fluentBitClusterRoleName + "-" + fluentBit.Name}, fluentBitClusterRoleBinding))
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBit.Name}, fluentBitServiceAccount))
 		fluentBitPriorityClassName := fluentBit.Spec.Template.Spec.PriorityClassName
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: "", Name: fluentBitPriorityClassName}, fluentBitPriorityClass))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: "", Name: "clusters.extensions.gardener.cloud"}, clusterCRD))
@@ -400,17 +399,21 @@ func prepareFluentBitServiceAccount(serviceAccount *corev1.ServiceAccount) *core
 	return serviceAccount
 }
 
-func getFluentBitDaemonSetName(ctx context.Context, k8sSeedClient kubernetes.Interface) (string, error) {
+func getFluentBitDaemonSet(ctx context.Context, k8sSeedClient kubernetes.Interface) (*appsv1.DaemonSet, error) {
 	daemonSetList := &appsv1.DaemonSetList{}
 	err := k8sSeedClient.Client().List(ctx,
 		daemonSetList,
 		client.InNamespace(garden),
 		client.MatchingLabels{
-			v1beta1constants.LabelApp: v1beta1constants.DaemonSetNameFluentBit,
-			"gardener.cloud/role":     "logging",
+			v1beta1constants.LabelApp:   v1beta1constants.DaemonSetNameFluentBit,
+			v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging,
 		})
-	if err != nil || len(daemonSetList.Items) == 0 {
-		return "", fmt.Errorf("fluent-bit daemonset not found")
+	if err != nil {
+		return nil, err
 	}
-	return daemonSetList.Items[0].Name, nil
+	if len(daemonSetList.Items) == 0 {
+		return nil, fmt.Errorf("fluent-bit daemonset not found")
+	}
+
+	return daemonSetList.Items[0].DeepCopy(), nil
 }
