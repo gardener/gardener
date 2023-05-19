@@ -41,8 +41,7 @@ import (
 // Checks whether required logging resources are present.
 // If not, probably the logging feature gate is not enabled.
 func hasRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interface) (bool, error) {
-	fluentBit := &appsv1.DaemonSet{}
-	if err := k8sSeedClient.Client().Get(ctx, client.ObjectKey{Namespace: garden, Name: fluentBitName}, fluentBit); err != nil {
+	if _, err := getFluentBitDaemonSet(ctx, k8sSeedClient); err != nil {
 		return false, err
 	}
 
@@ -101,7 +100,7 @@ func WaitUntilValiReceivesLogs(ctx context.Context, interval time.Duration, f *f
 		defer dumpLogsCancel()
 
 		f.Logger.Info("Dump Vali logs")
-		if dumpError := f.DumpLogsForPodInNamespace(dumpLogsCtx, c, valiNamespace, "vali-0"); dumpError != nil {
+		if dumpError := f.DumpLogsForPodInNamespace(dumpLogsCtx, c, valiNamespace, "vali-0", &corev1.PodLogOptions{Container: "vali"}); dumpError != nil {
 			f.Logger.Error(dumpError, "Error dumping logs for pod")
 		}
 
@@ -140,6 +139,12 @@ func getCluster(number int) *extensionsv1alpha1.Cluster {
 				Enabled: pointer.Bool(false),
 			},
 			Purpose: (*gardencorev1beta1.ShootPurpose)(pointer.String("evaluation")),
+		},
+		Status: gardencorev1beta1.ShootStatus{
+			LastOperation: &gardencorev1beta1.LastOperation{
+				Progress: 100,
+				Type:     gardencorev1beta1.LastOperationTypeReconcile,
+			},
 		},
 	}
 
