@@ -130,8 +130,10 @@ func (r *Reconciler) reconcile(
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+	if len(istio.GetValues().IngressGateway) != 1 {
+		return reconcile.Result{}, fmt.Errorf("exactly one Istio Ingress Gateway is required")
+	}
 	kubeAPIServerSNI := r.newSNI(garden, istio.GetValues().IngressGateway[0])
-
 	// virtual garden control plane components
 	etcdMain, err := r.newEtcd(log, garden, secretsManager, v1beta1constants.ETCDRoleMain, etcd.ClassImportant)
 	if err != nil {
@@ -141,7 +143,7 @@ func (r *Reconciler) reconcile(
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	kubeAPIServerService := r.newKubeAPIServerService(log, garden)
+	kubeAPIServerService := r.newKubeAPIServerService(log, garden, istio.GetValues().IngressGateway[0])
 	kubeAPIServer, err := r.newKubeAPIServer(ctx, garden, secretsManager, targetVersion)
 	if err != nil {
 		return reconcile.Result{}, err

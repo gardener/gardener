@@ -234,7 +234,7 @@ func (r *Reconciler) newEtcd(
 	), nil
 }
 
-func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1alpha1.Garden) component.DeployWaiter {
+func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1alpha1.Garden, istioValues istio.IngressGatewayValues) component.DeployWaiter {
 	var (
 		annotations map[string]string
 		clusterIP   string
@@ -260,9 +260,8 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 		func() client.ObjectKey {
 			return client.ObjectKey{Name: namePrefix + v1beta1constants.DeploymentNameKubeAPIServer, Namespace: r.GardenNamespace}
 		},
-		// TODO(timuthy): This function should return the Istio-Ingress service as soon as the Kube-Apiserver LoadBalancer service was switched to 'ClusterIP'. This is planned for release v1.73.
 		func() client.ObjectKey {
-			return client.ObjectKey{Name: namePrefix + v1beta1constants.DeploymentNameKubeAPIServer, Namespace: r.GardenNamespace}
+			return client.ObjectKey{Name: v1beta1constants.DefaultSNIIngressServiceName, Namespace: istioValues.Namespace}
 		},
 		nil,
 		nil,

@@ -78,6 +78,10 @@ var _ = Describe("#SNI", func() {
 		Expect(istionetworkingv1beta1.AddToScheme(s)).To(Succeed())
 		Expect(istionetworkingv1alpha3.AddToScheme(s)).To(Succeed())
 		c = fake.NewClientBuilder().WithScheme(s).Build()
+		apiServerProxyValues = &APIServerProxy{
+			APIServerClusterIP: "1.1.1.1",
+			NamespaceUID:       namespaceUID,
+		}
 
 		var err error
 		applier, err = test.NewTestApplier(c, &fakediscovery.FakeDiscovery{
@@ -242,27 +246,23 @@ var _ = Describe("#SNI", func() {
 		}
 
 		Context("when APIServer Proxy is configured", func() {
-			BeforeEach(func() {
-				apiServerProxyValues = &APIServerProxy{
-					APIServerClusterIP: "1.1.1.1",
-					NamespaceUID:       namespaceUID,
-				}
-			})
-
 			It("should succeed deploying", func() {
 				test()
 			})
 		})
 
 		Context("when APIServer Proxy is not configured", func() {
+			BeforeEach(func() {
+				apiServerProxyValues = nil
+			})
+
 			It("should succeed deploying", func() {
 				test()
 			})
 		})
-
 	})
 
-	It("should succeed  destroying", func() {
+	It("should succeed destroying", func() {
 		Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 		Expect(c.Get(ctx, kubernetesutils.Key(expectedDestinationRule.Namespace, expectedDestinationRule.Name), &istionetworkingv1beta1.DestinationRule{})).To(Succeed())

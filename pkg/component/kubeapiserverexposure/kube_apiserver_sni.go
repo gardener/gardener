@@ -32,7 +32,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -50,12 +49,11 @@ var (
 )
 
 func init() {
-	var err error
-	envoyFilterSpecTemplate, err = template.
+	envoyFilterSpecTemplate = template.Must(template.
 		New("envoy-filter-spec").
 		Funcs(sprig.TxtFuncMap()).
-		Parse(envoyFilterSpecTemplateContent)
-	utilruntime.Must(err)
+		Parse(envoyFilterSpecTemplateContent),
+	)
 }
 
 // SNIValues configure the kube-apiserver service SNI.

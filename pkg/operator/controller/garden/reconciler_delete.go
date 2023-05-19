@@ -93,8 +93,11 @@ func (r *Reconciler) delete(
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+	if len(istio.GetValues().IngressGateway) != 1 {
+		return reconcile.Result{}, fmt.Errorf("exactly one Istio Ingress Gateway is required")
+	}
 	kubeAPIServerSNI := r.newSNI(garden, istio.GetValues().IngressGateway[0])
-	kubeAPIServerService := r.newKubeAPIServerService(log, garden)
+	kubeAPIServerService := r.newKubeAPIServerService(log, garden, istio.GetValues().IngressGateway[0])
 	kubeAPIServer, err := r.newKubeAPIServer(ctx, garden, secretsManager, targetVersion)
 	if err != nil {
 		return reconcile.Result{}, err

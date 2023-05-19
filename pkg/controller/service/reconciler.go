@@ -34,7 +34,6 @@ var (
 	keyIstioIngressGatewayZone1         = client.ObjectKey{Namespace: "istio-ingress--1", Name: "istio-ingressgateway"}
 	keyIstioIngressGatewayZone2         = client.ObjectKey{Namespace: "istio-ingress--2", Name: "istio-ingressgateway"}
 	keyNginxIngress                     = client.ObjectKey{Namespace: "garden", Name: "nginx-ingress-controller"}
-	keyVirtualGardenKubeAPIServer       = client.ObjectKey{Namespace: "garden", Name: "virtual-garden-kube-apiserver"}
 	keyVirtualGardenIstioIngressGateway = client.ObjectKey{Namespace: "virtual-garden-istio-ingress", Name: "istio-ingressgateway"}
 )
 
@@ -95,8 +94,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			ip = r.Zone2IP
 		case key == keyNginxIngress && servicePort.Name == "https":
 			service.Spec.Ports[i].NodePort = nodePortIngress
-			ip = r.HostIP
-		case key == keyVirtualGardenKubeAPIServer && servicePort.Name == "kube-apiserver":
 			ip = r.HostIP
 		}
 	}
