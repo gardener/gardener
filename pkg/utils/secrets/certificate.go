@@ -72,8 +72,9 @@ type CertificateSecretConfig struct {
 	SigningCA *Certificate
 	PKCS      int
 
-	Validity                    *time.Duration
-	SkipPublishingCACertificate bool
+	Validity                          *time.Duration
+	SkipPublishingCACertificate       bool
+	IncludeCACertificateInServerChain bool
 }
 
 // Certificate contains the private key, and the certificate. It does also contain the CA certificate
@@ -81,8 +82,10 @@ type CertificateSecretConfig struct {
 type Certificate struct {
 	Name string
 
-	CA                          *Certificate
-	SkipPublishingCACertificate bool
+	CA                                *Certificate
+	CertType                          CertType
+	SkipPublishingCACertificate       bool
+	IncludeCACertificateInServerChain bool
 
 	PrivateKey    *rsa.PrivateKey
 	PrivateKeyPEM []byte
@@ -104,9 +107,11 @@ func (s *CertificateSecretConfig) Generate() (DataInterface, error) {
 // GenerateCertificate is the same as Generate but returns a *Certificate instead of the DataInterface.
 func (s *CertificateSecretConfig) GenerateCertificate() (*Certificate, error) {
 	certificateObj := &Certificate{
-		Name:                        s.Name,
-		CA:                          s.SigningCA,
-		SkipPublishingCACertificate: s.SkipPublishingCACertificate,
+		Name:                              s.Name,
+		CA:                                s.SigningCA,
+		CertType:                          s.CertType,
+		SkipPublishingCACertificate:       s.SkipPublishingCACertificate,
+		IncludeCACertificateInServerChain: s.IncludeCACertificateInServerChain,
 	}
 
 	// If no cert type is given then we only return a certificate object that contains the CA.
@@ -162,11 +167,17 @@ func (c *Certificate) SecretData() map[string][]byte {
 		// compatibility).
 		data[DataKeyCertificateCA] = c.CertificatePEM
 		data[DataKeyPrivateKeyCA] = c.PrivateKeyPEM
+
 	case c.CA != nil:
-		// The certificate is not a CA certificate, so we add the signing CA certificate to it and use different
-		// keys in the secret data.
+		cert := c.CertificatePEM
+		if c.CertType == ServerCert && c.IncludeCACertificateInServerChain {
+			cert = make([]byte, 0, len(c.CA.CertificatePEM)+len(c.CertificatePEM))
+			cert = append(cert, c.CertificatePEM...)
+			cert = append(cert, c.CA.CertificatePEM...)
+		}
+
+		data[DataKeyCertificate] = cert
 		data[DataKeyPrivateKey] = c.PrivateKeyPEM
-		data[DataKeyCertificate] = c.CertificatePEM
 		if !c.SkipPublishingCACertificate {
 			data[DataKeyCertificateCA] = c.CA.CertificatePEM
 		}
