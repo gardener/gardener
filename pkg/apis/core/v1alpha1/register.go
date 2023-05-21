@@ -49,8 +49,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&CloudProfile{},
 		&CloudProfileList{},
-		&Project{},
-		&ProjectList{},
 		&Seed{},
 		&SeedList{},
 	)
