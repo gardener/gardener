@@ -53,8 +53,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ProjectList{},
 		&Quota{},
 		&QuotaList{},
-		&SecretBinding{},
-		&SecretBindingList{},
 		&Seed{},
 		&SeedList{},
 		&ShootState{},

@@ -73,9 +73,6 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	quotaStorage := quotastore.NewStorage(restOptionsGetter)
 	storage["quotas"] = quotaStorage.Quota
 
-	secretBindingStorage := secretbindingstore.NewStorage(restOptionsGetter)
-	storage["secretbindings"] = secretBindingStorage.SecretBinding
-
 	seedStorage := seedstore.NewStorage(restOptionsGetter)
 	storage["seeds"] = seedStorage.Seed
 	storage["seeds/status"] = seedStorage.Status

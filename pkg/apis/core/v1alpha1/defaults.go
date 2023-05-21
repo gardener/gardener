@@ -33,19 +33,6 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 	return RegisterDefaults(scheme)
 }
 
-// SetDefaults_SecretBinding sets default values for SecretBinding objects.
-func SetDefaults_SecretBinding(obj *SecretBinding) {
-	if len(obj.SecretRef.Namespace) == 0 {
-		obj.SecretRef.Namespace = obj.Namespace
-	}
-
-	for i, quota := range obj.Quotas {
-		if len(quota.Namespace) == 0 {
-			obj.Quotas[i].Namespace = obj.Namespace
-		}
-	}
-}
-
 // SetDefaults_Seed sets default values for Seed objects.
 func SetDefaults_Seed(obj *Seed) {
 	if obj.Spec.Settings == nil {
