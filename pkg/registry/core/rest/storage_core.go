@@ -63,10 +63,6 @@ func (p StorageProvider) GroupName() string {
 func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGetter) map[string]rest.Storage {
 	storage := map[string]rest.Storage{}
 
-	backupEntryStorage := backupentrystore.NewStorage(restOptionsGetter)
-	storage["backupentries"] = backupEntryStorage.BackupEntry
-	storage["backupentries/status"] = backupEntryStorage.Status
-
 	cloudprofileStorage := cloudprofilestore.NewStorage(restOptionsGetter)
 	storage["cloudprofiles"] = cloudprofileStorage.CloudProfile
 

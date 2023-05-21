@@ -47,8 +47,6 @@ var (
 // Adds the list of known types to the given scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&BackupEntry{},
-		&BackupEntryList{},
 		&CloudProfile{},
 		&CloudProfileList{},
 		&ControllerRegistration{},
