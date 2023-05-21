@@ -53,8 +53,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ProjectList{},
 		&Seed{},
 		&SeedList{},
-		&ShootState{},
-		&ShootStateList{},
 		&Shoot{},
 		&ShootList{},
 	)

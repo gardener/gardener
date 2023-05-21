@@ -74,9 +74,6 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	storage["seeds"] = seedStorage.Seed
 	storage["seeds/status"] = seedStorage.Status
 
-	shootStateStorage := shootstatestore.NewStorage(restOptionsGetter)
-	storage["shootstates"] = shootStateStorage.ShootState
-
 	shootStorage := shootstore.NewStorage(restOptionsGetter, shootStateStorage.ShootState.Store, p.AdminKubeconfigMaxExpiration, p.CredentialsRotationInterval)
 	storage["shoots"] = shootStorage.Shoot
 	storage["shoots/status"] = shootStorage.Status
