@@ -69,10 +69,6 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	controllerRegistrationStorage := controllerregistrationstore.NewStorage(restOptionsGetter)
 	storage["controllerregistrations"] = controllerRegistrationStorage.ControllerRegistration
 
-	controllerInstallationStorage := controllerinstallationstore.NewStorage(restOptionsGetter)
-	storage["controllerinstallations"] = controllerInstallationStorage.ControllerInstallation
-	storage["controllerinstallations/status"] = controllerInstallationStorage.Status
-
 	exposureClassStorage := exposureclassstore.NewStorage(restOptionsGetter)
 	storage["exposureclasses"] = exposureClassStorage.ExposureClass
 

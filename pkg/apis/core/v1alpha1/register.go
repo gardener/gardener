@@ -51,8 +51,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&CloudProfileList{},
 		&ControllerRegistration{},
 		&ControllerRegistrationList{},
-		&ControllerInstallation{},
-		&ControllerInstallationList{},
 		&ExposureClass{},
 		&ExposureClassList{},
 		&Project{},
