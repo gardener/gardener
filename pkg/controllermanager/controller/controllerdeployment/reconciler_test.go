@@ -25,7 +25,6 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -72,7 +71,7 @@ var _ = Describe("Controller", func() {
 	})
 
 	It("should return nil because object is not found", func() {
-		Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(controllerDeployment), &gardencorev1alpha1.ControllerDeployment{})).To(BeNotFoundError())
+		Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(controllerDeployment), &gardencorev1beta1.ControllerDeployment{})).To(BeNotFoundError())
 
 		result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerDeploymentName}})
 		Expect(result).To(Equal(reconcile.Result{}))

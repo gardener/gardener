@@ -66,9 +66,6 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	cloudprofileStorage := cloudprofilestore.NewStorage(restOptionsGetter)
 	storage["cloudprofiles"] = cloudprofileStorage.CloudProfile
 
-	controllerDeploymentStorage := controllerdeploymentstore.NewStorage(restOptionsGetter)
-	storage["controllerdeployments"] = controllerDeploymentStorage.ControllerDeployment
-
 	controllerRegistrationStorage := controllerregistrationstore.NewStorage(restOptionsGetter)
 	storage["controllerregistrations"] = controllerRegistrationStorage.ControllerRegistration
 
