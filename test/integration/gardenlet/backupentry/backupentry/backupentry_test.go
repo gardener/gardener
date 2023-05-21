@@ -158,7 +158,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 
 		By("Ensure manager cache observes BackupBucket creation")
 		Eventually(func() error {
-			return mgrClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), &gardencorev1alpha1.BackupBucket{})
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), &gardencorev1beta1.BackupBucket{})
 		}).Should(Succeed())
 
 		DeferCleanup(func() {

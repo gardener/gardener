@@ -54,18 +54,6 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 	}
 
 	// Add non-generated conversion functions
-	if err := scheme.AddConversionFunc((*BackupBucket)(nil), (*core.BackupBucket)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_BackupBucket_To_core_BackupBucket(a.(*BackupBucket), b.(*core.BackupBucket), scope)
-	}); err != nil {
-		return err
-	}
-
-	if err := scheme.AddConversionFunc((*BackupBucketSpec)(nil), (*core.BackupBucketSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_BackupBucketSpec_To_core_BackupBucketSpec(a.(*BackupBucketSpec), b.(*core.BackupBucketSpec), scope)
-	}); err != nil {
-		return err
-	}
-
 	if err := scheme.AddConversionFunc((*BackupEntry)(nil), (*core.BackupEntry)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_BackupEntry_To_core_BackupEntry(a.(*BackupEntry), b.(*core.BackupEntry), scope)
 	}); err != nil {
@@ -98,18 +86,6 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 
 	if err := scheme.AddConversionFunc((*ShootStatus)(nil), (*core.ShootStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_ShootStatus_To_core_ShootStatus(a.(*ShootStatus), b.(*core.ShootStatus), scope)
-	}); err != nil {
-		return err
-	}
-
-	if err := scheme.AddConversionFunc((*core.BackupBucket)(nil), (*BackupBucket)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_core_BackupBucket_To_v1alpha1_BackupBucket(a.(*core.BackupBucket), b.(*BackupBucket), scope)
-	}); err != nil {
-		return err
-	}
-
-	if err := scheme.AddConversionFunc((*core.BackupBucketSpec)(nil), (*BackupBucketSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_core_BackupBucketSpec_To_v1alpha1_BackupBucketSpec(a.(*core.BackupBucketSpec), b.(*BackupBucketSpec), scope)
 	}); err != nil {
 		return err
 	}
@@ -150,34 +126,6 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 		return err
 	}
 	return nil
-}
-
-func Convert_v1alpha1_BackupBucket_To_core_BackupBucket(in *BackupBucket, out *core.BackupBucket, s conversion.Scope) error {
-	if err := autoConvert_v1alpha1_BackupBucket_To_core_BackupBucket(in, out, s); err != nil {
-		return err
-	}
-
-	out.Spec.SeedName = in.Spec.Seed
-
-	return nil
-}
-
-func Convert_core_BackupBucket_To_v1alpha1_BackupBucket(in *core.BackupBucket, out *BackupBucket, s conversion.Scope) error {
-	if err := autoConvert_core_BackupBucket_To_v1alpha1_BackupBucket(in, out, s); err != nil {
-		return err
-	}
-
-	out.Spec.Seed = in.Spec.SeedName
-
-	return nil
-}
-
-func Convert_core_BackupBucketSpec_To_v1alpha1_BackupBucketSpec(in *core.BackupBucketSpec, out *BackupBucketSpec, s conversion.Scope) error {
-	return autoConvert_core_BackupBucketSpec_To_v1alpha1_BackupBucketSpec(in, out, s)
-}
-
-func Convert_v1alpha1_BackupBucketSpec_To_core_BackupBucketSpec(in *BackupBucketSpec, out *core.BackupBucketSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha1_BackupBucketSpec_To_core_BackupBucketSpec(in, out, s)
 }
 
 func Convert_v1alpha1_BackupEntry_To_core_BackupEntry(in *BackupEntry, out *core.BackupEntry, s conversion.Scope) error {
