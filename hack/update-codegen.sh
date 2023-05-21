@@ -46,7 +46,7 @@ core_groups() {
     github.com/gardener/gardener/pkg/client/core \
     github.com/gardener/gardener/pkg/apis \
     github.com/gardener/gardener/pkg/apis \
-    "core:v1alpha1,v1beta1" \
+    "core:v1beta1" \
     -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
 
   bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
@@ -54,7 +54,7 @@ core_groups() {
     github.com/gardener/gardener/pkg/client/core \
     github.com/gardener/gardener/pkg/apis \
     github.com/gardener/gardener/pkg/apis \
-    "core:v1alpha1,v1beta1" \
+    "core:v1beta1" \
     -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
 }
 export -f core_groups
@@ -428,7 +428,6 @@ openapi_definitions() {
     --v 1 \
     --logtostderr \
     --input-dirs=github.com/gardener/gardener/pkg/apis/authentication/v1alpha1 \
-    --input-dirs=github.com/gardener/gardener/pkg/apis/core/v1alpha1 \
     --input-dirs=github.com/gardener/gardener/pkg/apis/core/v1beta1 \
     --input-dirs=github.com/gardener/gardener/pkg/apis/settings/v1alpha1 \
     --input-dirs=github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1 \
