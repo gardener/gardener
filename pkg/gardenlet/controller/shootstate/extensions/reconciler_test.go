@@ -31,7 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shootstate/extensions"
@@ -76,7 +75,6 @@ var _ = Describe("Reconciler", func() {
 
 	BeforeEach(func() {
 		gardenScheme := runtime.NewScheme()
-		Expect(gardencorev1alpha1.AddToScheme(gardenScheme)).NotTo(HaveOccurred())
 		Expect(gardencorev1beta1.AddToScheme(gardenScheme)).NotTo(HaveOccurred())
 		fakeGardenClient = fake.NewClientBuilder().WithScheme(gardenScheme).Build()
 

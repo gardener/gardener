@@ -35,7 +35,6 @@ import (
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed"
 	graphpkg "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed/graph"
 	mockgraph "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed/graph/mock"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
@@ -858,7 +857,7 @@ var _ = Describe("Seed", func() {
 				attrs = &auth.AttributesRecord{
 					User:            seedUser,
 					Name:            exposureClassName,
-					APIGroup:        gardencorev1alpha1.SchemeGroupVersion.Group,
+					APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
 					Resource:        "exposureclasses",
 					ResourceRequest: true,
 					Verb:            "get",

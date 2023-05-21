@@ -19,13 +19,11 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 var (
 	localSchemeBuilder = runtime.SchemeBuilder{
-		v1alpha1.AddToScheme,
 		v1beta1.AddToScheme,
 	}
 	// AddToScheme adds all versioned API types to the given scheme.
@@ -35,8 +33,7 @@ var (
 // Install registers the API group and adds types to a scheme.
 func Install(scheme *runtime.Scheme) {
 	utilruntime.Must(core.AddToScheme(scheme))
-	utilruntime.Must(v1alpha1.AddToScheme(scheme))
 	utilruntime.Must(v1beta1.AddToScheme(scheme))
 
-	utilruntime.Must(scheme.SetVersionPriority(v1beta1.SchemeGroupVersion, v1alpha1.SchemeGroupVersion))
+	utilruntime.Must(scheme.SetVersionPriority(v1beta1.SchemeGroupVersion))
 }
