@@ -17,7 +17,6 @@ package v1alpha1
 
 import (
 	"fmt"
-	"unsafe"
 
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -72,12 +71,6 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 		return err
 	}
 
-	if err := scheme.AddConversionFunc((*ShootStatus)(nil), (*core.ShootStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_ShootStatus_To_core_ShootStatus(a.(*ShootStatus), b.(*core.ShootStatus), scope)
-	}); err != nil {
-		return err
-	}
-
 	if err := scheme.AddConversionFunc((*core.Seed)(nil), (*Seed)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_core_Seed_To_v1alpha1_Seed(a.(*core.Seed), b.(*Seed), scope)
 	}); err != nil {
@@ -96,11 +89,6 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 		return err
 	}
 
-	if err := scheme.AddConversionFunc((*core.ShootStatus)(nil), (*ShootStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_core_ShootStatus_To_v1alpha1_ShootStatus(a.(*core.ShootStatus), b.(*ShootStatus), scope)
-	}); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -142,49 +130,6 @@ func Convert_v1alpha1_SeedNetworks_To_core_SeedNetworks(in *SeedNetworks, out *c
 
 func Convert_core_SeedStatus_To_v1alpha1_SeedStatus(in *core.SeedStatus, out *SeedStatus, s conversion.Scope) error {
 	return autoConvert_core_SeedStatus_To_v1alpha1_SeedStatus(in, out, s)
-}
-
-func Convert_core_ShootStatus_To_v1alpha1_ShootStatus(in *core.ShootStatus, out *ShootStatus, s conversion.Scope) error {
-	if err := autoConvert_core_ShootStatus_To_v1alpha1_ShootStatus(in, out, s); err != nil {
-		return err
-	}
-
-	if len(in.LastErrors) != 0 {
-		out.LastError = (*LastError)(unsafe.Pointer(&in.LastErrors[0]))
-		if len(in.LastErrors) > 1 {
-			lastErrors := in.LastErrors[1:]
-			out.LastErrors = *(*[]LastError)(unsafe.Pointer(&lastErrors))
-		} else {
-			out.LastErrors = nil
-		}
-	}
-
-	out.Seed = in.SeedName
-
-	return nil
-}
-
-func Convert_v1alpha1_ShootStatus_To_core_ShootStatus(in *ShootStatus, out *core.ShootStatus, s conversion.Scope) error {
-	if err := autoConvert_v1alpha1_ShootStatus_To_core_ShootStatus(in, out, s); err != nil {
-		return err
-	}
-
-	if in.LastError != nil {
-		outLastErrors := []core.LastError{
-			{
-				Description:    in.LastError.Description,
-				Codes:          *(*[]core.ErrorCode)(unsafe.Pointer(&in.LastError.Codes)),
-				LastUpdateTime: in.LastError.LastUpdateTime,
-			},
-		}
-		out.LastErrors = append(outLastErrors, *(*[]core.LastError)(unsafe.Pointer(&in.LastErrors))...)
-	} else {
-		out.LastErrors = nil
-	}
-
-	out.SeedName = in.Seed
-
-	return nil
 }
 
 func Convert_v1alpha1_ProjectSpec_To_core_ProjectSpec(in *ProjectSpec, out *core.ProjectSpec, s conversion.Scope) error {

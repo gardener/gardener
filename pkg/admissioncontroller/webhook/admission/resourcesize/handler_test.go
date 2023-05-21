@@ -40,7 +40,6 @@ import (
 
 	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/resourcesize"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
 )
@@ -126,19 +125,6 @@ var _ = Describe("handler", func() {
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Shoot",
 					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "garden-my-project",
-					Name:      "my-shoot",
-				},
-			}
-		}
-
-		shootv1alpha1 = func() runtime.Object {
-			return &gardencorev1alpha1.Shoot{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Shoot",
-					APIVersion: gardencorev1alpha1.SchemeGroupVersion.String(),
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "garden-my-project",
@@ -269,27 +255,12 @@ var _ = Describe("handler", func() {
 		test(shootv1beta1, restrictedUser, true)
 	})
 
-	It("should fail because size is not in range for v1alpha1 shoot and mode is nil", func() {
-		test(shootv1alpha1, restrictedUser, false)
-		Eventually(logBuffer).Should(gbytes.Say("Maximum resource size exceeded"))
+	It("should pass because of unrestricted user", func() {
+		test(shootv1beta1, unrestrictedUser, true)
 	})
 
-	It("should fail because size is not in range for v1alpha1 shoot and mode is block", func() {
-		cfg := config()
-		blockMode := admissioncontrollerconfig.ResourceAdmissionWebhookMode("block")
-		cfg.OperationMode = &blockMode
-		handler = &Handler{Logger: log, Config: config()}
-
-		test(shootv1alpha1, restrictedUser, false)
-		Eventually(logBuffer).Should(gbytes.Say("Maximum resource size exceeded"))
-	})
-
-	It("should pass but log because size is not in range for v1alpha1 shoot and mode is log", func() {
-		mode := admissioncontrollerconfig.ResourceAdmissionWebhookMode("log")
-		handler.Config.OperationMode = &mode
-
-		test(shootv1alpha1, restrictedUser, true)
-		Eventually(logBuffer).Should(gbytes.Say("Maximum resource size exceeded"))
+	It("should pass because of unrestricted group", func() {
+		test(shootv1beta1, unrestrictedGroup, true)
 	})
 
 	It("should pass because size is in range for secret", func() {
