@@ -32,8 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/ratelimiter"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -48,7 +46,7 @@ import (
 const (
 	// finalizerName is the Kubernetes finalizerName that is used to control the cleanup of
 	// Bastion resources in the seed cluster.
-	finalizerName = gardencorev1alpha1.GardenerName
+	finalizerName = gardencorev1beta1.GardenerName
 )
 
 // RequeueDurationWhenResourceDeletionStillPresent is the duration used for requeueing when owned resources are still in
@@ -170,7 +168,7 @@ func (r *Reconciler) reconcileBastion(
 		message := fmt.Sprintf("Error while waiting for %s %s/%s to become ready", extensionsv1alpha1.BastionResource, extensionBastion.Namespace, extensionBastion.Name)
 		err := fmt.Errorf("%s: %w", message, lastObservedError)
 
-		if patchErr := patchReadyCondition(gardenCtx, r.GardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
+		if patchErr := patchReadyCondition(gardenCtx, r.GardenClient, r.Clock, bastion, gardencorev1beta1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
 			log.Error(patchErr, "Failed patching ready condition")
 		}
 	}
@@ -183,7 +181,7 @@ func (r *Reconciler) reconcileBastion(
 			extensionBastion.Spec = extensionBastionSpec
 			return nil
 		}); err != nil {
-			if patchErr := patchReadyCondition(gardenCtx, r.GardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
+			if patchErr := patchReadyCondition(gardenCtx, r.GardenClient, r.Clock, bastion, gardencorev1beta1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
 				log.Error(patchErr, "Failed patching ready condition")
 			}
 			return fmt.Errorf("failed to ensure bastion extension resource: %w", err)
@@ -195,7 +193,7 @@ func (r *Reconciler) reconcileBastion(
 	if extensionBastion.Status.LastOperation != nil && extensionBastion.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
 		// copy over the extension's status to the operation bastion and set the condition
 		patch := client.MergeFrom(bastion.DeepCopy())
-		setReadyCondition(bastion, gardencorev1alpha1.ConditionTrue, "SuccessfullyReconciled", "The bastion has been reconciled successfully.")
+		setReadyCondition(r.Clock, bastion, gardencorev1beta1.ConditionTrue, "SuccessfullyReconciled", "The bastion has been reconciled successfully.")
 		bastion.Status.Ingress = extensionBastion.Status.Ingress.DeepCopy()
 		bastion.Status.ObservedGeneration = &bastion.Generation
 		if err := r.GardenClient.Status().Patch(gardenCtx, bastion, patch); err != nil {
@@ -217,7 +215,7 @@ func (r *Reconciler) cleanupBastion(
 		return nil
 	}
 
-	if err := patchReadyCondition(gardenCtx, r.GardenClient, bastion, gardencorev1alpha1.ConditionFalse, "DeletionInProgress", "The bastion is being deleted."); err != nil {
+	if err := patchReadyCondition(gardenCtx, r.GardenClient, r.Clock, bastion, gardencorev1beta1.ConditionFalse, "DeletionInProgress", "The bastion is being deleted."); err != nil {
 		return fmt.Errorf("failed patching ready condition of Bastion: %w", err)
 	}
 
@@ -256,16 +254,16 @@ func newBastionExtension(bastion *operationsv1alpha1.Bastion, shoot *gardencorev
 	}
 }
 
-func setReadyCondition(bastion *operationsv1alpha1.Bastion, status gardencorev1alpha1.ConditionStatus, reason string, message string) {
-	condition := v1alpha1helper.GetOrInitCondition(bastion.Status.Conditions, operationsv1alpha1.BastionReady)
-	condition = v1alpha1helper.UpdatedCondition(condition, status, reason, message)
+func setReadyCondition(clock clock.Clock, bastion *operationsv1alpha1.Bastion, status gardencorev1beta1.ConditionStatus, reason string, message string) {
+	condition := v1beta1helper.GetOrInitConditionWithClock(clock, bastion.Status.Conditions, operationsv1alpha1.BastionReady)
+	condition = v1beta1helper.UpdatedConditionWithClock(clock, condition, status, reason, message)
 
-	bastion.Status.Conditions = v1alpha1helper.MergeConditions(bastion.Status.Conditions, condition)
+	bastion.Status.Conditions = v1beta1helper.MergeConditions(bastion.Status.Conditions, condition)
 }
 
-func patchReadyCondition(ctx context.Context, c client.StatusClient, bastion *operationsv1alpha1.Bastion, status gardencorev1alpha1.ConditionStatus, reason string, message string) error {
+func patchReadyCondition(ctx context.Context, c client.StatusClient, clock clock.Clock, bastion *operationsv1alpha1.Bastion, status gardencorev1beta1.ConditionStatus, reason string, message string) error {
 	patch := client.MergeFrom(bastion.DeepCopy())
-	setReadyCondition(bastion, status, reason, message)
+	setReadyCondition(clock, bastion, status, reason, message)
 	return c.Status().Patch(ctx, bastion, patch)
 }
 

@@ -19,13 +19,13 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 const (
 	// BastionReady is a condition type for indicating whether the bastion has been
 	// successfully reconciled on the seed cluster and is available to be used.
-	BastionReady gardencorev1alpha1.ConditionType = "BastionReady"
+	BastionReady gardencorev1beta1.ConditionType = "BastionReady"
 )
 
 // +genclient
@@ -87,7 +87,7 @@ type BastionStatus struct {
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +optional
-	Conditions []gardencorev1alpha1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,2,rep,name=conditions"`
+	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,2,rep,name=conditions"`
 	// LastHeartbeatTimestamp is the time when the bastion was last marked as
 	// not to be deleted. When this is set, the ExpirationTimestamp is advanced
 	// as well.
