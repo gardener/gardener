@@ -25,7 +25,7 @@ import (
 	unsafe "unsafe"
 
 	core "github.com/gardener/gardener/pkg/apis/core"
-	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operations "github.com/gardener/gardener/pkg/apis/operations"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -211,7 +211,7 @@ func Convert_v1alpha1_BastionStatus_To_operations_BastionStatus(in *BastionStatu
 
 func autoConvert_operations_BastionStatus_To_v1alpha1_BastionStatus(in *operations.BastionStatus, out *BastionStatus, s conversion.Scope) error {
 	out.Ingress = (*v1.LoadBalancerIngress)(unsafe.Pointer(in.Ingress))
-	out.Conditions = *(*[]corev1alpha1.Condition)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*[]v1beta1.Condition)(unsafe.Pointer(&in.Conditions))
 	out.LastHeartbeatTimestamp = (*metav1.Time)(unsafe.Pointer(in.LastHeartbeatTimestamp))
 	out.ExpirationTimestamp = (*metav1.Time)(unsafe.Pointer(in.ExpirationTimestamp))
 	out.ObservedGeneration = (*int64)(unsafe.Pointer(in.ObservedGeneration))

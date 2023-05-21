@@ -300,9 +300,7 @@ Kubernetes core/v1.LoadBalancerIngress
 <td>
 <code>conditions</code></br>
 <em>
-<a href="./core.md#core.gardener.cloud/v1alpha1.Condition">
-[]github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition
-</a>
+[]github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition
 </em>
 </td>
 <td>
