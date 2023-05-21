@@ -63,9 +63,6 @@ func (p StorageProvider) GroupName() string {
 func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGetter) map[string]rest.Storage {
 	storage := map[string]rest.Storage{}
 
-	cloudprofileStorage := cloudprofilestore.NewStorage(restOptionsGetter)
-	storage["cloudprofiles"] = cloudprofileStorage.CloudProfile
-
 	return storage
 }
 

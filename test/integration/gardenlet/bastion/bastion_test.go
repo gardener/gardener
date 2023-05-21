@@ -229,7 +229,7 @@ var _ = Describe("Bastion controller tests", func() {
 					Object: seed,
 				},
 				CloudProfile: runtime.RawExtension{
-					Object: &gardencorev1alpha1.CloudProfile{},
+					Object: &gardencorev1beta1.CloudProfile{},
 				},
 			},
 		}
