@@ -51,8 +51,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&CloudProfileList{},
 		&Project{},
 		&ProjectList{},
-		&Quota{},
-		&QuotaList{},
 		&Seed{},
 		&SeedList{},
 		&ShootState{},

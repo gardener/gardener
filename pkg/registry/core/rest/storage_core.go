@@ -70,9 +70,6 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	storage["projects"] = projectStorage.Project
 	storage["projects/status"] = projectStorage.Status
 
-	quotaStorage := quotastore.NewStorage(restOptionsGetter)
-	storage["quotas"] = quotaStorage.Quota
-
 	seedStorage := seedstore.NewStorage(restOptionsGetter)
 	storage["seeds"] = seedStorage.Seed
 	storage["seeds/status"] = seedStorage.Status
