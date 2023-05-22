@@ -133,7 +133,9 @@ func (i *infrastructure) deploy(ctx context.Context, operation string) (extensio
 	}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, i.infrastructure, func() error {
-		if i.values.AnnotateOperation || i.lastOperationNotSuccessful() {
+		if i.values.AnnotateOperation || i.lastOperationNotSuccessful() || i.isTimestampInvalidOrAfterLastUpdateTime() {
+			// Check if gardener timestamp is in an invalid format or is after status.LastOperation.LastUpdateTime.
+			// If that is the case health checks for the infrastructure will fail so we request a reconciliation to correct the current state.
 			metav1.SetMetaDataAnnotation(&i.infrastructure.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 			metav1.SetMetaDataAnnotation(&i.infrastructure.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().Format(time.RFC3339Nano))
 		}
@@ -259,4 +261,24 @@ func (i *infrastructure) extractStatus(status extensionsv1alpha1.InfrastructureS
 
 func (i *infrastructure) lastOperationNotSuccessful() bool {
 	return i.infrastructure.Status.LastOperation != nil && i.infrastructure.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded
+}
+
+// isTimestampInvalidOrAfterLastUpdateTime returns true if v1beta1constants.GardenerTimestamp is after status.LastOperation.LastUpdateTime
+// or if v1beta1constants.GardenerTimestamp is in invalid format
+func (i *infrastructure) isTimestampInvalidOrAfterLastUpdateTime() bool {
+	timestamp, ok := i.infrastructure.Annotations[v1beta1constants.GardenerTimestamp]
+	if ok && i.infrastructure.Status.LastOperation != nil {
+		parsedTimestamp, err := time.Parse(time.RFC3339Nano, timestamp)
+		if err != nil {
+			// this should not happen
+			// we cannot do anything meaningful about this error so we mark the timestamp invalid
+			return true
+		}
+
+		if parsedTimestamp.Truncate(time.Second).UTC().After(i.infrastructure.Status.LastOperation.LastUpdateTime.Time.UTC()) {
+			return true
+		}
+	}
+
+	return false
 }
