@@ -224,6 +224,45 @@ var _ = Describe("#Interface", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(deployedInfra).To(DeepEqual(expected))
 		})
+
+		It("should deploy the Infrastructure with operation annotation if gardener timestamp is after status.lastOperation.lastUpdateTime", func() {
+			defer test.WithVars(
+				&infrastructure.TimeNow, mockNow.Do,
+			)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+			existingInfra := expected.DeepCopy()
+			existingInfra.ResourceVersion = ""
+			delete(existingInfra.Annotations, v1beta1constants.GardenerOperation)
+			metav1.SetMetaDataAnnotation(&existingInfra.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(time.Second*10).Format(time.RFC3339Nano))
+			existingInfra.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State:          gardencorev1beta1.LastOperationStateSucceeded,
+				LastUpdateTime: metav1.NewTime(now.UTC()),
+			}
+
+			expected.ResourceVersion = "2"
+			expected.Status = extensionsv1alpha1.InfrastructureStatus{
+				DefaultStatus: extensionsv1alpha1.DefaultStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						State:          gardencorev1beta1.LastOperationStateSucceeded,
+						LastUpdateTime: metav1.NewTime(now.Truncate(time.Second)), // this is also truncated when read from the client later on in the test
+					},
+				},
+			}
+
+			Expect(c.Create(ctx, existingInfra)).To(Succeed())
+			values.AnnotateOperation = false
+			deployWaiter = infrastructure.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+			deployWaiter.SetSSHPublicKey(sshPublicKey)
+			Expect(deployWaiter.Deploy(ctx)).To(Succeed())
+
+			deployedInfra := &extensionsv1alpha1.Infrastructure{ObjectMeta: metav1.ObjectMeta{
+				Name:      existingInfra.Name,
+				Namespace: existingInfra.Namespace,
+			}}
+			err := c.Get(ctx, client.ObjectKeyFromObject(deployedInfra), deployedInfra)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(deployedInfra).To(DeepEqual(expected))
+		})
 	})
 
 	Describe("#Wait", func() {
