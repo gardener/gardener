@@ -2,10 +2,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: istiod
-{{- if .Values.ignoreMode }}
-  annotations:
-    resources.gardener.cloud/mode: Ignore
-{{- end }}
   labels:
 {{ .Values.labels | toYaml | indent 4 }}
 rules:

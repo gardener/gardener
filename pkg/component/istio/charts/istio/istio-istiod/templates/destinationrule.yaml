@@ -3,10 +3,6 @@ kind: DestinationRule
 metadata:
   name: default
   namespace: {{ .Release.Namespace }}
-{{- if .Values.ignoreMode }}
-  annotations:
-    resources.gardener.cloud/mode: Ignore
-{{- end }}
 spec:
   host: "*"
   exportTo:

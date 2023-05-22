@@ -10,6 +10,3 @@ ports:
 portsNames:
   metrics: metrics
 serviceName: istiod
-
-# TODO(rfranzke): To be removed after v1.71 got released. Only required to move istiod assets to separate ManagedResource.
-ignoreMode: false
