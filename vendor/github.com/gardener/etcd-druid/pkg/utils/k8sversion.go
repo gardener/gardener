@@ -23,11 +23,6 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-var (
-	// ConstraintK8sGreaterEqual121 is a version constraint for versions >= 1.21.
-	ConstraintK8sGreaterEqual121 *semver.Constraints
-)
-
 // CompareVersions returns true if the constraint <version1> compared by <operator> to <version2>
 // returns true, and false otherwise.
 // The comparison is based on semantic versions, i.e. <version1> and <version2> will be converted

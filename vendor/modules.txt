@@ -96,10 +96,11 @@ github.com/fsnotify/fsnotify
 ## explicit; go 1.19
 github.com/gardener/dependency-watchdog/api/prober
 github.com/gardener/dependency-watchdog/api/weeder
-# github.com/gardener/etcd-druid v0.15.3
-## explicit; go 1.19
+# github.com/gardener/etcd-druid v0.17.0
+## explicit; go 1.20
 github.com/gardener/etcd-druid/api/v1alpha1
 github.com/gardener/etcd-druid/api/validation
+github.com/gardener/etcd-druid/pkg/common
 github.com/gardener/etcd-druid/pkg/utils
 # github.com/gardener/hvpa-controller/api v0.5.0
 ## explicit; go 1.15

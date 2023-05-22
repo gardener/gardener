@@ -54,25 +54,6 @@ func ValidateEtcdSpec(spec *v1alpha1.EtcdSpec, name, namespace string, path *fie
 		allErrs = append(allErrs, validateStore(spec.Backup.Store, name, namespace, path.Child("backup.store"))...)
 	}
 
-	if spec.Backup.OwnerCheck != nil {
-		ownerCheckPath := path.Child("backup.ownerCheck")
-		if spec.Backup.OwnerCheck.Name == "" {
-			allErrs = append(allErrs, field.Required(ownerCheckPath.Child("name"), "field is required"))
-		}
-		if spec.Backup.OwnerCheck.ID == "" {
-			allErrs = append(allErrs, field.Required(ownerCheckPath.Child("id"), "field is required"))
-		}
-		if spec.Backup.OwnerCheck.Interval != nil {
-			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(spec.Backup.OwnerCheck.Interval.Duration), ownerCheckPath.Child("interval"))...)
-		}
-		if spec.Backup.OwnerCheck.Timeout != nil {
-			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(spec.Backup.OwnerCheck.Timeout.Duration), ownerCheckPath.Child("timeout"))...)
-		}
-		if spec.Backup.OwnerCheck.DNSCacheTTL != nil {
-			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(spec.Backup.OwnerCheck.DNSCacheTTL.Duration), ownerCheckPath.Child("dnsCacheTTL"))...)
-		}
-	}
-
 	return allErrs
 }
 
