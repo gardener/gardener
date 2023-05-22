@@ -20,7 +20,6 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage/names"
 
 	"github.com/gardener/gardener/pkg/api"
@@ -32,13 +31,11 @@ import (
 type Strategy struct {
 	runtime.ObjectTyper
 	names.NameGenerator
-
-	CloudProfiles rest.StandardStorage
 }
 
 // NewStrategy defines the storage strategy for Seeds.
-func NewStrategy(cloudProfiles rest.StandardStorage) Strategy {
-	return Strategy{api.Scheme, names.SimpleNameGenerator, cloudProfiles}
+func NewStrategy() Strategy {
+	return Strategy{api.Scheme, names.SimpleNameGenerator}
 }
 
 // NamespaceScoped returns true if the object must be within a namespace.
@@ -150,8 +147,8 @@ type StatusStrategy struct {
 }
 
 // NewStatusStrategy defines the storage strategy for the status subresource of Seeds.
-func NewStatusStrategy(cloudProfiles rest.StandardStorage) StatusStrategy {
-	return StatusStrategy{NewStrategy(cloudProfiles)}
+func NewStatusStrategy() StatusStrategy {
+	return StatusStrategy{NewStrategy()}
 }
 
 // PrepareForUpdate is invoked on update before validation to normalize
