@@ -37,10 +37,10 @@ func SeedNameFromSeedConfig(seedConfig *config.SeedConfig) string {
 	return seedConfig.SeedTemplate.Name
 }
 
-// OwnerChecksEnabledInSeedConfig returns true if the given seed config is nil or the 'ownerChecks' setting is enabled.
+// OwnerChecksEnabledInSeedConfig returns false if the given seed config is nil or the 'ownerChecks' setting is enabled.
 func OwnerChecksEnabledInSeedConfig(seedConfig *config.SeedConfig) bool {
 	if seedConfig == nil {
-		return true
+		return false
 	}
 	return gardencorehelper.SeedSettingOwnerChecksEnabled(seedConfig.Spec.Settings)
 }

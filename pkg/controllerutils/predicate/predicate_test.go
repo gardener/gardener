@@ -15,25 +15,19 @@
 package predicate_test
 
 import (
-	"context"
-
 	. "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/controllerutils/predicate"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Predicate", func() {
@@ -476,37 +470,6 @@ var _ = Describe("Predicate", func() {
 			newExtensionBackupBucket := extensionBackupBucket.DeepCopy()
 
 			gomega.Expect(p.Update(event.UpdateEvent{ObjectNew: newExtensionBackupBucket, ObjectOld: extensionBackupBucket})).To(gomega.BeFalse())
-		})
-	})
-
-	Describe("#IsBeingMigratedPredicate", func() {
-		var (
-			ctx        = context.TODO()
-			fakeClient client.Client
-			p          predicate.Predicate
-
-			obj      *gardencorev1beta1.BackupEntry
-			seedName = "seed"
-		)
-
-		BeforeEach(func() {
-			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-
-			p = IsBeingMigratedPredicate(fakeClient, seedName, nil)
-			gomega.Expect(inject.StopChannelInto(ctx.Done(), p)).To(gomega.BeTrue())
-
-			DeferCleanup(test.WithVar(&IsObjectBeingMigrated, func(_ context.Context, _ client.Reader, obj client.Object, _ string, _ func(client.Object) (*string, *string)) bool {
-				return false
-			}))
-
-			obj = &gardencorev1beta1.BackupEntry{}
-		})
-
-		It("should call the IsObjectBeingMigrated helper functions", func() {
-			gomega.Expect(p.Create(event.CreateEvent{Object: obj})).To(gomega.BeFalse())
-			gomega.Expect(p.Update(event.UpdateEvent{ObjectNew: obj})).To(gomega.BeFalse())
-			gomega.Expect(p.Delete(event.DeleteEvent{Object: obj})).To(gomega.BeFalse())
-			gomega.Expect(p.Generic(event.GenericEvent{Object: obj})).To(gomega.BeFalse())
 		})
 	})
 

@@ -248,8 +248,8 @@ type SeedSettings struct {
 	// SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
 	//
 	// Deprecated: This field is deprecated. The "bad-case" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302).
-	// The field will be locked to false in a future version of Gardener. In this way gardenlet will clean up all owner DNSRecords. Finally, the field will be removed from the API.
-	// Set this field to false to be prepared for the above-mentioned locking.
+	// The field is locked to false (i.e. if the field value is true a validation error will be returned). In this way gardenlet will clean up all owner DNSRecords.
+	// Finally, the field will be removed from the API in a future version of Gardener.
 	// +optional
 	OwnerChecks *SeedSettingOwnerChecks `json:"ownerChecks,omitempty" protobuf:"bytes,6,opt,name=ownerChecks"`
 	// DependencyWatchdog controls certain settings for the dependency-watchdog components deployed in the seed.
@@ -318,11 +318,10 @@ type SeedSettingVerticalPodAutoscaler struct {
 // SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
 //
 // Deprecated: This field is deprecated. The "bad-case" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302).
-// The field will be locked to false in a future version of Gardener. In this way gardenlet will clean up all owner DNSRecords. Finally, the field will be removed from the API.
-// Set this field to false to be prepared for the above-mentioned locking.
+// The field is locked to false (i.e. if the field value is true a validation error will be returned). In this way gardenlet will clean up all owner DNSRecords.
+// Finally, the field will be removed from the API in a future version of Gardener.
 type SeedSettingOwnerChecks struct {
-	// Enabled controls whether owner checks are enabled for shoots scheduled on this seed. It
-	// is enabled by default because it is a prerequisite for control plane migration.
+	// Enabled controls whether owner checks are enabled for shoots scheduled on this seed.
 	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
 }
 

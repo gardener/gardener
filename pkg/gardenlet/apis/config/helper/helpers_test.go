@@ -49,23 +49,23 @@ var _ = Describe("helper", func() {
 	})
 
 	Describe("#OwnerChecksEnabledInSeedConfig", func() {
-		It("should return true with nil config", func() {
-			Expect(OwnerChecksEnabledInSeedConfig(nil)).To(BeTrue())
+		It("should return false with nil config", func() {
+			Expect(OwnerChecksEnabledInSeedConfig(nil)).To(BeFalse())
 		})
 
-		It("should return false if owner checks are disabled", func() {
+		It("should return true if owner checks are enabled", func() {
 			config := &config.SeedConfig{
 				SeedTemplate: gardencore.SeedTemplate{
 					Spec: gardencore.SeedSpec{
 						Settings: &gardencore.SeedSettings{
 							OwnerChecks: &gardencore.SeedSettingOwnerChecks{
-								Enabled: false,
+								Enabled: true,
 							},
 						},
 					},
 				},
 			}
-			Expect(OwnerChecksEnabledInSeedConfig(config)).To(BeFalse())
+			Expect(OwnerChecksEnabledInSeedConfig(config)).To(BeTrue())
 		})
 	})
 

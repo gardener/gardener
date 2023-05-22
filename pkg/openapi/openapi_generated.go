@@ -6724,12 +6724,12 @@ func schema_pkg_apis_core_v1alpha1_SeedSettingOwnerChecks(ref common.ReferenceCa
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.\n\nDeprecated: This field is deprecated. The \"bad-case\" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302). The field will be locked to false in a future version of Gardener. In this way gardenlet will clean up all owner DNSRecords. Finally, the field will be removed from the API. Set this field to false to be prepared for the above-mentioned locking.",
+				Description: "SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.\n\nDeprecated: This field is deprecated. The \"bad-case\" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302). The field is locked to false (i.e. if the field value is true a validation error will be returned). In this way gardenlet will clean up all owner DNSRecords. Finally, the field will be removed from the API in a future version of Gardener.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"enabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Enabled controls whether owner checks are enabled for shoots scheduled on this seed. It is enabled by default because it is a prerequisite for control plane migration.",
+							Description: "Enabled controls whether owner checks are enabled for shoots scheduled on this seed.",
 							Default:     false,
 							Type:        []string{"boolean"},
 							Format:      "",
@@ -6841,7 +6841,7 @@ func schema_pkg_apis_core_v1alpha1_SeedSettings(ref common.ReferenceCallback) co
 					},
 					"ownerChecks": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.\n\nDeprecated: This field is deprecated. The \"bad-case\" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302). The field will be locked to false in a future version of Gardener. In this way gardenlet will clean up all owner DNSRecords. Finally, the field will be removed from the API. Set this field to false to be prepared for the above-mentioned locking.",
+							Description: "SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.\n\nDeprecated: This field is deprecated. The \"bad-case\" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302). The field is locked to false (i.e. if the field value is true a validation error will be returned). In this way gardenlet will clean up all owner DNSRecords. Finally, the field will be removed from the API in a future version of Gardener.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingOwnerChecks"),
 						},
 					},
@@ -14519,12 +14519,12 @@ func schema_pkg_apis_core_v1beta1_SeedSettingOwnerChecks(ref common.ReferenceCal
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.\n\nDeprecated: This field is deprecated. The \"bad-case\" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302). The field will be locked to false in a future version of Gardener. In this way gardenlet will clean up all owner DNSRecords. Finally, the field will be removed from the API. Set this field to false to be prepared for the above-mentioned locking.",
+				Description: "SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.\n\nDeprecated: This field is deprecated. The \"bad-case\" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302). The field is locked to false (i.e. if the field value is true a validation error will be returned). In this way gardenlet will clean up all owner DNSRecords. Finally, the field will be removed from the API in a future version of Gardener.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"enabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Enabled controls whether owner checks are enabled for shoots scheduled on this seed. It is enabled by default because it is a prerequisite for control plane migration.",
+							Description: "Enabled controls whether owner checks are enabled for shoots scheduled on this seed.",
 							Default:     false,
 							Type:        []string{"boolean"},
 							Format:      "",
@@ -14636,7 +14636,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettings(ref common.ReferenceCallback) com
 					},
 					"ownerChecks": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.\n\nDeprecated: This field is deprecated. The \"bad-case\" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302). The field will be locked to false in a future version of Gardener. In this way gardenlet will clean up all owner DNSRecords. Finally, the field will be removed from the API. Set this field to false to be prepared for the above-mentioned locking.",
+							Description: "SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.\n\nDeprecated: This field is deprecated. The \"bad-case\" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302). The field is locked to false (i.e. if the field value is true a validation error will be returned). In this way gardenlet will clean up all owner DNSRecords. Finally, the field will be removed from the API in a future version of Gardener.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingOwnerChecks"),
 						},
 					},

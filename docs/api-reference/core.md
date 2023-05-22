@@ -9130,8 +9130,8 @@ Defaults to &ldquo;Cluster&rdquo;.</p>
 <p>
 <p>SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.</p>
 <p>Deprecated: This field is deprecated. The &ldquo;bad-case&rdquo; control plane migration is being removed in favor of the HA Shoot control planes (see <a href="https://github.com/gardener/gardener/issues/6302">https://github.com/gardener/gardener/issues/6302</a>).
-The field will be locked to false in a future version of Gardener. In this way gardenlet will clean up all owner DNSRecords. Finally, the field will be removed from the API.
-Set this field to false to be prepared for the above-mentioned locking.</p>
+The field is locked to false (i.e. if the field value is true a validation error will be returned). In this way gardenlet will clean up all owner DNSRecords.
+Finally, the field will be removed from the API in a future version of Gardener.</p>
 </p>
 <table>
 <thead>
@@ -9149,8 +9149,7 @@ bool
 </em>
 </td>
 <td>
-<p>Enabled controls whether owner checks are enabled for shoots scheduled on this seed. It
-is enabled by default because it is a prerequisite for control plane migration.</p>
+<p>Enabled controls whether owner checks are enabled for shoots scheduled on this seed.</p>
 </td>
 </tr>
 </tbody>
@@ -9337,8 +9336,8 @@ SeedSettingOwnerChecks
 <em>(Optional)</em>
 <p>SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.</p>
 <p>Deprecated: This field is deprecated. The &ldquo;bad-case&rdquo; control plane migration is being removed in favor of the HA Shoot control planes (see <a href="https://github.com/gardener/gardener/issues/6302">https://github.com/gardener/gardener/issues/6302</a>).
-The field will be locked to false in a future version of Gardener. In this way gardenlet will clean up all owner DNSRecords. Finally, the field will be removed from the API.
-Set this field to false to be prepared for the above-mentioned locking.</p>
+The field is locked to false (i.e. if the field value is true a validation error will be returned). In this way gardenlet will clean up all owner DNSRecords.
+Finally, the field will be removed from the API in a future version of Gardener.</p>
 </td>
 </tr>
 <tr>
