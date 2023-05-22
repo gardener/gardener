@@ -96,6 +96,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
@@ -447,6 +448,21 @@ func (r *Reconciler) runReconcileSeedFlow(
 		if err := component.OpWait(gardenerResourceManager).Deploy(ctx); err != nil {
 			return err
 		}
+	}
+
+	// Deploy System Resources
+	systemResources, err := defaultSystem(seedClient, seed, r.ImageVector, seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled, r.GardenNamespace)
+	if err != nil {
+		return err
+	}
+
+	if err := systemResources.Deploy(ctx); err != nil {
+		return err
+	}
+
+	// Wait until required extensions are ready because they might be needed by following deployments
+	if err := WaitUntilRequiredExtensionsReady(ctx, r.GardenClient, seed.GetInfo(), 5*time.Second, 1*time.Minute); err != nil {
+		return err
 	}
 
 	// Fetch component-specific aggregate and central monitoring configuration
@@ -842,10 +858,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if err != nil {
 		return err
 	}
-	systemResources, err := defaultSystem(seedClient, seed, r.ImageVector, seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled, r.GardenNamespace)
-	if err != nil {
-		return err
-	}
 	vpnAuthzServer, err := defaultVPNAuthzServer(seedClient, kubernetesVersion, r.ImageVector, r.GardenNamespace)
 	if err != nil {
 		return err
@@ -895,10 +907,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		_ = g.Add(flow.Task{
 			Name: "Deploying VPN authorization server",
 			Fn:   vpnAuthzServer.Deploy,
-		})
-		_ = g.Add(flow.Task{
-			Name: "Deploying system resources",
-			Fn:   systemResources.Deploy,
 		})
 	)
 
@@ -1377,4 +1385,15 @@ func isOwnedByFluentOperator(obj client.Object) bool {
 		}
 	}
 	return false
+}
+
+// WaitUntilRequiredExtensionsReady checks and waits until all required extensions for a seed exist and are ready.
+func WaitUntilRequiredExtensionsReady(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed, interval, timeout time.Duration) error {
+	return retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
+		if err := gardenerutils.RequiredExtensionsReady(ctx, gardenClient, seed.Name, gardenerutils.ComputeRequiredExtensionsForSeed(seed)); err != nil {
+			return retry.MinorError(err)
+		}
+
+		return retry.Ok()
+	})
 }

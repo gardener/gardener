@@ -61,11 +61,12 @@ import (
 
 var _ = Describe("Seed controller tests", func() {
 	var (
-		testRunID     string
-		testNamespace *corev1.Namespace
-		seedName      string
-		seed          *gardencorev1beta1.Seed
-		identity      = &gardencorev1beta1.Gardener{Version: "1.2.3"}
+		testRunID          string
+		testNamespace      *corev1.Namespace
+		seedName           string
+		seed               *gardencorev1beta1.Seed
+		seedControllerInst *gardencorev1beta1.ControllerInstallation
+		identity           = &gardencorev1beta1.Gardener{Version: "1.2.3"}
 	)
 
 	BeforeEach(func() {
@@ -206,6 +207,8 @@ var _ = Describe("Seed controller tests", func() {
 			return mgrClient.Get(ctx, client.ObjectKeyFromObject(dnsProviderSecret), dnsProviderSecret)
 		}).Should(Succeed())
 
+		provider := "providerType"
+
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   seedName,
@@ -214,7 +217,7 @@ var _ = Describe("Seed controller tests", func() {
 			Spec: gardencorev1beta1.SeedSpec{
 				Provider: gardencorev1beta1.SeedProvider{
 					Region: "region",
-					Type:   "providerType",
+					Type:   provider,
 					Zones:  []string{"a", "b", "c"},
 				},
 				Networks: gardencorev1beta1.SeedNetworks{
@@ -230,7 +233,7 @@ var _ = Describe("Seed controller tests", func() {
 				},
 				DNS: gardencorev1beta1.SeedDNS{
 					Provider: &gardencorev1beta1.SeedDNSProvider{
-						Type: "providerType",
+						Type: provider,
 						SecretRef: corev1.SecretReference{
 							Name:      dnsProviderSecret.Name,
 							Namespace: dnsProviderSecret.Namespace,
@@ -240,13 +243,63 @@ var _ = Describe("Seed controller tests", func() {
 			},
 		}
 
+		controllerRegistration := &gardencorev1beta1.ControllerRegistration{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "ctrlreg-" + testID + "-",
+				Labels:       map[string]string{testID: testRunID},
+			},
+			Spec: gardencorev1beta1.ControllerRegistrationSpec{
+				Resources: []gardencorev1beta1.ControllerResource{
+					{Kind: extensionsv1alpha1.DNSRecordResource, Type: provider},
+					{Kind: extensionsv1alpha1.ControlPlaneResource, Type: provider},
+					{Kind: extensionsv1alpha1.InfrastructureResource, Type: provider},
+					{Kind: extensionsv1alpha1.WorkerResource, Type: provider},
+				},
+			},
+		}
+
 		By("Create Seed")
 		Expect(testClient.Create(ctx, seed)).To(Succeed())
 		log.Info("Created Seed for test", "seed", seed.Name)
 
+		By("Create ControllerRegistration")
+		Expect(testClient.Create(ctx, controllerRegistration)).To(Succeed())
+		log.Info("Created ControllerRegistration for test", "controllerRegistration", controllerRegistration.Name)
+
+		seedControllerInst = &gardencorev1beta1.ControllerInstallation{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "ctrlinst-" + testID + "-",
+				Labels:       map[string]string{testID: testRunID},
+			},
+			Spec: gardencorev1beta1.ControllerInstallationSpec{
+				RegistrationRef: corev1.ObjectReference{
+					Name: controllerRegistration.Name,
+				},
+				SeedRef: corev1.ObjectReference{
+					Name: seedName,
+				},
+			},
+		}
+
+		By("Create ControllerInstallation")
+		Expect(testClient.Create(ctx, seedControllerInst)).To(Succeed())
+		log.Info("Created ControllerInstallation for test", "seedControllerInst", seedControllerInst.Name)
+
+		By("Patch ControllerInstallation")
+		patch := client.MergeFrom(seedControllerInst.DeepCopy())
+		seedControllerInst.Status.Conditions = []gardencorev1beta1.Condition{
+			{Type: gardencorev1beta1.ControllerInstallationInstalled, Status: gardencorev1beta1.ConditionTrue},
+			{Type: gardencorev1beta1.ControllerInstallationHealthy, Status: gardencorev1beta1.ConditionTrue},
+			{Type: gardencorev1beta1.ControllerInstallationProgressing, Status: gardencorev1beta1.ConditionFalse},
+		}
+		Expect(testClient.Status().Patch(ctx, seedControllerInst, patch)).To(Succeed())
+
 		DeferCleanup(func() {
 			By("Delete Seed")
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, seed))).To(Succeed())
+
+			By("Delete ControllerInstallation")
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, seedControllerInst))).To(Succeed())
 
 			By("Forcefully remove finalizers")
 			Expect(client.IgnoreNotFound(controllerutils.RemoveAllFinalizers(ctx, testClient, seed))).To(Succeed())
@@ -255,6 +308,9 @@ var _ = Describe("Seed controller tests", func() {
 			Eventually(func() error {
 				return mgrClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)
 			}).Should(BeNotFoundError())
+
+			By("Delete ControllerRegistration")
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, controllerRegistration))).To(Succeed())
 
 			By("Delete DNS provider secret in garden namespace")
 			Expect(testClient.Delete(ctx, dnsProviderSecret)).To(Succeed())
@@ -554,6 +610,11 @@ var _ = Describe("Seed controller tests", func() {
 
 					By("Delete Seed")
 					Expect(testClient.Delete(ctx, seed)).To(Succeed())
+
+					// The ControllerInstallation for the seed provider must be deleted manually because the
+					// ControllerRegistration controller does not run in this test.
+					By("Delete ControllerInstallation")
+					Expect(client.IgnoreNotFound(testClient.Delete(ctx, seedControllerInst))).To(Succeed())
 
 					if seedIsGarden {
 						// The CRDs are cleaned up by the Destroy function of GRM. In case the seed is garden, the Destroy is called by the gardener-operator and since it's

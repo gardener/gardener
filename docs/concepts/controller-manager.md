@@ -61,10 +61,11 @@ The controller has three reconciliation loops.
 
 #### "Main" Reconciler
 
-This reconciliation loop watches the `Seed` objects and determines which `ControllerRegistrations` are required for them and reconciles the corresponding `ControllerInstallation` resources to reach the determined state.
+This reconciliation loop watches the `Seed` objects and determines which `ControllerRegistration`s are required for them and reconciles the corresponding `ControllerInstallation` resources to reach the determined state.
 To begin with, it computes the kind/type combinations of extensions required for the seed.
 For this, the controller examines a live list of `ControllerRegistration`s, `ControllerInstallation`s, `BackupBucket`s, `BackupEntry`s, `Shoot`s, and `Secret`s from the garden cluster.
 For example, it examines the shoots running on the seed and deducts the kind/type, like `Infrastructure/gcp`.
+The seed (`seed.spec.provider.type`) and DNS (`seed.spec.dns.provider.type`) provider types are considered when calculating the list of required `ControllerRegistration`s, as well.
 It also decides whether they should always be deployed based on the `.spec.deployment.policy`.
 For the configuration options, please see this [section](../extensions/controllerregistration.md#deployment-configuration-options).
 

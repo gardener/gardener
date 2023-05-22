@@ -22,12 +22,10 @@ import (
 	"time"
 
 	"k8s.io/utils/clock"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/logging/kuberbacproxy"
@@ -243,42 +241,9 @@ func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 	if err := b.GardenClient.List(ctx, controllerRegistrationList); err != nil {
 		return err
 	}
+	requiredExtensions := gardenerutils.ComputeRequiredExtensionsForShoot(b.Shoot.GetInfo(), b.Seed.GetInfo(), controllerRegistrationList, b.Garden.InternalDomain, b.Shoot.ExternalDomain)
 
-	controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
-	if err := b.GardenClient.List(ctx, controllerInstallationList); err != nil {
-		return err
-	}
-
-	requiredExtensions := gardenerutils.ComputeRequiredExtensions(b.Shoot.GetInfo(), b.Seed.GetInfo(), controllerRegistrationList, b.Garden.InternalDomain, b.Shoot.ExternalDomain)
-
-	for _, controllerInstallation := range controllerInstallationList.Items {
-		if controllerInstallation.Spec.SeedRef.Name != b.Seed.GetInfo().Name {
-			continue
-		}
-
-		controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
-		if err := b.GardenClient.Get(ctx, client.ObjectKey{Name: controllerInstallation.Spec.RegistrationRef.Name}, controllerRegistration); err != nil {
-			return err
-		}
-
-		for _, kindType := range requiredExtensions.UnsortedList() {
-			split := strings.Split(kindType, "/")
-			if len(split) != 2 {
-				return fmt.Errorf("unexpected required extension: %q", kindType)
-			}
-			extensionKind, extensionType := split[0], split[1]
-
-			if helper.IsResourceSupported(controllerRegistration.Spec.Resources, extensionKind, extensionType) && helper.IsControllerInstallationSuccessful(controllerInstallation) {
-				requiredExtensions.Delete(kindType)
-			}
-		}
-	}
-
-	if len(requiredExtensions) > 0 {
-		return fmt.Errorf("extension controllers missing or unready: %+v", requiredExtensions)
-	}
-
-	return nil
+	return gardenerutils.RequiredExtensionsReady(ctx, b.GardenClient, b.Seed.GetInfo().Name, requiredExtensions)
 }
 
 // outOfClusterAPIServerFQDN returns the Fully Qualified Domain Name of the apiserver

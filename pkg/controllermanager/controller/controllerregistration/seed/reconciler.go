@@ -237,7 +237,7 @@ func computeKindTypesForShoots(
 				log.Info("Could not determine external domain for shoot", "err", err, "shoot", client.ObjectKeyFromObject(shoot))
 			}
 
-			out <- gardenerutils.ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
+			out <- gardenerutils.ComputeRequiredExtensionsForShoot(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
 		}(shoot.DeepCopy())
 	}
 
@@ -258,18 +258,12 @@ func computeKindTypesForShoots(
 func computeKindTypesForSeed(
 	seed *gardencorev1beta1.Seed,
 ) sets.Set[string] {
-	var wantedKindTypeCombinations = sets.New[string]()
-
 	// enable clean up of controller installations in case of seed deletion
 	if seed.DeletionTimestamp != nil {
 		return sets.New[string]()
 	}
 
-	if seed.Spec.DNS.Provider != nil {
-		wantedKindTypeCombinations.Insert(gardenerutils.ExtensionsID(extensionsv1alpha1.DNSRecordResource, seed.Spec.DNS.Provider.Type))
-	}
-
-	return wantedKindTypeCombinations
+	return gardenerutils.ComputeRequiredExtensionsForSeed(seed)
 }
 
 type controllerRegistration struct {

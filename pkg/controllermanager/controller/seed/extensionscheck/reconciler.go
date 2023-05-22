@@ -77,13 +77,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	)
 
 	for _, controllerInstallation := range controllerInstallationList.Items {
-		// not needed for real client, but fake client doesn't support field selector
-		// see https://github.com/kubernetes-sigs/controller-runtime/issues/1376
-		// could be solved by switching from fake client to real client against envtest
-		if controllerInstallation.Spec.SeedRef.Name != seed.Name {
-			continue
-		}
-
 		if len(controllerInstallation.Status.Conditions) == 0 {
 			notInstalled[controllerInstallation.Name] = "extension was not yet installed"
 			continue
