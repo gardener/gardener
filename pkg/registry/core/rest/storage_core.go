@@ -46,7 +46,7 @@ type StorageProvider struct {
 	CredentialsRotationInterval  time.Duration
 }
 
-// NewRESTStorage creates a new API group info object and registers the v1alpha1 core storage.
+// NewRESTStorage creates a new API group info object and registers the v1beta1 core storage.
 func (p StorageProvider) NewRESTStorage(restOptionsGetter generic.RESTOptionsGetter) genericapiserver.APIGroupInfo {
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(core.GroupName, api.Scheme, metav1.ParameterCodec, api.Codecs)
 	apiGroupInfo.VersionedResourcesStorageMap[gardencorev1beta1.SchemeGroupVersion.Version] = p.v1beta1Storage(restOptionsGetter)
