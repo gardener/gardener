@@ -76,7 +76,18 @@ var _ = Describe("Nodeexporter", func() {
 	})
 
 	Describe("#Deploy", func() {
-		var ()
+		var (
+			serviceAccountYAML = `apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  creationTimestamp: null
+  labels:
+    component: node-exporter
+  name: node-exporter
+  namespace: kube-system
+`
+		)
 
 		JustBeforeEach(func() {
 			component = New(c, namespace, values)
@@ -108,6 +119,10 @@ var _ = Describe("Nodeexporter", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+		})
+
+		It("should successfully deploy all resources", func() {
+			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__node-exporter.yaml"])).To(Equal(serviceAccountYAML))
 		})
 	})
 

@@ -18,6 +18,9 @@ import (
 	"context"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -28,6 +31,10 @@ import (
 const (
 	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
 	ManagedResourceName = "shoot-core-node-exporter"
+	// labelValue is the value of a label used for the identification of node-exporter pods.
+	labelValue = "node-exporter"
+
+	labelKeyComponent = "component"
 )
 
 // Interface contains functions for a node-exporter deployer.
@@ -97,7 +104,18 @@ func (n *nodeExporter) WaitCleanup(ctx context.Context) error {
 func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+
+		serviceAccount = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "node-exporter",
+				Namespace: metav1.NamespaceSystem,
+				Labels: map[string]string{
+					labelKeyComponent: labelValue,
+				},
+			},
+			AutomountServiceAccountToken: pointer.Bool(false),
+		}
 	)
 
-	return registry.AddAllAndSerialize()
+	return registry.AddAllAndSerialize(serviceAccount)
 }

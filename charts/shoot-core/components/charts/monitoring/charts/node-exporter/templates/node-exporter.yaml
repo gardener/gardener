@@ -3,9 +3,8 @@ kind: ServiceAccount
 metadata:
   name: node-exporter
   namespace: kube-system
-  labels:
-    component: node-exporter
-automountServiceAccountToken: false
+  annotations:
+    resources.gardener.cloud/mode: Ignore
 ---
 apiVersion: v1
 kind: Service
