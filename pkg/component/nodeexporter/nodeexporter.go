@@ -20,12 +20,14 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -285,10 +287,44 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 
+		vpa               *vpaautoscalingv1.VerticalPodAutoscaler
 		podSecurityPolicy *policyv1beta1.PodSecurityPolicy
 		clusterRolePSP    *rbacv1.ClusterRole
 		roleBindingPSP    *rbacv1.RoleBinding
 	)
+
+	if n.values.VPAEnabled {
+		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
+		vpaControlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+
+		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "node-exporter",
+				Namespace: metav1.NamespaceSystem,
+			},
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceMemory: resource.MustParse("50Mi"),
+							},
+							ControlledValues: &vpaControlledValues,
+						},
+					},
+				},
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "DaemonSet",
+					Name:       daemonSet.Name,
+				},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+					UpdateMode: &vpaUpdateMode,
+				},
+			},
+		}
+	}
 
 	if !n.values.PSPDisabled {
 		podSecurityPolicy = &policyv1beta1.PodSecurityPolicy{
@@ -379,6 +415,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 		podSecurityPolicy,
 		clusterRolePSP,
 		roleBindingPSP,
+		vpa,
 	)
 }
 

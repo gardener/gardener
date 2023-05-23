@@ -271,6 +271,27 @@ subjects:
   name: node-exporter
   namespace: kube-system
 `
+			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  creationTimestamp: null
+  name: node-exporter
+  namespace: kube-system
+spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: '*'
+      controlledValues: RequestsOnly
+      minAllowed:
+        memory: 50Mi
+  targetRef:
+    apiVersion: apps/v1
+    kind: DaemonSet
+    name: node-exporter
+  updatePolicy:
+    updateMode: Auto
+status: {}
+`
 		)
 
 		JustBeforeEach(func() {
@@ -325,6 +346,24 @@ subjects:
 				Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.node-exporter.yaml"])).To(Equal(podSecurityPolicyYAML))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-exporter.yaml"])).To(Equal(clusterRolePSP))
 				Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_node-exporter.yaml"])).To(Equal(roleBindingPSP))
+			})
+		})
+
+		Context("PSP is not disabled, VPA enabled", func() {
+			BeforeEach(func() {
+				values.PSPDisabled = false
+				values.VPAEnabled = true
+			})
+
+			It("should successfully PSP related resources when psp is not disabled", func() {
+				Expect(managedResourceSecret.Data).To(HaveLen(7))
+				Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__node-exporter.yaml"])).To(Equal(serviceAccountYAML))
+				Expect(string(managedResourceSecret.Data["service__kube-system__node-exporter.yaml"])).To(Equal(serviceYAML))
+				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-exporter.yaml"])).To(Equal(daemonSetYAML))
+				Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.node-exporter.yaml"])).To(Equal(podSecurityPolicyYAML))
+				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-exporter.yaml"])).To(Equal(clusterRolePSP))
+				Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_node-exporter.yaml"])).To(Equal(roleBindingPSP))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-exporter.yaml"])).To(Equal(vpaYAML))
 			})
 		})
 	})
