@@ -1,3 +1,4 @@
+#TODO(shafeeqes): Remove this chart once gardener v1.75 is released
 {{- if not .Values.global.pspDisabled }}
 apiVersion: {{ include "rbacversion" . }}
 kind: RoleBinding
@@ -5,13 +6,5 @@ metadata:
   name: gardener.cloud:psp:node-exporter
   namespace: kube-system
   annotations:
-    resources.gardener.cloud/delete-on-invalid-update: "true"
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: gardener.cloud:psp:kube-system:node-exporter
-subjects:
-- kind: ServiceAccount
-  name: node-exporter
-  namespace: kube-system
+    resources.gardener.cloud/mode: Ignore
 {{- end }}

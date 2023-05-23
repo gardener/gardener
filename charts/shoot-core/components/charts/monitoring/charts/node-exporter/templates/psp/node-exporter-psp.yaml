@@ -1,31 +1,9 @@
+#TODO(shafeeqes): Remove this chart once gardener v1.75 is released
 {{- if not .Values.global.pspDisabled }}
 apiVersion: {{ include "podsecuritypolicyversion" .}}
 kind: PodSecurityPolicy
 metadata:
   name: gardener.kube-system.node-exporter
   annotations:
-    seccomp.security.alpha.kubernetes.io/defaultProfileName: 'runtime/default'
-    seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'runtime/default'
-spec:
-  privileged: false
-  volumes:
-  - hostPath
-  hostNetwork: true
-  hostPID: true
-  allowedHostPaths:
-  - pathPrefix: /
-  - pathPrefix: /sys
-  - pathPrefix: /proc
-  hostPorts:
-  - min: {{ .Values.ports.metrics }}
-    max: {{ .Values.ports.metrics }}
-  runAsUser:
-    rule: 'MustRunAsNonRoot'
-  seLinux:
-    rule: 'RunAsAny'
-  supplementalGroups:
-    rule: 'RunAsAny'
-  fsGroup:
-    rule: 'RunAsAny'
-  readOnlyRootFilesystem: false
+    resources.gardener.cloud/mode: Ignore
 {{- end }}

@@ -209,6 +209,68 @@ status:
   numberMisscheduled: 0
   numberReady: 0
 `
+			podSecurityPolicyYAML = `apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  annotations:
+    seccomp.security.alpha.kubernetes.io/allowedProfileNames: runtime/default
+    seccomp.security.alpha.kubernetes.io/defaultProfileName: runtime/default
+  creationTimestamp: null
+  name: gardener.kube-system.node-exporter
+spec:
+  allowedHostPaths:
+  - pathPrefix: /
+  - pathPrefix: /sys
+  - pathPrefix: /proc
+  fsGroup:
+    rule: RunAsAny
+  hostNetwork: true
+  hostPID: true
+  hostPorts:
+  - max: 16909
+    min: 16909
+  runAsUser:
+    rule: MustRunAsNonRoot
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  volumes:
+  - hostPath
+`
+			clusterRolePSP = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: gardener.cloud:psp:kube-system:node-exporter
+rules:
+- apiGroups:
+  - policy
+  - extensions
+  resourceNames:
+  - gardener.kube-system.node-exporter
+  resources:
+  - podsecuritypolicies
+  verbs:
+  - use
+`
+			roleBindingPSP = `apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
+  creationTimestamp: null
+  name: gardener.cloud:psp:node-exporter
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gardener.cloud:psp:kube-system:node-exporter
+subjects:
+- kind: ServiceAccount
+  name: node-exporter
+  namespace: kube-system
+`
 		)
 
 		JustBeforeEach(func() {
@@ -244,9 +306,26 @@ status:
 		})
 
 		It("should successfully deploy all resources", func() {
+			Expect(managedResourceSecret.Data).To(HaveLen(3))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__node-exporter.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__node-exporter.yaml"])).To(Equal(serviceYAML))
 			Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-exporter.yaml"])).To(Equal(daemonSetYAML))
+		})
+
+		Context("PSP is not disabled", func() {
+			BeforeEach(func() {
+				values.PSPDisabled = false
+			})
+
+			It("should successfully PSP related resources when psp is not disabled", func() {
+				Expect(managedResourceSecret.Data).To(HaveLen(6))
+				Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__node-exporter.yaml"])).To(Equal(serviceAccountYAML))
+				Expect(string(managedResourceSecret.Data["service__kube-system__node-exporter.yaml"])).To(Equal(serviceYAML))
+				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-exporter.yaml"])).To(Equal(daemonSetYAML))
+				Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.node-exporter.yaml"])).To(Equal(podSecurityPolicyYAML))
+				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_node-exporter.yaml"])).To(Equal(clusterRolePSP))
+				Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_node-exporter.yaml"])).To(Equal(roleBindingPSP))
+			})
 		})
 	})
 
