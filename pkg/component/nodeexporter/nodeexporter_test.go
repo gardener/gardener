@@ -87,6 +87,27 @@ metadata:
   name: node-exporter
   namespace: kube-system
 `
+			serviceYAML = `apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    component: node-exporter
+  name: node-exporter
+  namespace: kube-system
+spec:
+  clusterIP: None
+  ports:
+  - name: metrics
+    port: 16909
+    protocol: TCP
+    targetPort: 0
+  selector:
+    component: node-exporter
+  type: ClusterIP
+status:
+  loadBalancer: {}
+`
 		)
 
 		JustBeforeEach(func() {
@@ -123,6 +144,7 @@ metadata:
 
 		It("should successfully deploy all resources", func() {
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__node-exporter.yaml"])).To(Equal(serviceAccountYAML))
+			Expect(string(managedResourceSecret.Data["service__kube-system__node-exporter.yaml"])).To(Equal(serviceYAML))
 		})
 	})
 

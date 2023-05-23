@@ -35,6 +35,7 @@ const (
 	labelValue = "node-exporter"
 
 	labelKeyComponent = "component"
+	serviceName       = "node-exporter"
 )
 
 // Interface contains functions for a node-exporter deployer.
@@ -109,13 +110,40 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "node-exporter",
 				Namespace: metav1.NamespaceSystem,
-				Labels: map[string]string{
-					labelKeyComponent: labelValue,
-				},
+				Labels:    getLabels(),
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
 		}
+
+		service = &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      serviceName,
+				Namespace: metav1.NamespaceSystem,
+				Labels:    getLabels(),
+			},
+			Spec: corev1.ServiceSpec{
+				Type:      corev1.ServiceTypeClusterIP,
+				ClusterIP: corev1.ClusterIPNone,
+				Ports: []corev1.ServicePort{
+					{
+						Name:     "metrics",
+						Port:     int32(16909),
+						Protocol: corev1.ProtocolTCP,
+					},
+				},
+				Selector: getLabels(),
+			},
+		}
 	)
 
-	return registry.AddAllAndSerialize(serviceAccount)
+	return registry.AddAllAndSerialize(
+		serviceAccount,
+		service,
+	)
+}
+
+func getLabels() map[string]string {
+	return map[string]string{
+		labelKeyComponent: labelValue,
+	}
 }

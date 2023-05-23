@@ -11,17 +11,8 @@ kind: Service
 metadata:
   name: node-exporter
   namespace: kube-system
-  labels:
-    component: node-exporter
-spec:
-  type: ClusterIP
-  clusterIP: None
-  ports:
-  - name: metrics
-    port: {{ .Values.ports.metrics }}
-    protocol: TCP
-  selector:
-    component: node-exporter
+  annotations:
+    resources.gardener.cloud/mode: Ignore
 ---
 apiVersion: {{ include "daemonsetversion" . }}
 kind: DaemonSet
