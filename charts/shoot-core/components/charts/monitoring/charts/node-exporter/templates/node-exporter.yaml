@@ -1,3 +1,4 @@
+#TODO(shafeeqes): Remove this chart once gardener v1.75 is released
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -19,92 +20,5 @@ kind: DaemonSet
 metadata:
   name: node-exporter
   namespace: kube-system
-  labels:
-    gardener.cloud/role: monitoring
-    component: node-exporter
-    origin: gardener
-spec:
-  selector:
-    matchLabels:
-      component: node-exporter
-  updateStrategy:
-    type: RollingUpdate
-  template:
-    metadata:
-      labels:
-        networking.gardener.cloud/to-public-networks: allowed
-        networking.gardener.cloud/from-seed: allowed
-        gardener.cloud/role: monitoring
-        origin: gardener
-        component: node-exporter
-    spec:
-      tolerations:
-      - effect: NoSchedule
-        operator: Exists
-      - effect: NoExecute
-        operator: Exists
-      hostNetwork: true
-      hostPID: true
-      priorityClassName: system-cluster-critical
-      serviceAccountName: node-exporter
-      # not used - safe to not mount it at all.
-      automountServiceAccountToken: false
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 65534
-        seccompProfile:
-          type: RuntimeDefault
-      containers:
-      - name: node-exporter
-        image: {{ index .Values.images "node-exporter" }}
-        imagePullPolicy: IfNotPresent
-        command:
-        - /bin/node_exporter
-        - --web.listen-address=:{{ .Values.ports.metrics }}
-        - --path.procfs=/host/proc
-        - --path.sysfs=/host/sys
-        - --path.rootfs=/host
-        - --log.level=error
-        - --collector.disable-defaults
-        - --collector.conntrack
-        - --collector.cpu
-        - --collector.diskstats
-        - --collector.filefd
-        - --collector.filesystem
-        - --collector.filesystem.mount-points-exclude=^/(run|var)/.+$|^/(boot|dev|sys|usr)($|/.+$)
-        - --collector.loadavg
-        - --collector.meminfo
-        - --collector.uname
-        - --collector.stat
-        - --collector.pressure
-        ports:
-        - containerPort: {{ .Values.ports.metrics }}
-          protocol: TCP
-          hostPort: {{ .Values.ports.metrics }}
-          name: scrape
-        livenessProbe:
-          httpGet:
-            path: /
-            port: {{ .Values.ports.metrics }}
-          initialDelaySeconds: 5
-          timeoutSeconds: 5
-        readinessProbe:
-          httpGet:
-            path: /
-            port: {{ .Values.ports.metrics }}
-          initialDelaySeconds: 5
-          timeoutSeconds: 5
-        resources:
-          requests:
-            cpu: 50m
-            memory: 50Mi
-          limits:
-            memory: 250Mi
-        volumeMounts:
-        - name: host
-          readOnly: true
-          mountPath: /host
-      volumes:
-      - name: host
-        hostPath:
-          path: /
+  annotations:
+    resources.gardener.cloud/mode: Ignore

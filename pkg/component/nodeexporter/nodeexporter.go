@@ -16,15 +16,21 @@ package nodeexporter
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -36,6 +42,13 @@ const (
 
 	labelKeyComponent = "component"
 	serviceName       = "node-exporter"
+	daemonsetName     = "node-exporter"
+	containerName     = "node-exporter"
+
+	portNameMetrics           = "metrics"
+	portMetrics         int32 = 16909
+	volumeNameHost            = "host"
+	volumeMountPathHost       = "/host"
 )
 
 // Interface contains functions for a node-exporter deployer.
@@ -126,12 +139,146 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 				ClusterIP: corev1.ClusterIPNone,
 				Ports: []corev1.ServicePort{
 					{
-						Name:     "metrics",
-						Port:     int32(16909),
+						Name:     portNameMetrics,
+						Port:     portMetrics,
 						Protocol: corev1.ProtocolTCP,
 					},
 				},
 				Selector: getLabels(),
+			},
+		}
+
+		daemonSet = &appsv1.DaemonSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      daemonsetName,
+				Namespace: metav1.NamespaceSystem,
+				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+					v1beta1constants.GardenRole:     v1beta1constants.GardenRoleMonitoring,
+					managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
+				}),
+			},
+			Spec: appsv1.DaemonSetSpec{
+				Selector: &metav1.LabelSelector{
+					MatchLabels: getLabels(),
+				},
+				UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
+					Type: appsv1.RollingUpdateDaemonSetStrategyType,
+				},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+							v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleMonitoring,
+							managedresources.LabelKeyOrigin:                     managedresources.LabelValueGardener,
+							v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyShootFromSeed:    v1beta1constants.LabelNetworkPolicyAllowed,
+						}),
+					},
+					Spec: corev1.PodSpec{
+						Tolerations: []corev1.Toleration{
+							{
+								Effect:   corev1.TaintEffectNoSchedule,
+								Operator: corev1.TolerationOpExists,
+							},
+							{
+								Effect:   corev1.TaintEffectNoExecute,
+								Operator: corev1.TolerationOpExists,
+							},
+						},
+						HostNetwork:                  true,
+						HostPID:                      true,
+						PriorityClassName:            "system-cluster-critical",
+						ServiceAccountName:           serviceAccount.Name,
+						AutomountServiceAccountToken: pointer.Bool(false),
+						SecurityContext: &corev1.PodSecurityContext{
+							RunAsNonRoot: pointer.Bool(true),
+							RunAsUser:    pointer.Int64(65534),
+							SeccompProfile: &corev1.SeccompProfile{
+								Type: corev1.SeccompProfileTypeRuntimeDefault,
+							},
+						},
+						Containers: []corev1.Container{
+							{
+								Name:            containerName,
+								Image:           n.values.Image,
+								ImagePullPolicy: corev1.PullIfNotPresent,
+								Command: []string{
+									"/bin/node_exporter",
+									fmt.Sprintf("--web.listen-address=:%d", portMetrics),
+									"--path.procfs=/host/proc",
+									"--path.sysfs=/host/sys",
+									"--path.rootfs=/host",
+									"--log.level=error",
+									"--collector.disable-defaults",
+									"--collector.conntrack",
+									"--collector.cpu",
+									"--collector.diskstats",
+									"--collector.filefd",
+									"--collector.filesystem",
+									"--collector.filesystem.mount-points-exclude=^/(run|var)/.+$|^/(boot|dev|sys|usr)($|/.+$)",
+									"--collector.loadavg",
+									"--collector.meminfo",
+									"--collector.uname",
+									"--collector.stat",
+									"--collector.pressure",
+								},
+								Ports: []corev1.ContainerPort{
+									{
+										ContainerPort: portMetrics,
+										Protocol:      corev1.ProtocolTCP,
+										HostPort:      portMetrics,
+										Name:          "scrape",
+									},
+								},
+								LivenessProbe: &corev1.Probe{
+									ProbeHandler: corev1.ProbeHandler{
+										HTTPGet: &corev1.HTTPGetAction{
+											Path: "/",
+											Port: intstr.FromInt(int(portMetrics)),
+										},
+									},
+									InitialDelaySeconds: 5,
+									TimeoutSeconds:      5,
+								},
+								ReadinessProbe: &corev1.Probe{
+									ProbeHandler: corev1.ProbeHandler{
+										HTTPGet: &corev1.HTTPGetAction{
+											Path: "/",
+											Port: intstr.FromInt(int(portMetrics)),
+										},
+									},
+									InitialDelaySeconds: 5,
+									TimeoutSeconds:      5,
+								},
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("50m"),
+										corev1.ResourceMemory: resource.MustParse("50Mi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceMemory: resource.MustParse("250Mi"),
+									},
+								},
+								VolumeMounts: []corev1.VolumeMount{
+									{
+										Name:      volumeNameHost,
+										ReadOnly:  true,
+										MountPath: volumeMountPathHost,
+									},
+								},
+							},
+						},
+						Volumes: []corev1.Volume{
+							{
+								Name: volumeNameHost,
+								VolumeSource: corev1.VolumeSource{
+									HostPath: &corev1.HostPathVolumeSource{
+										Path: "/",
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 		}
 	)
@@ -139,6 +286,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 	return registry.AddAllAndSerialize(
 		serviceAccount,
 		service,
+		daemonSet,
 	)
 }
 

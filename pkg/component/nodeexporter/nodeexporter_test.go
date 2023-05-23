@@ -108,6 +108,107 @@ spec:
 status:
   loadBalancer: {}
 `
+			daemonSetYAML = `apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  creationTimestamp: null
+  labels:
+    component: node-exporter
+    gardener.cloud/role: monitoring
+    origin: gardener
+  name: node-exporter
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      component: node-exporter
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        component: node-exporter
+        gardener.cloud/role: monitoring
+        networking.gardener.cloud/from-seed: allowed
+        networking.gardener.cloud/to-public-networks: allowed
+        origin: gardener
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - command:
+        - /bin/node_exporter
+        - --web.listen-address=:16909
+        - --path.procfs=/host/proc
+        - --path.sysfs=/host/sys
+        - --path.rootfs=/host
+        - --log.level=error
+        - --collector.disable-defaults
+        - --collector.conntrack
+        - --collector.cpu
+        - --collector.diskstats
+        - --collector.filefd
+        - --collector.filesystem
+        - --collector.filesystem.mount-points-exclude=^/(run|var)/.+$|^/(boot|dev|sys|usr)($|/.+$)
+        - --collector.loadavg
+        - --collector.meminfo
+        - --collector.uname
+        - --collector.stat
+        - --collector.pressure
+        image: some-image:some-tag
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 16909
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+        name: node-exporter
+        ports:
+        - containerPort: 16909
+          hostPort: 16909
+          name: scrape
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 16909
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+        resources:
+          limits:
+            memory: 250Mi
+          requests:
+            cpu: 50m
+            memory: 50Mi
+        volumeMounts:
+        - mountPath: /host
+          name: host
+          readOnly: true
+      hostNetwork: true
+      hostPID: true
+      priorityClassName: system-cluster-critical
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: node-exporter
+      tolerations:
+      - effect: NoSchedule
+        operator: Exists
+      - effect: NoExecute
+        operator: Exists
+      volumes:
+      - hostPath:
+          path: /
+        name: host
+  updateStrategy:
+    type: RollingUpdate
+status:
+  currentNumberScheduled: 0
+  desiredNumberScheduled: 0
+  numberMisscheduled: 0
+  numberReady: 0
+`
 		)
 
 		JustBeforeEach(func() {
@@ -145,6 +246,7 @@ status:
 		It("should successfully deploy all resources", func() {
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__node-exporter.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__node-exporter.yaml"])).To(Equal(serviceYAML))
+			Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-exporter.yaml"])).To(Equal(daemonSetYAML))
 		})
 	})
 
