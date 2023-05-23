@@ -129,6 +129,7 @@ rules:
   - list
   - watch
   - delete
+  - deletecollection
 - apiGroups:
   - ""
   resources:
