@@ -51,7 +51,7 @@ import (
 )
 
 const (
-	// LabelValue is used as value for LabeApp.
+	// LabelValue is used as value for LabelApp.
 	LabelValue = "vpn-shoot"
 
 	managedResourceName = "shoot-core-vpn-shoot"
