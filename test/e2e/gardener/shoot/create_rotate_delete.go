@@ -30,16 +30,19 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/rotation"
-	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/access"
 	rotationutils "github.com/gardener/gardener/test/utils/rotation"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	test := func(f *framework.ShootCreationFramework) {
+	test := func(shoot *gardencorev1beta1.Shoot) {
+		f := defaultShootCreationFramework()
+		f.Shoot = shoot
+
 		// Setting the kubernetes versions to < 1.27 as enableStaticTokenKubeconfig cannot be enabled
 		// for Shoot clusters with k8s version >= 1.27.
 		f.Shoot.Spec.Kubernetes.Version = "1.26.0"
+
 		// Explicitly enable the static token kubeconfig to test the kubeconfig rotation.
 		f.Shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
 
@@ -149,16 +152,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	}
 
 	Context("Shoot with workers", func() {
-		f := defaultShootCreationFramework()
-		f.Shoot = e2e.DefaultShoot("e2e-rotate")
-
-		test(f)
+		test(e2e.DefaultShoot("e2e-rotate"))
 	})
 
 	Context("Workerless Shoot", Label("workerless"), func() {
-		f := defaultShootCreationFramework()
-		f.Shoot = e2e.DefaultWorkerlessShoot("e2e-rotate")
-
-		test(f)
+		test(e2e.DefaultWorkerlessShoot("e2e-rotate"))
 	})
 })

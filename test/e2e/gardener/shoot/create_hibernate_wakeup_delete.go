@@ -21,14 +21,17 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/node"
-	"github.com/gardener/gardener/test/framework"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	test := func(f *framework.ShootCreationFramework) {
+	test := func(shoot *gardencorev1beta1.Shoot) {
+		f := defaultShootCreationFramework()
+		f.Shoot = shoot
+
 		It("Create, Hibernate, Wake up and Delete Shoot", Offset(1), func() {
 			By("Create Shoot")
 			ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
@@ -64,18 +67,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	}
 
 	Context("Shoot with workers", func() {
-		f := defaultShootCreationFramework()
-
-		f.Shoot = e2e.DefaultShoot("e2e-wake-up")
-
-		test(f)
+		test(e2e.DefaultShoot("e2e-wake-up"))
 	})
 
 	Context("Workerless Shoot", Label("workerless"), func() {
-		f := defaultShootCreationFramework()
-
-		f.Shoot = e2e.DefaultWorkerlessShoot("e2e-wake-up")
-
-		test(f)
+		test(e2e.DefaultWorkerlessShoot("e2e-wake-up"))
 	})
 })

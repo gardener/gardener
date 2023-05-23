@@ -22,13 +22,16 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
-	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/shoots/update/highavailability"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "high-availability", "upgrade-to-zone"), func() {
-	test := func(f *framework.ShootCreationFramework) {
+	test := func(shoot *gardencorev1beta1.Shoot) {
+		f := defaultShootCreationFramework()
+		f.Shoot = shoot
+
 		f.Shoot.Spec.ControlPlane = nil
 
 		It("Create, Upgrade (non-HA to HA with failure tolerance type 'zone') and Delete Shoot", Offset(1), func() {
@@ -52,16 +55,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability", "upgrade-to-
 	}
 
 	Context("Shoot with workers", func() {
-		f := defaultShootCreationFramework()
-		f.Shoot = e2e.DefaultShoot("e2e-upd-zone")
-
-		test(f)
+		test(e2e.DefaultShoot("e2e-upd-zone"))
 	})
 
 	Context("Workerless Shoot", Label("workerless"), func() {
-		f := defaultShootCreationFramework()
-		f.Shoot = e2e.DefaultWorkerlessShoot("e2e-upd-zone")
-
-		test(f)
+		test(e2e.DefaultWorkerlessShoot("e2e-upd-zone"))
 	})
 })

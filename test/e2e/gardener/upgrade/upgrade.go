@@ -41,13 +41,15 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 		projectNamespace           = "garden-local"
 	)
 
-	test_e2e_upgrade := func(f *framework.ShootCreationFramework) {
+	test_e2e_upgrade := func(shoot *gardencorev1beta1.Shoot) {
 		var (
 			parentCtx = context.Background()
 			job       *batchv1.Job
 			err       error
+			f         = framework.NewShootCreationFramework(&framework.ShootCreationConfig{GardenerConfig: e2e.DefaultGardenConfig(projectNamespace)})
 		)
 
+		f.Shoot = shoot
 		f.Shoot.Namespace = projectNamespace
 
 		When("Pre-Upgrade (Gardener version:'"+gardenerPreviousVersion+"', Git version:'"+gardenerPreviousGitVersion+"')", Ordered, Offset(1), Label("pre-upgrade"), func() {
@@ -117,27 +119,23 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 	}
 
 	Context("Shoot with workers::e2e-upgrade", func() {
-		f := framework.NewShootCreationFramework(&framework.ShootCreationConfig{GardenerConfig: e2e.DefaultGardenConfig(projectNamespace)})
-		f.Shoot = e2e.DefaultShoot("e2e-upgrade")
-
-		test_e2e_upgrade(f)
+		test_e2e_upgrade(e2e.DefaultShoot("e2e-upgrade"))
 	})
 
 	Context("Workerless Shoot::e2e-upgrade", Label("workerless"), func() {
-		f := framework.NewShootCreationFramework(&framework.ShootCreationConfig{GardenerConfig: e2e.DefaultGardenConfig(projectNamespace)})
-		f.Shoot = e2e.DefaultWorkerlessShoot("e2e-upgrade")
-
-		test_e2e_upgrade(f)
+		test_e2e_upgrade(e2e.DefaultWorkerlessShoot("e2e-upgrade"))
 	})
 
 	// This test will create a non-HA control plane shoot in Gardener version vX.X.X
 	// and then upgrades shoot's control plane to HA once successfully upgraded Gardener version to vY.Y.Y.
-	test_e2e_upgrade_ha := func(f *framework.ShootCreationFramework) {
+	test_e2e_upgrade_ha := func(shoot *gardencorev1beta1.Shoot) {
 		var (
 			parentCtx = context.Background()
 			err       error
+			f         = framework.NewShootCreationFramework(&framework.ShootCreationConfig{GardenerConfig: e2e.DefaultGardenConfig(projectNamespace)})
 		)
 
+		f.Shoot = shoot
 		f.Shoot.Namespace = projectNamespace
 		f.Shoot.Spec.ControlPlane = nil
 
@@ -184,25 +182,21 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 	}
 
 	Context("Shoot with workers::e2e-upg-ha", Label("high-availability"), func() {
-		f := framework.NewShootCreationFramework(&framework.ShootCreationConfig{GardenerConfig: e2e.DefaultGardenConfig(projectNamespace)})
-		f.Shoot = e2e.DefaultShoot("e2e-upg-ha")
-
-		test_e2e_upgrade_ha(f)
+		test_e2e_upgrade_ha(e2e.DefaultShoot("e2e-upg-ha"))
 	})
 
 	Context("Workerless Shoot::e2e-upg-ha", Label("high-availability", "workerless"), func() {
-		f := framework.NewShootCreationFramework(&framework.ShootCreationConfig{GardenerConfig: e2e.DefaultGardenConfig(projectNamespace)})
-		f.Shoot = e2e.DefaultWorkerlessShoot("e2e-upg-ha")
-
-		test_e2e_upgrade_ha(f)
+		test_e2e_upgrade_ha(e2e.DefaultWorkerlessShoot("e2e-upg-ha"))
 	})
 
-	test_e2e_upgrade_hib := func(f *framework.ShootCreationFramework) {
+	test_e2e_upgrade_hib := func(shoot *gardencorev1beta1.Shoot) {
 		var (
 			parentCtx = context.Background()
 			err       error
+			f         = framework.NewShootCreationFramework(&framework.ShootCreationConfig{GardenerConfig: e2e.DefaultGardenConfig(projectNamespace)})
 		)
 
+		f.Shoot = shoot
 		f.Shoot.Namespace = projectNamespace
 
 		When("Pre-upgrade (Gardener version:'"+gardenerCurrentVersion+"', Git version:'"+gardenerCurrentGitVersion+"')", Ordered, Offset(1), Label("pre-upgrade"), func() {
@@ -254,17 +248,11 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 	}
 
 	Context("Shoot with workers::e2e-upg-hib", func() {
-		f := framework.NewShootCreationFramework(&framework.ShootCreationConfig{GardenerConfig: e2e.DefaultGardenConfig(projectNamespace)})
-		f.Shoot = e2e.DefaultShoot("e2e-upg-hib")
-
-		test_e2e_upgrade_hib(f)
+		test_e2e_upgrade_hib(e2e.DefaultShoot("e2e-upg-hib"))
 	})
 
 	Context("Workerless Shoot::e2e-upg-hib", Label("workerless"), func() {
-		f := framework.NewShootCreationFramework(&framework.ShootCreationConfig{GardenerConfig: e2e.DefaultGardenConfig(projectNamespace)})
-		f.Shoot = e2e.DefaultWorkerlessShoot("e2e-upg-hib")
-
-		test_e2e_upgrade_hib(f)
+		test_e2e_upgrade_hib(e2e.DefaultWorkerlessShoot("e2e-upg-hib"))
 	})
 })
 

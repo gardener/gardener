@@ -37,7 +37,10 @@ import (
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	test := func(f *framework.ShootCreationFramework) {
+	test := func(shoot *gardencorev1beta1.Shoot) {
+		f := defaultShootCreationFramework()
+		f.Shoot = shoot
+
 		// explicitly use one version below the latest supported minor version so that Kubernetes version update test can be
 		// performed
 		f.Shoot.Spec.Kubernetes.Version = "1.26.0"
@@ -146,16 +149,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	}
 
 	Context("Shoot with workers", func() {
-		f := defaultShootCreationFramework()
-		f.Shoot = e2e.DefaultShoot("e2e-default")
-
-		test(f)
+		test(e2e.DefaultShoot("e2e-default"))
 	})
 
 	Context("Workerless Shoot", Label("workerless"), func() {
-		f := defaultShootCreationFramework()
-		f.Shoot = e2e.DefaultWorkerlessShoot("e2e-default")
-
-		test(f)
+		test(e2e.DefaultWorkerlessShoot("e2e-default"))
 	})
 })
