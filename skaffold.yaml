@@ -793,6 +793,7 @@ build:
         - pkg/controller/networkpolicy
         - pkg/controller/networkpolicy/helper
         - pkg/controller/networkpolicy/hostnameresolver
+        - pkg/controller/tokenrequestor
         - pkg/controllerutils
         - pkg/controllerutils/mapper
         - pkg/controllerutils/predicate
