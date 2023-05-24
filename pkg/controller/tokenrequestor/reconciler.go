@@ -35,7 +35,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
@@ -54,6 +53,7 @@ type Reconciler struct {
 	Clock              clock.Clock
 	JitterFunc         func(time.Duration, float64) time.Duration
 	Class              *string
+	APIAudiences       []string
 	// TargetNamespace is the namespace that requested ServiceAccounts should be created in.
 	// If TargetNamespace is empty, the controller uses the namespace specified in the
 	// serviceaccount.resources.gardener.cloud/namespace annotation.
@@ -180,7 +180,7 @@ func (r *Reconciler) depopulateToken(secret *corev1.Secret) func() error {
 func (r *Reconciler) createServiceAccountToken(ctx context.Context, sa *corev1.ServiceAccount, expirationSeconds int64) (*authenticationv1.TokenRequest, error) {
 	tokenRequest := &authenticationv1.TokenRequest{
 		Spec: authenticationv1.TokenRequestSpec{
-			Audiences:         []string{v1beta1constants.GardenerAudience},
+			Audiences:         r.APIAudiences,
 			ExpirationSeconds: &expirationSeconds,
 		},
 	}

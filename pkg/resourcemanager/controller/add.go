@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controller/tokenrequestor"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/csrapprover"
@@ -121,6 +122,7 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 			ConcurrentSyncs: pointer.IntDeref(cfg.Controllers.TokenRequestor.ConcurrentSyncs, 0),
 			Clock:           clock.RealClock{},
 			JitterFunc:      wait.Jitter,
+			APIAudiences:    []string{v1beta1constants.GardenerAudience},
 			// TODO(rfranzke): Uncomment the next line after v1.85 has been released.
 			// Class: pointer.String(resourcesv1alpha1.ResourceManagerClassShoot),
 		}).AddToManager(mgr, sourceCluster, targetCluster); err != nil {
