@@ -86,6 +86,33 @@ metadata:
   name: blackbox-exporter
   namespace: kube-system
 `
+
+			configMapYAML = `apiVersion: v1
+data:
+  blackbox.yaml: |
+    modules:
+      http_kubernetes_service:
+        prober: http
+        timeout: 10s
+        http:
+          headers:
+            Accept: "*/*"
+            Accept-Language: "en-US"
+          tls_config:
+            ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+          preferred_ip_protocol: "ip4"
+immutable: true
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: prometheus
+    resources.gardener.cloud/garbage-collectable-reference: "true"
+    role: monitoring
+  name: blackbox-exporter-config-07d191e0
+  namespace: kube-system
+`
 		)
 
 		JustBeforeEach(func() {
@@ -120,8 +147,9 @@ metadata:
 		})
 
 		It("should successfully deploy the resources", func() {
-			Expect(managedResourceSecret.Data).To(HaveLen(1))
+			Expect(managedResourceSecret.Data).To(HaveLen(2))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__blackbox-exporter.yaml"])).To(Equal(serviceAccountYAML))
+			Expect(string(managedResourceSecret.Data["configmap__kube-system__blackbox-exporter-config-07d191e0.yaml"])).To(Equal(configMapYAML))
 		})
 	})
 

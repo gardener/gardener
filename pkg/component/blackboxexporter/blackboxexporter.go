@@ -18,15 +18,17 @@ import (
 	"context"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ManagedResourceName is the name of the ManagedResource containing the resource specifications.
@@ -106,9 +108,38 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
 		}
+
+		configMap = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "blackbox-exporter-config",
+				Namespace: metav1.NamespaceSystem,
+				Labels: map[string]string{
+					v1beta1constants.LabelApp:  "prometheus",
+					v1beta1constants.LabelRole: v1beta1constants.GardenRoleMonitoring,
+				},
+			},
+			Data: map[string]string{
+				`blackbox.yaml`: `modules:
+  http_kubernetes_service:
+    prober: http
+    timeout: 10s
+    http:
+      headers:
+        Accept: "*/*"
+        Accept-Language: "en-US"
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      preferred_ip_protocol: "ip4"
+`,
+			},
+		}
 	)
+
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
 	return registry.AddAllAndSerialize(
 		serviceAccount,
+		configMap,
 	)
 }
