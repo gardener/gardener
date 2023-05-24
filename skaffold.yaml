@@ -899,6 +899,7 @@ build:
         - pkg/component/monitoring
         - pkg/component/namespaces
         - pkg/component/nginxingress
+        - pkg/component/nodeexporter
         - pkg/component/nodelocaldns
         - pkg/component/nodelocaldns/constants
         - pkg/component/nodeproblemdetector
