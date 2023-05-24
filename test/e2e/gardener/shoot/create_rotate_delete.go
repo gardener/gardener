@@ -37,6 +37,9 @@ import (
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	test := func(f *framework.ShootCreationFramework) {
+		// Setting the kubernetes versions to < 1.27 as enableStaticTokenKubeconfig cannot be enabled
+		// for Shoot clusters with k8s version >= 1.27.
+		f.Shoot.Spec.Kubernetes.Version = "1.26.0"
 		// Explicitly enable the static token kubeconfig to test the kubeconfig rotation.
 		f.Shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
 
