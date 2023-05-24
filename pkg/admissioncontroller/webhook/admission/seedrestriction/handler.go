@@ -421,6 +421,11 @@ func (h *Handler) admitServiceAccount(ctx context.Context, seedName string, requ
 		return h.allowIfManagedSeedIsNotYetBootstrapped(ctx, seedName, request.Namespace, strings.TrimPrefix(request.Name, gardenletbootstraputil.ServiceAccountNamePrefix))
 	}
 
+	// Allow all verbs for service accounts in gardenlets' seed-<name> namespaces.
+	if request.Namespace == gardenerutils.ComputeGardenNamespace(seedName) {
+		return admission.Allowed("")
+	}
+
 	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to seed %q", seedName))
 }
 

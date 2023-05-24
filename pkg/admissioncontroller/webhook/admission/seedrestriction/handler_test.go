@@ -2168,6 +2168,11 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 					request.Operation = admissionv1.Create
 				})
 
+				It("should allow the request because namespace is seed namespace", func() {
+					request.Namespace = "seed-" + seedName
+					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+				})
+
 				It("should forbid the request because name pattern does not match", func() {
 					Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
 						AdmissionResponse: admissionv1.AdmissionResponse{
