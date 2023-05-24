@@ -1,6 +1,5 @@
 environment: skaffold # skaffold|local
-# TODO(ary1992): Update to 1.27.1 after the merge of https://github.com/gardener/gardener/pull/7883 has been merged and released (after 1.71 has been released).
-image: kindest/node:v1.26.3
+image: kindest/node:v1.27.1
 
 gardener:
   apiserverRelay:
