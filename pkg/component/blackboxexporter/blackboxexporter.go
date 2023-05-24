@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -31,19 +32,24 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/Masterminds/semver"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/version"
 )
 
-// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
-const ManagedResourceName = "shoot-core-blackbox-exporter"
+const (
+	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
+	ManagedResourceName = "shoot-core-blackbox-exporter"
+
+	labelValue        = "blackbox-exporter"
+	labelKeyComponent = "component"
+)
 
 // Interface contains functions for a blackbox-exporter deployer.
 type Interface interface {
@@ -120,11 +126,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "blackbox-exporter",
 				Namespace: metav1.NamespaceSystem,
-				Labels: map[string]string{
-					v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring,
-					"component":                 "blackbox-exporter",
-					"origin":                    "gardener",
-				},
+				Labels:    getLabels(),
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
 		}
@@ -163,33 +165,33 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "blackbox-exporter",
 				Namespace: metav1.NamespaceSystem,
-				Labels: map[string]string{
-					v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring,
-					"component":                 "blackbox-exporter",
-					"origin":                    "gardener",
-					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
-				},
+				Labels: utils.MergeStringMaps(
+					getLabels(),
+					map[string]string{
+						resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
+					},
+				),
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             pointer.Int32(1),
 				RevisionHistoryLimit: pointer.Int32(2),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
-						"component": "blackbox-exporter",
+						labelKeyComponent: labelValue,
 					},
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{},
-						Labels: map[string]string{
-							"origin":                    "gardener",
-							v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring,
-							"component":                 "blackbox-exporter",
-							v1beta1constants.LabelNetworkPolicyShootFromSeed:    v1beta1constants.LabelNetworkPolicyAllowed,
-							v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
-							v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
-							v1beta1constants.LabelNetworkPolicyShootToAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
-						},
+						Labels: utils.MergeStringMaps(
+							getLabels(),
+							map[string]string{
+								v1beta1constants.LabelNetworkPolicyShootFromSeed:    v1beta1constants.LabelNetworkPolicyAllowed,
+								v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
+								v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
+								v1beta1constants.LabelNetworkPolicyShootToAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+							},
+						),
 					},
 					Spec: corev1.PodSpec{
 						ServiceAccountName: serviceAccount.Name,
@@ -265,7 +267,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				Name:      "blackbox-exporter",
 				Namespace: metav1.NamespaceSystem,
 				Labels: map[string]string{
-					"component": "blackbox-exporter",
+					labelKeyComponent: labelValue,
 				},
 			},
 			Spec: corev1.ServiceSpec{
@@ -278,7 +280,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 					},
 				},
 				Selector: map[string]string{
-					"component": "blackbox-exporter",
+					labelKeyComponent: labelValue,
 				},
 			},
 		}
@@ -296,7 +298,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				Namespace: metav1.NamespaceSystem,
 				Labels: map[string]string{
 					v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring,
-					"component":                 "blackbox-exporter",
+					labelKeyComponent:           labelValue,
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
@@ -311,7 +313,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				Namespace: metav1.NamespaceSystem,
 				Labels: map[string]string{
 					v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring,
-					"component":                 "blackbox-exporter",
+					labelKeyComponent:           labelValue,
 				},
 			},
 			Spec: policyv1beta1.PodDisruptionBudgetSpec{
@@ -358,4 +360,12 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 		service,
 		vpa,
 	)
+}
+
+func getLabels() map[string]string {
+	return map[string]string{
+		"origin":                    "gardener",
+		labelKeyComponent:           labelValue,
+		v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring,
+	}
 }
