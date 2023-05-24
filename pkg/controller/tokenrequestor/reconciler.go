@@ -53,6 +53,7 @@ type Reconciler struct {
 	ConcurrentSyncs    int
 	Clock              clock.Clock
 	JitterFunc         func(time.Duration, float64) time.Duration
+	Class              *string
 }
 
 // Reconcile requests and populates tokens.
@@ -71,7 +72,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	if !isRelevantSecret(secret) {
+	if !r.isRelevantSecret(secret) {
 		return reconcile.Result{}, nil
 	}
 
