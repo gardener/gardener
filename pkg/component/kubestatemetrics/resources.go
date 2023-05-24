@@ -38,7 +38,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName string, shootAccessSecret *gardenerutils.ShootAccessSecret) component.ResourceConfigs {
+func (k *kubeStateMetrics) getResourceConfigs(genericTokenKubeconfigSecretName string, shootAccessSecret *gardenerutils.AccessSecret) component.ResourceConfigs {
 	var (
 		clusterRole        = k.emptyClusterRole()
 		clusterRoleBinding = k.emptyClusterRoleBinding()
@@ -84,7 +84,7 @@ func (k *kubeStateMetrics) reconcileServiceAccount(serviceAccount *corev1.Servic
 	serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
 }
 
-func (k *kubeStateMetrics) newShootAccessSecret() *gardenerutils.ShootAccessSecret {
+func (k *kubeStateMetrics) newShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeStateMetrics, k.namespace)
 }
 
@@ -193,7 +193,7 @@ func (k *kubeStateMetrics) reconcileDeployment(
 	deployment *appsv1.Deployment,
 	serviceAccount *corev1.ServiceAccount,
 	genericTokenKubeconfigSecretName string,
-	shootAccessSecret *gardenerutils.ShootAccessSecret,
+	shootAccessSecret *gardenerutils.AccessSecret,
 ) {
 	var (
 		maxUnavailable = intstr.FromInt(1)

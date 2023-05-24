@@ -168,11 +168,11 @@ func (k *kubeRBACProxy) Destroy(ctx context.Context) error {
 	)
 }
 
-func (k *kubeRBACProxy) newKubeRBACProxyShootAccessSecret() *gardenerutils.ShootAccessSecret {
+func (k *kubeRBACProxy) newKubeRBACProxyShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(kubeRBACProxyName, k.namespace)
 }
 
-func (k *kubeRBACProxy) newValitailShootAccessSecret() *gardenerutils.ShootAccessSecret {
+func (k *kubeRBACProxy) newValitailShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret("valitail", k.namespace).
 		WithServiceAccountName(valitailName).
 		WithTargetSecret(ValitailTokenSecretName, metav1.NamespaceSystem)

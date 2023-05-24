@@ -402,172 +402,186 @@ var _ = Describe("Shoot", func() {
 		Entry("ca-client suffix", "baz.ca-client", "baz", true),
 	)
 
-	Context("ShootAccessSecret", func() {
-		Describe("#NewShootAccessSecret", func() {
-			var (
-				name      = "name"
-				namespace = "namespace"
-			)
+	Describe("#NewShootAccessSecret", func() {
+		var (
+			name      = "name"
+			namespace = "namespace"
+		)
 
-			DescribeTable("default name/namespace",
-				func(prefix string) {
-
-					Expect(NewShootAccessSecret(prefix+name, namespace)).To(Equal(&ShootAccessSecret{
-						Secret:             &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-" + name, Namespace: namespace}},
-						ServiceAccountName: name,
-					}))
-				},
-
-				Entry("no prefix", ""),
-				Entry("prefix", "shoot-access-"),
-			)
-
-			It("should override the name and namespace", func() {
-				Expect(NewShootAccessSecret(name, namespace).
-					WithNameOverride("other-name").
-					WithNamespaceOverride("other-namespace"),
-				).To(Equal(&ShootAccessSecret{
-					Secret:             &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "other-name", Namespace: "other-namespace"}},
+		DescribeTable("default name/namespace",
+			func(prefix string) {
+				Expect(NewShootAccessSecret(prefix+name, namespace)).To(Equal(&AccessSecret{
+					Secret:             &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-" + name, Namespace: namespace}},
 					ServiceAccountName: name,
+					Class:              "shoot",
 				}))
-			})
+			},
+
+			Entry("no prefix", ""),
+			Entry("prefix", "shoot-access-"),
+		)
+
+		It("should override the name and namespace", func() {
+			Expect(NewShootAccessSecret(name, namespace).
+				WithNameOverride("other-name").
+				WithNamespaceOverride("other-namespace"),
+			).To(Equal(&AccessSecret{
+				Secret:             &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "other-name", Namespace: "other-namespace"}},
+				ServiceAccountName: name,
+				Class:              "shoot",
+			}))
+		})
+	})
+
+	Describe("AccessSecret", func() {
+		var (
+			ctx                     = context.TODO()
+			fakeClient              client.Client
+			accessSecret            *AccessSecret
+			serviceAccountName      = "serviceaccount"
+			tokenExpirationDuration = "1234h"
+		)
+
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+			accessSecret = &AccessSecret{
+				Secret: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "access-secret",
+						Namespace: "namespace",
+					},
+				},
+				ServiceAccountName: serviceAccountName,
+				Class:              "foo",
+			}
 		})
 
 		Describe("#Reconcile", func() {
-			var (
-				ctx                     = context.TODO()
-				fakeClient              client.Client
-				shootAccessSecret       *ShootAccessSecret
-				serviceAccountName      = "serviceaccount"
-				tokenExpirationDuration = "1234h"
-			)
+			validate := func() {
+				Expect(accessSecret.Reconcile(ctx, fakeClient)).To(Succeed())
 
-			BeforeEach(func() {
-				fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
-				shootAccessSecret = NewShootAccessSecret("secret", "namespace").WithServiceAccountName(serviceAccountName)
-			})
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(accessSecret.Secret), accessSecret.Secret)).To(Succeed())
+				Expect(accessSecret.Secret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(accessSecret.Secret.Labels).To(And(
+					HaveKeyWithValue("resources.gardener.cloud/purpose", "token-requestor"),
+					HaveKeyWithValue("resources.gardener.cloud/class", accessSecret.Class),
+				))
+				Expect(accessSecret.Secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/name", serviceAccountName))
+			}
 
-			Describe("#Reconcile", func() {
-				validate := func() {
-					Expect(shootAccessSecret.Reconcile(ctx, fakeClient)).To(Succeed())
-
-					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shootAccessSecret.Secret), shootAccessSecret.Secret)).To(Succeed())
-					Expect(shootAccessSecret.Secret.Type).To(Equal(corev1.SecretTypeOpaque))
-					Expect(shootAccessSecret.Secret.Labels).To(And(
-						HaveKeyWithValue("resources.gardener.cloud/purpose", "token-requestor"),
-						HaveKeyWithValue("resources.gardener.cloud/class", "shoot"),
-					))
-					Expect(shootAccessSecret.Secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/name", serviceAccountName))
-					Expect(shootAccessSecret.Secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/namespace", "kube-system"))
-				}
-
-				Context("create", func() {
-					BeforeEach(func() {
-						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shootAccessSecret.Secret), shootAccessSecret.Secret)).To(BeNotFoundError())
-					})
-
-					It("should work w/o settings", func() {
-						validate()
-					})
-
-					It("should work w/ token expiration duration", func() {
-						shootAccessSecret.WithTokenExpirationDuration(tokenExpirationDuration)
-						validate()
-						Expect(shootAccessSecret.Secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-expiration-duration", tokenExpirationDuration))
-					})
-
-					It("should work w/ kubeconfig", func() {
-						kubeconfig := &clientcmdv1.Config{}
-						kubeconfigRaw, err := runtime.Encode(clientcmdlatest.Codec, kubeconfig)
-						Expect(err).NotTo(HaveOccurred())
-
-						shootAccessSecret.WithKubeconfig(kubeconfig)
-						validate()
-						Expect(shootAccessSecret.Secret.Data).To(HaveKeyWithValue("kubeconfig", kubeconfigRaw))
-					})
-
-					It("should work w/ target secret", func() {
-						targetSecretName, targetSecretNamespace := "tname", "tnamespace"
-
-						shootAccessSecret.WithTargetSecret(targetSecretName, targetSecretNamespace)
-						validate()
-						Expect(shootAccessSecret.Secret.Annotations).To(HaveKeyWithValue("token-requestor.resources.gardener.cloud/target-secret-name", targetSecretName))
-						Expect(shootAccessSecret.Secret.Annotations).To(HaveKeyWithValue("token-requestor.resources.gardener.cloud/target-secret-namespace", targetSecretNamespace))
-					})
+			Context("create", func() {
+				BeforeEach(func() {
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(accessSecret.Secret), accessSecret.Secret)).To(BeNotFoundError())
 				})
 
-				Context("update", func() {
-					BeforeEach(func() {
-						shootAccessSecret.Secret.Type = corev1.SecretTypeServiceAccountToken
-						shootAccessSecret.Secret.Annotations = map[string]string{"foo": "bar"}
-						shootAccessSecret.Secret.Labels = map[string]string{"bar": "foo"}
-						Expect(fakeClient.Create(ctx, shootAccessSecret.Secret)).To(Succeed())
-					})
+				It("should work w/o settings", func() {
+					validate()
+					Expect(accessSecret.Secret.Annotations).NotTo(HaveKey("serviceaccount.resources.gardener.cloud/namespace"))
+				})
 
-					AfterEach(func() {
-						Expect(shootAccessSecret.Secret.Labels).To(HaveKeyWithValue("bar", "foo"))
-						Expect(shootAccessSecret.Secret.Annotations).To(HaveKeyWithValue("foo", "bar"))
-					})
+				It("should set ServiceAccount namespace to kube-system for shoot class", func() {
+					accessSecret.Class = "shoot"
+					validate()
+					Expect(accessSecret.Secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/namespace", "kube-system"))
+				})
 
-					It("should work w/o settings", func() {
-						validate()
-					})
+				It("should work w/ token expiration duration", func() {
+					accessSecret.WithTokenExpirationDuration(tokenExpirationDuration)
+					validate()
+					Expect(accessSecret.Secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-expiration-duration", tokenExpirationDuration))
+				})
 
-					It("should work w/ token expiration duration", func() {
-						shootAccessSecret.WithTokenExpirationDuration(tokenExpirationDuration)
-						validate()
-						Expect(shootAccessSecret.Secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-expiration-duration", tokenExpirationDuration))
-					})
+				It("should work w/ kubeconfig", func() {
+					kubeconfig := &clientcmdv1.Config{}
+					kubeconfigRaw, err := runtime.Encode(clientcmdlatest.Codec, kubeconfig)
+					Expect(err).NotTo(HaveOccurred())
 
-					It("should work w/ kubeconfig", func() {
-						existingAuthInfos := []clientcmdv1.NamedAuthInfo{{AuthInfo: clientcmdv1.AuthInfo{Token: "some-token"}}}
+					accessSecret.WithKubeconfig(kubeconfig)
+					validate()
+					Expect(accessSecret.Secret.Data).To(HaveKeyWithValue("kubeconfig", kubeconfigRaw))
+				})
 
-						existingKubeconfig := &clientcmdv1.Config{AuthInfos: existingAuthInfos}
-						existingKubeconfigRaw, err := runtime.Encode(clientcmdlatest.Codec, existingKubeconfig)
-						Expect(err).NotTo(HaveOccurred())
+				It("should work w/ target secret", func() {
+					targetSecretName, targetSecretNamespace := "tname", "tnamespace"
 
-						shootAccessSecret.Secret.Data = map[string][]byte{"kubeconfig": existingKubeconfigRaw}
-						Expect(fakeClient.Update(ctx, shootAccessSecret.Secret)).To(Succeed())
+					accessSecret.WithTargetSecret(targetSecretName, targetSecretNamespace)
+					validate()
+					Expect(accessSecret.Secret.Annotations).To(HaveKeyWithValue("token-requestor.resources.gardener.cloud/target-secret-name", targetSecretName))
+					Expect(accessSecret.Secret.Annotations).To(HaveKeyWithValue("token-requestor.resources.gardener.cloud/target-secret-namespace", targetSecretNamespace))
+				})
+			})
 
-						newKubeconfig := existingKubeconfig.DeepCopy()
-						newKubeconfig.AuthInfos = nil
-						shootAccessSecret.WithKubeconfig(newKubeconfig)
+			Context("update", func() {
+				BeforeEach(func() {
+					accessSecret.Secret.Type = corev1.SecretTypeServiceAccountToken
+					accessSecret.Secret.Annotations = map[string]string{"foo": "bar"}
+					accessSecret.Secret.Labels = map[string]string{"bar": "foo"}
+					Expect(fakeClient.Create(ctx, accessSecret.Secret)).To(Succeed())
+				})
 
-						expectedKubeconfig := newKubeconfig.DeepCopy()
-						expectedKubeconfig.AuthInfos = existingAuthInfos
-						expectedKubeconfigRaw, err := runtime.Encode(clientcmdlatest.Codec, expectedKubeconfig)
-						Expect(err).NotTo(HaveOccurred())
+				AfterEach(func() {
+					Expect(accessSecret.Secret.Labels).To(HaveKeyWithValue("bar", "foo"))
+					Expect(accessSecret.Secret.Annotations).To(HaveKeyWithValue("foo", "bar"))
+				})
 
-						validate()
-						Expect(shootAccessSecret.Secret.Data).To(HaveKeyWithValue("kubeconfig", expectedKubeconfigRaw))
-					})
+				It("should work w/o settings", func() {
+					validate()
+				})
 
-					It("should delete the kubeconfig key", func() {
-						shootAccessSecret.Secret.Data = map[string][]byte{"kubeconfig": []byte("foo")}
-						Expect(fakeClient.Update(ctx, shootAccessSecret.Secret)).To(Succeed())
+				It("should work w/ token expiration duration", func() {
+					accessSecret.WithTokenExpirationDuration(tokenExpirationDuration)
+					validate()
+					Expect(accessSecret.Secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-expiration-duration", tokenExpirationDuration))
+				})
 
-						validate()
-						Expect(shootAccessSecret.Secret.Data).NotTo(HaveKey("kubeconfig"))
-					})
+				It("should work w/ kubeconfig", func() {
+					existingAuthInfos := []clientcmdv1.NamedAuthInfo{{AuthInfo: clientcmdv1.AuthInfo{Token: "some-token"}}}
 
-					It("should delete the token key", func() {
-						shootAccessSecret.Secret.Data = map[string][]byte{"token": []byte("foo")}
-						Expect(fakeClient.Update(ctx, shootAccessSecret.Secret)).To(Succeed())
+					existingKubeconfig := &clientcmdv1.Config{AuthInfos: existingAuthInfos}
+					existingKubeconfigRaw, err := runtime.Encode(clientcmdlatest.Codec, existingKubeconfig)
+					Expect(err).NotTo(HaveOccurred())
 
-						shootAccessSecret.WithKubeconfig(&clientcmdv1.Config{})
+					accessSecret.Secret.Data = map[string][]byte{"kubeconfig": existingKubeconfigRaw}
+					Expect(fakeClient.Update(ctx, accessSecret.Secret)).To(Succeed())
 
-						validate()
-						Expect(shootAccessSecret.Secret.Data).NotTo(HaveKey("token"))
-					})
+					newKubeconfig := existingKubeconfig.DeepCopy()
+					newKubeconfig.AuthInfos = nil
+					accessSecret.WithKubeconfig(newKubeconfig)
 
-					It("should work w/ target secret", func() {
-						targetSecretName, targetSecretNamespace := "tname", "tnamespace"
+					expectedKubeconfig := newKubeconfig.DeepCopy()
+					expectedKubeconfig.AuthInfos = existingAuthInfos
+					expectedKubeconfigRaw, err := runtime.Encode(clientcmdlatest.Codec, expectedKubeconfig)
+					Expect(err).NotTo(HaveOccurred())
 
-						shootAccessSecret.WithTargetSecret(targetSecretName, targetSecretNamespace)
-						validate()
-						Expect(shootAccessSecret.Secret.Annotations).To(HaveKeyWithValue("token-requestor.resources.gardener.cloud/target-secret-name", targetSecretName))
-						Expect(shootAccessSecret.Secret.Annotations).To(HaveKeyWithValue("token-requestor.resources.gardener.cloud/target-secret-namespace", targetSecretNamespace))
-					})
+					validate()
+					Expect(accessSecret.Secret.Data).To(HaveKeyWithValue("kubeconfig", expectedKubeconfigRaw))
+				})
+
+				It("should delete the kubeconfig key", func() {
+					accessSecret.Secret.Data = map[string][]byte{"kubeconfig": []byte("foo")}
+					Expect(fakeClient.Update(ctx, accessSecret.Secret)).To(Succeed())
+
+					validate()
+					Expect(accessSecret.Secret.Data).NotTo(HaveKey("kubeconfig"))
+				})
+
+				It("should delete the token key", func() {
+					accessSecret.Secret.Data = map[string][]byte{"token": []byte("foo")}
+					Expect(fakeClient.Update(ctx, accessSecret.Secret)).To(Succeed())
+
+					accessSecret.WithKubeconfig(&clientcmdv1.Config{})
+
+					validate()
+					Expect(accessSecret.Secret.Data).NotTo(HaveKey("token"))
+				})
+
+				It("should work w/ target secret", func() {
+					targetSecretName, targetSecretNamespace := "tname", "tnamespace"
+
+					accessSecret.WithTargetSecret(targetSecretName, targetSecretNamespace)
+					validate()
+					Expect(accessSecret.Secret.Annotations).To(HaveKeyWithValue("token-requestor.resources.gardener.cloud/target-secret-name", targetSecretName))
+					Expect(accessSecret.Secret.Annotations).To(HaveKeyWithValue("token-requestor.resources.gardener.cloud/target-secret-namespace", targetSecretNamespace))
 				})
 			})
 		})

@@ -101,7 +101,7 @@ type Values struct {
 func (k *kubeStateMetrics) Deploy(ctx context.Context) error {
 	var (
 		genericTokenKubeconfigSecretName string
-		shootAccessSecret                *gardenerutils.ShootAccessSecret
+		shootAccessSecret                *gardenerutils.AccessSecret
 	)
 
 	if k.values.ClusterType == component.ClusterTypeShoot {

@@ -589,7 +589,7 @@ func (k *kubeControllerManager) emptyPodDisruptionBudget() *policyv1.PodDisrupti
 	return &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: k.values.NamePrefix + v1beta1constants.DeploymentNameKubeControllerManager, Namespace: k.namespace}}
 }
 
-func (k *kubeControllerManager) newShootAccessSecret() *gardenerutils.ShootAccessSecret {
+func (k *kubeControllerManager) newShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeControllerManager, k.namespace)
 }
 

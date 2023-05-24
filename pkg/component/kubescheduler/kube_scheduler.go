@@ -425,7 +425,7 @@ func (k *kubeScheduler) emptyDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeScheduler, Namespace: k.namespace}}
 }
 
-func (k *kubeScheduler) newShootAccessSecret() *gardenerutils.ShootAccessSecret {
+func (k *kubeScheduler) newShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeScheduler, k.namespace)
 }
 

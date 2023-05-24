@@ -21,6 +21,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/rest"
@@ -237,6 +238,8 @@ func ReadGardenSecrets(
 }
 
 const (
+	// SecretNamePrefixGardenAccess is the prefix of all secrets containing credentials for accessing the garden cluster.
+	SecretNamePrefixGardenAccess = "garden-access-"
 	// VolumeMountPathGenericGardenKubeconfig is a constant for the path to which the generic garden kubeconfig will be mounted.
 	VolumeMountPathGenericGardenKubeconfig = "/var/run/secrets/gardener.cloud/garden/generic-kubeconfig"
 	// PathGardenToken is a constant for the path at which the garden token file is accessible.
@@ -244,6 +247,26 @@ const (
 	// PathGenericGardenKubeconfig is a constant for the path at which the kubeconfig file is accessible.
 	PathGenericGardenKubeconfig = VolumeMountPathGenericGardenKubeconfig + "/" + secrets.DataKeyKubeconfig
 )
+
+// NewGardenAccessSecret returns a new AccessSecret object and initializes it with an empty corev1.Secret object
+// with the given name and namespace. If not already done, the name will be prefixed with the
+// SecretNamePrefixGardenAccess. The ServiceAccountName field will be defaulted with the name.
+func NewGardenAccessSecret(name, namespace string) *AccessSecret {
+	if !strings.HasPrefix(name, SecretNamePrefixGardenAccess) {
+		name = SecretNamePrefixGardenAccess + name
+	}
+
+	return &AccessSecret{
+		Secret: &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
+		},
+		ServiceAccountName: strings.TrimPrefix(name, SecretNamePrefixGardenAccess),
+		Class:              resourcesv1alpha1.ResourceManagerClassGarden,
+	}
+}
 
 // PrepareGardenClientRestConfig takes a base rest config and adds an optional host and CA certificate.
 func PrepareGardenClientRestConfig(baseConfig *rest.Config, address *string, caCert []byte) rest.Config {

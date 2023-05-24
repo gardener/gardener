@@ -168,4 +168,35 @@ var _ = Describe("Garden", func() {
 		Entry("default domain", "foo.bar.com", []*Domain{defaultDomain}, Equal(defaultDomain)),
 		Entry("no default domain but with same suffix", "foo.foobar.com", []*Domain{defaultDomain}, BeNil()),
 	)
+
+	Describe("#NewGardenAccessSecret", func() {
+		var (
+			name      = "name"
+			namespace = "namespace"
+		)
+
+		DescribeTable("default name/namespace",
+			func(prefix string) {
+				Expect(NewGardenAccessSecret(prefix+name, namespace)).To(Equal(&AccessSecret{
+					Secret:             &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "garden-access-" + name, Namespace: namespace}},
+					ServiceAccountName: name,
+					Class:              "garden",
+				}))
+			},
+
+			Entry("no prefix", ""),
+			Entry("prefix", "garden-access-"),
+		)
+
+		It("should override the name and namespace", func() {
+			Expect(NewGardenAccessSecret(name, namespace).
+				WithNameOverride("other-name").
+				WithNamespaceOverride("other-namespace"),
+			).To(Equal(&AccessSecret{
+				Secret:             &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "other-name", Namespace: "other-namespace"}},
+				ServiceAccountName: name,
+				Class:              "garden",
+			}))
+		})
+	})
 })

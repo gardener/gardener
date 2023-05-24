@@ -281,11 +281,12 @@ const (
 	PathGenericKubeconfig = VolumeMountPathGenericKubeconfig + "/" + secrets.DataKeyKubeconfig
 )
 
-// ShootAccessSecret contains settings for a shoot access secret consumed by a component communicating with a shoot API
-// server.
-type ShootAccessSecret struct {
+// AccessSecret contains settings for a shoot/garden access secret consumed by a component communicating with a shoot
+// or the garden API server.
+type AccessSecret struct {
 	Secret             *corev1.Secret
 	ServiceAccountName string
+	Class              string
 
 	tokenExpirationDuration string
 	kubeconfig              *clientcmdv1.Config
@@ -293,15 +294,15 @@ type ShootAccessSecret struct {
 	targetSecretNamespace   string
 }
 
-// NewShootAccessSecret returns a new ShootAccessSecret object and initializes it with an empty corev1.Secret object
-// with for the given name and namespace. If not already done, the name will be prefixed with the
+// NewShootAccessSecret returns a new AccessSecret object and initializes it with an empty corev1.Secret object
+// with the given name and namespace. If not already done, the name will be prefixed with the
 // SecretNamePrefixShootAccess. The ServiceAccountName field will be defaulted with the name.
-func NewShootAccessSecret(name, namespace string) *ShootAccessSecret {
+func NewShootAccessSecret(name, namespace string) *AccessSecret {
 	if !strings.HasPrefix(name, SecretNamePrefixShootAccess) {
 		name = SecretNamePrefixShootAccess + name
 	}
 
-	return &ShootAccessSecret{
+	return &AccessSecret{
 		Secret: &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
@@ -309,41 +310,42 @@ func NewShootAccessSecret(name, namespace string) *ShootAccessSecret {
 			},
 		},
 		ServiceAccountName: strings.TrimPrefix(name, SecretNamePrefixShootAccess),
+		Class:              resourcesv1alpha1.ResourceManagerClassShoot,
 	}
 }
 
-// WithNameOverride sets the ObjectMeta.Name field of the *corev1.Secret inside the ShootAccessSecret.
-func (s *ShootAccessSecret) WithNameOverride(name string) *ShootAccessSecret {
+// WithNameOverride sets the ObjectMeta.Name field of the *corev1.Secret inside the AccessSecret.
+func (s *AccessSecret) WithNameOverride(name string) *AccessSecret {
 	s.Secret.Name = name
 	return s
 }
 
-// WithNamespaceOverride sets the ObjectMeta.Namespace field of the *corev1.Secret inside the ShootAccessSecret.
-func (s *ShootAccessSecret) WithNamespaceOverride(namespace string) *ShootAccessSecret {
+// WithNamespaceOverride sets the ObjectMeta.Namespace field of the *corev1.Secret inside the AccessSecret.
+func (s *AccessSecret) WithNamespaceOverride(namespace string) *AccessSecret {
 	s.Secret.Namespace = namespace
 	return s
 }
 
-// WithServiceAccountName sets the ServiceAccountName field of the ShootAccessSecret.
-func (s *ShootAccessSecret) WithServiceAccountName(name string) *ShootAccessSecret {
+// WithServiceAccountName sets the ServiceAccountName field of the AccessSecret.
+func (s *AccessSecret) WithServiceAccountName(name string) *AccessSecret {
 	s.ServiceAccountName = name
 	return s
 }
 
-// WithTokenExpirationDuration sets the tokenExpirationDuration field of the ShootAccessSecret.
-func (s *ShootAccessSecret) WithTokenExpirationDuration(duration string) *ShootAccessSecret {
+// WithTokenExpirationDuration sets the tokenExpirationDuration field of the AccessSecret.
+func (s *AccessSecret) WithTokenExpirationDuration(duration string) *AccessSecret {
 	s.tokenExpirationDuration = duration
 	return s
 }
 
-// WithKubeconfig sets the kubeconfig field of the ShootAccessSecret.
-func (s *ShootAccessSecret) WithKubeconfig(kubeconfigRaw *clientcmdv1.Config) *ShootAccessSecret {
+// WithKubeconfig sets the kubeconfig field of the AccessSecret.
+func (s *AccessSecret) WithKubeconfig(kubeconfigRaw *clientcmdv1.Config) *AccessSecret {
 	s.kubeconfig = kubeconfigRaw
 	return s
 }
 
-// WithTargetSecret sets the kubeconfig field of the ShootAccessSecret.
-func (s *ShootAccessSecret) WithTargetSecret(name, namespace string) *ShootAccessSecret {
+// WithTargetSecret sets the kubeconfig field of the AccessSecret.
+func (s *AccessSecret) WithTargetSecret(name, namespace string) *AccessSecret {
 	s.targetSecretName = name
 	s.targetSecretNamespace = namespace
 	return s
@@ -351,13 +353,16 @@ func (s *ShootAccessSecret) WithTargetSecret(name, namespace string) *ShootAcces
 
 // Reconcile creates or patches the given shoot access secret. Based on the struct configuration, it adds the required
 // annotations for the token requestor controller of gardener-resource-manager.
-func (s *ShootAccessSecret) Reconcile(ctx context.Context, c client.Client) error {
+func (s *AccessSecret) Reconcile(ctx context.Context, c client.Client) error {
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, s.Secret, func() error {
 		s.Secret.Type = corev1.SecretTypeOpaque
 		metav1.SetMetaDataLabel(&s.Secret.ObjectMeta, resourcesv1alpha1.ResourceManagerPurpose, resourcesv1alpha1.LabelPurposeTokenRequest)
-		metav1.SetMetaDataLabel(&s.Secret.ObjectMeta, resourcesv1alpha1.ResourceManagerClass, resourcesv1alpha1.ResourceManagerClassShoot)
+		metav1.SetMetaDataLabel(&s.Secret.ObjectMeta, resourcesv1alpha1.ResourceManagerClass, s.Class)
 		metav1.SetMetaDataAnnotation(&s.Secret.ObjectMeta, resourcesv1alpha1.ServiceAccountName, s.ServiceAccountName)
-		metav1.SetMetaDataAnnotation(&s.Secret.ObjectMeta, resourcesv1alpha1.ServiceAccountNamespace, metav1.NamespaceSystem)
+
+		if s.Class == resourcesv1alpha1.ResourceManagerClassShoot {
+			metav1.SetMetaDataAnnotation(&s.Secret.ObjectMeta, resourcesv1alpha1.ServiceAccountNamespace, metav1.NamespaceSystem)
+		}
 
 		if s.tokenExpirationDuration != "" {
 			metav1.SetMetaDataAnnotation(&s.Secret.ObjectMeta, resourcesv1alpha1.ServiceAccountTokenExpirationDuration, s.tokenExpirationDuration)

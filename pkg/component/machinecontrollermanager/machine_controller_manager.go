@@ -460,7 +460,7 @@ func (m *machineControllerManager) emptyService() *corev1.Service {
 	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: m.namespace}}
 }
 
-func (m *machineControllerManager) newShootAccessSecret() *gardenerutils.ShootAccessSecret {
+func (m *machineControllerManager) newShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(v1beta1constants.DeploymentNameMachineControllerManager, m.namespace)
 }
 
