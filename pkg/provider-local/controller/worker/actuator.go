@@ -16,6 +16,7 @@ package worker
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	"k8s.io/client-go/kubernetes"
@@ -62,17 +63,11 @@ func (a *actuator) InjectFunc(f inject.Func) error {
 	return f(a.Actuator)
 }
 
-func (a *actuator) Migrate(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
-	// Migrate must call Delete so that the `Node` object registered in the shoot is also deleted. This is necessary because the shoot's
-	// worker nodes are Pods which reside in the shoot's control plane namespace. This namespace will be deleted at the end of the migrate
-	// step together with all objects inside of it. During the restore phase a new `Machine` object and therefore a new `Node` will be created.
-	// If the old `Node` object was not previously deleted, the shoot will have two nodes registered, but only one of them will be backed by an
-	// actual Pod inside the shoot's control plane.
-	return a.Actuator.Delete(ctx, log, worker, cluster)
-}
-
 func (a *actuator) Restore(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
-	// Restore must call Reconcile because the worker nodes of the shoot cluster are deleted during the create phase. Therefore they must be recreated.
+	if err := genericactuator.RestoreWithoutReconcile(ctx, log, a.workerDelegate.Client(), a.workerDelegate, worker, cluster); err != nil {
+		return fmt.Errorf("failed restoring the worker state: %w", err)
+	}
+
 	return a.Actuator.Reconcile(ctx, log, worker, cluster)
 }
 
