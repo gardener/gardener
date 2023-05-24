@@ -842,6 +842,7 @@ build:
         - pkg/component/nginxingressshoot
         - pkg/component
         - pkg/component/backupentry
+        - pkg/component/blackboxexporter
         - pkg/component/clusterautoscaler
         - pkg/component/clusteridentity
         - pkg/component/coredns
