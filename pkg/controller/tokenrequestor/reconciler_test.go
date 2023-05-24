@@ -37,7 +37,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	. "github.com/gardener/gardener/pkg/resourcemanager/controller/tokenrequestor"
+	. "github.com/gardener/gardener/pkg/controller/tokenrequestor"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 

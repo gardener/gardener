@@ -19,7 +19,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	corev1clientset "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -55,7 +54,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 		Named(ControllerName).
 		For(&corev1.Secret{}, builder.WithPredicates(r.SecretPredicate())).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: r.ConcurrentSyncs,
 		}).
 		Complete(r)
 }

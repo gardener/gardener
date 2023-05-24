@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/gardener/gardener/pkg/controller/tokenrequestor"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/csrapprover"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
@@ -34,7 +35,6 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/node"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/tokenrequestor"
 	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
 
@@ -118,9 +118,9 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 
 	if cfg.Controllers.TokenRequestor.Enabled {
 		if err := (&tokenrequestor.Reconciler{
-			Config:     cfg.Controllers.TokenRequestor,
-			Clock:      clock.RealClock{},
-			JitterFunc: wait.Jitter,
+			ConcurrentSyncs: pointer.IntDeref(cfg.Controllers.TokenRequestor.ConcurrentSyncs, 0),
+			Clock:           clock.RealClock{},
+			JitterFunc:      wait.Jitter,
 		}).AddToManager(mgr, sourceCluster, targetCluster); err != nil {
 			return fmt.Errorf("failed adding token requestor controller: %w", err)
 		}

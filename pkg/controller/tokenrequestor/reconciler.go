@@ -38,7 +38,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 )
 
 const (
@@ -51,7 +50,7 @@ type Reconciler struct {
 	SourceClient       client.Client
 	TargetClient       client.Client
 	TargetCoreV1Client corev1clientset.CoreV1Interface
-	Config             config.TokenRequestorControllerConfig
+	ConcurrentSyncs    int
 	Clock              clock.Clock
 	JitterFunc         func(time.Duration, float64) time.Duration
 }

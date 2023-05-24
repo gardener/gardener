@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	. "github.com/gardener/gardener/pkg/resourcemanager/controller/tokenrequestor"
+	. "github.com/gardener/gardener/pkg/controller/tokenrequestor"
 )
 
 var _ = Describe("Add", func() {
