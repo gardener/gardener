@@ -77,7 +77,7 @@ func (a *genericActuator) Delete(ctx context.Context, log logr.Logger, worker *e
 
 	// Mark all existing machines to become forcefully deleted.
 	log.Info("Marking all machines to become forcefully deleted")
-	if err := a.markAllMachinesForcefulDeletion(ctx, log, worker.Namespace); err != nil {
+	if err := markAllMachinesForcefulDeletion(ctx, log, a.client, worker.Namespace); err != nil {
 		return fmt.Errorf("marking all machines for forceful deletion failed: %w", err)
 	}
 
@@ -124,11 +124,11 @@ func (a *genericActuator) Delete(ctx context.Context, log logr.Logger, worker *e
 }
 
 // Mark all existing machines to become forcefully deleted.
-func (a *genericActuator) markAllMachinesForcefulDeletion(ctx context.Context, log logr.Logger, namespace string) error {
+func markAllMachinesForcefulDeletion(ctx context.Context, log logr.Logger, cl client.Client, namespace string) error {
 	log.Info("Marking all machines for forceful deletion")
 	// Mark all existing machines to become forcefully deleted.
 	existingMachines := &machinev1alpha1.MachineList{}
-	if err := a.client.List(ctx, existingMachines, client.InNamespace(namespace)); err != nil {
+	if err := cl.List(ctx, existingMachines, client.InNamespace(namespace)); err != nil {
 		return err
 	}
 
@@ -136,7 +136,7 @@ func (a *genericActuator) markAllMachinesForcefulDeletion(ctx context.Context, l
 	for _, machine := range existingMachines.Items {
 		m := machine
 		tasks = append(tasks, func(ctx context.Context) error {
-			return a.markMachineForcefulDeletion(ctx, &m)
+			return markMachineForcefulDeletion(ctx, cl, &m)
 		})
 	}
 
@@ -148,7 +148,7 @@ func (a *genericActuator) markAllMachinesForcefulDeletion(ctx context.Context, l
 }
 
 // markMachineForcefulDeletion labels a machine object to become forcefully deleted.
-func (a *genericActuator) markMachineForcefulDeletion(ctx context.Context, machine *machinev1alpha1.Machine) error {
+func markMachineForcefulDeletion(ctx context.Context, cl client.Client, machine *machinev1alpha1.Machine) error {
 	if machine.Labels == nil {
 		machine.Labels = map[string]string{}
 	}
@@ -158,7 +158,7 @@ func (a *genericActuator) markMachineForcefulDeletion(ctx context.Context, machi
 	}
 
 	machine.Labels[forceDeletionLabelKey] = forceDeletionLabelValue
-	return a.client.Update(ctx, machine)
+	return cl.Update(ctx, machine)
 }
 
 // waitUntilMachineResourcesDeleted waits for a maximum of 30 minutes until all machine resources have been properly

@@ -299,7 +299,7 @@ var _ = Describe("Actuator", func() {
 			mockClient.EXPECT().Create(ctx, &expectedMachine1)
 			mockClient.EXPECT().Create(ctx, &expectedMachine2)
 
-			Expect(a.restoreMachineSetsAndMachines(ctx, logger, machineDeployments)).To(Succeed())
+			Expect(restoreMachineSetsAndMachines(ctx, logger, a.client, machineDeployments)).To(Succeed())
 		})
 
 		It("should not return error if machineset and machines already exist", func() {
@@ -307,7 +307,7 @@ var _ = Describe("Actuator", func() {
 			mockClient.EXPECT().Create(ctx, &expectedMachine1).Return(alreadyExistsError)
 			mockClient.EXPECT().Create(ctx, &expectedMachine2).Return(alreadyExistsError)
 
-			Expect(a.restoreMachineSetsAndMachines(ctx, logger, machineDeployments)).To(Succeed())
+			Expect(restoreMachineSetsAndMachines(ctx, logger, a.client, machineDeployments)).To(Succeed())
 		})
 	})
 })
