@@ -465,6 +465,8 @@ var _ = Describe("ResourceManager", func() {
 					},
 					IngressControllerSelector: ingressControllerSelector,
 				}
+				config.SourceClientConnection.ClientConnectionConfiguration.QPS = 300
+				config.SourceClientConnection.ClientConnectionConfiguration.Burst = 500
 				config.Webhooks.CRDDeletionProtection.Enabled = true
 				config.Webhooks.ExtensionValidation.Enabled = true
 				config.Webhooks.SeccompProfile.Enabled = true
