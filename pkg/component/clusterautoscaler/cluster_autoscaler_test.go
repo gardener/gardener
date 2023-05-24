@@ -226,6 +226,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				},
 				Labels: map[string]string{
 					"resources.gardener.cloud/purpose": "token-requestor",
+					"resources.gardener.cloud/class":   "shoot",
 				},
 				ResourceVersion: "0",
 			},

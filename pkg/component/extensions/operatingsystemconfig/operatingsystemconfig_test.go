@@ -328,6 +328,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				Expect(c.Get(ctx, client.ObjectKey{Name: "shoot-access-cloud-config-downloader", Namespace: namespace}, secret)).To(Succeed())
 				Expect(secret.Labels).To(Equal(map[string]string{
 					"resources.gardener.cloud/purpose": "token-requestor",
+					"resources.gardener.cloud/class":   "shoot",
 				}))
 				Expect(secret.Annotations).To(Equal(map[string]string{
 					"serviceaccount.resources.gardener.cloud/name":                      "cloud-config-downloader",
@@ -464,6 +465,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 						Labels: map[string]string{
 							"resources.gardener.cloud/purpose": "token-requestor",
+							"resources.gardener.cloud/class":   "shoot",
 						},
 					},
 					Type: corev1.SecretTypeOpaque,

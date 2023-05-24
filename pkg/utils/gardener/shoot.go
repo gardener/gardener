@@ -334,6 +334,7 @@ func (s *ShootAccessSecret) Reconcile(ctx context.Context, c client.Client) erro
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, s.Secret, func() error {
 		s.Secret.Type = corev1.SecretTypeOpaque
 		metav1.SetMetaDataLabel(&s.Secret.ObjectMeta, resourcesv1alpha1.ResourceManagerPurpose, resourcesv1alpha1.LabelPurposeTokenRequest)
+		metav1.SetMetaDataLabel(&s.Secret.ObjectMeta, resourcesv1alpha1.ResourceManagerClass, resourcesv1alpha1.ResourceManagerClassShoot)
 		metav1.SetMetaDataAnnotation(&s.Secret.ObjectMeta, resourcesv1alpha1.ServiceAccountName, s.ServiceAccountName)
 		metav1.SetMetaDataAnnotation(&s.Secret.ObjectMeta, resourcesv1alpha1.ServiceAccountNamespace, metav1.NamespaceSystem)
 

@@ -78,6 +78,7 @@ var _ = Describe("Access", func() {
 				},
 				Labels: map[string]string{
 					"resources.gardener.cloud/purpose": "token-requestor",
+					"resources.gardener.cloud/class":   "shoot",
 				},
 			},
 			Type: corev1.SecretTypeOpaque,
@@ -115,6 +116,7 @@ users:
 				},
 				Labels: map[string]string{
 					"resources.gardener.cloud/purpose": "token-requestor",
+					"resources.gardener.cloud/class":   "shoot",
 				},
 			},
 			Type: corev1.SecretTypeOpaque,

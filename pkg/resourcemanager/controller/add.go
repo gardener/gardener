@@ -121,6 +121,8 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 			ConcurrentSyncs: pointer.IntDeref(cfg.Controllers.TokenRequestor.ConcurrentSyncs, 0),
 			Clock:           clock.RealClock{},
 			JitterFunc:      wait.Jitter,
+			// TODO(rfranzke): Uncomment the next line after v1.85 has been released.
+			// Class: pointer.String(resourcesv1alpha1.ResourceManagerClassShoot),
 		}).AddToManager(mgr, sourceCluster, targetCluster); err != nil {
 			return fmt.Errorf("failed adding token requestor controller: %w", err)
 		}
