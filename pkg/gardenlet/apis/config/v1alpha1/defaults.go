@@ -177,6 +177,9 @@ func SetDefaults_GardenletControllerConfiguration(obj *GardenletControllerConfig
 	if obj.ManagedSeed == nil {
 		obj.ManagedSeed = &ManagedSeedControllerConfiguration{}
 	}
+	if obj.TokenRequestor == nil {
+		obj.TokenRequestor = &TokenRequestorControllerConfiguration{}
+	}
 }
 
 // SetDefaults_ClientConnectionConfiguration sets defaults for the client connection objects.
@@ -413,6 +416,13 @@ func SetDefaults_ManagedSeedControllerConfiguration(obj *ManagedSeedControllerCo
 
 	if obj.JitterUpdates == nil {
 		obj.JitterUpdates = pointer.Bool(false)
+	}
+}
+
+// SetDefaults_TokenRequestorControllerConfiguration sets defaults for the TokenRequestor controller.
+func SetDefaults_TokenRequestorControllerConfiguration(obj *TokenRequestorControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		obj.ConcurrentSyncs = pointer.Int(5)
 	}
 }
 

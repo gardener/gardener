@@ -796,6 +796,9 @@ func ComputeExpectedGardenletConfiguration(
 			ShootStateSync: &gardenletv1alpha1.ShootStateSyncControllerConfiguration{
 				ConcurrentSyncs: &five,
 			},
+			TokenRequestor: &gardenletv1alpha1.TokenRequestorControllerConfiguration{
+				ConcurrentSyncs: &five,
+			},
 			ControllerInstallation: &gardenletv1alpha1.ControllerInstallationControllerConfiguration{
 				ConcurrentSyncs: &twenty,
 			},

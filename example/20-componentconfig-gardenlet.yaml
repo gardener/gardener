@@ -86,6 +86,8 @@ controllers:
     syncPeriod: 1h
     waitSyncPeriod: 15s
     syncJitterPeriod: 5m
+  tokenRequestor:
+    concurrentSyncs: 5
 resources:
   capacity:
     shoots: 200
