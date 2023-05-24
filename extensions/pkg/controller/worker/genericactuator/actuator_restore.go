@@ -31,13 +31,18 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-// Restore uses the Worker's spec to figure out the wanted MachineDeployments. Then it parses the Worker's state.
-// If there is a record in the state corresponding to a wanted deployment then the Restore function
-// deploys that MachineDeployment with all related MachineSet and Machines.
-func (a *genericActuator) Restore(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
+// RestoreWithoutReconcile restores the worker state without calling 'Reconcile'.
+func RestoreWithoutReconcile(
+	ctx context.Context,
+	log logr.Logger,
+	cl client.Client,
+	delegateFactory DelegateFactory,
+	worker *extensionsv1alpha1.Worker,
+	cluster *extensionscontroller.Cluster,
+) error {
 	log = log.WithValues("operation", "restore")
 
-	workerDelegate, err := a.delegateFactory.WorkerDelegate(ctx, worker, cluster)
+	workerDelegate, err := delegateFactory.WorkerDelegate(ctx, worker, cluster)
 	if err != nil {
 		return fmt.Errorf("could not instantiate actuator context: %w", err)
 	}
@@ -51,7 +56,7 @@ func (a *genericActuator) Restore(ctx context.Context, log logr.Logger, worker *
 
 	// Get the list of all existing machine deployments.
 	existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
-	if err := a.client.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
+	if err := cl.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
 		return err
 	}
 
@@ -88,8 +93,16 @@ func (a *genericActuator) Restore(ctx context.Context, log logr.Logger, worker *
 		return fmt.Errorf("failed to restore the machine deployment config: %w", err)
 	}
 
-	// Finally reconcile the worker so that the machine-controller-manager gets scaled up and OwnerReferences between
-	// machinedeployments, machinesets and machines are added properly.
+	return nil
+}
+
+// Restore uses the Worker's spec to figure out the wanted MachineDeployments. Then it parses the Worker's state.
+// If there is a record in the state corresponding to a wanted deployment then the Restore function
+// deploys that MachineDeployment with all related MachineSet and Machines. It finally calls the 'Reconcile' function.
+func (a *genericActuator) Restore(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
+	if err := RestoreWithoutReconcile(ctx, log, a.client, a.delegateFactory, worker, cluster); err != nil {
+		return err
+	}
 	return a.Reconcile(ctx, log, worker, cluster)
 }
 
