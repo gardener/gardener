@@ -45,7 +45,6 @@ readinessProbe:
   httpGet:
     path: /ready
     port: metrics
-  initialDelaySeconds: 80
   failureThreshold: 7
 
 replicas: 1
