@@ -23,10 +23,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 // Domain contains information about a domain configured in the garden cluster.
@@ -231,4 +234,27 @@ func ReadGardenSecrets(
 
 	log.Info("Found secrets", "namespace", namespace, "secrets", logInfo)
 	return secretsMap, nil
+}
+
+const (
+	// VolumeMountPathGenericGardenKubeconfig is a constant for the path to which the generic garden kubeconfig will be mounted.
+	VolumeMountPathGenericGardenKubeconfig = "/var/run/secrets/gardener.cloud/garden/generic-kubeconfig"
+	// PathGardenToken is a constant for the path at which the garden token file is accessible.
+	PathGardenToken = VolumeMountPathGenericGardenKubeconfig + "/" + resourcesv1alpha1.DataKeyToken
+	// PathGenericGardenKubeconfig is a constant for the path at which the kubeconfig file is accessible.
+	PathGenericGardenKubeconfig = VolumeMountPathGenericGardenKubeconfig + "/" + secrets.DataKeyKubeconfig
+)
+
+// PrepareGardenClientRestConfig takes a base rest config and adds an optional host and CA certificate.
+func PrepareGardenClientRestConfig(baseConfig *rest.Config, address *string, caCert []byte) rest.Config {
+	gardenClientRestConfig := rest.CopyConfig(baseConfig)
+	if address != nil {
+		gardenClientRestConfig.Host = *address
+	}
+	if caCert != nil {
+		gardenClientRestConfig.TLSClientConfig = rest.TLSClientConfig{
+			CAData: caCert,
+		}
+	}
+	return *gardenClientRestConfig
 }

@@ -26,6 +26,9 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/component-base/featuregate"
 	podsecurityadmissionapi "k8s.io/pod-security-admission/api"
 	"k8s.io/utils/clock"
@@ -47,6 +50,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 const finalizerName = "core.gardener.cloud/controllerinstallation"
@@ -58,8 +62,9 @@ var RequeueDurationWhenResourceDeletionStillPresent = 30 * time.Second
 // Reconciler reconciles ControllerInstallations and deploys them into the seed cluster.
 type Reconciler struct {
 	GardenClient          client.Client
+	GardenConfig          *rest.Config
 	SeedClientSet         kubernetes.Interface
-	Config                config.ControllerInstallationControllerConfiguration
+	Config                config.GardenletConfiguration
 	Clock                 clock.Clock
 	Identity              *gardencorev1beta1.Gardener
 	GardenClusterIdentity string
@@ -179,6 +184,11 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, fmt.Errorf("cluster-identity of seed '%s' not set", seed.Name)
 	}
 
+	genericGardenKubeconfigSecretName, err := r.reconcileGenericGardenKubeconfig(seedCtx, namespace.Name)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to reconcile generic garden kubeconfig: %w", err)
+	}
+
 	var (
 		volumeProvider  string
 		volumeProviders []gardencorev1beta1.SeedVolumeProvider
@@ -201,7 +211,8 @@ func (r *Reconciler) reconcile(
 		"gardener": map[string]interface{}{
 			"version": r.Identity.Version,
 			"garden": map[string]interface{}{
-				"clusterIdentity": r.GardenClusterIdentity,
+				"clusterIdentity":             r.GardenClusterIdentity,
+				"genericKubeconfigSecretName": genericGardenKubeconfigSecretName,
 			},
 			"seed": map[string]interface{}{
 				"name":            seed.Name,
@@ -353,4 +364,53 @@ func getNamespaceForControllerInstallation(controllerInstallation *gardencorev1b
 			Name: gardenerutils.NamespaceNameForControllerInstallation(controllerInstallation),
 		},
 	}
+}
+
+func (r *Reconciler) reconcileGenericGardenKubeconfig(ctx context.Context, namespace string) (string, error) {
+	var (
+		address *string
+		caCert  []byte
+	)
+
+	if gcc := r.Config.GardenClientConnection; gcc != nil {
+		address = gcc.GardenClusterAddress
+		caCert = gcc.GardenClusterCACert
+	}
+
+	restConfig := gardenerutils.PrepareGardenClientRestConfig(r.GardenConfig, address, caCert)
+
+	kubeconfig, err := clientcmd.Write(clientcmdapi.Config{
+		Clusters: map[string]*clientcmdapi.Cluster{"garden": {
+			Server:                   restConfig.Host,
+			InsecureSkipTLSVerify:    restConfig.Insecure,
+			CertificateAuthorityData: restConfig.CAData,
+		}},
+		AuthInfos: map[string]*clientcmdapi.AuthInfo{"extension": {
+			TokenFile: gardenerutils.PathGardenToken,
+		}},
+		Contexts: map[string]*clientcmdapi.Context{"garden": {
+			Cluster:  "garden",
+			AuthInfo: "extension",
+		}},
+		CurrentContext: "garden",
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to serialize generic garden kubeconfig: %w", err)
+	}
+
+	kubeconfigSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      v1beta1constants.SecretNameGenericGardenKubeconfig,
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			secretsutils.DataKeyKubeconfig: kubeconfig,
+		},
+	}
+
+	if err := kubernetesutils.MakeUnique(kubeconfigSecret); err != nil {
+		return "", err
+	}
+
+	return kubeconfigSecret.Name, client.IgnoreAlreadyExists(r.SeedClientSet.Client().Create(ctx, kubeconfigSecret))
 }

@@ -218,8 +218,12 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&controllerinstallation.Reconciler{
 		SeedClientSet: testClientSet,
-		Config: config.ControllerInstallationControllerConfiguration{
-			ConcurrentSyncs: pointer.Int(5),
+		Config: config.GardenletConfiguration{
+			Controllers: &config.GardenletControllerConfiguration{
+				ControllerInstallation: &config.ControllerInstallationControllerConfiguration{
+					ConcurrentSyncs: pointer.Int(5),
+				},
+			},
 		},
 		Identity:              identity,
 		GardenClusterIdentity: gardenClusterIdentity,

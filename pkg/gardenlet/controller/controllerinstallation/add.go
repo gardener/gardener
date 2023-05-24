@@ -46,7 +46,7 @@ func AddToManager(
 
 	if err := (&controllerinstallation.Reconciler{
 		SeedClientSet:         seedClientSet,
-		Config:                *cfg.Controllers.ControllerInstallation,
+		Config:                cfg,
 		Identity:              identity,
 		GardenClusterIdentity: gardenClusterIdentity,
 	}).AddToManager(mgr, gardenCluster); err != nil {

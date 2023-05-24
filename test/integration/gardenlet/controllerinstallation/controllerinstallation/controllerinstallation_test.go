@@ -15,6 +15,7 @@
 package controllerinstallation_test
 
 import (
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -171,6 +172,22 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				))
 			}).Should(Succeed())
 
+			By("Ensure generic garden kubeconfig was created")
+			var genericKubeconfigSecret *corev1.Secret
+			Eventually(func(g Gomega) {
+				secretList := &corev1.SecretList{}
+				g.Expect(testClient.List(ctx, secretList, client.InNamespace(namespace.Name))).To(Succeed())
+
+				for _, secret := range secretList.Items {
+					if strings.HasPrefix(secret.Name, "generic-garden-kubeconfig-") {
+						genericKubeconfigSecret = secret.DeepCopy()
+						break
+					}
+				}
+				g.Expect(genericKubeconfigSecret).NotTo(BeNil())
+				g.Expect(genericKubeconfigSecret.Data).To(HaveKeyWithValue("kubeconfig", Not(BeEmpty())))
+			}).Should(Succeed())
+
 			By("Ensure chart was deployed correctly")
 			values := make(map[string]any)
 			Eventually(func(g Gomega) {
@@ -201,6 +218,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			Expect(string(valuesBytes)).To(Equal(`gardener:
   garden:
     clusterIdentity: ` + gardenClusterIdentity + `
+    genericKubeconfigSecretName: ` + genericKubeconfigSecret.Name + `
   gardenlet: {}
   seed:
     annotations: null

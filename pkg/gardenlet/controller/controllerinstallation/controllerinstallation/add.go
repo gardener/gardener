@@ -43,6 +43,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	if r.GardenClient == nil {
 		r.GardenClient = gardenCluster.GetClient()
 	}
+	if r.GardenConfig == nil {
+		r.GardenConfig = gardenCluster.GetConfig()
+	}
 	if r.Clock == nil {
 		r.Clock = clock.RealClock{}
 	}
@@ -51,7 +54,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: pointer.IntDeref(r.Config.Controllers.ControllerInstallation.ConcurrentSyncs, 0),
 		}).
 		Watches(
 			source.NewKindWithCache(&gardencorev1beta1.ControllerInstallation{}, gardenCluster.GetCache()),
