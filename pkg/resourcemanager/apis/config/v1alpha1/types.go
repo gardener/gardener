@@ -262,6 +262,8 @@ type ResourceManagerWebhookConfiguration struct {
 	ExtensionValidation ExtensionValidation `json:"extensionValidation"`
 	// HighAvailabilityConfig is the configuration for the high-availability-config webhook.
 	HighAvailabilityConfig HighAvailabilityConfigWebhookConfig `json:"highAvailabilityConfig"`
+	// KubernetesServiceHost is the configuration for the kubernetes-service-host webhook.
+	KubernetesServiceHost KubernetesServiceHostWebhookConfig `json:"kubernetesServiceHost"`
 	// SystemComponentsConfig is the configuration for the system-components-config webhook.
 	SystemComponentsConfig SystemComponentsConfigWebhookConfig `json:"systemComponentsConfig"`
 	// PodSchedulerName is the configuration for the pod-scheduler-name webhook.
@@ -306,6 +308,14 @@ type HighAvailabilityConfigWebhookConfig struct {
 	// should be added to pods not already tolerating this taint.
 	// +optional
 	DefaultUnreachableTolerationSeconds *int64 `json:"defaultUnreachableTolerationSeconds,omitempty"`
+}
+
+// KubernetesServiceHostWebhookConfig is the configuration for the kubernetes-service-host webhook.
+type KubernetesServiceHostWebhookConfig struct {
+	// Enabled defines whether this webhook is enabled.
+	Enabled bool `json:"enabled"`
+	// Host is the FQDN of the API server.
+	Host string `json:"host"`
 }
 
 // SystemComponentsConfigWebhookConfig is the configuration for the system-components-config webhook.

@@ -119,6 +119,9 @@ global:
         enabled: false
       highAvailabilityConfig:
         enabled: false
+      kubernetesServiceHost:
+        enabled: false
+      # host: api.example.com
       podSchedulerName:
         enabled: false
       # schedulerName: foo-scheduler
