@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/blackboxexporter"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -77,6 +78,8 @@ var _ = Describe("BlackboxExporter", func() {
 
 	Describe("#Deploy", func() {
 		var (
+			configMapName = "blackbox-exporter-config-07d191e0"
+
 			serviceAccountYAML = `apiVersion: v1
 automountServiceAccountToken: false
 kind: ServiceAccount
@@ -113,7 +116,7 @@ metadata:
     app: prometheus
     resources.gardener.cloud/garbage-collectable-reference: "true"
     role: monitoring
-  name: blackbox-exporter-config-07d191e0
+  name: ` + configMapName + `
   namespace: kube-system
 `
 
@@ -144,6 +147,79 @@ status:
 `
 				return out
 			}
+
+			deploymentYAML = `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
+  creationTimestamp: null
+  labels:
+    component: blackbox-exporter
+    gardener.cloud/role: monitoring
+    high-availability-config.resources.gardener.cloud/type: server
+    origin: gardener
+  name: blackbox-exporter
+  namespace: kube-system
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      component: blackbox-exporter
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
+      creationTimestamp: null
+      labels:
+        component: blackbox-exporter
+        gardener.cloud/role: monitoring
+        networking.gardener.cloud/from-seed: allowed
+        networking.gardener.cloud/to-apiserver: allowed
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-public-networks: allowed
+        origin: gardener
+    spec:
+      containers:
+      - args:
+        - --config.file=/etc/blackbox_exporter/blackbox.yaml
+        - --log.level=debug
+        imagePullPolicy: IfNotPresent
+        name: blackbox-exporter
+        ports:
+        - containerPort: 9115
+          name: probe
+          protocol: TCP
+        resources:
+          limits:
+            memory: 128Mi
+          requests:
+            cpu: 10m
+            memory: 25Mi
+        volumeMounts:
+        - mountPath: /etc/blackbox_exporter
+          name: blackbox-exporter-config
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "3"
+      priorityClassName: system-cluster-critical
+      securityContext:
+        fsGroup: 65534
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
+        supplementalGroups:
+        - 1
+      serviceAccountName: blackbox-exporter
+      volumes:
+      - configMap:
+          name: ` + configMapName + `
+        name: blackbox-exporter-config
+status: {}
+`
 		)
 
 		JustBeforeEach(func() {
@@ -178,10 +254,11 @@ status:
 		})
 
 		It("should successfully deploy the resources", func() {
-			Expect(managedResourceSecret.Data).To(HaveLen(3))
+			Expect(managedResourceSecret.Data).To(HaveLen(4))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__blackbox-exporter.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["configmap__kube-system__blackbox-exporter-config-07d191e0.yaml"])).To(Equal(configMapYAML))
 			Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(false)))
+			Expect(string(managedResourceSecret.Data["deployment__kube-system__blackbox-exporter.yaml"])).To(Equal(deploymentYAML))
 		})
 	})
 

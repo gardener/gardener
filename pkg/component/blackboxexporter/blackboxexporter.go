@@ -18,9 +18,11 @@ import (
 	"context"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -29,8 +31,10 @@ import (
 
 	"github.com/Masterminds/semver"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/version"
@@ -46,6 +50,8 @@ type Interface interface {
 
 // Values is a set of configuration values for the blackbox-exporter.
 type Values struct {
+	// Image is the container image used for blackbox-exporter.
+	Image string
 	// KubernetesVersion is the Kubernetes version of the Shoot.
 	KubernetesVersion *semver.Version
 }
@@ -144,11 +150,116 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 `,
 			},
 		}
+	)
+
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
+
+	var (
+		deployment = &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "blackbox-exporter",
+				Namespace: metav1.NamespaceSystem,
+				Labels: map[string]string{
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring,
+					"component":                 "blackbox-exporter",
+					"origin":                    "gardener",
+					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
+				},
+			},
+			Spec: appsv1.DeploymentSpec{
+				Replicas:             pointer.Int32(1),
+				RevisionHistoryLimit: pointer.Int32(2),
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"component": "blackbox-exporter",
+					},
+				},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{},
+						Labels: map[string]string{
+							"origin":                    "gardener",
+							v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring,
+							"component":                 "blackbox-exporter",
+							v1beta1constants.LabelNetworkPolicyShootFromSeed:    v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyShootToAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+						},
+					},
+					Spec: corev1.PodSpec{
+						ServiceAccountName: serviceAccount.Name,
+						PriorityClassName:  "system-cluster-critical",
+						SecurityContext: &corev1.PodSecurityContext{
+							RunAsUser:          pointer.Int64(65534),
+							FSGroup:            pointer.Int64(65534),
+							SupplementalGroups: []int64{1},
+							SeccompProfile: &corev1.SeccompProfile{
+								Type: corev1.SeccompProfileTypeRuntimeDefault,
+							},
+						},
+						Containers: []corev1.Container{
+							{
+								Name:  "blackbox-exporter",
+								Image: b.values.Image,
+								Args: []string{
+									"--config.file=/etc/blackbox_exporter/blackbox.yaml",
+									"--log.level=debug",
+								},
+								ImagePullPolicy: corev1.PullIfNotPresent,
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("10m"),
+										corev1.ResourceMemory: resource.MustParse("25Mi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceMemory: resource.MustParse("128Mi"),
+									},
+								},
+								Ports: []corev1.ContainerPort{
+									{
+										Name:          "probe",
+										ContainerPort: int32(9115),
+										Protocol:      corev1.ProtocolTCP,
+									},
+								},
+								VolumeMounts: []corev1.VolumeMount{
+									{
+										Name:      "blackbox-exporter-config",
+										MountPath: "/etc/blackbox_exporter",
+									},
+								},
+							},
+						},
+						DNSConfig: &corev1.PodDNSConfig{
+							Options: []corev1.PodDNSConfigOption{
+								{
+									Name:  "ndots",
+									Value: pointer.String("3"),
+								},
+							},
+						},
+						Volumes: []corev1.Volume{
+							{
+								Name: "blackbox-exporter-config",
+								VolumeSource: corev1.VolumeSource{
+									ConfigMap: &corev1.ConfigMapVolumeSource{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: configMap.Name,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
 
 		podDisruptionBudget client.Object
 	)
 
-	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
+	utilruntime.Must(references.InjectAnnotations(deployment))
 
 	if version.ConstraintK8sGreaterEqual121.Check(b.values.KubernetesVersion) {
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
@@ -162,11 +273,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
 				MaxUnavailable: &intStrOne,
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"component": "blackbox-exporter",
-					},
-				},
+				Selector:       deployment.Spec.Selector,
 			},
 		}
 	} else {
@@ -181,11 +288,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 			},
 			Spec: policyv1beta1.PodDisruptionBudgetSpec{
 				MaxUnavailable: &intStrOne,
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"component": "blackbox-exporter",
-					},
-				},
+				Selector:       deployment.Spec.Selector,
 			},
 		}
 	}
@@ -193,6 +296,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 	return registry.AddAllAndSerialize(
 		serviceAccount,
 		configMap,
+		deployment,
 		podDisruptionBudget,
 	)
 }
