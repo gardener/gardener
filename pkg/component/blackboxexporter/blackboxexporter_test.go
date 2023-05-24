@@ -17,6 +17,7 @@ package blackboxexporter_test
 import (
 	"context"
 
+	"github.com/Masterminds/semver"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -55,7 +56,9 @@ var _ = Describe("BlackboxExporter", func() {
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		values = Values{}
+		values = Values{
+			KubernetesVersion: semver.MustParse("1.20.5"),
+		}
 		component = New(c, namespace, values)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
@@ -113,6 +116,34 @@ metadata:
   name: blackbox-exporter-config-07d191e0
   namespace: kube-system
 `
+
+			pdbYAMLFor = func(k8sGreaterEqual121 bool) string {
+				apiVersion := "policy/v1beta1"
+				if k8sGreaterEqual121 {
+					apiVersion = "policy/v1"
+				}
+				out := `apiVersion: ` + apiVersion + `
+kind: PodDisruptionBudget
+metadata:
+  creationTimestamp: null
+  labels:
+    component: blackbox-exporter
+    gardener.cloud/role: monitoring
+  name: blackbox-exporter
+  namespace: kube-system
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      component: blackbox-exporter
+status:
+  currentHealthy: 0
+  desiredHealthy: 0
+  disruptionsAllowed: 0
+  expectedPods: 0
+`
+				return out
+			}
 		)
 
 		JustBeforeEach(func() {
@@ -147,9 +178,10 @@ metadata:
 		})
 
 		It("should successfully deploy the resources", func() {
-			Expect(managedResourceSecret.Data).To(HaveLen(2))
+			Expect(managedResourceSecret.Data).To(HaveLen(3))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__blackbox-exporter.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["configmap__kube-system__blackbox-exporter-config-07d191e0.yaml"])).To(Equal(configMapYAML))
+			Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(false)))
 		})
 	})
 

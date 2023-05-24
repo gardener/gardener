@@ -19,16 +19,21 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/Masterminds/semver"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 // ManagedResourceName is the name of the ManagedResource containing the resource specifications.
@@ -40,7 +45,10 @@ type Interface interface {
 }
 
 // Values is a set of configuration values for the blackbox-exporter.
-type Values struct{}
+type Values struct {
+	// KubernetesVersion is the Kubernetes version of the Shoot.
+	KubernetesVersion *semver.Version
+}
 
 // New creates a new instance of DeployWaiter for blackbox-exporter.
 func New(
@@ -94,6 +102,8 @@ func (b *blackboxExporter) WaitCleanup(ctx context.Context) error {
 
 func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 	var (
+		intStrOne = intstr.FromInt(1)
+
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
 		serviceAccount = &corev1.ServiceAccount{
@@ -134,12 +144,55 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 `,
 			},
 		}
+
+		podDisruptionBudget client.Object
 	)
 
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
+	if version.ConstraintK8sGreaterEqual121.Check(b.values.KubernetesVersion) {
+		podDisruptionBudget = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "blackbox-exporter",
+				Namespace: metav1.NamespaceSystem,
+				Labels: map[string]string{
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring,
+					"component":                 "blackbox-exporter",
+				},
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &intStrOne,
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"component": "blackbox-exporter",
+					},
+				},
+			},
+		}
+	} else {
+		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "blackbox-exporter",
+				Namespace: metav1.NamespaceSystem,
+				Labels: map[string]string{
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring,
+					"component":                 "blackbox-exporter",
+				},
+			},
+			Spec: policyv1beta1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &intStrOne,
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"component": "blackbox-exporter",
+					},
+				},
+			},
+		}
+	}
+
 	return registry.AddAllAndSerialize(
 		serviceAccount,
 		configMap,
+		podDisruptionBudget,
 	)
 }
