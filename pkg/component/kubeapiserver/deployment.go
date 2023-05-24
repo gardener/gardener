@@ -1211,7 +1211,7 @@ func (k *kubeAPIServer) handleServiceAccountSigningKeySettings(deployment *appsv
 }
 
 func (k *kubeAPIServer) handlePodMutatorSettings(deployment *appsv1.Deployment) {
-	if k.values.SNI.PodMutatorEnabled {
+	if k.values.SNI.Enabled {
 		deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, corev1.Container{
 			Name:  containerNameAPIServerProxyPodMutator,
 			Image: k.values.Images.APIServerProxyPodWebhook,

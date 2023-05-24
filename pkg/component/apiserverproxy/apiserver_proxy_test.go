@@ -578,13 +578,12 @@ subjects:
 	})
 
 	Describe("#Deploy", func() {
-		test := func(podMutatorEnabled, pspDisabled bool) {
+		test := func(pspDisabled bool) {
 			By("Verify that managed resource does not exist yet")
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 
 			By("Deploy the managed resource successfully")
-			values.PodMutatorEnabled = podMutatorEnabled
 			values.PSPDisabled = pspDisabled
 			component = New(c, namespace, sm, values)
 			component.SetAdvertiseIPAddress(advertiseIPAddress)
@@ -615,39 +614,30 @@ subjects:
 			By("Verify that referenced secret is consistent")
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			expectedLen := 4
+			expectedLen := 5
 			if !pspDisabled {
 				expectedLen += 3
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_apiserver-proxy.yaml"])).To(Equal(clusterRoleYAML))
 				Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.apiserver-proxy.yaml"])).To(Equal(pspYAML))
 				Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_apiserver-proxy.yaml"])).To(Equal(roleBindingYAML))
 			}
-			if podMutatorEnabled {
-				expectedLen++
-				Expect(string(managedResourceSecret.Data["mutatingwebhookconfiguration____apiserver-proxy.networking.gardener.cloud.yaml"])).To(Equal(webhokkConfigYAML))
-			}
 			Expect(managedResourceSecret.Data).To(HaveLen(expectedLen))
+			Expect(string(managedResourceSecret.Data["mutatingwebhookconfiguration____apiserver-proxy.networking.gardener.cloud.yaml"])).To(Equal(webhokkConfigYAML))
 			Expect(string(managedResourceSecret.Data["configmap__kube-system__apiserver-proxy-config-4baf1826.yaml"])).To(Equal(configMapYAML))
 			Expect(string(managedResourceSecret.Data["daemonset__kube-system__apiserver-proxy.yaml"])).To(Equal(daemonSetYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__apiserver-proxy.yaml"])).To(Equal(serviceYAML))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__apiserver-proxy.yaml"])).To(Equal(serviceAccountYAML))
 		}
 
-		Context("Pod mutator disabled, PSP disabled", func() {
+		Context("PSP disabled", func() {
 			It("should deploy the managed resource successfully", func() {
-				test(false, true)
+				test(true)
 			})
 		})
 
-		Context("Pod mutator enabled, PSP disabled", func() {
+		Context("PSP enabled", func() {
 			It("should deploy the managed resource successfully", func() {
-				test(true, true)
-			})
-		})
-
-		Context("Pod mutator enabled, PSP enabled", func() {
-			It("should deploy the managed resource successfully", func() {
-				test(true, false)
+				test(false)
 			})
 		})
 	})

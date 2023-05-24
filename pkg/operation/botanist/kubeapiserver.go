@@ -236,11 +236,7 @@ func (b *Botanist) computeKubeAPIServerSNIConfig() kubeapiserver.SNIConfig {
 	if b.APIServerSNIEnabled() {
 		config.Enabled = true
 		config.AdvertiseAddress = b.APIServerClusterIP
-
-		if b.APIServerSNIPodMutatorEnabled() {
-			config.PodMutatorEnabled = true
-			config.APIServerFQDN = b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)
-		}
+		config.APIServerFQDN = b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)
 	}
 
 	// Add control plane wildcard certificate to TLS SNI config if it is available.

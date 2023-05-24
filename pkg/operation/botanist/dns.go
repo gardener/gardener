@@ -17,7 +17,6 @@ package botanist
 import (
 	"strings"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 )
 
@@ -40,23 +39,6 @@ func (b *Botanist) NeedsExternalDNS() bool {
 func (b *Botanist) NeedsInternalDNS() bool {
 	return b.Garden.InternalDomain != nil &&
 		b.Garden.InternalDomain.Provider != "unmanaged"
-}
-
-// APIServerSNIPodMutatorEnabled returns false if the value of the Shoot annotation
-// 'alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector' is 'disable' or
-// APIServerSNI feature is disabled.
-func (b *Botanist) APIServerSNIPodMutatorEnabled() bool {
-	sniEnabled := b.APIServerSNIEnabled()
-	if !sniEnabled {
-		return false
-	}
-
-	vs, ok := b.Shoot.GetInfo().GetAnnotations()[v1beta1constants.AnnotationShootAPIServerSNIPodInjector]
-	if !ok {
-		return true
-	}
-
-	return vs != v1beta1constants.AnnotationShootAPIServerSNIPodInjectorDisableValue
 }
 
 func (b *Botanist) newDNSComponentsTargetingAPIServerAddress() {

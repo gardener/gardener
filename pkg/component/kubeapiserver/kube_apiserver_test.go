@@ -652,7 +652,7 @@ var _ = Describe("KubeAPIServer", func() {
 					defaultExpectedVPAContainerResourcePolicies,
 					defaultExpectedWeightBasedScalingIntervals,
 				),
-				Entry("SNI pod mutator is enabled",
+				Entry("SNI  is enabled",
 					AutoscalingConfig{
 						HVPAEnabled: true,
 						Replicas:    pointer.Int32(2),
@@ -660,7 +660,7 @@ var _ = Describe("KubeAPIServer", func() {
 						MaxReplicas: 5,
 					},
 					SNIConfig{
-						PodMutatorEnabled: true,
+						Enabled: true,
 					},
 					defaultExpectedScaleDownUpdateMode,
 					defaultExpectedHPAMetrics,
@@ -2258,8 +2258,8 @@ rules:
 				)
 
 				kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, RuntimeVersion: runtimeVersion, Version: version, SNI: SNIConfig{
-					PodMutatorEnabled: true,
-					APIServerFQDN:     fqdn,
+					Enabled:       true,
+					APIServerFQDN: fqdn,
 				}})
 				deployAndRead()
 

@@ -86,7 +86,6 @@ func init() {
 // Values is a set of configuration values for the apiserver-proxy component.
 type Values struct {
 	ProxySeedServerHost string
-	PodMutatorEnabled   bool
 	PSPDisabled         bool
 	Image               string
 	SidecarImage        string
@@ -405,78 +404,77 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 		}
 	)
 
-	if a.values.PodMutatorEnabled {
-		clusterCASecret, found := a.secretsManager.Get(v1beta1constants.SecretNameCACluster)
-		if !found {
-			return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
-		}
-		var (
-			failurePolicy      = admissionregistrationv1.Ignore
-			matchPolicy        = admissionregistrationv1.Exact
-			reinvocationPolicy = admissionregistrationv1.NeverReinvocationPolicy
-			scope              = admissionregistrationv1.AllScopes
-			sideEffects        = admissionregistrationv1.SideEffectClassNone
+	clusterCASecret, found := a.secretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+	}
+	var (
+		failurePolicy      = admissionregistrationv1.Ignore
+		matchPolicy        = admissionregistrationv1.Exact
+		reinvocationPolicy = admissionregistrationv1.NeverReinvocationPolicy
+		scope              = admissionregistrationv1.AllScopes
+		sideEffects        = admissionregistrationv1.SideEffectClassNone
 
-			mutatingWebhook = &admissionregistrationv1.MutatingWebhookConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: mutatingWebhookName,
-					Annotations: map[string]string{
-						"networking.gardener.cloud/description": `This webhook adds "KUBERNETES_SERVICE_HOST"
+		mutatingWebhook = &admissionregistrationv1.MutatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: mutatingWebhookName,
+				Annotations: map[string]string{
+					"networking.gardener.cloud/description": `This webhook adds "KUBERNETES_SERVICE_HOST"
 environment variable to all containers and init containers matched by it.`,
-					},
-					Labels: utils.MergeStringMaps(
-						configMap.GetLabels(),
-						map[string]string{v1beta1constants.LabelExcludeWebhookFromRemediation: "true"}),
 				},
-				Webhooks: []admissionregistrationv1.MutatingWebhook{
-					{
-						AdmissionReviewVersions: []string{"v1"},
-						ClientConfig: admissionregistrationv1.WebhookClientConfig{
-							CABundle: clusterCASecret.Data[secrets.DataKeyCertificateBundle],
-							URL:      pointer.String("https://127.0.0.1:9443/webhook/pod-apiserver-env"),
-						},
-						FailurePolicy: &failurePolicy,
-						MatchPolicy:   &matchPolicy,
-						Name:          mutatingWebhookName,
-						NamespaceSelector: &metav1.LabelSelector{
-							MatchExpressions: []metav1.LabelSelectorRequirement{
-								{
-									Key:      webhookExpressionsKey,
-									Operator: metav1.LabelSelectorOpNotIn,
-									Values:   []string{"disable"},
-								},
-							},
-						},
-						ObjectSelector: &metav1.LabelSelector{
-							MatchExpressions: []metav1.LabelSelectorRequirement{
-								{
-									Key:      webhookExpressionsKey,
-									Operator: metav1.LabelSelectorOpNotIn,
-									Values:   []string{"disable"},
-								},
-							},
-						},
-						ReinvocationPolicy: &reinvocationPolicy,
-						Rules: []admissionregistrationv1.RuleWithOperations{
+				Labels: utils.MergeStringMaps(
+					configMap.GetLabels(),
+					map[string]string{v1beta1constants.LabelExcludeWebhookFromRemediation: "true"},
+				),
+			},
+			Webhooks: []admissionregistrationv1.MutatingWebhook{
+				{
+					AdmissionReviewVersions: []string{"v1"},
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						CABundle: clusterCASecret.Data[secrets.DataKeyCertificateBundle],
+						URL:      pointer.String("https://127.0.0.1:9443/webhook/pod-apiserver-env"),
+					},
+					FailurePolicy: &failurePolicy,
+					MatchPolicy:   &matchPolicy,
+					Name:          mutatingWebhookName,
+					NamespaceSelector: &metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{
 							{
-								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
-								Rule: admissionregistrationv1.Rule{
-									APIGroups:   []string{""},
-									APIVersions: []string{"v1"},
-									Resources:   []string{"pods"},
-									Scope:       &scope,
-								},
+								Key:      webhookExpressionsKey,
+								Operator: metav1.LabelSelectorOpNotIn,
+								Values:   []string{"disable"},
 							},
 						},
-						SideEffects:    &sideEffects,
-						TimeoutSeconds: pointer.Int32(2),
 					},
+					ObjectSelector: &metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      webhookExpressionsKey,
+								Operator: metav1.LabelSelectorOpNotIn,
+								Values:   []string{"disable"},
+							},
+						},
+					},
+					ReinvocationPolicy: &reinvocationPolicy,
+					Rules: []admissionregistrationv1.RuleWithOperations{
+						{
+							Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{""},
+								APIVersions: []string{"v1"},
+								Resources:   []string{"pods"},
+								Scope:       &scope,
+							},
+						},
+					},
+					SideEffects:    &sideEffects,
+					TimeoutSeconds: pointer.Int32(2),
 				},
-			}
-		)
-		if err := registry.Add(mutatingWebhook); err != nil {
-			return nil, err
+			},
 		}
+	)
+	if err := registry.Add(mutatingWebhook); err != nil {
+		return nil, err
 	}
 
 	if !a.values.PSPDisabled {

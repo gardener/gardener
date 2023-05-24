@@ -96,7 +96,7 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 		scaleDownUpdateMode = hvpav1alpha1.UpdateModeOff
 	}
 
-	if k.values.SNI.PodMutatorEnabled {
+	if k.values.SNI.Enabled {
 		vpaContainerResourcePolicies = append(vpaContainerResourcePolicies, vpaautoscalingv1.ContainerResourcePolicy{
 			ContainerName:    containerNameAPIServerProxyPodMutator,
 			Mode:             &containerPolicyOff,

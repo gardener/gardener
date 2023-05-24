@@ -330,8 +330,6 @@ type ServiceAccountConfig struct {
 type SNIConfig struct {
 	// Enabled states whether the SNI feature is enabled.
 	Enabled bool
-	// PodMutatorEnabled states whether the pod mutator is enabled.
-	PodMutatorEnabled bool
 	// APIServerFQDN is the fully qualified domain name for the kube-apiserver.
 	APIServerFQDN string
 	// AdvertiseAddress is the address which should be advertised by the kube-apiserver.
