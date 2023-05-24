@@ -51,15 +51,10 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		podSecurityPolicies = map[string]interface{}{
 			"allowPrivilegedContainers": pointer.BoolDeref(b.Shoot.GetInfo().Spec.Kubernetes.AllowPrivilegedContainers, false),
 		}
-		nodeExporterConfig     = map[string]interface{}{}
-		blackboxExporterConfig = map[string]interface{}{}
+		nodeExporterConfig = map[string]interface{}{}
 	)
 
 	nodeExporter, err := b.InjectShootShootImages(nodeExporterConfig, images.ImageNameNodeExporter)
-	if err != nil {
-		return nil, err
-	}
-	blackboxExporter, err := b.InjectShootShootImages(blackboxExporterConfig, images.ImageNameBlackboxExporter)
 	if err != nil {
 		return nil, err
 	}
@@ -67,8 +62,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 	values := map[string]interface{}{
 		"global": global,
 		"monitoring": common.GenerateAddonConfig(map[string]interface{}{
-			"node-exporter":     nodeExporter,
-			"blackbox-exporter": blackboxExporter,
+			"node-exporter": nodeExporter,
 		}, b.Operation.IsShootMonitoringEnabled()),
 		"podsecuritypolicies": common.GenerateAddonConfig(podSecurityPolicies, !b.Shoot.PSPDisabled && !b.Shoot.IsWorkerless),
 	}
