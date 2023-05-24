@@ -19,6 +19,7 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
@@ -26,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -52,6 +54,8 @@ type Interface interface {
 type Values struct {
 	// Image is the container image used for blackbox-exporter.
 	Image string
+	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
+	VPAEnabled bool
 	// KubernetesVersion is the Kubernetes version of the Shoot.
 	KubernetesVersion *semver.Version
 }
@@ -280,6 +284,7 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 		}
 
 		podDisruptionBudget client.Object
+		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
 	)
 
 	utilruntime.Must(references.InjectAnnotations(deployment))
@@ -316,11 +321,41 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 		}
 	}
 
+	if b.values.VPAEnabled {
+		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
+		vpaControlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "blackbox-exporter",
+				Namespace: metav1.NamespaceSystem,
+			},
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "Deployment",
+					Name:       deployment.Name,
+				},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+					UpdateMode: &vpaUpdateMode,
+				},
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
+							ControlledValues: &vpaControlledValues,
+						},
+					},
+				},
+			},
+		}
+	}
+
 	return registry.AddAllAndSerialize(
 		serviceAccount,
 		configMap,
 		deployment,
 		podDisruptionBudget,
 		service,
+		vpa,
 	)
 }

@@ -58,6 +58,7 @@ var _ = Describe("BlackboxExporter", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
+			VPAEnabled:        true,
 			KubernetesVersion: semver.MustParse("1.20.5"),
 		}
 		component = New(c, namespace, values)
@@ -241,6 +242,26 @@ spec:
 status:
   loadBalancer: {}
 `
+
+			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  creationTimestamp: null
+  name: blackbox-exporter
+  namespace: kube-system
+spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: '*'
+      controlledValues: RequestsOnly
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: blackbox-exporter
+  updatePolicy:
+    updateMode: Auto
+status: {}
+`
 		)
 
 		JustBeforeEach(func() {
@@ -275,12 +296,13 @@ status:
 		})
 
 		It("should successfully deploy the resources", func() {
-			Expect(managedResourceSecret.Data).To(HaveLen(5))
+			Expect(managedResourceSecret.Data).To(HaveLen(6))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__blackbox-exporter.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["configmap__kube-system__blackbox-exporter-config-07d191e0.yaml"])).To(Equal(configMapYAML))
 			Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(false)))
 			Expect(string(managedResourceSecret.Data["deployment__kube-system__blackbox-exporter.yaml"])).To(Equal(deploymentYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__blackbox-exporter.yaml"])).To(Equal(serviceYAML))
+			Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__blackbox-exporter.yaml"])).To(Equal(vpaYAML))
 		})
 	})
 
