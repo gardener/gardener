@@ -137,6 +137,7 @@ func NewTargetGardenerResourceManager(
 	secretNameServerCA string,
 	systemComponentsToleration []corev1.Toleration,
 	topologyAwareRoutingEnabled bool,
+	kubernetesServiceHost *string,
 	isWorkerless bool,
 ) (
 	resourcemanager.Interface,
@@ -161,6 +162,7 @@ func NewTargetGardenerResourceManager(
 		DefaultUnreachableToleration:         defaultUnreachableTolerationSeconds,
 		HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
 		Image:                                image.String(),
+		KubernetesServiceHost:                kubernetesServiceHost,
 		LogLevel:                             logLevel,
 		LogFormat:                            logFormat,
 		MaxConcurrentHealthWorkers:           pointer.Int(10),

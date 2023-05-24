@@ -311,6 +311,9 @@ type Values struct {
 	DefaultSeccompProfileEnabled bool
 	// EndpointSliceHintsEnabled specifies if the EndpointSlice hints webhook of GRM should be enabled or not.
 	EndpointSliceHintsEnabled bool
+	// KubernetesServiceHost specifies the FQDN of the API server of the target cluster. If it is non-nil, the GRM's
+	// kubernetes-service-host webhook will be enabled.
+	KubernetesServiceHost *string
 	// PodTopologySpreadConstraintsEnabled specifies if the pod's TSC should be mutated to support rolling updates.
 	PodTopologySpreadConstraintsEnabled bool
 	// FailureToleranceType determines the failure tolerance type for the resource manager deployment.
@@ -626,6 +629,11 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile != gardencorev1beta1.SchedulingProfileBalanced {
 		config.Webhooks.PodSchedulerName.Enabled = true
 		config.Webhooks.PodSchedulerName.SchedulerName = pointer.String(kubescheduler.BinPackingSchedulerName)
+	}
+
+	if r.values.KubernetesServiceHost != nil {
+		config.Webhooks.KubernetesServiceHost.Enabled = true
+		config.Webhooks.KubernetesServiceHost.Host = *r.values.KubernetesServiceHost
 	}
 
 	if r.values.TargetDiffersFromSourceCluster {
@@ -1260,6 +1268,10 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 
 	if r.values.DefaultSeccompProfileEnabled {
 		webhooks = append(webhooks, GetSeccompProfileMutatingWebhook(r.values.NamePrefix, namespaceSelector, secretServerCA, buildClientConfigFn))
+	}
+
+	if r.values.KubernetesServiceHost != nil {
+		webhooks = append(webhooks, GetKubernetesServiceHostMutatingWebhook(nil, secretServerCA, buildClientConfigFn))
 	}
 
 	if r.values.TargetDiffersFromSourceCluster {
@@ -2063,4 +2075,5 @@ func disableControllersAndWebhooksForWorkerlessShoot(config *resourcemanagerv1al
 	config.Webhooks.ProjectedTokenMount.Enabled = false
 	config.Webhooks.HighAvailabilityConfig.Enabled = false
 	config.Webhooks.PodTopologySpreadConstraints.Enabled = false
+	config.Webhooks.KubernetesServiceHost.Enabled = false
 }
