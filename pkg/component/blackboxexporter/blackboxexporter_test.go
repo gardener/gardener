@@ -220,6 +220,27 @@ spec:
         name: blackbox-exporter-config
 status: {}
 `
+
+			serviceYAML = `apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    component: blackbox-exporter
+  name: blackbox-exporter
+  namespace: kube-system
+spec:
+  ports:
+  - name: probe
+    port: 9115
+    protocol: TCP
+    targetPort: 0
+  selector:
+    component: blackbox-exporter
+  type: ClusterIP
+status:
+  loadBalancer: {}
+`
 		)
 
 		JustBeforeEach(func() {
@@ -254,11 +275,12 @@ status: {}
 		})
 
 		It("should successfully deploy the resources", func() {
-			Expect(managedResourceSecret.Data).To(HaveLen(4))
+			Expect(managedResourceSecret.Data).To(HaveLen(5))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__blackbox-exporter.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["configmap__kube-system__blackbox-exporter-config-07d191e0.yaml"])).To(Equal(configMapYAML))
 			Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(false)))
 			Expect(string(managedResourceSecret.Data["deployment__kube-system__blackbox-exporter.yaml"])).To(Equal(deploymentYAML))
+			Expect(string(managedResourceSecret.Data["service__kube-system__blackbox-exporter.yaml"])).To(Equal(serviceYAML))
 		})
 	})
 

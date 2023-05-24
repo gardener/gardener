@@ -256,6 +256,29 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 
+		service = &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "blackbox-exporter",
+				Namespace: metav1.NamespaceSystem,
+				Labels: map[string]string{
+					"component": "blackbox-exporter",
+				},
+			},
+			Spec: corev1.ServiceSpec{
+				Type: corev1.ServiceTypeClusterIP,
+				Ports: []corev1.ServicePort{
+					{
+						Name:     "probe",
+						Port:     int32(9115),
+						Protocol: corev1.ProtocolTCP,
+					},
+				},
+				Selector: map[string]string{
+					"component": "blackbox-exporter",
+				},
+			},
+		}
+
 		podDisruptionBudget client.Object
 	)
 
@@ -298,5 +321,6 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 		configMap,
 		deployment,
 		podDisruptionBudget,
+		service,
 	)
 }
