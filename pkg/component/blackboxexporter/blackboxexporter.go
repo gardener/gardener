@@ -18,9 +18,13 @@ import (
 	"context"
 	"time"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -89,7 +93,22 @@ func (b *blackboxExporter) WaitCleanup(ctx context.Context) error {
 func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+
+		serviceAccount = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "blackbox-exporter",
+				Namespace: metav1.NamespaceSystem,
+				Labels: map[string]string{
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring,
+					"component":                 "blackbox-exporter",
+					"origin":                    "gardener",
+				},
+			},
+			AutomountServiceAccountToken: pointer.Bool(false),
+		}
 	)
 
-	return registry.AddAllAndSerialize()
+	return registry.AddAllAndSerialize(
+		serviceAccount,
+	)
 }

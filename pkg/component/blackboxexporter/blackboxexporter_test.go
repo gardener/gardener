@@ -73,6 +73,21 @@ var _ = Describe("BlackboxExporter", func() {
 	})
 
 	Describe("#Deploy", func() {
+		var (
+			serviceAccountYAML = `apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  creationTimestamp: null
+  labels:
+    component: blackbox-exporter
+    gardener.cloud/role: monitoring
+    origin: gardener
+  name: blackbox-exporter
+  namespace: kube-system
+`
+		)
+
 		JustBeforeEach(func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
@@ -105,7 +120,8 @@ var _ = Describe("BlackboxExporter", func() {
 		})
 
 		It("should successfully deploy the resources", func() {
-			Expect(managedResourceSecret.Data).To(HaveLen(0))
+			Expect(managedResourceSecret.Data).To(HaveLen(1))
+			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__blackbox-exporter.yaml"])).To(Equal(serviceAccountYAML))
 		})
 	})
 
