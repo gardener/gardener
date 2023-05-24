@@ -306,12 +306,6 @@ func computeKubeAPIServerImages(
 	}
 	result.KubeAPIServer = imageKubeAPIServer.String()
 
-	imageApiserverProxyPodWebhook, err := imageVector.FindImage(images.ImageNameApiserverProxyPodWebhook, imagevector.RuntimeVersion(runtimeVersion.String()), imagevector.TargetVersion(targetVersion.String()))
-	if err != nil {
-		return kubeapiserver.Images{}, err
-	}
-	result.APIServerProxyPodWebhook = imageApiserverProxyPodWebhook.String()
-
 	if version.ConstraintK8sEqual124.Check(targetVersion) {
 		imageWatchdog, err := imageVector.FindImage(images.ImageNameAlpine, imagevector.RuntimeVersion(runtimeVersion.String()), imagevector.TargetVersion(targetVersion.String()))
 		if err != nil {

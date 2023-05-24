@@ -412,58 +412,6 @@ metadata:
   namespace: kube-system
 `
 
-		webhokkConfigYAML = `apiVersion: admissionregistration.k8s.io/v1
-kind: MutatingWebhookConfiguration
-metadata:
-  annotations:
-    networking.gardener.cloud/description: |-
-      This webhook adds "KUBERNETES_SERVICE_HOST"
-      environment variable to all containers and init containers matched by it.
-  creationTimestamp: null
-  labels:
-    app: kubernetes
-    gardener.cloud/role: system-component
-    origin: gardener
-    remediation.webhook.shoot.gardener.cloud/exclude: "true"
-    resources.gardener.cloud/garbage-collectable-reference: "true"
-    role: apiserver-proxy
-  name: apiserver-proxy.networking.gardener.cloud
-webhooks:
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    caBundle: Rk9PQkFS
-    url: https://127.0.0.1:9443/webhook/pod-apiserver-env
-  failurePolicy: Ignore
-  matchPolicy: Exact
-  name: apiserver-proxy.networking.gardener.cloud
-  namespaceSelector:
-    matchExpressions:
-    - key: apiserver-proxy.networking.gardener.cloud/inject
-      operator: NotIn
-      values:
-      - disable
-  objectSelector:
-    matchExpressions:
-    - key: apiserver-proxy.networking.gardener.cloud/inject
-      operator: NotIn
-      values:
-      - disable
-  reinvocationPolicy: Never
-  rules:
-  - apiGroups:
-    - ""
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    resources:
-    - pods
-    scope: '*'
-  sideEffects: None
-  timeoutSeconds: 2
-`
-
 		clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -614,7 +562,7 @@ subjects:
 			By("Verify that referenced secret is consistent")
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			expectedLen := 5
+			expectedLen := 4
 			if !pspDisabled {
 				expectedLen += 3
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_apiserver-proxy.yaml"])).To(Equal(clusterRoleYAML))
@@ -622,7 +570,6 @@ subjects:
 				Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_apiserver-proxy.yaml"])).To(Equal(roleBindingYAML))
 			}
 			Expect(managedResourceSecret.Data).To(HaveLen(expectedLen))
-			Expect(string(managedResourceSecret.Data["mutatingwebhookconfiguration____apiserver-proxy.networking.gardener.cloud.yaml"])).To(Equal(webhokkConfigYAML))
 			Expect(string(managedResourceSecret.Data["configmap__kube-system__apiserver-proxy-config-4baf1826.yaml"])).To(Equal(configMapYAML))
 			Expect(string(managedResourceSecret.Data["daemonset__kube-system__apiserver-proxy.yaml"])).To(Equal(daemonSetYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__apiserver-proxy.yaml"])).To(Equal(serviceYAML))

@@ -55,10 +55,9 @@ const (
 	secretNameHAVPNSeedClient        = "vpn-seed-client"
 
 	// ContainerNameKubeAPIServer is the name of the kube-apiserver container.
-	ContainerNameKubeAPIServer            = "kube-apiserver"
-	containerNameVPNSeedClient            = "vpn-client"
-	containerNameAPIServerProxyPodMutator = "apiserver-proxy-pod-mutator"
-	containerNameWatchdog                 = "watchdog"
+	ContainerNameKubeAPIServer = "kube-apiserver"
+	containerNameVPNSeedClient = "vpn-client"
+	containerNameWatchdog      = "watchdog"
 
 	volumeNameAdmissionConfiguration          = "admission-config"
 	volumeNameAdmissionKubeconfigSecrets      = "admission-kubeconfigs"
@@ -465,7 +464,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handleHostCertVolumes(deployment)
 		k.handleSNISettings(deployment)
 		k.handleTLSSNISettings(deployment, tlsSNISecrets)
-		k.handlePodMutatorSettings(deployment)
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
 		k.handleServiceAccountSigningKeySettings(deployment)
 		k.handleAuditSettings(deployment, configMapAuditPolicy, secretAuditWebhookKubeconfig)
@@ -1208,36 +1206,6 @@ func (k *kubeAPIServer) handleOIDCSettings(deployment *appsv1.Deployment, secret
 func (k *kubeAPIServer) handleServiceAccountSigningKeySettings(deployment *appsv1.Deployment) {
 	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--service-account-signing-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey))
 	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--service-account-key-file=%s/%s", volumeMountPathServiceAccountKeyBundle, secrets.DataKeyPrivateKeyBundle))
-}
-
-func (k *kubeAPIServer) handlePodMutatorSettings(deployment *appsv1.Deployment) {
-	if k.values.SNI.Enabled {
-		deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, corev1.Container{
-			Name:  containerNameAPIServerProxyPodMutator,
-			Image: k.values.Images.APIServerProxyPodWebhook,
-			Args: []string{
-				"--apiserver-fqdn=" + k.values.SNI.APIServerFQDN,
-				"--host=localhost",
-				"--port=9443",
-				"--cert-dir=" + volumeMountPathServer,
-				"--cert-name=" + secrets.DataKeyCertificate,
-				"--key-name=" + secrets.DataKeyPrivateKey,
-			},
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("50m"),
-					corev1.ResourceMemory: resource.MustParse("128M"),
-				},
-				Limits: corev1.ResourceList{
-					corev1.ResourceMemory: resource.MustParse("500M"),
-				},
-			},
-			VolumeMounts: []corev1.VolumeMount{{
-				Name:      volumeNameServer,
-				MountPath: volumeMountPathServer,
-			}},
-		})
-	}
 }
 
 func (k *kubeAPIServer) handleKubeletSettings(deployment *appsv1.Deployment, secretKubeletClient *corev1.Secret) error {

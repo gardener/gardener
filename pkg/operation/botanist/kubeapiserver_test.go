@@ -129,7 +129,6 @@ var _ = Describe("KubeAPIServer", func() {
 					KubernetesVersion: semver.MustParse("1.22.1"),
 				},
 				ImageVector: imagevector.ImageVector{
-					{Name: "apiserver-proxy-pod-webhook"},
 					{Name: "kube-apiserver"},
 					{Name: "vpn-shoot-client"},
 					{Name: "alpine"},
@@ -444,7 +443,6 @@ var _ = Describe("KubeAPIServer", func() {
 					kubeapiserver.SNIConfig{
 						Enabled:          true,
 						AdvertiseAddress: apiServerClusterIP,
-						APIServerFQDN:    "api." + internalClusterDomain,
 					},
 				),
 				Entry("Control plane wildcard certificate available",

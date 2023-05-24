@@ -75,12 +75,11 @@ var _ = Describe("KubeAPIServer", func() {
 	var (
 		ctx = context.TODO()
 
-		namespace          = "some-namespace"
-		vpaUpdateMode      = vpaautoscalingv1.UpdateModeOff
-		controlledValues   = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		containerPolicyOff = vpaautoscalingv1.ContainerScalingModeOff
-		directoryOrCreate  = corev1.HostPathDirectoryOrCreate
-		priorityClassName  = "some-priority-class"
+		namespace         = "some-namespace"
+		vpaUpdateMode     = vpaautoscalingv1.UpdateModeOff
+		controlledValues  = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		directoryOrCreate = corev1.HostPathDirectoryOrCreate
+		priorityClassName = "some-priority-class"
 
 		kubernetesInterface kubernetes.Interface
 		c                   client.Client
@@ -650,38 +649,6 @@ var _ = Describe("KubeAPIServer", func() {
 					"Off",
 					defaultExpectedHPAMetrics,
 					defaultExpectedVPAContainerResourcePolicies,
-					defaultExpectedWeightBasedScalingIntervals,
-				),
-				Entry("SNI  is enabled",
-					AutoscalingConfig{
-						HVPAEnabled: true,
-						Replicas:    pointer.Int32(2),
-						MinReplicas: 5,
-						MaxReplicas: 5,
-					},
-					SNIConfig{
-						Enabled: true,
-					},
-					defaultExpectedScaleDownUpdateMode,
-					defaultExpectedHPAMetrics,
-					[]vpaautoscalingv1.ContainerResourcePolicy{
-						{
-							ContainerName: "kube-apiserver",
-							MinAllowed: corev1.ResourceList{
-								"memory": resource.MustParse("400M"),
-							},
-							MaxAllowed: corev1.ResourceList{
-								"cpu":    resource.MustParse("8"),
-								"memory": resource.MustParse("25G"),
-							},
-							ControlledValues: &controlledValues,
-						},
-						{
-							ContainerName:    "apiserver-proxy-pod-mutator",
-							Mode:             &containerPolicyOff,
-							ControlledValues: &controlledValues,
-						},
-					},
 					defaultExpectedWeightBasedScalingIntervals,
 				),
 				Entry("max replicas > min replicas",
@@ -2249,51 +2216,6 @@ rules:
 						},
 					},
 				))
-			})
-
-			It("should have the mutator sidecar container when enabled", func() {
-				var (
-					fqdn   = "fqdn.fqdn"
-					images = Images{APIServerProxyPodWebhook: "some-image:latest"}
-				)
-
-				kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, RuntimeVersion: runtimeVersion, Version: version, SNI: SNIConfig{
-					Enabled:       true,
-					APIServerFQDN: fqdn,
-				}})
-				deployAndRead()
-
-				Expect(deployment.Spec.Template.Spec.Containers).To(ContainElement(corev1.Container{
-					Name:  "apiserver-proxy-pod-mutator",
-					Image: images.APIServerProxyPodWebhook,
-					Args: []string{
-						"--apiserver-fqdn=" + fqdn,
-						"--host=localhost",
-						"--port=9443",
-						"--cert-dir=/srv/kubernetes/apiserver",
-						"--cert-name=tls.crt",
-						"--key-name=tls.key",
-					},
-					Resources: corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("50m"),
-							corev1.ResourceMemory: resource.MustParse("128M"),
-						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceMemory: resource.MustParse("500M"),
-						},
-					},
-					VolumeMounts: []corev1.VolumeMount{{
-						Name:      "kube-apiserver-server",
-						MountPath: "/srv/kubernetes/apiserver",
-					}},
-				}))
-				Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElement(corev1.Volume{
-					Name: "kube-apiserver-server",
-					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{SecretName: secretNameServer},
-					},
-				}))
 			})
 
 			It("should have the watchdog container when the kubernetes is version 1.24", func() {

@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/sprig"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
@@ -42,7 +41,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -201,7 +199,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 						Name:       "metrics",
 						Port:       adminPort,
 						Protocol:   corev1.ProtocolTCP,
-						TargetPort: intstr.FromInt(int(adminPort)),
+						TargetPort: intstr.FromInt(adminPort),
 					},
 				},
 				Selector: getSelector(),
@@ -340,7 +338,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									ProbeHandler: corev1.ProbeHandler{
 										HTTPGet: &corev1.HTTPGetAction{
 											Path: "/ready",
-											Port: intstr.FromInt(int(adminPort)),
+											Port: intstr.FromInt(adminPort),
 										},
 									},
 									InitialDelaySeconds: 1,
@@ -352,7 +350,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									ProbeHandler: corev1.ProbeHandler{
 										HTTPGet: &corev1.HTTPGetAction{
 											Path: "/ready",
-											Port: intstr.FromInt(int(adminPort)),
+											Port: intstr.FromInt(adminPort),
 										},
 									},
 									InitialDelaySeconds: 1,
@@ -403,79 +401,6 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 	)
-
-	clusterCASecret, found := a.secretsManager.Get(v1beta1constants.SecretNameCACluster)
-	if !found {
-		return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
-	}
-	var (
-		failurePolicy      = admissionregistrationv1.Ignore
-		matchPolicy        = admissionregistrationv1.Exact
-		reinvocationPolicy = admissionregistrationv1.NeverReinvocationPolicy
-		scope              = admissionregistrationv1.AllScopes
-		sideEffects        = admissionregistrationv1.SideEffectClassNone
-
-		mutatingWebhook = &admissionregistrationv1.MutatingWebhookConfiguration{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: mutatingWebhookName,
-				Annotations: map[string]string{
-					"networking.gardener.cloud/description": `This webhook adds "KUBERNETES_SERVICE_HOST"
-environment variable to all containers and init containers matched by it.`,
-				},
-				Labels: utils.MergeStringMaps(
-					configMap.GetLabels(),
-					map[string]string{v1beta1constants.LabelExcludeWebhookFromRemediation: "true"},
-				),
-			},
-			Webhooks: []admissionregistrationv1.MutatingWebhook{
-				{
-					AdmissionReviewVersions: []string{"v1"},
-					ClientConfig: admissionregistrationv1.WebhookClientConfig{
-						CABundle: clusterCASecret.Data[secrets.DataKeyCertificateBundle],
-						URL:      pointer.String("https://127.0.0.1:9443/webhook/pod-apiserver-env"),
-					},
-					FailurePolicy: &failurePolicy,
-					MatchPolicy:   &matchPolicy,
-					Name:          mutatingWebhookName,
-					NamespaceSelector: &metav1.LabelSelector{
-						MatchExpressions: []metav1.LabelSelectorRequirement{
-							{
-								Key:      webhookExpressionsKey,
-								Operator: metav1.LabelSelectorOpNotIn,
-								Values:   []string{"disable"},
-							},
-						},
-					},
-					ObjectSelector: &metav1.LabelSelector{
-						MatchExpressions: []metav1.LabelSelectorRequirement{
-							{
-								Key:      webhookExpressionsKey,
-								Operator: metav1.LabelSelectorOpNotIn,
-								Values:   []string{"disable"},
-							},
-						},
-					},
-					ReinvocationPolicy: &reinvocationPolicy,
-					Rules: []admissionregistrationv1.RuleWithOperations{
-						{
-							Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
-							Rule: admissionregistrationv1.Rule{
-								APIGroups:   []string{""},
-								APIVersions: []string{"v1"},
-								Resources:   []string{"pods"},
-								Scope:       &scope,
-							},
-						},
-					},
-					SideEffects:    &sideEffects,
-					TimeoutSeconds: pointer.Int32(2),
-				},
-			},
-		}
-	)
-	if err := registry.Add(mutatingWebhook); err != nil {
-		return nil, err
-	}
 
 	if !a.values.PSPDisabled {
 		var (
