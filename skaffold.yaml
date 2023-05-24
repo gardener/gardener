@@ -1036,6 +1036,7 @@ build:
         - pkg/resourcemanager/webhook/endpointslicehints
         - pkg/resourcemanager/webhook/extensionvalidation
         - pkg/resourcemanager/webhook/highavailabilityconfig
+        - pkg/resourcemanager/webhook/kubernetesservicehost
         - pkg/resourcemanager/webhook/podschedulername
         - pkg/resourcemanager/webhook/podtopologyspreadconstraints
         - pkg/resourcemanager/webhook/projectedtokenmount

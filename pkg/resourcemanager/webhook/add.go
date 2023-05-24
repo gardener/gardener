@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/endpointslicehints"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/extensionvalidation"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/kubernetesservicehost"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
@@ -82,6 +83,15 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 			Config:        cfg.Webhooks.HighAvailabilityConfig,
 		}).AddToManager(mgr); err != nil {
 			return fmt.Errorf("failed adding %s webhook handler: %w", highavailabilityconfig.HandlerName, err)
+		}
+	}
+
+	if cfg.Webhooks.KubernetesServiceHost.Enabled {
+		if err := (&kubernetesservicehost.Handler{
+			Logger: mgr.GetLogger().WithName("webhook").WithName(kubernetesservicehost.HandlerName),
+			Host:   cfg.Webhooks.KubernetesServiceHost.Host,
+		}).AddToManager(mgr); err != nil {
+			return fmt.Errorf("failed adding %s webhook handler: %w", kubernetesservicehost.HandlerName, err)
 		}
 	}
 

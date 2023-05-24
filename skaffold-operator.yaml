@@ -204,6 +204,7 @@ build:
         - pkg/resourcemanager/controller/health/progressing
         - pkg/resourcemanager/controller/health/utils
         - pkg/resourcemanager/controller/managedresource
+        - pkg/resourcemanager/controller/networkpolicy
         - pkg/resourcemanager/controller/node
         - pkg/resourcemanager/controller/node/helper
         - pkg/resourcemanager/controller/secret
@@ -215,7 +216,7 @@ build:
         - pkg/resourcemanager/webhook/endpointslicehints
         - pkg/resourcemanager/webhook/extensionvalidation
         - pkg/resourcemanager/webhook/highavailabilityconfig
-        - pkg/resourcemanager/controller/networkpolicy
+        - pkg/resourcemanager/webhook/kubernetesservicehost
         - pkg/resourcemanager/webhook/podschedulername
         - pkg/resourcemanager/webhook/podtopologyspreadconstraints
         - pkg/resourcemanager/webhook/projectedtokenmount
