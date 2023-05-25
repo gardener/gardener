@@ -62,14 +62,14 @@ var _ = Describe("Certificate Secrets", func() {
 		})
 
 		Describe("#SecretData", func() {
-			It("should properly return secret data if certificate type is CA", func() {
+			It("should properly return secret data for CA certificates", func() {
 				Expect(certificate.SecretData()).To(Equal(map[string][]byte{
 					DataKeyPrivateKeyCA:  []byte("foo"),
 					DataKeyCertificateCA: []byte("bar"),
 				}))
 			})
 
-			It("should properly return secret data if certificate type is server, client or both", func() {
+			It("should properly return secret data for non-CA certificates", func() {
 				certificate.CA = &Certificate{CertificatePEM: []byte("ca")}
 
 				Expect(certificate.SecretData()).To(Equal(map[string][]byte{
@@ -79,7 +79,7 @@ var _ = Describe("Certificate Secrets", func() {
 				}))
 			})
 
-			It("should properly return secret data if certificate type is server, client or both w/o publishing CA", func() {
+			It("should properly return secret data for non-CA certificates w/o publishing CA", func() {
 				certificate.CA = &Certificate{CertificatePEM: []byte("ca")}
 				certificate.SkipPublishingCACertificate = true
 
@@ -87,6 +87,32 @@ var _ = Describe("Certificate Secrets", func() {
 					DataKeyPrivateKey:  []byte("foo"),
 					DataKeyCertificate: []byte("bar"),
 				}))
+			})
+
+			Context("w/ CA included in chain", func() {
+				BeforeEach(func() {
+					certificate.CA = &Certificate{CertificatePEM: []byte("ca")}
+					certificate.IncludeCACertificateInServerChain = true
+					certificate.SkipPublishingCACertificate = true
+				})
+
+				It("should properly return secret data for server certificates", func() {
+					certificate.CertType = ServerCert
+
+					Expect(certificate.SecretData()).To(Equal(map[string][]byte{
+						DataKeyPrivateKey:  []byte("foo"),
+						DataKeyCertificate: []byte("barca"),
+					}))
+				})
+
+				It("should properly return secret data for client certificates", func() {
+					certificate.CertType = ClientCert
+
+					Expect(certificate.SecretData()).To(Equal(map[string][]byte{
+						DataKeyPrivateKey:  []byte("foo"),
+						DataKeyCertificate: []byte("bar"),
+					}))
+				})
 			})
 		})
 	})

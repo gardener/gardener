@@ -273,12 +273,13 @@ func (k *kubeAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.Secr
 	}
 
 	return k.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:                        secretNameServer,
-		CommonName:                  deploymentName,
-		IPAddresses:                 append(ipAddresses, k.values.ServerCertificate.ExtraIPAddresses...),
-		DNSNames:                    append(dnsNames, k.values.ServerCertificate.ExtraDNSNames...),
-		CertType:                    secretsutils.ServerCert,
-		SkipPublishingCACertificate: true,
+		Name:                              secretNameServer,
+		CommonName:                        deploymentName,
+		IPAddresses:                       append(ipAddresses, k.values.ServerCertificate.ExtraIPAddresses...),
+		DNSNames:                          append(dnsNames, k.values.ServerCertificate.ExtraDNSNames...),
+		CertType:                          secretsutils.ServerCert,
+		SkipPublishingCACertificate:       true,
+		IncludeCACertificateInServerChain: true,
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster), secretsmanager.Rotate(secretsmanager.InPlace))
 }
 
