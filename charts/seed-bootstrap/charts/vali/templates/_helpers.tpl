@@ -12,6 +12,8 @@ vali.yaml: |-
         kvstore:
           store: inmemory
         replication_factor: 1
+      final_sleep: 0s
+      min_ready_duration: 1s
   limits_config:
     enforce_metric_name: false
     reject_old_samples: true
@@ -90,8 +92,10 @@ telegraf.conf: |+
 start.sh: |+
   #/bin/bash
 
+  trap 'kill %1; wait' SIGTERM
   iptables -A INPUT -p tcp --dport {{ .Values.kubeRBACProxy.port }}  -j ACCEPT -m comment --comment "valitail"
-  /usr/bin/telegraf --config /etc/telegraf/telegraf.conf
+  /usr/bin/telegraf --config /etc/telegraf/telegraf.conf &
+  wait
 {{- end -}}
 
 {{- define "telegraf.config.name" -}}
