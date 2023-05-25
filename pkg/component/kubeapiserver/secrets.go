@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
@@ -193,9 +194,7 @@ func (k *kubeAPIServer) reconcileSecretETCDEncryptionConfiguration(ctx context.C
 
 	encryptionConfiguration := &apiserverconfigv1.EncryptionConfiguration{
 		Resources: []apiserverconfigv1.ResourceConfiguration{{
-			Resources: []string{
-				"secrets",
-			},
+			Resources: sets.List(sets.New(k.values.ETCDEncryption.Resources...).Insert("secrets")),
 			Providers: []apiserverconfigv1.ProviderConfiguration{
 				{
 					AESCBC: &apiserverconfigv1.AESConfiguration{
