@@ -93,8 +93,8 @@ var _ = Describe("Add", func() {
 				Expect(p.Delete(event.DeleteEvent{Object: garden})).To(BeFalse())
 			})
 
-			It("should return true because both spec.runtimeCluster.networking.{pods, services} are present", func() {
-				Expect(p.Delete(event.DeleteEvent{Object: garden})).To(BeTrue())
+			It("should return false even if both spec.runtimeCluster.networking.{pods, services} are present", func() {
+				Expect(p.Delete(event.DeleteEvent{Object: garden})).To(BeFalse())
 			})
 		})
 
@@ -111,8 +111,8 @@ var _ = Describe("Add", func() {
 				Expect(p.Generic(event.GenericEvent{Object: garden})).To(BeFalse())
 			})
 
-			It("should return true because both spec.runtimeCluster.networking.{pods, services} are present", func() {
-				Expect(p.Generic(event.GenericEvent{Object: garden})).To(BeTrue())
+			It("should return false even if both spec.runtimeCluster.networking.{pods, services} are present", func() {
+				Expect(p.Generic(event.GenericEvent{Object: garden})).To(BeFalse())
 			})
 		})
 	})
