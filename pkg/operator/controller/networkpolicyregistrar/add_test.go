@@ -25,7 +25,7 @@ import (
 )
 
 var _ = Describe("Add", func() {
-	Describe("#NetworkingPredicate Predicate", func() {
+	Describe("#NetworkingPredicate", func() {
 		var (
 			p      predicate.Predicate
 			garden *operatorv1alpha1.Garden

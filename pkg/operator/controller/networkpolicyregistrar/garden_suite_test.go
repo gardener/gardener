@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestGarden(t *testing.T) {
+func TestNetworkPolicyRegistrar(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Network Policy Registrar Controller Suite")
+	RunSpecs(t, "Operator Controller NetworkPolicyRegistrar Suite")
 }
