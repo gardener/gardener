@@ -90,7 +90,7 @@ var _ = Describe("ETCD", func() {
 			Expect(runtimeClient.Create(ctx, kubeAPIServerDeployment)).To(Succeed())
 		})
 
-		Describe("#RewriteSecretsAddLabel", func() {
+		Describe("#RewriteEncryptedDataAddLabel", func() {
 			It("should patch all secrets and add the label if not already done", func() {
 				Expect(runtimeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-etcd-encryption-key-current", Namespace: kubeAPIServerNamespace}})).To(Succeed())
 
@@ -102,7 +102,7 @@ var _ = Describe("ETCD", func() {
 				secret2ResourceVersion := secret2.ResourceVersion
 				secret3ResourceVersion := secret3.ResourceVersion
 
-				Expect(RewriteSecretsAddLabel(ctx, logger, targetClient, fakeSecretsManager)).To(Succeed())
+				Expect(RewriteEncryptedDataAddLabel(ctx, logger, targetClient, fakeSecretsManager, corev1.SchemeGroupVersion.WithKind("SecretList"))).To(Succeed())
 
 				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
 				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
@@ -143,7 +143,7 @@ var _ = Describe("ETCD", func() {
 			})
 		})
 
-		Describe("#RewriteSecretsRemoveLabel", func() {
+		Describe("#RewriteEncryptedDataRemoveLabel", func() {
 			It("should patch all secrets and remove the label if not already done", func() {
 				metav1.SetMetaDataAnnotation(&kubeAPIServerDeployment.ObjectMeta, "credentials.gardener.cloud/etcd-snapshotted", "true")
 				Expect(runtimeClient.Update(ctx, kubeAPIServerDeployment)).To(Succeed())
@@ -156,7 +156,7 @@ var _ = Describe("ETCD", func() {
 				secret2ResourceVersion := secret2.ResourceVersion
 				secret3ResourceVersion := secret3.ResourceVersion
 
-				Expect(RewriteSecretsRemoveLabel(ctx, logger, runtimeClient, targetClient, kubeAPIServerNamespace, namePrefix)).To(Succeed())
+				Expect(RewriteEncryptedDataRemoveLabel(ctx, logger, runtimeClient, targetClient, kubeAPIServerNamespace, namePrefix, corev1.SchemeGroupVersion.WithKind("SecretList"))).To(Succeed())
 
 				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
 				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())

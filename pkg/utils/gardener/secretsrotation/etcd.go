@@ -21,9 +21,9 @@ import (
 	"github.com/go-logr/logr"
 	"golang.org/x/time/rate"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -34,18 +34,24 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
-// RewriteSecretsAddLabel patches all secrets in all namespaces in the target clusters and adds a label whose value is
-// the name of the current ETCD encryption key secret. This function is useful for the ETCD encryption key secret
-// rotation which requires all secrets to be rewritten to ETCD so that they become encrypted with the new key.
-// After it's done, it snapshots ETCD so that we can restore backups in case we lose the cluster before the next
-// incremental snapshot is taken.
-func RewriteSecretsAddLabel(ctx context.Context, log logr.Logger, c client.Client, secretsManager secretsmanager.Interface) error {
+// RewriteEncryptedDataAddLabel patches all encrypted data in all namespaces in the target clusters and adds a label
+// whose value is the name of the current ETCD encryption key secret. This function is useful for the ETCD encryption
+// key secret rotation which requires all encrypted data to be rewritten to ETCD so that they become encrypted with the
+// new key. After it's done, it snapshots ETCD so that we can restore backups in case we lose the cluster before the
+// next incremental snapshot has been taken.
+func RewriteEncryptedDataAddLabel(
+	ctx context.Context,
+	log logr.Logger,
+	c client.Client,
+	secretsManager secretsmanager.Interface,
+	gvks ...schema.GroupVersionKind,
+) error {
 	etcdEncryptionKeySecret, found := secretsManager.Get(v1beta1constants.SecretNameETCDEncryptionKey, secretsmanager.Current)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameETCDEncryptionKey)
 	}
 
-	return rewriteSecrets(
+	return rewriteEncryptedData(
 		ctx,
 		log,
 		c,
@@ -53,14 +59,24 @@ func RewriteSecretsAddLabel(ctx context.Context, log logr.Logger, c client.Clien
 		func(objectMeta *metav1.ObjectMeta) {
 			metav1.SetMetaDataLabel(objectMeta, labelKeyRotationKeyName, etcdEncryptionKeySecret.Name)
 		},
+		gvks...,
 	)
 }
 
-// RewriteSecretsRemoveLabel patches all secrets in all namespaces in the target clusters and removes the label whose
-// value is the name of the current ETCD encryption key secret. This function is useful for the ETCD encryption key
-// secret rotation which requires all secrets to be rewritten to ETCD so that they become encrypted with the new key.
-func RewriteSecretsRemoveLabel(ctx context.Context, log logr.Logger, runtimeClient, targetClient client.Client, kubeAPIServerNamespace, namePrefix string) error {
-	if err := rewriteSecrets(
+// RewriteEncryptedDataRemoveLabel patches all encrypted data in all namespaces in the target clusters and removes the
+// label whose value is the name of the current ETCD encryption key secret. This function is useful for the ETCD
+// encryption key secret rotation which requires all encrypted data to be rewritten to ETCD so that they become
+// encrypted with the new key.
+func RewriteEncryptedDataRemoveLabel(
+	ctx context.Context,
+	log logr.Logger,
+	runtimeClient client.Client,
+	targetClient client.Client,
+	kubeAPIServerNamespace string,
+	namePrefix string,
+	gvks ...schema.GroupVersionKind,
+) error {
+	if err := rewriteEncryptedData(
 		ctx,
 		log,
 		targetClient,
@@ -68,6 +84,7 @@ func RewriteSecretsRemoveLabel(ctx context.Context, log logr.Logger, runtimeClie
 		func(objectMeta *metav1.ObjectMeta) {
 			delete(objectMeta.Labels, labelKeyRotationKeyName)
 		},
+		gvks...,
 	); err != nil {
 		return err
 	}
@@ -77,34 +94,43 @@ func RewriteSecretsRemoveLabel(ctx context.Context, log logr.Logger, runtimeClie
 	})
 }
 
-func rewriteSecrets(ctx context.Context, log logr.Logger, c client.Client, requirement labels.Requirement, mutateObjectMeta func(*metav1.ObjectMeta)) error {
-	secretList := &metav1.PartialObjectMetadataList{}
-	secretList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("SecretList"))
-	if err := c.List(ctx, secretList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(requirement)}); err != nil {
-		return err
-	}
-
-	log.Info("Secrets requiring to be rewritten after ETCD encryption key rotation", "number", len(secretList.Items))
-
+func rewriteEncryptedData(
+	ctx context.Context,
+	log logr.Logger,
+	c client.Client,
+	requirement labels.Requirement,
+	mutateObjectMeta func(*metav1.ObjectMeta),
+	gvks ...schema.GroupVersionKind,
+) error {
 	var (
 		limiter = rate.NewLimiter(rate.Limit(rotationQPS), rotationQPS)
 		taskFns []flow.TaskFn
 	)
 
-	for _, obj := range secretList.Items {
-		secret := obj
+	for _, gvk := range gvks {
+		objList := &metav1.PartialObjectMetadataList{}
+		objList.SetGroupVersionKind(gvk)
+		if err := c.List(ctx, objList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(requirement)}); err != nil {
+			return err
+		}
 
-		taskFns = append(taskFns, func(ctx context.Context) error {
-			patch := client.StrategicMergeFrom(secret.DeepCopy())
-			mutateObjectMeta(&secret.ObjectMeta)
+		log.Info("Objects requiring to be rewritten after ETCD encryption key rotation", "gvk", gvk, "number", len(objList.Items))
 
-			// Wait until we are allowed by the limiter to not overload the kube-apiserver with too many requests.
-			if err := limiter.Wait(ctx); err != nil {
-				return err
-			}
+		for _, o := range objList.Items {
+			obj := o
 
-			return c.Patch(ctx, &secret, patch)
-		})
+			taskFns = append(taskFns, func(ctx context.Context) error {
+				patch := client.StrategicMergeFrom(obj.DeepCopy())
+				mutateObjectMeta(&obj.ObjectMeta)
+
+				// Wait until we are allowed by the limiter to not overload the kube-apiserver with too many requests.
+				if err := limiter.Wait(ctx); err != nil {
+					return err
+				}
+
+				return c.Patch(ctx, &obj, patch)
+			})
+		}
 	}
 
 	return flow.Parallel(taskFns...)(ctx)
