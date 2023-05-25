@@ -16,7 +16,7 @@ limitations under the License.
 The utility functions in this file were copied from the kubernetes/client-go project
 https://github.com/kubernetes/client-go/blob/master/util/certificate/certificate_manager.go
 
-Modifications Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved.
+Modifications Copyright 2020 SAP SE or an SAP affiliate company. All rights reserved.
 */
 
 package certificate

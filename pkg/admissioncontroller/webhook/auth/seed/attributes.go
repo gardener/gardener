@@ -16,7 +16,7 @@ limitations under the License.
 The utility functions in this file were copied from the kubernetes/kubernetes project
 https://github.com/kubernetes/kubernetes/blob/v1.20.2/pkg/registry/authorization/util/helpers.go
 
-Modifications Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved.
+Modifications Copyright 2021 SAP SE or an SAP affiliate company. All rights reserved.
 */
 
 package seed

@@ -16,7 +16,7 @@ limitations under the License.
 This file was copied and modified from the kubernetes/kubernetes project
 https://github.com/kubernetes/kubernetes/blob/release-1.15/pkg/controller/certificates/approver/sarapprove.go
 
-Modifications Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved.
+Modifications Copyright 2019 SAP SE or an SAP affiliate company. All rights reserved.
 */
 
 package certificatesigningrequest

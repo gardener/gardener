@@ -16,7 +16,7 @@ limitations under the License.
 The majority of this package is heavily inspired by the kubernetes/kubernetes implementation for their NodeAuthorizer
 package, see https://github.com/kubernetes/kubernetes/blob/v1.20.3/plugin/pkg/auth/authorizer/node.
 
-Modifications Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved.
+Modifications Copyright 2021 SAP SE or an SAP affiliate company. All rights reserved.
 */
 
 package graph
