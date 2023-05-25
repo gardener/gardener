@@ -17,7 +17,6 @@ package operation
 import (
 	"context"
 	"sync"
-	"sync/atomic"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -54,9 +53,6 @@ type Operation struct {
 	secrets        map[string]*corev1.Secret
 	secretsMutex   sync.RWMutex
 	SecretsManager secretsmanager.Interface
-
-	shootState      atomic.Value
-	shootStateMutex sync.Mutex
 
 	Config                *config.GardenletConfiguration
 	Logger                logr.Logger

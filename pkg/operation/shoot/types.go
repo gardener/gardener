@@ -71,6 +71,9 @@ type Shoot struct {
 	info      atomic.Value
 	infoMutex sync.Mutex
 
+	shootState      atomic.Value
+	shootStateMutex sync.Mutex
+
 	Secret       *corev1.Secret
 	CloudProfile *gardencorev1beta1.CloudProfile
 

@@ -277,6 +277,27 @@ func (s *Shoot) SetInfo(shoot *gardencorev1beta1.Shoot) {
 	s.info.Store(shoot)
 }
 
+// GetShootState returns the shootstate resource of this Shoot in a concurrency safe way.
+// This method should be used only for reading the data of the returned shootstate resource. The returned shootstate
+// resource MUST NOT BE MODIFIED (except in test code) since this might interfere with other concurrent reads and writes.
+// To properly update the shootstate resource of this Shoot use SaveGardenerResourceDataInShootState.
+func (s *Shoot) GetShootState() *gardencorev1beta1.ShootState {
+	shootState, ok := s.shootState.Load().(*gardencorev1beta1.ShootState)
+	if !ok {
+		return nil
+	}
+	return shootState
+}
+
+// SetShootState sets the shootstate resource of this Shoot in a concurrency safe way.
+// This method is not protected by a mutex and does not update the shootstate resource in the cluster and so
+// should be used only in exceptional situations, or as a convenience in test code. The shootstate passed as a parameter
+// MUST NOT BE MODIFIED after the call to SetShootState (except in test code) since this might interfere with other concurrent reads and writes.
+// To properly update the shootstate resource of this Shoot use SaveGardenerResourceDataInShootState.
+func (s *Shoot) SetShootState(shootState *gardencorev1beta1.ShootState) {
+	s.shootState.Store(shootState)
+}
+
 // UpdateInfo updates the shoot resource of this Shoot in a concurrency safe way,
 // using the given context, client, and mutate function.
 // It copies the current shoot resource and then uses the copy to patch the resource in the cluster

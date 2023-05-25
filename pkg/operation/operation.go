@@ -444,51 +444,6 @@ func (o *Operation) InjectShootShootImages(values map[string]interface{}, names 
 	return chart.InjectImages(values, o.ImageVector, names, imagevector.RuntimeVersion(o.ShootVersion()), imagevector.TargetVersion(o.ShootVersion()))
 }
 
-// EnsureShootStateExists creates the ShootState resource for the corresponding shoot and updates the operations object
-func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
-	var (
-		err        error
-		shootState = &gardencorev1beta1.ShootState{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      o.Shoot.GetInfo().Name,
-				Namespace: o.Shoot.GetInfo().Namespace,
-			},
-		}
-	)
-
-	if err = o.GardenClient.Create(ctx, shootState); client.IgnoreAlreadyExists(err) != nil {
-		return err
-	}
-
-	if err = o.GardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState); err != nil {
-		return err
-	}
-	o.SetShootState(shootState)
-
-	return nil
-}
-
-// GetShootState returns the shootstate resource of this Shoot in a concurrency safe way.
-// This method should be used only for reading the data of the returned shootstate resource. The returned shootstate
-// resource MUST NOT BE MODIFIED (except in test code) since this might interfere with other concurrent reads and writes.
-// To properly update the shootstate resource of this Shoot use SaveGardenerResourceDataInShootState.
-func (o *Operation) GetShootState() *gardencorev1beta1.ShootState {
-	shootState, ok := o.shootState.Load().(*gardencorev1beta1.ShootState)
-	if !ok {
-		return nil
-	}
-	return shootState
-}
-
-// SetShootState sets the shootstate resource of this Shoot in a concurrency safe way.
-// This method is not protected by a mutex and does not update the shootstate resource in the cluster and so
-// should be used only in exceptional situations, or as a convenience in test code. The shootstate passed as a parameter
-// MUST NOT BE MODIFIED after the call to SetShootState (except in test code) since this might interfere with other concurrent reads and writes.
-// To properly update the shootstate resource of this Shoot use SaveGardenerResourceDataInShootState.
-func (o *Operation) SetShootState(shootState *gardencorev1beta1.ShootState) {
-	o.shootState.Store(shootState)
-}
-
 // DeleteClusterResourceFromSeed deletes the `Cluster` extension resource for the shoot in the seed cluster.
 func (o *Operation) DeleteClusterResourceFromSeed(ctx context.Context) error {
 	return client.IgnoreNotFound(o.SeedClientSet.Client().Delete(ctx, &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}))
