@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -44,12 +45,23 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 }
 
 func NetworkingPredicate() predicate.Predicate {
-	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		garden, ok := obj.(*operatorv1alpha1.Garden)
-		if !ok {
-			return false
-		}
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return networkingFieldsSet(e.Object)
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return networkingFieldsSet(e.ObjectNew)
+		},
+		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
+		GenericFunc: func(_ event.GenericEvent) bool { return false },
+	}
+}
 
-		return garden.Spec.RuntimeCluster.Networking.Pods != "" && garden.Spec.RuntimeCluster.Networking.Services != ""
-	})
+func networkingFieldsSet(obj client.Object) bool {
+	garden, ok := obj.(*operatorv1alpha1.Garden)
+	if !ok {
+		return false
+	}
+
+	return garden.Spec.RuntimeCluster.Networking.Pods != "" && garden.Spec.RuntimeCluster.Networking.Services != ""
 }
