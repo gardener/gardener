@@ -25,7 +25,7 @@ import (
 )
 
 var _ = Describe("Add", func() {
-	Describe("#Garden Predicate", func() {
+	Describe("#NetworkingPredicate Predicate", func() {
 		var (
 			p      predicate.Predicate
 			garden *operatorv1alpha1.Garden
@@ -38,7 +38,8 @@ var _ = Describe("Add", func() {
 					RuntimeCluster: operatorv1alpha1.RuntimeCluster{
 						Networking: operatorv1alpha1.RuntimeNetworking{
 							Pods:     "10.1.0.0/16",
-							Services: "10.2.0.0/16"},
+							Services: "10.2.0.0/16",
+						},
 					},
 				},
 			}
