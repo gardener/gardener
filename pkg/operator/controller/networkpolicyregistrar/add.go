@@ -16,11 +16,12 @@ package networkpolicyregistrar
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
 // ControllerName is the name of this controller.
@@ -35,9 +36,20 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(&operatorv1alpha1.Garden{}, builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update))).
+		For(&operatorv1alpha1.Garden{}, builder.WithPredicates(NetworkingPredicate())).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
 		}).
 		Complete(r)
+}
+
+func NetworkingPredicate() predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		garden, ok := obj.(*operatorv1alpha1.Garden)
+		if !ok {
+			return false
+		}
+
+		return garden.Spec.RuntimeCluster.Networking.Pods != "" && garden.Spec.RuntimeCluster.Networking.Services != ""
+	})
 }
