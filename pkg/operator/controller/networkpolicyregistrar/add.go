@@ -46,6 +46,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 
 // NetworkingPredicate returns true for Create and Update events if the
 // garden.Spec.RuntimeCluster.Networking.{Pods,Services} fields are not empty
+// TODO(shafeeqes): Remove this predicate in v1.75
 func NetworkingPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
