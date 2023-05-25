@@ -15,7 +15,7 @@
 // This file was copied from the kubernetes-sigs/controller-runtime project
 // https://github.com/kubernetes-sigs/controller-runtime/blob/v0.8.0/pkg/internal/testing/integration/addr/manager.go
 //
-// Modifications Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved.
+// Modifications Copyright 2021 SAP SE or an SAP affiliate company. All rights reserved.
 
 package envtest
 
