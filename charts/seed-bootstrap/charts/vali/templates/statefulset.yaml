@@ -104,9 +104,12 @@ spec:
         - image: {{ index .Values.global.images "telegraf" }}
           name: telegraf
           command:
-            - "/bin/bash"
-          args:
-            - /etc/telegraf/start.sh
+          - /bin/bash
+          - -c
+          - |
+            trap 'kill %1; wait' SIGTERM
+            bash /etc/telegraf/start.sh &
+            wait
           resources:
 {{- toYaml .Values.resources.telegraf | nindent 12 }}
           securityContext:
