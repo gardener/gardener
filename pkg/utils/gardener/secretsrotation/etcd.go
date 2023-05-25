@@ -56,33 +56,6 @@ func RewriteSecretsAddLabel(ctx context.Context, log logr.Logger, c client.Clien
 	)
 }
 
-// SnapshotETCDAfterRewritingSecrets performs a full snapshot on ETCD after the secrets got rewritten as part of the
-// ETCD encryption secret rotation. It adds an annotation to the kube-apiserver deployment after it's done so that it
-// does not take another snapshot again after it succeeded once.
-func SnapshotETCDAfterRewritingSecrets(ctx context.Context, runtimeClient client.Client, snapshotEtcd func(ctx context.Context) error, kubeAPIServerNamespace, namePrefix string) error {
-	// Check if we have to snapshot ETCD now that we have rewritten all secrets.
-	meta := &metav1.PartialObjectMetadata{}
-	meta.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-	if err := runtimeClient.Get(ctx, kubernetesutils.Key(kubeAPIServerNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer), meta); err != nil {
-		return err
-	}
-
-	if metav1.HasAnnotation(meta.ObjectMeta, AnnotationKeyEtcdSnapshotted) {
-		return nil
-	}
-
-	if err := snapshotEtcd(ctx); err != nil {
-		return err
-	}
-
-	// If we have hit this point then we have snapshotted ETCD successfully. Now we can mark this step as "completed"
-	// (via an annotation) so that we do not trigger a snapshot again in a future reconciliation in case the current one
-	// fails after this step.
-	return PatchKubeAPIServerDeploymentMeta(ctx, runtimeClient, kubeAPIServerNamespace, namePrefix, func(meta *metav1.PartialObjectMetadata) {
-		metav1.SetMetaDataAnnotation(&meta.ObjectMeta, AnnotationKeyEtcdSnapshotted, "true")
-	})
-}
-
 // RewriteSecretsRemoveLabel patches all secrets in all namespaces in the target clusters and removes the label whose
 // value is the name of the current ETCD encryption key secret. This function is useful for the ETCD encryption key
 // secret rotation which requires all secrets to be rewritten to ETCD so that they become encrypted with the new key.
@@ -135,6 +108,39 @@ func rewriteSecrets(ctx context.Context, log logr.Logger, c client.Client, requi
 	}
 
 	return flow.Parallel(taskFns...)(ctx)
+}
+
+// SnapshotETCDAfterRewritingEncryptedData performs a full snapshot on ETCD after the encrypted data (like secrets) have
+// been rewritten as part of the ETCD encryption secret rotation. It adds an annotation to the kube-apiserver deployment
+// after it's done so that it does not take another snapshot again after it succeeded once.
+func SnapshotETCDAfterRewritingEncryptedData(
+	ctx context.Context,
+	runtimeClient client.Client,
+	snapshotEtcd func(ctx context.Context) error,
+	kubeAPIServerNamespace string,
+	namePrefix string,
+) error {
+	// Check if we have to snapshot ETCD now that we have rewritten all encrypted data.
+	meta := &metav1.PartialObjectMetadata{}
+	meta.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
+	if err := runtimeClient.Get(ctx, kubernetesutils.Key(kubeAPIServerNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer), meta); err != nil {
+		return err
+	}
+
+	if metav1.HasAnnotation(meta.ObjectMeta, AnnotationKeyEtcdSnapshotted) {
+		return nil
+	}
+
+	if err := snapshotEtcd(ctx); err != nil {
+		return err
+	}
+
+	// If we have hit this point then we have snapshotted ETCD successfully. Now we can mark this step as "completed"
+	// (via an annotation) so that we do not trigger a snapshot again in a future reconciliation in case the current one
+	// fails after this step.
+	return PatchKubeAPIServerDeploymentMeta(ctx, runtimeClient, kubeAPIServerNamespace, namePrefix, func(meta *metav1.PartialObjectMetadata) {
+		metav1.SetMetaDataAnnotation(&meta.ObjectMeta, AnnotationKeyEtcdSnapshotted, "true")
+	})
 }
 
 // PatchKubeAPIServerDeploymentMeta patches metadata of a Kubernetes API-Server deployment

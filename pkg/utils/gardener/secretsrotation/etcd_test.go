@@ -118,7 +118,7 @@ var _ = Describe("ETCD", func() {
 			})
 		})
 
-		Describe("#SnapshotETCDAfterRewritingSecrets", func() {
+		Describe("#SnapshotETCDAfterRewritingEncryptedData", func() {
 			var (
 				ctrl     *gomock.Controller
 				etcdMain *mocketcd.MockInterface
@@ -136,7 +136,7 @@ var _ = Describe("ETCD", func() {
 			It("should create a snapshot of ETCD and annotate kube-apiserver accordingly", func() {
 				etcdMain.EXPECT().Snapshot(ctx, nil)
 
-				Expect(SnapshotETCDAfterRewritingSecrets(ctx, runtimeClient, func(ctx context.Context) error { return etcdMain.Snapshot(ctx, nil) }, kubeAPIServerNamespace, namePrefix)).To(Succeed())
+				Expect(SnapshotETCDAfterRewritingEncryptedData(ctx, runtimeClient, func(ctx context.Context) error { return etcdMain.Snapshot(ctx, nil) }, kubeAPIServerNamespace, namePrefix)).To(Succeed())
 
 				Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(kubeAPIServerDeployment), kubeAPIServerDeployment)).To(Succeed())
 				Expect(kubeAPIServerDeployment.Annotations).To(HaveKeyWithValue("credentials.gardener.cloud/etcd-snapshotted", "true"))
