@@ -15,6 +15,8 @@
 package botanist
 
 import (
+	"context"
+
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/nodeexporter"
 	"github.com/gardener/gardener/pkg/utils/images"
@@ -39,4 +41,13 @@ func (b *Botanist) DefaultNodeExporter() (component.DeployWaiter, error) {
 		b.Shoot.SeedNamespace,
 		values,
 	), nil
+}
+
+// ReconcileNodeExporter deploys or destroys the node-exporter component depending on whether shoot monitoring is enabled or not.
+func (b *Botanist) ReconcileNodeExporter(ctx context.Context) error {
+	if !b.IsShootMonitoringEnabled() {
+		return b.Shoot.Components.SystemComponents.NodeExporter.Destroy(ctx)
+	}
+
+	return b.Shoot.Components.SystemComponents.NodeExporter.Deploy(ctx)
 }
