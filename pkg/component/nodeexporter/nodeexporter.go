@@ -50,10 +50,10 @@ const (
 	daemonsetName     = "node-exporter"
 	containerName     = "node-exporter"
 
-	portNameMetrics           = "metrics"
-	portMetrics         int32 = 16909
-	volumeNameHost            = "host"
-	volumeMountPathHost       = "/host"
+	portNameMetrics     = "metrics"
+	portMetrics         = int32(16909)
+	volumeNameHost      = "host"
+	volumeMountPathHost = "/host"
 )
 
 // Interface contains functions for a node-exporter deployer.

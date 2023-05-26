@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestNodeexporter(t *testing.T) {
+func TestNodeExporter(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Node Exporter Suite")
+	RunSpecs(t, "Botanist Component NodeExporter Suite")
 }

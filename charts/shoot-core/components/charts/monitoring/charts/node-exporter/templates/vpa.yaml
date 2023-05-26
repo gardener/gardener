@@ -1,4 +1,4 @@
-#TODO(shafeeqes): Remove this chart once gardener v1.75 is released
+# TODO(shafeeqes): Remove this chart once gardener v1.75 is released
 {{- if .Values.global.vpaEnabled }}
 apiVersion: "autoscaling.k8s.io/v1"
 kind: VerticalPodAutoscaler

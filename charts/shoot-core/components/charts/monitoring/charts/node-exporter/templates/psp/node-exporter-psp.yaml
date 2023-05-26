@@ -1,4 +1,4 @@
-#TODO(shafeeqes): Remove this chart once gardener v1.75 is released
+# TODO(shafeeqes): Remove this chart once gardener v1.75 is released
 {{- if not .Values.global.pspDisabled }}
 apiVersion: {{ include "podsecuritypolicyversion" .}}
 kind: PodSecurityPolicy
