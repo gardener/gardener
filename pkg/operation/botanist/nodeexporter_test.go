@@ -124,9 +124,27 @@ var _ = Describe("NodeExporter", func() {
 			})
 		})
 
-		Context("shoot monitoring disabled", func() {
+		Context("Shoot monitoring disabled", func() {
 			BeforeEach(func() {
 				botanist.Operation.Config.Monitoring.Shoot.Enabled = pointer.Bool(false)
+			})
+
+			It("should fail when the destroy function fails", func() {
+				nodeExporter.EXPECT().Destroy(ctx).Return(fakeErr)
+
+				Expect(botanist.ReconcileNodeExporter(ctx)).To(MatchError(fakeErr))
+			})
+
+			It("should successfully destroy", func() {
+				nodeExporter.EXPECT().Destroy(ctx)
+
+				Expect(botanist.ReconcileNodeExporter(ctx)).To(Succeed())
+			})
+		})
+
+		Context("Shoot purpose is testing", func() {
+			BeforeEach(func() {
+				botanist.Shoot.Purpose = gardencorev1beta1.ShootPurposeTesting
 			})
 
 			It("should fail when the destroy function fails", func() {

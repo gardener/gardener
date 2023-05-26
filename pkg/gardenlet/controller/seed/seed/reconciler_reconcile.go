@@ -78,6 +78,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/monitoring"
 	"github.com/gardener/gardener/pkg/component/nginxingress"
 	"github.com/gardener/gardener/pkg/component/nginxingressshoot"
+	"github.com/gardener/gardener/pkg/component/nodeexporter"
 	"github.com/gardener/gardener/pkg/component/nodeproblemdetector"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
@@ -603,6 +604,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			coredns.CentralLoggingConfiguration,
 			kubeproxy.CentralLoggingConfiguration,
 			metricsserver.CentralLoggingConfiguration,
+			nodeexporter.CentralLoggingConfiguration,
 			nodeproblemdetector.CentralLoggingConfiguration,
 			vpnshoot.CentralLoggingConfiguration,
 			// shoot addon components
