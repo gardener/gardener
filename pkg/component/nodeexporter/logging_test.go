@@ -60,7 +60,7 @@ var _ = Describe("Logging", func() {
 				[]*fluentbitv1alpha2.ClusterParser{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "node-exporter" + "-parser",
+							Name:   "node-exporter-parser",
 							Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 						},
 						Spec: fluentbitv1alpha2.ParserSpec{

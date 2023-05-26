@@ -38,7 +38,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("Nodeexporter", func() {
+var _ = Describe("NodeExporter", func() {
 	var (
 		ctx = context.TODO()
 
