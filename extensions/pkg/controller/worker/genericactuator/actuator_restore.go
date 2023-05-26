@@ -31,13 +31,18 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-// Restore uses the Worker's spec to figure out the wanted MachineDeployments. Then it parses the Worker's state.
-// If there is a record in the state corresponding to a wanted deployment then the Restore function
-// deploys that MachineDeployment with all related MachineSet and Machines.
-func (a *genericActuator) Restore(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
+// RestoreWithoutReconcile restores the worker state without calling 'Reconcile'.
+func RestoreWithoutReconcile(
+	ctx context.Context,
+	log logr.Logger,
+	cl client.Client,
+	delegateFactory DelegateFactory,
+	worker *extensionsv1alpha1.Worker,
+	cluster *extensionscontroller.Cluster,
+) error {
 	log = log.WithValues("operation", "restore")
 
-	workerDelegate, err := a.delegateFactory.WorkerDelegate(ctx, worker, cluster)
+	workerDelegate, err := delegateFactory.WorkerDelegate(ctx, worker, cluster)
 	if err != nil {
 		return fmt.Errorf("could not instantiate actuator context: %w", err)
 	}
@@ -51,22 +56,22 @@ func (a *genericActuator) Restore(ctx context.Context, log logr.Logger, worker *
 
 	// Get the list of all existing machine deployments.
 	existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
-	if err := a.client.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
+	if err := cl.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
 		return err
 	}
 
 	// Parse the worker state to a separate machineDeployment states and attach them to
 	// the corresponding machineDeployments which are to be deployed later
 	log.Info("Extracting state from worker status")
-	if err := a.addStateToMachineDeployment(worker, wantedMachineDeployments); err != nil {
+	if err := addStateToMachineDeployment(worker, wantedMachineDeployments); err != nil {
 		return err
 	}
 
 	wantedMachineDeployments = removeWantedDeploymentWithoutState(wantedMachineDeployments)
 
 	// Scale the machine-controller-manager to 0. During restoration MCM must not be working
-	if err := a.scaleMachineControllerManager(ctx, log, worker, 0); err != nil {
-		return fmt.Errorf("failed scale down machine-controller-manager: %w", err)
+	if err := scaleMachineControllerManager(ctx, log, cl, worker, 0); err != nil {
+		return fmt.Errorf("failed to scale down machine-controller-manager: %w", err)
 	}
 
 	// Deploy generated machine classes.
@@ -74,26 +79,34 @@ func (a *genericActuator) Restore(ctx context.Context, log logr.Logger, worker *
 		return fmt.Errorf("failed to deploy the machine classes: %w", err)
 	}
 
-	if err := kubernetes.WaitUntilDeploymentScaledToDesiredReplicas(ctx, a.client, kubernetesutils.Key(worker.Namespace, McmDeploymentName), 0); err != nil && !apierrors.IsNotFound(err) {
+	if err := kubernetes.WaitUntilDeploymentScaledToDesiredReplicas(ctx, cl, kubernetesutils.Key(worker.Namespace, McmDeploymentName), 0); err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("deadline exceeded while scaling down machine-controller-manager: %w", err)
 	}
 
 	// Do the actual restoration
-	if err := a.restoreMachineSetsAndMachines(ctx, log, wantedMachineDeployments); err != nil {
+	if err := restoreMachineSetsAndMachines(ctx, log, cl, wantedMachineDeployments); err != nil {
 		return fmt.Errorf("failed restoration of the machineSet and the machines: %w", err)
 	}
 
 	// Generate machine deployment configuration based on previously computed list of deployments and deploy them.
-	if err := a.deployMachineDeployments(ctx, log, cluster, worker, existingMachineDeployments, wantedMachineDeployments, workerDelegate.MachineClassKind(), true); err != nil {
+	if err := deployMachineDeployments(ctx, log, cl, cluster, worker, existingMachineDeployments, wantedMachineDeployments, workerDelegate.MachineClassKind(), true); err != nil {
 		return fmt.Errorf("failed to restore the machine deployment config: %w", err)
 	}
 
-	// Finally reconcile the worker so that the machine-controller-manager gets scaled up and OwnerReferences between
-	// machinedeployments, machinesets and machines are added properly.
+	return nil
+}
+
+// Restore uses the Worker's spec to figure out the wanted MachineDeployments. Then it parses the Worker's state.
+// If there is a record in the state corresponding to a wanted deployment then the Restore function
+// deploys that MachineDeployment with all related MachineSet and Machines. It finally calls the 'Reconcile' function.
+func (a *genericActuator) Restore(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
+	if err := RestoreWithoutReconcile(ctx, log, a.client, a.delegateFactory, worker, cluster); err != nil {
+		return err
+	}
 	return a.Reconcile(ctx, log, worker, cluster)
 }
 
-func (a *genericActuator) addStateToMachineDeployment(worker *extensionsv1alpha1.Worker, wantedMachineDeployments extensionsworkercontroller.MachineDeployments) error {
+func addStateToMachineDeployment(worker *extensionsv1alpha1.Worker, wantedMachineDeployments extensionsworkercontroller.MachineDeployments) error {
 	if worker.Status.State == nil || len(worker.Status.State.Raw) <= 0 {
 		return nil
 	}
@@ -115,17 +128,17 @@ func (a *genericActuator) addStateToMachineDeployment(worker *extensionsv1alpha1
 	return nil
 }
 
-func (a *genericActuator) restoreMachineSetsAndMachines(ctx context.Context, log logr.Logger, wantedMachineDeployments extensionsworkercontroller.MachineDeployments) error {
+func restoreMachineSetsAndMachines(ctx context.Context, log logr.Logger, cl client.Client, wantedMachineDeployments extensionsworkercontroller.MachineDeployments) error {
 	log.Info("Deploying Machines and MachineSets")
 	for _, wantedMachineDeployment := range wantedMachineDeployments {
 		for _, machineSet := range wantedMachineDeployment.State.MachineSets {
-			if err := a.client.Create(ctx, &machineSet); client.IgnoreAlreadyExists(err) != nil {
+			if err := cl.Create(ctx, &machineSet); client.IgnoreAlreadyExists(err) != nil {
 				return err
 			}
 		}
 
 		for _, machine := range wantedMachineDeployment.State.Machines {
-			if err := a.client.Create(ctx, &machine); err != nil {
+			if err := cl.Create(ctx, &machine); err != nil {
 				if !apierrors.IsAlreadyExists(err) {
 					return err
 				}
