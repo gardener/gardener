@@ -136,7 +136,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				{
 					APIGroups: []string{corev1.GroupName},
 					Resources: []string{"pods"},
-					Verbs:     []string{"get", "list", "watch", "delete"},
+					Verbs:     []string{"get", "list", "watch", "delete", "deletecollection"},
 				},
 				{
 					APIGroups: []string{corev1.GroupName},
