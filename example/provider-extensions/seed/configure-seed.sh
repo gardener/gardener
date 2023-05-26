@@ -106,7 +106,7 @@ ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/c
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml.tmpl
 
 echo "Check if essential config options are initialized"
-check-not-initial "$SCRIPT_DIR"/kubeconfig ""
+check-not-initial $seed_kubeconfig ""
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/values.yaml ".global.internalDomain.domain"
 check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/values.yaml ".global.internalDomain.provider"
 
