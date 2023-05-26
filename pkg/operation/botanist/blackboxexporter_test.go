@@ -90,7 +90,6 @@ var _ = Describe("BlackboxExporter", func() {
 	Describe("#ReconcileBlackboxExporter", func() {
 		var (
 			blackboxExporter *mockblackboxexporter.MockInterface
-			kubernetesClient *kubernetesmock.MockInterface
 
 			ctx     = context.TODO()
 			fakeErr = fmt.Errorf("fake err")
@@ -98,9 +97,7 @@ var _ = Describe("BlackboxExporter", func() {
 
 		BeforeEach(func() {
 			blackboxExporter = mockblackboxexporter.NewMockInterface(ctrl)
-			kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
 
-			botanist.ShootClientSet = kubernetesClient
 			botanist.Shoot.Components = &shootpkg.Components{
 				SystemComponents: &shootpkg.SystemComponents{
 					BlackboxExporter: blackboxExporter,

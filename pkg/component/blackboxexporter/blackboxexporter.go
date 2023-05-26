@@ -364,8 +364,8 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 
 func getLabels() map[string]string {
 	return map[string]string{
-		"origin":                    "gardener",
-		labelKeyComponent:           labelValue,
-		v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring,
+		labelKeyComponent:               labelValue,
+		v1beta1constants.GardenRole:     v1beta1constants.GardenRoleMonitoring,
+		managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 	}
 }
