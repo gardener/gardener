@@ -506,6 +506,17 @@ var _ = Describe("Seed", func() {
 				}
 			})
 
+			It("should allow without consulting graph because name is 'garden'", func() {
+				name = "garden"
+				attrs.Name = name
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+
 			DescribeTable("should return correct result if path exists",
 				func(verb string) {
 					attrs.Verb = verb
