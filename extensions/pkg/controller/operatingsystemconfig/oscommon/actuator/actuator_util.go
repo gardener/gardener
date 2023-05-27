@@ -77,9 +77,6 @@ func CloudConfigFromOperatingSystemConfig(
 // DataForFileContent returns the content for a FileContent, retrieving from a Secret if necessary.
 func DataForFileContent(ctx context.Context, c client.Client, namespace string, content *extensionsv1alpha1.FileContent) ([]byte, error) {
 	if inline := content.Inline; inline != nil {
-		if len(inline.Encoding) == 0 {
-			return []byte(inline.Data), nil
-		}
 		return extensionsv1alpha1helper.Decode(inline.Encoding, []byte(inline.Data))
 	}
 
