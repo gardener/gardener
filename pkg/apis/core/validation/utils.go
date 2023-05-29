@@ -52,14 +52,24 @@ func validateSecretReference(ref corev1.SecretReference, fldPath *field.Path) fi
 func validateCrossVersionObjectReference(ref autoscalingv1.CrossVersionObjectReference, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if len(ref.Kind) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("kind"), "must provide a kind"))
-	}
-	if len(ref.Name) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a name"))
-	}
 	if len(ref.APIVersion) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("apiVersion"), "must provide a apiVersion"))
+	} else {
+		if ref.APIVersion != corev1.SchemeGroupVersion.String() {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("apiVersion"), ref.APIVersion, []string{corev1.SchemeGroupVersion.String()}))
+		}
+	}
+
+	if len(ref.Kind) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("kind"), "must provide a kind"))
+	} else {
+		if ref.Kind != "Secret" && ref.Kind != "ConfigMap" {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("kind"), ref.Kind, []string{"Secret", "ConfigMap"}))
+		}
+	}
+
+	if len(ref.Name) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a name"))
 	}
 
 	return allErrs
