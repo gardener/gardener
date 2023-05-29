@@ -35,7 +35,6 @@ build:
         - pkg/apis/core
         - pkg/apis/core/helper
         - pkg/apis/core/install
-        - pkg/apis/core/v1alpha1
         - pkg/apis/core/v1beta1
         - pkg/apis/core/v1beta1/constants
         - pkg/apis/core/v1beta1/helper
@@ -71,11 +70,9 @@ build:
         - pkg/client/core/clientset/internalversion/typed/core/internalversion
         - pkg/client/core/clientset/versioned
         - pkg/client/core/clientset/versioned/scheme
-        - pkg/client/core/clientset/versioned/typed/core/v1alpha1
         - pkg/client/core/clientset/versioned/typed/core/v1beta1
         - pkg/client/core/informers/externalversions
         - pkg/client/core/informers/externalversions/core
-        - pkg/client/core/informers/externalversions/core/v1alpha1
         - pkg/client/core/informers/externalversions/core/v1beta1
         - pkg/client/core/informers/externalversions/internalinterfaces
         - pkg/client/core/informers/internalversion
@@ -83,7 +80,6 @@ build:
         - pkg/client/core/informers/internalversion/core/internalversion
         - pkg/client/core/informers/internalversion/internalinterfaces
         - pkg/client/core/listers/core/internalversion
-        - pkg/client/core/listers/core/v1alpha1
         - pkg/client/core/listers/core/v1beta1
         - pkg/client/kubernetes
         - pkg/client/kubernetes/cache
@@ -216,7 +212,6 @@ build:
         - pkg/api/indexer
         - pkg/apis/core
         - pkg/apis/core/install
-        - pkg/apis/core/v1alpha1
         - pkg/apis/core/v1beta1
         - pkg/apis/core/v1beta1/constants
         - pkg/apis/core/v1beta1/helper
@@ -319,7 +314,6 @@ build:
         - pkg/api/extensions
         - pkg/apis/core
         - pkg/apis/core/install
-        - pkg/apis/core/v1alpha1
         - pkg/apis/core/v1beta1
         - pkg/apis/core/v1beta1/constants
         - pkg/apis/core/v1beta1/helper
@@ -399,7 +393,6 @@ build:
         - pkg/apis/core
         - pkg/apis/core/helper
         - pkg/apis/core/install
-        - pkg/apis/core/v1alpha1
         - pkg/apis/core/v1beta1
         - pkg/apis/core/v1beta1/constants
         - pkg/apis/core/v1beta1/helper
@@ -569,7 +562,6 @@ build:
         - pkg/api/extensions
         - pkg/apis/core
         - pkg/apis/core/install
-        - pkg/apis/core/v1alpha1
         - pkg/apis/core/v1beta1
         - pkg/apis/core/v1beta1/constants
         - pkg/apis/core/v1beta1/helper
@@ -762,8 +754,6 @@ build:
         - pkg/apis/core
         - pkg/apis/core/helper
         - pkg/apis/core/install
-        - pkg/apis/core/v1alpha1
-        - pkg/apis/core/v1alpha1/helper
         - pkg/apis/core/v1beta1
         - pkg/apis/core/v1beta1/constants
         - pkg/apis/core/v1beta1/helper
@@ -975,7 +965,6 @@ build:
         - pkg/apis/core
         - pkg/apis/core/helper
         - pkg/apis/core/install
-        - pkg/apis/core/v1alpha1
         - pkg/apis/core/v1beta1
         - pkg/apis/core/v1beta1/constants
         - pkg/apis/core/v1beta1/helper

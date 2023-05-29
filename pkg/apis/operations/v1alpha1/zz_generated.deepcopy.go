@@ -22,7 +22,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -149,7 +149,7 @@ func (in *BastionStatus) DeepCopyInto(out *BastionStatus) {
 	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
-		*out = make([]corev1alpha1.Condition, len(*in))
+		*out = make([]v1beta1.Condition, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}

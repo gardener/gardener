@@ -37,7 +37,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/auditpolicy"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
@@ -72,7 +71,6 @@ var _ = Describe("handler", func() {
 
 		cm                  *corev1.ConfigMap
 		shootv1beta1        *gardencorev1beta1.Shoot
-		shootv1alpha1       *gardencorev1alpha1.Shoot
 		shootv1beta1K8sV124 *gardencorev1beta1.Shoot
 		shootv1beta1K8sV123 *gardencorev1beta1.Shoot
 
@@ -189,29 +187,6 @@ rules:
 					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
 						AuditConfig: &gardencorev1beta1.AuditConfig{
 							AuditPolicy: &gardencorev1beta1.AuditPolicy{
-								ConfigMapRef: &corev1.ObjectReference{
-									Name: cmName,
-								},
-							},
-						},
-					},
-				},
-			},
-		}
-		shootv1alpha1 = &gardencorev1alpha1.Shoot{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: gardencorev1alpha1.SchemeGroupVersion.String(),
-				Kind:       "Shoot",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      shootName,
-				Namespace: shootNamespace,
-			},
-			Spec: gardencorev1alpha1.ShootSpec{
-				Kubernetes: gardencorev1alpha1.Kubernetes{
-					KubeAPIServer: &gardencorev1alpha1.KubeAPIServerConfig{
-						AuditConfig: &gardencorev1alpha1.AuditConfig{
-							AuditPolicy: &gardencorev1alpha1.AuditPolicy{
 								ConfigMapRef: &corev1.ObjectReference{
 									Name: cmName,
 								},
@@ -339,19 +314,6 @@ rules:
 				test(admissionv1.Create, nil, shootv1beta1, true, statusCodeAllowed, "referenced audit policy is valid", "")
 			})
 
-			It("references a valid auditPolicy (CREATE/v1alpha1)", func() {
-				returnedCm := corev1.ConfigMap{
-					TypeMeta:   metav1.TypeMeta{},
-					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "1"},
-					Data:       map[string]string{"policy": validAuditPolicy},
-				}
-				mockReader.EXPECT().Get(gomock.Any(), kubernetesutils.Key(shootNamespace, cmName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
-					*cm = returnedCm
-					return nil
-				})
-				test(admissionv1.Create, nil, shootv1alpha1, true, statusCodeAllowed, "referenced audit policy is valid", "")
-			})
-
 			It("references a valid auditPolicy/v1alpha1 (CREATE k8s < 1.24.0)", func() {
 				returnedCm := corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{},
@@ -384,12 +346,6 @@ rules:
 				test(admissionv1.Update, shootv1beta1, newShoot, true, statusCodeAllowed, "audit policy configmap was not changed", "")
 			})
 
-			It("referenced auditPolicy name was not changed (UPDATE/v1alpha1)", func() {
-				newShoot := shootv1alpha1.DeepCopy()
-				newShoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)
-				test(admissionv1.Update, shootv1alpha1, newShoot, true, statusCodeAllowed, "audit policy configmap was not changed", "")
-			})
-
 			It("auditPolicy name was added (UPDATE)", func() {
 				returnedCm := corev1.ConfigMap{
 					Data: map[string]string{"policy": validAuditPolicy},
@@ -405,21 +361,6 @@ rules:
 				test(admissionv1.Update, shootv1beta1, newShoot, true, statusCodeAllowed, "referenced audit policy is valid", "")
 			})
 
-			It("auditPolicy name was added (UPDATE/v1alpha1)", func() {
-				returnedCm := corev1.ConfigMap{
-					Data: map[string]string{"policy": validAuditPolicy},
-				}
-				apiServerConfig := shootv1alpha1.Spec.Kubernetes.KubeAPIServer.DeepCopy()
-				shootv1alpha1.Spec.Kubernetes.KubeAPIServer = nil
-				newShoot := shootv1alpha1.DeepCopy()
-				newShoot.Spec.Kubernetes.KubeAPIServer = apiServerConfig
-				mockReader.EXPECT().Get(gomock.Any(), kubernetesutils.Key(shootNamespace, cmName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
-					*cm = returnedCm
-					return nil
-				})
-				test(admissionv1.Update, shootv1alpha1, newShoot, true, statusCodeAllowed, "referenced audit policy is valid", "")
-			})
-
 			It("referenced auditPolicy name was changed (UPDATE)", func() {
 				returnedCm := corev1.ConfigMap{
 					Data: map[string]string{"policy": validAuditPolicy},
@@ -433,29 +374,10 @@ rules:
 				test(admissionv1.Update, shootv1beta1, newShoot, true, statusCodeAllowed, "referenced audit policy is valid", "")
 			})
 
-			It("referenced auditPolicy name was changed (UPDATE/v1alpha1)", func() {
-				returnedCm := corev1.ConfigMap{
-					Data: map[string]string{"policy": validAuditPolicy},
-				}
-				newShoot := shootv1alpha1.DeepCopy()
-				newShoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name = cmNameOther
-				mockReader.EXPECT().Get(gomock.Any(), kubernetesutils.Key(shootNamespace, cmNameOther), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *corev1.ConfigMap, _ ...client.GetOption) error {
-					*cm = returnedCm
-					return nil
-				})
-				test(admissionv1.Update, shootv1alpha1, newShoot, true, statusCodeAllowed, "referenced audit policy is valid", "")
-			})
-
 			It("referenced auditPolicy name was removed (UPDATE)", func() {
 				newShoot := shootv1beta1.DeepCopy()
 				newShoot.Spec.Kubernetes.KubeAPIServer = nil
 				test(admissionv1.Update, shootv1beta1, newShoot, true, statusCodeAllowed, "shoot resource is not specifying any audit policy", "")
-			})
-
-			It("referenced auditPolicy name was removed (UPDATE/v1alpha1)", func() {
-				newShoot := shootv1alpha1.DeepCopy()
-				newShoot.Spec.Kubernetes.KubeAPIServer = nil
-				test(admissionv1.Update, shootv1alpha1, newShoot, true, statusCodeAllowed, "shoot resource is not specifying any audit policy", "")
 			})
 
 			It("should not validate auditPolicy if already marked for deletion (UPDATE)", func() {

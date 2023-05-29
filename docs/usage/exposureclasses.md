@@ -78,7 +78,7 @@ spec:
     matchLabels:
       env: prod
 ---
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1beta1
 kind: ExposureClass
 metadata:
   name: abc
@@ -91,7 +91,7 @@ scheduling:
 
 2. Both `seedSelectors` would be merged into the `Shoot`. The result would be the following:
 ```yaml
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: core.gardener.cloud/v1beta1
 kind: Shoot
 metadata:
   name: abc

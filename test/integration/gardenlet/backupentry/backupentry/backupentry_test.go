@@ -28,7 +28,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -158,7 +157,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 
 		By("Ensure manager cache observes BackupBucket creation")
 		Eventually(func() error {
-			return mgrClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), &gardencorev1alpha1.BackupBucket{})
+			return mgrClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), &gardencorev1beta1.BackupBucket{})
 		}).Should(Succeed())
 
 		DeferCleanup(func() {
@@ -243,7 +242,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 					Object: seed,
 				},
 				CloudProfile: runtime.RawExtension{
-					Object: &gardencorev1alpha1.CloudProfile{},
+					Object: &gardencorev1beta1.CloudProfile{},
 				},
 			},
 		}

@@ -24,7 +24,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	backupbucketstore "github.com/gardener/gardener/pkg/registry/core/backupbucket/storage"
 	backupentrystore "github.com/gardener/gardener/pkg/registry/core/backupentry/storage"
@@ -47,10 +46,9 @@ type StorageProvider struct {
 	CredentialsRotationInterval  time.Duration
 }
 
-// NewRESTStorage creates a new API group info object and registers the v1alpha1 core storage.
+// NewRESTStorage creates a new API group info object and registers the v1beta1 core storage.
 func (p StorageProvider) NewRESTStorage(restOptionsGetter generic.RESTOptionsGetter) genericapiserver.APIGroupInfo {
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(core.GroupName, api.Scheme, metav1.ParameterCodec, api.Codecs)
-	apiGroupInfo.VersionedResourcesStorageMap[gardencorev1alpha1.SchemeGroupVersion.Version] = p.v1alpha1Storage(restOptionsGetter)
 	apiGroupInfo.VersionedResourcesStorageMap[gardencorev1beta1.SchemeGroupVersion.Version] = p.v1beta1Storage(restOptionsGetter)
 	return apiGroupInfo
 }
@@ -58,63 +56,6 @@ func (p StorageProvider) NewRESTStorage(restOptionsGetter generic.RESTOptionsGet
 // GroupName returns the core group name.
 func (p StorageProvider) GroupName() string {
 	return core.GroupName
-}
-
-func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGetter) map[string]rest.Storage {
-	storage := map[string]rest.Storage{}
-
-	backupBucketStorage := backupbucketstore.NewStorage(restOptionsGetter)
-	storage["backupbuckets"] = backupBucketStorage.BackupBucket
-	storage["backupbuckets/status"] = backupBucketStorage.Status
-
-	backupEntryStorage := backupentrystore.NewStorage(restOptionsGetter)
-	storage["backupentries"] = backupEntryStorage.BackupEntry
-	storage["backupentries/status"] = backupEntryStorage.Status
-
-	cloudprofileStorage := cloudprofilestore.NewStorage(restOptionsGetter)
-	storage["cloudprofiles"] = cloudprofileStorage.CloudProfile
-
-	controllerDeploymentStorage := controllerdeploymentstore.NewStorage(restOptionsGetter)
-	storage["controllerdeployments"] = controllerDeploymentStorage.ControllerDeployment
-
-	controllerRegistrationStorage := controllerregistrationstore.NewStorage(restOptionsGetter)
-	storage["controllerregistrations"] = controllerRegistrationStorage.ControllerRegistration
-
-	controllerInstallationStorage := controllerinstallationstore.NewStorage(restOptionsGetter)
-	storage["controllerinstallations"] = controllerInstallationStorage.ControllerInstallation
-	storage["controllerinstallations/status"] = controllerInstallationStorage.Status
-
-	exposureClassStorage := exposureclassstore.NewStorage(restOptionsGetter)
-	storage["exposureclasses"] = exposureClassStorage.ExposureClass
-
-	projectStorage := projectstore.NewStorage(restOptionsGetter)
-	storage["projects"] = projectStorage.Project
-	storage["projects/status"] = projectStorage.Status
-
-	quotaStorage := quotastore.NewStorage(restOptionsGetter)
-	storage["quotas"] = quotaStorage.Quota
-
-	secretBindingStorage := secretbindingstore.NewStorage(restOptionsGetter)
-	storage["secretbindings"] = secretBindingStorage.SecretBinding
-
-	seedStorage := seedstore.NewStorage(restOptionsGetter)
-	storage["seeds"] = seedStorage.Seed
-	storage["seeds/status"] = seedStorage.Status
-
-	shootStateStorage := shootstatestore.NewStorage(restOptionsGetter)
-	storage["shootstates"] = shootStateStorage.ShootState
-
-	shootStorage := shootstore.NewStorage(restOptionsGetter, shootStateStorage.ShootState.Store, p.AdminKubeconfigMaxExpiration, p.CredentialsRotationInterval)
-	storage["shoots"] = shootStorage.Shoot
-	storage["shoots/status"] = shootStorage.Status
-
-	storage["shoots/binding"] = shootStorage.Binding
-
-	if shootStorage.AdminKubeconfig != nil {
-		storage["shoots/adminkubeconfig"] = shootStorage.AdminKubeconfig
-	}
-
-	return storage
 }
 
 func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGetter) map[string]rest.Storage {

@@ -167,8 +167,6 @@ linters-settings:
         alias: gardencoreinformers
       - pkg: github.com/gardener/gardener/pkg/client/core/listers/core/internalversion
         alias: gardencorelisters
-      - pkg: github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1
-        alias: gardencorev1alpha1listers
       - pkg: github.com/gardener/gardener/pkg/client/kubernetes
         alias: kubernetesclient
       - pkg: github.com/gardener/gardener/pkg/client/kubernetes/(\w+)

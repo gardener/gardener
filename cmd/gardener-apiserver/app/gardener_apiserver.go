@@ -48,7 +48,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/gardener/gardener/pkg/api"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
@@ -128,7 +127,6 @@ func NewOptions() *Options {
 		Recommended: genericoptions.NewRecommendedOptions(
 			"/registry-gardener",
 			api.Codecs.LegacyCodec(
-				gardencorev1alpha1.SchemeGroupVersion,
 				seedmanagementv1alpha1.SchemeGroupVersion,
 				settingsv1alpha1.SchemeGroupVersion,
 				operationsv1alpha1.SchemeGroupVersion,
@@ -140,7 +138,6 @@ func NewOptions() *Options {
 	}
 	o.Recommended.Etcd.StorageConfig.EncodeVersioner = runtime.NewMultiGroupVersioner(
 		gardencorev1beta1.SchemeGroupVersion,
-		schema.GroupKind{Group: gardencorev1alpha1.GroupName},
 		schema.GroupKind{Group: gardencorev1beta1.GroupName},
 	)
 	apiserver.RegisterAllAdmissionPlugins(o.Recommended.Admission.Plugins)
@@ -407,7 +404,6 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 
 	resourceConfig := serverstorage.NewResourceConfig()
 	resourceConfig.EnableVersions(
-		gardencorev1alpha1.SchemeGroupVersion,
 		seedmanagementv1alpha1.SchemeGroupVersion,
 		settingsv1alpha1.SchemeGroupVersion,
 		operationsv1alpha1.SchemeGroupVersion,
