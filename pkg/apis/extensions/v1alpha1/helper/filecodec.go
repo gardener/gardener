@@ -38,6 +38,7 @@ type FileCodec interface {
 }
 
 var (
+	// PlainFileCodec is a noop FileCodec.
 	PlainFileCodec FileCodec = plainFileCodec{}
 	// B64FileCodec is the base64 FileCodec.
 	B64FileCodec FileCodec = b64FileCodec{}
