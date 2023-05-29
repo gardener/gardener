@@ -991,23 +991,27 @@ func ShootDNSProviderSecretNamesEqual(oldDNS, newDNS *gardencorev1beta1.DNS) boo
 	return oldNames.Equal(newNames)
 }
 
-// ShootSecretResourceReferencesEqual returns true when at least one of the Secret resource references inside a Shoot
+// ShootResourceReferencesEqual returns true when at least one of the Secret/ConfigMap resource references inside a Shoot
 // has been changed.
-func ShootSecretResourceReferencesEqual(oldResources, newResources []gardencorev1beta1.NamedResourceReference) bool {
+func ShootResourceReferencesEqual(oldResources, newResources []gardencorev1beta1.NamedResourceReference) bool {
 	var (
 		oldNames = sets.New[string]()
 		newNames = sets.New[string]()
 	)
 
 	for _, resource := range oldResources {
-		if resource.ResourceRef.APIVersion == "v1" && resource.ResourceRef.Kind == "Secret" {
-			oldNames.Insert(resource.ResourceRef.Name)
+		if resource.ResourceRef.APIVersion == "v1" {
+			if resource.ResourceRef.Kind == "Secret" || resource.ResourceRef.Kind == "ConfigMap" {
+				oldNames.Insert(resource.ResourceRef.Kind + resource.ResourceRef.Name)
+			}
 		}
 	}
 
 	for _, resource := range newResources {
-		if resource.ResourceRef.APIVersion == "v1" && resource.ResourceRef.Kind == "Secret" {
-			newNames.Insert(resource.ResourceRef.Name)
+		if resource.ResourceRef.APIVersion == "v1" {
+			if resource.ResourceRef.Kind == "Secret" || resource.ResourceRef.Kind == "ConfigMap" {
+				newNames.Insert(resource.ResourceRef.Kind + resource.ResourceRef.Name)
+			}
 		}
 	}
 
