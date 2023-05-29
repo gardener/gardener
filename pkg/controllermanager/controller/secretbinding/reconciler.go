@@ -17,6 +17,7 @@ package secretbinding
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -82,10 +83,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			if mayReleaseSecret {
 				secret := &corev1.Secret{}
 				if err := r.Client.Get(ctx, kubernetesutils.Key(secretBinding.SecretRef.Namespace, secretBinding.SecretRef.Name), secret); err == nil {
-					// Remove 'referred by a secret binding' label
-					if metav1.HasLabel(secret.ObjectMeta, v1beta1constants.LabelSecretBindingReference) {
+					// Remove shoot provider label and 'referred by a secret binding' label
+					hasProviderLabel, providerLabel := getProviderLabel(secret.Labels)
+					if hasProviderLabel || metav1.HasLabel(secret.ObjectMeta, v1beta1constants.LabelSecretBindingReference) {
 						patch := client.MergeFrom(secret.DeepCopy())
 						delete(secret.ObjectMeta.Labels, v1beta1constants.LabelSecretBindingReference)
+						delete(secret.ObjectMeta.Labels, providerLabel)
 						if err := r.Client.Patch(ctx, secret, patch); err != nil {
 							return reconcile.Result{}, fmt.Errorf("failed to remove referred label from Secret: %w", err)
 						}
@@ -250,4 +253,14 @@ func quotaHasOtherRef(quota corev1.ObjectReference, secretBindingList *gardencor
 	}
 
 	return false
+}
+
+func getProviderLabel(labels map[string]string) (bool, string) {
+	for label := range labels {
+		if strings.HasPrefix(label, v1beta1constants.LabelShootProviderPrefix) {
+			return true, label
+		}
+	}
+
+	return false, ""
 }
