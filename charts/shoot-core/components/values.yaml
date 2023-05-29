@@ -4,9 +4,6 @@ global:
   hasWorkers: true
 monitoring:
   enabled: true
-  node-exporter:
-    images:
-      node-exporter: image-repository:image-tag
 podsecuritypolicies:
   enabled: true
   allowPrivilegedContainers: false

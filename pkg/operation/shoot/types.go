@@ -160,6 +160,7 @@ type SystemComponents struct {
 	Namespaces          component.DeployWaiter
 	NodeLocalDNS        nodelocaldns.Interface
 	NodeProblemDetector component.DeployWaiter
+	NodeExporter        component.DeployWaiter
 	Resources           component.DeployWaiter
 	VPNShoot            vpnshoot.Interface
 }

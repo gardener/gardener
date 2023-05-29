@@ -36,24 +36,6 @@ var _ = Describe("Logging", func() {
 				[]*fluentbitv1alpha2.ClusterFilter{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "node-exporter",
-							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
-						},
-						Spec: fluentbitv1alpha2.FilterSpec{
-							Match: "kubernetes.*node-exporter*node-exporter*",
-							FilterItems: []fluentbitv1alpha2.FilterItem{
-								{
-									Parser: &fluentbitv1alpha2filter.Parser{
-										KeyName:     "log",
-										Parser:      "node-exporter-parser",
-										ReserveData: pointer.Bool(true),
-									},
-								},
-							},
-						},
-					},
-					{
-						ObjectMeta: metav1.ObjectMeta{
 							Name:   "alertmanager",
 							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
 						},
@@ -128,19 +110,6 @@ var _ = Describe("Logging", func() {
 
 			Expect(loggingConfig.Parsers).To(Equal(
 				[]*fluentbitv1alpha2.ClusterParser{
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:   "node-exporter-parser",
-							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
-						},
-						Spec: fluentbitv1alpha2.ParserSpec{
-							Regex: &fluentbitv1alpha2parser.Regex{
-								Regex:      "^time=\"(?<time>\\d{4}-\\d{2}-\\d{2}T[^\"]*)\"\\s+level=(?<severity>\\w+)\\smsg=\"(?<log>.*)\"\\s+source=\"(?<source>.*)\"",
-								TimeKey:    "time",
-								TimeFormat: "%Y-%m-%dT%H:%M:%S.%L",
-							},
-						},
-					},
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:   "alertmanager-parser",

@@ -1,20 +1,10 @@
+# TODO(shafeeqes): Remove this chart once gardener v1.75 is released
 {{- if .Values.global.vpaEnabled }}
 apiVersion: "autoscaling.k8s.io/v1"
 kind: VerticalPodAutoscaler
 metadata:
   name: node-exporter
   namespace: {{ .Release.Namespace }}
-spec:
-  resourcePolicy:
-    containerPolicies:
-      - containerName: '*'
-        minAllowed:
-          memory: 50Mi
-        controlledValues: RequestsOnly
-  targetRef:
-    apiVersion: {{ include "daemonsetversion" . }}
-    kind: DaemonSet
-    name: node-exporter
-  updatePolicy:
-    updateMode: "Auto"
+  annotations:
+    resources.gardener.cloud/mode: Ignore
 {{- end }}

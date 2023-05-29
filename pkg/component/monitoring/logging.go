@@ -28,10 +28,9 @@ import (
 )
 
 var (
-	nodeExporterName = "node-exporter"
-	alermanagerName  = "alertmanager"
-	prometheusName   = "prometheus"
-	plutonoName      = "plutono"
+	alermanagerName = "alertmanager"
+	prometheusName  = "prometheus"
+	plutonoName     = "plutono"
 )
 
 // CentralLoggingConfiguration returns a fluent-bit parser and filter for the monitoring logs.
@@ -41,24 +40,6 @@ func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
 
 func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
 	return []*fluentbitv1alpha2.ClusterFilter{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   nodeExporterName,
-				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
-			},
-			Spec: fluentbitv1alpha2.FilterSpec{
-				Match: fmt.Sprintf("kubernetes.*%s*%s*", nodeExporterName, nodeExporterName),
-				FilterItems: []fluentbitv1alpha2.FilterItem{
-					{
-						Parser: &fluentbitv1alpha2filter.Parser{
-							KeyName:     "log",
-							Parser:      nodeExporterName + "-parser",
-							ReserveData: pointer.Bool(true),
-						},
-					},
-				},
-			},
-		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   alermanagerName,
@@ -136,19 +117,6 @@ func generateClusterFilters() []*fluentbitv1alpha2.ClusterFilter {
 
 func generateClusterParsers() []*fluentbitv1alpha2.ClusterParser {
 	return []*fluentbitv1alpha2.ClusterParser{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   nodeExporterName + "-parser",
-				Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
-			},
-			Spec: fluentbitv1alpha2.ParserSpec{
-				Regex: &fluentbitv1alpha2parser.Regex{
-					Regex:      "^time=\"(?<time>\\d{4}-\\d{2}-\\d{2}T[^\"]*)\"\\s+level=(?<severity>\\w+)\\smsg=\"(?<log>.*)\"\\s+source=\"(?<source>.*)\"",
-					TimeKey:    "time",
-					TimeFormat: "%Y-%m-%dT%H:%M:%S.%L",
-				},
-			},
-		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   alermanagerName + "-parser",
