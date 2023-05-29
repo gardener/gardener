@@ -109,7 +109,7 @@ var _ = Describe("SecretBindingControl", func() {
 		})
 	})
 
-	Describe("SecretBinding label for Secrets", func() {
+	Describe("SecretBinding and Provider label for Secrets", func() {
 		var (
 			reconciler *Reconciler
 			request    reconcile.Request
@@ -138,6 +138,9 @@ var _ = Describe("SecretBindingControl", func() {
 					Namespace: secret.Namespace,
 					Name:      secret.Name,
 				},
+				Provider: &gardencorev1beta1.SecretBindingProvider{
+					Type: "provider",
+				},
 			}
 
 			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
@@ -147,17 +150,18 @@ var _ = Describe("SecretBindingControl", func() {
 			request = reconcile.Request{NamespacedName: types.NamespacedName{Namespace: secretBindingNamespace, Name: secretBindingName}}
 		})
 
-		It("should add the label to the secret referred by the secretbinding", func() {
+		It("should add the secretbinding referred label to the secret referred by the secretbinding", func() {
 			_, err := reconciler.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
-			Expect(secret.ObjectMeta.Labels).To(HaveKeyWithValue(
-				"reference.gardener.cloud/secretbinding", "true",
+			Expect(secret.ObjectMeta.Labels).To(And(
+				HaveKeyWithValue("reference.gardener.cloud/secretbinding", "true"),
+				HaveKeyWithValue("provider.shoot.gardener.cloud/provider", "true"),
 			))
 		})
 
-		It("should remove the label from the secret when there are no secretbindings referring it", func() {
+		It("should remove both the labels from the secret when there are no other secretbindings referring it", func() {
 			_, err := reconciler.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -172,6 +176,38 @@ var _ = Describe("SecretBindingControl", func() {
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			Expect(secret.ObjectMeta.Labels).To(BeEmpty())
+		})
+
+		It("should not remove any of the label from the secret when there are other secretbindings referring it", func() {
+			secretBinding2 := &gardencorev1beta1.SecretBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secretbinding-2",
+					Namespace: "some-namespace",
+				},
+				SecretRef: corev1.SecretReference{
+					Namespace: secret.Namespace,
+					Name:      secret.Name,
+				},
+			}
+			Expect(fakeClient.Create(ctx, secretBinding2)).To(Succeed())
+
+			_, err := reconciler.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretBinding), secretBinding)).To(Succeed())
+			secretBinding.DeletionTimestamp = &metav1.Time{Time: time.Date(1, 1, 1, 1, 1, 1, 1, time.UTC)}
+			// Add dummy finalizer to prevent deletion
+			secretBinding.Finalizers = append(secretBinding.Finalizers, "finalizer")
+			Expect(fakeClient.Update(ctx, secretBinding)).To(Succeed())
+
+			_, err = reconciler.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			Expect(secret.ObjectMeta.Labels).To(And(
+				HaveKeyWithValue("reference.gardener.cloud/secretbinding", "true"),
+				HaveKeyWithValue("provider.shoot.gardener.cloud/provider", "true"),
+			))
 		})
 	})
 
