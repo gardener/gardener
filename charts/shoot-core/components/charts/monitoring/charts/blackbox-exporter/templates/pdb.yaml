@@ -1,13 +1,8 @@
+# TODO(acumino): Drop this chart in release v1.75
 apiVersion: {{ include "poddisruptionbudgetversion" .}}
 kind: PodDisruptionBudget
 metadata:
   name: blackbox-exporter
   namespace: kube-system
-  labels:
-    gardener.cloud/role: monitoring
-    component: blackbox-exporter
-spec:
-  maxUnavailable: 1
-  selector:
-    matchLabels:
-      component: blackbox-exporter
+  annotations:
+    resources.gardener.cloud/mode: Ignore

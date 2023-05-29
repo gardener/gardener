@@ -177,6 +177,12 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		o.Shoot.Components.SystemComponents.BlackboxExporter, err = b.DefaultBlackboxExporter()
+		if err != nil {
+			return nil, err
+		}
+
 		o.Shoot.Components.SystemComponents.CoreDNS, err = b.DefaultCoreDNS()
 		if err != nil {
 			return nil, err

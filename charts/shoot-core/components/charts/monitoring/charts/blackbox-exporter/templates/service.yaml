@@ -1,15 +1,8 @@
+# TODO(acumino): Drop this chart in release v1.75
 apiVersion: v1
 kind: Service
 metadata:
   name: blackbox-exporter
   namespace: kube-system
-  labels:
-    component: blackbox-exporter
-spec:
-  type: ClusterIP
-  ports:
-  - name: probe
-    port: 9115
-    protocol: TCP
-  selector:
-    component: blackbox-exporter
+  annotations:
+    resources.gardener.cloud/mode: Ignore

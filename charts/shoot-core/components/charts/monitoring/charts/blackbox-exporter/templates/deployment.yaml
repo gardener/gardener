@@ -1,72 +1,8 @@
-{{- define "blackbox-exporter.deployment.annotations" -}}
-reference.resources.gardener.cloud/configmap-{{ include "blackbox-exporter.config.name" . | sha256sum | trunc 8 }}: {{ include "blackbox-exporter.config.name" . }}
-{{- end -}}
----
+# TODO(acumino): Drop this chart in release v1.75
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
   name: blackbox-exporter
   namespace: kube-system
-  labels:
-    gardener.cloud/role: monitoring
-    component: blackbox-exporter
-    origin: gardener
-    high-availability-config.resources.gardener.cloud/type: server
   annotations:
-{{ include "blackbox-exporter.deployment.annotations" . | indent 4 }}
-spec:
-  replicas: 1
-  revisionHistoryLimit: 2
-  selector:
-    matchLabels:
-      component: blackbox-exporter
-  template:
-    metadata:
-      annotations:
-{{ include "blackbox-exporter.deployment.annotations" . | indent 8 }}
-      labels:
-        origin: gardener
-        gardener.cloud/role: monitoring
-        component: blackbox-exporter
-        networking.gardener.cloud/from-seed: allowed
-        networking.gardener.cloud/to-dns: allowed
-        networking.gardener.cloud/to-public-networks: allowed
-        networking.gardener.cloud/to-apiserver: allowed
-    spec:
-      serviceAccountName: blackbox-exporter
-      priorityClassName: system-cluster-critical
-      securityContext:
-        runAsUser: 65534
-        fsGroup: 65534
-        supplementalGroups:
-        - 1
-        seccompProfile:
-          type: RuntimeDefault
-      containers:
-      - name: blackbox-exporter
-        image: {{ index .Values.images "blackbox-exporter" }}
-        args:
-        - --config.file=/etc/blackbox_exporter/blackbox.yaml
-        - --log.level=debug
-        imagePullPolicy: IfNotPresent
-        resources:
-          requests:
-            cpu: 10m
-            memory: 25Mi
-          limits:
-            memory: 128Mi
-        ports:
-        - containerPort: 9115
-          protocol: TCP
-          name: probe
-        volumeMounts:
-        - name: blackbox-exporter-config
-          mountPath: /etc/blackbox_exporter
-      dnsConfig:
-        options:
-          - name: ndots
-            value: "3"
-      volumes:
-      - name: blackbox-exporter-config
-        configMap:
-          name: {{ include "blackbox-exporter.config.name" . }}
+    resources.gardener.cloud/mode: Ignore
