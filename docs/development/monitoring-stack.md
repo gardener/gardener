@@ -34,7 +34,7 @@ The Alertmanager in the Shoot namespace on the Seed is only responsible for forw
 
 After exploring the metrics which your component provides or adding new metrics, you should be aware which metrics are required to write the needed alerts and dashboards.
 
-Prometheus prefers a pull based metrics collection approach and therefore the targets to observe need to be defined upfront. The targets are defined in `charts/seed-monitoring/charts/prometheus/templates/config.yaml`.
+Prometheus prefers a pull based metrics collection approach and therefore the targets to observe need to be defined upfront. The targets are defined in `charts/seed-monitoring/charts/core/charts/prometheus/templates/config.yaml`.
 New scrape jobs can be added in the section `scrape_configs`. Detailed information how to configure scrape jobs and how to use the kubernetes service discovery are available in the [Prometheus documentation](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config).
 
 The `job_name` of a scrape job should be the name of the component e.g. `kube-apiserver` or `vpn`. The collection interval should be the default of `30s`. You do not need to specify this in the configuration.
@@ -48,7 +48,7 @@ Please do not ingest all metrics which are provided by a component. Rather, coll
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.exampleComponent | indent 6 }}
 ```
 
-The whitelist for the metrics of your job can be maintained in `charts/seed-monitoring/charts/prometheus/values.yaml` in section `allowedMetrics.exampleComponent` (replace `exampleComponent` with component name). Check the following example:
+The whitelist for the metrics of your job can be maintained in `charts/seed-monitoring/charts/core/charts/prometheus/values.yaml` in section `allowedMetrics.exampleComponent` (replace `exampleComponent` with component name). Check the following example:
 
 ```yaml
 allowedMetrics:
@@ -61,7 +61,7 @@ allowedMetrics:
 
 ## Adding Alerts
 
-The alert definitons are located in `charts/seed-monitoring/charts/prometheus/rules`. There are two approaches for adding new alerts.
+The alert definitons are located in `charts/seed-monitoring/charts/core/charts/prometheus/rules`. There are two approaches for adding new alerts.
 
 1. Adding additional alerts for a component which already has a set of alerts. In this case you have to extend the existing rule file for the component.
 1. Adding alerts for a new component. In this case a new rule file with name scheme `example-component.rules.yaml` needs to be added.
@@ -90,7 +90,7 @@ groups:
       summary: Short summary of an example alert.
 ```
 
-If the deployment of component is optional then the alert definitions needs to be added to `charts/seed-monitoring/charts/prometheus/optional-rules` instead. Furthermore the alerts for component need to be activatable in `charts/seed-monitoring/charts/prometheus/values.yaml` via `rules.optional.example-component.enabled`. The default should be `true`.
+If the deployment of component is optional then the alert definitions needs to be added to `charts/seed-monitoring/charts/core/charts/prometheus/optional-rules` instead. Furthermore the alerts for component need to be activatable in `charts/seed-monitoring/charts/core/charts/prometheus/values.yaml` via `rules.optional.example-component.enabled`. The default should be `true`.
 
 Basic instruction how to define alert rules can be found in the [Prometheus documentation](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules).
 
