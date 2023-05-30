@@ -53,7 +53,7 @@ func validateCrossVersionObjectReference(ref autoscalingv1.CrossVersionObjectRef
 	allErrs := field.ErrorList{}
 
 	if len(ref.APIVersion) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("apiVersion"), "must provide a apiVersion"))
+		allErrs = append(allErrs, field.Required(fldPath.Child("apiVersion"), "must provide an apiVersion"))
 	} else {
 		if ref.APIVersion != corev1.SchemeGroupVersion.String() {
 			allErrs = append(allErrs, field.NotSupported(fldPath.Child("apiVersion"), ref.APIVersion, []string{corev1.SchemeGroupVersion.String()}))

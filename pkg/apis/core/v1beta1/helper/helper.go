@@ -1000,18 +1000,14 @@ func ShootResourceReferencesEqual(oldResources, newResources []gardencorev1beta1
 	)
 
 	for _, resource := range oldResources {
-		if resource.ResourceRef.APIVersion == "v1" {
-			if resource.ResourceRef.Kind == "Secret" || resource.ResourceRef.Kind == "ConfigMap" {
-				oldNames.Insert(resource.ResourceRef.Kind + resource.ResourceRef.Name)
-			}
+		if resource.ResourceRef.APIVersion == "v1" && sets.New("Secret", "ConfigMap").Has(resource.ResourceRef.Kind) {
+			oldNames.Insert(resource.ResourceRef.Kind + resource.ResourceRef.Name)
 		}
 	}
 
 	for _, resource := range newResources {
-		if resource.ResourceRef.APIVersion == "v1" {
-			if resource.ResourceRef.Kind == "Secret" || resource.ResourceRef.Kind == "ConfigMap" {
-				newNames.Insert(resource.ResourceRef.Kind + resource.ResourceRef.Name)
-			}
+		if resource.ResourceRef.APIVersion == "v1" && sets.New("Secret", "ConfigMap").Has(resource.ResourceRef.Kind) {
+			newNames.Insert(resource.ResourceRef.Kind + resource.ResourceRef.Name)
 		}
 	}
 
