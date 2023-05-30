@@ -72,7 +72,7 @@ var _ = Describe("Add", func() {
 					Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: shoot})).To(BeFalse())
 				})
 
-				It("should return because the DNS fields changed", func() {
+				It("should return true because the DNS fields changed", func() {
 					oldShoot := shoot.DeepCopy()
 					shoot.Spec.DNS = &gardencorev1beta1.DNS{
 						Providers: []gardencorev1beta1.DNSProvider{{
@@ -94,7 +94,7 @@ var _ = Describe("Add", func() {
 					Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
 				})
 
-				It("should return false because the resources field changed", func() {
+				It("should return true because the resources field changed", func() {
 					oldShoot := shoot.DeepCopy()
 					shoot.Spec.Resources = []gardencorev1beta1.NamedResourceReference{{
 						Name: "resource-1",

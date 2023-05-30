@@ -817,6 +817,28 @@ var _ = Describe("Shoot Validation Tests", func() {
 			))
 		})
 
+		It("should forbid resources of kind other than Secret/ConfigMap", func() {
+			ref := core.NamedResourceReference{
+				Name: "test",
+				ResourceRef: autoscalingv1.CrossVersionObjectReference{
+					Kind:       "ServiceAccount",
+					Name:       "test-sa",
+					APIVersion: "v1",
+				},
+			}
+			shoot.Spec.Resources = append(shoot.Spec.Resources, ref)
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeNotSupported),
+					"Field":    Equal("spec.resources[0].resourceRef.kind"),
+					"BadValue": Equal("ServiceAccount"),
+				})),
+			))
+		})
+
 		It("should forbid resources with non-unique names", func() {
 			ref := core.NamedResourceReference{
 				Name: "test",
@@ -847,7 +869,17 @@ var _ = Describe("Shoot Validation Tests", func() {
 					APIVersion: "v1",
 				},
 			}
-			shoot.Spec.Resources = append(shoot.Spec.Resources, ref)
+
+			ref2 := core.NamedResourceReference{
+				Name: "test-cm",
+				ResourceRef: autoscalingv1.CrossVersionObjectReference{
+					Kind:       "ConfigMap",
+					Name:       "test-cm",
+					APIVersion: "v1",
+				},
+			}
+
+			shoot.Spec.Resources = append(shoot.Spec.Resources, ref, ref2)
 
 			errorList := ValidateShoot(shoot)
 

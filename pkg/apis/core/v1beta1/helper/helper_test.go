@@ -1998,7 +1998,7 @@ var _ = Describe("helper", func() {
 		Entry("equality", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: pointer.String("foo")}}}, &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: pointer.String("foo")}}}, BeTrue()),
 	)
 
-	FDescribeTable("#ShootSecretResourceReferencesEqual",
+	DescribeTable("#ShootResourceReferencesEqual",
 		func(oldResources, newResources []gardencorev1beta1.NamedResourceReference, matcher gomegatypes.GomegaMatcher) {
 			Expect(ShootResourceReferencesEqual(oldResources, newResources)).To(matcher)
 		},
