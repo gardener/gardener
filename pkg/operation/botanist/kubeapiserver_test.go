@@ -176,13 +176,13 @@ var _ = Describe("KubeAPIServer", func() {
 	Describe("#DefaultKubeAPIServer", func() {
 		Describe("AutoscalingConfig", func() {
 			DescribeTable("should have the expected autoscaling config",
-				func(prepTest func(), featureGate *featuregate.Feature, value *bool, expectedConfig kubeapiserver.AutoscalingConfig) {
+				func(prepTest func(), featureGates map[featuregate.Feature]bool, expectedConfig kubeapiserver.AutoscalingConfig) {
 					if prepTest != nil {
 						prepTest()
 					}
 
-					if featureGate != nil && value != nil {
-						defer test.WithFeatureGate(features.DefaultFeatureGate, *featureGate, *value)()
+					for featureGate, value := range featureGates {
+						defer test.WithFeatureGate(features.DefaultFeatureGate, featureGate, value)()
 					}
 
 					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
@@ -192,7 +192,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 				Entry("default behaviour, HVPA is disabled",
 					nil,
-					featureGatePtr(features.HVPA), pointer.Bool(false),
+					map[featuregate.Feature]bool{features.HVPA: false},
 					kubeapiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
 						HVPAEnabled:               false,
@@ -204,7 +204,7 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("default behaviour, HVPA is enabled",
 					nil,
-					featureGatePtr(features.HVPA), pointer.Bool(true),
+					map[featuregate.Feature]bool{features.HVPA: true},
 					kubeapiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
 						HVPAEnabled:               true,
@@ -218,7 +218,7 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						botanist.Shoot.Purpose = gardencorev1beta1.ShootPurposeProduction
 					},
-					nil, nil,
+					nil,
 					kubeapiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
 						HVPAEnabled:               false,
@@ -232,7 +232,7 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						botanist.Shoot.GetInfo().Annotations = map[string]string{"alpha.control-plane.scaling.shoot.gardener.cloud/scale-down-disabled": "true"}
 					},
-					nil, nil,
+					nil,
 					kubeapiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
 						HVPAEnabled:               false,
@@ -246,7 +246,7 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 					},
-					featureGatePtr(features.HVPAForShootedSeed), pointer.Bool(false),
+					map[featuregate.Feature]bool{features.HVPAForShootedSeed: false},
 					kubeapiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
 						HVPAEnabled:               false,
@@ -260,7 +260,7 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 					},
-					featureGatePtr(features.HVPAForShootedSeed), pointer.Bool(true),
+					map[featuregate.Feature]bool{features.HVPAForShootedSeed: true},
 					kubeapiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
 						HVPAEnabled:               true,
@@ -281,7 +281,7 @@ var _ = Describe("KubeAPIServer", func() {
 							Replicas: pointer.Int32(24),
 						}
 					},
-					featureGatePtr(features.HVPAForShootedSeed), pointer.Bool(true),
+					map[featuregate.Feature]bool{features.HVPAForShootedSeed: true},
 					kubeapiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
 						HVPAEnabled:               true,
@@ -302,7 +302,7 @@ var _ = Describe("KubeAPIServer", func() {
 							Replicas: pointer.Int32(24),
 						}
 					},
-					featureGatePtr(features.HVPAForShootedSeed), pointer.Bool(false),
+					map[featuregate.Feature]bool{features.HVPAForShootedSeed: false},
 					kubeapiserver.AutoscalingConfig{
 						APIServerResources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
@@ -326,7 +326,7 @@ var _ = Describe("KubeAPIServer", func() {
 							},
 						}
 					},
-					nil, nil,
+					nil,
 					kubeapiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
 						HVPAEnabled:               false,
