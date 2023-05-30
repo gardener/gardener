@@ -214,6 +214,26 @@ var _ = Describe("KubeAPIServer", func() {
 						ScaleDownDisabledForHvpa:  false,
 					},
 				),
+				Entry("default behaviour, HVPA is enabled and DisableScalingClassesForShoots is enabled",
+					nil,
+					map[featuregate.Feature]bool{
+						features.HVPA:                           true,
+						features.DisableScalingClassesForShoots: true,
+					},
+					kubeapiserver.AutoscalingConfig{
+						APIServerResources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("500m"),
+								corev1.ResourceMemory: resource.MustParse("1Gi"),
+							},
+						},
+						HVPAEnabled:               true,
+						MinReplicas:               1,
+						MaxReplicas:               4,
+						UseMemoryMetricForHvpaHPA: false,
+						ScaleDownDisabledForHvpa:  false,
+					},
+				),
 				Entry("shoot purpose production",
 					func() {
 						botanist.Shoot.Purpose = gardencorev1beta1.ShootPurposeProduction
@@ -284,6 +304,35 @@ var _ = Describe("KubeAPIServer", func() {
 					map[featuregate.Feature]bool{features.HVPAForShootedSeed: true},
 					kubeapiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
+						HVPAEnabled:               true,
+						MinReplicas:               16,
+						MaxReplicas:               32,
+						UseMemoryMetricForHvpaHPA: true,
+						ScaleDownDisabledForHvpa:  false,
+					},
+				),
+				Entry("shoot is a managed seed w/ APIServer settings and HVPAForShootedSeed is enabled and DisableScalingClassesForShoots is enabled",
+					func() {
+						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
+						botanist.ManagedSeedAPIServer = &helper.ManagedSeedAPIServer{
+							Autoscaler: &helper.ManagedSeedAPIServerAutoscaler{
+								MinReplicas: pointer.Int32(16),
+								MaxReplicas: 32,
+							},
+							Replicas: pointer.Int32(24),
+						}
+					},
+					map[featuregate.Feature]bool{
+						features.HVPAForShootedSeed:             true,
+						features.DisableScalingClassesForShoots: true,
+					},
+					kubeapiserver.AutoscalingConfig{
+						APIServerResources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("500m"),
+								corev1.ResourceMemory: resource.MustParse("1Gi"),
+							},
+						},
 						HVPAEnabled:               true,
 						MinReplicas:               16,
 						MaxReplicas:               32,
