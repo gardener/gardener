@@ -113,6 +113,10 @@ func (r *Reconciler) reconcile(
 				return r.generateGenericTokenKubeconfig(ctx, secretsManager)
 			},
 		})
+		deployEtcdCRD = g.Add(flow.Task{
+			Name: "Deploying custom resource definition for ETCD/EtcdCopyBackupsTask",
+			Fn:   c.etcdCRD.Deploy,
+		})
 		deployVPACRD = g.Add(flow.Task{
 			Name: "Deploying custom resource definition for VPA",
 			Fn:   flow.TaskFn(c.vpaCRD.Deploy).DoIf(vpaEnabled(garden.Spec.RuntimeCluster.Settings)),
@@ -128,7 +132,7 @@ func (r *Reconciler) reconcile(
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
 			Fn:           component.OpWait(c.gardenerResourceManager).Deploy,
-			Dependencies: flow.NewTaskIDs(deployVPACRD, reconcileHVPACRD, deployIstioCRD),
+			Dependencies: flow.NewTaskIDs(deployEtcdCRD, deployVPACRD, reconcileHVPACRD, deployIstioCRD),
 		})
 		deploySystemResources = g.Add(flow.Task{
 			Name:         "Deploying system resources",

@@ -171,6 +171,11 @@ func (r *Reconciler) delete(
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
+			Name:         "Destroying custom resource definition for ETCD/EtcdCopyBackupsTask",
+			Fn:           c.etcdCRD.Destroy,
+			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
+		})
+		_ = g.Add(flow.Task{
 			Name:         "Cleaning up secrets",
 			Fn:           secretsManager.Cleanup,
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
