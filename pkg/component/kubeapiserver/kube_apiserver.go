@@ -594,6 +594,8 @@ var (
 	// TimeoutWaitForDeployment is the timeout used while waiting for the Deployments to become healthy
 	// or deleted.
 	TimeoutWaitForDeployment = 5 * time.Minute
+	// Until is an alias for retry.Until. Exposed for tests.
+	Until = retry.Until
 )
 
 func (k *kubeAPIServer) Wait(ctx context.Context) error {
@@ -602,7 +604,7 @@ func (k *kubeAPIServer) Wait(ctx context.Context) error {
 
 	deployment := k.emptyDeployment()
 
-	if err := retry.Until(timeoutCtx, IntervalWaitForDeployment, health.IsDeploymentUpdated(k.client.APIReader(), deployment)); err != nil {
+	if err := Until(timeoutCtx, IntervalWaitForDeployment, health.IsDeploymentUpdated(k.client.APIReader(), deployment)); err != nil {
 		var (
 			retryError *retry.Error
 			headBytes  *int64

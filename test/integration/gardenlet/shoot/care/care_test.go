@@ -36,8 +36,6 @@ import (
 
 var _ = Describe("Shoot Care controller tests", func() {
 	var (
-		project              *gardencorev1beta1.Project
-		seed                 *gardencorev1beta1.Seed
 		seedNamespace        *corev1.Namespace
 		secret               *corev1.Secret
 		internalDomainSecret *corev1.Secret
@@ -47,49 +45,6 @@ var _ = Describe("Shoot Care controller tests", func() {
 	)
 
 	BeforeEach(func() {
-		project = &gardencorev1beta1.Project{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   projectName,
-				Labels: map[string]string{testID: testRunID},
-			},
-			Spec: gardencorev1beta1.ProjectSpec{
-				Namespace: &testNamespace.Name,
-			},
-		}
-		seed = &gardencorev1beta1.Seed{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   seedName,
-				Labels: map[string]string{testID: testRunID},
-			},
-			Spec: gardencorev1beta1.SeedSpec{
-				Provider: gardencorev1beta1.SeedProvider{
-					Region: "region",
-					Type:   "providerType",
-					Zones:  []string{"a", "b", "c"},
-				},
-				Ingress: &gardencorev1beta1.Ingress{
-					Domain: "seed.example.com",
-					Controller: gardencorev1beta1.IngressController{
-						Kind: "nginx",
-					},
-				},
-				DNS: gardencorev1beta1.SeedDNS{
-					Provider: &gardencorev1beta1.SeedDNSProvider{
-						Type: "providerType",
-						SecretRef: corev1.SecretReference{
-							Name:      "some-secret",
-							Namespace: "some-namespace",
-						},
-					},
-				},
-				Networks: gardencorev1beta1.SeedNetworks{
-					Pods:     "10.0.0.0/16",
-					Services: "10.1.0.0/16",
-					Nodes:    pointer.String("10.2.0.0/16"),
-				},
-			},
-		}
-
 		seedNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   gardenerutils.ComputeGardenNamespace(seed.Name),
@@ -277,14 +232,6 @@ var _ = Describe("Shoot Care controller tests", func() {
 
 	Context("when operation can be initialized", func() {
 		BeforeEach(func() {
-			By("Create Project")
-			Expect(testClient.Create(ctx, project)).To(Succeed())
-			log.Info("Created Project for test", "project", project.Name)
-
-			By("Create Seed")
-			Expect(testClient.Create(ctx, seed)).To(Succeed())
-			log.Info("Created Seed for test", "seed", seed.Name)
-
 			By("Create Secret")
 			Expect(testClient.Create(ctx, secret)).To(Succeed())
 			log.Info("Created Secret for test", "secret", secret.Name)
@@ -297,33 +244,17 @@ var _ = Describe("Shoot Care controller tests", func() {
 				By("Delete SecretBinding")
 				Expect(testClient.Delete(ctx, secretBinding)).To(Succeed())
 
-				By("Delete Secret")
-				Expect(testClient.Delete(ctx, secret)).To(Succeed())
-
-				By("Delete Seed")
-				Expect(testClient.Delete(ctx, seed)).To(Succeed())
-
-				By("Delete Project")
-				Expect(testClient.Delete(ctx, project)).To(Succeed())
-
 				By("Ensure SecretBinding is gone")
 				Eventually(func() error {
 					return mgrClient.Get(ctx, client.ObjectKeyFromObject(secretBinding), secretBinding)
 				}).Should(BeNotFoundError())
 
+				By("Delete Secret")
+				Expect(testClient.Delete(ctx, secret)).To(Succeed())
+
 				By("Ensure Secret is gone")
 				Eventually(func() error {
 					return mgrClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)
-				}).Should(BeNotFoundError())
-
-				By("Ensure Seed is gone")
-				Eventually(func() error {
-					return mgrClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)
-				}).Should(BeNotFoundError())
-
-				By("Ensure Project is gone")
-				Eventually(func() error {
-					return mgrClient.Get(ctx, client.ObjectKeyFromObject(project), project)
 				}).Should(BeNotFoundError())
 			})
 		})
