@@ -365,6 +365,7 @@ var _ = Describe("Garden controller tests", func() {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(service), service)).To(Succeed())
 			return service.Annotations
 		}).Should(Equal(utils.MergeStringMaps(loadBalancerServiceAnnotations, map[string]string{
+			"networking.istio.io/exportTo":                                              "*",
 			"networking.resources.gardener.cloud/from-world-to-ports":                   `[{"protocol":"TCP","port":443}]`,
 			"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":443}]`,
 			"networking.resources.gardener.cloud/namespace-selectors":                   `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchLabels":{"networking.gardener.cloud/access-target-apiserver":"allowed"}}]`,
@@ -385,12 +386,21 @@ var _ = Describe("Garden controller tests", func() {
 			}
 		}).Should(Succeed())
 
-		// The garden controller waits for the virtual-garden-kube-apiserver Service resource to be ready, but there is
-		// no service controller running in this test which would make it ready, so let's fake this here.
-		By("Patch virtual-garden-kube-apiserver Service resource to report readiness")
+		// The garden controller waits for the istio-ingress Service resource to be ready, but there is
+		// no service controller or GRM running in this test which would make it ready, so let's fake this here.
+		By("Create and patch istio-ingress Service resource to report readiness")
 		Eventually(func(g Gomega) {
-			service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "virtual-garden-kube-apiserver", Namespace: testNamespace.Name}}
-			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(service), service)).To(Succeed())
+			service := &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "istio-ingressgateway",
+					Namespace: "virtual-garden-istio-ingress",
+				},
+				Spec: corev1.ServiceSpec{
+					Type:  corev1.ServiceTypeLoadBalancer,
+					Ports: []corev1.ServicePort{{Protocol: corev1.ProtocolTCP, Port: 443}},
+				},
+			}
+			g.Expect(testClient.Create(ctx, service)).To(Succeed())
 
 			patch := client.MergeFrom(service.DeepCopy())
 			service.Status.LoadBalancer.Ingress = append(service.Status.LoadBalancer.Ingress, corev1.LoadBalancerIngress{Hostname: "localhost"})

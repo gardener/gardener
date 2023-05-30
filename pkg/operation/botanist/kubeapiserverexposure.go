@@ -75,6 +75,7 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 	return component.OpDestroyWithoutWait(kubeapiserverexposure.NewSNI(
 		b.SeedClientSet.Client(),
 		b.SeedClientSet.Applier(),
+		v1beta1constants.DeploymentNameKubeAPIServer,
 		b.Shoot.SeedNamespace,
 		func() *kubeapiserverexposure.SNIValues {
 			return &kubeapiserverexposure.SNIValues{
@@ -82,7 +83,6 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 					Namespace: b.IstioNamespace(),
 					Labels:    b.IstioLabels(),
 				},
-				APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
 			}
 		},
 	))
@@ -134,20 +134,22 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 	b.Shoot.Components.ControlPlane.KubeAPIServerSNI = kubeapiserverexposure.NewSNI(
 		b.SeedClientSet.Client(),
 		b.SeedClientSet.Applier(),
+		v1beta1constants.DeploymentNameKubeAPIServer,
 		b.Shoot.SeedNamespace,
 		func() *kubeapiserverexposure.SNIValues {
 			return &kubeapiserverexposure.SNIValues{
-				APIServerClusterIP: clusterIP,
-				NamespaceUID:       b.SeedNamespaceObject.UID,
 				Hosts: []string{
 					gardenerutils.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
 					gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+				},
+				APIServerProxy: &kubeapiserverexposure.APIServerProxy{
+					APIServerClusterIP: clusterIP,
+					NamespaceUID:       b.SeedNamespaceObject.UID,
 				},
 				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
 					Namespace: b.IstioNamespace(),
 					Labels:    b.IstioLabels(),
 				},
-				APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
 			}
 		},
 	)

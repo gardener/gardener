@@ -37,6 +37,7 @@ type istioTestValues struct {
 	priorityClassName                 string
 	istiodEnabled                     bool
 	labels                            map[string]string
+	kubeAPIServerPolicyLabel          string
 	lbAnnotations                     map[string]string
 	externalTrafficPolicy             *corev1.ServiceExternalTrafficPolicyType
 	serviceExternalIP                 *string
@@ -59,6 +60,7 @@ func createIstio(testValues istioTestValues) istio.Interface {
 		testValues.priorityClassName,
 		testValues.istiodEnabled,
 		testValues.labels,
+		testValues.kubeAPIServerPolicyLabel,
 		testValues.lbAnnotations,
 		testValues.externalTrafficPolicy,
 		testValues.serviceExternalIP,
@@ -77,6 +79,19 @@ func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 	if zoneSize := len(testValues.zones); zoneSize > 1 {
 		minReplicas = pointer.Int(zoneSize * 2)
 		maxReplicas = pointer.Int(zoneSize * 4)
+	}
+
+	networkPolicyLabels := map[string]string{
+		"networking.gardener.cloud/to-dns":                                     "allowed",
+		"networking.resources.gardener.cloud/to-istio-system-istiod-tcp-15012": "allowed",
+		testValues.kubeAPIServerPolicyLabel:                                    "allowed",
+	}
+
+	if testValues.vpnEnabled {
+		networkPolicyLabels["networking.resources.gardener.cloud/to-garden-reversed-vpn-auth-server-tcp-9001"] = "allowed"
+		networkPolicyLabels["networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-tcp-1194"] = "allowed"
+		networkPolicyLabels["networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-0-tcp-1194"] = "allowed"
+		networkPolicyLabels["networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-1-tcp-1194"] = "allowed"
 	}
 
 	Expect(istioDeploy.GetValues()).To(Equal(istio.Values{
@@ -100,6 +115,7 @@ func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 				Ports:                 testValues.servicePorts,
 				LoadBalancerIP:        testValues.serviceExternalIP,
 				Labels:                testValues.labels,
+				NetworkPolicyLabels:   networkPolicyLabels,
 				Namespace:             "shared-istio-test-some-istio-ingress",
 				PriorityClassName:     testValues.priorityClassName,
 				ProxyProtocolEnabled:  testValues.proxyProtocolEnabled,
@@ -144,6 +160,7 @@ func checkAdditionalIstioGateway(istioDeploy istio.Interface,
 		Ports:                 ingressValues[0].Ports,
 		LoadBalancerIP:        serviceExternalIP,
 		Labels:                labels,
+		NetworkPolicyLabels:   ingressValues[0].NetworkPolicyLabels,
 		Namespace:             namespace,
 		PriorityClassName:     ingressValues[0].PriorityClassName,
 		ProxyProtocolEnabled:  ingressValues[0].ProxyProtocolEnabled,
@@ -156,6 +173,7 @@ var _ = Describe("Istio", func() {
 	var (
 		testValues  istioTestValues
 		zones       []string
+		vpnEnabled  bool
 		istioDeploy istio.Interface
 	)
 
@@ -167,26 +185,37 @@ var _ = Describe("Istio", func() {
 	JustBeforeEach(func() {
 		trafficPolicy := corev1.ServiceExternalTrafficPolicyTypeLocal
 		testValues = istioTestValues{
-			istiodImageName:       "istiod",
-			ingressImageName:      "istio-ingress",
-			prefix:                "shared-istio-test-",
-			ingressNamespace:      "some-istio-ingress",
-			priorityClassName:     "some-high-priority-class",
-			istiodEnabled:         true,
-			labels:                map[string]string{"some": "labelValue"},
-			lbAnnotations:         map[string]string{"some": "annotationValue"},
-			externalTrafficPolicy: &trafficPolicy,
-			serviceExternalIP:     pointer.String("1.2.3.4"),
-			servicePorts:          []corev1.ServicePort{{Port: 443}},
-			proxyProtocolEnabled:  false,
-			vpnEnabled:            true,
-			zones:                 zones,
+			istiodImageName:          "istiod",
+			ingressImageName:         "istio-ingress",
+			prefix:                   "shared-istio-test-",
+			ingressNamespace:         "some-istio-ingress",
+			priorityClassName:        "some-high-priority-class",
+			istiodEnabled:            true,
+			labels:                   map[string]string{"some": "labelValue"},
+			kubeAPIServerPolicyLabel: "to-all-test-kube-apiserver",
+			lbAnnotations:            map[string]string{"some": "annotationValue"},
+			externalTrafficPolicy:    &trafficPolicy,
+			serviceExternalIP:        pointer.String("1.2.3.4"),
+			servicePorts:             []corev1.ServicePort{{Port: 443}},
+			proxyProtocolEnabled:     false,
+			vpnEnabled:               vpnEnabled,
+			zones:                    zones,
 		}
 
 		istioDeploy = createIstio(testValues)
 	})
 
 	Describe("#NewIstio", func() {
+		Context("with VPN enabled", func() {
+			BeforeEach(func() {
+				vpnEnabled = true
+			})
+
+			It("should successfully create a new Istio deployer", func() {
+				checkIstio(istioDeploy, testValues)
+			})
+		})
+
 		Context("without zone", func() {
 			It("should successfully create a new Istio deployer", func() {
 				checkIstio(istioDeploy, testValues)

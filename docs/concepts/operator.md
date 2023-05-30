@@ -50,15 +50,11 @@ This section provides an overview over the available settings in `.spec.runtimeC
 
 #### Load Balancer Services
 
-`gardener-operator` creates a Kubernetes `Service` object of type `LoadBalancer` in the runtime cluster.
-It is used for exposing the virtual garden control planes, namely the `virtual-garden-kube-apiserver`.
+`gardener-operator` deploys Istio and relevant resources to the runtime cluster in order to expose the `virtual-garden-kube-apiserver` service (similar to how the `kube-apiservers` of shoot clusters are exposed).
 In most cases, the `cloud-controller-manager` (responsible for managing these load balancers on the respective underlying infrastructure) supports certain customization and settings via annotations.
 [This document](https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer) provides a good overview and many examples.
 
 By setting the `.spec.settings.loadBalancerServices.annotations` field the Gardener administrator can specify a list of annotations which will be injected into the `Service`s of type `LoadBalancer`.
-
-Note that we might switch to exposing the `virtual-garden-kube-apiserver` via Istio in the future (similar to how the `kube-apiservers` of shoot clusters are exposed).
-The load balancer service settings might still be relevant, though.
 
 #### Vertical Pod Autoscaler
 

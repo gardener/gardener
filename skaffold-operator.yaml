@@ -71,6 +71,7 @@ build:
         - pkg/component/shared
         - pkg/component/vpa
         - pkg/component/vpa/constants
+        - pkg/component/vpnauthzserver
         - pkg/component/vpnseedserver
         - pkg/controller/networkpolicy
         - pkg/controller/networkpolicy/helper

@@ -33,10 +33,6 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/etcd"
-	"github.com/gardener/gardener/pkg/component/hvpa"
-	"github.com/gardener/gardener/pkg/component/istio"
-	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -56,60 +52,7 @@ func (r *Reconciler) delete(
 	error,
 ) {
 	log.Info("Instantiating component destroyers")
-	applier := kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper())
-
-	// garden system components
-	hvpaCRD := hvpa.NewCRD(applier)
-	vpaCRD := vpa.NewCRD(applier, nil)
-	istioCRD := istio.NewCRD(r.RuntimeClientSet.ChartApplier())
-	gardenerResourceManager, err := r.newGardenerResourceManager(garden, secretsManager)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	system := r.newSystem()
-	verticalPodAutoscaler, err := r.newVerticalPodAutoscaler(garden, secretsManager)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	hvpaController, err := r.newHVPA()
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	etcdDruid, err := r.newEtcdDruid()
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	// virtual garden control plane components
-	etcdMain, err := r.newEtcd(log, garden, secretsManager, v1beta1constants.ETCDRoleMain, etcd.ClassImportant)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	etcdEvents, err := r.newEtcd(log, garden, secretsManager, v1beta1constants.ETCDRoleEvents, etcd.ClassNormal)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	istio, err := r.newIstio(garden)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	kubeAPIServerService := r.newKubeAPIServerService(log, garden)
-	kubeAPIServer, err := r.newKubeAPIServer(ctx, garden, secretsManager, targetVersion)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	kubeControllerManager, err := r.newKubeControllerManager(log, garden, secretsManager, targetVersion)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	virtualGardenGardenerResourceManager, err := r.newVirtualGardenGardenerResourceManager(secretsManager)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	virtualGardenGardenerAccess := r.newGardenerAccess(secretsManager, garden.Spec.VirtualCluster.DNS.Domain)
-
-	// observability components
-	kubeStateMetrics, err := r.newKubeStateMetrics()
+	c, err := r.instantiateComponents(ctx, log, garden, secretsManager, targetVersion, kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper()))
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -119,34 +62,39 @@ func (r *Reconciler) delete(
 
 		_ = g.Add(flow.Task{
 			Name: "Destroying Kube State Metrics",
-			Fn:   component.OpDestroyAndWait(kubeStateMetrics).Destroy,
+			Fn:   component.OpDestroyAndWait(c.kubeStateMetrics).Destroy,
 		})
 		destroyVirtualGardenGardenerAccess = g.Add(flow.Task{
 			Name: "Destroying Gardener virtual garden access resources",
-			Fn:   virtualGardenGardenerAccess.Destroy,
+			Fn:   c.virtualGardenGardenerAccess.Destroy,
 		})
 		destroyVirtualGardenGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Destroying gardener-resource-manager for virtual garden",
-			Fn:           component.OpDestroyAndWait(virtualGardenGardenerResourceManager).Destroy,
+			Fn:           component.OpDestroyAndWait(c.virtualGardenGardenerResourceManager).Destroy,
 			Dependencies: flow.NewTaskIDs(destroyVirtualGardenGardenerAccess),
 		})
 		destroyKubeControllerManager = g.Add(flow.Task{
 			Name: "Destroying Kubernetes Controller Manager Server",
-			Fn:   component.OpDestroyAndWait(kubeControllerManager).Destroy,
+			Fn:   component.OpDestroyAndWait(c.kubeControllerManager).Destroy,
+		})
+		destroyKubeAPIServerSNI = g.Add(flow.Task{
+			Name: "Destroying Kubernetes API server service SNI",
+			Fn:   component.OpDestroyAndWait(c.kubeAPIServerSNI).Destroy,
 		})
 		destroyKubeAPIServerService = g.Add(flow.Task{
-			Name: "Destroying Kubernetes API Server service",
-			Fn:   component.OpDestroyAndWait(kubeAPIServerService).Destroy,
+			Name:         "Destroying Kubernetes API Server service",
+			Fn:           component.OpDestroyAndWait(c.kubeAPIServerService).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyKubeAPIServerSNI),
 		})
 		destroyKubeAPIServer = g.Add(flow.Task{
 			Name: "Destroying Kubernetes API Server",
-			Fn:   component.OpDestroyAndWait(kubeAPIServer).Destroy,
+			Fn:   component.OpDestroyAndWait(c.kubeAPIServer).Destroy,
 		})
 		destroyEtcd = g.Add(flow.Task{
 			Name: "Destroying main and events ETCDs of virtual garden",
 			Fn: flow.Parallel(
-				component.OpDestroyAndWait(etcdMain).Destroy,
-				component.OpDestroyAndWait(etcdEvents).Destroy,
+				component.OpDestroyAndWait(c.etcdMain).Destroy,
+				component.OpDestroyAndWait(c.etcdEvents).Destroy,
 			),
 			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer),
 		})
@@ -160,6 +108,7 @@ func (r *Reconciler) delete(
 			destroyVirtualGardenGardenerAccess,
 			destroyVirtualGardenGardenerResourceManager,
 			destroyKubeControllerManager,
+			destroyKubeAPIServerSNI,
 			destroyKubeAPIServerService,
 			destroyKubeAPIServer,
 			destroyEtcd,
@@ -167,21 +116,21 @@ func (r *Reconciler) delete(
 
 		destroyEtcdDruid = g.Add(flow.Task{
 			Name:         "Destroying ETCD Druid",
-			Fn:           component.OpDestroyAndWait(etcdDruid).Destroy,
+			Fn:           component.OpDestroyAndWait(c.etcdDruid).Destroy,
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
 		})
 		destroyIstio = g.Add(flow.Task{
 			Name: "Destroying Istio",
-			Fn:   component.OpDestroyAndWait(istio).Destroy,
+			Fn:   component.OpDestroyAndWait(c.istio).Destroy,
 		})
 		destroyHVPAController = g.Add(flow.Task{
 			Name:         "Destroying HVPA controller",
-			Fn:           component.OpDestroyAndWait(hvpaController).Destroy,
+			Fn:           component.OpDestroyAndWait(c.hvpaController).Destroy,
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
 		})
 		destroyVerticalPodAutoscaler = g.Add(flow.Task{
 			Name:         "Destroying Kubernetes vertical pod autoscaler",
-			Fn:           component.OpDestroyAndWait(verticalPodAutoscaler).Destroy,
+			Fn:           component.OpDestroyAndWait(c.verticalPodAutoscaler).Destroy,
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
 		})
 		syncPointCleanedUp = flow.NewTaskIDs(
@@ -193,7 +142,7 @@ func (r *Reconciler) delete(
 
 		destroySystemResources = g.Add(flow.Task{
 			Name:         "Destroying system resources",
-			Fn:           component.OpDestroyAndWait(system).Destroy,
+			Fn:           component.OpDestroyAndWait(c.system).Destroy,
 			Dependencies: flow.NewTaskIDs(syncPointCleanedUp),
 		})
 		ensureNoManagedResourcesExistAnymore = g.Add(flow.Task{
@@ -203,22 +152,22 @@ func (r *Reconciler) delete(
 		})
 		destroyGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Destroying and waiting for gardener-resource-manager to be deleted",
-			Fn:           component.OpWait(gardenerResourceManager).Destroy,
+			Fn:           component.OpWait(c.gardenerResourceManager).Destroy,
 			Dependencies: flow.NewTaskIDs(ensureNoManagedResourcesExistAnymore),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for Istio",
-			Fn:           istioCRD.Destroy,
+			Fn:           c.istioCRD.Destroy,
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for VPA",
-			Fn:           flow.TaskFn(vpaCRD.Destroy).DoIf(vpaEnabled(garden.Spec.RuntimeCluster.Settings)),
+			Fn:           flow.TaskFn(c.vpaCRD.Destroy).DoIf(vpaEnabled(garden.Spec.RuntimeCluster.Settings)),
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for HVPA",
-			Fn:           flow.TaskFn(hvpaCRD.Destroy).DoIf(hvpaEnabled()),
+			Fn:           flow.TaskFn(c.hvpaCRD.Destroy).DoIf(hvpaEnabled()),
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
@@ -240,9 +189,9 @@ func (r *Reconciler) delete(
 		objects := []client.Object{
 			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "etcd-to-world", Namespace: r.GardenNamespace}},
 			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-allow-all", Namespace: r.GardenNamespace}},
-			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "istio-allow-all", Namespace: istio.GetValues().Istiod.Namespace}},
+			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "istio-allow-all", Namespace: c.istio.GetValues().Istiod.Namespace}},
 		}
-		for _, istioIngress := range istio.GetValues().IngressGateway {
+		for _, istioIngress := range c.istio.GetValues().IngressGateway {
 			objects = append(objects, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "istio-allow-all", Namespace: istioIngress.Namespace}})
 		}
 		if err := kubernetesutils.DeleteObjects(ctx, r.RuntimeClientSet.Client(), objects...); err != nil {

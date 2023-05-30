@@ -37,21 +37,131 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/gardeneraccess"
 	"github.com/gardener/gardener/pkg/component/gardensystem"
+	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/istio"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
+	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
+
+type components struct {
+	vpaCRD   component.Deployer
+	hvpaCRD  component.Deployer
+	istioCRD component.DeployWaiter
+
+	gardenerResourceManager component.DeployWaiter
+	system                  component.DeployWaiter
+	verticalPodAutoscaler   component.DeployWaiter
+	hvpaController          component.DeployWaiter
+	etcdDruid               component.DeployWaiter
+	istio                   istio.Interface
+
+	etcdMain                             etcd.Interface
+	etcdEvents                           etcd.Interface
+	kubeAPIServerService                 component.DeployWaiter
+	kubeAPIServerSNI                     component.Deployer
+	kubeAPIServer                        kubeapiserver.Interface
+	kubeControllerManager                kubecontrollermanager.Interface
+	virtualGardenGardenerResourceManager resourcemanager.Interface
+	virtualGardenGardenerAccess          component.Deployer
+
+	kubeStateMetrics component.DeployWaiter
+}
+
+func (r *Reconciler) instantiateComponents(
+	ctx context.Context,
+	log logr.Logger,
+	garden *operatorv1alpha1.Garden,
+	secretsManager secretsmanager.Interface,
+	targetVersion *semver.Version,
+	applier kubernetes.Applier,
+) (
+	c components,
+	err error,
+) {
+	// crds
+	c.vpaCRD = vpa.NewCRD(applier, nil)
+	c.hvpaCRD = hvpa.NewCRD(applier)
+	if !hvpaEnabled() {
+		c.hvpaCRD = component.OpDestroy(c.hvpaCRD)
+	}
+	c.istioCRD = istio.NewCRD(r.RuntimeClientSet.ChartApplier())
+
+	// garden system components
+	c.gardenerResourceManager, err = r.newGardenerResourceManager(garden, secretsManager)
+	if err != nil {
+		return
+	}
+	c.system = r.newSystem()
+	c.verticalPodAutoscaler, err = r.newVerticalPodAutoscaler(garden, secretsManager)
+	if err != nil {
+		return
+	}
+	c.hvpaController, err = r.newHVPA()
+	if err != nil {
+		return
+	}
+	c.etcdDruid, err = r.newEtcdDruid()
+	if err != nil {
+		return
+	}
+	c.istio, err = r.newIstio(garden)
+	if err != nil {
+		return
+	}
+
+	// virtual garden control plane components
+	c.etcdMain, err = r.newEtcd(log, garden, secretsManager, v1beta1constants.ETCDRoleMain, etcd.ClassImportant)
+	if err != nil {
+		return
+	}
+	c.etcdEvents, err = r.newEtcd(log, garden, secretsManager, v1beta1constants.ETCDRoleEvents, etcd.ClassNormal)
+	if err != nil {
+		return
+	}
+	c.kubeAPIServerService, err = r.newKubeAPIServerService(log, garden, c.istio.GetValues().IngressGateway)
+	if err != nil {
+		return
+	}
+	c.kubeAPIServerSNI, err = r.newSNI(garden, c.istio.GetValues().IngressGateway)
+	if err != nil {
+		return
+	}
+	c.kubeAPIServer, err = r.newKubeAPIServer(ctx, garden, secretsManager, targetVersion)
+	if err != nil {
+		return
+	}
+	c.kubeControllerManager, err = r.newKubeControllerManager(log, garden, secretsManager, targetVersion)
+	if err != nil {
+		return
+	}
+	c.virtualGardenGardenerResourceManager, err = r.newVirtualGardenGardenerResourceManager(secretsManager)
+	if err != nil {
+		return
+	}
+	c.virtualGardenGardenerAccess = r.newGardenerAccess(secretsManager, garden.Spec.VirtualCluster.DNS.Domain)
+
+	// observability components
+	c.kubeStateMetrics, err = r.newKubeStateMetrics()
+	if err != nil {
+		return
+	}
+
+	return c, nil
+}
 
 const namePrefix = "virtual-garden-"
 
@@ -233,16 +343,17 @@ func (r *Reconciler) newEtcd(
 	), nil
 }
 
-func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1alpha1.Garden) component.DeployWaiter {
-	var (
-		annotations map[string]string
-		clusterIP   string
-	)
+func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1alpha1.Garden, ingressGatewayValues []istio.IngressGatewayValues) (component.DeployWaiter, error) {
+	if len(ingressGatewayValues) != 1 {
+		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
+	}
 
+	var annotations map[string]string
 	if settings := garden.Spec.RuntimeCluster.Settings; settings != nil && settings.LoadBalancerServices != nil {
 		annotations = settings.LoadBalancerServices.Annotations
 	}
 
+	var clusterIP string
 	if os.Getenv("GARDENER_OPERATOR_LOCAL") == "true" {
 		clusterIP = "10.2.10.2"
 	}
@@ -252,20 +363,22 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 		r.RuntimeClientSet.Client(),
 		&kubeapiserverexposure.ServiceValues{
 			AnnotationsFunc:             func() map[string]string { return annotations },
-			SNIPhase:                    component.PhaseDisabled,
+			SNIPhase:                    component.PhaseEnabling,
 			TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 			RuntimeKubernetesVersion:    r.RuntimeVersion,
 		},
 		func() client.ObjectKey {
 			return client.ObjectKey{Name: namePrefix + v1beta1constants.DeploymentNameKubeAPIServer, Namespace: r.GardenNamespace}
 		},
-		nil,
+		func() client.ObjectKey {
+			return client.ObjectKey{Name: v1beta1constants.DefaultSNIIngressServiceName, Namespace: ingressGatewayValues[0].Namespace}
+		},
 		nil,
 		nil,
 		nil,
 		false,
 		clusterIP,
-	)
+	), nil
 }
 
 func (r *Reconciler) newKubeAPIServer(
@@ -510,6 +623,7 @@ func (r *Reconciler) newIstio(garden *operatorv1alpha1.Garden) (istio.Interface,
 		v1beta1constants.PriorityClassNameGardenSystemCritical,
 		true,
 		sharedcomponent.GetIstioZoneLabels(nil, nil),
+		gardenerutils.NetworkPolicyLabel(r.GardenNamespace+"-"+kubeapiserverconstants.ServiceName(namePrefix), kubeapiserverconstants.Port),
 		annotations,
 		nil,
 		nil,
@@ -520,6 +634,28 @@ func (r *Reconciler) newIstio(garden *operatorv1alpha1.Garden) (istio.Interface,
 		false,
 		garden.Spec.RuntimeCluster.Provider.Zones,
 	)
+}
+
+func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValues []istio.IngressGatewayValues) (component.Deployer, error) {
+	if len(ingressGatewayValues) != 1 {
+		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
+	}
+
+	return kubeapiserverexposure.NewSNI(
+		r.RuntimeClientSet.Client(),
+		r.RuntimeClientSet.Applier(),
+		namePrefix+v1beta1constants.DeploymentNameKubeAPIServer,
+		r.GardenNamespace,
+		func() *kubeapiserverexposure.SNIValues {
+			return &kubeapiserverexposure.SNIValues{
+				Hosts: []string{gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domain)},
+				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
+					Namespace: ingressGatewayValues[0].Namespace,
+					Labels:    ingressGatewayValues[0].Labels,
+				},
+			}
+		},
+	), nil
 }
 
 func (r *Reconciler) newGardenerAccess(secretsManager secretsmanager.Interface, domain string) component.Deployer {

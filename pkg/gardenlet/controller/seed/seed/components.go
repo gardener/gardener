@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/component/seedsystem"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/component/vpnauthzserver"
@@ -80,6 +81,7 @@ func defaultIstio(
 		v1beta1constants.PriorityClassNameSeedSystemCritical,
 		!isGardenCluster,
 		labels,
+		gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port),
 		seed.GetLoadBalancerServiceAnnotations(),
 		seed.GetLoadBalancerServiceExternalTrafficPolicy(),
 		conf.SNI.Ingress.ServiceExternalIP,

@@ -32,11 +32,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
@@ -44,13 +42,31 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
+var (
+	//go:embed templates/envoyfilter.yaml
+	envoyFilterSpecTemplateContent string
+	envoyFilterSpecTemplate        *template.Template
+)
+
+func init() {
+	envoyFilterSpecTemplate = template.Must(template.
+		New("envoy-filter-spec").
+		Funcs(sprig.TxtFuncMap()).
+		Parse(envoyFilterSpecTemplateContent),
+	)
+}
+
 // SNIValues configure the kube-apiserver service SNI.
 type SNIValues struct {
-	Hosts                    []string
-	NamespaceUID             types.UID
-	APIServerClusterIP       string
-	APIServerInternalDNSName string
-	IstioIngressGateway      IstioIngressGateway
+	Hosts               []string
+	APIServerProxy      *APIServerProxy
+	IstioIngressGateway IstioIngressGateway
+}
+
+// APIServerProxy contains values for the APIServer proxy protocol configuration.
+type APIServerProxy struct {
+	NamespaceUID       types.UID
+	APIServerClusterIP string
 }
 
 // IstioIngressGateway contains the values for istio ingress gateway configuration.
@@ -64,6 +80,7 @@ type IstioIngressGateway struct {
 func NewSNI(
 	client client.Client,
 	applier kubernetes.Applier,
+	name string,
 	namespace string,
 	valuesFunc func() *SNIValues,
 ) component.DeployWaiter {
@@ -74,6 +91,7 @@ func NewSNI(
 	return &sni{
 		client:     client,
 		applier:    applier,
+		name:       name,
 		namespace:  namespace,
 		valuesFunc: valuesFunc,
 	}
@@ -82,40 +100,48 @@ func NewSNI(
 type sni struct {
 	client     client.Client
 	applier    kubernetes.Applier
+	name       string
 	namespace  string
 	valuesFunc func() *SNIValues
 }
 
 type envoyFilterTemplateValues struct {
-	*SNIValues
-	Name      string
-	Namespace string
-	Host      string
-	Port      int
+	*APIServerProxy
+	IngressGatewayLabels map[string]string
+	Name                 string
+	Namespace            string
+	Host                 string
+	Port                 int
 }
 
 func (s *sni) Deploy(ctx context.Context) error {
 	var (
+		values = s.valuesFunc()
+
 		destinationRule = s.emptyDestinationRule()
-		envoyFilter     = s.emptyEnvoyFilter()
 		gateway         = s.emptyGateway()
 		virtualService  = s.emptyVirtualService()
 
-		hostName        = fmt.Sprintf("%s.%s.svc.%s", v1beta1constants.DeploymentNameKubeAPIServer, s.namespace, gardencorev1beta1.DefaultDomain)
+		hostName        = fmt.Sprintf("%s.%s.svc.%s", s.name, s.namespace, gardencorev1beta1.DefaultDomain)
 		envoyFilterSpec bytes.Buffer
 	)
 
-	if err := envoyFilterSpecTemplate.Execute(&envoyFilterSpec, envoyFilterTemplateValues{
-		SNIValues: s.valuesFunc(),
-		Name:      envoyFilter.Name,
-		Namespace: envoyFilter.Namespace,
-		Host:      hostName,
-		Port:      kubeapiserverconstants.Port,
-	}); err != nil {
-		return err
-	}
-	if err := s.applier.ApplyManifest(ctx, kubernetes.NewManifestReader(envoyFilterSpec.Bytes()), kubernetes.DefaultMergeFuncs); err != nil {
-		return err
+	if values.APIServerProxy != nil {
+		envoyFilter := s.emptyEnvoyFilter()
+
+		if err := envoyFilterSpecTemplate.Execute(&envoyFilterSpec, envoyFilterTemplateValues{
+			APIServerProxy:       values.APIServerProxy,
+			IngressGatewayLabels: values.IstioIngressGateway.Labels,
+			Name:                 envoyFilter.Name,
+			Namespace:            envoyFilter.Namespace,
+			Host:                 hostName,
+			Port:                 kubeapiserverconstants.Port,
+		}); err != nil {
+			return err
+		}
+		if err := s.applier.ApplyManifest(ctx, kubernetes.NewManifestReader(envoyFilterSpec.Bytes()), kubernetes.DefaultMergeFuncs); err != nil {
+			return err
+		}
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, destinationRule, func() error {
@@ -216,7 +242,7 @@ func (s *sni) Wait(_ context.Context) error        { return nil }
 func (s *sni) WaitCleanup(_ context.Context) error { return nil }
 
 func (s *sni) emptyDestinationRule() *istionetworkingv1beta1.DestinationRule {
-	return &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.namespace}}
+	return &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: s.name, Namespace: s.namespace}}
 }
 
 func (s *sni) emptyEnvoyFilter() *istionetworkingv1alpha3.EnvoyFilter {
@@ -224,11 +250,11 @@ func (s *sni) emptyEnvoyFilter() *istionetworkingv1alpha3.EnvoyFilter {
 }
 
 func (s *sni) emptyGateway() *istionetworkingv1beta1.Gateway {
-	return &istionetworkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.namespace}}
+	return &istionetworkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: s.name, Namespace: s.namespace}}
 }
 
 func (s *sni) emptyVirtualService() *istionetworkingv1beta1.VirtualService {
-	return &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.namespace}}
+	return &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: s.name, Namespace: s.namespace}}
 }
 
 // AnyDeployedSNI returns true if any SNI is deployed in the cluster.
@@ -245,19 +271,4 @@ func AnyDeployedSNI(ctx context.Context, c client.Client) (bool, error) {
 	}
 
 	return len(l.Items) > 0, nil
-}
-
-var (
-	//go:embed templates/envoyfilter.yaml
-	envoyFilterSpecTemplateContent string
-	envoyFilterSpecTemplate        *template.Template
-)
-
-func init() {
-	var err error
-	envoyFilterSpecTemplate, err = template.
-		New("envoy-filter-spec").
-		Funcs(sprig.TxtFuncMap()).
-		Parse(envoyFilterSpecTemplateContent)
-	utilruntime.Must(err)
 }

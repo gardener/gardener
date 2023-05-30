@@ -38,12 +38,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/etcd"
-	"github.com/gardener/gardener/pkg/component/hvpa"
-	"github.com/gardener/gardener/pkg/component/istio"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/shared"
-	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
@@ -100,63 +97,7 @@ func (r *Reconciler) reconcile(
 	}
 
 	log.Info("Instantiating component deployers")
-	applier := kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper())
-
-	// garden system components
-	vpaCRD := vpa.NewCRD(applier, nil)
-	hvpaCRD := hvpa.NewCRD(applier)
-	istioCRD := istio.NewCRD(r.RuntimeClientSet.ChartApplier())
-	if !hvpaEnabled() {
-		hvpaCRD = component.OpDestroy(hvpaCRD)
-	}
-	gardenerResourceManager, err := r.newGardenerResourceManager(garden, secretsManager)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	system := r.newSystem()
-	verticalPodAutoscaler, err := r.newVerticalPodAutoscaler(garden, secretsManager)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	hvpaController, err := r.newHVPA()
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	etcdDruid, err := r.newEtcdDruid()
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	istio, err := r.newIstio(garden)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	// virtual garden control plane components
-	etcdMain, err := r.newEtcd(log, garden, secretsManager, v1beta1constants.ETCDRoleMain, etcd.ClassImportant)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	etcdEvents, err := r.newEtcd(log, garden, secretsManager, v1beta1constants.ETCDRoleEvents, etcd.ClassNormal)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	kubeAPIServerService := r.newKubeAPIServerService(log, garden)
-	kubeAPIServer, err := r.newKubeAPIServer(ctx, garden, secretsManager, targetVersion)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	kubeControllerManager, err := r.newKubeControllerManager(log, garden, secretsManager, targetVersion)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	virtualGardenGardenerResourceManager, err := r.newVirtualGardenGardenerResourceManager(secretsManager)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	virtualGardenGardenerAccess := r.newGardenerAccess(secretsManager, garden.Spec.VirtualCluster.DNS.Domain)
-
-	// observability components
-	kubeStateMetrics, err := r.newKubeStateMetrics()
+	c, err := r.instantiateComponents(ctx, log, garden, secretsManager, targetVersion, kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper()))
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -168,50 +109,50 @@ func (r *Reconciler) reconcile(
 		g                              = flow.NewGraph("Garden reconciliation")
 		generateGenericTokenKubeconfig = g.Add(flow.Task{
 			Name: "Generating generic token kubeconfig",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
+			Fn: func(ctx context.Context) error {
 				return r.generateGenericTokenKubeconfig(ctx, secretsManager)
-			}),
+			},
 		})
 		deployVPACRD = g.Add(flow.Task{
 			Name: "Deploying custom resource definition for VPA",
-			Fn:   flow.TaskFn(vpaCRD.Deploy).DoIf(vpaEnabled(garden.Spec.RuntimeCluster.Settings)),
+			Fn:   flow.TaskFn(c.vpaCRD.Deploy).DoIf(vpaEnabled(garden.Spec.RuntimeCluster.Settings)),
 		})
 		reconcileHVPACRD = g.Add(flow.Task{
 			Name: "Reconciling custom resource definition for HVPA",
-			Fn:   hvpaCRD.Deploy,
+			Fn:   c.hvpaCRD.Deploy,
 		})
 		deployIstioCRD = g.Add(flow.Task{
 			Name: "Deploying custom resource definition for Istio",
-			Fn:   istioCRD.Deploy,
+			Fn:   c.istioCRD.Deploy,
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
-			Fn:           component.OpWait(gardenerResourceManager).Deploy,
+			Fn:           component.OpWait(c.gardenerResourceManager).Deploy,
 			Dependencies: flow.NewTaskIDs(deployVPACRD, reconcileHVPACRD, deployIstioCRD),
 		})
 		deploySystemResources = g.Add(flow.Task{
 			Name:         "Deploying system resources",
-			Fn:           system.Deploy,
+			Fn:           c.system.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		deployVPA = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes vertical pod autoscaler",
-			Fn:           verticalPodAutoscaler.Deploy,
+			Fn:           c.verticalPodAutoscaler.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		deployHVPA = g.Add(flow.Task{
 			Name:         "Deploying HVPA controller",
-			Fn:           hvpaController.Deploy,
+			Fn:           c.hvpaController.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		deployEtcdDruid = g.Add(flow.Task{
 			Name:         "Deploying ETCD Druid",
-			Fn:           etcdDruid.Deploy,
+			Fn:           c.etcdDruid.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		deployIstio = g.Add(flow.Task{
 			Name:         "Deploying Istio",
-			Fn:           component.OpWait(istio).Deploy,
+			Fn:           component.OpWait(c.istio).Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		syncPointSystemComponents = flow.NewTaskIDs(
@@ -225,52 +166,57 @@ func (r *Reconciler) reconcile(
 
 		deployEtcds = g.Add(flow.Task{
 			Name:         "Deploying main and events ETCDs of virtual garden",
-			Fn:           r.deployEtcdsFunc(garden, etcdMain, etcdEvents),
+			Fn:           r.deployEtcdsFunc(garden, c.etcdMain, c.etcdEvents),
 			Dependencies: flow.NewTaskIDs(syncPointSystemComponents),
 		})
 		waitUntilEtcdsReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event ETCDs report readiness",
-			Fn:           flow.Parallel(etcdMain.Wait, etcdEvents.Wait),
+			Fn:           flow.Parallel(c.etcdMain.Wait, c.etcdEvents.Wait),
 			Dependencies: flow.NewTaskIDs(deployEtcds),
 		})
 		deployKubeAPIServerService = g.Add(flow.Task{
 			Name:         "Deploying and waiting for kube-apiserver service in the runtime cluster",
-			Fn:           component.OpWait(kubeAPIServerService).Deploy,
+			Fn:           component.OpWait(c.kubeAPIServerService).Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointSystemComponents),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Kubernetes API server service SNI",
+			Fn:           c.kubeAPIServerSNI.Deploy,
+			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService),
 		})
 		deployKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API Server",
-			Fn:           r.deployKubeAPIServerFunc(ctx, garden, kubeAPIServer),
+			Fn:           r.deployKubeAPIServerFunc(ctx, garden, c.kubeAPIServer),
 			Dependencies: flow.NewTaskIDs(waitUntilEtcdsReady),
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API server rolled out",
-			Fn:           kubeAPIServer.Wait,
+			Fn:           c.kubeAPIServer.Wait,
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying Kubernetes Controller Manager",
 			Fn: func(ctx context.Context) error {
-				kubeControllerManager.SetReplicaCount(1)
-				return component.OpWait(kubeControllerManager).Deploy(ctx)
+				c.kubeControllerManager.SetReplicaCount(1)
+				return component.OpWait(c.kubeControllerManager).Deploy(ctx)
 			},
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
 		deployVirtualGardenGardenerResourceManager = g.Add(flow.Task{
 			Name: "Deploying gardener-resource-manager for virtual garden",
 			Fn: func(ctx context.Context) error {
-				return r.deployVirtualGardenGardenerResourceManager(ctx, secretsManager, virtualGardenGardenerResourceManager)
+				return r.deployVirtualGardenGardenerResourceManager(ctx, secretsManager, c.virtualGardenGardenerResourceManager)
 			},
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
 		waitUntilVirtualGardenGardenerResourceManagerIsReady = g.Add(flow.Task{
 			Name:         "Waiting until gardener-resource-manager for virtual garden rolled out",
-			Fn:           virtualGardenGardenerResourceManager.Wait,
+			Fn:           c.virtualGardenGardenerResourceManager.Wait,
 			Dependencies: flow.NewTaskIDs(deployVirtualGardenGardenerResourceManager),
 		})
 		deployVirtualGardenGardenerAccess = g.Add(flow.Task{
 			Name:         "Deploying resources for gardener-operator access to virtual garden",
-			Fn:           virtualGardenGardenerAccess.Deploy,
+			Fn:           c.virtualGardenGardenerAccess.Deploy,
 			Dependencies: flow.NewTaskIDs(waitUntilVirtualGardenGardenerResourceManagerIsReady),
 		})
 		renewVirtualClusterAccess = g.Add(flow.Task{
@@ -304,7 +250,7 @@ func (r *Reconciler) reconcile(
 		_ = g.Add(flow.Task{
 			Name: "Snapshotting ETCD after secrets were re-encrypted with new ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return secretsrotation.SnapshotETCDAfterRewritingSecrets(ctx, r.RuntimeClientSet.Client(), r.snapshotETCDFunc(secretsManager, etcdMain), r.GardenNamespace, namePrefix)
+				return secretsrotation.SnapshotETCDAfterRewritingSecrets(ctx, r.RuntimeClientSet.Client(), r.snapshotETCDFunc(secretsManager, c.etcdMain), r.GardenNamespace, namePrefix)
 			}).
 				DoIf(allowBackup && helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationPreparing),
 			Dependencies: flow.NewTaskIDs(rewriteSecretsAddLabel),
@@ -319,10 +265,9 @@ func (r *Reconciler) reconcile(
 			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient),
 		})
 
-		// observability components
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Kube State Metrics",
-			Fn:           kubeStateMetrics.Deploy,
+			Fn:           c.kubeStateMetrics.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 	)
@@ -339,9 +284,9 @@ func (r *Reconciler) reconcile(
 		objects := []client.Object{
 			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "etcd-to-world", Namespace: r.GardenNamespace}},
 			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-allow-all", Namespace: r.GardenNamespace}},
-			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "istio-allow-all", Namespace: istio.GetValues().Istiod.Namespace}},
+			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "istio-allow-all", Namespace: c.istio.GetValues().Istiod.Namespace}},
 		}
-		for _, istioIngress := range istio.GetValues().IngressGateway {
+		for _, istioIngress := range c.istio.GetValues().IngressGateway {
 			objects = append(objects, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "istio-allow-all", Namespace: istioIngress.Namespace}})
 		}
 		if err := kubernetesutils.DeleteObjects(ctx, r.RuntimeClientSet.Client(), objects...); err != nil {

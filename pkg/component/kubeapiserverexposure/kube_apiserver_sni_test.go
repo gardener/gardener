@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/test"
 	"github.com/gardener/gardener/pkg/component"
@@ -62,6 +63,8 @@ var _ = Describe("#SNI", func() {
 		hosts            = []string{"foo.bar"}
 		hostName         = "kube-apiserver." + namespace + ".svc.cluster.local"
 
+		apiServerProxyValues *APIServerProxy
+
 		expectedDestinationRule       *istionetworkingv1beta1.DestinationRule
 		expectedGateway               *istionetworkingv1beta1.Gateway
 		expectedVirtualService        *istionetworkingv1beta1.VirtualService
@@ -75,6 +78,10 @@ var _ = Describe("#SNI", func() {
 		Expect(istionetworkingv1beta1.AddToScheme(s)).To(Succeed())
 		Expect(istionetworkingv1alpha3.AddToScheme(s)).To(Succeed())
 		c = fake.NewClientBuilder().WithScheme(s).Build()
+		apiServerProxyValues = &APIServerProxy{
+			APIServerClusterIP: "1.1.1.1",
+			NamespaceUID:       namespaceUID,
+		}
 
 		var err error
 		applier, err = test.NewTestApplier(c, &fakediscovery.FakeDiscovery{
@@ -202,21 +209,20 @@ var _ = Describe("#SNI", func() {
 	})
 
 	JustBeforeEach(func() {
-		defaultDepWaiter = NewSNI(c, applier, namespace, func() *SNIValues {
+		defaultDepWaiter = NewSNI(c, applier, v1beta1constants.DeploymentNameKubeAPIServer, namespace, func() *SNIValues {
 			return &SNIValues{
-				Hosts:              hosts,
-				APIServerClusterIP: "1.1.1.1",
+				Hosts:          hosts,
+				APIServerProxy: apiServerProxyValues,
 				IstioIngressGateway: IstioIngressGateway{
 					Namespace: istioNamespace,
 					Labels:    istioLabels,
 				},
-				NamespaceUID: namespaceUID,
 			}
 		})
 	})
 
 	Describe("#Deploy", func() {
-		It("succeeds", func() {
+		test := func() {
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 			actualDestinationRule := &istionetworkingv1beta1.DestinationRule{}
@@ -231,14 +237,32 @@ var _ = Describe("#SNI", func() {
 			Expect(c.Get(ctx, kubernetesutils.Key(expectedVirtualService.Namespace, expectedVirtualService.Name), actualVirtualService)).To(Succeed())
 			Expect(actualVirtualService).To(BeComparableTo(expectedVirtualService, comptest.CmpOptsForVirtualService()))
 
-			actualEnvoyFilter := &istionetworkingv1alpha3.EnvoyFilter{}
-			Expect(c.Get(ctx, kubernetesutils.Key(expectedEnvoyFilterObjectMeta.Namespace, expectedEnvoyFilterObjectMeta.Name), actualEnvoyFilter)).To(Succeed())
-			// cannot validate the Spec as there is meaningful way to unmarshal the data into the Golang structure
-			Expect(actualEnvoyFilter.ObjectMeta).To(DeepEqual(expectedEnvoyFilterObjectMeta))
+			if apiServerProxyValues != nil {
+				actualEnvoyFilter := &istionetworkingv1alpha3.EnvoyFilter{}
+				Expect(c.Get(ctx, kubernetesutils.Key(expectedEnvoyFilterObjectMeta.Namespace, expectedEnvoyFilterObjectMeta.Name), actualEnvoyFilter)).To(Succeed())
+				// cannot validate the Spec as there is no meaningful way to unmarshal the data into the Golang structure
+				Expect(actualEnvoyFilter.ObjectMeta).To(DeepEqual(expectedEnvoyFilterObjectMeta))
+			}
+		}
+
+		Context("when APIServer Proxy is configured", func() {
+			It("should succeed deploying", func() {
+				test()
+			})
+		})
+
+		Context("when APIServer Proxy is not configured", func() {
+			BeforeEach(func() {
+				apiServerProxyValues = nil
+			})
+
+			It("should succeed deploying", func() {
+				test()
+			})
 		})
 	})
 
-	It("destroy succeeds", func() {
+	It("should succeed destroying", func() {
 		Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 		Expect(c.Get(ctx, kubernetesutils.Key(expectedDestinationRule.Namespace, expectedDestinationRule.Name), &istionetworkingv1beta1.DestinationRule{})).To(Succeed())

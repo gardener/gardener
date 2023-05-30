@@ -41,6 +41,8 @@ const (
 	DefaultZoneKey = "istio"
 	// IstiodServiceName is the name of the istiod service.
 	IstiodServiceName = "istiod"
+	// IstiodPort is the port of the istiod service.
+	IstiodPort = 15012
 	// PortWebhookServer is the port of the validating webhook server.
 	PortWebhookServer = 10250
 

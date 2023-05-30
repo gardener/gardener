@@ -1,5 +1,6 @@
 labels:
   app: istio-ingressgateway
+networkPolicyLabels: {}
 annotations: {}
 image: to-be-injected-by-imagevector
 trustDomain: cluster.local
@@ -28,5 +29,4 @@ maxReplicas: 5
 proxyProtocolEnabled: false
 vpn:
   enabled: false
-  highAvailabilityReplicas: 2
 
