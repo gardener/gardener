@@ -93,6 +93,13 @@ const (
 	// owner: @rfranzke @JensAc @mreiger
 	// alpha: v1.73.0
 	MachineControllerManagerDeployment featuregate.Feature = "MachineControllerManagerDeployment"
+
+	// DisableScalingClassesForShoots disables assigning a ScalingClass to Shoots based on their maximum Node count
+	// All Shoot kube-apiservers will get the same initial resource requests for CPU and memory instead of making this
+	// depend on the ScalingClass
+	// owner: @voelzmo, @andrerun
+	// alpha: v1.72.0
+	DisableScalingClassesForShoots featuregate.Feature = "DisableScalingClassesForShoots"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -130,6 +137,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	FullNetworkPoliciesInRuntimeCluster: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	WorkerlessShoots:                    {Default: false, PreRelease: featuregate.Alpha},
 	MachineControllerManagerDeployment:  {Default: false, PreRelease: featuregate.Alpha},
+	DisableScalingClassesForShoots:      {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
