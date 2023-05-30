@@ -94,7 +94,7 @@ var _ = Describe("KubeAPIServer", func() {
 			objectMeta = metav1.ObjectMeta{Namespace: namespace, Name: name}
 			runtimeVersion = semver.MustParse("1.22.0")
 			targetVersion = semver.MustParse("1.22.1")
-			imageVector = imagevector.ImageVector{{Name: "kube-apiserver"}, {Name: "apiserver-proxy-pod-webhook"}}
+			imageVector = imagevector.ImageVector{{Name: "kube-apiserver"}}
 			namePrefix = ""
 			serviceNetworkCIDR = "10.0.2.0/24"
 			autoscalingConfig = kubeapiserver.AutoscalingConfig{}
@@ -119,14 +119,6 @@ var _ = Describe("KubeAPIServer", func() {
 				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, auditConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
 				Expect(kubeAPIServer).To(BeNil())
 				Expect(err).To(MatchError(ContainSubstring("could not find image \"kube-apiserver\"")))
-			})
-
-			It("should return an error because the apiserver-proxy-pod-webhook image cannot be found", func() {
-				imageVector = imagevector.ImageVector{{Name: "kube-apiserver"}}
-
-				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, auditConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
-				Expect(kubeAPIServer).To(BeNil())
-				Expect(err).To(MatchError(ContainSubstring("could not find image \"apiserver-proxy-pod-webhook\"")))
 			})
 
 			It("should return an error because the alpine cannot be found", func() {

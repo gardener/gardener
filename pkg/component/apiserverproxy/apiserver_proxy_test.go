@@ -412,58 +412,6 @@ metadata:
   namespace: kube-system
 `
 
-		webhokkConfigYAML = `apiVersion: admissionregistration.k8s.io/v1
-kind: MutatingWebhookConfiguration
-metadata:
-  annotations:
-    networking.gardener.cloud/description: |-
-      This webhook adds "KUBERNETES_SERVICE_HOST"
-      environment variable to all containers and init containers matched by it.
-  creationTimestamp: null
-  labels:
-    app: kubernetes
-    gardener.cloud/role: system-component
-    origin: gardener
-    remediation.webhook.shoot.gardener.cloud/exclude: "true"
-    resources.gardener.cloud/garbage-collectable-reference: "true"
-    role: apiserver-proxy
-  name: apiserver-proxy.networking.gardener.cloud
-webhooks:
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    caBundle: Rk9PQkFS
-    url: https://127.0.0.1:9443/webhook/pod-apiserver-env
-  failurePolicy: Ignore
-  matchPolicy: Exact
-  name: apiserver-proxy.networking.gardener.cloud
-  namespaceSelector:
-    matchExpressions:
-    - key: apiserver-proxy.networking.gardener.cloud/inject
-      operator: NotIn
-      values:
-      - disable
-  objectSelector:
-    matchExpressions:
-    - key: apiserver-proxy.networking.gardener.cloud/inject
-      operator: NotIn
-      values:
-      - disable
-  reinvocationPolicy: Never
-  rules:
-  - apiGroups:
-    - ""
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    resources:
-    - pods
-    scope: '*'
-  sideEffects: None
-  timeoutSeconds: 2
-`
-
 		clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -578,13 +526,12 @@ subjects:
 	})
 
 	Describe("#Deploy", func() {
-		test := func(podMutatorEnabled, pspDisabled bool) {
+		test := func(pspDisabled bool) {
 			By("Verify that managed resource does not exist yet")
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 
 			By("Deploy the managed resource successfully")
-			values.PodMutatorEnabled = podMutatorEnabled
 			values.PSPDisabled = pspDisabled
 			component = New(c, namespace, sm, values)
 			component.SetAdvertiseIPAddress(advertiseIPAddress)
@@ -622,10 +569,6 @@ subjects:
 				Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.apiserver-proxy.yaml"])).To(Equal(pspYAML))
 				Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_apiserver-proxy.yaml"])).To(Equal(roleBindingYAML))
 			}
-			if podMutatorEnabled {
-				expectedLen++
-				Expect(string(managedResourceSecret.Data["mutatingwebhookconfiguration____apiserver-proxy.networking.gardener.cloud.yaml"])).To(Equal(webhokkConfigYAML))
-			}
 			Expect(managedResourceSecret.Data).To(HaveLen(expectedLen))
 			Expect(string(managedResourceSecret.Data["configmap__kube-system__apiserver-proxy-config-4baf1826.yaml"])).To(Equal(configMapYAML))
 			Expect(string(managedResourceSecret.Data["daemonset__kube-system__apiserver-proxy.yaml"])).To(Equal(daemonSetYAML))
@@ -633,21 +576,15 @@ subjects:
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__apiserver-proxy.yaml"])).To(Equal(serviceAccountYAML))
 		}
 
-		Context("Pod mutator disabled, PSP disabled", func() {
+		Context("PSP disabled", func() {
 			It("should deploy the managed resource successfully", func() {
-				test(false, true)
+				test(true)
 			})
 		})
 
-		Context("Pod mutator enabled, PSP disabled", func() {
+		Context("PSP enabled", func() {
 			It("should deploy the managed resource successfully", func() {
-				test(true, true)
-			})
-		})
-
-		Context("Pod mutator enabled, PSP enabled", func() {
-			It("should deploy the managed resource successfully", func() {
-				test(true, false)
+				test(false)
 			})
 		})
 	})

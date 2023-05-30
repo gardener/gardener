@@ -49,7 +49,6 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 		vpaLabels           = map[string]string{v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer + "-vpa"}
 		updateModeAuto      = hvpav1alpha1.UpdateModeAuto
 		scaleDownUpdateMode = updateModeAuto
-		containerPolicyOff  = vpaautoscalingv1.ContainerScalingModeOff
 		controlledValues    = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		hpaMetrics          = []autoscalingv2beta1.MetricSpec{
 			{
@@ -94,14 +93,6 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 
 	if k.values.Autoscaling.ScaleDownDisabledForHvpa {
 		scaleDownUpdateMode = hvpav1alpha1.UpdateModeOff
-	}
-
-	if k.values.SNI.PodMutatorEnabled {
-		vpaContainerResourcePolicies = append(vpaContainerResourcePolicies, vpaautoscalingv1.ContainerResourcePolicy{
-			ContainerName:    containerNameAPIServerProxyPodMutator,
-			Mode:             &containerPolicyOff,
-			ControlledValues: &controlledValues,
-		})
 	}
 
 	if k.values.Autoscaling.MaxReplicas > k.values.Autoscaling.MinReplicas {

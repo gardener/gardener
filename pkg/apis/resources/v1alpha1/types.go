@@ -138,6 +138,11 @@ const (
 	// defaulting of its seccomp profile.
 	SeccompProfileSkip = "seccompprofile.resources.gardener.cloud/skip"
 
+	// KubernetesServiceHostInject is a constant for a label on a Pod or a Namespace which indicates that all pods in
+	// this namespace (or the specific pod) should not be considered for injection of the KUBERNETES_SERVICE_HOST
+	// environment variable.
+	KubernetesServiceHostInject = "apiserver-proxy.networking.gardener.cloud/inject"
+
 	// SystemComponentsConfigSkip is a constant for a label on a Pod which indicates that this Pod should not be considered for
 	// adding default node selector and tolerations.
 	SystemComponentsConfigSkip = "system-components-config.resources.gardener.cloud/skip"

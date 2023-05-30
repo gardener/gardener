@@ -182,50 +182,6 @@ var _ = Describe("dns", func() {
 		})
 	})
 
-	Context("APIServerSNIPodMutatorEnabled", func() {
-		BeforeEach(func() {
-			gardenletfeatures.RegisterFeatureGates()
-		})
-
-		Context("APIServerSNI feature gate is enabled", func() {
-			BeforeEach(func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.APIServerSNI, true))
-				b.Garden.InternalDomain = &gardenerutils.Domain{Provider: "some-provider"}
-				b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
-				b.Shoot.ExternalClusterDomain = pointer.String("baz")
-				b.Shoot.ExternalDomain = &gardenerutils.Domain{Provider: "valid-provider"}
-			})
-
-			It("returns true when Shoot annotations are nil", func() {
-				b.Shoot.GetInfo().Annotations = nil
-
-				Expect(b.APIServerSNIPodMutatorEnabled()).To(BeTrue())
-			})
-
-			It("returns true when Shoot annotations does not have the annotation", func() {
-				b.Shoot.GetInfo().Annotations = map[string]string{"foo": "bar"}
-
-				Expect(b.APIServerSNIPodMutatorEnabled()).To(BeTrue())
-			})
-
-			It("returns true when Shoot annotations exist, but it's not a 'disable", func() {
-				b.Shoot.GetInfo().Annotations = map[string]string{
-					"alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector": "not-disable",
-				}
-
-				Expect(b.APIServerSNIPodMutatorEnabled()).To(BeTrue())
-			})
-
-			It("returns false when Shoot annotations exist and it's a disable", func() {
-				b.Shoot.GetInfo().Annotations = map[string]string{
-					"alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector": "disable",
-				}
-
-				Expect(b.APIServerSNIPodMutatorEnabled()).To(BeFalse())
-			})
-		})
-	})
-
 	Context("newDNSComponentsTargetingAPIServerAddress", func() {
 		var (
 			ctrl              *gomock.Controller

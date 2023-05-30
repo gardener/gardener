@@ -129,7 +129,6 @@ var _ = Describe("KubeAPIServer", func() {
 					KubernetesVersion: semver.MustParse("1.22.1"),
 				},
 				ImageVector: imagevector.ImageVector{
-					{Name: "apiserver-proxy-pod-webhook"},
 					{Name: "kube-apiserver"},
 					{Name: "vpn-shoot-client"},
 					{Name: "alpine"},
@@ -416,7 +415,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					featureGatePtr(features.APIServerSNI), pointer.Bool(true),
 					kubeapiserver.SNIConfig{
-						PodMutatorEnabled: false,
+						Enabled: false,
 					},
 				),
 				Entry("SNI enabled but no need for external DNS",
@@ -427,7 +426,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					featureGatePtr(features.APIServerSNI), pointer.Bool(true),
 					kubeapiserver.SNIConfig{
-						PodMutatorEnabled: false,
+						Enabled: false,
 					},
 				),
 				Entry("SNI and both DNS enabled",
@@ -442,10 +441,8 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					featureGatePtr(features.APIServerSNI), pointer.Bool(true),
 					kubeapiserver.SNIConfig{
-						Enabled:           true,
-						AdvertiseAddress:  apiServerClusterIP,
-						PodMutatorEnabled: true,
-						APIServerFQDN:     "api." + internalClusterDomain,
+						Enabled:          true,
+						AdvertiseAddress: apiServerClusterIP,
 					},
 				),
 				Entry("Control plane wildcard certificate available",
@@ -454,7 +451,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					featureGatePtr(features.APIServerSNI), pointer.Bool(true),
 					kubeapiserver.SNIConfig{
-						PodMutatorEnabled: false,
+						Enabled: false,
 						TLS: []kubeapiserver.TLSSNIConfig{
 							{
 								SecretName:     &secret.Name,

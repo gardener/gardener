@@ -67,6 +67,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/endpointslicehints"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/extensionvalidation"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/kubernetesservicehost"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podschedulername"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/podtopologyspreadconstraints"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
@@ -310,6 +311,9 @@ type Values struct {
 	DefaultSeccompProfileEnabled bool
 	// EndpointSliceHintsEnabled specifies if the EndpointSlice hints webhook of GRM should be enabled or not.
 	EndpointSliceHintsEnabled bool
+	// KubernetesServiceHost specifies the FQDN of the API server of the target cluster. If it is non-nil, the GRM's
+	// kubernetes-service-host webhook will be enabled.
+	KubernetesServiceHost *string
 	// PodTopologySpreadConstraintsEnabled specifies if the pod's TSC should be mutated to support rolling updates.
 	PodTopologySpreadConstraintsEnabled bool
 	// FailureToleranceType determines the failure tolerance type for the resource manager deployment.
@@ -625,6 +629,11 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile != gardencorev1beta1.SchedulingProfileBalanced {
 		config.Webhooks.PodSchedulerName.Enabled = true
 		config.Webhooks.PodSchedulerName.SchedulerName = pointer.String(kubescheduler.BinPackingSchedulerName)
+	}
+
+	if r.values.KubernetesServiceHost != nil {
+		config.Webhooks.KubernetesServiceHost.Enabled = true
+		config.Webhooks.KubernetesServiceHost.Host = *r.values.KubernetesServiceHost
 	}
 
 	if r.values.TargetDiffersFromSourceCluster {
@@ -1261,6 +1270,10 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 		webhooks = append(webhooks, GetSeccompProfileMutatingWebhook(r.values.NamePrefix, namespaceSelector, secretServerCA, buildClientConfigFn))
 	}
 
+	if r.values.KubernetesServiceHost != nil {
+		webhooks = append(webhooks, GetKubernetesServiceHostMutatingWebhook(nil, secretServerCA, buildClientConfigFn))
+	}
+
 	if r.values.TargetDiffersFromSourceCluster {
 		webhooks = append(webhooks, GetSystemComponentsConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
@@ -1711,6 +1724,62 @@ func GetSeccompProfileMutatingWebhook(
 	}
 }
 
+// GetKubernetesServiceHostMutatingWebhook returns the kubernetes-service-host mutating webhook for the resourcemanager
+// component for reuse between the component and integration tests.
+func GetKubernetesServiceHostMutatingWebhook(
+	namespaceSelector *metav1.LabelSelector,
+	secretServerCA *corev1.Secret,
+	buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig,
+) admissionregistrationv1.MutatingWebhook {
+	var (
+		failurePolicy      = admissionregistrationv1.Ignore
+		matchPolicy        = admissionregistrationv1.Exact
+		sideEffect         = admissionregistrationv1.SideEffectClassNone
+		reinvocationPolicy = admissionregistrationv1.NeverReinvocationPolicy
+	)
+
+	var nsSelector *metav1.LabelSelector
+	if namespaceSelector == nil {
+		nsSelector = &metav1.LabelSelector{}
+	} else {
+		nsSelector = namespaceSelector.DeepCopy()
+	}
+	nsSelector.MatchExpressions = append(nsSelector.MatchExpressions, metav1.LabelSelectorRequirement{
+		Key:      resourcesv1alpha1.KubernetesServiceHostInject,
+		Operator: metav1.LabelSelectorOpNotIn,
+		Values:   []string{"disable"},
+	})
+
+	return admissionregistrationv1.MutatingWebhook{
+		Name: "kubernetes-service-host.resources.gardener.cloud",
+		Rules: []admissionregistrationv1.RuleWithOperations{{
+			Rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{corev1.GroupName},
+				APIVersions: []string{corev1.SchemeGroupVersion.Version},
+				Resources:   []string{"pods"},
+			},
+			Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+		}},
+		NamespaceSelector: nsSelector,
+		ObjectSelector: &metav1.LabelSelector{
+			MatchExpressions: []metav1.LabelSelectorRequirement{
+				{
+					Key:      resourcesv1alpha1.KubernetesServiceHostInject,
+					Operator: metav1.LabelSelectorOpNotIn,
+					Values:   []string{"disable"},
+				},
+			},
+		},
+		ClientConfig:            buildClientConfigFn(secretServerCA, kubernetesservicehost.WebhookPath),
+		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+		ReinvocationPolicy:      &reinvocationPolicy,
+		FailurePolicy:           &failurePolicy,
+		MatchPolicy:             &matchPolicy,
+		SideEffects:             &sideEffect,
+		TimeoutSeconds:          pointer.Int32(2),
+	}
+}
+
 // GetSystemComponentsConfigMutatingWebhook returns the system-components-config mutating webhook for the resourcemanager component for reuse
 // between the component and integration tests.
 func GetSystemComponentsConfigMutatingWebhook(namespaceSelector, objectSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
@@ -2006,4 +2075,5 @@ func disableControllersAndWebhooksForWorkerlessShoot(config *resourcemanagerv1al
 	config.Webhooks.ProjectedTokenMount.Enabled = false
 	config.Webhooks.HighAvailabilityConfig.Enabled = false
 	config.Webhooks.PodTopologySpreadConstraints.Enabled = false
+	config.Webhooks.KubernetesServiceHost.Enabled = false
 }

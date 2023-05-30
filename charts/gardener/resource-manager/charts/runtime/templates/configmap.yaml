@@ -156,6 +156,11 @@ data:
         defaultUnreachableTolerationSeconds: {{ .Values.global.nodeToleration.defaultUnreachableTolerationSeconds }}
         {{- end }}
         {{- end }}
+      kubernetesServiceHost:
+        enabled: {{ .Values.global.config.webhooks.kubernetesServiceHost.enabled }}
+        {{- if .Values.global.config.webhooks.kubernetesServiceHost.host }}
+        host: {{ .Values.global.config.webhooks.kubernetesServiceHost.host }}
+        {{- end }}
       podSchedulerName:
         enabled: {{ .Values.global.config.webhooks.podSchedulerName.enabled }}
         {{- if .Values.global.config.webhooks.podSchedulerName.schedulerName }}

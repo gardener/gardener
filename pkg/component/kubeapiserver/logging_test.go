@@ -52,44 +52,6 @@ var _ = Describe("Logging", func() {
 							},
 						},
 					},
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:   "kube-apiserver--apiserver-proxy-pod-mutator",
-							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
-						},
-						Spec: fluentbitv1alpha2.FilterSpec{
-							Match: "kubernetes.*kube-apiserver*apiserver-proxy-pod-mutator*",
-							FilterItems: []fluentbitv1alpha2.FilterItem{
-								{
-									Parser: &fluentbitv1alpha2filter.Parser{
-										KeyName:     "log",
-										Parser:      "apiserver-proxy-pod-mutator-parser",
-										ReserveData: pointer.Bool(true),
-									},
-								},
-							},
-						},
-					},
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:   "apiserver-proxy-pod-mutator-modify-severity",
-							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
-						},
-						Spec: fluentbitv1alpha2.FilterSpec{
-							Match: "kubernetes.*kube-apiserver*apiserver-proxy-pod-mutator*",
-							FilterItems: []fluentbitv1alpha2.FilterItem{
-								{
-									Modify: &fluentbitv1alpha2filter.Modify{
-										Rules: []fluentbitv1alpha2filter.Rule{
-											{
-												Copy: map[string]string{"level": "severity"},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
 				}))
 			Expect(loggingConfig.Parsers).To(Equal(
 				[]*fluentbitv1alpha2.ClusterParser{
@@ -103,17 +65,6 @@ var _ = Describe("Logging", func() {
 								Regex:      "^(?<severity>\\w)(?<time>\\d{4} [^\\s]*)\\s+(?<pid>\\d+)\\s+(?<source>[^ \\]]+)\\] (?<log>.*)$",
 								TimeKey:    "time",
 								TimeFormat: "%m%d %H:%M:%S.%L",
-							},
-						},
-					},
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:   "apiserver-proxy-pod-mutator-parser",
-							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
-						},
-						Spec: fluentbitv1alpha2.ParserSpec{
-							JSON: &fluentbitv1alpha2parser.JSON{
-								TimeKey: "ts",
 							},
 						},
 					},

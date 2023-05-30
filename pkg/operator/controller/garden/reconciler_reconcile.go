@@ -415,7 +415,7 @@ func (r *Reconciler) deployKubeAPIServerFunc(ctx context.Context, garden *operat
 				},
 			}
 			apiServerConfig *gardencorev1beta1.KubeAPIServerConfig
-			sniConfig       = kubeapiserver.SNIConfig{Enabled: false, PodMutatorEnabled: false}
+			sniConfig       = kubeapiserver.SNIConfig{Enabled: false}
 		)
 
 		if apiServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; apiServer != nil {

@@ -278,8 +278,6 @@ type ETCDEncryptionConfig struct {
 
 // Images is a set of container images used for the containers of the kube-apiserver pods.
 type Images struct {
-	// APIServerProxyPodWebhook is the container image for the apiserver-proxy-pod-webhook.
-	APIServerProxyPodWebhook string
 	// KubeAPIServer is the container image for the kube-apiserver.
 	KubeAPIServer string
 	// VPNClient is the container image for the vpn-seed-client.
@@ -330,10 +328,6 @@ type ServiceAccountConfig struct {
 type SNIConfig struct {
 	// Enabled states whether the SNI feature is enabled.
 	Enabled bool
-	// PodMutatorEnabled states whether the pod mutator is enabled.
-	PodMutatorEnabled bool
-	// APIServerFQDN is the fully qualified domain name for the kube-apiserver.
-	APIServerFQDN string
 	// AdvertiseAddress is the address which should be advertised by the kube-apiserver.
 	AdvertiseAddress string
 	// TLS contains information for configuring the TLS SNI settings for the kube-apiserver.

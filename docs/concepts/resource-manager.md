@@ -941,6 +941,18 @@ The webhook performs the following actions:
    We consider fine-tuned values for those tolerations a matter of high-availability because they often help to reduce recovery times in case of node or zone outages, also see [High-Availability Best Practices](../../docs/usage/shoot_high_availability_best_practices.md).
    In addition, this webhook handling helps to set defaults for many but not all workload components in a cluster. For instance, Gardener can use this webhook to set defaults for nearly every component in seed clusters but only for the system components in shoot clusters. Any customer workload remains unchanged.
 
+#### Kubernetes Service Host Injection
+
+By default, when `Pod`s are created, Kubernetes implicitly injects the `KUBERNETES_SERVICE_HOST` environment variable into all containers.
+The value of this variable points it to the default Kubernetes service (i.e., `kubernetes.default.svc.cluster.local`).
+This allows pods to conveniently talk to the API server of their cluster.
+
+In shoot clusters, this network path involves the `apiserver-proxy` `DaemonSet` which eventually forwards the traffic to the API server.
+Hence, it results in additional network hop.
+
+The purpose of this webhook is to explicitly inject the `KUBERNETES_SERVICE_HOST` environment variable into all containers and setting its value to the FQDN of the API server.
+This way, the additional network hop is avoided.
+
 #### Auto-Mounting Projected `ServiceAccount` Tokens
 
 When this webhook is activated, then it automatically injects projected `ServiceAccount` token volumes into `Pod`s and all its containers if all of the following preconditions are fulfilled:

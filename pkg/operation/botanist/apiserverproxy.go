@@ -38,7 +38,6 @@ func (b *Botanist) DefaultAPIServerProxy() (apiserverproxy.Interface, error) {
 		Image:               image.String(),
 		SidecarImage:        sidecarImage.String(),
 		ProxySeedServerHost: b.outOfClusterAPIServerFQDN(),
-		PodMutatorEnabled:   b.APIServerSNIPodMutatorEnabled(),
 		PSPDisabled:         b.Shoot.PSPDisabled,
 	}
 

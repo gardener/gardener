@@ -107,6 +107,8 @@ var _ = Describe("ResourceManager", func() {
 		targetDisableCache                   = true
 		maxUnavailable                       = intstr.FromInt(1)
 		failurePolicyFail                    = admissionregistrationv1.Fail
+		failurePolicyIgnore                  = admissionregistrationv1.Ignore
+		reinvocationPolicyNever              = admissionregistrationv1.NeverReinvocationPolicy
 		matchPolicyExact                     = admissionregistrationv1.Exact
 		matchPolicyEquivalent                = admissionregistrationv1.Equivalent
 		sideEffect                           = admissionregistrationv1.SideEffectClassNone
@@ -116,6 +118,7 @@ var _ = Describe("ResourceManager", func() {
 			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{"bar": "baz"}},
 		}
 		additionalNetworkPolicyNamespaceSelectors = []metav1.LabelSelector{{MatchLabels: map[string]string{"foo": "bar"}}}
+		kubernetesServiceHost                     = "some-host"
 
 		allowAll                            []rbacv1.PolicyRule
 		allowManagedResources               []rbacv1.PolicyRule
@@ -316,6 +319,7 @@ var _ = Describe("ResourceManager", func() {
 			NetworkPolicyAdditionalNamespaceSelectors:        additionalNetworkPolicyNamespaceSelectors,
 			NetworkPolicyControllerIngressControllerSelector: ingressControllerSelector,
 			HealthSyncPeriod:                                 &healthSyncPeriod,
+			KubernetesServiceHost:                            &kubernetesServiceHost,
 			Image:                                            image,
 			MaxConcurrentHealthWorkers:                       &maxConcurrentHealthWorkers,
 			MaxConcurrentTokenInvalidatorWorkers:             &maxConcurrentTokenInvalidatorWorkers,
@@ -426,6 +430,10 @@ var _ = Describe("ResourceManager", func() {
 						Enabled:                             !isWorkerless,
 						DefaultNotReadyTolerationSeconds:    defaultNotReadyTolerationSeconds,
 						DefaultUnreachableTolerationSeconds: defaultUnreachableTolerationSeconds,
+					},
+					KubernetesServiceHost: resourcemanagerv1alpha1.KubernetesServiceHostWebhookConfig{
+						Enabled: !isWorkerless,
+						Host:    kubernetesServiceHost,
 					},
 					PodSchedulerName: resourcemanagerv1alpha1.PodSchedulerNameWebhookConfig{
 						Enabled: false,
@@ -1048,6 +1056,46 @@ var _ = Describe("ResourceManager", func() {
 					TimeoutSeconds:          pointer.Int32(10),
 				},
 				{
+					Name: "kubernetes-service-host.resources.gardener.cloud",
+					Rules: []admissionregistrationv1.RuleWithOperations{{
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{""},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"pods"},
+						},
+						Operations: []admissionregistrationv1.OperationType{"CREATE"},
+					}},
+					NamespaceSelector: &metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{{
+							Key:      resourcesv1alpha1.KubernetesServiceHostInject,
+							Operator: metav1.LabelSelectorOpNotIn,
+							Values:   []string{"disable"},
+						}},
+					},
+					ObjectSelector: &metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      resourcesv1alpha1.KubernetesServiceHostInject,
+								Operator: metav1.LabelSelectorOpNotIn,
+								Values:   []string{"disable"},
+							},
+						},
+					},
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Name:      "gardener-resource-manager",
+							Namespace: deployNamespace,
+							Path:      pointer.String("/webhooks/kubernetes-service-host"),
+						},
+					},
+					AdmissionReviewVersions: []string{"v1beta1", "v1"},
+					ReinvocationPolicy:      &reinvocationPolicyNever,
+					FailurePolicy:           &failurePolicyIgnore,
+					MatchPolicy:             &matchPolicyExact,
+					SideEffects:             &sideEffect,
+					TimeoutSeconds:          pointer.Int32(2),
+				},
+				{
 					Name: "endpoint-slice-hints.resources.gardener.cloud",
 					Rules: []admissionregistrationv1.RuleWithOperations{{
 						Rule: admissionregistrationv1.Rule{
@@ -1280,6 +1328,38 @@ webhooks:
   - v1beta1
   - v1
   clientConfig:
+    url: https://gardener-resource-manager.` + deployNamespace + `:443/webhooks/kubernetes-service-host
+  failurePolicy: Ignore
+  matchPolicy: Exact
+  name: kubernetes-service-host.resources.gardener.cloud
+  namespaceSelector:
+    matchExpressions:
+    - key: apiserver-proxy.networking.gardener.cloud/inject
+      operator: NotIn
+      values:
+      - disable
+  objectSelector:
+    matchExpressions:
+    - key: apiserver-proxy.networking.gardener.cloud/inject
+      operator: NotIn
+      values:
+      - disable
+  reinvocationPolicy: Never
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - pods
+  sideEffects: None
+  timeoutSeconds: 2
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
     url: https://gardener-resource-manager.` + deployNamespace + `:443/webhooks/system-components-config
   failurePolicy: Fail
   matchPolicy: Exact
@@ -1312,7 +1392,7 @@ webhooks:
   - v1beta1
   - v1
   clientConfig:
-    url: https://gardener-resource-manager.fake-ns:443/webhooks/pod-topology-spread-constraints
+    url: https://gardener-resource-manager.` + deployNamespace + `:443/webhooks/pod-topology-spread-constraints
   failurePolicy: Fail
   matchPolicy: Exact
   name: pod-topology-spread-constraints.resources.gardener.cloud

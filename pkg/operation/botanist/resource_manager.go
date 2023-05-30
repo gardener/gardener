@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/Masterminds/semver"
+	"k8s.io/utils/pointer"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -60,6 +61,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		v1beta1constants.SecretNameCACluster,
 		gardenerutils.ExtractSystemComponentsTolerations(b.Shoot.GetInfo().Spec.Provider.Workers),
 		b.Shoot.TopologyAwareRoutingEnabled,
+		pointer.String(b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)),
 		b.Shoot.IsWorkerless,
 	)
 }

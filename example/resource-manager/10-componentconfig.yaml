@@ -85,6 +85,9 @@ webhooks:
     enabled: true
     defaultNotReadyTolerationSeconds: 60
     defaultUnreachableTolerationSeconds: 60
+  kubernetesServiceHost:
+    enabled: true
+    host: api.example.com
   podSchedulerName:
     enabled: true
     schedulerName: foo-scheduler
