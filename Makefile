@@ -158,18 +158,6 @@ docker-images:
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(GARDENLET_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                -t $(GARDENLET_IMAGE_REPOSITORY):latest                -f Dockerfile --target gardenlet .
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION) -t $(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY):latest -f Dockerfile --target gardener-extension-provider-local .
 
-.PHONY: docker-images-ppc
-docker-images-ppc:
-	@echo "Building docker images for IBM's POWER(ppc64le) with version and tag $(EFFECTIVE_VERSION)"
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(APISERVER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                -t $(APISERVER_IMAGE_REPOSITORY):latest                -f Dockerfile --target apiserver .
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(CONTROLLER_MANAGER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)       -t $(CONTROLLER_MANAGER_IMAGE_REPOSITORY):latest       -f Dockerfile --target controller-manager .
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(SCHEDULER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                -t $(SCHEDULER_IMAGE_REPOSITORY):latest                -f Dockerfile --target scheduler .
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(ADMISSION_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                -t $(ADMISSION_IMAGE_REPOSITORY):latest                -f Dockerfile --target admission-controller .
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(RESOURCE_MANAGER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)         -t $(RESOURCE_MANAGER_IMAGE_REPOSITORY):latest         -f Dockerfile --target resource-manager .
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(OPERATOR_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                 -t $(OPERATOR_IMAGE_REPOSITORY):latest                 -f Dockerfile --target operator .
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(GARDENLET_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                -t $(GARDENLET_IMAGE_REPOSITORY):latest                -f Dockerfile --target gardenlet .
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION) -t $(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY):latest -f Dockerfile --target gardener-extension-provider-local .
-
 .PHONY: docker-push
 docker-push:
 	@if ! docker images $(APISERVER_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(EFFECTIVE_VERSION); then echo "$(APISERVER_IMAGE_REPOSITORY) version $(EFFECTIVE_VERSION) is not yet built. Please run 'make docker-images'"; false; fi
@@ -309,23 +297,44 @@ verify-extended: check-generate check format test-cov test-cov-clean test-integr
 #####################################################################
 
 kind-% kind2-% gardener-%: export IPFAMILY := $(IPFAMILY)
-kind-up kind-down gardener-up gardener-dev gardener-debug gardener-down register-local-env tear-down-local-env register-kind2-env tear-down-kind2-env test-e2e-local-simple test-e2e-local-migration test-e2e-local-workerless test-e2e-local ci-e2e-kind ci-e2e-kind-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
+# KUBECONFIG
+kind-up kind-down gardener-up gardener-dev gardener-debug gardener-down register-local-env tear-down-local-env register-kind2-env tear-down-kind2-env: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
+test-e2e-local-simple test-e2e-local-migration test-e2e-local-workerless test-e2e-local ci-e2e-kind ci-e2e-kind-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
 kind-extensions-up kind-extensions-down gardener-extensions-up gardener-extensions-down: export KUBECONFIG = $(GARDENER_EXTENSIONS_KUBECONFIG)
-kind-ha-single-zone-up kind-ha-single-zone-down gardener-ha-single-zone-up gardener-ha-single-zone-down register-kind-ha-single-zone-env tear-down-kind-ha-single-zone-env register-kind2-ha-single-zone-env tear-down-kind2-ha-single-zone-env test-e2e-local-ha-single-zone test-e2e-local-migration-ha-single-zone ci-e2e-kind-ha-single-zone ci-e2e-kind-ha-single-zone-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG)
+kind-ha-single-zone-up kind-ha-single-zone-down gardener-ha-single-zone-up gardener-ha-single-zone-down register-kind-ha-single-zone-env tear-down-kind-ha-single-zone-env register-kind2-ha-single-zone-env tear-down-kind2-ha-single-zone-env: export KUBECONFIG = $(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG)
+test-e2e-local-ha-single-zone test-e2e-local-migration-ha-single-zone ci-e2e-kind-ha-single-zone ci-e2e-kind-ha-single-zone-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG)
 kind2-ha-single-zone-up kind2-ha-single-zone-down gardenlet-kind2-ha-single-zone-up gardenlet-kind2-ha-single-zone-dev gardenlet-kind2-ha-single-zone-debug gardenlet-kind2-ha-single-zone-down: export KUBECONFIG = $(GARDENER_LOCAL2_HA_SINGLE_ZONE_KUBECONFIG)
-kind-ha-multi-zone-up kind-ha-multi-zone-down gardener-ha-multi-zone-up register-kind-ha-multi-zone-env tear-down-kind-ha-multi-zone-env test-e2e-local-ha-multi-zone ci-e2e-kind-ha-multi-zone ci-e2e-kind-ha-multi-zone-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG)
+kind-ha-multi-zone-up kind-ha-multi-zone-down gardener-ha-multi-zone-up register-kind-ha-multi-zone-env tear-down-kind-ha-multi-zone-env: export KUBECONFIG = $(GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG)
+test-e2e-local-ha-multi-zone ci-e2e-kind-ha-multi-zone ci-e2e-kind-ha-multi-zone-upgrade: export KUBECONFIG = $(GARDENER_LOCAL_HA_MULTI_ZONE_KUBECONFIG)
 kind-operator-up kind-operator-down operator-up operator-dev operator-debug operator-down test-e2e-local-operator ci-e2e-kind-operator: export KUBECONFIG = $(GARDENER_LOCAL_OPERATOR_KUBECONFIG)
+# CLUSTER_NAME
+kind-up kind-down: export CLUSTER_NAME = gardener-local
+kind2-up kind2-down: export CLUSTER_NAME = gardener-local2
+kind-ha-single-zone-up kind-ha-single-zone-down: export CLUSTER_NAME = gardener-local-ha-single-zone
+kind2-ha-single-zone-up kind2-ha-single-zone-down: export CLUSTER_NAME = gardener-local2-ha-single-zone
+kind-ha-multi-zone-up kind-ha-multi-zone-down: export CLUSTER_NAME = gardener-local-ha-multi-zone
+# KIND_KUBECONFIG
+kind-up kind-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
+kind2-up kind2-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-kind2/base/kubeconfig
+kind-ha-single-zone-up kind-ha-single-zone-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/base/kubeconfig
+kind2-ha-single-zone-up kind2-ha-single-zone-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-kind2-ha-single-zone/base/kubeconfig
+kind-ha-multi-zone-up kind-ha-multi-zone-down: export KIND_KUBECONFIG = $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/base/kubeconfig
+# CLUSTER_VALUES
+kind-up kind-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/local/values.yaml
+kind2-up kind2-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/local2/values.yaml
+kind-ha-single-zone-up kind-ha-single-zone-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/ha-single-zone/values.yaml
+kind2-ha-single-zone-up kind2-ha-single-zone-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/ha-single-zone2/values.yaml
+kind-ha-multi-zone-up kind-ha-multi-zone-down: export CLUSTER_VALUES = $(REPO_ROOT)/example/gardener-local/kind/ha-multi-zone/values.yaml
+# ADDITIONAL_PARAMETERS
+kind2-up kind2-ha-single-zone-up: export ADDITIONAL_PARAMETERS = --skip-registry
+kind2-down: export ADDITIONAL_PARAMETERS = --keep-backupbuckets-dir
+kind-ha-multi-zone-up: export ADDITIONAL_PARAMETERS = --multi-zonal
 
-kind-up: $(KIND) $(KUBECTL) $(HELM) $(YQ)
-	./hack/kind-up.sh --cluster-name gardener-local --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/local/values.yaml
-kind-down: $(KIND)
-	./hack/kind-down.sh --cluster-name gardener-local --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind/base/kubeconfig
-
-kind2-up: $(KIND) $(KUBECTL) $(HELM) $(YQ)
-	./hack/kind-up.sh --cluster-name gardener-local2 --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind2/base/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/local2/values.yaml --skip-registry
-kind2-down: $(KIND)
-	./hack/kind-down.sh --cluster-name gardener-local2 --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind2/base/kubeconfig --keep-backupbuckets-dir
+kind-up kind2-up kind-ha-single-zone-up kind2-ha-single-zone-up kind-ha-multi-zone-up: $(KIND) $(KUBECTL) $(HELM) $(YQ)
+	./hack/kind-up.sh --cluster-name $(CLUSTER_NAME) --environment $(KIND_ENV) --path-kubeconfig $(KIND_KUBECONFIG) --path-cluster-values $(CLUSTER_VALUES) $(ADDITIONAL_PARAMETERS)
+kind-down kind2-down kind-ha-single-zone-down kind2-ha-single-zone-down kind-ha-multi-zone-down: $(KIND)
+	./hack/kind-down.sh --cluster-name $(CLUSTER_NAME) --path-kubeconfig $(KIND_KUBECONFIG) $(ADDITIONAL_PARAMETERS)
 
 kind-extensions-up: $(KIND) $(KUBECTL)
 	KIND_ENV=$(KIND_ENV) REPO_ROOT=$(REPO_ROOT) ./hack/kind-extensions-up.sh
@@ -333,21 +342,6 @@ kind-extensions-down: $(KIND)
 	docker stop gardener-extensions-control-plane
 kind-extensions-clean:
 	./hack/kind-down.sh --cluster-name gardener-extensions --path-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig
-
-kind-ha-single-zone-up: $(KIND) $(KUBECTL) $(HELM) $(YQ)
-	./hack/kind-up.sh --cluster-name gardener-local-ha-single-zone --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/base/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/ha-single-zone/values.yaml
-kind-ha-single-zone-down: $(KIND)
-	./hack/kind-down.sh --cluster-name gardener-local-ha-single-zone --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/base/kubeconfig
-
-kind2-ha-single-zone-up: $(KIND) $(KUBECTL) $(HELM) $(YQ)
-	./hack/kind-up.sh --cluster-name gardener-local2-ha-single-zone --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind2-ha-single-zone/base/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/ha-single-zone2/values.yaml --skip-registry
-kind2-ha-single-zone-down: $(KIND) $(KUBECTL) $(HELM)
-	./hack/kind-down.sh --cluster-name gardener-local2-ha-single-zone --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind2-ha-single-zone/base/kubeconfig
-
-kind-ha-multi-zone-up: $(KIND) $(KUBECTL) $(HELM) $(YQ)
-	./hack/kind-up.sh --cluster-name gardener-local-ha-multi-zone --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/base/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/ha-multi-zone/values.yaml --multi-zonal
-kind-ha-multi-zone-down: $(KIND)
-	./hack/kind-down.sh --cluster-name gardener-local-ha-multi-zone --path-kubeconfig $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/base/kubeconfig
 
 kind-operator-up: $(KIND) $(KUBECTL) $(HELM) $(YQ)
 	./hack/kind-up.sh --cluster-name gardener-operator-local --environment $(KIND_ENV) --path-kubeconfig $(REPO_ROOT)/example/gardener-local/kind/operator/kubeconfig --path-cluster-values $(REPO_ROOT)/example/gardener-local/kind/operator/values.yaml
@@ -376,13 +370,16 @@ gardener%dev gardenlet%dev operator-dev: export SKAFFOLD_TRIGGER = manual
 # Disabling the skaffold cache for debugging ensures that you run artifacts with gcflags required for debugging.
 gardener%debug gardenlet%debug operator-debug: export SKAFFOLD_CACHE_ARTIFACTS = false
 
-gardener-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
+gardener-ha-single-zone%: export SKAFFOLD_PROFILE=ha-single-zone
+gardener-ha-multi-zone%: export SKAFFOLD_PROFILE=ha-multi-zone
+
+gardener-up gardener-ha-single-zone-up gardener-ha-multi-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
 	$(SKAFFOLD) run
-gardener-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
+gardener-dev gardener-ha-single-zone-dev gardener-ha-multi-zone-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
 	$(SKAFFOLD) dev
-gardener-debug: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
+gardener-debug gardener-ha-single-zone-debug gardener-ha-multi-zone-debug: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
 	$(SKAFFOLD) debug
-gardener-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
+gardener-down gardener-ha-single-zone-down gardener-ha-multi-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-down.sh
 
 gardener-extensions-%: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-extensions
@@ -392,91 +389,43 @@ gardener-extensions-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
 gardener-extensions-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-extensions-down.sh --path-garden-kubeconfig $(REPO_ROOT)/example/provider-extensions/garden/kubeconfig --path-seed-kubeconfig $(SEED_KUBECONFIG) --seed-name $(SEED_NAME)
 
-register-local-env: $(KUBECTL)
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
-	@if [[ "$(IPFAMILY)" != "ipv6" ]]; then $(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind/local; else $(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind/local-ipv6; fi
+register-local-env tear-down-local-env: export SEED_FOLDER = seed-kind
+register-kind-ha-single-zone-env tear-down-kind-ha-single-zone-env: export SEED_FOLDER = seed-kind-ha-single-zone
+register-kind-ha-multi-zone-env tear-down-kind-ha-multi-zone-env: export SEED_FOLDER = seed-kind-ha-multi-zone
 
-tear-down-local-env: $(KUBECTL)
+register-local-env register-kind-ha-single-zone-env register-kind-ha-multi-zone-env: $(KUBECTL)
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
+	@if [[ "$(IPFAMILY)" != "ipv6" ]]; then $(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/$(SEED_FOLDER)/local; else $(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/$(SEED_FOLDER)/local-ipv6; fi
+
+tear-down-local-env tear-down-kind-ha-single-zone-env tear-down-kind-ha-multi-zone-env: $(KUBECTL)
 	$(KUBECTL) annotate project local confirmation.gardener.cloud/deletion=true
-	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind/local
+	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/$(SEED_FOLDER)/local
 	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/garden/local
 
-gardenlet-kind2-up: $(SKAFFOLD) $(HELM)
-	$(SKAFFOLD) deploy -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
-	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
-	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_KUBECONFIG) $(SKAFFOLD) run -m gardenlet -p kind2
-gardenlet-kind2-dev: $(SKAFFOLD) $(HELM)
-	$(SKAFFOLD) deploy -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
-	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
-	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_KUBECONFIG) $(SKAFFOLD) dev -m gardenlet -p kind2
-gardenlet-kind2-debug: $(SKAFFOLD) $(HELM)
-	$(SKAFFOLD) deploy -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
-	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
-	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_KUBECONFIG) $(SKAFFOLD) debug -m gardenlet -p kind2
-gardenlet-kind2-down: $(SKAFFOLD) $(HELM)
-	$(SKAFFOLD) delete -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
-	$(SKAFFOLD) delete -m gardenlet,kind2-env -p kind2
-register-kind2-env: $(KUBECTL)
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind2/local
-tear-down-kind2-env: $(KUBECTL)
-	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind2/local
+gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug gardenlet-kind2-down register-kind2-env tear-down-kind2-env: export SKAFFOLD_PREFIX_NAME = kind2
+gardenlet-kind2-ha-single-zone-up gardenlet-kind2-ha-single-zone-dev gardenlet-kind2-ha-single-zone-debug gardenlet-kind2-ha-single-zone-down register-kind2-ha-single-zone-env tear-down-kind2-ha-single-zone-env: export SKAFFOLD_PREFIX_NAME = kind2-ha-single-zone
+gardenlet-kind2-up gardenlet-kind2-dev gardenlet-kind2-debug gardenlet-kind2-down register-kind2-env tear-down-kind2-env: export SKAFFOLD_COMMAND_KUBECONFIG := $(GARDENER_LOCAL_KUBECONFIG)
+gardenlet-kind2-ha-single-zone-up gardenlet-kind2-ha-single-zone-dev gardenlet-kind2-ha-single-zone-debug gardenlet-kind2-ha-single-zone-down register-kind2-ha-single-zone-env tear-down-kind2-ha-single-zone-env: export SKAFFOLD_COMMAND_KUBECONFIG := $(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG)
 
-gardener-ha-single-zone%: export SKAFFOLD_PROFILE=ha-single-zone
-
-gardener-ha-single-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) run
-gardener-ha-single-zone-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) dev
-gardener-ha-single-zone-debug: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) debug
-gardener-ha-single-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	./hack/gardener-down.sh
-register-kind-ha-single-zone-env: $(KUBECTL)
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/local
-tear-down-kind-ha-single-zone-env: $(KUBECTL)
-	$(KUBECTL) annotate project local confirmation.gardener.cloud/deletion=true
-	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-single-zone/local
-	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/garden/local
-
-
-gardenlet-kind2-ha-single-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) deploy -m kind2-ha-single-zone-env -p kind2-ha-single-zone --kubeconfig=$(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG)
+gardenlet-kind2-up gardenlet-kind2-ha-single-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	$(SKAFFOLD) deploy -m $(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME) --kubeconfig=$(SKAFFOLD_COMMAND_KUBECONFIG)
 	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
-	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG) $(SKAFFOLD) run -m gardenlet -p kind2-ha-single-zone
-gardenlet-kind2-ha-single-zone-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) deploy -m kind2-ha-single-zone-env -p kind2-ha-single-zone --kubeconfig=$(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG)
+	GARDENER_LOCAL_KUBECONFIG=$(SKAFFOLD_COMMAND_KUBECONFIG) $(SKAFFOLD) run -m gardenlet -p $(SKAFFOLD_PREFIX_NAME)
+gardenlet-kind2-dev gardenlet-kind2-ha-single-zone-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	$(SKAFFOLD) deploy -m $(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME) --kubeconfig=$(SKAFFOLD_COMMAND_KUBECONFIG)
 	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
-	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG) $(SKAFFOLD) dev -m gardenlet -p kind2-ha-single-zone
-gardenlet-kind2-ha-single-zone-debug: $(SKAFFOLD) $(HELM)
-	$(SKAFFOLD) deploy -m kind2-ha-single-zone-env -p kind2-ha-single-zone --kubeconfig=$(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG)
+	GARDENER_LOCAL_KUBECONFIG=$(SKAFFOLD_COMMAND_KUBECONFIG) $(SKAFFOLD) dev -m gardenlet -p $(SKAFFOLD_PREFIX_NAME)
+gardenlet-kind2-debug gardenlet-kind2-ha-single-zone-debug: $(SKAFFOLD) $(HELM)
+	$(SKAFFOLD) deploy -m $(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME) --kubeconfig=$(SKAFFOLD_COMMAND_KUBECONFIG)
 	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
-	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_KUBECONFIG) $(SKAFFOLD) debug -m gardenlet -p kind2-ha-single-zone
-gardenlet-kind2-ha-single-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) delete -m kind2-ha-single-zone-env -p kind2-ha-single-zone --kubeconfig=$(GARDENER_LOCAL_HA_SINGLE_ZONE_KUBECONFIG)
-	$(SKAFFOLD) delete -m gardenlet,kind2-ha-single-zone-env -p kind2-ha-single-zone
-register-kind2-ha-single-zone-env: $(KUBECTL)
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind2-ha-single-zone/local
-tear-down-kind2-ha-single-zone-env: $(KUBECTL)
-	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind2-ha-single-zone/local
-
-gardener-ha-multi-zone%: export SKAFFOLD_PROFILE=ha-multi-zone
-
-gardener-ha-multi-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) run
-gardener-ha-multi-zone-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) dev
-gardener-ha-multi-zone-debug: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) debug
-gardener-ha-multi-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	./hack/gardener-down.sh
-register-kind-ha-multi-zone-env: $(KUBECTL)
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/garden/local
-	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/local
-tear-down-kind-ha-multi-zone-env: $(KUBECTL)
-	$(KUBECTL) annotate project local confirmation.gardener.cloud/deletion=true
-	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-kind-ha-multi-zone/local
-	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/garden/local
+	GARDENER_LOCAL_KUBECONFIG=$(SKAFFOLD_COMMAND_KUBECONFIG) $(SKAFFOLD) debug -m gardenlet -p $(SKAFFOLD_PREFIX_NAME)
+gardenlet-kind2-down gardenlet-kind2-ha-single-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
+	$(SKAFFOLD) delete -m $(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME) --kubeconfig=$(SKAFFOLD_COMMAND_KUBECONFIG)
+	$(SKAFFOLD) delete -m gardenlet,$(SKAFFOLD_PREFIX_NAME)-env -p $(SKAFFOLD_PREFIX_NAME)
+register-kind2-env register-kind2-ha-single-zone-env: $(KUBECTL)
+	$(KUBECTL) apply -k $(REPO_ROOT)/example/provider-local/seed-$(SKAFFOLD_PREFIX_NAME)/local
+tear-down-kind2-env tear-down-kind2-ha-single-zone-env: $(KUBECTL)
+	$(KUBECTL) delete -k $(REPO_ROOT)/example/provider-local/seed-$(SKAFFOLD_PREFIX_NAME)/local
 
 operator-%: export SKAFFOLD_FILENAME = skaffold-operator.yaml
 
