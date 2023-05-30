@@ -61,8 +61,11 @@ const (
 	druidServiceAccountName                      = Druid
 	druidVPAName                                 = Druid + "-vpa"
 	druidConfigMapImageVectorOverwriteNamePrefix = Druid + "-imagevector-overwrite"
+	druidServiceName                             = Druid
 	druidDeploymentName                          = Druid
 	managedResourceControlName                   = Druid
+
+	metricsPort = 8080
 
 	druidConfigMapImageVectorOverwriteDataKey          = "images_overwrite.yaml"
 	druidDeploymentVolumeMountPathImageVectorOverwrite = "/charts_overwrite"
@@ -242,6 +245,29 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			},
 		}
 
+		service = &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      druidServiceName,
+				Namespace: b.namespace,
+				Labels: utils.MergeStringMaps(map[string]string{
+					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
+				}, labels()),
+			},
+			Spec: corev1.ServiceSpec{
+				Type:            corev1.ServiceTypeClusterIP,
+				SessionAffinity: corev1.ServiceAffinityNone,
+				Selector:        labels(),
+				Ports: []corev1.ServicePort{
+					{
+						Name:       "metrics",
+						Protocol:   corev1.ProtocolTCP,
+						Port:       metricsPort,
+						TargetPort: intstr.FromInt(int(metricsPort)),
+					},
+				},
+			},
+		}
+
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      druidDeploymentName,
@@ -282,7 +308,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 									},
 								},
 								Ports: []corev1.ContainerPort{{
-									ContainerPort: 9569,
+									ContainerPort: metricsPort,
 								}},
 							},
 						},
@@ -296,6 +322,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			clusterRole,
 			clusterRoleBinding,
 			vpa,
+			service,
 		}
 
 		podDisruptionBudget client.Object
