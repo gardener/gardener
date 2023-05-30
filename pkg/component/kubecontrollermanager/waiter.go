@@ -37,13 +37,15 @@ var (
 	IntervalWaitForDeployment = 5 * time.Second
 	// TimeoutWaitForDeployment is the timeout used while waiting for the Deployments to become healthy or deleted.
 	TimeoutWaitForDeployment = 3 * time.Minute
+	// Until is an alias for retry.Until. Exposed for tests.
+	Until = retry.Until
 )
 
 func (k *kubeControllerManager) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForDeployment)
 	defer cancel()
 
-	return retry.Until(timeoutCtx, IntervalWaitForDeployment, health.IsDeploymentUpdated(k.seedClient.APIReader(), k.emptyDeployment()))
+	return Until(timeoutCtx, IntervalWaitForDeployment, health.IsDeploymentUpdated(k.seedClient.APIReader(), k.emptyDeployment()))
 }
 
 func (k *kubeControllerManager) WaitCleanup(_ context.Context) error { return nil }

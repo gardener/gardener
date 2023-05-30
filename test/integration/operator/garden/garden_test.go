@@ -47,6 +47,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
+	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -57,6 +58,7 @@ import (
 	gardencontroller "github.com/gardener/gardener/pkg/operator/controller/garden"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -81,9 +83,14 @@ var _ = Describe("Garden controller tests", func() {
 			&kubeapiserverexposure.DefaultTimeout, 500*time.Millisecond,
 			&kubeapiserver.IntervalWaitForDeployment, 100*time.Millisecond,
 			&kubeapiserver.TimeoutWaitForDeployment, 500*time.Millisecond,
+			&kubeapiserver.Until, untilInTest,
+			&kubecontrollermanager.IntervalWaitForDeployment, 100*time.Millisecond,
+			&kubecontrollermanager.TimeoutWaitForDeployment, 500*time.Millisecond,
+			&kubecontrollermanager.Until, untilInTest,
 			&resourcemanager.SkipWebhookDeployment, true,
 			&resourcemanager.IntervalWaitForDeployment, 100*time.Millisecond,
 			&resourcemanager.TimeoutWaitForDeployment, 500*time.Millisecond,
+			&resourcemanager.Until, untilInTest,
 			&shared.IntervalWaitForGardenerResourceManagerBootstrapping, 500*time.Millisecond,
 		))
 
@@ -251,8 +258,6 @@ var _ = Describe("Garden controller tests", func() {
 		Expect(garden.Status.Gardener).NotTo(BeNil())
 
 		By("Verify that the custom resource definitions have been created")
-		// When the controller succeeds then it deletes the `ManagedResource` CRD, so we only need to ensure here that
-		// the `ManagedResource` API is no longer available.
 		Eventually(func(g Gomega) []apiextensionsv1.CustomResourceDefinition {
 			crdList := &apiextensionsv1.CustomResourceDefinitionList{}
 			g.Expect(testClient.List(ctx, crdList)).To(Succeed())
@@ -664,3 +669,7 @@ var _ = Describe("Garden controller tests", func() {
 		}).Should(BeNotFoundError())
 	})
 })
+
+func untilInTest(_ context.Context, _ time.Duration, _ retry.Func) error {
+	return nil
+}
