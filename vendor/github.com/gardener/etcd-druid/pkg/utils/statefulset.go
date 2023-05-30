@@ -31,10 +31,16 @@ import (
 // It returns ready status (bool) and in case it is not ready then the second return value holds the reason.
 func IsStatefulSetReady(etcdReplicas int32, statefulSet *appsv1.StatefulSet) (bool, string) {
 	if statefulSet.Status.ObservedGeneration < statefulSet.Generation {
-		return false, fmt.Sprintf("observed generation outdated (%d/%d)", statefulSet.Status.ObservedGeneration, statefulSet.Generation)
+		return false, fmt.Sprintf("observed generation %d is outdated in comparison to generation %d", statefulSet.Status.ObservedGeneration, statefulSet.Generation)
 	}
 	if statefulSet.Status.ReadyReplicas < etcdReplicas {
 		return false, fmt.Sprintf("not enough ready replicas (%d/%d)", statefulSet.Status.ReadyReplicas, etcdReplicas)
+	}
+	if statefulSet.Status.CurrentRevision != statefulSet.Status.UpdateRevision {
+		return false, fmt.Sprintf("Current StatefulSet revision %s is older than the updated StatefulSet revision %s)", statefulSet.Status.CurrentRevision, statefulSet.Status.UpdateRevision)
+	}
+	if statefulSet.Status.CurrentReplicas != statefulSet.Status.UpdatedReplicas {
+		return false, fmt.Sprintf("StatefulSet status.CurrentReplicas (%d) != status.UpdatedReplicas (%d)", statefulSet.Status.CurrentReplicas, statefulSet.Status.UpdatedReplicas)
 	}
 	return true, ""
 }

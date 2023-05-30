@@ -470,3 +470,13 @@ func (e *Etcd) GetAsOwnerReference() metav1.OwnerReference {
 		BlockOwnerDeletion: pointer.Bool(true),
 	}
 }
+
+// GetRoleName returns the role name for the Etcd
+func (e *Etcd) GetRoleName() string {
+	return fmt.Sprintf("%s:etcd:%s", GroupVersion.Group, e.Name)
+}
+
+// GetRoleBindingName returns the rolebinding name for the Etcd
+func (e *Etcd) GetRoleBindingName() string {
+	return fmt.Sprintf("%s:etcd:%s", GroupVersion.Group, e.Name)
+}
