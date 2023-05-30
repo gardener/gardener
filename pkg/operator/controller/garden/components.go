@@ -234,16 +234,17 @@ func (r *Reconciler) newEtcd(
 	), nil
 }
 
-func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1alpha1.Garden, istioValues istio.IngressGatewayValues) component.DeployWaiter {
-	var (
-		annotations map[string]string
-		clusterIP   string
-	)
+func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1alpha1.Garden, ingressGatewayValues []istio.IngressGatewayValues) (component.DeployWaiter, error) {
+	if len(ingressGatewayValues) != 1 {
+		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
+	}
 
+	var annotations map[string]string
 	if settings := garden.Spec.RuntimeCluster.Settings; settings != nil && settings.LoadBalancerServices != nil {
 		annotations = settings.LoadBalancerServices.Annotations
 	}
 
+	var clusterIP string
 	if os.Getenv("GARDENER_OPERATOR_LOCAL") == "true" {
 		clusterIP = "10.2.10.2"
 	}
@@ -261,14 +262,14 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 			return client.ObjectKey{Name: namePrefix + v1beta1constants.DeploymentNameKubeAPIServer, Namespace: r.GardenNamespace}
 		},
 		func() client.ObjectKey {
-			return client.ObjectKey{Name: v1beta1constants.DefaultSNIIngressServiceName, Namespace: istioValues.Namespace}
+			return client.ObjectKey{Name: v1beta1constants.DefaultSNIIngressServiceName, Namespace: ingressGatewayValues[0].Namespace}
 		},
 		nil,
 		nil,
 		nil,
 		false,
 		clusterIP,
-	)
+	), nil
 }
 
 func (r *Reconciler) newKubeAPIServer(
@@ -526,7 +527,11 @@ func (r *Reconciler) newIstio(garden *operatorv1alpha1.Garden) (istio.Interface,
 	)
 }
 
-func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, istioValues istio.IngressGatewayValues) component.Deployer {
+func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValues []istio.IngressGatewayValues) (component.Deployer, error) {
+	if len(ingressGatewayValues) != 1 {
+		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
+	}
+
 	return kubeapiserverexposure.NewSNI(
 		r.RuntimeClientSet.Client(),
 		r.RuntimeClientSet.Applier(),
@@ -536,11 +541,12 @@ func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, istioValues istio.I
 			return &kubeapiserverexposure.SNIValues{
 				Hosts: []string{gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domain)},
 				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
-					Namespace: istioValues.Namespace,
-					Labels:    istioValues.Labels,
+					Namespace: ingressGatewayValues[0].Namespace,
+					Labels:    ingressGatewayValues[0].Labels,
 				},
 			}
-		})
+		},
+	), nil
 }
 
 func (r *Reconciler) newGardenerAccess(secretsManager secretsmanager.Interface, domain string) component.Deployer {

@@ -79,7 +79,6 @@ func (r *Reconciler) delete(
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-
 	// virtual garden control plane components
 	etcdMain, err := r.newEtcd(log, garden, secretsManager, v1beta1constants.ETCDRoleMain, etcd.ClassImportant)
 	if err != nil {
@@ -93,11 +92,14 @@ func (r *Reconciler) delete(
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	if len(istio.GetValues().IngressGateway) != 1 {
-		return reconcile.Result{}, fmt.Errorf("exactly one Istio Ingress Gateway is required")
+	kubeAPIServerService, err := r.newKubeAPIServerService(log, garden, istio.GetValues().IngressGateway)
+	if err != nil {
+		return reconcile.Result{}, err
 	}
-	kubeAPIServerSNI := r.newSNI(garden, istio.GetValues().IngressGateway[0])
-	kubeAPIServerService := r.newKubeAPIServerService(log, garden, istio.GetValues().IngressGateway[0])
+	kubeAPIServerSNI, err := r.newSNI(garden, istio.GetValues().IngressGateway)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 	kubeAPIServer, err := r.newKubeAPIServer(ctx, garden, secretsManager, targetVersion)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -111,7 +113,6 @@ func (r *Reconciler) delete(
 		return reconcile.Result{}, err
 	}
 	virtualGardenGardenerAccess := r.newGardenerAccess(secretsManager, garden.Spec.VirtualCluster.DNS.Domain)
-
 	// observability components
 	kubeStateMetrics, err := r.newKubeStateMetrics()
 	if err != nil {
