@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
@@ -191,6 +192,23 @@ func (shootStrategy) Canonicalize(obj runtime.Object) {
 	if versionutils.ConstraintK8sGreaterEqual125.Check(semver.MustParse(shoot.Spec.Kubernetes.Version)) {
 		cleanupAdmissionPlugins(shoot)
 	}
+	// TODO(acumino): Drop this in release v1.74
+	cleanupReferencedResources(shoot)
+}
+
+func cleanupReferencedResources(shoot *core.Shoot) {
+	var (
+		resources                []core.NamedResourceReference
+		shootReferencedResources = shoot.Spec.Resources
+	)
+
+	for _, resource := range shootReferencedResources {
+		if sets.New("Secret", "ConfigMap").Has(resource.ResourceRef.Kind) {
+			resources = append(resources, resource)
+		}
+	}
+
+	shoot.Spec.Resources = resources
 }
 
 func cleanupAdmissionPlugins(shoot *core.Shoot) {
