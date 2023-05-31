@@ -98,7 +98,7 @@ const (
 	// All Shoot kube-apiservers will get the same initial resource requests for CPU and memory instead of making this
 	// depend on the ScalingClass
 	// owner: @voelzmo, @andrerun
-	// alpha: v1.72.0
+	// alpha: v1.73.0
 	DisableScalingClassesForShoots featuregate.Feature = "DisableScalingClassesForShoots"
 )
 
