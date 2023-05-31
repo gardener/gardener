@@ -284,7 +284,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Name: "Waiting until shoot control plane has been reconciled",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.Shoot.Components.Extensions.ControlPlane.Wait(ctx)
-			}).SkipIf(o.Shoot.IsWorkerless || skipReadiness).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			}).SkipIf(o.Shoot.IsWorkerless || skipReadiness),
 			Dependencies: flow.NewTaskIDs(deployControlPlane),
 		})
 		deployExtensionResourcesBeforeKAPI = g.Add(flow.Task{
@@ -501,7 +501,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Name: "Waiting until shoot network plugin has been reconciled",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.Shoot.Components.Extensions.Network.Wait(ctx)
-			}).SkipIf(o.Shoot.IsWorkerless || skipReadiness).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			}).SkipIf(o.Shoot.IsWorkerless || skipReadiness),
 			Dependencies: flow.NewTaskIDs(deployNetwork),
 		})
 		_ = g.Add(flow.Task{
@@ -677,12 +677,12 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		waitUntilTunnelConnectionExists = g.Add(flow.Task{
 			Name:         "Waiting until the Kubernetes API server can connect to the Shoot workers",
-			Fn:           flow.TaskFn(botanist.WaitUntilTunnelConnectionExists).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled || skipReadiness),
+			Fn:           flow.TaskFn(botanist.WaitUntilTunnelConnectionExists).SkipIf(o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled || skipReadiness),
 			Dependencies: flow.NewTaskIDs(syncPointAllSystemComponentsDeployed, waitUntilNetworkIsReady, waitUntilWorkerReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until all shoot worker nodes have updated the cloud config user data",
-			Fn:           flow.TaskFn(botanist.WaitUntilCloudConfigUpdatedForAllWorkerPools).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled),
+			Fn:           flow.TaskFn(botanist.WaitUntilCloudConfigUpdatedForAllWorkerPools).SkipIf(o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, waitUntilTunnelConnectionExists),
 		})
 		_ = g.Add(flow.Task{
@@ -781,7 +781,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Name: "Waiting until container runtime resources are ready",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.Shoot.Components.Extensions.ContainerRuntime.Wait(ctx)
-			}).SkipIf(o.Shoot.IsWorkerless || skipReadiness).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			}).SkipIf(o.Shoot.IsWorkerless || skipReadiness),
 			Dependencies: flow.NewTaskIDs(deployContainerRuntimeResources),
 		})
 		deleteStaleContainerRuntimeResources = g.Add(flow.Task{
