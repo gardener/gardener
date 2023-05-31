@@ -37,7 +37,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | FullNetworkPoliciesInRuntimeCluster | `true`  | `GA`    | `1.73` |        |
 | WorkerlessShoots                    | `false` | `Alpha` | `1.70` |        |
 | MachineControllerManagerDeployment  | `false` | `Alpha` | `1.73` |        |
-| DisableScalingClassesForShoots      | `false` | `Alpha` | `1.72` |        |
+| DisableScalingClassesForShoots      | `false` | `Alpha` | `1.73` |        |
 
 ## Feature Gates for Graduated or Deprecated Features
 
