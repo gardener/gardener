@@ -148,6 +148,8 @@ rules:
   resources:
   - customresourcedefinitions
   resourceNames:
+  - etcds.druid.gardener.cloud
+  - etcdcopybackupstasks.druid.gardener.cloud
   - hvpas.autoscaling.k8s.io
   - destinationrules.networking.istio.io
   - envoyfilters.networking.istio.io
