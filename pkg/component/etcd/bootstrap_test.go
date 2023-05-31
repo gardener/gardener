@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -32,7 +33,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
@@ -43,6 +43,13 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+)
+
+var (
+	//go:embed crds/templates/crd-druid.gardener.cloud_etcds-copy.yaml
+	etcdCRD string
+	//go:embed crds/templates/crd-druid.gardener.cloud_etcdcopybackupstasks-copy.yaml
+	etcdCopyBackupsTaskCRD1 string
 )
 
 var _ = Describe("Etcd", func() {
@@ -472,6 +479,8 @@ status:
 					"verticalpodautoscaler__" + namespace + "__etcd-druid-vpa.yaml": []byte(vpaYAML),
 					"deployment__" + namespace + "__etcd-druid.yaml":                []byte(deploymentWithoutImageVectorOverwriteYAML),
 					"poddisruptionbudget__" + namespace + "__etcd-druid.yaml":       []byte(podDisruptionYAML),
+					"crd.yaml":                    []byte(etcdCRD),
+					"crdEtcdCopyBackupsTask.yaml": []byte(etcdCopyBackupsTaskCRD1),
 				},
 			}
 			managedResource = &resourcesv1alpha1.ManagedResource{
