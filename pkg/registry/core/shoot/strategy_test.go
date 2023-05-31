@@ -22,6 +22,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -608,6 +609,77 @@ var _ = Describe("Strategy", func() {
 					},
 				},
 			}
+		})
+
+		Context("shoot doesn't reference any resource", func() {
+			It("shouldn't do anything", func() {
+				shootregistry.NewStrategy(0).Canonicalize(shoot)
+				Expect(len(shoot.Spec.Resources)).To(Equal(0))
+			})
+		})
+
+		Context("shoot references resources other than ConfigMap/Secret", func() {
+			BeforeEach(func() {
+				shoot.Spec.Resources = []core.NamedResourceReference{
+					{
+						Name: "resource-1",
+						ResourceRef: autoscalingv1.CrossVersionObjectReference{
+							Name:       "resource-1",
+							APIVersion: "v1",
+							Kind:       "SerivceAccout",
+						},
+					},
+					{
+						Name: "resource-2",
+						ResourceRef: autoscalingv1.CrossVersionObjectReference{
+							Name:       "resource-2",
+							APIVersion: "v1",
+							Kind:       "Secret",
+						},
+					},
+					{
+						Name: "resource-3",
+						ResourceRef: autoscalingv1.CrossVersionObjectReference{
+							Name:       "resource-3",
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+						},
+					},
+				}
+			})
+
+			It("should cleanup referenced resources other than ConfigMap/Secret", func() {
+				shootregistry.NewStrategy(0).Canonicalize(shoot)
+				Expect(len(shoot.Spec.Resources)).To(Equal(2))
+			})
+		})
+
+		Context("shoot referenced resources are either ConfigMap or Secret", func() {
+			BeforeEach(func() {
+				shoot.Spec.Resources = []core.NamedResourceReference{
+					{
+						Name: "resource-1",
+						ResourceRef: autoscalingv1.CrossVersionObjectReference{
+							Name:       "resource-1",
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+						},
+					},
+					{
+						Name: "resource-2",
+						ResourceRef: autoscalingv1.CrossVersionObjectReference{
+							Name:       "resource-2",
+							APIVersion: "v1",
+							Kind:       "Secret",
+						},
+					},
+				}
+			})
+
+			It("shouldn't do anything", func() {
+				shootregistry.NewStrategy(0).Canonicalize(shoot)
+				Expect(len(shoot.Spec.Resources)).To(Equal(2))
+			})
 		})
 
 		Context("k8s version >=1.25", func() {
