@@ -111,6 +111,7 @@
 * [GEP-19: Observability Stack - Migrating to the prometheus-operator and fluent-bit operator](proposals/19-migrating-observability-stack-to-operators.md)
 * [GEP-20: Highly Available Shoot Control Planes](proposals/20-ha-control-planes.md)
 * [GEP-21: IPv6 Single-Stack Support in Local Gardener](proposals/21-ipv6-singlestack-local.md)
+* [GEP-22: Eliminating the `ShootState` API](proposals/22-eliminating-shootstate-api.md)
 
 ## Development
 
