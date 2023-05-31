@@ -377,6 +377,17 @@ func (r *Reconciler) runReconcileSeedFlow(
 	// Deploy the CRDs in the seed cluster.
 	log.Info("Deploying custom resource definitions")
 
+	if !seedIsGarden {
+		if err := etcd.NewCRD(seedClient, applier).Deploy(ctx); err != nil {
+			return err
+		}
+		if vpaEnabled {
+			if err := vpa.NewCRD(applier, nil).Deploy(ctx); err != nil {
+				return err
+			}
+		}
+	}
+
 	if hvpaEnabled {
 		if err := kubernetesutils.DeleteObjects(ctx, seedClient,
 			&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-vpa", Namespace: r.GardenNamespace}},
@@ -393,12 +404,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 	istioCRDs := istio.NewCRD(chartApplier)
 	if err := istioCRDs.Deploy(ctx); err != nil {
 		return err
-	}
-
-	if !seedIsGarden && vpaEnabled {
-		if err := vpa.NewCRD(applier, nil).Deploy(ctx); err != nil {
-			return err
-		}
 	}
 
 	if err := fluentoperator.NewCRDs(applier).Deploy(ctx); err != nil {
