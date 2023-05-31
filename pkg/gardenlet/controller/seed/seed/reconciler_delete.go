@@ -341,7 +341,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 				Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources),
 			})
 			destroyEtcdCRD = g.Add(flow.Task{
-				Name:         "Destroy custom resource definition for ETCD/EtcdCopyBackupsTask",
+				Name:         "Destroy ETCD-related custom resource definitions",
 				Fn:           component.OpDestroyAndWait(etcdCRD).Destroy,
 				Dependencies: flow.NewTaskIDs(destroyEtcdDruid),
 			})

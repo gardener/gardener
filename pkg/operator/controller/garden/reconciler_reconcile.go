@@ -114,7 +114,7 @@ func (r *Reconciler) reconcile(
 			},
 		})
 		deployEtcdCRD = g.Add(flow.Task{
-			Name: "Deploying custom resource definition for ETCD/EtcdCopyBackupsTask",
+			Name: "Deploying ETCD-related custom resource definitions",
 			Fn:   c.etcdCRD.Deploy,
 		})
 		deployVPACRD = g.Add(flow.Task{

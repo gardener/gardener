@@ -517,6 +517,18 @@ var _ = Describe("Seed controller tests", func() {
 							deployment.Status.Conditions = []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue}}
 							g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
 						}).Should(Succeed())
+
+						By("Verify that the ETCD-related CRDs have been deployed")
+						expectedEtcdCRDs := []gomegatypes.GomegaMatcher{
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcds.druid.gardener.cloud")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcdcopybackupstasks.druid.gardener.cloud")})}),
+						}
+
+						Eventually(func(g Gomega) []apiextensionsv1.CustomResourceDefinition {
+							crdList := &apiextensionsv1.CustomResourceDefinitionList{}
+							g.Expect(testClient.List(ctx, crdList)).To(Succeed())
+							return crdList.Items
+						}).Should(ContainElements(expectedEtcdCRDs))
 					} else {
 						// Usually, the gardener-operator deploys and manages the following resources.
 						// However, it is not really running, so we have to fake its behaviour here.
