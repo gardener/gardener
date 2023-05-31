@@ -25,6 +25,7 @@ import (
 )
 
 var validFileCodecIDs = map[extensionsv1alpha1.FileCodecID]struct{}{
+	extensionsv1alpha1.PlainFileCodecID:   {},
 	extensionsv1alpha1.B64FileCodecID:     {},
 	extensionsv1alpha1.GZIPFileCodecID:    {},
 	extensionsv1alpha1.GZIPB64FileCodecID: {},
@@ -37,11 +38,22 @@ type FileCodec interface {
 }
 
 var (
+	// PlainFileCodec is a noop FileCodec.
+	PlainFileCodec FileCodec = plainFileCodec{}
 	// B64FileCodec is the base64 FileCodec.
 	B64FileCodec FileCodec = b64FileCodec{}
 	// GZIPFileCodec is the gzip FileCodec.
 	GZIPFileCodec FileCodec = gzipFileCodec{}
 )
+
+type plainFileCodec struct{}
+
+func (plainFileCodec) Encode(data []byte) ([]byte, error) {
+	return data, nil
+}
+func (plainFileCodec) Decode(data []byte) ([]byte, error) {
+	return data, nil
+}
 
 type b64FileCodec struct{}
 
@@ -92,8 +104,9 @@ func ParseFileCodecID(s string) (extensionsv1alpha1.FileCodecID, error) {
 }
 
 var fileCodecIDToFileCodec = map[extensionsv1alpha1.FileCodecID]FileCodec{
-	extensionsv1alpha1.B64FileCodecID:  B64FileCodec,
-	extensionsv1alpha1.GZIPFileCodecID: GZIPFileCodec,
+	extensionsv1alpha1.PlainFileCodecID: PlainFileCodec,
+	extensionsv1alpha1.B64FileCodecID:   B64FileCodec,
+	extensionsv1alpha1.GZIPFileCodecID:  GZIPFileCodec,
 }
 
 // FileCodecForID retrieves the FileCodec for the given FileCodecID.

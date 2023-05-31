@@ -241,6 +241,8 @@ const ContainerDRuntimeContainersBinFolder = "/var/bin/containerruntimes"
 type FileCodecID string
 
 const (
+	// PlainFileCodecID is the plain file codec id.
+	PlainFileCodecID FileCodecID = ""
 	// B64FileCodecID is the base64 file codec id.
 	B64FileCodecID FileCodecID = "b64"
 	// GZIPFileCodecID is the gzip file codec id.
