@@ -280,7 +280,6 @@ service/gardener-apiserver created
 service/gardener-admission-controller created
 endpoints/gardener-apiserver created
 endpoints/gardener-admission-controller created
-apiservice.apiregistration.k8s.io/v1alpha1.core.gardener.cloud created
 apiservice.apiregistration.k8s.io/v1beta1.core.gardener.cloud created
 apiservice.apiregistration.k8s.io/v1alpha1.seedmanagement.gardener.cloud created
 apiservice.apiregistration.k8s.io/v1alpha1.settings.gardener.cloud created
