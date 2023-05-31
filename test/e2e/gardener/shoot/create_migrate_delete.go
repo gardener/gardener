@@ -24,13 +24,16 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
-	"github.com/gardener/gardener/test/framework"
 	. "github.com/gardener/gardener/test/framework"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func() {
-	test := func(f *framework.ShootCreationFramework) {
+	test := func(shoot *gardencorev1beta1.Shoot) {
+		f := defaultShootCreationFramework()
+		f.Shoot = shoot
+
 		// Assign seedName so that shoot does not get scheduled to the seed that will be used as target.
 		f.Shoot.Spec.SeedName = pointer.String(getSeedName(false))
 
@@ -57,17 +60,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 	}
 
 	Context("Shoot with workers", func() {
-		f := defaultShootCreationFramework()
-		f.Shoot = e2e.DefaultShoot("e2e-migrate")
-
-		test(f)
+		test(e2e.DefaultShoot("e2e-migrate"))
 	})
 
 	Context("Workerless Shoot", Label("workerless"), func() {
-		f := defaultShootCreationFramework()
-		f.Shoot = e2e.DefaultWorkerlessShoot("e2e-migrate")
-
-		test(f)
+		test(e2e.DefaultWorkerlessShoot("e2e-migrate"))
 	})
 })
 

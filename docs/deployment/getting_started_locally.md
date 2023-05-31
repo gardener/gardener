@@ -204,12 +204,12 @@ cat <<EOF | sudo tee -a /etc/hosts
 
 127.0.0.1 api.e2e-managedseed.garden.external.local.gardener.cloud
 127.0.0.1 api.e2e-managedseed.garden.internal.local.gardener.cloud
-127.0.0.1 api.e2e-hibernated.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-hibernated.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-hib.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-hib.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-hib-wl.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-hib-wl.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-unpriv.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-unpriv.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-unpriv-wl.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-unpriv-wl.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-wake-up.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-wake-up.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-wake-up-wl.local.external.local.gardener.cloud
@@ -226,12 +226,18 @@ cat <<EOF | sudo tee -a /etc/hosts
 127.0.0.1 api.e2e-default.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-default-wl.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-default-wl.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-update-node.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-update-node.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-update-node-wl.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-update-node-wl.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-upd-node.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-upd-node.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-upd-node-wl.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-upd-node-wl.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-upgrade.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-upgrade.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-upgrade-wl.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-upgrade-wl.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-upg-hib.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-upg-hib.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-upg-hib-wl.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-upg-hib-wl.local.internal.local.gardener.cloud
 EOF
 ```
 

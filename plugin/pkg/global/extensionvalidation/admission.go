@@ -306,7 +306,7 @@ func (e *ExtensionValidator) validateShoot(kindToTypesMap map[string]sets.Set[st
 	}
 
 	for i, extension := range spec.Extensions {
-		requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.ExtensionResource, extension.Type, fmt.Sprintf("%s extension type: %s", message, field.NewPath("spec", "extensions").Index(i).Child("type"))})
+		requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.ExtensionResource, extension.Type, fmt.Sprintf("extension type: %s", field.NewPath("spec", "extensions").Index(i).Child("type"))})
 	}
 
 	for i, worker := range spec.Provider.Workers {
@@ -362,7 +362,7 @@ func (r requiredExtensions) areRegistered(kindToTypesMap map[string]sets.Set[str
 // kind/type combination is registered then it returns nil, otherwise it returns an error with the given message.
 func isExtensionRegistered(kindToTypesMap map[string]sets.Set[string], extensionKind, extensionType, message string) error {
 	if types, ok := kindToTypesMap[extensionKind]; !ok || !types.Has(extensionType) {
-		return fmt.Errorf("%s (%q)", message, extensionType)
+		return fmt.Errorf("given Shoot uses non-registered %s (%q)", message, extensionType)
 	}
 	return nil
 }
@@ -414,7 +414,7 @@ func (r requiredExtensions) areSupportedForWorkerlessShoots(workerlessSupportedE
 		}
 
 		if !workerlessSupportedExtensionTypes.Has(requiredExtension.extensionType) {
-			result = multierror.Append(result, fmt.Errorf("given Shoot is workerless and uses non-supported Extension type: %q", requiredExtension.extensionType))
+			result = multierror.Append(result, fmt.Errorf("given Shoot is workerless and uses non-supported %s (%q)", requiredExtension.message, requiredExtension.extensionType))
 		}
 	}
 

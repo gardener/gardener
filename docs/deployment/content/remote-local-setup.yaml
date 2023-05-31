@@ -33,7 +33,7 @@ spec:
           echo kubectl           && curl -sL  "https://dl.k8s.io/release/$(curl -sL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl && chmod +x /usr/local/bin/kubectl
           echo tmux-completion   && curl -sL  "https://raw.githubusercontent.com/imomaliev/tmux-bash-completion/master/completions/tmux" -o /usr/share/bash-completion/completions/tmux
           echo docker-completion && curl -sL  "https://raw.githubusercontent.com/docker/docker-ce/master/components/cli/contrib/completion/bash/docker" -o /usr/share/bash-completion/completions/docker
-          bash -c "echo api.{e2e-managedseed.garden,{local,e2e-{managedseed,hib,hib-wl,unpriv,wake-up,wake-up-wl,migrate,migrate-wl,rotate,rotate-wl,default,default-wl,update-node,update-node-wl,update-zone,update-zone-wl,upgrade}}.local}.{internal,external}.local.gardener.cloud \
+          bash -c "echo api.{e2e-managedseed.garden,{local,e2e-{managedseed,hib,hib-wl,unpriv,wake-up,wake-up-wl,migrate,migrate-wl,rotate,rotate-wl,default,default-wl,upd-node,upd-node-wl,upgrade,upgrade-wl,upg-hib,upg-hib-wl}}.local}.{internal,external}.local.gardener.cloud \
                    | sed 's/ /\n/g' | sed 's/^/127.0.0.1 /' | sort >> /etc/hosts"
           echo 'source ~/.bashrc' > ~/.bash_profile
           cat > ~/.bashrc <<"EOF"

@@ -25,11 +25,13 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
-	"github.com/gardener/gardener/test/framework"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	test := func(f *framework.ShootCreationFramework) {
+	test := func(shoot *gardencorev1beta1.Shoot) {
+		f := defaultShootCreationFramework()
+		f.Shoot = shoot
+
 		f.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 			Enabled: pointer.Bool(true),
 		}
@@ -53,16 +55,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	}
 
 	Context("Shoot with workers", func() {
-		f := defaultShootCreationFramework()
-		f.Shoot = e2e.DefaultShoot("e2e-hib")
-
-		test(f)
+		test(e2e.DefaultShoot("e2e-hib"))
 	})
 
 	Context("Workerless Shoot", Label("workerless"), func() {
-		f := defaultShootCreationFramework()
-		f.Shoot = e2e.DefaultWorkerlessShoot("e2e-hib")
-
-		test(f)
+		test(e2e.DefaultWorkerlessShoot("e2e-hib"))
 	})
 })

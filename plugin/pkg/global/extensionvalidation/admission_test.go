@@ -408,7 +408,7 @@ var _ = Describe("ExtensionValidator", func() {
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
-				Expect(err).To(MatchError(ContainSubstring("given Shoot is workerless and uses non-supported Extension type: %q", nonSupportedType)))
+				Expect(err).To(MatchError(ContainSubstring("given Shoot is workerless and uses non-supported extension type: spec.extensions[0].type (%q)", nonSupportedType)))
 			})
 
 			It("should prevent the object from being created because the extension type doesn't specify WorkerlessSupported field for workerless Shoots", func() {
@@ -433,7 +433,7 @@ var _ = Describe("ExtensionValidator", func() {
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
-				Expect(err).To(MatchError(ContainSubstring("given Shoot is workerless and uses non-supported Extension type: %q", nonSupportedType)))
+				Expect(err).To(MatchError(ContainSubstring("given Shoot is workerless and uses non-supported extension type: spec.extensions[0].type (%q)", nonSupportedType)))
 			})
 
 			It("should allow object creation because the extension type supports workerless Shoots", func() {
