@@ -82,10 +82,16 @@ func (r *WebhookRemediation) Remediate(ctx context.Context) error {
 			mustPatch     bool
 			patch         = client.StrategicMergeFrom(webhookConfig.DeepCopy())
 			remediations  []string
+			matchers      []webhookmatchers.WebhookConstraintMatcher
 		)
 
 		for i, w := range webhookConfig.Webhooks {
 			remediate := newRemediator(r.log, "ValidatingWebhookConfiguration", webhookConfig.Name, w.Name, &remediations)
+
+			if mustRemediateTimeoutSecondsIfLeaseResource(w.Rules, w.ObjectSelector, w.NamespaceSelector, w.TimeoutSeconds) {
+				mustPatch = true
+				webhookConfig.Webhooks[i].TimeoutSeconds = remediate.timeoutSecondsToThree()
+			}
 
 			if mustRemediateTimeoutSeconds(w.TimeoutSeconds) {
 				mustPatch = true
@@ -96,7 +102,7 @@ func (r *WebhookRemediation) Remediate(ctx context.Context) error {
 				continue
 			}
 
-			matchers := getMatchingRules(w.Rules, w.ObjectSelector, w.NamespaceSelector)
+			matchers = getMatchingRules(w.Rules, w.ObjectSelector, w.NamespaceSelector)
 
 			if mustRemediateFailurePolicy(matchers) {
 				mustPatch = true
@@ -127,10 +133,16 @@ func (r *WebhookRemediation) Remediate(ctx context.Context) error {
 			mustPatch     bool
 			patch         = client.StrategicMergeFrom(webhookConfig.DeepCopy())
 			remediations  []string
+			matchers      []webhookmatchers.WebhookConstraintMatcher
 		)
 
 		for i, w := range webhookConfig.Webhooks {
 			remediate := newRemediator(r.log, "MutatingWebhookConfiguration", webhookConfig.Name, w.Name, &remediations)
+
+			if mustRemediateTimeoutSecondsIfLeaseResource(w.Rules, w.ObjectSelector, w.NamespaceSelector, w.TimeoutSeconds) {
+				mustPatch = true
+				webhookConfig.Webhooks[i].TimeoutSeconds = remediate.timeoutSecondsToThree()
+			}
 
 			if mustRemediateTimeoutSeconds(w.TimeoutSeconds) {
 				mustPatch = true
@@ -141,7 +153,7 @@ func (r *WebhookRemediation) Remediate(ctx context.Context) error {
 				continue
 			}
 
-			matchers := getMatchingRules(w.Rules, w.ObjectSelector, w.NamespaceSelector)
+			matchers = getMatchingRules(w.Rules, w.ObjectSelector, w.NamespaceSelector)
 
 			if mustRemediateFailurePolicy(matchers) {
 				mustPatch = true
@@ -177,6 +189,22 @@ func getMatchingRules(
 		}
 	}
 	return matchers
+}
+
+func mustRemediateTimeoutSecondsIfLeaseResource(rules []admissionregistrationv1.RuleWithOperations,
+	objLabelSelector *metav1.LabelSelector,
+	namespaceLabelSelector *metav1.LabelSelector,
+	timeoutSeconds *int32) bool {
+	for _, rule := range rules {
+		for _, matcher := range webhookmatchers.WebhookConstraintMatchersForLeases {
+			if matcher.Match(rule, objLabelSelector, namespaceLabelSelector) &&
+				(timeoutSeconds == nil || *timeoutSeconds > WebhookMaximumTimeoutSecondsNotProblematicForLeases) {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 func mustRemediateTimeoutSeconds(timeoutSeconds *int32) bool {
@@ -220,6 +248,12 @@ func newRemediator(log logr.Logger, webhookConfigKind, webhookConfigName, webhoo
 
 func (r *remediator) timeoutSeconds() *int32 {
 	var timeoutSeconds int32 = WebhookMaximumTimeoutSecondsNotProblematic
+	r.reportf("timeoutSeconds", "set to %d", timeoutSeconds)
+	return pointer.Int32(timeoutSeconds)
+}
+
+func (r *remediator) timeoutSecondsToThree() *int32 {
+	var timeoutSeconds int32 = WebhookMaximumTimeoutSecondsNotProblematicForLeases
 	r.reportf("timeoutSeconds", "set to %d", timeoutSeconds)
 	return pointer.Int32(timeoutSeconds)
 }

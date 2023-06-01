@@ -153,6 +153,14 @@ var _ = Describe("Constraints", func() {
 			}
 
 			commonTests = func(gvr schema.GroupVersionResource, problematic, notProblematic []TableEntry) {
+				if gvr.Resource == "leases" || (gvr.Group == "*" && gvr.Resource == "*") {
+					problematic = append(problematic,
+						Entry("failurePolicy 'Ignore' and timeoutSeconds ok", webhookTestCase{failurePolicy: &failurePolicyIgnore, timeoutSeconds: &timeoutSecondsNotProblematic}))
+				} else {
+					notProblematic = append(notProblematic,
+						Entry("failurePolicy 'Ignore' and timeoutSeconds ok", webhookTestCase{failurePolicy: &failurePolicyIgnore, timeoutSeconds: &timeoutSecondsNotProblematic}))
+				}
+
 				DescribeTable(fmt.Sprintf("problematic webhook for %s", gvr.String()),
 					func(testCase webhookTestCase) {
 						testCase.gvr = gvr
@@ -184,7 +192,6 @@ var _ = Describe("Constraints", func() {
 						testCase.gvr = gvr
 						Expect(IsProblematicWebhook(testCase.build())).To(BeFalse(), "expected webhook not to be problematic")
 					},
-					Entry("failurePolicy 'Ignore' and timeoutSeconds ok", webhookTestCase{failurePolicy: &failurePolicyIgnore, timeoutSeconds: &timeoutSecondsNotProblematic}),
 					Entry("operationType 'DELETE'", webhookTestCase{operationType: &operationDelete}),
 					notProblematic,
 				)

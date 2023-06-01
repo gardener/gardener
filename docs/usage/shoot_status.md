@@ -88,6 +88,8 @@ However, some other resources (some of them cluster-scoped) might still trigger 
 
 If one of the above resources triggers the remediator, the preferred solution is to remove that particular resource from your webhook's `rules`. You can also use the `objectSelector` to reduce the scope of webhook's `rules`. However, in special cases where a webhook is absolutely needed for the workload, it is possible to add the `remediation.webhook.shoot.gardener.cloud/exclude=true` label to your webhook so that the remediator ignores it. This label **should not be used to silence an alert**, but rather to confirm that a webhook won't cause problems. Note that all of this is no perfect solution and just done on a best effort basis, and only the owner of the webhook can know whether it indeed is problematic and configured correctly.
 
+In a special case, if a webhook has a rule for `CREATE/UPDATE` lease resources in `kube-system` namespace, its `timeoutSeconds` is updated to 3 seconds. This is required to ensure the proper functioning of the leader election of essential control plane controllers.
+
 You can also find more help from the [Kubernetes documentation](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#best-practices-and-warnings)
 
 **`MaintenancePreconditionsSatisfied`**:
