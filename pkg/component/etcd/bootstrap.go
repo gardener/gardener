@@ -370,6 +370,8 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	// TODO(acumino): Drop CRDs deployment from here in release v1.73.
 	resources["crd.yaml"] = []byte(etcdCRD)
 	resources["crdEtcdCopyBackupsTask.yaml"] = []byte(etcdCopyBackupsTaskCRD1)
 
