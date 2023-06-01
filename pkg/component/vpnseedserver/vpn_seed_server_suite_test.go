@@ -26,7 +26,7 @@ import (
 
 func TestVPNSeedServer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component VPNSeedServer Suite")
+	RunSpecs(t, "Component VPNSeedServer Suite")
 }
 
 var _ = BeforeSuite(func() {

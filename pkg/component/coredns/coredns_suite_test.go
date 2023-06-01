@@ -23,5 +23,5 @@ import (
 
 func TestCoreDNS(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component CoreDNS Suite")
+	RunSpecs(t, "Component CoreDNS Suite")
 }

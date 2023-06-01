@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestNginxIngressAddonShoot(t *testing.T) {
+func TestNginxIngressShoot(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Nginx Ingress Addon Suite")
+	RunSpecs(t, "Component NginxIngressShoot Suite")
 }

@@ -23,5 +23,5 @@ import (
 
 func TestInfrastructure(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Extensions Infrastructure Suite")
+	RunSpecs(t, "Component Extensions Infrastructure Suite")
 }

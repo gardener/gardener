@@ -23,5 +23,5 @@ import (
 
 func TestClusterIdentity(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component ClusterIdentity Suite")
+	RunSpecs(t, "Component ClusterIdentity Suite")
 }

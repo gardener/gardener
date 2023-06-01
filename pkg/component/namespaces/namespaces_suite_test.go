@@ -23,5 +23,5 @@ import (
 
 func TestNamespaces(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Namespaces Suite")
+	RunSpecs(t, "Component Namespaces Suite")
 }

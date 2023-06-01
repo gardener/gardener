@@ -23,5 +23,5 @@ import (
 
 func TestControlPlane(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Extensions ControlPlane Suite")
+	RunSpecs(t, "Component Extensions ControlPlane Suite")
 }

@@ -23,5 +23,5 @@ import (
 
 func TestGardenerUser(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Extensions OperatingSystemConfig Original Components GardenerUser Suite")
+	RunSpecs(t, "Component Extensions OperatingSystemConfig Original Components GardenerUser Suite")
 }

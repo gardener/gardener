@@ -23,5 +23,5 @@ import (
 
 func TestGardenerAccess(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component GardenerAccess Suite")
+	RunSpecs(t, "Component GardenerAccess Suite")
 }

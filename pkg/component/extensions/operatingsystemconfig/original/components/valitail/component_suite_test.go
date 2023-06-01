@@ -23,5 +23,5 @@ import (
 
 func TestValitail(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Extensions OperatingSystemConfig Original Components Valitail Suite")
+	RunSpecs(t, "Component Extensions OperatingSystemConfig Original Components Valitail Suite")
 }

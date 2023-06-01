@@ -23,5 +23,5 @@ import (
 
 func TestDownloader(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Extensions OperatingSystemConfig Downloader Suite")
+	RunSpecs(t, "Component Extensions OperatingSystemConfig Downloader Suite")
 }

@@ -26,7 +26,7 @@ import (
 
 func TestMetricsServer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component MetricsServer Suite")
+	RunSpecs(t, "Component MetricsServer Suite")
 }
 
 var _ = BeforeSuite(func() {

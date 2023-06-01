@@ -23,5 +23,5 @@ import (
 
 func TestHVPA(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component HVPA Suite")
+	RunSpecs(t, "Component HVPA Suite")
 }

@@ -26,7 +26,7 @@ import (
 
 func TestVPA(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component VPA Suite")
+	RunSpecs(t, "Component VPA Suite")
 }
 
 var _ = BeforeSuite(func() {

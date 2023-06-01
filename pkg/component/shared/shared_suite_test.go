@@ -23,5 +23,5 @@ import (
 
 func TestShared(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Shared Suite")
+	RunSpecs(t, "Component Shared Suite")
 }

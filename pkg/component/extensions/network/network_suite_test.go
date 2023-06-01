@@ -23,5 +23,5 @@ import (
 
 func TestNetwork(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Extensions Network Suite")
+	RunSpecs(t, "Component Extensions Network Suite")
 }

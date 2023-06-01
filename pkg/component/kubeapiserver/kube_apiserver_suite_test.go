@@ -23,5 +23,5 @@ import (
 
 func TestKubeAPIServer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component KubeAPIServer Suite")
+	RunSpecs(t, "Component KubeAPIServer Suite")
 }

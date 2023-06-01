@@ -23,5 +23,5 @@ import (
 
 func TestKubelet(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Extensions OperatingSystemConfig Original Components Kubelet Suite")
+	RunSpecs(t, "Component Extensions OperatingSystemConfig Original Components Kubelet Suite")
 }

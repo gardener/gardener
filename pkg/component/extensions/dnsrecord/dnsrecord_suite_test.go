@@ -23,5 +23,5 @@ import (
 
 func TestDNSRecord(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Extensions DNSRecord Suite")
+	RunSpecs(t, "Component Extensions DNSRecord Suite")
 }

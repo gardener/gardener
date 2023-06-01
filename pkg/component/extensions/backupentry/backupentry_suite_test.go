@@ -23,5 +23,5 @@ import (
 
 func TestBackupEntry(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Extensions BackupEntry Suite")
+	RunSpecs(t, "Component Extensions BackupEntry Suite")
 }

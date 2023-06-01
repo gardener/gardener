@@ -23,5 +23,5 @@ import (
 
 func TestEtcdCopyBackupsTask(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component EtcdCopyBackupsTask Suite")
+	RunSpecs(t, "Component EtcdCopyBackupsTask Suite")
 }

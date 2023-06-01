@@ -26,7 +26,7 @@ import (
 
 func TestKubeControllerManager(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component KubeControllerManager Suite")
+	RunSpecs(t, "Component KubeControllerManager Suite")
 }
 
 var _ = BeforeSuite(func() {

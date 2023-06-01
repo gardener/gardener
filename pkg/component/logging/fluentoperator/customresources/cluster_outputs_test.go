@@ -43,43 +43,43 @@ var _ = Describe("Logging", func() {
 						Spec: fluentbitv1alpha2.OutputSpec{
 							CustomPlugin: &custom.CustomPlugin{
 								Config: `Name gardenervali
-			Match kubernetes.*
-			Url http://logging.garden.svc:3100/vali/api/v1/push
-			LogLevel info
-			BatchWait 60s
-			BatchSize 30720
-			Labels {origin="seed"}
-			LineFormat json
-			SortByTimestamp true
-			DropSingleKey false
-			AutoKubernetesLabels false
-			LabelSelector gardener.cloud/role:shoot
-			RemoveKeys kubernetes,stream,time,tag,gardenuser,job
-			LabelMapPath {"kubernetes": {"container_name":"container_name","container_id":"container_id","namespace_name":"namespace_name","pod_name":"pod_name"},"severity": "severity","job": "job"}
-			DynamicHostPath {"kubernetes": {"namespace_name": "namespace"}}
-			DynamicHostPrefix http://logging.
-			DynamicHostSuffix .svc:3100/vali/api/v1/push
-			DynamicHostRegex ^shoot-
-			DynamicTenant user gardenuser user
-			HostnameKeyValue nodename ${NODE_NAME}
-			MaxRetries 3
-			Timeout 10s
-			MinBackoff 30s
-			Buffer true
-			BufferType dque
-			QueueDir /fluent-bit/buffers/seed
-			QueueSegmentSize 300
-			QueueSync normal
-			QueueName gardener-kubernetes-operator
-			FallbackToTagWhenMetadataIsMissing true
-			TagKey tag
-			DropLogEntryWithoutK8sMetadata true
-			SendDeletedClustersLogsToDefaultClient true
-			CleanExpiredClientsPeriod 1h
-			ControllerSyncTimeout 120s
-			PreservedLabels origin,namespace_name,pod_name
-			NumberOfBatchIDs 5
-			TenantID operator`,
+Match kubernetes.*
+Url http://logging.garden.svc:3100/vali/api/v1/push
+LogLevel info
+BatchWait 60s
+BatchSize 30720
+Labels {origin="seed"}
+LineFormat json
+SortByTimestamp true
+DropSingleKey false
+AutoKubernetesLabels false
+LabelSelector gardener.cloud/role:shoot
+RemoveKeys kubernetes,stream,time,tag,gardenuser,job
+LabelMapPath {"kubernetes": {"container_name":"container_name","container_id":"container_id","namespace_name":"namespace_name","pod_name":"pod_name"},"severity": "severity","job": "job"}
+DynamicHostPath {"kubernetes": {"namespace_name": "namespace"}}
+DynamicHostPrefix http://logging.
+DynamicHostSuffix .svc:3100/vali/api/v1/push
+DynamicHostRegex ^shoot-
+DynamicTenant user gardenuser user
+HostnameKeyValue nodename ${NODE_NAME}
+MaxRetries 3
+Timeout 10s
+MinBackoff 30s
+Buffer true
+BufferType dque
+QueueDir /fluent-bit/buffers/seed
+QueueSegmentSize 300
+QueueSync normal
+QueueName gardener-kubernetes-operator
+FallbackToTagWhenMetadataIsMissing true
+TagKey tag
+DropLogEntryWithoutK8sMetadata true
+SendDeletedClustersLogsToDefaultClient true
+CleanExpiredClientsPeriod 1h
+ControllerSyncTimeout 120s
+PreservedLabels origin,namespace_name,pod_name
+NumberOfBatchIDs 5
+TenantID operator`,
 							},
 						},
 					},
@@ -91,32 +91,33 @@ var _ = Describe("Logging", func() {
 						Spec: fluentbitv1alpha2.OutputSpec{
 							CustomPlugin: &custom.CustomPlugin{
 								Config: `Name gardenervali
-			Match journald.*
-			Url http://logging.garden.svc:3100/vali/api/v1/push
-			LogLevel info
-			BatchWait 60s
-			BatchSize 30720
-			Labels {origin="seed-journald"}
-			LineFormat json
-			SortByTimestamp true
-			DropSingleKey false
-			RemoveKeys kubernetes,stream,hostname,unit
-			LabelMapPath {"hostname":"host_name","unit":"systemd_component"}
-			HostnameKeyValue nodename ${NODE_NAME}
-			MaxRetries 3
-			Timeout 10s
-			MinBackoff 30s
-			Buffer true
-			BufferType dque
-			QueueDir /fluent-bit/buffers
-			QueueSegmentSize 300
-			QueueSync normal
-			QueueName seed-journald
-			NumberOfBatchIDs 5`,
+Match journald.*
+Url http://logging.garden.svc:3100/vali/api/v1/push
+LogLevel info
+BatchWait 60s
+BatchSize 30720
+Labels {origin="seed-journald"}
+LineFormat json
+SortByTimestamp true
+DropSingleKey false
+RemoveKeys kubernetes,stream,hostname,unit
+LabelMapPath {"hostname":"host_name","unit":"systemd_component"}
+HostnameKeyValue nodename ${NODE_NAME}
+MaxRetries 3
+Timeout 10s
+MinBackoff 30s
+Buffer true
+BufferType dque
+QueueDir /fluent-bit/buffers
+QueueSegmentSize 300
+QueueSync normal
+QueueName seed-journald
+NumberOfBatchIDs 5`,
 							},
 						},
 					},
-				}))
+				},
+			))
 		})
 	})
 })

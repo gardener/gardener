@@ -23,5 +23,5 @@ import (
 
 func TestNodeProblemDetector(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component NodeProblemDetector Suite")
+	RunSpecs(t, "Component NodeProblemDetector Suite")
 }

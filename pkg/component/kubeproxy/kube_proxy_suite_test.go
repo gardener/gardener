@@ -23,5 +23,5 @@ import (
 
 func TestKubeProxy(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component KubeProxy Suite")
+	RunSpecs(t, "Component KubeProxy Suite")
 }

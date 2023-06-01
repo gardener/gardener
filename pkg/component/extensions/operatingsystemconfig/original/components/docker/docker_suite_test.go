@@ -23,5 +23,5 @@ import (
 
 func TestDocker(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Extensions OperatingSystemConfig Original Components Docker Suite")
+	RunSpecs(t, "Component Extensions OperatingSystemConfig Original Components Docker Suite")
 }

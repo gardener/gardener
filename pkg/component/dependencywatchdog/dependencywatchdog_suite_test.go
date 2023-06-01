@@ -23,5 +23,5 @@ import (
 
 func TestDependencyWatchdog(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component DependencyWatchdog Suite")
+	RunSpecs(t, "Component DependencyWatchdog Suite")
 }

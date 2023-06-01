@@ -23,5 +23,5 @@ import (
 
 func TestWorker(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Extensions Worker Suite")
+	RunSpecs(t, "Component Extensions Worker Suite")
 }

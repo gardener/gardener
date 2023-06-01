@@ -26,7 +26,7 @@ import (
 
 func TestMachineControllerManager(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component MachineControllerManager Suite")
+	RunSpecs(t, "Component MachineControllerManager Suite")
 }
 
 var _ = BeforeSuite(func() {
