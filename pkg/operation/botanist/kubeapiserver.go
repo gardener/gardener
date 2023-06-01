@@ -105,6 +105,10 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 		apiServerResources        corev1.ResourceRequirements
 	)
 
+	if b.ManagedSeed != nil {
+		hvpaEnabled = features.DefaultFeatureGate.Enabled(features.HVPAForShootedSeed)
+	}
+
 	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeProduction {
 		minReplicas = 2
 	}
@@ -135,7 +139,6 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 	}
 
 	if b.ManagedSeed != nil {
-		hvpaEnabled = features.DefaultFeatureGate.Enabled(features.HVPAForShootedSeed)
 		useMemoryMetricForHvpaHPA = true
 
 		if b.ManagedSeedAPIServer != nil {
