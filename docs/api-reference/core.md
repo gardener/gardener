@@ -1641,8 +1641,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>SeedName is the name of the seed cluster that runs the control plane of the Shoot.
-This field is immutable when the SeedChange feature gate is disabled.</p>
+<p>SeedName is the name of the seed cluster that runs the control plane of the Shoot.</p>
 </td>
 </tr>
 <tr>
@@ -10752,8 +10751,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>SeedName is the name of the seed cluster that runs the control plane of the Shoot.
-This field is immutable when the SeedChange feature gate is disabled.</p>
+<p>SeedName is the name of the seed cluster that runs the control plane of the Shoot.</p>
 </td>
 </tr>
 <tr>
@@ -11379,8 +11377,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>SeedName is the name of the seed cluster that runs the control plane of the Shoot.
-This field is immutable when the SeedChange feature gate is disabled.</p>
+<p>SeedName is the name of the seed cluster that runs the control plane of the Shoot.</p>
 </td>
 </tr>
 <tr>

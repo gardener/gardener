@@ -2,8 +2,6 @@
 
 ## Prerequisites
 
-To be able to use this feature, the `SeedChange` feature gate has to be enabled on your `gardener-apiserver`.
-
 Also, the involved Seeds need to have enabled `BackupBucket`s.
 
 ## ShootState

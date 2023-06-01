@@ -2671,7 +2671,6 @@ message ShootSpec {
   optional string secretBindingName = 13;
 
   // SeedName is the name of the seed cluster that runs the control plane of the Shoot.
-  // This field is immutable when the SeedChange feature gate is disabled.
   // +optional
   optional string seedName = 14;
 
