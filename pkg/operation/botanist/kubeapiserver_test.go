@@ -153,6 +153,12 @@ var _ = Describe("KubeAPIServer", func() {
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.22.0",
 				},
+				Provider: gardencorev1beta1.Provider{
+					Workers: []gardencorev1beta1.Worker{
+						{Minimum: 2, Maximum: 20},
+						{Minimum: 2, Maximum: 20},
+					},
+				},
 			},
 			Status: gardencorev1beta1.ShootStatus{
 				TechnicalID: seedNamespace,
@@ -194,7 +200,7 @@ var _ = Describe("KubeAPIServer", func() {
 					nil,
 					map[featuregate.Feature]bool{features.HVPA: false},
 					kubeapiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
 						HVPAEnabled:               false,
 						MinReplicas:               1,
 						MaxReplicas:               4,
@@ -206,7 +212,7 @@ var _ = Describe("KubeAPIServer", func() {
 					nil,
 					map[featuregate.Feature]bool{features.HVPA: true},
 					kubeapiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(40, ""),
 						HVPAEnabled:               true,
 						MinReplicas:               1,
 						MaxReplicas:               4,
@@ -240,7 +246,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					nil,
 					kubeapiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
 						HVPAEnabled:               false,
 						MinReplicas:               2,
 						MaxReplicas:               4,
@@ -254,7 +260,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					nil,
 					kubeapiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
 						HVPAEnabled:               false,
 						MinReplicas:               4,
 						MaxReplicas:               4,
@@ -268,7 +274,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					map[featuregate.Feature]bool{features.HVPAForShootedSeed: false},
 					kubeapiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
 						HVPAEnabled:               false,
 						MinReplicas:               1,
 						MaxReplicas:               4,
@@ -282,7 +288,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					map[featuregate.Feature]bool{features.HVPAForShootedSeed: true},
 					kubeapiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(40, ""),
 						HVPAEnabled:               true,
 						MinReplicas:               1,
 						MaxReplicas:               4,
@@ -303,7 +309,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					map[featuregate.Feature]bool{features.HVPAForShootedSeed: true},
 					kubeapiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(40, ""),
 						HVPAEnabled:               true,
 						MinReplicas:               16,
 						MaxReplicas:               32,
@@ -377,7 +383,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					nil,
 					kubeapiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
 						HVPAEnabled:               false,
 						MinReplicas:               3,
 						MaxReplicas:               4,
