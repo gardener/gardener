@@ -26,7 +26,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,10 +46,10 @@ import (
 )
 
 var (
-	//go:embed crds/templates/crd-druid.gardener.cloud_etcds.yaml
+	//go:embed crds/templates/crd-druid.gardener.cloud_etcds-copy.yaml
 	etcdCRD string
-	//go:embed crds/templates/crd-druid.gardener.cloud_etcdcopybackupstasks.yaml
-	etcdCopyBackupsTaskCRD string
+	//go:embed crds/templates/crd-druid.gardener.cloud_etcdcopybackupstasks-copy.yaml
+	etcdCopyBackupsTaskCRD1 string
 )
 
 var _ = Describe("Etcd", func() {
@@ -481,7 +480,7 @@ status:
 					"deployment__" + namespace + "__etcd-druid.yaml":                []byte(deploymentWithoutImageVectorOverwriteYAML),
 					"poddisruptionbudget__" + namespace + "__etcd-druid.yaml":       []byte(podDisruptionYAML),
 					"crd.yaml":                    []byte(etcdCRD),
-					"crdEtcdCopyBackupsTask.yaml": []byte(etcdCopyBackupsTaskCRD),
+					"crdEtcdCopyBackupsTask.yaml": []byte(etcdCopyBackupsTaskCRD1),
 				},
 			}
 			managedResource = &resourcesv1alpha1.ManagedResource{
@@ -654,10 +653,8 @@ status:
 			It("should succeed when isNoMatch error is returned", func() {
 				noMatchError := &meta.NoKindMatchError{}
 				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})).Return(noMatchError)
-				c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&apiextensionsv1.CustomResourceDefinition{}), gomock.Any())
 
 				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdCopyBackupsTaskList{})).Return(noMatchError)
-				c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&apiextensionsv1.CustomResourceDefinition{}), gomock.Any())
 
 				c.EXPECT().Delete(gomock.Any(), gomock.Any())
 				c.EXPECT().Delete(gomock.Any(), gomock.Any())
@@ -668,10 +665,8 @@ status:
 			It("should suceed when NotFoundError is returned", func() {
 				notFoundError := apierrors.NewNotFound(schema.GroupResource{}, "etcd")
 				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})).Return(notFoundError)
-				c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&apiextensionsv1.CustomResourceDefinition{}), gomock.Any())
 
 				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdCopyBackupsTaskList{})).Return(notFoundError)
-				c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&apiextensionsv1.CustomResourceDefinition{}), gomock.Any())
 
 				c.EXPECT().Delete(gomock.Any(), gomock.Any())
 				c.EXPECT().Delete(gomock.Any(), gomock.Any())
@@ -695,7 +690,6 @@ status:
 			It("should fail when there are EtcdCopyBackupsTask resources left", func() {
 				notFoundError := apierrors.NewNotFound(schema.GroupResource{}, "etcd")
 				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})).Return(notFoundError)
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&apiextensionsv1.CustomResourceDefinition{}), gomock.Any())
 				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdCopyBackupsTaskList{})).DoAndReturn(
 					func(ctx context.Context, list client.ObjectList, _ ...client.ListOptions) error {
 						(&druidv1alpha1.EtcdCopyBackupsTaskList{
@@ -707,32 +701,10 @@ status:
 				Expect(bootstrapper.Destroy(ctx)).To(MatchError(ContainSubstring("because there are still druidv1alpha1.EtcdCopyBackupsTask resources left in the cluster")))
 			})
 
-			It("should fail when the deletion confirmation for etcd CRDs fails", func() {
-				gomock.InOrder(
-					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&apiextensionsv1.CustomResourceDefinition{}), gomock.Any()).Return(fakeErr),
-				)
-
-				Expect(bootstrapper.Destroy(ctx)).To(MatchError(fakeErr))
-			})
-
-			It("should fail when the deletion confirmation for EtcdCopyBackupsTask CRDs fails", func() {
-				gomock.InOrder(
-					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&apiextensionsv1.CustomResourceDefinition{}), gomock.Any()),
-					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdCopyBackupsTaskList{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&apiextensionsv1.CustomResourceDefinition{}), gomock.Any()).Return(fakeErr),
-				)
-
-				Expect(bootstrapper.Destroy(ctx)).To(MatchError(fakeErr))
-			})
-
 			It("should fail when the managed resource deletion fails", func() {
 				gomock.InOrder(
 					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&apiextensionsv1.CustomResourceDefinition{}), gomock.Any()),
 					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdCopyBackupsTaskList{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&apiextensionsv1.CustomResourceDefinition{}), gomock.Any()),
 					c.EXPECT().Delete(ctx, managedResource).Return(fakeErr),
 				)
 
@@ -742,9 +714,7 @@ status:
 			It("should fail when the secret deletion fails", func() {
 				gomock.InOrder(
 					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&apiextensionsv1.CustomResourceDefinition{}), gomock.Any()),
 					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdCopyBackupsTaskList{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&apiextensionsv1.CustomResourceDefinition{}), gomock.Any()),
 					c.EXPECT().Delete(ctx, managedResource),
 					c.EXPECT().Delete(ctx, secret).Return(fakeErr),
 				)
@@ -755,9 +725,7 @@ status:
 			It("should successfully delete all resources", func() {
 				gomock.InOrder(
 					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&apiextensionsv1.CustomResourceDefinition{}), gomock.Any()),
 					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdCopyBackupsTaskList{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&apiextensionsv1.CustomResourceDefinition{}), gomock.Any()),
 					c.EXPECT().Delete(ctx, managedResource),
 					c.EXPECT().Delete(ctx, secret),
 				)

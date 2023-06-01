@@ -58,6 +58,7 @@ import (
 )
 
 type components struct {
+	etcdCRD  component.Deployer
 	vpaCRD   component.Deployer
 	hvpaCRD  component.Deployer
 	istioCRD component.DeployWaiter
@@ -93,6 +94,7 @@ func (r *Reconciler) instantiateComponents(
 	err error,
 ) {
 	// crds
+	c.etcdCRD = etcd.NewCRD(r.RuntimeClientSet.Client(), applier)
 	c.vpaCRD = vpa.NewCRD(applier, nil)
 	c.hvpaCRD = hvpa.NewCRD(applier)
 	if !hvpaEnabled() {

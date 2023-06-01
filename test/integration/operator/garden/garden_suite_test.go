@@ -61,9 +61,6 @@ var _ = BeforeSuite(func() {
 		CRDInstallOptions: envtest.CRDInstallOptions{
 			Paths: []string{
 				filepath.Join("..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml"),
-				// This CRD would be installed by gardener-resource-manager (GRM) in a real system, however in this
-				// integration test GRM is not running. Hence, we have to create it manually to satisfy the test setup.
-				filepath.Join("..", "..", "..", "..", "example", "seed-crds", "10-crd-druid.gardener.cloud_etcds.yaml"),
 			},
 		},
 		ErrorIfCRDPathMissing: true,

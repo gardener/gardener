@@ -303,6 +303,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 	if !seedIsGarden {
 		var (
 			kubeStateMetrics              = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
+			etcdCRD                       = etcd.NewCRD(seedClient, r.SeedClientSet.Applier())
 			etcdDruid                     = etcd.NewBootstrapper(seedClient, r.GardenNamespace, nil, r.Config.ETCDConfig, "", nil, "")
 			hvpa                          = hvpa.New(seedClient, r.GardenNamespace, hvpa.Values{})
 			verticalPodAutoscaler         = vpa.New(seedClient, r.GardenNamespace, nil, vpa.Values{ClusterType: component.ClusterTypeSeed, RuntimeKubernetesVersion: kubernetesVersion})
@@ -339,6 +340,11 @@ func (r *Reconciler) runDeleteSeedFlow(
 				Fn:           component.OpDestroyAndWait(fluentOperator).Destroy,
 				Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources),
 			})
+			destroyEtcdCRD = g.Add(flow.Task{
+				Name:         "Destroy ETCD-related custom resource definitions",
+				Fn:           component.OpDestroyAndWait(etcdCRD).Destroy,
+				Dependencies: flow.NewTaskIDs(destroyEtcdDruid),
+			})
 		)
 
 		syncPointCleanedUp.Insert(
@@ -348,6 +354,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyVPA,
 			destroyFluentOperatorResources,
 			destroyFluentOperator,
+			destroyEtcdCRD,
 		)
 
 		var (

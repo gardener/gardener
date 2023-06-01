@@ -252,6 +252,8 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 				APIGroups: []string{"apiextensions.k8s.io"},
 				Resources: []string{"customresourcedefinitions"},
 				ResourceNames: []string{
+					"etcds.druid.gardener.cloud",
+					"etcdcopybackupstasks.druid.gardener.cloud",
 					"hvpas.autoscaling.k8s.io",
 					"destinationrules.networking.istio.io",
 					"envoyfilters.networking.istio.io",

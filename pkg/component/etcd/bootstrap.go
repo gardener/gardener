@@ -31,7 +31,6 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -49,7 +48,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -60,8 +58,6 @@ const (
 	// Druid is a constant for the name of the etcd-druid.
 	Druid = "etcd-druid"
 
-	etcdCRDName                                  = "etcds.druid.gardener.cloud"
-	etcdCopyBackupsTaskCRDName                   = "etcdcopybackupstasks.druid.gardener.cloud"
 	druidRBACName                                = "gardener.cloud:system:" + Druid
 	druidServiceAccountName                      = Druid
 	druidVPAName                                 = Druid + "-vpa"
@@ -75,11 +71,10 @@ const (
 )
 
 var (
-	//go:embed crds/templates/crd-druid.gardener.cloud_etcds.yaml
-	// CRD holds the etcd custom resource definition template
-	CRD string
-	//go:embed crds/templates/crd-druid.gardener.cloud_etcdcopybackupstasks.yaml
-	etcdCopyBackupsTaskCRD string
+	//go:embed crds/templates/crd-druid.gardener.cloud_etcds-copy.yaml
+	etcdCRD string
+	//go:embed crds/templates/crd-druid.gardener.cloud_etcdcopybackupstasks-copy.yaml
+	etcdCopyBackupsTaskCRD1 string
 )
 
 // NewBootstrapper creates a new instance of DeployWaiter for the etcd bootstrapper.
@@ -375,8 +370,10 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	resources["crd.yaml"] = []byte(CRD)
-	resources["crdEtcdCopyBackupsTask.yaml"] = []byte(etcdCopyBackupsTaskCRD)
+
+	// TODO(acumino): Drop CRDs deployment from here in release v1.73.
+	resources["crd.yaml"] = []byte(etcdCRD)
+	resources["crdEtcdCopyBackupsTask.yaml"] = []byte(etcdCopyBackupsTaskCRD1)
 
 	return managedresources.CreateForSeed(ctx, b.client, b.namespace, managedResourceControlName, false, resources)
 }
@@ -412,10 +409,6 @@ func (b *bootstrapper) Destroy(ctx context.Context) error {
 		return fmt.Errorf("cannot debootstrap etcd-druid because there are still druidv1alpha1.Etcd resources left in the cluster")
 	}
 
-	if err := gardenerutils.ConfirmDeletion(ctx, b.client, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: etcdCRDName}}); client.IgnoreNotFound(err) != nil {
-		return err
-	}
-
 	etcdCopyBackupsTaskList := &druidv1alpha1.EtcdCopyBackupsTaskList{}
 	if err := b.client.List(ctx, etcdCopyBackupsTaskList); err != nil && !meta.IsNoMatchError(err) && !apierrors.IsNotFound(err) {
 		return err
@@ -423,10 +416,6 @@ func (b *bootstrapper) Destroy(ctx context.Context) error {
 
 	if len(etcdCopyBackupsTaskList.Items) > 0 {
 		return fmt.Errorf("cannot debootstrap etcd-druid because there are still druidv1alpha1.EtcdCopyBackupsTask resources left in the cluster")
-	}
-
-	if err := gardenerutils.ConfirmDeletion(ctx, b.client, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: etcdCopyBackupsTaskCRDName}}); client.IgnoreNotFound(err) != nil {
-		return err
 	}
 
 	return managedresources.DeleteForSeed(ctx, b.client, b.namespace, managedResourceControlName)
