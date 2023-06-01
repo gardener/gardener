@@ -22,15 +22,18 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockclusterautoscaler "github.com/gardener/gardener/pkg/component/clusterautoscaler/mock"
 	mockworker "github.com/gardener/gardener/pkg/component/extensions/worker/mock"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
@@ -40,16 +43,22 @@ import (
 
 var _ = Describe("ClusterAutoscaler", func() {
 	var (
-		ctrl     *gomock.Controller
-		botanist *Botanist
+		ctx     = context.TODO()
+		fakeErr = fmt.Errorf("fake err")
+
+		ctrl             *gomock.Controller
+		botanist         *Botanist
+		kubernetesClient *kubernetesmock.MockInterface
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
+		kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
 		botanist = &Botanist{Operation: &operation.Operation{}}
 		botanist.Seed = &seedpkg.Seed{
 			KubernetesVersion: semver.MustParse("1.25.0"),
 		}
+		botanist.SeedClientSet = kubernetesClient
 	})
 
 	AfterEach(func() {
@@ -57,13 +66,9 @@ var _ = Describe("ClusterAutoscaler", func() {
 	})
 
 	Describe("#DefaultClusterAutoscaler", func() {
-		var kubernetesClient *kubernetesmock.MockInterface
-
 		BeforeEach(func() {
-			kubernetesClient = kubernetesmock.NewMockInterface(ctrl)
 			kubernetesClient.EXPECT().Version()
 
-			botanist.SeedClientSet = kubernetesClient
 			botanist.Shoot = &shootpkg.Shoot{}
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 		})
@@ -91,8 +96,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 			clusterAutoscaler *mockclusterautoscaler.MockInterface
 			worker            *mockworker.MockInterface
 
-			ctx                = context.TODO()
-			fakeErr            = fmt.Errorf("fake err")
 			namespaceUID       = types.UID("5678")
 			machineDeployments = []extensionsv1alpha1.MachineDeployment{{}}
 		)
@@ -152,6 +155,38 @@ var _ = Describe("ClusterAutoscaler", func() {
 				clusterAutoscaler.EXPECT().Destroy(ctx).Return(fakeErr)
 				Expect(botanist.DeployClusterAutoscaler(ctx)).To(Equal(fakeErr))
 			})
+		})
+	})
+
+	Describe("#ScaleClusterAutoscalerToZero", func() {
+		var (
+			c         *mockclient.MockClient
+			sw        *mockclient.MockSubResourceClient
+			patch     = client.RawPatch(types.MergePatchType, []byte(`{"spec":{"replicas":0}}`))
+			namespace = "shoot--foo--bar"
+		)
+
+		BeforeEach(func() {
+			botanist.SeedClientSet = kubernetesClient
+			botanist.Shoot = &shootpkg.Shoot{
+				SeedNamespace: namespace,
+			}
+
+			c = mockclient.NewMockClient(ctrl)
+			kubernetesClient.EXPECT().Client().Return(c)
+
+			sw = mockclient.NewMockSubResourceClient(ctrl)
+			c.EXPECT().SubResource("scale").Return(sw)
+		})
+
+		It("should scale the CA deployment", func() {
+			sw.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), patch)
+			Expect(botanist.ScaleClusterAutoscalerToZero(ctx)).To(Succeed())
+		})
+
+		It("should fail when the scale call fails", func() {
+			sw.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), patch).Return(fakeErr)
+			Expect(botanist.ScaleClusterAutoscalerToZero(ctx)).To(MatchError(fakeErr))
 		})
 	})
 })

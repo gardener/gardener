@@ -632,10 +632,15 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			deployNginxIngressAddon,
 		)
 
+		scaleClusterAutoscalerToZero = g.Add(flow.Task{
+			Name:         "Scaling down cluster autoscaler",
+			Fn:           flow.TaskFn(botanist.ScaleClusterAutoscalerToZero).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsWorkerless).DoIf(o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(deployManagedResourcesForAddons, deployManagedResourceForCloudConfigExecutor),
+		})
 		deployWorker = g.Add(flow.Task{
 			Name:         "Configuring shoot worker pools",
 			Fn:           flow.TaskFn(botanist.DeployWorker).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsWorkerless),
-			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, deployReferencedResources, waitUntilInfrastructureReady, initializeShootClients, waitUntilOperatingSystemConfigReady, waitUntilNetworkIsReady, createNewServiceAccountSecrets),
+			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, deployReferencedResources, waitUntilInfrastructureReady, initializeShootClients, waitUntilOperatingSystemConfigReady, waitUntilNetworkIsReady, createNewServiceAccountSecrets, scaleClusterAutoscalerToZero),
 		})
 		waitUntilWorkerStatusUpdate = g.Add(flow.Task{
 			Name: "Waiting until worker resource status is updated with latest machine deployments",
@@ -646,7 +651,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		deployClusterAutoscaler = g.Add(flow.Task{
 			Name:         "Deploying cluster autoscaler",
-			Fn:           flow.TaskFn(botanist.DeployClusterAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsWorkerless),
+			Fn:           flow.TaskFn(botanist.DeployClusterAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerStatusUpdate, deployManagedResourcesForAddons, deployManagedResourceForCloudConfigExecutor),
 		})
 		_ = g.Add(flow.Task{

@@ -96,6 +96,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 
 	var clusterAutoscalerUsed = extensionsv1alpha1helper.ClusterAutoscalerRequired(worker.Spec.Pools)
 
+	// TODO(rfranzke): Remove this code after v1.77 was released.
 	// When the Shoot is hibernated we want to remove the cluster autoscaler so that it does not interfer
 	// with Gardeners modifications on the machine deployment's replicas fields.
 	isHibernationEnabled := controller.IsHibernationEnabled(cluster)
@@ -198,6 +199,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 		}
 	}
 
+	// TODO(rfranzke): Remove this code after v1.77 was released.
 	if clusterAutoscalerUsed && !isHibernationEnabled {
 		if err = a.scaleClusterAutoscaler(ctx, log, worker, 1); err != nil {
 			return err
