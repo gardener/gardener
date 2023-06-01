@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
 
 // ControllerName is the name of this controller.
@@ -73,7 +74,8 @@ func (r *Reconciler) ShootPredicate() predicate.Predicate {
 }
 
 func refChange(oldShoot, newShoot *gardencorev1beta1.Shoot) bool {
-	return shootDNSFieldChanged(oldShoot, newShoot) || shootKubeAPIServerAuditConfigFieldChanged(oldShoot, newShoot)
+	return shootDNSFieldChanged(oldShoot, newShoot) ||
+		shootKubeAPIServerAuditConfigFieldChanged(oldShoot, newShoot) || !v1beta1helper.ShootResourceReferencesEqual(oldShoot.Spec.Resources, newShoot.Spec.Resources)
 }
 
 func shootDNSFieldChanged(oldShoot, newShoot *gardencorev1beta1.Shoot) bool {

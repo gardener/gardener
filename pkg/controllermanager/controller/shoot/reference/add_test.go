@@ -17,6 +17,7 @@ package reference_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -71,7 +72,7 @@ var _ = Describe("Add", func() {
 					Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: shoot})).To(BeFalse())
 				})
 
-				It("should return because the DNS fields changed", func() {
+				It("should return true because the DNS fields changed", func() {
 					oldShoot := shoot.DeepCopy()
 					shoot.Spec.DNS = &gardencorev1beta1.DNS{
 						Providers: []gardencorev1beta1.DNSProvider{{
@@ -81,7 +82,7 @@ var _ = Describe("Add", func() {
 					Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
 				})
 
-				It("should return because the audit policy fields changed", func() {
+				It("should return true because the audit policy field changed", func() {
 					oldShoot := shoot.DeepCopy()
 					shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig = &gardencorev1beta1.AuditConfig{
 						AuditPolicy: &gardencorev1beta1.AuditPolicy{
@@ -90,6 +91,19 @@ var _ = Describe("Add", func() {
 							},
 						},
 					}
+					Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
+				})
+
+				It("should return true because the resources field changed", func() {
+					oldShoot := shoot.DeepCopy()
+					shoot.Spec.Resources = []gardencorev1beta1.NamedResourceReference{{
+						Name: "resource-1",
+						ResourceRef: autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "v1",
+							Kind:       "Secret",
+							Name:       "test",
+						},
+					}}
 					Expect(p.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: oldShoot})).To(BeTrue())
 				})
 			})

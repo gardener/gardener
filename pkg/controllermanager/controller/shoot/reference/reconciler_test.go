@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -747,6 +748,277 @@ var _ = Describe("Shoot References", func() {
 			Expect(result).To(Equal(emptyResult()))
 			Expect(updatedConfigMap.Finalizers).To(BeEmpty())
 			Expect(updatedConfigMap.ObjectMeta.Name).To(Equal(configMaps[0].Name))
+		})
+	})
+
+	Context("Shoot resources reference test", func() {
+		var (
+			secrets []corev1.Secret
+		)
+
+		BeforeEach(func() {
+			secrets = []corev1.Secret{
+				{ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret-1",
+					Namespace: shootNamespace},
+				},
+				{ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret-2",
+					Namespace: shootNamespace},
+				},
+			}
+
+			gardenClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace)).DoAndReturn(
+				func(_ context.Context, list *corev1.ConfigMapList, _ ...client.ListOption) error {
+					list.Items = []corev1.ConfigMap{}
+					return nil
+				})
+		})
+
+		It("should not add finalizers because shoot does not refer to any secret in resources", func() {
+			shoot.Spec.Resources = []gardencorev1beta1.NamedResourceReference{}
+
+			gardenClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(shootNamespace)).DoAndReturn(
+				func(_ context.Context, list *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
+					list.Items = append(list.Items, shoot)
+					return nil
+				})
+
+			gardenClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(shootNamespace), UserManagedSelector).DoAndReturn(
+				func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
+					list.Items = append(list.Items, secrets...)
+					return nil
+				})
+
+			gardenClient.EXPECT().Get(gomock.Any(), namespacedName, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
+				func(_ context.Context, _ types.NamespacedName, s *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+					*s = shoot
+					return nil
+				})
+
+			request := reconcile.Request{NamespacedName: namespacedName}
+			result, err := reconciler.Reconcile(ctx, request)
+
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(result).To(Equal(emptyResult()))
+			Expect(shoot.ObjectMeta.Finalizers).To(BeEmpty())
+		})
+
+		It("should add finalizer to secrets referneced in resources", func() {
+			secretName := secrets[0].Name
+			secretName2 := secrets[1].Name
+			shoot.Spec.Resources = []gardencorev1beta1.NamedResourceReference{
+				{
+					Name: "resource-1",
+					ResourceRef: autoscalingv1.CrossVersionObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       secrets[0].Name,
+					},
+				},
+				{
+					Name: "resource-2",
+					ResourceRef: autoscalingv1.CrossVersionObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       secrets[1].Name,
+					},
+				},
+			}
+
+			gardenClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(shootNamespace)).DoAndReturn(
+				func(_ context.Context, list *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
+					list.Items = append(list.Items, shoot)
+					return nil
+				})
+
+			gardenClient.EXPECT().Get(gomock.Any(), namespacedName, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
+				func(_ context.Context, _ types.NamespacedName, s *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+					*s = shoot
+					return nil
+				})
+
+			gardenClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(shootNamespace), UserManagedSelector).DoAndReturn(
+				func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
+					list.Items = append(list.Items, secrets...)
+					return nil
+				})
+
+			var (
+				m              sync.Mutex
+				updatedSecrets []*corev1.Secret
+			)
+			gardenClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(secrets[0].Namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+				func(_ context.Context, _ types.NamespacedName, s *corev1.Secret, _ ...client.GetOption) error {
+					*s = secrets[0]
+					return nil
+				})
+			gardenClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(secrets[1].Namespace, secretName2), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+				func(_ context.Context, _ types.NamespacedName, s *corev1.Secret, _ ...client.GetOption) error {
+					*s = secrets[1]
+					return nil
+				})
+			gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, secret *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
+					defer m.Unlock()
+					m.Lock()
+					updatedSecrets = append(updatedSecrets, secret)
+					return nil
+				})
+			gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, secret *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
+					defer m.Unlock()
+					m.Lock()
+					updatedSecrets = append(updatedSecrets, secret)
+					return nil
+				})
+
+			var updatedShoot *gardencorev1beta1.Shoot
+			gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
+					updatedShoot = shoot
+					return nil
+				})
+
+			request := reconcile.Request{NamespacedName: namespacedName}
+			result, err := reconciler.Reconcile(ctx, request)
+
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(result).To(Equal(emptyResult()))
+			Expect(updatedShoot.ObjectMeta.Finalizers).To(ConsistOf(Equal(FinalizerName)))
+			Expect(updatedSecrets).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"ObjectMeta": MatchFields(IgnoreExtras, Fields{
+						"Finalizers": ConsistOf(FinalizerName),
+						"Name":       Equal(secretName),
+					}),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"ObjectMeta": MatchFields(IgnoreExtras, Fields{
+						"Finalizers": ConsistOf(FinalizerName),
+						"Name":       Equal(secretName2),
+					}),
+				})),
+			))
+		})
+
+		It("should remove finalizer from secret because shoot is in deletion", func() {
+			secretName := secrets[0].Name
+			secrets[0].Finalizers = []string{FinalizerName}
+
+			now := metav1.Now()
+			shoot.ObjectMeta.DeletionTimestamp = &now
+			shoot.Finalizers = []string{FinalizerName}
+
+			shoot.Spec.Resources = []gardencorev1beta1.NamedResourceReference{
+				{
+					Name: "resource-1",
+					ResourceRef: autoscalingv1.CrossVersionObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       secretName,
+					},
+				},
+			}
+
+			gardenClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(shootNamespace)).DoAndReturn(
+				func(_ context.Context, list *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
+					list.Items = append(list.Items, shoot)
+					return nil
+				})
+
+			gardenClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(shootNamespace), UserManagedSelector).DoAndReturn(
+				func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
+					list.Items = append(list.Items, secrets...)
+					return nil
+				})
+
+			gardenClient.EXPECT().Get(gomock.Any(), namespacedName, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
+				func(_ context.Context, _ types.NamespacedName, s *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+					*s = shoot
+					return nil
+				})
+
+			var updatedSecret *corev1.Secret
+			gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, secret *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
+					updatedSecret = secret
+					return nil
+				})
+
+			var updatedShoot *gardencorev1beta1.Shoot
+			gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
+					updatedShoot = shoot
+					return nil
+				})
+
+			request := reconcile.Request{NamespacedName: namespacedName}
+			result, err := reconciler.Reconcile(ctx, request)
+
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(result).To(Equal(emptyResult()))
+			Expect(updatedShoot.ObjectMeta.Finalizers).To(BeEmpty())
+			Expect(updatedSecret.Finalizers).To(BeEmpty())
+			Expect(updatedSecret.ObjectMeta.Name).To(Equal(secrets[0].Name))
+		})
+
+		It("should remove finalizer from secret because it is not referenced any more", func() {
+			secretName := secrets[1].Name
+			secrets[0].Finalizers = []string{FinalizerName}
+			secrets[1].Finalizers = []string{FinalizerName}
+
+			shoot.Finalizers = []string{FinalizerName}
+
+			shoot.Spec.Resources = []gardencorev1beta1.NamedResourceReference{
+				{
+					Name: "resource-1",
+					ResourceRef: autoscalingv1.CrossVersionObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       secretName,
+					},
+				},
+			}
+
+			gardenClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(shootNamespace)).DoAndReturn(
+				func(_ context.Context, list *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
+					list.Items = append(list.Items, shoot)
+					return nil
+				})
+
+			gardenClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(shootNamespace), UserManagedSelector).DoAndReturn(
+				func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
+					list.Items = append(list.Items, secrets...)
+					return nil
+				})
+
+			gardenClient.EXPECT().Get(gomock.Any(), namespacedName, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
+				func(_ context.Context, _ types.NamespacedName, s *gardencorev1beta1.Shoot, _ ...client.GetOption) error {
+					*s = shoot
+					return nil
+				})
+
+			gardenClient.EXPECT().Get(gomock.Any(), kubernetesutils.Key(shootNamespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+				func(_ context.Context, _ types.NamespacedName, s *corev1.Secret, _ ...client.GetOption) error {
+					*s = secrets[1]
+					return nil
+				})
+
+			var updatedSecret *corev1.Secret
+			gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, secret *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
+					updatedSecret = secret
+					return nil
+				})
+
+			request := reconcile.Request{NamespacedName: namespacedName}
+			result, err := reconciler.Reconcile(ctx, request)
+
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(result).To(Equal(emptyResult()))
+			Expect(updatedSecret.Finalizers).To(BeEmpty())
+			Expect(updatedSecret.ObjectMeta.Name).To(Equal(secrets[0].Name))
 		})
 	})
 })
