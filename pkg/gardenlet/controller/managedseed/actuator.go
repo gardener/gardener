@@ -37,7 +37,6 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
-	v1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
@@ -400,7 +399,7 @@ func (a *actuator) deployGardenlet(
 		managedSeed,
 		seed,
 		gardenletConfig,
-		v1alpha1helper.GetBootstrap(managedSeed.Spec.Gardenlet.Bootstrap),
+		helper.GetBootstrap(managedSeed.Spec.Gardenlet.Bootstrap),
 		pointer.BoolDeref(managedSeed.Spec.Gardenlet.MergeWithParent, false),
 		shoot,
 	)
@@ -442,7 +441,7 @@ func (a *actuator) deleteGardenlet(
 		managedSeed,
 		seed,
 		gardenletConfig,
-		v1alpha1helper.GetBootstrap(managedSeed.Spec.Gardenlet.Bootstrap),
+		helper.GetBootstrap(managedSeed.Spec.Gardenlet.Bootstrap),
 		pointer.BoolDeref(managedSeed.Spec.Gardenlet.MergeWithParent, false),
 		shoot,
 	)
