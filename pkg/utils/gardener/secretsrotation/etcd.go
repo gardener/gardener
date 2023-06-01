@@ -103,7 +103,7 @@ func rewriteEncryptedData(
 	gvks ...schema.GroupVersionKind,
 ) error {
 	var (
-		limiter = rate.NewLimiter(rate.Limit(rotationQPS), rotationQPS)
+		limiter = rate.NewLimiter(rate.Limit(reencryptionQPS), reencryptionQPS)
 		taskFns []flow.TaskFn
 	)
 
