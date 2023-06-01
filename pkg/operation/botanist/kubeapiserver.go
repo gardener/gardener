@@ -127,7 +127,7 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 		nodeCount = b.Shoot.GetMaxNodeCount()
 	}
 
-	if features.DefaultFeatureGate.Enabled(features.DisableScalingClassesForShoots) {
+	if hvpaEnabled && features.DefaultFeatureGate.Enabled(features.DisableScalingClassesForShoots) {
 		apiServerResources = corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("500m"),
