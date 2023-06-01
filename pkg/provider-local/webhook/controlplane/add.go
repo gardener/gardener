@@ -16,6 +16,7 @@ package controlplane
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -28,7 +29,12 @@ import (
 	"github.com/gardener/gardener/pkg/provider-local/local"
 )
 
-var logger = log.Log.WithName("local-controlplane-webhook")
+var (
+	logger = log.Log.WithName("local-controlplane-webhook")
+
+	// GardenletManagesMCM specifies whether the machine-controller-manager should be managed.
+	GardenletManagesMCM bool
+)
 
 // AddToManager creates a webhook and adds it to the manager.
 func AddToManager(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
@@ -41,8 +47,9 @@ func AddToManager(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 		Provider: local.Type,
 		Types: []extensionswebhook.Type{
 			{Obj: &appsv1.Deployment{}},
+			{Obj: &vpaautoscalingv1.VerticalPodAutoscaler{}},
 			{Obj: &extensionsv1alpha1.OperatingSystemConfig{}},
 		},
-		Mutator: genericmutator.NewMutator(NewEnsurer(logger), oscutils.NewUnitSerializer(), kubelet.NewConfigCodec(fciCodec), fciCodec, logger),
+		Mutator: genericmutator.NewMutator(NewEnsurer(logger, GardenletManagesMCM), oscutils.NewUnitSerializer(), kubelet.NewConfigCodec(fciCodec), fciCodec, logger),
 	})
 }

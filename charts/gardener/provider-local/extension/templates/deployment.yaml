@@ -76,6 +76,9 @@ spec:
         {{- if .Values.gardener.version }}
         - --gardener-version={{ .Values.gardener.version }}
         {{- end }}
+        {{- if .Values.gardener.gardenlet.featureGates.MachineControllerManagerDeployment }}
+        - --gardenlet-manages-mcm={{ .Values.gardener.gardenlet.featureGates.MachineControllerManagerDeployment }}
+        {{- end }}
         - --log-level={{ .Values.logLevel | default "info"  }}
         - --log-format={{ .Values.logFormat | default "json"  }}
         env:

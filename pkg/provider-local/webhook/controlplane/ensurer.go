@@ -26,6 +26,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/pointer"
 
@@ -56,15 +57,33 @@ func init() {
 }
 
 // NewEnsurer creates a new controlplane ensurer.
-func NewEnsurer(logger logr.Logger) genericmutator.Ensurer {
+func NewEnsurer(logger logr.Logger, gardenletManagesMCM bool) genericmutator.Ensurer {
 	return &ensurer{
-		logger: logger.WithName("local-controlplane-ensurer"),
+		logger:              logger.WithName("local-controlplane-ensurer"),
+		gardenletManagesMCM: gardenletManagesMCM,
 	}
 }
 
 type ensurer struct {
 	genericmutator.NoopEnsurer
-	logger logr.Logger
+	logger              logr.Logger
+	gardenletManagesMCM bool
+}
+
+// EnsureMachineControllerManagerDeployment ensures that the machine-controller-manager deployment conforms to the provider requirements.
+func (e *ensurer) EnsureMachineControllerManagerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, newObj, _ *appsv1.Deployment) error {
+	if !e.gardenletManagesMCM {
+		return nil
+	}
+	return nil
+}
+
+// EnsureMachineControllerManagerVPA ensures that the machine-controller-manager VPA conforms to the provider requirements.
+func (e *ensurer) EnsureMachineControllerManagerVPA(_ context.Context, _ extensionscontextwebhook.GardenContext, newObj, _ *vpaautoscalingv1.VerticalPodAutoscaler) error {
+	if !e.gardenletManagesMCM {
+		return nil
+	}
+	return nil
 }
 
 func (e *ensurer) EnsureKubeAPIServerDeployment(_ context.Context, _ extensionscontextwebhook.GardenContext, new, _ *appsv1.Deployment) error {
