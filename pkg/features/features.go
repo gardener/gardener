@@ -50,6 +50,7 @@ const (
 	// owner: @shreyas-s-rao @timuthy
 	// alpha: v1.49.0
 	// beta: v1.71.0
+	// GA: v1.73.0
 	HAControlPlanes featuregate.Feature = "HAControlPlanes"
 
 	// DefaultSeccompProfile defaults the seccomp profile for Gardener managed workload in the seed to RuntimeDefault.
@@ -114,7 +115,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HVPA:                                {Default: false, PreRelease: featuregate.Alpha},
 	HVPAForShootedSeed:                  {Default: false, PreRelease: featuregate.Alpha},
 	APIServerSNI:                        {Default: true, PreRelease: featuregate.Deprecated, LockToDefault: true},
-	HAControlPlanes:                     {Default: true, PreRelease: featuregate.Beta},
+	HAControlPlanes:                     {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	DefaultSeccompProfile:               {Default: false, PreRelease: featuregate.Alpha},
 	CoreDNSQueryRewriting:               {Default: false, PreRelease: featuregate.Alpha},
 	IPv6SingleStack:                     {Default: false, PreRelease: featuregate.Alpha},

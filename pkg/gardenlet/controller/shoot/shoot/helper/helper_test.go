@@ -175,20 +175,16 @@ var _ = Describe("GetEtcdDeployTimeout", func() {
 		defaultTimeout = 30 * time.Second
 	})
 
-	It("HAControlPlanes feature is not enabled", func() {
+	It("shoot is not marked to have HA control plane", func() {
 		Expect(GetEtcdDeployTimeout(s, defaultTimeout)).To(Equal(defaultTimeout))
 	})
 
-	It("HAControlPlanes feature is enabled but shoot is not marked to have HA control plane", func() {
-		Expect(GetEtcdDeployTimeout(s, defaultTimeout)).To(Equal(defaultTimeout))
-	})
-
-	It("HAControlPlanes feature is enabled, shoot spec has empty ControlPlane", func() {
+	It("shoot spec has empty ControlPlane", func() {
 		s.GetInfo().Spec.ControlPlane = &gardencorev1beta1.ControlPlane{}
 		Expect(GetEtcdDeployTimeout(s, defaultTimeout)).To(Equal(defaultTimeout))
 	})
 
-	It("HAControlPlanes feature is enabled and s is marked as multi-zonal", func() {
+	It("shoot is marked as multi-zonal", func() {
 		s.GetInfo().Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
 			HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}},
 		}

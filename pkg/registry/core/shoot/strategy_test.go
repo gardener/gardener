@@ -16,7 +16,6 @@ package shoot_test
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -28,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
-	"k8s.io/component-base/featuregate"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -39,59 +37,6 @@ import (
 )
 
 var _ = Describe("Strategy", func() {
-	Describe("#PrepareForCreate", func() {
-		var (
-			shoot *core.Shoot
-		)
-
-		BeforeEach(func() {
-			shoot = &core.Shoot{}
-		})
-
-		DescribeTable("HAControlPlanes feature gate on shoot creation",
-			func(featureGateEnabled bool, shootCP, resultingShootCP *core.ControlPlane) {
-
-				testFeatureGate := featuregate.NewFeatureGate()
-				Expect(testFeatureGate.Add(features.GetFeatures(
-					features.HAControlPlanes,
-				))).To(Succeed())
-				Expect(testFeatureGate.Set(fmt.Sprintf("%s=%v", features.HAControlPlanes, featureGateEnabled))).To(Succeed())
-
-				DeferCleanup(test.WithVars(
-					&features.DefaultFeatureGate,
-					testFeatureGate,
-				))
-
-				shoot.Spec.ControlPlane = shootCP
-
-				shootregistry.NewStrategy(0).PrepareForCreate(context.TODO(), shoot)
-
-				Expect(shoot.Spec.ControlPlane).To(Equal(resultingShootCP))
-			},
-
-			Entry("HAControlPlanes false, new shoot HA",
-				false,
-				newControlPlaneWithFailureTypeNode(),
-				newControlPlaneWithHighAvailabilityNil(),
-			),
-			Entry("HAControlPlanes true, new shoot HA",
-				true,
-				newControlPlaneWithFailureTypeNode(),
-				newControlPlaneWithFailureTypeNode(),
-			),
-			Entry("HAControlPlanes false, new shoot no HA",
-				false,
-				nil,
-				nil,
-			),
-			Entry("HAControlPlanes true, new shoot no HA",
-				true,
-				nil,
-				nil,
-			),
-		)
-	})
-
 	Describe("#Validate", func() {
 		var (
 			shoot *core.Shoot
@@ -380,78 +325,6 @@ var _ = Describe("Strategy", func() {
 				)
 			})
 
-			DescribeTable("HAControlPlanes feature gate on shoot update",
-				func(featureGateEnabled bool, oldShootCP, newShootCP, resultingShootCP *core.ControlPlane) {
-
-					testFeatureGate := featuregate.NewFeatureGate()
-					Expect(testFeatureGate.Add(features.GetFeatures(
-						features.HAControlPlanes,
-					))).To(Succeed())
-					Expect(testFeatureGate.Set(fmt.Sprintf("%s=%v", features.HAControlPlanes, featureGateEnabled))).To(Succeed())
-
-					DeferCleanup(test.WithVars(
-						&features.DefaultFeatureGate,
-						testFeatureGate,
-					))
-
-					oldShoot.Spec.ControlPlane = oldShootCP
-					newShoot.Spec.ControlPlane = newShootCP
-
-					shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-
-					Expect(newShoot.Spec.ControlPlane).To(Equal(resultingShootCP))
-				},
-
-				Entry("HAControlPlanes false, old shoot no HA, new shoot HA",
-					false,
-					nil,
-					newControlPlaneWithFailureTypeNode(),
-					newControlPlaneWithHighAvailabilityNil(),
-				),
-				Entry("HAControlPlanes true, old shoot no HA, new shoot HA",
-					true,
-					nil,
-					newControlPlaneWithFailureTypeNode(),
-					newControlPlaneWithFailureTypeNode(),
-				),
-				Entry("HAControlPlanes false, old shoot HA, new shoot HA",
-					false,
-					newControlPlaneWithFailureTypeNode(),
-					newControlPlaneWithFailureTypeNode(),
-					newControlPlaneWithFailureTypeNode(),
-				),
-				Entry("HAControlPlanes true, old shoot HA, new shoot HA",
-					true,
-					newControlPlaneWithFailureTypeNode(),
-					newControlPlaneWithFailureTypeNode(),
-					newControlPlaneWithFailureTypeNode(),
-				),
-				Entry("HAControlPlanes false, old shoot no HA, new shoot no HA",
-					false,
-					nil,
-					nil,
-					nil,
-				),
-				Entry("HAControlPlanes true, old shoot no HA, new shoot no HA",
-					true,
-					nil,
-					nil,
-					nil,
-				),
-				Entry("HAControlPlanes false, old shoot HA, new shoot no HA",
-					false,
-					newControlPlaneWithFailureTypeNode(),
-					nil,
-					nil,
-				),
-				Entry("HAControlPlanes true, old shoot HA, new shoot no HA",
-					true,
-					newControlPlaneWithFailureTypeNode(),
-					nil,
-					nil,
-				),
-			)
-
 			DescribeTable("operation annotations",
 				func(operationAnnotation string, mutateOldShoot func(*core.Shoot), shouldIncreaseGeneration, shouldKeepAnnotation bool) {
 					oldShoot := &core.Shoot{
@@ -727,12 +600,4 @@ func newShoot(seedName string) *core.Shoot {
 			SeedName: &seedName,
 		},
 	}
-}
-
-func newControlPlaneWithHighAvailabilityNil() *core.ControlPlane {
-	return &core.ControlPlane{HighAvailability: nil}
-}
-
-func newControlPlaneWithFailureTypeNode() *core.ControlPlane {
-	return &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: "node"}}}
 }

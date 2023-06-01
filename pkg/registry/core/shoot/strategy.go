@@ -67,8 +67,6 @@ func (shootStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 
 	shoot.Generation = 1
 	shoot.Status = core.ShootStatus{}
-
-	dropDisabledFields(shoot, nil)
 }
 
 func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
@@ -83,8 +81,6 @@ func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obje
 	if mustIncreaseGeneration(oldShoot, newShoot) {
 		newShoot.Generation = oldShoot.Generation + 1
 	}
-
-	dropDisabledFields(newShoot, oldShoot)
 }
 
 // defaultNodeMonitorGracePeriod will set the kube controller manager's nodeMonitorGracePeriod to 40s when upgrading the shoot to k8s version 1.27
@@ -96,15 +92,6 @@ func defaultNodeMonitorGracePeriod(newShoot, oldShoot *core.Shoot) {
 
 	if oldShootK8sLess127 && newShootK8sGreaterEqual127 && newShoot.Spec.Kubernetes.KubeControllerManager != nil && reflect.DeepEqual(newShoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod, defaultNodeMonitorGracePeriod) {
 		newShoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod = &metav1.Duration{Duration: 40 * time.Second}
-	}
-}
-
-// dropDisabledFields removes disabled fields from shoot.
-func dropDisabledFields(newShoot, oldShoot *core.Shoot) {
-	// Removes disabled HighAvailability related fields from shoot spec if it is not already used by the old spec
-	oldShootIsHA := oldShoot != nil && gardencorehelper.IsHAControlPlaneConfigured(oldShoot)
-	if !features.DefaultFeatureGate.Enabled(features.HAControlPlanes) && !oldShootIsHA && newShoot.Spec.ControlPlane != nil {
-		newShoot.Spec.ControlPlane.HighAvailability = nil
 	}
 }
 
