@@ -23,5 +23,5 @@ import (
 
 func TestCustomResources(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component FluentOperator CustomResources Suite")
+	RunSpecs(t, "Component Logging FluentOperator CustomResources Suite")
 }

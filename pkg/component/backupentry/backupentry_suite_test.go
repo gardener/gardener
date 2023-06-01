@@ -26,5 +26,5 @@ import (
 func TestBackupEntry(t *testing.T) {
 	features.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component BackupEntry Suite")
+	RunSpecs(t, "Component BackupEntry Suite")
 }

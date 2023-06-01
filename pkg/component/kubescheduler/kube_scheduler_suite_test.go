@@ -26,7 +26,7 @@ import (
 
 func TestKubeScheduler(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component KubeScheduler Suite")
+	RunSpecs(t, "Component KubeScheduler Suite")
 }
 
 var _ = BeforeSuite(func() {

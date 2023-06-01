@@ -23,5 +23,5 @@ import (
 
 func TestProjectRBAC(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component ProjectRBAC Suite")
+	RunSpecs(t, "Component ProjectRBAC Suite")
 }

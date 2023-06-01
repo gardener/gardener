@@ -23,5 +23,5 @@ import (
 
 func TestVPNAuthzServer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component VPNAuthzServer Suite")
+	RunSpecs(t, "Component VPNAuthzServer Suite")
 }

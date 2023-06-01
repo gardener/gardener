@@ -23,5 +23,5 @@ import (
 
 func TestShootSystem(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component ShootSystem Suite")
+	RunSpecs(t, "Component ShootSystem Suite")
 }

@@ -23,5 +23,5 @@ import (
 
 func TestControlPlane(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component KubeAPIServerExposure Suite")
+	RunSpecs(t, "Component KubeAPIServerExposure Suite")
 }

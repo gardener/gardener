@@ -28,7 +28,7 @@ import (
 func TestEtcd(t *testing.T) {
 	gardenletfeatures.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Etcd Suite")
+	RunSpecs(t, "Component Etcd Suite")
 }
 
 const (

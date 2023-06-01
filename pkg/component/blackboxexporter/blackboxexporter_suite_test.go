@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestSeedSystem(t *testing.T) {
+func TestBlackboxExporter(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component BlackboxExporter Suite")
+	RunSpecs(t, "Component BlackboxExporter Suite")
 }

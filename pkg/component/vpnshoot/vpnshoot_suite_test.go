@@ -26,7 +26,7 @@ import (
 
 func TestVPNShoot(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component VPNShoot Suite")
+	RunSpecs(t, "Component VPNShoot Suite")
 }
 
 var _ = BeforeSuite(func() {

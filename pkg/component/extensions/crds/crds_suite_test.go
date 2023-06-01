@@ -23,5 +23,5 @@ import (
 
 func TestExtensionCRDs(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Extensions CRDs Suite")
+	RunSpecs(t, "Component Extensions CRDs Suite")
 }

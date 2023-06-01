@@ -23,5 +23,5 @@ import (
 
 func TestExtension(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Extensions Extension Suite")
+	RunSpecs(t, "Component Extensions Extension Suite")
 }

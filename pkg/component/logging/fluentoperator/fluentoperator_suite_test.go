@@ -23,5 +23,5 @@ import (
 
 func TestFluentOperator(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component FluentOperator Suite")
+	RunSpecs(t, "Component Logging FluentOperator Suite")
 }

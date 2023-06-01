@@ -23,5 +23,5 @@ import (
 
 func TestSeedSystem(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component SeedSystem Suite")
+	RunSpecs(t, "Component SeedSystem Suite")
 }

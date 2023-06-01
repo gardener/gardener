@@ -23,5 +23,5 @@ import (
 
 func TestIstio(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Istio Suite")
+	RunSpecs(t, "Component Istio Suite")
 }

@@ -23,5 +23,5 @@ import (
 
 func TestNodeLocalDNS(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component NodeLocalDNS Suite")
+	RunSpecs(t, "Component NodeLocalDNS Suite")
 }

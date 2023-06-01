@@ -23,5 +23,5 @@ import (
 
 func TestKubernetesDashboard(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component KubernetesDashboard Suite")
+	RunSpecs(t, "Component KubernetesDashboard Suite")
 }

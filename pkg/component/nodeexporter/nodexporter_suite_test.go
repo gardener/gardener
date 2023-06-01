@@ -23,5 +23,5 @@ import (
 
 func TestNodeExporter(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component NodeExporter Suite")
+	RunSpecs(t, "Component NodeExporter Suite")
 }

@@ -23,5 +23,5 @@ import (
 
 func TestContainerRuntime(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Extensions ContainerRuntime Suite")
+	RunSpecs(t, "Component Extensions ContainerRuntime Suite")
 }

@@ -23,5 +23,5 @@ import (
 
 func TestKubeRBACProxy(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Logging KubeRBACProxy Suite")
+	RunSpecs(t, "Component Logging KubeRBACProxy Suite")
 }

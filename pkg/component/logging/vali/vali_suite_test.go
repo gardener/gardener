@@ -23,5 +23,5 @@ import (
 
 func TestVali(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Logging Vali Suite")
+	RunSpecs(t, "Component Logging Vali Suite")
 }

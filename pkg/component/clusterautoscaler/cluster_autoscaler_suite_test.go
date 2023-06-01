@@ -23,5 +23,5 @@ import (
 
 func TestClusterAutoscaler(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component ClusterAutoscaler Suite")
+	RunSpecs(t, "Component ClusterAutoscaler Suite")
 }

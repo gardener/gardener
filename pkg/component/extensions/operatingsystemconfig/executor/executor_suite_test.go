@@ -23,5 +23,5 @@ import (
 
 func TestExecutor(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component Extensions OperatingSystemConfig Executor Suite")
+	RunSpecs(t, "Component Extensions OperatingSystemConfig Executor Suite")
 }

@@ -23,5 +23,5 @@ import (
 
 func TestNginxIngress(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component NginxIngress Suite")
+	RunSpecs(t, "Component NginxIngress Suite")
 }

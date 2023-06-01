@@ -26,7 +26,7 @@ import (
 
 func TestGardenerResourceManager(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component ResourceManager Suite")
+	RunSpecs(t, "Component ResourceManager Suite")
 }
 
 var _ = BeforeSuite(func() {
