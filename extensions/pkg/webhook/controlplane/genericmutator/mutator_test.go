@@ -29,6 +29,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -150,8 +151,13 @@ var _ = Describe("Mutator", func() {
 				nil,
 			),
 			Entry(
-				"other deployments than kube-apiserver, kube-controller-manager, and kube-scheduler",
+				"other deployments than kube-apiserver, kube-controller-manager, machine-controller-manager, and kube-scheduler",
 				&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "test"}},
+				nil,
+			),
+			Entry(
+				"other VPAs than machine-controller-manager",
+				&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "test"}},
 				nil,
 			),
 			Entry(
@@ -235,6 +241,20 @@ var _ = Describe("Mutator", func() {
 				},
 			),
 			Entry(
+				"EnsureMachineControllerManagerDeployment with a machine-controller-manager deployment",
+				func() {
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameMachineControllerManager}}
+					ensurer.EXPECT().EnsureMachineControllerManagerDeployment(context.TODO(), gomock.Any(), newObj, oldObj).Return(nil)
+				},
+			),
+			Entry(
+				"EnsureMachineControllerManagerVPA with a machine-controller-manager VPA",
+				func() {
+					newObj = &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager-vpa"}}
+					ensurer.EXPECT().EnsureMachineControllerManagerVPA(context.TODO(), gomock.Any(), newObj, oldObj).Return(nil)
+				},
+			),
+			Entry(
 				"EnsureClusterAutoscalerDeployment with a cluster-autoscaler deployment and existing deployment",
 				func() {
 					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameClusterAutoscaler}}
@@ -259,11 +279,11 @@ var _ = Describe("Mutator", func() {
 			),
 		)
 
-		DescribeTable("EnsureETCD", func(new, old *druidv1alpha1.Etcd) {
+		DescribeTable("EnsureETCD", func(newObj, oldObj *druidv1alpha1.Etcd) {
 			client := mockclient.NewMockClient(ctrl)
 			client.EXPECT().Get(context.TODO(), clusterKey, &extensionsv1alpha1.Cluster{}).DoAndReturn(clientGet(clusterObject(cluster)))
 
-			ensurer.EXPECT().EnsureETCD(context.TODO(), gomock.Any(), new, old).Return(nil).Do(func(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *druidv1alpha1.Etcd) {
+			ensurer.EXPECT().EnsureETCD(context.TODO(), gomock.Any(), newObj, oldObj).Return(nil).Do(func(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *druidv1alpha1.Etcd) {
 				_, err := gctx.GetCluster(ctx)
 				if err != nil {
 					logger.Error(err, "Failed to get cluster object")
@@ -274,7 +294,7 @@ var _ = Describe("Mutator", func() {
 			Expect(err).To(Not(HaveOccurred()))
 
 			// Call Mutate method and check the result
-			err = mutator.Mutate(context.TODO(), new, old)
+			err = mutator.Mutate(context.TODO(), newObj, oldObj)
 			Expect(err).To(Not(HaveOccurred()))
 		},
 			Entry(

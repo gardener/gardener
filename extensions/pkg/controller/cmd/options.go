@@ -73,6 +73,9 @@ const (
 
 	// GardenerVersionFlag is the name of the command line flag containing the Gardener version.
 	GardenerVersionFlag = "gardener-version"
+	// GardenletManagesMCMFlag is the name of the command line flag containing the Gardener version.
+	// TODO(rfranzke): Remove this flag when all provider extensions support the feature, see https://github.com/gardener/gardener/issues/7594.
+	GardenletManagesMCMFlag = "gardenlet-manages-mcm"
 
 	// LogLevelFlag is the name of the command line flag containing the log level.
 	LogLevelFlag = "log-level"
@@ -491,21 +494,25 @@ type SwitchConfig struct {
 
 // GeneralOptions are command line options that can be set for general configuration.
 type GeneralOptions struct {
-	// GardenerVersion string
+	// GardenerVersion is the version of the Gardener.
 	GardenerVersion string
+	// GardenletManagesMCM specifies whether gardenlet manages the machine-controller-manager.
+	GardenletManagesMCM bool
 
 	config *GeneralConfig
 }
 
 // GeneralConfig is a completed general configuration.
 type GeneralConfig struct {
-	// GardenerVersion string
+	// GardenerVersion is the version of the Gardener.
 	GardenerVersion string
+	// GardenletManagesMCM specifies whether gardenlet manages the machine-controller-manager.
+	GardenletManagesMCM bool
 }
 
 // Complete implements Complete.
 func (r *GeneralOptions) Complete() error {
-	r.config = &GeneralConfig{r.GardenerVersion}
+	r.config = &GeneralConfig{r.GardenerVersion, r.GardenletManagesMCM}
 	return nil
 }
 
@@ -517,4 +524,5 @@ func (r *GeneralOptions) Completed() *GeneralConfig {
 // AddFlags implements Flagger.AddFlags.
 func (r *GeneralOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&r.GardenerVersion, GardenerVersionFlag, "", "Version of the gardenlet.")
+	fs.BoolVar(&r.GardenletManagesMCM, GardenletManagesMCMFlag, false, "Specifies whether gardenlet manages the machine-controller-manager.")
 }

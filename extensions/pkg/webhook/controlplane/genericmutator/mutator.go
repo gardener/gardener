@@ -25,6 +25,7 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,10 +39,11 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/utils"
+	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-// Ensurer ensures that various standard Kubernets controlplane objects conform to the provider requirements.
+// Ensurer ensures that various standard Kubernetes control plane objects conform to the provider requirements.
 // If they don't initially, they are mutated accordingly.
 type Ensurer interface {
 	// EnsureKubeAPIServerService ensures that the kube-apiserver service conforms to the provider requirements.
@@ -59,6 +61,12 @@ type Ensurer interface {
 	// EnsureClusterAutoscalerDeployment ensures that the cluster-autoscaler deployment conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
 	EnsureClusterAutoscalerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *appsv1.Deployment) error
+	// EnsureMachineControllerManagerDeployment ensures that the machine-controller-manager deployment conforms to the provider requirements.
+	// "old" might be "nil" and must always be checked.
+	EnsureMachineControllerManagerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *appsv1.Deployment) error
+	// EnsureMachineControllerManagerVPA ensures that the machine-controller-manager VPA settings conform to the provider requirements.
+	// "old" might be "nil" and must always be checked.
+	EnsureMachineControllerManagerVPA(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *vpaautoscalingv1.VerticalPodAutoscaler) error
 	// EnsureETCD ensures that the etcds conform to the respective provider requirements.
 	// "old" might be "nil" and must always be checked.
 	EnsureETCD(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *druidv1alpha1.Etcd) error
@@ -166,12 +174,29 @@ func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
 		case v1beta1constants.DeploymentNameKubeScheduler:
 			extensionswebhook.LogMutation(m.logger, x.Kind, x.Namespace, x.Name)
 			return m.ensurer.EnsureKubeSchedulerDeployment(ctx, gctx, x, oldDep)
+		case v1beta1constants.DeploymentNameMachineControllerManager:
+			extensionswebhook.LogMutation(m.logger, x.Kind, x.Namespace, x.Name)
+			return m.ensurer.EnsureMachineControllerManagerDeployment(ctx, gctx, x, oldDep)
 		case v1beta1constants.DeploymentNameClusterAutoscaler:
 			extensionswebhook.LogMutation(m.logger, x.Kind, x.Namespace, x.Name)
 			return m.ensurer.EnsureClusterAutoscalerDeployment(ctx, gctx, x, oldDep)
 		case v1beta1constants.DeploymentNameVPNSeedServer:
 			extensionswebhook.LogMutation(m.logger, x.Kind, x.Namespace, x.Name)
 			return m.ensurer.EnsureVPNSeedServerDeployment(ctx, gctx, x, oldDep)
+		}
+	case *vpaautoscalingv1.VerticalPodAutoscaler:
+		var oldVPA *vpaautoscalingv1.VerticalPodAutoscaler
+		if old != nil {
+			var ok bool
+			oldVPA, ok = old.(*vpaautoscalingv1.VerticalPodAutoscaler)
+			if !ok {
+				return errors.New("could not cast old object to vpaautoscalingv1.VerticalPodAutoscaler")
+			}
+		}
+		switch x.Name {
+		case machinecontrollermanager.VPAName:
+			extensionswebhook.LogMutation(m.logger, x.Kind, x.Namespace, x.Name)
+			return m.ensurer.EnsureMachineControllerManagerVPA(ctx, gctx, x, oldVPA)
 		}
 	case *druidv1alpha1.Etcd:
 		switch x.Name {

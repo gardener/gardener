@@ -16,6 +16,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	v1 "k8s.io/api/apps/v1"
 	v10 "k8s.io/api/core/v1"
+	v11 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	v1beta1 "k8s.io/kubelet/config/v1beta1"
 )
 
@@ -209,6 +210,34 @@ func (m *MockEnsurer) EnsureKubernetesGeneralConfiguration(arg0 context.Context,
 func (mr *MockEnsurerMockRecorder) EnsureKubernetesGeneralConfiguration(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureKubernetesGeneralConfiguration", reflect.TypeOf((*MockEnsurer)(nil).EnsureKubernetesGeneralConfiguration), arg0, arg1, arg2, arg3)
+}
+
+// EnsureMachineControllerManagerDeployment mocks base method.
+func (m *MockEnsurer) EnsureMachineControllerManagerDeployment(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *v1.Deployment) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureMachineControllerManagerDeployment", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EnsureMachineControllerManagerDeployment indicates an expected call of EnsureMachineControllerManagerDeployment.
+func (mr *MockEnsurerMockRecorder) EnsureMachineControllerManagerDeployment(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureMachineControllerManagerDeployment", reflect.TypeOf((*MockEnsurer)(nil).EnsureMachineControllerManagerDeployment), arg0, arg1, arg2, arg3)
+}
+
+// EnsureMachineControllerManagerVPA mocks base method.
+func (m *MockEnsurer) EnsureMachineControllerManagerVPA(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *v11.VerticalPodAutoscaler) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureMachineControllerManagerVPA", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EnsureMachineControllerManagerVPA indicates an expected call of EnsureMachineControllerManagerVPA.
+func (mr *MockEnsurerMockRecorder) EnsureMachineControllerManagerVPA(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureMachineControllerManagerVPA", reflect.TypeOf((*MockEnsurer)(nil).EnsureMachineControllerManagerVPA), arg0, arg1, arg2, arg3)
 }
 
 // EnsureVPNSeedServerDeployment mocks base method.
