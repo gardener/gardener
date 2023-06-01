@@ -46,14 +46,6 @@ const (
 	// deprecated: v1.48.0
 	APIServerSNI featuregate.Feature = "APIServerSNI"
 
-	// CopyEtcdBackupsDuringControlPlaneMigration enables the copy of etcd backups from the object store of the source seed
-	// to the object store of the destination seed during control plane migration.
-	// owner: @plkokanov
-	// alpha: v1.37.0
-	// beta: v1.53.0
-	// GA: v1.69.0
-	CopyEtcdBackupsDuringControlPlaneMigration featuregate.Feature = "CopyEtcdBackupsDuringControlPlaneMigration"
-
 	// HAControlPlanes allows shoot control planes to be run in high availability mode.
 	// owner: @shreyas-s-rao @timuthy
 	// alpha: v1.49.0
@@ -118,10 +110,9 @@ const (
 var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 
 var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	HVPA:               {Default: false, PreRelease: featuregate.Alpha},
-	HVPAForShootedSeed: {Default: false, PreRelease: featuregate.Alpha},
-	APIServerSNI:       {Default: true, PreRelease: featuregate.Deprecated, LockToDefault: true},
-	CopyEtcdBackupsDuringControlPlaneMigration: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+	HVPA:                                {Default: false, PreRelease: featuregate.Alpha},
+	HVPAForShootedSeed:                  {Default: false, PreRelease: featuregate.Alpha},
+	APIServerSNI:                        {Default: true, PreRelease: featuregate.Deprecated, LockToDefault: true},
 	HAControlPlanes:                     {Default: true, PreRelease: featuregate.Beta},
 	DefaultSeccompProfile:               {Default: false, PreRelease: featuregate.Alpha},
 	CoreDNSQueryRewriting:               {Default: false, PreRelease: featuregate.Alpha},

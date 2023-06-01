@@ -20,7 +20,7 @@ If the `Shoot` has different `.spec.seedName` and `.status.seedName`, a process 
 
 If the process is successful, we update the status of the `Shoot` by setting the `.status.seedName` to the null value. That way, a restoration is triggered in the `Destination Seed` and `.status.lastOperation` is changed to `Restore`. The control plane migration is completed when the `Restore` operation has completed successfully.
 
-When the `CopyEtcdBackupsDuringControlPlaneMigration` feature gate is enabled on the `gardenlet`, the etcd backups will be copied over to the `BackupBucket` of the `Destination Seed` during control plane migration and any future backups will be uploaded there. Otherwise, backups will continue to be uploaded to the `BackupBucket` of the `Source Seed`.
+The etcd backups will be copied over to the `BackupBucket` of the `Destination Seed` during control plane migration and any future backups will be uploaded there.
 
 ## Triggering the Migration
 

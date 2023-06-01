@@ -26,7 +26,6 @@ func RegisterFeatureGates() {
 		features.HVPA,
 		features.HVPAForShootedSeed,
 		features.APIServerSNI,
-		features.CopyEtcdBackupsDuringControlPlaneMigration,
 		features.DefaultSeccompProfile,
 		features.CoreDNSQueryRewriting,
 		features.IPv6SingleStack,
