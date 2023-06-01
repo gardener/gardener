@@ -99,6 +99,10 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		if b.Shoot.WantsClusterAutoscaler {
 			monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.ClusterAutoscaler)
 		}
+
+		if features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment) {
+			monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.MachineControllerManager)
+		}
 	}
 
 	for _, component := range monitoringComponents {
