@@ -23,6 +23,8 @@ sni:
 nodeLocalDNS:
   enabled: false
 
+gardenletManagesMCM: false
+
 reversedVPN:
   highAvailabilityEnabled: false
 
