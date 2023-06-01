@@ -32,7 +32,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | IPv6SingleStack                            | `false` | `Alpha` | `1.63` |        |
 | MutableShootSpecNetworkingNodes            | `false` | `Alpha` | `1.64` |        |
 | FullNetworkPoliciesInRuntimeCluster        | `false` | `Alpha` | `1.66` | `1.70` |
-| FullNetworkPoliciesInRuntimeCluster        | `true`  | `Beta`  | `1.71` |        |
+| FullNetworkPoliciesInRuntimeCluster        | `true`  | `Beta`  | `1.71` | `1.72` |
+| FullNetworkPoliciesInRuntimeCluster        | `true`  | `GA`    | `1.73` |        |
 | WorkerlessShoots                           | `false` | `Alpha` | `1.70` |        |
 
 ## Feature Gates for Graduated or Deprecated Features

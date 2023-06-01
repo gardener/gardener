@@ -535,7 +535,7 @@ func migrationTasksForServices(cl client.Client, services []corev1.Service, port
 				metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}},
 			)
 
-			if withGardenNamespaceSelector && features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster) {
+			if withGardenNamespaceSelector {
 				selectors = append(selectors, metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}})
 			}
 

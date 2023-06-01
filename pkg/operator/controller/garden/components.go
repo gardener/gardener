@@ -185,7 +185,6 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 		defaultUnreachableTolerationSeconds,
 		features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
 		helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
-		features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster),
 		r.Config.Controllers.NetworkPolicy.AdditionalNamespaceSelectors,
 		garden.Spec.RuntimeCluster.Provider.Zones,
 	)
@@ -376,7 +375,6 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 		nil,
 		nil,
 		nil,
-		false,
 		clusterIP,
 	), nil
 }

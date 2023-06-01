@@ -78,6 +78,7 @@ const (
 	// owner: @rfranzke
 	// alpha: v1.66.0
 	// beta: v1.71.0
+	// GA: v1.73.0
 	FullNetworkPoliciesInRuntimeCluster featuregate.Feature = "FullNetworkPoliciesInRuntimeCluster"
 
 	// WorkerlessShoots allows creation of Shoot clusters with no worker pools.
@@ -118,7 +119,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	CoreDNSQueryRewriting:               {Default: false, PreRelease: featuregate.Alpha},
 	IPv6SingleStack:                     {Default: false, PreRelease: featuregate.Alpha},
 	MutableShootSpecNetworkingNodes:     {Default: false, PreRelease: featuregate.Alpha},
-	FullNetworkPoliciesInRuntimeCluster: {Default: true, PreRelease: featuregate.Beta},
+	FullNetworkPoliciesInRuntimeCluster: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	WorkerlessShoots:                    {Default: false, PreRelease: featuregate.Alpha},
 }
 

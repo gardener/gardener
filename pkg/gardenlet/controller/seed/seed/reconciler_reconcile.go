@@ -437,7 +437,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			defaultUnreachableTolerationSeconds,
 			features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
 			v1beta1helper.SeedSettingTopologyAwareRoutingEnabled(seed.GetInfo().Spec.Settings),
-			features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster),
 			additionalNetworkPolicyNamespaceSelectors,
 			seed.GetInfo().Spec.Provider.Zones,
 		)
@@ -773,10 +772,9 @@ func (r *Reconciler) runReconcileSeedFlow(
 			"images":       imagevector.ImageMapToValues(seedImages),
 		},
 		"prometheus": map[string]interface{}{
-			"deployAllowAllAccessNetworkPolicy": !features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster),
-			"resources":                         monitoringResources["prometheus"],
-			"storage":                           seed.GetValidVolumeSize("10Gi"),
-			"additionalScrapeConfigs":           centralScrapeConfigs.String(),
+			"resources":               monitoringResources["prometheus"],
+			"storage":                 seed.GetValidVolumeSize("10Gi"),
+			"additionalScrapeConfigs": centralScrapeConfigs.String(),
 			"additionalCAdvisorScrapeConfigMetricRelabelConfigs": centralCAdvisorScrapeConfigMetricRelabelConfigs.String(),
 		},
 		"aggregatePrometheus": map[string]interface{}{
@@ -865,10 +863,9 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
-	if features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster) {
-		if err := kubernetesutils.DeleteObject(ctx, seedClient, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-seed-prometheus", Namespace: r.GardenNamespace}}); err != nil {
-			return err
-		}
+	// TODO(rfranzke): Drop this code when the FullNetworkPoliciesInRuntimeCluster feature gate gets removed.
+	if err := kubernetesutils.DeleteObject(ctx, seedClient, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-seed-prometheus", Namespace: r.GardenNamespace}}); err != nil {
+		return err
 	}
 
 	var (

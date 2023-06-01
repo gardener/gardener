@@ -258,8 +258,6 @@ type Values struct {
 	DefaultUnreachableToleration *int64
 	// HealthSyncPeriod describes the duration of how often the health of existing resources should be synced
 	HealthSyncPeriod *metav1.Duration
-	// FullNetworkPolicies makes the network policy controller to consider all relevant namespaces.
-	FullNetworkPolicies bool
 	// NetworkPolicyAdditionalNamespaceSelectors is the list of additional namespace selectors to consider for the
 	// NetworkPolicy controller.
 	NetworkPolicyAdditionalNamespaceSelectors []metav1.LabelSelector
@@ -593,6 +591,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			Enabled: true,
 			NamespaceSelectors: append([]metav1.LabelSelector{
 				{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}},
+				{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}},
 				{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem}},
 				{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
 				{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}},
@@ -602,12 +601,6 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 		}
 		config.Webhooks.CRDDeletionProtection.Enabled = true
 		config.Webhooks.ExtensionValidation.Enabled = true
-
-		if r.values.FullNetworkPolicies {
-			config.Controllers.NetworkPolicy.NamespaceSelectors = append(config.Controllers.NetworkPolicy.NamespaceSelectors,
-				metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}},
-			)
-		}
 	}
 
 	if v := r.values.MaxConcurrentCSRApproverWorkers; v != nil {
