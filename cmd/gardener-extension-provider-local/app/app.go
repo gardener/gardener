@@ -46,7 +46,6 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/heartbeat"
 	extensionsheartbeatcmd "github.com/gardener/gardener/extensions/pkg/controller/heartbeat/cmd"
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon"
-	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	extensionscmdwebhook "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
@@ -145,10 +144,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 		workerCtrlOpts = &extensionscmdcontroller.ControllerOptions{
 			MaxConcurrentReconciles: 5,
 		}
-		workerReconcileOpts = &worker.Options{
-			DeployCRDs: true,
-		}
-		workerCtrlOptsUnprefixed = extensionscmdcontroller.NewOptionAggregator(workerCtrlOpts, workerReconcileOpts)
 
 		heartbeatCtrlOptions = &extensionsheartbeatcmd.Options{
 			ExtensionName:        local.Name,
@@ -178,7 +173,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			extensionscmdcontroller.PrefixOption("controlplane-", controlPlaneCtrlOpts),
 			extensionscmdcontroller.PrefixOption("dnsrecord-", dnsRecordCtrlOpts),
 			extensionscmdcontroller.PrefixOption("infrastructure-", infraCtrlOpts),
-			extensionscmdcontroller.PrefixOption("worker-", &workerCtrlOptsUnprefixed),
+			extensionscmdcontroller.PrefixOption("worker-", workerCtrlOpts),
 			extensionscmdcontroller.PrefixOption("ingress-", ingressCtrlOpts),
 			extensionscmdcontroller.PrefixOption("service-", serviceCtrlOpts),
 			extensionscmdcontroller.PrefixOption("backupbucket-", localBackupBucketOptions),
@@ -201,12 +196,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 
 			if err := heartbeatCtrlOptions.Validate(); err != nil {
 				return err
-			}
-
-			if workerReconcileOpts.Completed().DeployCRDs {
-				if err := worker.ApplyMachineResourcesForConfig(ctx, restOpts.Completed().Config); err != nil {
-					return fmt.Errorf("error ensuring the machine CRDs: %w", err)
-				}
 			}
 
 			mgr, err := manager.New(restOpts.Completed().Config, mgrOpts.Completed().Options())
