@@ -74,6 +74,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
+	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/metricsserver"
 	"github.com/gardener/gardener/pkg/component/monitoring"
 	"github.com/gardener/gardener/pkg/component/nginxingress"
@@ -403,6 +404,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 	istioCRDs := istio.NewCRD(chartApplier)
 	if err := istioCRDs.Deploy(ctx); err != nil {
+		return err
+	}
+
+	if err := machinecontrollermanager.NewCRD(seedClient, applier).Deploy(ctx); err != nil {
 		return err
 	}
 

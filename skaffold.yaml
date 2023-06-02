@@ -887,6 +887,7 @@ build:
         - pkg/component/logging/fluentoperator
         - pkg/component/logging/fluentoperator/customresources
         - pkg/component/logging/vali
+        - pkg/component/machinecontrollermanager
         - pkg/component/metricsserver
         - pkg/component/monitoring
         - pkg/component/namespaces
