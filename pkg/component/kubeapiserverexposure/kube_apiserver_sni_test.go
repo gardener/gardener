@@ -327,17 +327,17 @@ var _ = Describe("#SNI", func() {
 
 			It("returns true when exists", func() {
 				Expect(c.Create(ctx, createVS("kube-apiserver", "test"))).NotTo(HaveOccurred())
-				any, err := AnyDeployedSNI(ctx, c)
+				ok, err := AnyDeployedSNI(ctx, c)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(any).To(BeTrue())
+				Expect(ok).To(BeTrue())
 			})
 
 			It("returns false when does not exists", func() {
-				any, err := AnyDeployedSNI(ctx, c)
+				ok, err := AnyDeployedSNI(ctx, c)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(any).To(BeFalse())
+				Expect(ok).To(BeFalse())
 			})
 		})
 
@@ -358,10 +358,10 @@ var _ = Describe("#SNI", func() {
 
 			It("returns false", func() {
 				client.EXPECT().List(ctx, gomock.AssignableToTypeOf(&unstructured.UnstructuredList{}), gomock.Any()).Return(&meta.NoKindMatchError{})
-				any, err := AnyDeployedSNI(ctx, client)
+				ok, err := AnyDeployedSNI(ctx, client)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(any).To(BeFalse())
+				Expect(ok).To(BeFalse())
 			})
 		})
 	})

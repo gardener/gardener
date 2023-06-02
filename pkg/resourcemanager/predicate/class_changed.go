@@ -31,16 +31,16 @@ var classChangedPredicate = predicate.Funcs{
 			return false
 		}
 
-		old, ok := e.ObjectOld.(*resourcesv1alpha1.ManagedResource)
+		oldObj, ok := e.ObjectOld.(*resourcesv1alpha1.ManagedResource)
 		if !ok {
 			return false
 		}
-		new, ok := e.ObjectNew.(*resourcesv1alpha1.ManagedResource)
+		newObj, ok := e.ObjectNew.(*resourcesv1alpha1.ManagedResource)
 		if !ok {
 			return false
 		}
 
-		return !equality.Semantic.DeepEqual(old.Spec.Class, new.Spec.Class)
+		return !equality.Semantic.DeepEqual(oldObj.Spec.Class, newObj.Spec.Class)
 	},
 }
 

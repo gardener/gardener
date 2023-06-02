@@ -281,8 +281,8 @@ func updateCreatedCondition(status extensionsv1alpha1.Status, conditionStatus ga
 		builder = builder.WithOldCondition(*c)
 	}
 
-	new, _ := builder.WithStatus(conditionStatus).WithReason(reason).WithMessage(message).Build()
-	status.SetConditions(v1beta1helper.MergeConditions(conditions, new))
+	newCondition, _ := builder.WithStatus(conditionStatus).WithReason(reason).WithMessage(message).Build()
+	status.SetConditions(v1beta1helper.MergeConditions(conditions, newCondition))
 	return nil
 }
 

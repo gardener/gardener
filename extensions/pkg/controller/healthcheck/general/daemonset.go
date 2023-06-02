@@ -79,9 +79,10 @@ func (healthChecker *DaemonSetHealthChecker) SetLoggerSuffix(provider, extension
 }
 
 // DeepCopy clones the healthCheck struct by making a copy and returning the pointer to that new copy
+// Actually, it does not perform a *deep* copy.
 func (healthChecker *DaemonSetHealthChecker) DeepCopy() healthcheck.HealthCheck {
-	copy := *healthChecker
-	return &copy
+	shallowCopy := *healthChecker
+	return &shallowCopy
 }
 
 // Check executes the health check

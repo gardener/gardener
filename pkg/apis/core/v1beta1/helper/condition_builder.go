@@ -103,47 +103,47 @@ func (b *defaultConditionBuilder) WithClock(clock clock.Clock) ConditionBuilder 
 // - Any changes to status set the `LastTransitionTime`
 // - Any updates to the message, reason or the codes cause set `LastUpdateTime` to the current time.
 // - The error codes will not be transferred from the old to the new condition
-func (b *defaultConditionBuilder) Build() (new gardencorev1beta1.Condition, updated bool) {
+func (b *defaultConditionBuilder) Build() (c gardencorev1beta1.Condition, updated bool) {
 	var (
 		now       = metav1.Time{Time: b.clock.Now()}
 		emptyTime = metav1.Time{}
 	)
 
-	new = *b.old.DeepCopy()
+	c = *b.old.DeepCopy()
 
-	if new.LastTransitionTime == emptyTime {
-		new.LastTransitionTime = now
+	if c.LastTransitionTime == emptyTime {
+		c.LastTransitionTime = now
 	}
 
-	if new.LastUpdateTime == emptyTime {
-		new.LastUpdateTime = now
+	if c.LastUpdateTime == emptyTime {
+		c.LastUpdateTime = now
 	}
 
-	new.Type = b.conditionType
+	c.Type = b.conditionType
 
 	if b.status != "" {
-		new.Status = b.status
+		c.Status = b.status
 	} else if b.old.Status == "" {
-		new.Status = gardencorev1beta1.ConditionUnknown
+		c.Status = gardencorev1beta1.ConditionUnknown
 	}
 
-	new.Reason = b.buildReason()
+	c.Reason = b.buildReason()
 
-	new.Message = b.buildMessage()
+	c.Message = b.buildMessage()
 
-	new.Codes = b.codes
+	c.Codes = b.codes
 
-	if new.Status != b.old.Status {
-		new.LastTransitionTime = now
+	if c.Status != b.old.Status {
+		c.LastTransitionTime = now
 	}
 
-	if new.Reason != b.old.Reason ||
-		new.Message != b.old.Message ||
-		!apiequality.Semantic.DeepEqual(new.Codes, b.old.Codes) {
-		new.LastUpdateTime = now
+	if c.Reason != b.old.Reason ||
+		c.Message != b.old.Message ||
+		!apiequality.Semantic.DeepEqual(c.Codes, b.old.Codes) {
+		c.LastUpdateTime = now
 	}
 
-	return new, !apiequality.Semantic.DeepEqual(new, b.old)
+	return c, !apiequality.Semantic.DeepEqual(c, b.old)
 }
 
 func (b *defaultConditionBuilder) buildMessage() string {
