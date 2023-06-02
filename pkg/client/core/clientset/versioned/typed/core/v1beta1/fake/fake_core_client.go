@@ -56,6 +56,10 @@ func (c *FakeCoreV1beta1) ExposureClasses() v1beta1.ExposureClassInterface {
 	return &FakeExposureClasses{c}
 }
 
+func (c *FakeCoreV1beta1) InternalSecrets(namespace string) v1beta1.InternalSecretInterface {
+	return &FakeInternalSecrets{c, namespace}
+}
+
 func (c *FakeCoreV1beta1) Projects() v1beta1.ProjectInterface {
 	return &FakeProjects{c}
 }

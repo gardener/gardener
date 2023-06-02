@@ -34,6 +34,7 @@ type CoreInterface interface {
 	ControllerInstallationsGetter
 	ControllerRegistrationsGetter
 	ExposureClassesGetter
+	InternalSecretsGetter
 	ProjectsGetter
 	QuotasGetter
 	SecretBindingsGetter
@@ -73,6 +74,10 @@ func (c *CoreClient) ControllerRegistrations() ControllerRegistrationInterface {
 
 func (c *CoreClient) ExposureClasses() ExposureClassInterface {
 	return newExposureClasses(c)
+}
+
+func (c *CoreClient) InternalSecrets(namespace string) InternalSecretInterface {
+	return newInternalSecrets(c, namespace)
 }
 
 func (c *CoreClient) Projects() ProjectInterface {

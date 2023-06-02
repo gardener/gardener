@@ -24,6 +24,8 @@ Resource Types:
 </li><li>
 <a href="#core.gardener.cloud/v1beta1.ExposureClass">ExposureClass</a>
 </li><li>
+<a href="#core.gardener.cloud/v1beta1.InternalSecret">InternalSecret</a>
+</li><li>
 <a href="#core.gardener.cloud/v1beta1.Project">Project</a>
 </li><li>
 <a href="#core.gardener.cloud/v1beta1.Quota">Quota</a>
@@ -810,6 +812,116 @@ ExposureClassScheduling
 <em>(Optional)</em>
 <p>Scheduling holds information how to select applicable Seed&rsquo;s for ExposureClass usage.
 This field is immutable.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.InternalSecret">InternalSecret
+</h3>
+<p>
+<p>InternalSecret holds secret data of a certain type. The total bytes of the values in
+the Data field must be less than MaxSecretSize bytes.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code></br>
+string</td>
+<td>
+<code>
+core.gardener.cloud/v1beta1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code></br>
+string
+</td>
+<td><code>InternalSecret</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Standard object&rsquo;s metadata.
+More info: <a href="https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata">https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata</a></p>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>immutable</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Immutable, if set to true, ensures that data stored in the Secret cannot
+be updated (only object metadata can be modified).
+If not set to true, the field can be modified at any time.
+Defaulted to nil.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>data</code></br>
+<em>
+map[string][]byte
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Data contains the secret data. Each key must consist of alphanumeric
+characters, &lsquo;-&rsquo;, &lsquo;_&rsquo; or &lsquo;.&rsquo;. The serialized form of the secret data is a
+base64 encoded string, representing the arbitrary (possibly non-string)
+data value here. Described in <a href="https://tools.ietf.org/html/rfc4648#section-4">https://tools.ietf.org/html/rfc4648#section-4</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<code>stringData</code></br>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>stringData allows specifying non-binary secret data in string form.
+It is provided as a write-only input field for convenience.
+All keys and values are merged into the data field on write, overwriting any existing values.
+The stringData field is never output when reading from the API.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>type</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secrettype-v1-core">
+Kubernetes core/v1.SecretType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Used to facilitate programmatic handling of secret data.
+More info: <a href="https://kubernetes.io/docs/concepts/configuration/secret/#secret-types">https://kubernetes.io/docs/concepts/configuration/secret/#secret-types</a></p>
 </td>
 </tr>
 </tbody>

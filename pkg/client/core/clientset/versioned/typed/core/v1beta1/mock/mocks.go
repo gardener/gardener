@@ -138,6 +138,20 @@ func (mr *MockCoreV1beta1InterfaceMockRecorder) ExposureClasses() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExposureClasses", reflect.TypeOf((*MockCoreV1beta1Interface)(nil).ExposureClasses))
 }
 
+// InternalSecrets mocks base method.
+func (m *MockCoreV1beta1Interface) InternalSecrets(arg0 string) v1beta10.InternalSecretInterface {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalSecrets", arg0)
+	ret0, _ := ret[0].(v1beta10.InternalSecretInterface)
+	return ret0
+}
+
+// InternalSecrets indicates an expected call of InternalSecrets.
+func (mr *MockCoreV1beta1InterfaceMockRecorder) InternalSecrets(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalSecrets", reflect.TypeOf((*MockCoreV1beta1Interface)(nil).InternalSecrets), arg0)
+}
+
 // Projects mocks base method.
 func (m *MockCoreV1beta1Interface) Projects() v1beta10.ProjectInterface {
 	m.ctrl.T.Helper()

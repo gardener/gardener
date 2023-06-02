@@ -38,6 +38,8 @@ type Interface interface {
 	ControllerRegistrations() ControllerRegistrationInformer
 	// ExposureClasses returns a ExposureClassInformer.
 	ExposureClasses() ExposureClassInformer
+	// InternalSecrets returns a InternalSecretInformer.
+	InternalSecrets() InternalSecretInformer
 	// Projects returns a ProjectInformer.
 	Projects() ProjectInformer
 	// Quotas returns a QuotaInformer.
@@ -96,6 +98,11 @@ func (v *version) ControllerRegistrations() ControllerRegistrationInformer {
 // ExposureClasses returns a ExposureClassInformer.
 func (v *version) ExposureClasses() ExposureClassInformer {
 	return &exposureClassInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// InternalSecrets returns a InternalSecretInformer.
+func (v *version) InternalSecrets() InternalSecretInformer {
+	return &internalSecretInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Projects returns a ProjectInformer.
