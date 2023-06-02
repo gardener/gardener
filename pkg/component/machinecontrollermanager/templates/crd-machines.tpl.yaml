@@ -1,0 +1,287 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.9.2
+  labels:
+    gardener.cloud/deletion-protected: "true"
+  name: machines.machine.sapcloud.io
+spec:
+  group: machine.sapcloud.io
+  names:
+    kind: Machine
+    listKind: MachineList
+    plural: machines
+    shortNames:
+    - mc
+    singular: machine
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Current status of the machine.
+      jsonPath: .status.currentStatus.phase
+      name: Status
+      type: string
+    - description: |-
+        CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC
+        Populated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    - description: Node backing the machine object
+      jsonPath: .metadata.labels.node
+      name: Node
+      type: string
+    - description: ProviderID of the infra instance backing the machine object
+      jsonPath: .spec.providerID
+      name: ProviderID
+      priority: 1
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Machine is the representation of a physical or virtual machine.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+                  of an object. Servers should convert recognized schemas to the latest
+                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+                  object represents. Servers may infer this from the endpoint the client
+                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec contains the specification of the machine
+            properties:
+              class:
+                description: Class contains the machineclass attributes of a machine
+                properties:
+                  apiGroup:
+                    description: API group to which it belongs
+                    type: string
+                  kind:
+                    description: Kind for machine class
+                    type: string
+                  name:
+                    description: Name of machine class
+                    type: string
+                type: object
+              creationTimeout:
+                description: MachineCreationTimeout is the timeout after which machinie
+                  creation is declared failed.
+                type: string
+              drainTimeout:
+                description: MachineDraintimeout is the timeout after which machine
+                  is forcefully deleted.
+                type: string
+              healthTimeout:
+                description: MachineHealthTimeout is the timeout after which machine
+                  is declared unhealhty/failed.
+                type: string
+              maxEvictRetries:
+                description: MaxEvictRetries is the number of retries that will be
+                  attempted while draining the node.
+                format: int32
+                type: integer
+              nodeConditions:
+                description: NodeConditions are the set of conditions if set to true
+                  for MachineHealthTimeOut, machine will be declared failed.
+                type: string
+              nodeTemplate:
+                description: NodeTemplateSpec describes the data a node should have
+                  when created from a template
+                properties:
+                  metadata:
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  spec:
+                    description: NodeSpec describes the attributes that a node is
+                      created with.
+                    properties:
+                      configSource:
+                        description: 'Deprecated. If specified, the source of the
+                              node''s configuration. The DynamicKubeletConfig feature
+                              gate must be enabled for the Kubelet to use this field.
+                              This field is deprecated as of 1.22: https://git.k8s.io/enhancements/keps/sig-node/281-dynamic-kubelet-configuration'
+                        properties:
+                          configMap:
+                            description: ConfigMap is a reference to a Node's ConfigMap
+                            properties:
+                              kubeletConfigKey:
+                                description: KubeletConfigKey declares which key of
+                                  the referenced ConfigMap corresponds to the KubeletConfiguration
+                                  structure This field is required in all cases.
+                                type: string
+                              name:
+                                description: Name is the metadata.name of the referenced
+                                  ConfigMap. This field is required in all cases.
+                                type: string
+                              namespace:
+                                description: Namespace is the metadata.namespace of
+                                  the referenced ConfigMap. This field is required
+                                  in all cases.
+                                type: string
+                              resourceVersion:
+                                description: ResourceVersion is the metadata.ResourceVersion
+                                  of the referenced ConfigMap. This field is forbidden
+                                  in Node.Spec, and required in Node.Status.
+                                type: string
+                              uid:
+                                description: UID is the metadata.UID of the referenced
+                                  ConfigMap. This field is forbidden in Node.Spec,
+                                  and required in Node.Status.
+                                type: string
+                            required:
+                            - kubeletConfigKey
+                            - name
+                            - namespace
+                            type: object
+                        type: object
+                      externalID:
+                        description: 'Deprecated. Not all kubelets will set this field.
+                              Remove field after 1.13. see: https://issues.k8s.io/61966'
+                        type: string
+                      podCIDR:
+                        description: PodCIDR represents the pod IP range assigned
+                          to the node.
+                        type: string
+                      podCIDRs:
+                        description: podCIDRs represents the IP ranges assigned to
+                          the node for usage by Pods on that node. If this field is
+                          specified, the 0th entry must match the podCIDR field. It
+                          may contain at most 1 value for each of IPv4 and IPv6.
+                        items:
+                          type: string
+                        type: array
+                      providerID:
+                        description: 'ID of the node assigned by the cloud provider
+                              in the format: <ProviderName>://<ProviderSpecificNodeID>'
+                        type: string
+                      taints:
+                        description: If specified, the node's taints.
+                        items:
+                          description: The node this Taint is attached to has the
+                            "effect" on any pod that does not tolerate the Taint.
+                          properties:
+                            effect:
+                              description: Required. The effect of the taint on pods
+                                that do not tolerate the taint. Valid effects are
+                                NoSchedule, PreferNoSchedule and NoExecute.
+                              type: string
+                            key:
+                              description: Required. The taint key to be applied to
+                                a node.
+                              type: string
+                            timeAdded:
+                              description: TimeAdded represents the time at which
+                                the taint was added. It is only written for NoExecute
+                                taints.
+                              format: date-time
+                              type: string
+                            value:
+                              description: The taint value corresponding to the taint
+                                key.
+                              type: string
+                          required:
+                          - effect
+                          - key
+                          type: object
+                        type: array
+                      unschedulable:
+                        description: 'Unschedulable controls node schedulability of
+                              new pods. By default, node is schedulable. More info: https://kubernetes.io/docs/concepts/nodes/node/#manual-node-administration'
+                        type: boolean
+                    type: object
+                type: object
+              providerID:
+                description: ProviderID represents the provider's unique ID given
+                  to a machine
+                type: string
+            type: object
+          status:
+            description: Status contains fields depicting the status
+            properties:
+              conditions:
+                description: Conditions of this machine, same as node
+                items:
+                  description: NodeCondition contains condition information for a
+                    node.
+                  properties:
+                    lastHeartbeatTime:
+                      description: Last time we got an update on a given condition.
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      description: Last time the condition transit from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: Human readable message indicating details about
+                        last transition.
+                      type: string
+                    reason:
+                      description: (brief) reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of node condition.
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              currentStatus:
+                description: Current status of the machine object
+                properties:
+                  lastUpdateTime:
+                    description: Last update time of current status
+                    format: date-time
+                    type: string
+                  phase:
+                    description: MachinePhase is a label for the condition of a machines
+                      at the current time.
+                    type: string
+                  timeoutActive:
+                    type: boolean
+                type: object
+              lastKnownState:
+                description: LastKnownState can store details of the last known state
+                  of the VM by the plugins. It can be used by future operation calls
+                  to determine current infrastucture state
+                type: string
+              lastOperation:
+                description: Last operation refers to the status of the last operation
+                  performed
+                properties:
+                  description:
+                    description: Description of the current operation
+                    type: string
+                  lastUpdateTime:
+                    description: Last update time of current operation
+                    format: date-time
+                    type: string
+                  state:
+                    description: State of operation
+                    type: string
+                  type:
+                    description: Type of operation
+                    type: string
+                type: object
+              node:
+                description: Node string
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
