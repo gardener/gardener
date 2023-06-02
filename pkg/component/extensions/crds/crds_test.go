@@ -53,7 +53,7 @@ var _ = Describe("#CRDs", func() {
 
 		applier := kubernetes.NewApplier(c, mapper)
 
-		crdDeployer = crds.NewExtensionsCRD(applier)
+		crdDeployer = crds.NewCRD(applier)
 	})
 
 	JustBeforeEach(func() {

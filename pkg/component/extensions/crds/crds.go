@@ -69,19 +69,19 @@ func init() {
 	)
 }
 
-type extensionCRDs struct {
+type crd struct {
 	applier kubernetes.Applier
 }
 
-// NewExtensionsCRD can be used to deploy extensions CRDs.
-func NewExtensionsCRD(a kubernetes.Applier) component.DeployWaiter {
-	return &extensionCRDs{
+// NewCRD can be used to deploy extensions CRDs.
+func NewCRD(a kubernetes.Applier) component.DeployWaiter {
+	return &crd{
 		applier: a,
 	}
 }
 
 // Deploy creates and updates the CRD definitions for the gardener extensions.
-func (c *extensionCRDs) Deploy(ctx context.Context) error {
+func (c *crd) Deploy(ctx context.Context) error {
 	var fns []flow.TaskFn
 
 	for _, resource := range resources {
@@ -95,16 +95,16 @@ func (c *extensionCRDs) Deploy(ctx context.Context) error {
 }
 
 // Destroy does nothing
-func (c *extensionCRDs) Destroy(ctx context.Context) error {
+func (c *crd) Destroy(ctx context.Context) error {
 	return nil
 }
 
 // Wait does nothing
-func (c *extensionCRDs) Wait(ctx context.Context) error {
+func (c *crd) Wait(ctx context.Context) error {
 	return nil
 }
 
 // WaitCleanup does nothing
-func (c *extensionCRDs) WaitCleanup(ctx context.Context) error {
+func (c *crd) WaitCleanup(ctx context.Context) error {
 	return nil
 }
