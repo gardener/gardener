@@ -22,5 +22,5 @@ const (
 	AnnotationKeyEtcdSnapshotted = "credentials.gardener.cloud/etcd-snapshotted"
 
 	labelKeyRotationKeyName = "credentials.gardener.cloud/key-name"
-	reencryptionQPS         = 100
+	rotationQPS             = 100
 )

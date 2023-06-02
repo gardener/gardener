@@ -57,7 +57,7 @@ func CreateNewServiceAccountSecrets(ctx context.Context, log logr.Logger, c clie
 	log.Info("ServiceAccounts requiring a new token secret", "number", len(serviceAccountList.Items))
 
 	var (
-		limiter = rate.NewLimiter(rate.Limit(reencryptionQPS), reencryptionQPS)
+		limiter = rate.NewLimiter(rate.Limit(rotationQPS), rotationQPS)
 		taskFns []flow.TaskFn
 	)
 
@@ -138,7 +138,7 @@ func DeleteOldServiceAccountSecrets(ctx context.Context, log logr.Logger, c clie
 	log.Info("ServiceAccounts requiring the cleanup of old token secrets", "number", len(serviceAccountList.Items))
 
 	var (
-		limiter = rate.NewLimiter(rate.Limit(reencryptionQPS), reencryptionQPS)
+		limiter = rate.NewLimiter(rate.Limit(rotationQPS), rotationQPS)
 		taskFns []flow.TaskFn
 	)
 
