@@ -36,8 +36,8 @@ this_module=$(go list -m)
 export GO111MODULE=off
 
 packages=()
-for p in "$@" ; do
+for p in "$@"; do
   packages+=("$this_module/${p#./}")
 done
 
-import-boss --include-test-files=true --verify-only --input-dirs "$(IFS=, ; echo "${packages[*]}")"
+import-boss --include-test-files=true --verify-only --input-dirs "$(IFS=, ; echo "${packages[*]}")" 2>&1 | grep -Ev "Ignoring child directory"
