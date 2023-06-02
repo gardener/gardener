@@ -45,14 +45,14 @@ The `gardenlet` runs [two controllers](../concepts/gardenlet.md#shootstate-contr
 
 - The [`shootstate-secret`](../../pkg/gardenlet/controller/shootstate/secret) controller watches `Secret`s labeled with `persist=true` in the shoot namespaces in the seed cluster. It persists all labels and data of such `Secret`s into the related `ShootState` resource.
 
-In reality, those `Secret`s only change when the end-user initiates a credentials rotation operation, so rather rarely.
-Still, duplicating all labels and data of such `Secret`s into the garden cluster increases the size of `ShootState` resources.
+  In reality, those `Secret`s only change when the end-user initiates a credentials rotation operation, so rather rarely.
+  Still, duplicating all labels and data of such `Secret`s into the garden cluster increases the size of `ShootState` resources.
 
 - The [`shootstate-extensions`](../../pkg/gardenlet/controller/shootstate/extensions) controller watches all resources of the `extensions.gardener.cloud/v1alpha1` API group in the shoot namespaces in the seed cluster. It persists all extensions state and resources in the respective `.status.state` and `.status.resources` fields. See also [this document](../extensions/migration.md) for more background information.
 
-In reality, this is the controller which can cause quite a lot of network I/O (hence, traffic and costs).
-While most of the extension states change rather rarely, the state of the `extensions.gardener.cloud/v1alpha1.Worker` resources can update quite frequently whenever new worker machines join or leave the cluster.
-`gardenlet` has to watch and replicate all such state changes to the `ShootState` resource.
+  In reality, this is the controller which can cause quite a lot of network I/O (hence, traffic and costs).
+  While most of the extension states change rather rarely, the state of the `extensions.gardener.cloud/v1alpha1.Worker` resources can update quite frequently whenever new worker machines join or leave the cluster.
+  `gardenlet` has to watch and replicate all such state changes to the `ShootState` resource.
 
 In large Gardener installations, this can result in a lot of requests to the `gardener-apiserver` (transitively, also to ETCD of the garden cluster), and it can significantly contribute to the ETCD size (note that ETCD has a practical space limit of 8 GB).
 Besides, it increases the memory consumption considerably for all clients working with `ShootState`s.
@@ -98,9 +98,9 @@ With this, the `ShootState` API can be dropped entirely.
    1. all labels and data for `Secret`s labeled with `persist=true`.
    2. all `.status.state` and `.status.resources` for resources in the `extensions.gardener.cloud/v1alpha1` API group.
 
-   The `gardenlet` puts this state into a structure similar to the [`core.gardener.cloud/v1beta1.ShootSpec`](https://github.com/gardener/gardener/blob/27b76d8d825461b9edc75c2d4472829e309af05e/pkg/apis/core/v1beta1/types_shootstate.go#L49-L101), marshals it to JSON, and puts it into the data of an [`core.gardener.cloud/v1beta1.InternalSecret`](https://github.com/gardener/gardener/issues/7999) stored in the namespace of the respective `Shoot` in the garden cluster.
+   The `gardenlet` puts this state into a structure similar to the [`core.gardener.cloud/v1beta1.ShootStateSpec`](https://github.com/gardener/gardener/blob/27b76d8d825461b9edc75c2d4472829e309af05e/pkg/apis/core/v1beta1/types_shootstate.go#L49-L101), marshals it to JSON, and puts it into the data of an [`core.gardener.cloud/v1beta1.InternalSecret`](https://github.com/gardener/gardener/issues/7999) stored in the namespace of the respective `Shoot` in the garden cluster.
 
-4. During the `Restore` phase of a `Shoot`, `gardenlet` will read the created [`core.gardener.cloud/v1beta1.InternalSecret`](https://github.com/gardener/gardener/issues/7999) from the namespace of the respective `Shoot` in the garden cluster, unmarshals its data from JSON to a structure similar to the [`core.gardener.cloud/v1beta1.ShootSpec`](https://github.com/gardener/gardener/blob/27b76d8d825461b9edc75c2d4472829e309af05e/pkg/apis/core/v1beta1/types_shootstate.go#L49-L101), and uses it to populate the state in the new seed cluster just like today.
+4. During the `Restore` phase of a `Shoot`, `gardenlet` will read the created [`core.gardener.cloud/v1beta1.InternalSecret`](https://github.com/gardener/gardener/issues/7999) from the namespace of the respective `Shoot` in the garden cluster, unmarshals its data from JSON to a structure similar to the [`core.gardener.cloud/v1beta1.ShootStateSpec`](https://github.com/gardener/gardener/blob/27b76d8d825461b9edc75c2d4472829e309af05e/pkg/apis/core/v1beta1/types_shootstate.go#L49-L101), and uses it to populate the state in the new seed cluster just like today.
 5. After successful restoration, the created [`core.gardener.cloud/v1beta1.InternalSecret`](https://github.com/gardener/gardener/issues/7999) is deleted again from the namespace of the respective `Shoot` in the garden cluster.
 
 This approach addresses all the concerns and downsides of today's implementation:
@@ -165,7 +165,7 @@ However, this approach is significantly more expensive in terms of development c
 - Introduction of new resources in the `extensions.gardener.cloud/v1alpha1` API which comes with validation, deployment dependencies, etc.
 - Introduction of new extension controllers.
 - Adaptation of all existing provider extensions with support for `Backup{Bucket,Entry}`s with the implementation for the new `Backup{Up,Down}load` resources.
-- Encryption of the shoot state data (since we do not want to store it unencryptedly in the backup buckets).
+- Encryption of the shoot state data (since we do not want to store it as plain text in the backup buckets). With above proposal, encryption is handled by `gardener-apiserver` via the standard `EncryptionConfiguration`.
 - Management (incl. rotation) of a respective encryption key.
 
 So far, the only justification for following such a path would be the necessity for regular backups of the shoot states (e.g., every hour or so).
