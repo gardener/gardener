@@ -11,8 +11,9 @@ Generally, there are provider-specific `MachineClass` objects (`AWSMachineClass`
 A machine class describes **where** and **how** to create virtual machines (in which networks, region, availability zone, SSH key, user-data for bootstrapping, etc.), while a `Machine` results in an actual virtual machine.
 You can read up [more information](https://github.com/gardener/machine-controller-manager) in the machine-controller-manager's [repository](https://github.com/gardener/machine-controller-manager).
 
-Before the introduction of the `Worker` extension resource, Gardener was deploying the machine-controller-manager, the machine classes, and the machine deployments itself.
-Now, Gardener commissions an external, provider-specific controller to take over these tasks.
+The `gardenlet` has a feature gate `MachineControllerManagerDeployment` which controls whether it is deploying the `machine-controller-manager`.
+If set to `true`, provider extensions only have to inject their specific out-of-tree `machine-controller-manager` sidecar container into the `Deployment`.
+If set to `false`, provider extensions have to take care of th full deployment (including the generic `machine-controller-manager` container).
 
 ## What needs to be implemented to support a new worker provider?
 
@@ -116,7 +117,8 @@ The `spec.pools[].nodeTemplate.capacity` field contains the resource information
 
 The `spec.pools[].machineControllerManager` field allows to configure the settings for machine-controller-manager component. Providers must populate these settings on worker-pool to the related [fields](https://github.com/gardener/machine-controller-manager/blob/master/kubernetes/machine_objects/machine-deployment.yaml#L30-L34) in MachineDeployment.
 
-When seeing such a resource, your controller must make sure that it deploys the machine-controller-manager next to the control plane in the seed cluster.
+When observing such a resource, the controller must make sure that it deploys the machine-controller-manager next to the control plane in the seed cluster (only if `gardenlet`'s `MachineControllerManagerDeployment` feature gate is disabled). If the feature gate is enabled, the controller must only inject its provider-specific sidecar container into the `machine-controller-manager` `Deployment` managed by `gardenlet`.
+
 After that, it must compute the desired machine classes and the desired machine deployments.
 Typically, one class maps to one deployment, and one class/deployment is created per availability zone.
 Following this convention, the created resource would look like this:
@@ -307,8 +309,9 @@ You can take a look at the below referenced example implementation for the AWS p
 ## That sounds like a lot that needs to be done, can you help me?
 
 All of the described behaviour is mostly the same for every provider.
-The only difference is maybe the version/configuration of the machine-controller-manager, and the machine class specification itself.
+The only difference is maybe the version/configuration of the provider-specific `machine-controller-manager` sidecar container, and the machine class specification itself.
 You can take a look at our [extension library](https://github.com/gardener/gardener/blob/master/extensions), especially the [worker controller](../../extensions/pkg/controller/worker) part where you will find a lot of utilities that you can use.
+Note that there are also utility functions for getting the default sidecar container specification or corresponding VPA container policy in the [`machinecontrollermanager` package](../../pkg/component/machinecontrollermanager) called `ProviderSidecarContainer` and `ProviderSidecarVPAContainerPolicy`. 
 Also, using the library you only need to implement your provider specifics - all the things that can be handled generically can be taken for free and do not need to be re-implemented.
 Take a look at the [AWS worker controller](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller/worker) for finding an example.
 
