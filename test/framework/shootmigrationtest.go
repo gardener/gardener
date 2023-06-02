@@ -100,10 +100,7 @@ func (t *ShootMigrationTest) initializeShootMigrationTest(ctx context.Context) e
 		return err
 	}
 
-	if err := t.populateBeforeMigrationComparisonElements(ctx); err != nil {
-		return err
-	}
-	return nil
+	return t.populateBeforeMigrationComparisonElements(ctx)
 }
 
 func (t *ShootMigrationTest) initShootAndClient(ctx context.Context) (err error) {
@@ -193,10 +190,7 @@ func (t ShootMigrationTest) VerifyMigration(ctx context.Context) error {
 	}
 
 	ginkgo.By("Check for orphaned resources")
-	if err := t.checkForOrphanedNonNamespacedResources(ctx); err != nil {
-		return err
-	}
-	return nil
+	return t.checkForOrphanedNonNamespacedResources(ctx)
 }
 
 // GetNodeNames uses the shootClient to fetch all Node names from the Shoot
@@ -451,10 +445,8 @@ func (t ShootMigrationTest) CreateSecretAndServiceAccount(ctx context.Context) e
 	if err := t.ShootClient.Client().Create(ctx, testSecret); err != nil {
 		return err
 	}
-	if err := t.ShootClient.Client().Create(ctx, testServiceAccount); err != nil {
-		return err
-	}
-	return nil
+
+	return t.ShootClient.Client().Create(ctx, testServiceAccount)
 }
 
 // CheckSecretAndServiceAccount checks the test secret and service account exists in the shoot.
@@ -463,10 +455,8 @@ func (t ShootMigrationTest) CheckSecretAndServiceAccount(ctx context.Context) er
 	if err := t.ShootClient.Client().Get(ctx, client.ObjectKeyFromObject(testSecret), testSecret); err != nil {
 		return err
 	}
-	if err := t.ShootClient.Client().Get(ctx, client.ObjectKeyFromObject(testServiceAccount), testServiceAccount); err != nil {
-		return err
-	}
-	return nil
+
+	return t.ShootClient.Client().Get(ctx, client.ObjectKeyFromObject(testServiceAccount), testServiceAccount)
 }
 
 // CleanUpSecretAndServiceAccount cleans up the test secret and service account
@@ -475,10 +465,8 @@ func (t ShootMigrationTest) CleanUpSecretAndServiceAccount(ctx context.Context) 
 	if err := t.ShootClient.Client().Delete(ctx, testSecret); err != nil {
 		return err
 	}
-	if err := t.ShootClient.Client().Delete(ctx, testServiceAccount); err != nil {
-		return err
-	}
-	return nil
+
+	return t.ShootClient.Client().Delete(ctx, testServiceAccount)
 }
 
 func constructTestSecretAndServiceAccount() (*corev1.Secret, *corev1.ServiceAccount) {

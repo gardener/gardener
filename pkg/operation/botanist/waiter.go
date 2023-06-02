@@ -48,13 +48,9 @@ func (b *Botanist) WaitUntilNginxIngressServiceIsReady(ctx context.Context) erro
 func (b *Botanist) WaitUntilTunnelConnectionExists(ctx context.Context) error {
 	const timeout = 15 * time.Minute
 
-	if err := retry.UntilTimeout(ctx, 5*time.Second, timeout, func(ctx context.Context) (bool, error) {
+	return retry.UntilTimeout(ctx, 5*time.Second, timeout, func(ctx context.Context) (bool, error) {
 		return CheckTunnelConnection(ctx, b.Logger, b.ShootClientSet, common.VPNTunnel)
-	}); err != nil {
-		return err
-	}
-
-	return nil
+	})
 }
 
 // WaitUntilNodesDeleted waits until no nodes exist in the shoot cluster anymore.

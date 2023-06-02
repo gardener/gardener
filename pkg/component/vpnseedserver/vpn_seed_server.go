@@ -281,11 +281,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		}
 	}
 
-	if err := v.deployVPA(ctx); err != nil {
-		return err
-	}
-
-	return nil
+	return v.deployVPA(ctx)
 }
 
 func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secretCAVPN, secretServer, secretTLSAuth *corev1.Secret) *corev1.PodTemplateSpec {

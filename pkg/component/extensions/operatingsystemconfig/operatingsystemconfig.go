@@ -227,11 +227,7 @@ func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(
 		return reconcileFn(d)
 	})
 
-	if err := flow.Parallel(fns...)(ctx); err != nil {
-		return err
-	}
-
-	return nil
+	return flow.Parallel(fns...)(ctx)
 }
 
 // Wait waits until the OperatingSystemConfig CRD is ready (deployed or restored). It also reads the produced secret
