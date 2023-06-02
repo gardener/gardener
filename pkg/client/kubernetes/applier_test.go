@@ -177,13 +177,13 @@ spec:
 
 			Context("DefaultMergeFuncs", func() {
 				var (
-					old      *corev1.Service
-					new      *corev1.Service
-					expected *corev1.Service
+					oldService *corev1.Service
+					newService *corev1.Service
+					expected   *corev1.Service
 				)
 
 				BeforeEach(func() {
-					old = &corev1.Service{
+					oldService = &corev1.Service{
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "Service",
 							APIVersion: "v1",
@@ -210,19 +210,19 @@ spec:
 						},
 					}
 
-					new = old.DeepCopy()
-					new.Spec.ClusterIP = ""
-					new.Annotations = map[string]string{}
-					expected = old.DeepCopy()
+					newService = oldService.DeepCopy()
+					newService.Spec.ClusterIP = ""
+					newService.Annotations = map[string]string{}
+					expected = oldService.DeepCopy()
 					expected.ResourceVersion = "2"
 				})
 
 				DescribeTable("Existing ClusterIP service",
 					func(mutator func()) {
 						mutator()
-						Expect(c.Create(context.TODO(), old)).ToNot(HaveOccurred())
+						Expect(c.Create(context.TODO(), oldService)).ToNot(HaveOccurred())
 
-						manifest := mkManifest(new)
+						manifest := mkManifest(newService)
 						manifestReader := kubernetes.NewManifestReader(manifest)
 
 						err := applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)
@@ -237,9 +237,9 @@ spec:
 
 					Entry(
 						"ClusterIP with changed ports", func() {
-							new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-							new.Spec.Ports[0].Port = 999
-							new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+							newService.Spec.Ports[0].Port = 999
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
 
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
@@ -247,21 +247,21 @@ spec:
 						}),
 					Entry(
 						"ClusterIP with changed ClusterIP, should not update it", func() {
-							new.Spec.ClusterIP = "5.6.7.8"
+							newService.Spec.ClusterIP = "5.6.7.8"
 						}),
 					Entry(
 						"Headless ClusterIP", func() {
-							new.Spec.ClusterIP = "None"
+							newService.Spec.ClusterIP = "None"
 
 							expected.Spec.ClusterIP = "None"
 						}),
 					Entry(
 						"ClusterIP without passing any type, should update it", func() {
-							new.Spec.ClusterIP = "5.6.7.8"
-							new.Spec.Type = ""
-							new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-							new.Spec.Ports[0].Port = 999
-							new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.ClusterIP = "5.6.7.8"
+							newService.Spec.Type = ""
+							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+							newService.Spec.Ports[0].Port = 999
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
 
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
@@ -269,11 +269,11 @@ spec:
 						}),
 					Entry(
 						"NodePort with changed ports", func() {
-							new.Spec.Type = corev1.ServiceTypeNodePort
-							new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-							new.Spec.Ports[0].Port = 999
-							new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
-							new.Spec.Ports[0].NodePort = 444
+							newService.Spec.Type = corev1.ServiceTypeNodePort
+							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+							newService.Spec.Ports[0].Port = 999
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].NodePort = 444
 
 							expected.Spec.Type = corev1.ServiceTypeNodePort
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
@@ -283,15 +283,15 @@ spec:
 						}),
 					Entry(
 						"ExternalName removes ClusterIP", func() {
-							new.Spec.Type = corev1.ServiceTypeExternalName
-							new.Spec.Selector = nil
-							new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-							new.Spec.Ports[0].Port = 999
-							new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
-							new.Spec.Ports[0].NodePort = 0
-							new.Spec.ClusterIP = ""
-							new.Spec.ExternalName = "foo.com"
-							new.Spec.HealthCheckNodePort = 0
+							newService.Spec.Type = corev1.ServiceTypeExternalName
+							newService.Spec.Selector = nil
+							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+							newService.Spec.Ports[0].Port = 999
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].NodePort = 0
+							newService.Spec.ClusterIP = ""
+							newService.Spec.ExternalName = "foo.com"
+							newService.Spec.HealthCheckNodePort = 0
 
 							expected.Spec.Type = corev1.ServiceTypeExternalName
 							expected.Spec.Selector = nil
@@ -307,19 +307,19 @@ spec:
 
 				DescribeTable("Existing NodePort service",
 					func(mutator func()) {
-						old.Spec.Ports[0].NodePort = 3333
-						old.Spec.Type = corev1.ServiceTypeNodePort
+						oldService.Spec.Ports[0].NodePort = 3333
+						oldService.Spec.Type = corev1.ServiceTypeNodePort
 
-						new.Spec.Ports[0].NodePort = 3333
-						new.Spec.Type = corev1.ServiceTypeNodePort
+						newService.Spec.Ports[0].NodePort = 3333
+						newService.Spec.Type = corev1.ServiceTypeNodePort
 
 						expected.Spec.Ports[0].NodePort = 3333
 						expected.Spec.Type = corev1.ServiceTypeNodePort
 
 						mutator()
-						Expect(c.Create(context.TODO(), old)).ToNot(HaveOccurred())
+						Expect(c.Create(context.TODO(), oldService)).ToNot(HaveOccurred())
 
-						manifest := mkManifest(new)
+						manifest := mkManifest(newService)
 						manifestReader := kubernetes.NewManifestReader(manifest)
 
 						err := applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)
@@ -334,11 +334,11 @@ spec:
 
 					Entry(
 						"ClusterIP with changed ports", func() {
-							new.Spec.Type = corev1.ServiceTypeClusterIP
-							new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-							new.Spec.Ports[0].Port = 999
-							new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
-							new.Spec.Ports[0].NodePort = 0
+							newService.Spec.Type = corev1.ServiceTypeClusterIP
+							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+							newService.Spec.Ports[0].Port = 999
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].NodePort = 0
 
 							expected.Spec.Type = corev1.ServiceTypeClusterIP
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
@@ -348,22 +348,22 @@ spec:
 						}),
 					Entry(
 						"ClusterIP changed, should not update it", func() {
-							new.Spec.ClusterIP = "5.6.7.8"
+							newService.Spec.ClusterIP = "5.6.7.8"
 						}),
 					Entry(
 						"Headless ClusterIP type service", func() {
-							new.Spec.Type = corev1.ServiceTypeClusterIP
-							new.Spec.ClusterIP = "None"
+							newService.Spec.Type = corev1.ServiceTypeClusterIP
+							newService.Spec.ClusterIP = "None"
 
 							expected.Spec.ClusterIP = "None"
 							expected.Spec.Type = corev1.ServiceTypeClusterIP
 						}),
 					Entry(
 						"NodePort with changed ports", func() {
-							new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-							new.Spec.Ports[0].Port = 999
-							new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
-							new.Spec.Ports[0].NodePort = 444
+							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+							newService.Spec.Ports[0].Port = 999
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].NodePort = 444
 
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
@@ -372,10 +372,10 @@ spec:
 						}),
 					Entry(
 						"NodePort with changed ports and without nodePort", func() {
-							new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-							new.Spec.Ports[0].Port = 999
-							new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
-							new.Spec.Ports[0].NodePort = 0
+							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+							newService.Spec.Ports[0].Port = 999
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].NodePort = 0
 
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
@@ -383,15 +383,15 @@ spec:
 						}),
 					Entry(
 						"ExternalName removes ClusterIP", func() {
-							new.Spec.Type = corev1.ServiceTypeExternalName
-							new.Spec.Selector = nil
-							new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-							new.Spec.Ports[0].Port = 999
-							new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
-							new.Spec.Ports[0].NodePort = 0
-							new.Spec.ClusterIP = ""
-							new.Spec.ExternalName = "foo.com"
-							new.Spec.HealthCheckNodePort = 0
+							newService.Spec.Type = corev1.ServiceTypeExternalName
+							newService.Spec.Selector = nil
+							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+							newService.Spec.Ports[0].Port = 999
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].NodePort = 0
+							newService.Spec.ClusterIP = ""
+							newService.Spec.ExternalName = "foo.com"
+							newService.Spec.HealthCheckNodePort = 0
 
 							expected.Spec.Type = corev1.ServiceTypeExternalName
 							expected.Spec.Selector = nil
@@ -407,19 +407,19 @@ spec:
 
 				DescribeTable("Existing LoadBalancer service change to service of type",
 					func(mutator func()) {
-						old.Spec.Ports[0].NodePort = 3333
-						old.Spec.Type = corev1.ServiceTypeLoadBalancer
+						oldService.Spec.Ports[0].NodePort = 3333
+						oldService.Spec.Type = corev1.ServiceTypeLoadBalancer
 
-						new.Spec.Ports[0].NodePort = 3333
-						new.Spec.Type = corev1.ServiceTypeLoadBalancer
+						newService.Spec.Ports[0].NodePort = 3333
+						newService.Spec.Type = corev1.ServiceTypeLoadBalancer
 
 						expected.Spec.Ports[0].NodePort = 3333
 						expected.Spec.Type = corev1.ServiceTypeLoadBalancer
 
 						mutator()
-						Expect(c.Create(context.TODO(), old)).ToNot(HaveOccurred())
+						Expect(c.Create(context.TODO(), oldService)).ToNot(HaveOccurred())
 
-						manifest := mkManifest(new)
+						manifest := mkManifest(newService)
 						manifestReader := kubernetes.NewManifestReader(manifest)
 
 						err := applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)
@@ -434,11 +434,11 @@ spec:
 
 					Entry(
 						"ClusterIP with changed ports", func() {
-							new.Spec.Type = corev1.ServiceTypeClusterIP
-							new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-							new.Spec.Ports[0].Port = 999
-							new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
-							new.Spec.Ports[0].NodePort = 0
+							newService.Spec.Type = corev1.ServiceTypeClusterIP
+							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+							newService.Spec.Ports[0].Port = 999
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].NodePort = 0
 
 							expected.Spec.Type = corev1.ServiceTypeClusterIP
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
@@ -448,22 +448,22 @@ spec:
 						}),
 					Entry(
 						"Cluster with ClusterIP changed, should not update it", func() {
-							new.Spec.ClusterIP = "5.6.7.8"
+							newService.Spec.ClusterIP = "5.6.7.8"
 						}),
 					Entry(
 						"Headless ClusterIP type service", func() {
-							new.Spec.Type = corev1.ServiceTypeClusterIP
-							new.Spec.ClusterIP = "None"
+							newService.Spec.Type = corev1.ServiceTypeClusterIP
+							newService.Spec.ClusterIP = "None"
 
 							expected.Spec.ClusterIP = "None"
 							expected.Spec.Type = corev1.ServiceTypeClusterIP
 						}),
 					Entry(
 						"NodePort with changed ports", func() {
-							new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-							new.Spec.Ports[0].Port = 999
-							new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
-							new.Spec.Ports[0].NodePort = 444
+							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+							newService.Spec.Ports[0].Port = 999
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].NodePort = 444
 
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
@@ -472,10 +472,10 @@ spec:
 						}),
 					Entry(
 						"NodePort with changed ports and without nodePort", func() {
-							new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-							new.Spec.Ports[0].Port = 999
-							new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
-							new.Spec.Ports[0].NodePort = 0
+							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+							newService.Spec.Ports[0].Port = 999
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].NodePort = 0
 
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 							expected.Spec.Ports[0].Port = 999
@@ -483,15 +483,15 @@ spec:
 						}),
 					Entry(
 						"ExternalName removes ClusterIP", func() {
-							new.Spec.Type = corev1.ServiceTypeExternalName
-							new.Spec.Selector = nil
-							new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-							new.Spec.Ports[0].Port = 999
-							new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
-							new.Spec.Ports[0].NodePort = 0
-							new.Spec.ClusterIP = ""
-							new.Spec.ExternalName = "foo.com"
-							new.Spec.HealthCheckNodePort = 0
+							newService.Spec.Type = corev1.ServiceTypeExternalName
+							newService.Spec.Selector = nil
+							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+							newService.Spec.Ports[0].Port = 999
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].NodePort = 0
+							newService.Spec.ClusterIP = ""
+							newService.Spec.ExternalName = "foo.com"
+							newService.Spec.HealthCheckNodePort = 0
 
 							expected.Spec.Type = corev1.ServiceTypeExternalName
 							expected.Spec.Selector = nil
@@ -505,19 +505,19 @@ spec:
 						}),
 					Entry(
 						"LoadBalancer with ExternalTrafficPolicy=Local and HealthCheckNodePort", func() {
-							new.Spec.HealthCheckNodePort = 123
-							new.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+							newService.Spec.HealthCheckNodePort = 123
+							newService.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
 
 							expected.Spec.HealthCheckNodePort = 123
 							expected.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
 						}),
 					Entry(
 						"LoadBalancer with ExternalTrafficPolicy=Local and no HealthCheckNodePort", func() {
-							old.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
-							old.Spec.HealthCheckNodePort = 3333
+							oldService.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+							oldService.Spec.HealthCheckNodePort = 3333
 
-							new.Spec.HealthCheckNodePort = 0
-							new.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+							newService.Spec.HealthCheckNodePort = 0
+							newService.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
 
 							expected.Spec.HealthCheckNodePort = 3333
 							expected.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
@@ -526,19 +526,19 @@ spec:
 
 				DescribeTable("Existing ExternalName service change to service of type",
 					func(mutator func()) {
-						old.Spec.Ports[0].NodePort = 0
-						old.Spec.Type = corev1.ServiceTypeExternalName
-						old.Spec.HealthCheckNodePort = 0
-						old.Spec.ClusterIP = ""
-						old.Spec.ExternalName = "baz.bar"
-						old.Spec.Selector = nil
+						oldService.Spec.Ports[0].NodePort = 0
+						oldService.Spec.Type = corev1.ServiceTypeExternalName
+						oldService.Spec.HealthCheckNodePort = 0
+						oldService.Spec.ClusterIP = ""
+						oldService.Spec.ExternalName = "baz.bar"
+						oldService.Spec.Selector = nil
 
-						new.Spec.Ports[0].NodePort = 0
-						new.Spec.Type = corev1.ServiceTypeExternalName
-						new.Spec.HealthCheckNodePort = 0
-						new.Spec.ClusterIP = ""
-						new.Spec.ExternalName = "baz.bar"
-						new.Spec.Selector = nil
+						newService.Spec.Ports[0].NodePort = 0
+						newService.Spec.Type = corev1.ServiceTypeExternalName
+						newService.Spec.HealthCheckNodePort = 0
+						newService.Spec.ClusterIP = ""
+						newService.Spec.ExternalName = "baz.bar"
+						newService.Spec.Selector = nil
 
 						expected.Spec.Ports[0].NodePort = 0
 						expected.Spec.Type = corev1.ServiceTypeExternalName
@@ -548,9 +548,9 @@ spec:
 						expected.Spec.Selector = nil
 
 						mutator()
-						Expect(c.Create(context.TODO(), old)).ToNot(HaveOccurred())
+						Expect(c.Create(context.TODO(), oldService)).ToNot(HaveOccurred())
 
-						manifest := mkManifest(new)
+						manifest := mkManifest(newService)
 						manifestReader := kubernetes.NewManifestReader(manifest)
 
 						err := applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultMergeFuncs)
@@ -565,13 +565,13 @@ spec:
 
 					Entry(
 						"ClusterIP with changed ports", func() {
-							new.Spec.Type = corev1.ServiceTypeClusterIP
-							new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-							new.Spec.Ports[0].Port = 999
-							new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
-							new.Spec.Ports[0].NodePort = 0
-							new.Spec.ExternalName = ""
-							new.Spec.ClusterIP = "3.4.5.6"
+							newService.Spec.Type = corev1.ServiceTypeClusterIP
+							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+							newService.Spec.Ports[0].Port = 999
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].NodePort = 0
+							newService.Spec.ExternalName = ""
+							newService.Spec.ClusterIP = "3.4.5.6"
 
 							expected.Spec.Type = corev1.ServiceTypeClusterIP
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
@@ -583,13 +583,13 @@ spec:
 						}),
 					Entry(
 						"NodePort with changed ports", func() {
-							new.Spec.Type = corev1.ServiceTypeNodePort
-							new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-							new.Spec.Ports[0].Port = 999
-							new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
-							new.Spec.Ports[0].NodePort = 444
-							new.Spec.ExternalName = ""
-							new.Spec.ClusterIP = "3.4.5.6"
+							newService.Spec.Type = corev1.ServiceTypeNodePort
+							newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+							newService.Spec.Ports[0].Port = 999
+							newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+							newService.Spec.Ports[0].NodePort = 444
+							newService.Spec.ExternalName = ""
+							newService.Spec.ClusterIP = "3.4.5.6"
 
 							expected.Spec.Type = corev1.ServiceTypeNodePort
 							expected.Spec.Ports[0].Protocol = corev1.ProtocolUDP
@@ -601,11 +601,11 @@ spec:
 						}),
 					Entry(
 						"LoadBalancer with ExternalTrafficPolicy=Local and HealthCheckNodePort", func() {
-							new.Spec.Type = corev1.ServiceTypeLoadBalancer
-							new.Spec.HealthCheckNodePort = 123
-							new.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
-							new.Spec.ExternalName = ""
-							new.Spec.ClusterIP = "3.4.5.6"
+							newService.Spec.Type = corev1.ServiceTypeLoadBalancer
+							newService.Spec.HealthCheckNodePort = 123
+							newService.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+							newService.Spec.ExternalName = ""
+							newService.Spec.ClusterIP = "3.4.5.6"
 
 							expected.Spec.Type = corev1.ServiceTypeLoadBalancer
 							expected.Spec.HealthCheckNodePort = 123
@@ -618,13 +618,13 @@ spec:
 
 			Context("DeploymentKeepReplicasMergeFunc", func() {
 				var (
-					old      *appsv1.Deployment
-					new      *appsv1.Deployment
-					expected *appsv1.Deployment
+					oldDeployment *appsv1.Deployment
+					newDeployment *appsv1.Deployment
+					expected      *appsv1.Deployment
 				)
 
 				BeforeEach(func() {
-					old = &appsv1.Deployment{
+					oldDeployment = &appsv1.Deployment{
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "Deployment",
 							APIVersion: "apps/v1",
@@ -635,17 +635,17 @@ spec:
 						},
 					}
 
-					new = old.DeepCopy()
-					expected = old.DeepCopy()
+					newDeployment = oldDeployment.DeepCopy()
+					expected = oldDeployment.DeepCopy()
 					expected.ResourceVersion = "2"
 				})
 
 				DescribeTable("Existing Deployment",
 					func(mutator func()) {
 						mutator()
-						Expect(c.Create(context.TODO(), old)).ToNot(HaveOccurred())
+						Expect(c.Create(context.TODO(), oldDeployment)).ToNot(HaveOccurred())
 
-						manifest := mkManifest(new)
+						manifest := mkManifest(newDeployment)
 						manifestReader := kubernetes.NewManifestReader(manifest)
 
 						err := applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.MergeFuncs{appsv1.SchemeGroupVersion.WithKind("Deployment").GroupKind(): kubernetes.DeploymentKeepReplicasMergeFunc})
@@ -660,29 +660,29 @@ spec:
 
 					Entry(
 						"old without replicas, new without replicas", func() {
-							old.Spec.Replicas = nil
-							new.Spec.Replicas = nil
+							oldDeployment.Spec.Replicas = nil
+							newDeployment.Spec.Replicas = nil
 							expected.Spec.Replicas = nil
 						},
 					),
 					Entry(
 						"old without replicas, new with replicas", func() {
-							old.Spec.Replicas = nil
-							new.Spec.Replicas = pointer.Int32(2)
+							oldDeployment.Spec.Replicas = nil
+							newDeployment.Spec.Replicas = pointer.Int32(2)
 							expected.Spec.Replicas = pointer.Int32(2)
 						},
 					),
 					Entry(
 						"old with replicas, new without replicas", func() {
-							old.Spec.Replicas = pointer.Int32(3)
-							new.Spec.Replicas = nil
+							oldDeployment.Spec.Replicas = pointer.Int32(3)
+							newDeployment.Spec.Replicas = nil
 							expected.Spec.Replicas = pointer.Int32(3)
 						},
 					),
 					Entry(
 						"old with replicas, new with replicas", func() {
-							old.Spec.Replicas = pointer.Int32(3)
-							new.Spec.Replicas = pointer.Int32(4)
+							oldDeployment.Spec.Replicas = pointer.Int32(3)
+							newDeployment.Spec.Replicas = pointer.Int32(4)
 							expected.Spec.Replicas = pointer.Int32(3)
 						},
 					),

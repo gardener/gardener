@@ -288,8 +288,8 @@ var _ = Describe("merger", func() {
 
 	Describe("#mergeDeployment", func() {
 		var (
-			old, new *appsv1.Deployment
-			s        *runtime.Scheme
+			old, newDeployment *appsv1.Deployment
+			s                  *runtime.Scheme
 		)
 
 		BeforeEach(func() {
@@ -307,62 +307,62 @@ var _ = Describe("merger", func() {
 				},
 			}
 
-			new = old.DeepCopy()
+			newDeployment = old.DeepCopy()
 		})
 
 		It("should not overwrite old .spec.replicas if the new one is nil", func() {
-			new.Spec.Replicas = nil
+			newDeployment.Spec.Replicas = nil
 
 			expected := old.DeepCopy()
 
-			Expect(mergeDeployment(s, old, new, false, false)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
+			Expect(mergeDeployment(s, old, newDeployment, false, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newDeployment).To(Equal(expected))
 		})
 
 		It("should not overwrite old .spec.replicas if preserveReplicas is true", func() {
-			new.Spec.Replicas = pointer.Int32(2)
+			newDeployment.Spec.Replicas = pointer.Int32(2)
 
 			expected := old.DeepCopy()
 
-			Expect(mergeDeployment(s, old, new, true, false)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
+			Expect(mergeDeployment(s, old, newDeployment, true, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newDeployment).To(Equal(expected))
 		})
 
 		It("should use new .spec.replicas if preserveReplicas is false", func() {
-			new.Spec.Replicas = pointer.Int32(2)
+			newDeployment.Spec.Replicas = pointer.Int32(2)
 
-			expected := new.DeepCopy()
+			expected := newDeployment.DeepCopy()
 
-			Expect(mergeDeployment(s, old, new, false, false)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
+			Expect(mergeDeployment(s, old, newDeployment, false, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newDeployment).To(Equal(expected))
 		})
 
 		It("should overwrite old .spec.containers[*].resources if preserveResources is false", func() {
-			new.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
+			newDeployment.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
 
 			expected := old.DeepCopy()
-			expected.Spec.Template.Spec.Containers[0].Resources = new.Spec.Template.Spec.Containers[0].Resources
+			expected.Spec.Template.Spec.Containers[0].Resources = newDeployment.Spec.Template.Spec.Containers[0].Resources
 
-			Expect(mergeDeployment(s, old, new, true, false)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
+			Expect(mergeDeployment(s, old, newDeployment, true, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newDeployment).To(Equal(expected))
 		})
 
 		It("should not overwrite old .spec.containers[*].resources if preserveResources is true", func() {
-			new.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
+			newDeployment.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
 
 			expected := old.DeepCopy()
 
-			Expect(mergeDeployment(s, old, new, true, true)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
+			Expect(mergeDeployment(s, old, newDeployment, true, true)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newDeployment).To(Equal(expected))
 		})
 	})
 
 	Describe("#mergeDeploymentAnnotations", func() {
 		origin := "test:a/b"
 		var (
-			old, new, expected *appsv1.Deployment
-			s                  *runtime.Scheme
-			current, desired   = &unstructured.Unstructured{}, &unstructured.Unstructured{}
+			old, newDeployment, expected *appsv1.Deployment
+			s                            *runtime.Scheme
+			current, desired             = &unstructured.Unstructured{}, &unstructured.Unstructured{}
 		)
 
 		BeforeEach(func() {
@@ -382,28 +382,28 @@ var _ = Describe("merger", func() {
 				},
 			}
 
-			new = old.DeepCopy()
+			newDeployment = old.DeepCopy()
 			expected = old.DeepCopy()
 		})
 
 		It("should use new .spec.replicas if preserve-replicas is unset", func() {
-			new.Spec.Replicas = pointer.Int32(2)
+			newDeployment.Spec.Replicas = pointer.Int32(2)
 
 			Expect(s.Convert(old, current, nil)).Should(Succeed())
-			Expect(s.Convert(new, desired, nil)).Should(Succeed())
+			Expect(s.Convert(newDeployment, desired, nil)).Should(Succeed())
 
 			Expect(merge(origin, desired, current, false, nil, false, nil, false, false)).To(Succeed(), "merge should be successful")
 			Expect(s.Convert(current, expected, nil)).Should(Succeed())
 
-			Expect(expected.Spec.Replicas).To(Equal(new.Spec.Replicas))
+			Expect(expected.Spec.Replicas).To(Equal(newDeployment.Spec.Replicas))
 		})
 
 		It("should not overwrite old .spec.replicas if preserve-replicas is true", func() {
-			new.Spec.Replicas = pointer.Int32(2)
-			new.ObjectMeta.Annotations["resources.gardener.cloud/preserve-replicas"] = "true"
+			newDeployment.Spec.Replicas = pointer.Int32(2)
+			newDeployment.ObjectMeta.Annotations["resources.gardener.cloud/preserve-replicas"] = "true"
 
 			Expect(s.Convert(old, current, nil)).Should(Succeed())
-			Expect(s.Convert(new, desired, nil)).Should(Succeed())
+			Expect(s.Convert(newDeployment, desired, nil)).Should(Succeed())
 
 			Expect(merge(origin, desired, current, false, nil, false, nil, false, false)).To(Succeed(), "merge should be successful")
 			Expect(s.Convert(current, expected, nil)).Should(Succeed())
@@ -411,7 +411,7 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should use new .spec.template.spec.resources if preserve-resources is unset", func() {
-			new.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{
+			newDeployment.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("60m"),
 					corev1.ResourceMemory: resource.MustParse("180Mi"),
@@ -423,19 +423,19 @@ var _ = Describe("merger", func() {
 			}
 
 			Expect(s.Convert(old, current, nil)).Should(Succeed())
-			Expect(s.Convert(new, desired, nil)).Should(Succeed())
+			Expect(s.Convert(newDeployment, desired, nil)).Should(Succeed())
 
 			Expect(merge(origin, desired, current, false, nil, false, nil, false, false)).To(Succeed(), "merge should be successful")
 			Expect(s.Convert(current, expected, nil)).Should(Succeed())
 
-			Expect(new.Spec.Template.Spec.Containers[0].Resources.Requests["cpu"].Equal(expected.Spec.Template.Spec.Containers[0].Resources.Requests["cpu"])).To(BeTrue())
-			Expect(new.Spec.Template.Spec.Containers[0].Resources.Requests["memory"].Equal(expected.Spec.Template.Spec.Containers[0].Resources.Requests["memory"])).To(BeTrue())
-			Expect(new.Spec.Template.Spec.Containers[0].Resources.Limits["cpu"].Equal(expected.Spec.Template.Spec.Containers[0].Resources.Limits["cpu"])).To(BeTrue())
-			Expect(new.Spec.Template.Spec.Containers[0].Resources.Limits["memory"].Equal(expected.Spec.Template.Spec.Containers[0].Resources.Limits["memory"])).To(BeTrue())
+			Expect(newDeployment.Spec.Template.Spec.Containers[0].Resources.Requests["cpu"].Equal(expected.Spec.Template.Spec.Containers[0].Resources.Requests["cpu"])).To(BeTrue())
+			Expect(newDeployment.Spec.Template.Spec.Containers[0].Resources.Requests["memory"].Equal(expected.Spec.Template.Spec.Containers[0].Resources.Requests["memory"])).To(BeTrue())
+			Expect(newDeployment.Spec.Template.Spec.Containers[0].Resources.Limits["cpu"].Equal(expected.Spec.Template.Spec.Containers[0].Resources.Limits["cpu"])).To(BeTrue())
+			Expect(newDeployment.Spec.Template.Spec.Containers[0].Resources.Limits["memory"].Equal(expected.Spec.Template.Spec.Containers[0].Resources.Limits["memory"])).To(BeTrue())
 		})
 
 		It("should not overwrite .spec.template.spec.resources if preserve-resources is true", func() {
-			new.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{
+			newDeployment.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("60m"),
 					corev1.ResourceMemory: resource.MustParse("180Mi"),
@@ -446,10 +446,10 @@ var _ = Describe("merger", func() {
 				},
 			}
 
-			new.ObjectMeta.Annotations["resources.gardener.cloud/preserve-resources"] = "true"
+			newDeployment.ObjectMeta.Annotations["resources.gardener.cloud/preserve-resources"] = "true"
 
 			Expect(s.Convert(old, current, nil)).Should(Succeed())
-			Expect(s.Convert(new, desired, nil)).Should(Succeed())
+			Expect(s.Convert(newDeployment, desired, nil)).Should(Succeed())
 
 			Expect(merge(origin, desired, current, false, nil, false, nil, false, false)).To(Succeed(), "merge should be successful")
 			Expect(s.Convert(current, expected, nil)).Should(Succeed())
@@ -459,8 +459,8 @@ var _ = Describe("merger", func() {
 
 	Describe("#mergeStatefulSet", func() {
 		var (
-			old, new *appsv1.StatefulSet
-			s        *runtime.Scheme
+			old, newStatefulSet *appsv1.StatefulSet
+			s                   *runtime.Scheme
 		)
 
 		BeforeEach(func() {
@@ -478,57 +478,57 @@ var _ = Describe("merger", func() {
 				},
 			}
 
-			new = old.DeepCopy()
+			newStatefulSet = old.DeepCopy()
 		})
 
 		It("should not overwrite old .spec.replicas if the new one is nil", func() {
-			new.Spec.Replicas = nil
+			newStatefulSet.Spec.Replicas = nil
 
 			expected := old.DeepCopy()
 
-			Expect(mergeStatefulSet(s, old, new, false, false)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
+			Expect(mergeStatefulSet(s, old, newStatefulSet, false, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newStatefulSet).To(Equal(expected))
 		})
 
 		It("should not overwrite old .spec.replicas if preserveReplicas is true", func() {
-			new.Spec.Replicas = pointer.Int32(2)
+			newStatefulSet.Spec.Replicas = pointer.Int32(2)
 
 			expected := old.DeepCopy()
 
-			Expect(mergeStatefulSet(s, old, new, true, false)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
+			Expect(mergeStatefulSet(s, old, newStatefulSet, true, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newStatefulSet).To(Equal(expected))
 		})
 
 		It("should use new .spec.replicas if preserveReplicas is false", func() {
-			new.Spec.Replicas = pointer.Int32(2)
+			newStatefulSet.Spec.Replicas = pointer.Int32(2)
 
-			expected := new.DeepCopy()
+			expected := newStatefulSet.DeepCopy()
 
-			Expect(mergeStatefulSet(s, old, new, false, false)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
+			Expect(mergeStatefulSet(s, old, newStatefulSet, false, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newStatefulSet).To(Equal(expected))
 		})
 
 		It("should overwrite old .spec.containers[*].resources if preserveResources is false", func() {
-			new.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
+			newStatefulSet.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
 
 			expected := old.DeepCopy()
-			expected.Spec.Template.Spec.Containers[0].Resources = new.Spec.Template.Spec.Containers[0].Resources
+			expected.Spec.Template.Spec.Containers[0].Resources = newStatefulSet.Spec.Template.Spec.Containers[0].Resources
 
-			Expect(mergeStatefulSet(s, old, new, true, false)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
+			Expect(mergeStatefulSet(s, old, newStatefulSet, true, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newStatefulSet).To(Equal(expected))
 		})
 
 		It("should not overwrite old .spec.containers[*].resources if preserveResources is true", func() {
-			new.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
+			newStatefulSet.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
 
 			expected := old.DeepCopy()
 
-			Expect(mergeStatefulSet(s, old, new, true, true)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
+			Expect(mergeStatefulSet(s, old, newStatefulSet, true, true)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newStatefulSet).To(Equal(expected))
 		})
 
 		It("should use new .spec.volumeClaimTemplates if the StatefulSet has not been created yet", func() {
-			new.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
+			newStatefulSet.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
 				{
 					Spec: corev1.PersistentVolumeClaimSpec{
 						AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
@@ -538,15 +538,15 @@ var _ = Describe("merger", func() {
 				},
 			}
 
-			expected := new.DeepCopy()
+			expected := newStatefulSet.DeepCopy()
 
-			Expect(mergeStatefulSet(s, old, new, false, false)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
+			Expect(mergeStatefulSet(s, old, newStatefulSet, false, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newStatefulSet).To(Equal(expected))
 		})
 
 		It("should not overwrite old .spec.volumeClaimTemplates if the StatefulSet has already been created", func() {
 			old.CreationTimestamp = metav1.Time{Time: time.Now()}
-			new.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
+			newStatefulSet.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
 				{
 					Spec: corev1.PersistentVolumeClaimSpec{
 						AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
@@ -556,18 +556,18 @@ var _ = Describe("merger", func() {
 				},
 			}
 
-			expected := new.DeepCopy()
+			expected := newStatefulSet.DeepCopy()
 			expected.Spec.VolumeClaimTemplates = nil
 
-			Expect(mergeStatefulSet(s, old, new, false, false)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
+			Expect(mergeStatefulSet(s, old, newStatefulSet, false, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newStatefulSet).To(Equal(expected))
 		})
 	})
 
 	Describe("#mergeDaemonSet", func() {
 		var (
-			old, new *appsv1.DaemonSet
-			s        *runtime.Scheme
+			old, newDaemonSet *appsv1.DaemonSet
+			s                 *runtime.Scheme
 		)
 
 		BeforeEach(func() {
@@ -581,32 +581,32 @@ var _ = Describe("merger", func() {
 				},
 			}
 
-			new = old.DeepCopy()
+			newDaemonSet = old.DeepCopy()
 		})
 
 		It("should overwrite old .spec.containers[*].resources if preserveResources is false", func() {
-			new.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
+			newDaemonSet.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
 
 			expected := old.DeepCopy()
-			expected.Spec.Template.Spec.Containers[0].Resources = new.Spec.Template.Spec.Containers[0].Resources
+			expected.Spec.Template.Spec.Containers[0].Resources = newDaemonSet.Spec.Template.Spec.Containers[0].Resources
 
-			Expect(mergeDaemonSet(s, old, new, false)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
+			Expect(mergeDaemonSet(s, old, newDaemonSet, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newDaemonSet).To(Equal(expected))
 		})
 
 		It("should not overwrite old .spec.containers[*].resources if preserveResources is true", func() {
-			new.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
+			newDaemonSet.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
 
 			expected := old.DeepCopy()
 
-			Expect(mergeDaemonSet(s, old, new, true)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
+			Expect(mergeDaemonSet(s, old, newDaemonSet, true)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newDaemonSet).To(Equal(expected))
 		})
 	})
 
 	Describe("#mergeContainer", func() {
 		var (
-			old, new *corev1.Container
+			old, newContainer *corev1.Container
 
 			quantity1, quantity2 resource.Quantity
 
@@ -622,7 +622,7 @@ var _ = Describe("merger", func() {
 				},
 			}
 
-			new = old.DeepCopy()
+			newContainer = old.DeepCopy()
 
 			q, err := resource.ParseQuantity("200")
 			Expect(err).NotTo(HaveOccurred())
@@ -646,55 +646,55 @@ var _ = Describe("merger", func() {
 		It("should do nothing if resource requirements are not set", func() {
 			expected := old.DeepCopy()
 
-			mergeContainer(old, new, true)
-			Expect(new).To(Equal(expected))
+			mergeContainer(old, newContainer, true)
+			Expect(newContainer).To(Equal(expected))
 		})
 
 		It("should use new requests if preserveResources is false)", func() {
 			old.Resources.Requests = resourceListBothSet
-			new.Resources.Requests = resourceListBothSet2
+			newContainer.Resources.Requests = resourceListBothSet2
 
-			expected := new.DeepCopy()
+			expected := newContainer.DeepCopy()
 
-			mergeContainer(old, new, false)
-			Expect(new).To(Equal(expected))
+			mergeContainer(old, newContainer, false)
+			Expect(newContainer).To(Equal(expected))
 		})
 
 		It("should use new limits if preserveResources is false)", func() {
 			old.Resources.Limits = resourceListBothSet
-			new.Resources.Limits = resourceListBothSet2
+			newContainer.Resources.Limits = resourceListBothSet2
 
-			expected := new.DeepCopy()
+			expected := newContainer.DeepCopy()
 
-			mergeContainer(old, new, false)
-			Expect(new).To(Equal(expected))
+			mergeContainer(old, newContainer, false)
+			Expect(newContainer).To(Equal(expected))
 		})
 
 		It("should not overwrite requests if preserveResources is true)", func() {
-			new.Resources.Requests = resourceListBothSet
+			newContainer.Resources.Requests = resourceListBothSet
 			old.Resources.Requests = resourceListBothSet2
 
 			expected := old.DeepCopy()
 
-			mergeContainer(old, new, true)
-			Expect(new).To(Equal(expected))
+			mergeContainer(old, newContainer, true)
+			Expect(newContainer).To(Equal(expected))
 		})
 
 		It("should not overwrite limits if preserveResources is true)", func() {
-			new.Resources.Requests = resourceListBothSet
+			newContainer.Resources.Requests = resourceListBothSet
 			old.Resources.Requests = resourceListBothSet2
 
 			expected := old.DeepCopy()
 
-			mergeContainer(old, new, true)
-			Expect(new).To(Equal(expected))
+			mergeContainer(old, newContainer, true)
+			Expect(newContainer).To(Equal(expected))
 		})
 	})
 
 	Describe("#mergeJob", func() {
 		var (
-			old, new *batchv1.Job
-			s        *runtime.Scheme
+			old, newJob *batchv1.Job
+			s           *runtime.Scheme
 		)
 
 		BeforeEach(func() {
@@ -714,31 +714,31 @@ var _ = Describe("merger", func() {
 				},
 			}
 
-			new = old.DeepCopy()
+			newJob = old.DeepCopy()
 		})
 
 		It("should not overwrite old .spec.selector", func() {
-			new.Spec.Selector = &metav1.LabelSelector{
+			newJob.Spec.Selector = &metav1.LabelSelector{
 				MatchLabels: map[string]string{"foo": "bar"},
 			}
 
 			expected := old.DeepCopy()
 
-			Expect(mergeJob(s, old, new, false)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
+			Expect(mergeJob(s, old, newJob, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newJob).To(Equal(expected))
 		})
 
 		It("should not overwrite old .spec.template.labels if the new one is nil", func() {
-			new.Spec.Template.Labels = nil
+			newJob.Spec.Template.Labels = nil
 
 			expected := old.DeepCopy()
 
-			Expect(mergeJob(s, old, new, false)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
+			Expect(mergeJob(s, old, newJob, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newJob).To(Equal(expected))
 		})
 
 		It("should be able to merge new .spec.template.labels with the old ones", func() {
-			new.Spec.Template.Labels = map[string]string{"app": "myapp", "version": "v0.1.0"}
+			newJob.Spec.Template.Labels = map[string]string{"app": "myapp", "version": "v0.1.0"}
 
 			expected := old.DeepCopy()
 			expected.Spec.Template.Labels = map[string]string{
@@ -748,27 +748,27 @@ var _ = Describe("merger", func() {
 				"version":        "v0.1.0",
 			}
 
-			Expect(mergeJob(s, old, new, false)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
+			Expect(mergeJob(s, old, newJob, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newJob).To(Equal(expected))
 		})
 
 		It("should overwrite old .spec.containers[*].resources if preserveResources is false", func() {
-			new.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
+			newJob.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
 
 			expected := old.DeepCopy()
-			expected.Spec.Template.Spec.Containers[0].Resources = new.Spec.Template.Spec.Containers[0].Resources
+			expected.Spec.Template.Spec.Containers[0].Resources = newJob.Spec.Template.Spec.Containers[0].Resources
 
-			Expect(mergeJob(s, old, new, false)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
+			Expect(mergeJob(s, old, newJob, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newJob).To(Equal(expected))
 		})
 
 		It("should not overwrite old .spec.containers[*].resources if preserveResources is true", func() {
-			new.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
+			newJob.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
 
 			expected := old.DeepCopy()
 
-			Expect(mergeJob(s, old, new, true)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
+			Expect(mergeJob(s, old, newJob, true)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newJob).To(Equal(expected))
 		})
 	})
 
@@ -813,15 +813,15 @@ var _ = Describe("merger", func() {
 					APIVersion: "batch/v2",
 				},
 			}
-			new := old.DeepCopy()
-			Expect(mergeCronJob(s, old, new, true)).To(MatchError(ContainSubstring("cannot merge objects with gvk")), "merge should fail")
+			newCronJob := old.DeepCopy()
+			Expect(mergeCronJob(s, old, newCronJob, true)).To(MatchError(ContainSubstring("cannot merge objects with gvk")), "merge should fail")
 		})
 	})
 
 	Describe("#mergeService", func() {
 		var (
-			old, new, expected *corev1.Service
-			s                  *runtime.Scheme
+			old, newService, expected *corev1.Service
+			s                         *runtime.Scheme
 		)
 
 		BeforeEach(func() {
@@ -850,66 +850,66 @@ var _ = Describe("merger", func() {
 				},
 			}
 
-			new = old.DeepCopy()
-			new.Annotations = map[string]string{}
+			newService = old.DeepCopy()
+			newService.Annotations = map[string]string{}
 			expected = old.DeepCopy()
 		})
 
 		DescribeTable("ClusterIP to", func(mutator func()) {
 			mutator()
-			Expect(mergeService(s, old, new)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
+			Expect(mergeService(s, old, newService)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newService).To(Equal(expected))
 		},
 			Entry("ClusterIP with changed ports", func() {
-				new.Spec.Ports[0].Port = 1234
-				new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-				new.Spec.Ports[0].TargetPort = intstr.FromInt(989)
-				new.Annotations = old.Annotations
+				newService.Spec.Ports[0].Port = 1234
+				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt(989)
+				newService.Annotations = old.Annotations
 
-				expected = new.DeepCopy()
-				new.Spec.ClusterIP = ""
+				expected = newService.DeepCopy()
+				newService.Spec.ClusterIP = ""
 			}),
 			Entry("ClusterIP with changed ClusterIP, should not update it", func() {
-				new.Spec.ClusterIP = "5.6.7.8"
+				newService.Spec.ClusterIP = "5.6.7.8"
 			}),
 			Entry("Headless ClusterIP", func() {
-				new.Spec.ClusterIP = "None"
+				newService.Spec.ClusterIP = "None"
 				expected.Spec.ClusterIP = "None"
 			}),
 			Entry("ClusterIP without passing any type", func() {
-				new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-				new.Spec.Ports[0].Port = 999
-				new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
-				new.Annotations = old.Annotations
+				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+				newService.Spec.Ports[0].Port = 999
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Annotations = old.Annotations
 
-				expected = new.DeepCopy()
-				new.Spec.ClusterIP = "5.6.7.8"
-				new.Spec.Type = ""
+				expected = newService.DeepCopy()
+				newService.Spec.ClusterIP = "5.6.7.8"
+				newService.Spec.Type = ""
 			}),
 			Entry("NodePort with changed ports", func() {
-				new.Spec.Type = corev1.ServiceTypeNodePort
-				new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-				new.Spec.Ports[0].Port = 999
-				new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
-				new.Spec.Ports[0].NodePort = 444
-				new.Annotations = old.Annotations
+				newService.Spec.Type = corev1.ServiceTypeNodePort
+				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+				newService.Spec.Ports[0].Port = 999
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].NodePort = 444
+				newService.Annotations = old.Annotations
 
-				expected = new.DeepCopy()
+				expected = newService.DeepCopy()
 			}),
 
 			Entry("ExternalName removes ClusterIP", func() {
-				new.Spec.Type = corev1.ServiceTypeExternalName
-				new.Spec.Selector = nil
-				new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-				new.Spec.Ports[0].Port = 999
-				new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
-				new.Spec.Ports[0].NodePort = 0
-				new.Spec.ClusterIP = ""
-				new.Spec.ExternalName = "foo.com"
-				new.Spec.HealthCheckNodePort = 0
-				new.Annotations = old.Annotations
+				newService.Spec.Type = corev1.ServiceTypeExternalName
+				newService.Spec.Selector = nil
+				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+				newService.Spec.Ports[0].Port = 999
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].NodePort = 0
+				newService.Spec.ClusterIP = ""
+				newService.Spec.ExternalName = "foo.com"
+				newService.Spec.HealthCheckNodePort = 0
+				newService.Annotations = old.Annotations
 
-				expected = new.DeepCopy()
+				expected = newService.DeepCopy()
 			}),
 		)
 
@@ -918,61 +918,61 @@ var _ = Describe("merger", func() {
 				old.Spec.Ports[0].NodePort = 3333
 				old.Spec.Type = corev1.ServiceTypeNodePort
 
-				new = old.DeepCopy()
+				newService = old.DeepCopy()
 				expected = old.DeepCopy()
 
 				mutator()
 
-				Expect(mergeService(s, old, new)).NotTo(HaveOccurred(), "merge should be successful")
-				Expect(new).To(Equal(expected))
+				Expect(mergeService(s, old, newService)).NotTo(HaveOccurred(), "merge should be successful")
+				Expect(newService).To(Equal(expected))
 			},
 			Entry("ClusterIP with changed ports", func() {
-				new.Spec.Type = corev1.ServiceTypeClusterIP
-				new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-				new.Spec.Ports[0].Port = 999
-				new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
-				new.Spec.Ports[0].NodePort = 0
+				newService.Spec.Type = corev1.ServiceTypeClusterIP
+				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+				newService.Spec.Ports[0].Port = 999
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].NodePort = 0
 
-				expected = new.DeepCopy()
+				expected = newService.DeepCopy()
 			}),
 			Entry("ClusterIP with changed ClusterIP", func() {
-				new.Spec.ClusterIP = "5.6.7.8"
+				newService.Spec.ClusterIP = "5.6.7.8"
 			}),
 			Entry("Headless ClusterIP type service", func() {
-				new.Spec.Type = corev1.ServiceTypeClusterIP
-				new.Spec.ClusterIP = "None"
+				newService.Spec.Type = corev1.ServiceTypeClusterIP
+				newService.Spec.ClusterIP = "None"
 
-				expected = new.DeepCopy()
+				expected = newService.DeepCopy()
 			}),
 
 			Entry("NodePort with changed ports", func() {
-				new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-				new.Spec.Ports[0].Port = 999
-				new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
-				new.Spec.Ports[0].NodePort = 444
+				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+				newService.Spec.Ports[0].Port = 999
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].NodePort = 444
 
-				expected = new.DeepCopy()
+				expected = newService.DeepCopy()
 			}),
 			Entry("NodePort with changed ports and without nodePort", func() {
-				new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-				new.Spec.Ports[0].Port = 999
-				new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+				newService.Spec.Ports[0].Port = 999
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
 
-				expected = new.DeepCopy()
-				new.Spec.Ports[0].NodePort = 0
+				expected = newService.DeepCopy()
+				newService.Spec.Ports[0].NodePort = 0
 			}),
 			Entry("ExternalName removes ClusterIP", func() {
-				new.Spec.Type = corev1.ServiceTypeExternalName
-				new.Spec.Selector = nil
-				new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-				new.Spec.Ports[0].Port = 999
-				new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
-				new.Spec.Ports[0].NodePort = 0
-				new.Spec.ClusterIP = ""
-				new.Spec.ExternalName = "foo.com"
-				new.Spec.HealthCheckNodePort = 0
+				newService.Spec.Type = corev1.ServiceTypeExternalName
+				newService.Spec.Selector = nil
+				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+				newService.Spec.Ports[0].Port = 999
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].NodePort = 0
+				newService.Spec.ClusterIP = ""
+				newService.Spec.ExternalName = "foo.com"
+				newService.Spec.HealthCheckNodePort = 0
 
-				expected = new.DeepCopy()
+				expected = newService.DeepCopy()
 			}),
 		)
 
@@ -980,73 +980,73 @@ var _ = Describe("merger", func() {
 			old.Spec.Ports[0].NodePort = 3333
 			old.Spec.Type = corev1.ServiceTypeLoadBalancer
 
-			new = old.DeepCopy()
+			newService = old.DeepCopy()
 			expected = old.DeepCopy()
 
 			mutator()
 
-			Expect(mergeService(s, old, new)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
+			Expect(mergeService(s, old, newService)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newService).To(Equal(expected))
 		},
 			Entry("ClusterIP with changed ports", func() {
-				new.Spec.Type = corev1.ServiceTypeClusterIP
-				new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-				new.Spec.Ports[0].Port = 999
-				new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
-				new.Spec.Ports[0].NodePort = 0
+				newService.Spec.Type = corev1.ServiceTypeClusterIP
+				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+				newService.Spec.Ports[0].Port = 999
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].NodePort = 0
 
-				expected = new.DeepCopy()
+				expected = newService.DeepCopy()
 			}),
 			Entry("Cluster with ClusterIP changed", func() {
-				new.Spec.ClusterIP = "5.6.7.8"
+				newService.Spec.ClusterIP = "5.6.7.8"
 			}),
 			Entry("Headless ClusterIP type service", func() {
-				new.Spec.Type = corev1.ServiceTypeClusterIP
-				new.Spec.ClusterIP = "None"
+				newService.Spec.Type = corev1.ServiceTypeClusterIP
+				newService.Spec.ClusterIP = "None"
 
-				expected = new.DeepCopy()
+				expected = newService.DeepCopy()
 			}),
 			Entry("NodePort with changed ports", func() {
-				new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-				new.Spec.Ports[0].Port = 999
-				new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
-				new.Spec.Ports[0].NodePort = 444
+				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+				newService.Spec.Ports[0].Port = 999
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].NodePort = 444
 
-				expected = new.DeepCopy()
+				expected = newService.DeepCopy()
 			}),
 			Entry("NodePort with changed ports and without nodePort", func() {
-				new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-				new.Spec.Ports[0].Port = 999
-				new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+				newService.Spec.Ports[0].Port = 999
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
 
-				expected = new.DeepCopy()
-				new.Spec.Ports[0].NodePort = 0
+				expected = newService.DeepCopy()
+				newService.Spec.Ports[0].NodePort = 0
 			}),
 			Entry("ExternalName removes ClusterIP", func() {
-				new.Spec.Type = corev1.ServiceTypeExternalName
-				new.Spec.Selector = nil
-				new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-				new.Spec.Ports[0].Port = 999
-				new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
-				new.Spec.Ports[0].NodePort = 0
-				new.Spec.ClusterIP = ""
-				new.Spec.ExternalName = "foo.com"
-				new.Spec.HealthCheckNodePort = 0
+				newService.Spec.Type = corev1.ServiceTypeExternalName
+				newService.Spec.Selector = nil
+				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+				newService.Spec.Ports[0].Port = 999
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].NodePort = 0
+				newService.Spec.ClusterIP = ""
+				newService.Spec.ExternalName = "foo.com"
+				newService.Spec.HealthCheckNodePort = 0
 
-				expected = new.DeepCopy()
+				expected = newService.DeepCopy()
 			}),
 			Entry("LoadBalancer with ExternalTrafficPolicy=Local and HealthCheckNodePort", func() {
-				new.Spec.HealthCheckNodePort = 123
-				new.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+				newService.Spec.HealthCheckNodePort = 123
+				newService.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
 
-				expected = new.DeepCopy()
+				expected = newService.DeepCopy()
 			}),
 			Entry("LoadBalancer with ExternalTrafficPolicy=Local and no HealthCheckNodePort", func() {
 				old.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
 				old.Spec.HealthCheckNodePort = 3333
 
-				new.Spec.HealthCheckNodePort = 0
-				new.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+				newService.Spec.HealthCheckNodePort = 0
+				newService.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
 
 				expected = old.DeepCopy()
 			}),
@@ -1065,44 +1065,44 @@ var _ = Describe("merger", func() {
 			old.Spec.ExternalName = "baz.bar"
 			old.Spec.Selector = nil
 
-			new = old.DeepCopy()
+			newService = old.DeepCopy()
 			expected = old.DeepCopy()
 
 			mutator()
 
-			Expect(mergeService(s, old, new)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
+			Expect(mergeService(s, old, newService)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(newService).To(Equal(expected))
 		},
 			Entry("ClusterIP with changed ports", func() {
-				new.Spec.Type = corev1.ServiceTypeClusterIP
-				new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-				new.Spec.Ports[0].Port = 999
-				new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
-				new.Spec.Ports[0].NodePort = 0
-				new.Spec.ExternalName = ""
-				new.Spec.ClusterIP = "3.4.5.6"
+				newService.Spec.Type = corev1.ServiceTypeClusterIP
+				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+				newService.Spec.Ports[0].Port = 999
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].NodePort = 0
+				newService.Spec.ExternalName = ""
+				newService.Spec.ClusterIP = "3.4.5.6"
 
-				expected = new.DeepCopy()
+				expected = newService.DeepCopy()
 			}),
 			Entry("NodePort with changed ports", func() {
-				new.Spec.Type = corev1.ServiceTypeNodePort
-				new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
-				new.Spec.Ports[0].Port = 999
-				new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
-				new.Spec.Ports[0].NodePort = 444
-				new.Spec.ExternalName = ""
-				new.Spec.ClusterIP = "3.4.5.6"
+				newService.Spec.Type = corev1.ServiceTypeNodePort
+				newService.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+				newService.Spec.Ports[0].Port = 999
+				newService.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				newService.Spec.Ports[0].NodePort = 444
+				newService.Spec.ExternalName = ""
+				newService.Spec.ClusterIP = "3.4.5.6"
 
-				expected = new.DeepCopy()
+				expected = newService.DeepCopy()
 			}),
 			Entry("LoadBalancer with ExternalTrafficPolicy=Local and HealthCheckNodePort", func() {
-				new.Spec.Type = corev1.ServiceTypeLoadBalancer
-				new.Spec.HealthCheckNodePort = 123
-				new.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
-				new.Spec.ExternalName = ""
-				new.Spec.ClusterIP = "3.4.5.6"
+				newService.Spec.Type = corev1.ServiceTypeLoadBalancer
+				newService.Spec.HealthCheckNodePort = 123
+				newService.Spec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+				newService.Spec.ExternalName = ""
+				newService.Spec.ClusterIP = "3.4.5.6"
 
-				expected = new.DeepCopy()
+				expected = newService.DeepCopy()
 			}),
 		)
 	})

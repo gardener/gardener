@@ -245,11 +245,7 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := a.reconcilePodDisruptionBudget(ctx, pdb); err != nil {
-		return err
-	}
-
-	return nil
+	return a.reconcilePodDisruptionBudget(ctx, pdb)
 }
 
 func (a *authzServer) Destroy(ctx context.Context) error {

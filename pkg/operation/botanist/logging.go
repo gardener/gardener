@@ -45,7 +45,7 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		return b.destroyShootLoggingStack(ctx)
 	}
 
-	//TODO(rickardsjp, istvanballok): Remove in release v1.77 once the Loki to Vali migration is complete.
+	// TODO(rickardsjp, istvanballok): Remove in release v1.77 once the Loki to Vali migration is complete.
 	if exists, err := b.lokiPvcExists(ctx); err != nil {
 		return err
 	} else if exists {
@@ -187,10 +187,7 @@ func (b *Botanist) lokiPvcExists(ctx context.Context) (bool, error) {
 }
 
 func (b *Botanist) renameLokiPvcToVali(ctx context.Context) error {
-	if err := common.RenameLokiPvcToValiPvc(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.Logger); err != nil {
-		return err
-	}
-	return nil
+	return common.RenameLokiPvcToValiPvc(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.Logger)
 }
 
 func (b *Botanist) destroyLokiBasedShootLoggingStackRetainingPvc(ctx context.Context) error {

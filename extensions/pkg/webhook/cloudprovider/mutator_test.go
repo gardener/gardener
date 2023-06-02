@@ -52,29 +52,29 @@ var _ = Describe("Mutator", func() {
 
 	Describe("#Mutate", func() {
 		var (
-			ensurer  *extensionsmockcloudprovider.MockEnsurer
-			new, old *corev1.Secret
-			mutator  webhook.Mutator
+			ensurer        *extensionsmockcloudprovider.MockEnsurer
+			newSecret, old *corev1.Secret
+			mutator        webhook.Mutator
 		)
 
 		BeforeEach(func() {
 			ensurer = extensionsmockcloudprovider.NewMockEnsurer(ctrl)
 			mutator = cloudprovider.NewMutator(logger, ensurer)
-			new = nil
+			newSecret = nil
 			old = nil
 		})
 
 		It("Should ignore secrets other than cloudprovider", func() {
-			new = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "test"}}
-			err := mutator.Mutate(context.TODO(), new, old)
+			newSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "test"}}
+			err := mutator.Mutate(context.TODO(), newSecret, old)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("Should mutate cloudprovider secret", func() {
-			new = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.SecretNameCloudProvider}}
+			newSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.SecretNameCloudProvider}}
 
-			ensurer.EXPECT().EnsureCloudProviderSecret(context.TODO(), gomock.Any(), new, old)
-			err := mutator.Mutate(context.TODO(), new, old)
+			ensurer.EXPECT().EnsureCloudProviderSecret(context.TODO(), gomock.Any(), newSecret, old)
+			err := mutator.Mutate(context.TODO(), newSecret, old)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})

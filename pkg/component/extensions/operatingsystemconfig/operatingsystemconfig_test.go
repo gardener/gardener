@@ -365,8 +365,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 			It("should exclude the bootstrap token file if purpose is not provision", func() {
 				bootstrapTokenFile := extensionsv1alpha1.File{Path: "/var/lib/cloud-config-downloader/credentials/bootstrap-token"}
 				downloaderConfigFnWithBootstrapToken := func(cloudConfigUserDataSecretName, apiServerURL, clusterCASecretName string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-					units, files, error := downloaderConfigFn(cloudConfigUserDataSecretName, apiServerURL, clusterCASecretName)
-					return units, append(files, bootstrapTokenFile), error
+					units, files, err := downloaderConfigFn(cloudConfigUserDataSecretName, apiServerURL, clusterCASecretName)
+					return units, append(files, bootstrapTokenFile), err
 				}
 
 				defer test.WithVars(

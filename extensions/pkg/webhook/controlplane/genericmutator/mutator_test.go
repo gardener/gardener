@@ -121,12 +121,13 @@ var _ = Describe("Mutator", func() {
 
 	Describe("#Mutate", func() {
 		var (
-			mutator  extensionswebhook.Mutator
-			kcc      *mockkubelet.MockConfigCodec
-			ensurer  *extensionsmockgenericmutator.MockEnsurer
-			us       *mockutils.MockUnitSerializer
-			fcic     *mockutils.MockFileContentInlineCodec
-			old, new client.Object
+			mutator extensionswebhook.Mutator
+			kcc     *mockkubelet.MockConfigCodec
+			ensurer *extensionsmockgenericmutator.MockEnsurer
+			us      *mockutils.MockUnitSerializer
+			fcic    *mockutils.MockFileContentInlineCodec
+
+			oldObj, newObj client.Object
 		)
 
 		BeforeEach(func() {
@@ -135,8 +136,8 @@ var _ = Describe("Mutator", func() {
 			us = mockutils.NewMockUnitSerializer(ctrl)
 			fcic = mockutils.NewMockFileContentInlineCodec(ctrl)
 			mutator = genericmutator.NewMutator(ensurer, us, kcc, fcic, logger)
-			old = nil
-			new = nil
+			oldObj = nil
+			newObj = nil
 		})
 
 		DescribeTable("Should ignore", func(new, old client.Object) {
@@ -163,97 +164,97 @@ var _ = Describe("Mutator", func() {
 		DescribeTable("Should ensure", func(ensureFunc func()) {
 			ensureFunc()
 
-			err := mutator.Mutate(context.TODO(), new, old)
+			err := mutator.Mutate(context.TODO(), newObj, oldObj)
 			Expect(err).To(Not(HaveOccurred()))
 		},
 			Entry(
 				"EnsureKubeAPIServerService with a kube-apiserver service",
 				func() {
-					new = &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer}}
-					ensurer.EXPECT().EnsureKubeAPIServerService(context.TODO(), gomock.Any(), new, old).Return(nil)
+					newObj = &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer}}
+					ensurer.EXPECT().EnsureKubeAPIServerService(context.TODO(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
 			),
 			Entry(
 				"EnsureKubeAPIServerService with a kube-apiserver service and existing service",
 				func() {
-					new = &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer}}
-					old = new.DeepCopyObject().(client.Object)
-					ensurer.EXPECT().EnsureKubeAPIServerService(context.TODO(), gomock.Any(), new, old).Return(nil)
+					newObj = &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer}}
+					oldObj = newObj.DeepCopyObject().(client.Object)
+					ensurer.EXPECT().EnsureKubeAPIServerService(context.TODO(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
 			),
 			Entry(
 				"EnsureKubeAPIServerDeployment with a kube-apiserver deployment",
 				func() {
-					new = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer}}
-					ensurer.EXPECT().EnsureKubeAPIServerDeployment(context.TODO(), gomock.Any(), new, old).Return(nil)
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer}}
+					ensurer.EXPECT().EnsureKubeAPIServerDeployment(context.TODO(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
 			),
 			Entry(
 				"EnsureKubeAPIServerDeployment with a kube-apiserver deployment and existing deployment",
 				func() {
-					new = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer}}
-					old = new.DeepCopyObject().(client.Object)
-					ensurer.EXPECT().EnsureKubeAPIServerDeployment(context.TODO(), gomock.Any(), new, old).Return(nil)
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer}}
+					oldObj = newObj.DeepCopyObject().(client.Object)
+					ensurer.EXPECT().EnsureKubeAPIServerDeployment(context.TODO(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
 			),
 			Entry(
 				"EnsureKubeControllerManagerDeployment with a kube-controller-manager deployment",
 				func() {
-					new = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeControllerManager}}
-					ensurer.EXPECT().EnsureKubeControllerManagerDeployment(context.TODO(), gomock.Any(), new, old).Return(nil)
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeControllerManager}}
+					ensurer.EXPECT().EnsureKubeControllerManagerDeployment(context.TODO(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
 			),
 			Entry(
 				"EnsureKubeControllerManagerDeployment with a kube-controller-manager deployment and existing deployment",
 				func() {
-					new = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeControllerManager}}
-					old = new.DeepCopyObject().(client.Object)
-					ensurer.EXPECT().EnsureKubeControllerManagerDeployment(context.TODO(), gomock.Any(), new, old).Return(nil)
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeControllerManager}}
+					oldObj = newObj.DeepCopyObject().(client.Object)
+					ensurer.EXPECT().EnsureKubeControllerManagerDeployment(context.TODO(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
 			),
 			Entry(
 				"EnsureKubeSchedulerDeployment with a kube-scheduler deployment",
 				func() {
-					new = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeScheduler}}
-					ensurer.EXPECT().EnsureKubeSchedulerDeployment(context.TODO(), gomock.Any(), new, old).Return(nil)
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeScheduler}}
+					ensurer.EXPECT().EnsureKubeSchedulerDeployment(context.TODO(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
 			),
 			Entry(
 				"EnsureKubeSchedulerDeployment with a kube-scheduler deployment and existing deployment",
 				func() {
-					new = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeScheduler}}
-					old = new.DeepCopyObject().(client.Object)
-					ensurer.EXPECT().EnsureKubeSchedulerDeployment(context.TODO(), gomock.Any(), new, old).Return(nil)
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeScheduler}}
+					oldObj = newObj.DeepCopyObject().(client.Object)
+					ensurer.EXPECT().EnsureKubeSchedulerDeployment(context.TODO(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
 			),
 			Entry(
 				"EnsureClusterAutoscalerDeployment with a cluster-autoscaler deployment",
 				func() {
-					new = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameClusterAutoscaler}}
-					ensurer.EXPECT().EnsureClusterAutoscalerDeployment(context.TODO(), gomock.Any(), new, old).Return(nil)
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameClusterAutoscaler}}
+					ensurer.EXPECT().EnsureClusterAutoscalerDeployment(context.TODO(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
 			),
 			Entry(
 				"EnsureClusterAutoscalerDeployment with a cluster-autoscaler deployment and existing deployment",
 				func() {
-					new = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameClusterAutoscaler}}
-					old = new.DeepCopyObject().(client.Object)
-					ensurer.EXPECT().EnsureClusterAutoscalerDeployment(context.TODO(), gomock.Any(), new, old).Return(nil)
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameClusterAutoscaler}}
+					oldObj = newObj.DeepCopyObject().(client.Object)
+					ensurer.EXPECT().EnsureClusterAutoscalerDeployment(context.TODO(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
 			),
 			Entry(
 				"EnsureVPNSeedServerDeployment with a vpn-seed-server deployment",
 				func() {
-					new = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPNSeedServer}}
-					ensurer.EXPECT().EnsureVPNSeedServerDeployment(context.TODO(), gomock.Any(), new, old).Return(nil)
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPNSeedServer}}
+					ensurer.EXPECT().EnsureVPNSeedServerDeployment(context.TODO(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
 			),
 			Entry(
 				"EnsureVPNSeedServerDeployment with a vpn-seed-server deployment and existing deployment",
 				func() {
-					new = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPNSeedServer}}
-					old = new.DeepCopyObject().(client.Object)
-					ensurer.EXPECT().EnsureVPNSeedServerDeployment(context.TODO(), gomock.Any(), new, old).Return(nil)
+					newObj = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPNSeedServer}}
+					oldObj = newObj.DeepCopyObject().(client.Object)
+					ensurer.EXPECT().EnsureVPNSeedServerDeployment(context.TODO(), gomock.Any(), newObj, oldObj).Return(nil)
 				},
 			),
 		)

@@ -232,9 +232,9 @@ func (u unstructuredStatusAccessor) GetConditions() []gardencorev1beta1.Conditio
 	var conditions []gardencorev1beta1.Condition
 	interfaceConditionSlice := val.([]interface{})
 	for _, interfaceCondition := range interfaceConditionSlice {
-		new := interfaceCondition.(map[string]interface{})
+		unstructuredCondition := interfaceCondition.(map[string]interface{})
 		condition := &gardencorev1beta1.Condition{}
-		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(new, condition); err != nil {
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredCondition, condition); err != nil {
 			return nil
 		}
 		conditions = append(conditions, *condition)
@@ -267,9 +267,9 @@ func (u unstructuredStatusAccessor) GetResources() []gardencorev1beta1.NamedReso
 	var resources []gardencorev1beta1.NamedResourceReference
 	interfaceResourceSlice := val.([]interface{})
 	for _, interfaceResource := range interfaceResourceSlice {
-		new := interfaceResource.(map[string]interface{})
+		unstructuredResource := interfaceResource.(map[string]interface{})
 		resource := &gardencorev1beta1.NamedResourceReference{}
-		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(new, resource); err != nil {
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredResource, resource); err != nil {
 			return nil
 		}
 		resources = append(resources, *resource)

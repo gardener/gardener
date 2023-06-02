@@ -67,11 +67,7 @@ func (o *options) complete() error {
 
 	// Set feature gates immediately after decoding the config.
 	// Feature gates might influence the next steps, e.g., validating the config.
-	if err := features.DefaultFeatureGate.SetFromMap(o.config.FeatureGates); err != nil {
-		return err
-	}
-
-	return nil
+	return features.DefaultFeatureGate.SetFromMap(o.config.FeatureGates)
 }
 
 func (o *options) validate() error {

@@ -57,17 +57,17 @@ func ConditionStatusChanged(conditionType gardencorev1beta1.ConditionType, chang
 				return false
 			}
 
-			old, ok := e.ObjectOld.(*resourcesv1alpha1.ManagedResource)
+			oldObj, ok := e.ObjectOld.(*resourcesv1alpha1.ManagedResource)
 			if !ok {
 				return false
 			}
-			new, ok := e.ObjectNew.(*resourcesv1alpha1.ManagedResource)
+			newObj, ok := e.ObjectNew.(*resourcesv1alpha1.ManagedResource)
 			if !ok {
 				return false
 			}
 
-			oldCondition := v1beta1helper.GetCondition(old.Status.Conditions, conditionType)
-			newCondition := v1beta1helper.GetCondition(new.Status.Conditions, conditionType)
+			oldCondition := v1beta1helper.GetCondition(oldObj.Status.Conditions, conditionType)
+			newCondition := v1beta1helper.GetCondition(newObj.Status.Conditions, conditionType)
 
 			return changeFn(oldCondition, newCondition)
 		},

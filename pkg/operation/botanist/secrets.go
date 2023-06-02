@@ -295,11 +295,7 @@ func (b *Botanist) syncShootCredentialToGarden(
 }
 
 func (b *Botanist) deleteSSHKeypair(ctx context.Context) error {
-	if err := b.deleteShootCredentialFromGarden(ctx, gardenerutils.ShootProjectSecretSuffixSSHKeypair, gardenerutils.ShootProjectSecretSuffixOldSSHKeypair); err != nil {
-		return err
-	}
-
-	return nil
+	return b.deleteShootCredentialFromGarden(ctx, gardenerutils.ShootProjectSecretSuffixSSHKeypair, gardenerutils.ShootProjectSecretSuffixOldSSHKeypair)
 }
 
 func (b *Botanist) deleteShootCredentialFromGarden(ctx context.Context, nameSuffixes ...string) error {

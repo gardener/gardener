@@ -89,5 +89,4 @@ performant parallel test execution via go test and automated report collection v
 	if err := cmd.Execute(); err != nil {
 		panic(err)
 	}
-	return
 }

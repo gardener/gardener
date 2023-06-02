@@ -365,11 +365,7 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 		fns = append(fns, r.ensureValidatingWebhookConfiguration)
 	}
 
-	if err := flow.Sequential(fns...)(ctx); err != nil {
-		return err
-	}
-
-	return nil
+	return flow.Sequential(fns...)(ctx)
 }
 
 func (r *resourceManager) Destroy(ctx context.Context) error {

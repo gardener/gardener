@@ -943,9 +943,9 @@ admin:
 			})
 
 			It("should successfully deploy all resources (w/o node network)", func() {
-				copy := values
-				copy.Network.NodeCIDR = ""
-				vpnSeedServer = New(c, namespace, sm, istioNamespaceFunc, copy)
+				valuesCopy := values
+				valuesCopy.Network.NodeCIDR = ""
+				vpnSeedServer = New(c, namespace, sm, istioNamespaceFunc, valuesCopy)
 				vpnSeedServer.SetSecrets(secrets)
 				vpnSeedServer.SetSeedNamespaceObjectUID(namespaceUID)
 

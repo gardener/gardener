@@ -7,11 +7,11 @@ go 1.20
 require (
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
 	// this has to be kept in sync with the used golangci-lint version
-	// use go version -m golanci-lint to detect the dependency versions
-	golang.org/x/tools v0.6.0
+	// use go version -m hack/tools/bin/golangci-lint to detect the dependency versions
+	golang.org/x/tools v0.9.2
 )
 
 require (
-	golang.org/x/mod v0.8.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/mod v0.10.0 // indirect
+	golang.org/x/sys v0.8.0 // indirect
 )

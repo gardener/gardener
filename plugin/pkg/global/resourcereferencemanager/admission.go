@@ -742,11 +742,7 @@ func (r *ReferenceManager) ensureBackupBucketReferences(ctx context.Context, old
 		}
 	}
 
-	if err := r.lookupSecret(ctx, backupBucket.Spec.SecretRef.Namespace, backupBucket.Spec.SecretRef.Name); err != nil {
-		return err
-	}
-
-	return nil
+	return r.lookupSecret(ctx, backupBucket.Spec.SecretRef.Namespace, backupBucket.Spec.SecretRef.Name)
 }
 
 func (r *ReferenceManager) validateBackupBucketDeleteCollection(ctx context.Context, a admission.Attributes) error {

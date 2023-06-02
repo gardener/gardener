@@ -55,7 +55,7 @@ type clusterIdentity struct {
 	managedResourceDeleteFn func(ctx context.Context, client client.Client, namespace string, name string) error
 }
 
-func new(
+func newComponent(
 	c client.Client,
 	namespace string,
 	identity string,
@@ -77,7 +77,7 @@ func new(
 
 // NewForSeed creates new instance of Deployer for the seed's cluster identity.
 func NewForSeed(c client.Client, namespace, identity string) Interface {
-	return new(
+	return newComponent(
 		c,
 		namespace,
 		identity,
@@ -90,7 +90,7 @@ func NewForSeed(c client.Client, namespace, identity string) Interface {
 
 // NewForShoot creates new instance of Deployer for the shoot's cluster identity.
 func NewForShoot(c client.Client, namespace, identity string) Interface {
-	return new(
+	return newComponent(
 		c,
 		namespace,
 		identity,
