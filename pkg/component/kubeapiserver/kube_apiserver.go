@@ -274,6 +274,8 @@ type ETCDEncryptionConfig struct {
 	// false and if there are two keys then the old key will be used for encryption while the current/new key will only
 	// be used for decryption.
 	EncryptWithCurrentKey bool
+	// Resources are the resources which should be encrypted.
+	Resources []string
 }
 
 // Images is a set of container images used for the containers of the kube-apiserver pods.

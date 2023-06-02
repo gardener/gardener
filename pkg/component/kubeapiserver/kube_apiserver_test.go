@@ -147,6 +147,7 @@ var _ = Describe("KubeAPIServer", func() {
 			RuntimeVersion:    runtimeVersion,
 			Version:           version,
 			VPN:               VPNConfig{Enabled: true},
+			ETCDEncryption:    ETCDEncryptionConfig{Resources: []string{"secrets"}},
 		}
 		kubernetesInterface = kubernetesfake.NewClientSetBuilder().WithAPIReader(c).WithClient(c).Build()
 		kapi = New(kubernetesInterface, namespace, sm, values)
@@ -1005,7 +1006,7 @@ resources:
 
 			DescribeTable("successfully deploy the ETCD encryption configuration secret resource w/ old key",
 				func(encryptWithCurrentKey bool) {
-					kapi = New(kubernetesInterface, namespace, sm, Values{ETCDEncryption: ETCDEncryptionConfig{EncryptWithCurrentKey: encryptWithCurrentKey}, RuntimeVersion: runtimeVersion, Version: version})
+					kapi = New(kubernetesInterface, namespace, sm, Values{ETCDEncryption: ETCDEncryptionConfig{EncryptWithCurrentKey: encryptWithCurrentKey, Resources: []string{"secrets"}}, RuntimeVersion: runtimeVersion, Version: version})
 
 					oldKeyName, oldKeySecret := "key-old", "old-secret"
 					Expect(c.Create(ctx, &corev1.Secret{

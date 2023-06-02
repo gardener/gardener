@@ -243,7 +243,7 @@ func DeployKubeAPIServer(
 	kubeAPIServer.SetExternalHostname(externalHostname)
 	kubeAPIServer.SetExternalServer(externalServer)
 
-	etcdEncryptionConfig, err := computeKubeAPIServerETCDEncryptionConfig(ctx, runtimeClient, runtimeNamespace, deploymentName, etcdEncryptionKeyRotationPhase)
+	etcdEncryptionConfig, err := computeKubeAPIServerETCDEncryptionConfig(ctx, runtimeClient, runtimeNamespace, deploymentName, etcdEncryptionKeyRotationPhase, []string{"secrets"})
 	if err != nil {
 		return err
 	}
@@ -504,7 +504,7 @@ func computeKubeAPIServerETCDEncryptionConfig(
 	runtimeNamespace string,
 	deploymentName string,
 	etcdEncryptionKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
-
+	resources []string,
 ) (
 	kubeapiserver.ETCDEncryptionConfig,
 	error,
@@ -512,6 +512,7 @@ func computeKubeAPIServerETCDEncryptionConfig(
 	config := kubeapiserver.ETCDEncryptionConfig{
 		RotationPhase:         etcdEncryptionKeyRotationPhase,
 		EncryptWithCurrentKey: true,
+		Resources:             resources,
 	}
 
 	if etcdEncryptionKeyRotationPhase == gardencorev1beta1.RotationPreparing {
