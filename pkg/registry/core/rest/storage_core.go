@@ -32,6 +32,7 @@ import (
 	controllerinstallationstore "github.com/gardener/gardener/pkg/registry/core/controllerinstallation/storage"
 	controllerregistrationstore "github.com/gardener/gardener/pkg/registry/core/controllerregistration/storage"
 	exposureclassstore "github.com/gardener/gardener/pkg/registry/core/exposureclass/storage"
+	internalsecretstore "github.com/gardener/gardener/pkg/registry/core/internalsecret/storage"
 	projectstore "github.com/gardener/gardener/pkg/registry/core/project/storage"
 	quotastore "github.com/gardener/gardener/pkg/registry/core/quota/storage"
 	secretbindingstore "github.com/gardener/gardener/pkg/registry/core/secretbinding/storage"
@@ -84,6 +85,8 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 
 	exposureClassStorage := exposureclassstore.NewStorage(restOptionsGetter)
 	storage["exposureclasses"] = exposureClassStorage.ExposureClass
+
+	storage["internalsecrets"] = internalsecretstore.NewREST(restOptionsGetter)
 
 	projectStorage := projectstore.NewStorage(restOptionsGetter)
 	storage["projects"] = projectStorage.Project
