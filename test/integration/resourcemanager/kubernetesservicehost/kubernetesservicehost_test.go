@@ -90,6 +90,11 @@ var _ = Describe("KubernetesServiceHost tests", func() {
 			Expect(testClient.Update(ctx, testNamespace)).To(Succeed())
 		})
 
+		Eventually(func(g Gomega) string {
+			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(testNamespace), testNamespace)).To(Succeed())
+			return testNamespace.Labels["apiserver-proxy.networking.gardener.cloud/inject"]
+		}).Should((Equal("disable")))
+
 		Expect(testClient.Create(ctx, pod)).To(Succeed())
 
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
