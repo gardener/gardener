@@ -72,6 +72,7 @@ var _ = Describe("References", func() {
 			secret4               = "secret4"
 			secret5               = "secret5"
 			secret6               = "secret6"
+			secret7               = "secret7"
 			additionalAnnotation1 = "foo"
 			additionalAnnotation2 = "bar"
 
@@ -141,6 +142,9 @@ var _ = Describe("References", func() {
 						},
 					},
 				},
+				ImagePullSecrets: []corev1.LocalObjectReference{
+					{Name: secret7},
+				},
 				Volumes: []corev1.Volume{
 					{
 						VolumeSource: corev1.VolumeSource{
@@ -208,6 +212,7 @@ var _ = Describe("References", func() {
 				AnnotationKey(KindSecret, secret4):       secret4,
 				AnnotationKey(KindSecret, secret5):       secret5,
 				AnnotationKey(KindSecret, secret6):       secret6,
+				AnnotationKey(KindSecret, secret7):       secret7,
 				additionalAnnotation1:                    "",
 				additionalAnnotation2:                    "",
 			}
@@ -224,6 +229,7 @@ var _ = Describe("References", func() {
 				AnnotationKey(KindSecret, secret4):       secret4,
 				AnnotationKey(KindSecret, secret5):       secret5,
 				AnnotationKey(KindSecret, secret6):       secret6,
+				AnnotationKey(KindSecret, secret7):       secret7,
 				additionalAnnotation1:                    "",
 				additionalAnnotation2:                    "",
 			}

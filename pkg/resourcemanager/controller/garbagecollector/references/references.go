@@ -201,6 +201,10 @@ func computeAnnotations(spec corev1.PodSpec, additional ...string) map[string]st
 		}
 	}
 
+	for _, imagePullSecret := range spec.ImagePullSecrets {
+		out[AnnotationKey(KindSecret, imagePullSecret.Name)] = imagePullSecret.Name
+	}
+
 	for _, v := range additional {
 		out[v] = ""
 	}
