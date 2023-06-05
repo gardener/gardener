@@ -363,13 +363,9 @@ data:
       relabel_configs:
       - target_label: type
         replacement: seed
-      - source_labels: [ __meta_kubernetes_pod_name ]
+      - source_labels: [ __meta_kubernetes_pod_name,__meta_kubernetes_pod_container_name ]
         action: keep
-        regex: vpn-shoot-(.+)
-      - source_labels: [ __meta_kubernetes_pod_container_name ]
-        regex: (vpn-shoot-.*|vpn-shoot)
-        replacement: $1
-        action: replace
+        regex: vpn-shoot-(0|.+-.+);vpn-shoot-init
       - source_labels: [__meta_kubernetes_pod_name,__meta_kubernetes_pod_container_name]
         target_label: __param_target
         regex: (.+);(.+)
