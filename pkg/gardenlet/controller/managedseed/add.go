@@ -294,7 +294,7 @@ func (r *Reconciler) EnqueueWithJitterDelay() handler.EventHandler {
 				return
 			}
 
-			if *r.Config.Controllers.ManagedSeed.JitterUpdates {
+			if pointer.BoolDeref(r.Config.Controllers.ManagedSeed.JitterUpdates, false) {
 				q.AddAfter(reconcileRequest(evt.ObjectNew), RandomDurationWithMetaDuration(r.Config.Controllers.ManagedSeed.SyncJitterPeriod))
 			} else {
 				q.Add(reconcileRequest(evt.ObjectNew))

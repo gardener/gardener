@@ -31,11 +31,13 @@ import (
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	seedmanagementv1alpha1constants "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -165,8 +167,8 @@ func (a *actuator) Reconcile(
 	// Create or update seed secrets
 	log.Info("Reconciling seed secrets")
 	a.recorder.Event(ms, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
-	if err := a.createOrUpdateSeedSecrets(ctx, &seedTemplate.Spec, ms, shoot); err != nil {
-		return status, false, fmt.Errorf("could not create or update seed %s secrets: %w", ms.Name, err)
+	if err := a.reconcileSeedSecrets(ctx, &seedTemplate.Spec, ms, shoot); err != nil {
+		return status, false, fmt.Errorf("could not reconcile seed %s secrets: %w", ms.Name, err)
 	}
 
 	if ms.Spec.Gardenlet != nil {
@@ -479,7 +481,7 @@ func (a *actuator) checkSeedSpec(ctx context.Context, spec *gardencorev1beta1.Se
 	return nil
 }
 
-func (a *actuator) createOrUpdateSeedSecrets(ctx context.Context, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed, shoot *gardencorev1beta1.Shoot) error {
+func (a *actuator) reconcileSeedSecrets(ctx context.Context, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed, shoot *gardencorev1beta1.Shoot) error {
 	// Get shoot secret
 	shootSecret, err := a.getShootSecret(ctx, shoot)
 	if err != nil {
@@ -536,6 +538,42 @@ func (a *actuator) createOrUpdateSeedSecrets(ctx context.Context, spec *gardenco
 			return nil
 		}); err != nil {
 			return err
+		}
+	}
+
+	// When the secretRef is unset, cleanup the secret if the reference annotations are present in the managedseed.
+	if spec.SecretRef == nil &&
+		metav1.HasAnnotation(managedSeed.ObjectMeta, seedmanagementv1alpha1constants.AnnotationSeedSecretName) &&
+		metav1.HasAnnotation(managedSeed.ObjectMeta, seedmanagementv1alpha1constants.AnnotationSeedSecretNamespace) {
+		secret, err := kubernetesutils.GetSecretByReference(ctx,
+			a.gardenClient,
+			&corev1.SecretReference{
+				Name:      managedSeed.GetAnnotations()[seedmanagementv1alpha1constants.AnnotationSeedSecretName],
+				Namespace: managedSeed.GetAnnotations()[seedmanagementv1alpha1constants.AnnotationSeedSecretNamespace],
+			},
+		)
+		if err != nil {
+			return fmt.Errorf("failed getting secret in the managedseed annotations: %w", err)
+		}
+
+		if metav1.IsControlledBy(secret, managedSeed) {
+			// This finalizer is added by the seed controller, but it cannot remove it when the secretRef is unset.
+			if controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
+				if err := controllerutils.RemoveFinalizers(ctx, a.gardenClient, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
+					return fmt.Errorf("failed to remove finalizer from secret referred by managedseed: %w", err)
+				}
+			}
+
+			if err := a.gardenClient.Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
+				return fmt.Errorf("error deleting seed secret referred by managedseed: %w", err)
+			}
+
+			patch := client.MergeFrom(managedSeed.DeepCopy())
+			delete(managedSeed.Annotations, seedmanagementv1alpha1constants.AnnotationSeedSecretName)
+			delete(managedSeed.Annotations, seedmanagementv1alpha1constants.AnnotationSeedSecretNamespace)
+			if err := a.gardenClient.Patch(ctx, managedSeed, patch); err != nil {
+				return fmt.Errorf("error removing seed secret reference annotations: %w", err)
+			}
 		}
 	}
 

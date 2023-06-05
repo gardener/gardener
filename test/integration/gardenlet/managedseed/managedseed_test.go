@@ -336,6 +336,40 @@ var _ = Describe("ManagedSeed controller test", func() {
 			checkIfSeedSecretsCreated()
 			checkIfGardenletWasDeployed()
 		})
+
+		It("should delete the seed secret when .spec.secretRef is unset", func() {
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
+				condition := v1beta1helper.GetCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedShootReconciled)
+				g.Expect(condition).NotTo(BeNil())
+				g.Expect(condition.Status).To(Equal(gardencorev1beta1.ConditionTrue))
+				g.Expect(condition.Reason).To(Equal(gardencorev1beta1.EventReconciled))
+			}).Should(Succeed())
+
+			checkIfSeedSecretsCreated()
+			checkIfGardenletWasDeployed()
+
+			patch := client.MergeFrom(managedSeed.DeepCopy())
+			gardenletConfig, err := encoding.DecodeGardenletConfiguration(&managedSeed.Spec.Gardenlet.Config, false)
+			Expect(err).NotTo(HaveOccurred())
+			gardenletConfig.SeedConfig.Spec.SecretRef = nil
+			gardenletConfigRaw, err := encoding.EncodeGardenletConfiguration(gardenletConfig)
+			Expect(err).NotTo(HaveOccurred())
+			managedSeed.Spec.Gardenlet.Config = *gardenletConfigRaw
+			// This should be ideally done by the ManagedSeed admission plugin, but it's disabled in the test
+			metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, "seedmanagement.gardener.cloud/seed-secret-name", seedSecretName)
+			metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, "seedmanagement.gardener.cloud/seed-secret-namespace", gardenNamespaceGarden.Name)
+			Expect(testClient.Patch(ctx, managedSeed, patch)).To(Succeed())
+
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: seedSecretName, Namespace: gardenNamespaceGarden.Name}, &corev1.Secret{})).Should(BeNotFoundError())
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
+				g.Expect(managedSeed.Annotations).NotTo(And(
+					HaveKey("seedmanagement.gardener.cloud/seed-secret-name"),
+					HaveKey("seedmanagement.gardener.cloud/seed-secret-namespace"),
+				))
+			}).Should(Succeed())
+		})
 	})
 
 	Context("deletion", func() {
