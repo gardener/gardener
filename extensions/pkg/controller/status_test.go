@@ -17,12 +17,13 @@ package controller_test
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -43,6 +44,7 @@ var _ = Describe("Status", func() {
 		generation int64 = 1337
 		lastOpType       = gardencorev1beta1.LastOperationTypeCreate
 		lastOpDesc       = "foo"
+		caser            = cases.Title(language.English)
 
 		ctrl *gomock.Controller
 		log  logr.Logger
@@ -115,7 +117,7 @@ var _ = Describe("Status", func() {
 				c.EXPECT().Status().Return(sw),
 				sw.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}), gomock.Any()).Do(func(ctx context.Context, obj extensionsv1alpha1.Object, patch client.Patch, opts ...client.PatchOption) {
 					var (
-						description = strings.Title(lastOpDesc) + ": " + fakeErr.Error()
+						description = caser.String(lastOpDesc) + ": " + fakeErr.Error()
 
 						lastOperation      = obj.GetExtensionStatus().GetLastOperation()
 						lastError          = obj.GetExtensionStatus().GetLastError()
@@ -145,7 +147,7 @@ var _ = Describe("Status", func() {
 				c.EXPECT().Status().Return(sw),
 				sw.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}), gomock.Any()).Do(func(ctx context.Context, obj extensionsv1alpha1.Object, patch client.Patch, opts ...client.PatchOption) {
 					var (
-						description = strings.Title(lastOpDesc) + ": " + err.Error()
+						description = caser.String(lastOpDesc) + ": " + err.Error()
 
 						lastOperation      = obj.GetExtensionStatus().GetLastOperation()
 						lastError          = obj.GetExtensionStatus().GetLastError()
