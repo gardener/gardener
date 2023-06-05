@@ -20,6 +20,8 @@ import (
 	"strings"
 	"text/template"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -403,7 +405,7 @@ func (e *etcd) AlertingRules() (map[string]string, error) {
 
 	if err := monitoringAlertingRulesTemplate.Execute(&alertingRules, map[string]interface{}{
 		"role":               e.values.Role,
-		"Role":               strings.Title(e.values.Role),
+		"Role":               cases.Title(language.English).String(e.values.Role),
 		"class":              e.values.Class,
 		"classImportant":     ClassImportant,
 		"backupEnabled":      e.values.BackupConfig != nil,

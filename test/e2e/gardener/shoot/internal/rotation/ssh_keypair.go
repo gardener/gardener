@@ -141,6 +141,7 @@ func (v *SSHKeypairVerifier) readAuthorizedKeysFile(ctx context.Context) (string
 	podExecutor := kubernetes.NewPodExecutor(v.ShootFramework.SeedClient.RESTConfig())
 
 	reader, err := podExecutor.Execute(
+		ctx,
 		v.Shoot.Status.TechnicalID,
 		podList.Items[0].Name,
 		"node",
