@@ -16,7 +16,6 @@ package etcd
 
 import (
 	"context"
-	_ "embed"
 	"fmt"
 	"strconv"
 	"time"
@@ -68,13 +67,6 @@ const (
 	druidConfigMapImageVectorOverwriteDataKey          = "images_overwrite.yaml"
 	druidDeploymentVolumeMountPathImageVectorOverwrite = "/charts_overwrite"
 	druidDeploymentVolumeNameImageVectorOverwrite      = "imagevector-overwrite"
-)
-
-var (
-	//go:embed crds/templates/crd-druid.gardener.cloud_etcds-copy.yaml
-	etcdCRD string
-	//go:embed crds/templates/crd-druid.gardener.cloud_etcdcopybackupstasks-copy.yaml
-	etcdCopyBackupsTaskCRD1 string
 )
 
 // NewBootstrapper creates a new instance of DeployWaiter for the etcd bootstrapper.
@@ -370,10 +362,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
-	// TODO(acumino): Drop CRDs deployment from here in release v1.73.
-	resources["crd.yaml"] = []byte(etcdCRD)
-	resources["crdEtcdCopyBackupsTask.yaml"] = []byte(etcdCopyBackupsTaskCRD1)
 
 	return managedresources.CreateForSeed(ctx, b.client, b.namespace, managedResourceControlName, false, resources)
 }
