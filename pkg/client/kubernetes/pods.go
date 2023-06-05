@@ -42,7 +42,7 @@ func NewPodExecutor(config *rest.Config) PodExecutor {
 
 // PodExecutor is the pod executor interface
 type PodExecutor interface {
-	Execute(namespace, name, containerName, command, commandArg string) (io.Reader, error)
+	Execute(ctx context.Context, namespace, name, containerName, command, commandArg string) (io.Reader, error)
 }
 
 type podExecutor struct {
@@ -50,7 +50,7 @@ type podExecutor struct {
 }
 
 // Execute executes a command on a pod
-func (p *podExecutor) Execute(namespace, name, containerName, command, commandArg string) (io.Reader, error) {
+func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerName, command, commandArg string) (io.Reader, error) {
 	client, err := corev1client.NewForConfig(p.config)
 	if err != nil {
 		return nil, err
@@ -75,7 +75,7 @@ func (p *podExecutor) Execute(namespace, name, containerName, command, commandAr
 		return nil, fmt.Errorf("failed to initialized the command exector: %w", err)
 	}
 
-	err = executor.Stream(remotecommand.StreamOptions{
+	err = executor.StreamWithContext(ctx, remotecommand.StreamOptions{
 		Stdin:  strings.NewReader(commandArg),
 		Stdout: &stdout,
 		Stderr: &stderr,
