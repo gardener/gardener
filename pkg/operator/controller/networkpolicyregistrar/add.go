@@ -16,13 +16,11 @@ package networkpolicyregistrar
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
 // ControllerName is the name of this controller.
@@ -37,34 +35,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(&operatorv1alpha1.Garden{}, builder.WithPredicates(NetworkingPredicate())).
+		For(&operatorv1alpha1.Garden{}, builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create))).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
 		}).
 		Complete(r)
-}
-
-// NetworkingPredicate returns true for Create and Update events if the
-// garden.Spec.RuntimeCluster.Networking.{Pods,Services} fields are not empty
-// TODO(shafeeqes): Remove this predicate in v1.75
-func NetworkingPredicate() predicate.Predicate {
-	return predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
-			return networkingFieldsSet(e.Object)
-		},
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			return networkingFieldsSet(e.ObjectNew)
-		},
-		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
-		GenericFunc: func(_ event.GenericEvent) bool { return false },
-	}
-}
-
-func networkingFieldsSet(obj client.Object) bool {
-	garden, ok := obj.(*operatorv1alpha1.Garden)
-	if !ok {
-		return false
-	}
-
-	return garden.Spec.RuntimeCluster.Networking.Pods != "" && garden.Spec.RuntimeCluster.Networking.Services != ""
 }
