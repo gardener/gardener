@@ -13,10 +13,6 @@ spec:
   region: local
   networking:
     type: calico
-    # TODO(scheererj): Drop this emtpy provider config after v1.71 has been released (otherwise, e2e upgrade tests break)
-    providerConfig:
-      apiVersion: calico.networking.extensions.gardener.cloud/v1alpha1
-      kind: NetworkConfig
   provider:
     type: local
     workers:
