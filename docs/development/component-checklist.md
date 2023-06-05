@@ -6,20 +6,20 @@ This document provides a checklist for them that you can walk through.
 
 ## General
 
-1. **Avoid usage of Helm charts** ([example](https://github.com/gardener/gardener/tree/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/metricsserver))
+1. **Avoid usage of Helm charts** ([example](https://github.com/gardener/gardener/tree/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver))
 
-   Nowadays, we use [Golang components](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/interfaces.go) instead of Helm charts for deploying components to a cluster.
+   Nowadays, we use [Golang components](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/interfaces.go) instead of Helm charts for deploying components to a cluster.
    Please find a typical structure of such components in the provided [metrics_server.go](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/metricsserver/metrics_server.go#L80-L97) file (configuration values are typically managed in a `Values` structure).
-   There are a few exceptions (e.g., [Istio](https://github.com/gardener/gardener/tree/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/istio)) still using charts, however the default should be using a Golang-based implementation.
-   For the exceptional cases, use Golang's [embed](https://pkg.go.dev/embed) package to embed the Helm chart directory ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/istio/istiod.go#L51-L52), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/istio/istiod.go#L257-L273)). 
+   There are a few exceptions (e.g., [Istio](https://github.com/gardener/gardener/tree/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/istio)) still using charts, however the default should be using a Golang-based implementation.
+   For the exceptional cases, use Golang's [embed](https://pkg.go.dev/embed) package to embed the Helm chart directory ([example 1](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/istio/istiod.go#L59-L60), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/istio/istiod.go#L297-L313)). 
 
-2. **Choose the proper deployment way** ([example 1 (direct application w/ client)](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/kubescheduler/kube_scheduler.go#L210-L225), [example 2 (using `ManagedResource`)](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/kubescheduler/kube_scheduler.go#L442-L484), [example 3 (mixed scenario)](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/kubestatemetrics/kube_state_metrics.go#L116))
+2. **Choose the proper deployment way** ([example 1 (direct application w/ client)](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubescheduler/kube_scheduler.go#L212-L232), [example 2 (using `ManagedResource`)](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubescheduler/kube_scheduler.go#L447-L488), [example 3 (mixed scenario)](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubestatemetrics/kube_state_metrics.go#L120))
 
    For historic reasons, resources related to shoot control plane components are applied directly with the client.
    All other resources (seed or shoot system components) are deployed via `gardener-resource-manager`'s [Resource controller](../concepts/resource-manager.md#managedresource-controller) (`ManagedResource`s) since it performs health checks out-of-the-box and has a lot of other features (see its documentation for more information).
-   Components that can run as both seed system component or shoot control plane component (e.g., VPA or `kube-state-metrics`) can make use of [these utility functions](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/resourceconfig.go).
+   Components that can run as both seed system component or shoot control plane component (e.g., VPA or `kube-state-metrics`) can make use of [these utility functions](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/resourceconfig.go).
 
-3. **Do not hard-code container image references** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/charts/images.yaml#L130-L133), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/metricsserver.go#L28-L31), [example 3](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/metricsserver/metrics_server.go#L82-L83))
+3. **Do not hard-code container image references** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/charts/images.yaml#L130-L133), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/metricsserver.go#L28-L31), [example 3](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L82-L83))
 
    We define all image references centrally in the [`charts/images.yaml`](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/charts/images.yaml) file.
    Hence, the image references must not be hard-coded in the pod template spec but read from this so-called [image vector](../deployment/image_vector.md) instead.
@@ -82,21 +82,21 @@ This document provides a checklist for them that you can walk through.
    This might include a combination of `ClusterRole`s and `Role`s.
    Please do not provide elevated privileges due to laziness (e.g., because there is already a `ClusterRole` that can be extended vs. creating a `Role` only when access to a single namespace is needed).
 
-4. **Use [`NetworkPolicy`s](https://kubernetes.io/docs/concepts/services-networking/network-policies/) to restrict network traffic** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/etcd/etcd.go#L293-L339))
+4. **Use [`NetworkPolicy`s](https://kubernetes.io/docs/concepts/services-networking/network-policies/) to restrict network traffic** 
 
    You should restrict both ingress and egress traffic to/from your component as much as possible to ensure that it only gets access to/from other components if really needed.
    Gardener provides a few default policies for typical usage scenarios. For more information, see [`NetworkPolicy`s In Garden, Seed, Shoot Clusters](../usage/network_policies.md).
 
-5. **Do not run components in privileged mode** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/nodelocaldns/nodelocaldns.go#L329-L333), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/nodelocaldns/nodelocaldns.go#L507))
+5. **Do not run components in privileged mode** ([example 1](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L324-L328), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L501))
 
    Avoid running components with `privileged=true`. Instead, define the needed [Linux capabilities](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-capabilities-for-a-container).
 
-6. **Choose the proper Seccomp profile** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/nodelocaldns/nodelocaldns.go#L285-L287), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/nginxingress/nginxingress.go#L427))
+6. **Choose the proper Seccomp profile** ([example 1](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L283-L287), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nginxingress/nginxingress.go#L447))
 
    The [Seccomp profile](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-seccomp-profile-for-a-container) will be defaulted by `gardener-resource-manager`'s SeccompProfile webhook which works well for the majority of components.
    However, in some special cases you might need to overwrite it.
 
-7. **Define `PodSecurityPolicy`s** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/vpnshoot/vpnshoot.go#L445-L516))
+7. **Define `PodSecurityPolicy`s** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/vpnshoot/vpnshoot.go#L341-L412))
 
    `PodSecurityPolicy`s are deprecated, however Gardener still supports shoot clusters with older Kubernetes versions ([ref](../usage/supported_k8s_versions.md)).
    To make sure that such clusters can run with `.spec.kubernetes.allowPrivilegedContainers=false`, you have to define proper `PodSecurityPolicy`s.
@@ -122,13 +122,13 @@ This document provides a checklist for them that you can walk through.
 
    To ensure smooth rolling update behaviour, consider the definition of [liveness and/or readiness probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/).
 
-5. **Mark node-critical components** ([example](https://github.com/gardener/gardener/blob/ec6f410d180868fded06122f53be16ed9892353f/pkg/component/kubeproxy/resources.go#L325-L328))
+5. **Mark node-critical components** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubeproxy/resources.go#L328))
 
    To ensure user workload pods are only scheduled to `Nodes` where all node-critical components are ready, these components need to tolerate the `node.gardener.cloud/critical-components-not-ready` taint (`NoSchedule` effect). 
    Also, such `DaemonSets` and the included `PodTemplates` need to be labelled with `node.gardener.cloud/critical-component=true`.
    For more information, see [Readiness of Shoot Worker Nodes](../usage/node-readiness.md).
 
-6. **Consider making a `Service` topology-aware** ([example](https://github.com/gardener/gardener/blob/6e5a47514b58a89355976a57ffede51b04df82e3/pkg/component/vpa/admissioncontroller.go#L154-L160))
+6. **Consider making a `Service` topology-aware** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/vpa/admissioncontroller.go#L154))
 
    To reduce costs and to improve the network traffic latency in multi-zone Seed clusters, consider making a `Service` topology-aware, if applicable. In short, when a `Service` is topology-aware, Kubernetes routes network traffic to the `Endpoint`s (`Pod`s) which are located in the same zone where the traffic originated from. In this way, the cross availability zone traffic is avoided. See [Topology-Aware Traffic Routing](../usage/topology_aware_routing.md).
 
@@ -145,19 +145,19 @@ This document provides a checklist for them that you can walk through.
    Each component should have a respective `VerticalPodAutoscaler` with "min allowed" resources, "auto update mode", and "requests only"-mode.
    VPA is always enabled in garden or seed clusters, while it is optional for shoot clusters.
 
-3. **Define a `HorizontalPodAutoscaler` if needed** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/coredns/coredns.go#L689-L738))
+3. **Define a `HorizontalPodAutoscaler` if needed** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/coredns/coredns.go#L671-L726))
 
    If your component is capable of scaling horizontally, you should consider defining a [`HorizontalPodAutoscaler`](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/).
 
 ## Observability / Operations Productivity
 
-1. **Provide monitoring scrape config and alerting rules** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/coredns/monitoring.go), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/monitoring.go#L97))
+1. **Provide monitoring scrape config and alerting rules** ([example 1](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/coredns/monitoring.go), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/monitoring.go#L97))
 
    Components should provide scrape configuration and alerting rules for Prometheus/Alertmanager if appropriate.
    This should be done inside a dedicated `monitoring.go` file.
    Extensions should follow the guidelines described in [Extensions Monitoring Integration](../extensions/logging-and-monitoring.md#extensions-monitoring-integration).
 
-2. **Provide logging parsers and filters** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/coredns/logging.go), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/gardenlet/controller/seed/seed/reconciler_reconcile.go#L563))
+2. **Provide logging parsers and filters** ([example 1](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/coredns/logging.go), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/gardenlet/controller/seed/seed/reconciler_reconcile.go#L563))
 
    Components should provide parsers and filters for fluent-bit, if appropriate.
    This should be done inside a dedicated `logging.go` file.

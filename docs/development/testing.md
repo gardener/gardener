@@ -169,7 +169,7 @@ stress -p 16 ./pkg/resourcemanager/controller/garbagecollector/garbagecollector.
 
 ### Writing Unit Tests
 
-- For the sake of execution speed, fake expensive calls/operations, e.g. secret generation: [example test](https://github.com/gardener/gardener/blob/efcc0a9146d3558253b95071f2c652663f916d92/pkg/component/kubescheduler/kube_scheduler_suite_test.go#L32-L34)
+- For the sake of execution speed, fake expensive calls/operations, e.g. secret generation: [example test](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubescheduler/kube_scheduler_suite_test.go#L32-L34)
 - Generally, prefer fakes over mocks, e.g., use controller-runtime fake client over mock clients.
   - Mocks decrease maintainability because they expect the tested component to follow a certain way to reach the desired goal (e.g., call specific functions with particular arguments), [example consequence](https://github.com/gardener/gardener/pull/4027/commits/111aba2c8e306421f2fa6b27e5d8ed8b2fc52be9#diff-8e61507edf985df2625840a690115c43bca6c032f2ff818389633bd4365c3efdR293-R298)
   - Generally, fakes should be used in "result-oriented" test code (e.g., that a certain object was labelled, but the test doesn't care if it was via patch or update as both a valid ways to reach the desired goal).
