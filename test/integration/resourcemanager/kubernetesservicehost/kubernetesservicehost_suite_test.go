@@ -55,6 +55,7 @@ var (
 	testEnv    *envtest.Environment
 	restConfig *rest.Config
 	testClient client.Client
+	mgrClient  client.Client
 
 	testNamespace *corev1.Namespace
 
@@ -119,6 +120,7 @@ var _ = BeforeSuite(func() {
 		Logger: log,
 		Host:   host,
 	}).AddToManager(mgr)).To(Succeed())
+	mgrClient = mgr.GetClient()
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
