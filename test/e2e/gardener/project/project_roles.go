@@ -12,13 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shoot
+package project
 
 import (
-	"context"
 	"time"
 
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -27,46 +25,20 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var (
-	ctx context.Context
-	log logr.Logger
-)
-
-const testID = "project-test"
-
-var _ = BeforeEach(func() {
-	ctx = context.Background()
-	log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)).WithName(testID)
-})
-
 var _ = Describe("Project Tests", Label("Project", "default"), func() {
 	var (
-		restConfig *rest.Config
-		testClient client.Client
-
 		project             *gardencorev1beta1.Project
 		projectNamespaceKey client.ObjectKey
 	)
 
 	BeforeEach(func() {
-		var err error
-		restConfig, err = config.GetConfig()
-		Expect(err).NotTo(HaveOccurred())
-
-		testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
-		Expect(err).NotTo(HaveOccurred())
-
 		projectName := "test-" + utils.ComputeSHA256Hex([]byte(CurrentSpecReport().LeafNodeLocation.String()))[:5]
 
 		project = &gardencorev1beta1.Project{
@@ -108,7 +80,7 @@ var _ = Describe("Project Tests", Label("Project", "default"), func() {
 		}).Should(Succeed())
 	}
 
-	Describe("Member RBAC", func() {
+	Describe("Project Member RBAC", func() {
 		var (
 			testUserName   string
 			testUserClient client.Client
