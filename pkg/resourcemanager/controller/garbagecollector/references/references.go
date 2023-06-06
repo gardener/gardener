@@ -81,7 +81,7 @@ func KindFromAnnotationKey(key string) string {
 }
 
 // InjectAnnotations injects annotations into the annotation maps based on the referenced ConfigMaps/Secrets appearing
-// in the pod template spec's `.volumes[]` or `.containers[].envFrom[]` or `.containers[].env[].valueFrom[]` lists.
+// in the pod template spec's `.volumes[]` or `.containers[].envFrom[]` or `.containers[].env[].valueFrom[]` or `.imagePullSecrets[]` lists.
 // Additional reference annotations can be specified via the variadic parameter (expected format is that returned by
 // `AnnotationKey`).
 func InjectAnnotations(obj runtime.Object, additional ...string) error {
@@ -199,6 +199,10 @@ func computeAnnotations(spec corev1.PodSpec, additional ...string) map[string]st
 				}
 			}
 		}
+	}
+
+	for _, imagePullSecret := range spec.ImagePullSecrets {
+		out[AnnotationKey(KindSecret, imagePullSecret.Name)] = imagePullSecret.Name
 	}
 
 	for _, v := range additional {
