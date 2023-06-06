@@ -27,6 +27,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -47,6 +48,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -322,7 +324,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			clusterRole,
 			clusterRoleBinding,
 			vpa,
-			service,
 		}
 
 		podDisruptionBudget client.Object
@@ -356,6 +357,15 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	}
 
 	resourcesToAdd = append(resourcesToAdd, podDisruptionBudget)
+
+	portMetrics := networkingv1.NetworkPolicyPort{
+		Port:     utils.IntStrPtrFromInt(metricsPort),
+		Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+	}
+
+	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, portMetrics))
+
+	resourcesToAdd = append(resourcesToAdd, service)
 
 	if b.imageVectorOverwrite != nil {
 		configMapImageVectorOverwrite.Data = map[string]string{druidConfigMapImageVectorOverwriteDataKey: *b.imageVectorOverwrite}

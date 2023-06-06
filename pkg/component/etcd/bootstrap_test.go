@@ -356,7 +356,7 @@ spec:
         imagePullPolicy: IfNotPresent
         name: etcd-druid
         ports:
-        - containerPort: 9569
+        - containerPort: 8080
         resources:
           limits:
             memory: 512Mi
@@ -414,7 +414,7 @@ spec:
         imagePullPolicy: IfNotPresent
         name: etcd-druid
         ports:
-        - containerPort: 9569
+        - containerPort: 8080
         resources:
           limits:
             memory: 512Mi
@@ -432,6 +432,30 @@ spec:
           name: ` + configMapName + `
         name: imagevector-overwrite
 status: {}
+`
+			serviceYAML = `apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports: '[{"protocol":"TCP","port":8080}]'
+  creationTimestamp: null
+  labels:
+    gardener.cloud/role: etcd-druid
+    high-availability-config.resources.gardener.cloud/type: controller
+  name: etcd-druid
+  namespace: ` + namespace + `
+spec:
+  ports:
+  - name: metrics
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    gardener.cloud/role: etcd-druid
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}
 `
 			podDisruptionYAML = `apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -469,6 +493,7 @@ status:
 					"clusterrole____gardener.cloud_system_etcd-druid.yaml":          []byte(clusterRoleYAML),
 					"clusterrolebinding____gardener.cloud_system_etcd-druid.yaml":   []byte(clusterRoleBindingYAML),
 					"verticalpodautoscaler__" + namespace + "__etcd-druid-vpa.yaml": []byte(vpaYAML),
+					"service__" + namespace + "__etcd-druid.yaml":                   []byte(serviceYAML),
 					"deployment__" + namespace + "__etcd-druid.yaml":                []byte(deploymentWithoutImageVectorOverwriteYAML),
 					"poddisruptionbudget__" + namespace + "__etcd-druid.yaml":       []byte(podDisruptionYAML),
 				},
