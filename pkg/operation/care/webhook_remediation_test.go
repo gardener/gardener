@@ -339,6 +339,11 @@ var _ = Describe("WebhookRemediation", func() {
 							Name:           "some-webhook2.example.com",
 							TimeoutSeconds: pointer.Int32(10),
 							FailurePolicy:  &ignore,
+							ObjectSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"app.kubernetes.io/name": "test",
+								},
+							},
 							Rules: []admissionregistrationv1.RuleWithOperations{
 								{
 									Rule: admissionregistrationv1.Rule{
@@ -354,6 +359,23 @@ var _ = Describe("WebhookRemediation", func() {
 						},
 						{
 							Name:           "some-webhook3.example.com",
+							TimeoutSeconds: pointer.Int32(10),
+							FailurePolicy:  &ignore,
+							Rules: []admissionregistrationv1.RuleWithOperations{
+								{
+									Rule: admissionregistrationv1.Rule{
+										APIGroups:   []string{"coordination.k8s.io"},
+										APIVersions: []string{"v1", "v1beta1"},
+										Resources:   []string{"leases"},
+									},
+									Operations: []admissionregistrationv1.OperationType{
+										"UPDATE",
+									},
+								},
+							},
+						},
+						{
+							Name:           "some-webhook4.example.com",
 							TimeoutSeconds: pointer.Int32(1),
 							FailurePolicy:  &ignore,
 							Rules: []admissionregistrationv1.RuleWithOperations{
@@ -377,8 +399,9 @@ var _ = Describe("WebhookRemediation", func() {
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhookConfiguration), mutatingWebhookConfiguration)).To(Succeed())
 					Expect(mutatingWebhookConfiguration.Annotations).To(HaveKey("gardener.cloud/warning"))
 					Expect(mutatingWebhookConfiguration.Webhooks[0].TimeoutSeconds).To(Equal(pointer.Int32(15)))
-					Expect(mutatingWebhookConfiguration.Webhooks[1].TimeoutSeconds).To(Equal(pointer.Int32(3)))
-					Expect(mutatingWebhookConfiguration.Webhooks[2].TimeoutSeconds).To(Equal(pointer.Int32(1)))
+					Expect(mutatingWebhookConfiguration.Webhooks[1].TimeoutSeconds).To(Equal(pointer.Int32(10)))
+					Expect(mutatingWebhookConfiguration.Webhooks[2].TimeoutSeconds).To(Equal(pointer.Int32(3)))
+					Expect(mutatingWebhookConfiguration.Webhooks[3].TimeoutSeconds).To(Equal(pointer.Int32(1)))
 				})
 
 				It("failurePolicy", func() {

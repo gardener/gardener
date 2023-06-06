@@ -64,8 +64,8 @@ var (
 	// WebhookConstraintMatchersForLeases contains a list of lease API resources that can break
 	// leader election of essential control plane controllers.
 	WebhookConstraintMatchersForLeases = []WebhookConstraintMatcher{
-		{GVR: coordinationv1.SchemeGroupVersion.WithResource("leases"), NamespaceLabels: kubeSystemNamespaceLabels},
-		{GVR: coordinationv1beta1.SchemeGroupVersion.WithResource("leases"), NamespaceLabels: kubeSystemNamespaceLabels},
+		{GVR: coordinationv1.SchemeGroupVersion.WithResource("leases"), NamespaceLabels: kubeSystemNamespaceLabels, ObjectLabels: labels.Set{}},
+		{GVR: coordinationv1beta1.SchemeGroupVersion.WithResource("leases"), NamespaceLabels: kubeSystemNamespaceLabels, ObjectLabels: labels.Set{}},
 	}
 
 	// WebhookConstraintMatchers contains a list of all api resources which can break
