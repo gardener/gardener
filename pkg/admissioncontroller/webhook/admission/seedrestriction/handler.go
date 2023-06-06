@@ -56,6 +56,7 @@ var (
 	bastionResource                   = operationsv1alpha1.Resource("bastions")
 	certificateSigningRequestResource = certificatesv1.Resource("certificatesigningrequests")
 	clusterRoleBindingResource        = rbacv1.Resource("clusterrolebindings")
+	internalSecretResource            = gardencorev1beta1.Resource("internalsecrets")
 	leaseResource                     = coordinationv1.Resource("leases")
 	secretResource                    = corev1.Resource("secrets")
 	seedResource                      = gardencorev1beta1.Resource("seeds")
@@ -95,6 +96,8 @@ func (h *Handler) Handle(ctx context.Context, request admission.Request) admissi
 		return h.admitCertificateSigningRequest(seedName, request)
 	case clusterRoleBindingResource:
 		return h.admitClusterRoleBinding(ctx, seedName, request)
+	case internalSecretResource:
+		return h.admitInternalSecret(ctx, seedName, request)
 	case leaseResource:
 		return h.admitLease(seedName, request)
 	case secretResource:
@@ -253,6 +256,27 @@ func (h *Handler) admitClusterRoleBinding(ctx context.Context, seedName string, 
 
 		managedSeedNamespace, managedSeedName := gardenletbootstraputil.ManagedSeedInfoFromClusterRoleBindingName(request.Name)
 		return h.allowIfManagedSeedIsNotYetBootstrapped(ctx, seedName, managedSeedNamespace, managedSeedName)
+	}
+
+	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to seed %q", seedName))
+}
+
+func (h *Handler) admitInternalSecret(ctx context.Context, seedName string, request admission.Request) admission.Response {
+	if request.Operation != admissionv1.Create {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	// Check if the internal secret is related to a Shoot assigned to the seed the gardenlet is responsible for.
+	if shootName, ok := gardenerutils.IsShootProjectInternalSecret(request.Name); ok {
+		shoot := &gardencorev1beta1.Shoot{}
+		if err := h.Client.Get(ctx, kubernetesutils.Key(request.Namespace, shootName), shoot); err != nil {
+			if apierrors.IsNotFound(err) {
+				return admission.Errored(http.StatusForbidden, err)
+			}
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+
+		return h.admit(seedName, shoot.Spec.SeedName)
 	}
 
 	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to seed %q", seedName))

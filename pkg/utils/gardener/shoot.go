@@ -230,6 +230,13 @@ func GetShootProjectSecretSuffixes() []string {
 	}
 }
 
+// GetShootProjectInternalSecretSuffixes returns the list of shoot-related project internal secret suffixes.
+func GetShootProjectInternalSecretSuffixes() []string {
+	return []string{
+		ShootProjectSecretSuffixCAClient,
+	}
+}
+
 func shootProjectSecretSuffix(suffix string) string {
 	return "." + suffix
 }
@@ -243,6 +250,18 @@ func ComputeShootProjectSecretName(shootName, suffix string) string {
 // an empty string and <false>. Otherwise, it returns the shoot name and <true>.
 func IsShootProjectSecret(secretName string) (string, bool) {
 	for _, v := range GetShootProjectSecretSuffixes() {
+		if suffix := shootProjectSecretSuffix(v); strings.HasSuffix(secretName, suffix) {
+			return strings.TrimSuffix(secretName, suffix), true
+		}
+	}
+
+	return "", false
+}
+
+// IsShootProjectInternalSecret checks if the given name matches the name of a shoot-related project internal secret.
+// If no, it returns an empty string and <false>. Otherwise, it returns the shoot name and <true>.
+func IsShootProjectInternalSecret(secretName string) (string, bool) {
+	for _, v := range GetShootProjectInternalSecretSuffixes() {
 		if suffix := shootProjectSecretSuffix(v); strings.HasSuffix(secretName, suffix) {
 			return strings.TrimSuffix(secretName, suffix), true
 		}

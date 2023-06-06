@@ -40,6 +40,8 @@ const (
 	VertexTypeControllerRegistration
 	// VertexTypeExposureClass is a constant for a 'ExposureClass' vertex.
 	VertexTypeExposureClass
+	// VertexTypeInternalSecret is a constant for a 'InternalSecret' vertex.
+	VertexTypeInternalSecret
 	// VertexTypeLease is a constant for a 'Lease' vertex.
 	VertexTypeLease
 	// VertexTypeManagedSeed is a constant for a 'ManagedSeed' vertex.

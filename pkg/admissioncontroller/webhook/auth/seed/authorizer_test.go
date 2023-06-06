@@ -1863,6 +1863,107 @@ var _ = Describe("Seed", func() {
 			)
 		})
 
+		Context("when requested for InternalSecrets", func() {
+			var (
+				name, namespace string
+				attrs           *auth.AttributesRecord
+			)
+
+			BeforeEach(func() {
+				name, namespace = "foo", "bar"
+				attrs = &auth.AttributesRecord{
+					User:            seedUser,
+					Name:            name,
+					Namespace:       namespace,
+					APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+					Resource:        "internalsecrets",
+					ResourceRequest: true,
+					Verb:            "get",
+				}
+			})
+
+			It("should allow because verb is create", func() {
+				attrs.Verb = "create"
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+
+			It("should allow when verb is delete and resource does not exist", func() {
+				attrs.Verb = "delete"
+
+				graph.EXPECT().HasVertex(graphpkg.VertexTypeInternalSecret, namespace, name).Return(false)
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+
+			DescribeTable("should return correct result if path exists",
+				func(verb string) {
+					attrs.Verb = verb
+
+					if verb == "delete" {
+						graph.EXPECT().HasVertex(graphpkg.VertexTypeInternalSecret, namespace, name).Return(true).Times(2)
+					}
+
+					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeInternalSecret, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+
+					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeInternalSecret, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+					decision, reason, err = authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("no relationship found"))
+				},
+
+				Entry("get", "get"),
+				Entry("list", "list"),
+				Entry("watch", "watch"),
+				Entry("patch", "patch"),
+				Entry("update", "update"),
+				Entry("delete", "delete"),
+			)
+
+			DescribeTable("should have no opinion because no allowed verb",
+				func(verb string) {
+					attrs.Verb = verb
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create get update patch delete list watch]"))
+				},
+
+				Entry("deletecollection", "deletecollection"),
+			)
+
+			It("should have no opinion because request is for a subresource", func() {
+				attrs.Subresource = "status"
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
+			})
+
+			It("should have no opinion because no resource name is given", func() {
+				attrs.Name = ""
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(reason).To(ContainSubstring("No Object name found"))
+			})
+		})
+
 		Context("when requested for ClusterRoleBindings", func() {
 			var (
 				name  string
