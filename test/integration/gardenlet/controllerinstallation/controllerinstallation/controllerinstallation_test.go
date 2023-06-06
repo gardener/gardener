@@ -30,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -153,127 +152,6 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
 				return controllerInstallation.Finalizers
 			}).Should(ConsistOf("core.gardener.cloud/controllerinstallation"))
-		})
-
-		Context("FullNetworkPoliciesinRuntimeCluster is disabled", func() {
-			BeforeEach(func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.FullNetworkPoliciesInRuntimeCluster, false))
-			})
-
-			It("should create a namespace and deploy the chart", func() {
-				By("Ensure namespace was created")
-				namespace := &corev1.Namespace{}
-				Eventually(func(g Gomega) {
-					g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "extension-" + controllerInstallation.Name}, namespace)).To(Succeed())
-					g.Expect(namespace.Labels).To(And(
-						HaveKeyWithValue("gardener.cloud/role", "extension"),
-						HaveKeyWithValue("controllerregistration.core.gardener.cloud/name", controllerRegistration.Name),
-						HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
-					))
-					g.Expect(namespace.Annotations).To(And(
-						HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b,c"),
-					))
-				}).Should(Succeed())
-
-				By("Ensure 'gardenlet-allow-all-traffic' policy was created because FullNetworkPoliciesInRuntimeCluster feature gate is disabled")
-				Eventually(func() error {
-					return testClient.Get(ctx, client.ObjectKey{Namespace: namespace.Name, Name: "gardenlet-allow-all-traffic"}, &networkingv1.NetworkPolicy{})
-				}).Should(Succeed())
-
-				By("Ensure chart was deployed correctly")
-				Eventually(func(g Gomega) string {
-					managedResource := &resourcesv1alpha1.ManagedResource{}
-					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: "garden", Name: controllerInstallation.Name}, managedResource)).To(Succeed())
-
-					secret := &corev1.Secret{}
-					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: managedResource.Namespace, Name: managedResource.Spec.SecretRefs[0].Name}, secret)).To(Succeed())
-
-					configMap := &corev1.ConfigMap{}
-					Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_config.yaml"], configMap)).To(Succeed())
-
-					return configMap.Data["values"]
-				}).Should(Equal(`gardener:
-  garden:
-    clusterIdentity: ` + gardenClusterIdentity + `
-  seed:
-    annotations: null
-    blockCIDRs: null
-    clusterIdentity: ` + seedClusterIdentity + `
-    ingressDomain: ` + seed.Spec.Ingress.Domain + `
-    labels:
-      ` + testID + `: ` + testRunID + `
-      dnsrecord.extensions.gardener.cloud/` + seed.Spec.DNS.Provider.Type + `: "true"
-      provider.extensions.gardener.cloud/` + seed.Spec.Provider.Type + `: "true"
-    name: ` + seed.Name + `
-    networks:
-      ipFamilies:
-      - IPv4
-      nodes: ` + *seed.Spec.Networks.Nodes + `
-      pods: ` + seed.Spec.Networks.Pods + `
-      services: ` + seed.Spec.Networks.Services + `
-    protected: false
-    provider: ` + seed.Spec.Provider.Type + `
-    region: ` + seed.Spec.Provider.Region + `
-    spec:
-      dns:
-        provider:
-          secretRef:
-            name: ` + seed.Spec.DNS.Provider.SecretRef.Name + `
-            namespace: ` + seed.Spec.DNS.Provider.SecretRef.Namespace + `
-          type: ` + seed.Spec.DNS.Provider.Type + `
-      ingress:
-        controller:
-          kind: ` + seed.Spec.Ingress.Controller.Kind + `
-        domain: ` + seed.Spec.Ingress.Domain + `
-      networks:
-        ipFamilies:
-        - IPv4
-        nodes: ` + *seed.Spec.Networks.Nodes + `
-        pods: ` + seed.Spec.Networks.Pods + `
-        services: ` + seed.Spec.Networks.Services + `
-      provider:
-        region: ` + seed.Spec.Provider.Region + `
-        type: ` + seed.Spec.Provider.Type + `
-        zones:
-        - a
-        - b
-        - c
-      settings:
-        dependencyWatchdog:
-          endpoint:
-            enabled: true
-          probe:
-            enabled: true
-          prober:
-            enabled: true
-          weeder:
-            enabled: true
-        excessCapacityReservation:
-          enabled: true
-        ownerChecks:
-          enabled: false
-        scheduling:
-          visible: true
-        topologyAwareRouting:
-          enabled: false
-        verticalPodAutoscaler:
-          enabled: true
-    taints: null
-    visible: true
-    volumeProvider: ""
-    volumeProviders: null
-  version: 1.2.3
-`))
-
-				By("Ensure conditions are maintained correctly")
-				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
-					return controllerInstallation.Status.Conditions
-				}).Should(And(
-					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationValid), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("RegistrationValid")),
-					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("InstallationPending")),
-				))
-			})
 		})
 
 		It("should properly clean up on ControllerInstallation deletion", func() {

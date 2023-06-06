@@ -7705,7 +7705,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					},
 					"seedName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeedName is the name of the seed cluster that runs the control plane of the Shoot. This field is immutable when the SeedChange feature gate is disabled.",
+							Description: "SeedName is the name of the seed cluster that runs the control plane of the Shoot.",
 							Type:        []string{"string"},
 							Format:      "",
 						},

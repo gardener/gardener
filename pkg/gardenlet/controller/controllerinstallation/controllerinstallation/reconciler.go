@@ -39,7 +39,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	ctrlinstutils "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/utils"
 	"github.com/gardener/gardener/pkg/utils"
@@ -167,8 +166,8 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
-	// TODO(timuthy, rfranzke): Drop this code when the FullNetworkPoliciesInRuntimeCluster feature gate gets promoted to GA.
-	if err := r.reconcileNetworkPoliciesInSeed(seedCtx, namespace.Name); err != nil {
+	// TODO(rfranzke): Drop this code when the FullNetworkPoliciesInRuntimeCluster feature gate gets removed.
+	if err := r.SeedClientSet.Client().Delete(seedCtx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet-allow-all-traffic", Namespace: namespace.Name}}); client.IgnoreNotFound(err) != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -343,31 +342,4 @@ func getNamespaceForControllerInstallation(controllerInstallation *gardencorev1b
 			Name: gardenerutils.NamespaceNameForControllerInstallation(controllerInstallation),
 		},
 	}
-}
-
-func (r *Reconciler) reconcileNetworkPoliciesInSeed(ctx context.Context, namespace string) error {
-	var (
-		peers = []networkingv1.NetworkPolicyPeer{
-			{PodSelector: &metav1.LabelSelector{}, NamespaceSelector: &metav1.LabelSelector{}},
-			{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
-			{IPBlock: &networkingv1.IPBlock{CIDR: "::/0"}},
-		}
-
-		allowAllTrafficNetworkPolicy = &networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardenlet-allow-all-traffic",
-				Namespace: namespace,
-			},
-			Spec: networkingv1.NetworkPolicySpec{
-				Ingress:     []networkingv1.NetworkPolicyIngressRule{{From: peers}},
-				Egress:      []networkingv1.NetworkPolicyEgressRule{{To: peers}},
-				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
-			},
-		}
-	)
-
-	if !features.DefaultFeatureGate.Enabled(features.FullNetworkPoliciesInRuntimeCluster) {
-		return client.IgnoreAlreadyExists(r.SeedClientSet.Client().Create(ctx, allowAllTrafficNetworkPolicy))
-	}
-	return client.IgnoreNotFound(r.SeedClientSet.Client().Delete(ctx, allowAllTrafficNetworkPolicy))
 }

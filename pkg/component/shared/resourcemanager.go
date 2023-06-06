@@ -62,7 +62,6 @@ func NewRuntimeGardenerResourceManager(
 	defaultUnreachableToleration *int64,
 	defaultSeccompProfileEnabled bool,
 	endpointSliceHintsEnabled bool,
-	fullNetworkPoliciesEnabled bool,
 	additionalNetworkPolicyNamespaceSelectors []metav1.LabelSelector,
 	zones []string,
 ) (
@@ -86,7 +85,6 @@ func NewRuntimeGardenerResourceManager(
 		DefaultNotReadyToleration:                 defaultNotReadyToleration,
 		DefaultUnreachableToleration:              defaultUnreachableToleration,
 		EndpointSliceHintsEnabled:                 endpointSliceHintsEnabled,
-		FullNetworkPolicies:                       fullNetworkPoliciesEnabled,
 		NetworkPolicyAdditionalNamespaceSelectors: additionalNetworkPolicyNamespaceSelectors,
 		NetworkPolicyControllerIngressControllerSelector: &resourcemanagerv1alpha1.IngressControllerSelector{
 			Namespace: v1beta1constants.GardenNamespace,

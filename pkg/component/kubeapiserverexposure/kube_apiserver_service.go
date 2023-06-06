@@ -71,7 +71,6 @@ type serviceValues struct {
 	gardenerManaged             bool
 	topologyAwareRoutingEnabled bool
 	runtimeKubernetesVersion    *semver.Version
-	fullNetworkPolicies         bool
 	clusterIP                   string
 }
 
@@ -86,7 +85,6 @@ func NewService(
 	waiter retry.Ops,
 	clusterIPFunc func(clusterIP string),
 	ingressFunc func(ingressIP string),
-	fullNetworkPolicies bool,
 	clusterIP string,
 ) component.DeployWaiter {
 	if waiter == nil {
@@ -103,9 +101,8 @@ func NewService(
 
 	var (
 		internalValues = &serviceValues{
-			annotationsFunc:     func() map[string]string { return map[string]string{} },
-			fullNetworkPolicies: fullNetworkPolicies,
-			clusterIP:           clusterIP,
+			annotationsFunc: func() map[string]string { return map[string]string{} },
+			clusterIP:       clusterIP,
 		}
 		loadBalancerServiceKeyFunc func() client.ObjectKey
 	)
@@ -192,11 +189,8 @@ func (s *service) Deploy(ctx context.Context) error {
 			namespaceSelectors = append(namespaceSelectors,
 				metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}},
 				metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}},
+				metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}},
 			)
-
-			if s.values.fullNetworkPolicies {
-				namespaceSelectors = append(namespaceSelectors, metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension}})
-			}
 		}
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(obj, namespaceSelectors...))
 

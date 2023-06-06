@@ -129,7 +129,6 @@ var _ = Describe("#Service", func() {
 			&retryfake.Ops{MaxAttempts: 1},
 			clusterIPFunc,
 			ingressIPFunc,
-			true,
 			"",
 		)
 	})
@@ -296,7 +295,6 @@ var _ = Describe("#Service", func() {
 					&retryfake.Ops{MaxAttempts: 1},
 					clusterIPFunc,
 					ingressIPFunc,
-					false,
 					"",
 				)
 
@@ -339,7 +337,6 @@ var _ = Describe("#Service", func() {
 					&retryfake.Ops{MaxAttempts: 1},
 					clusterIPFunc,
 					ingressIPFunc,
-					false,
 					clusterIP,
 				)
 			})

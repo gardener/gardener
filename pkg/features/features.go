@@ -46,26 +46,11 @@ const (
 	// deprecated: v1.48.0
 	APIServerSNI featuregate.Feature = "APIServerSNI"
 
-	// SeedChange enables updating the `spec.seedName` field during shoot validation from a non-empty value
-	// in order to trigger shoot control plane migration.
-	// owner: @plkokanov
-	// alpha: v1.12.0
-	// beta: v1.53.0
-	// GA: v1.69.0
-	SeedChange featuregate.Feature = "SeedChange"
-
-	// CopyEtcdBackupsDuringControlPlaneMigration enables the copy of etcd backups from the object store of the source seed
-	// to the object store of the destination seed during control plane migration.
-	// owner: @plkokanov
-	// alpha: v1.37.0
-	// beta: v1.53.0
-	// GA: v1.69.0
-	CopyEtcdBackupsDuringControlPlaneMigration featuregate.Feature = "CopyEtcdBackupsDuringControlPlaneMigration"
-
 	// HAControlPlanes allows shoot control planes to be run in high availability mode.
 	// owner: @shreyas-s-rao @timuthy
 	// alpha: v1.49.0
 	// beta: v1.71.0
+	// GA: v1.73.0
 	HAControlPlanes featuregate.Feature = "HAControlPlanes"
 
 	// DefaultSeccompProfile defaults the seccomp profile for Gardener managed workload in the seed to RuntimeDefault.
@@ -94,6 +79,7 @@ const (
 	// owner: @rfranzke
 	// alpha: v1.66.0
 	// beta: v1.71.0
+	// GA: v1.73.0
 	FullNetworkPoliciesInRuntimeCluster featuregate.Feature = "FullNetworkPoliciesInRuntimeCluster"
 
 	// WorkerlessShoots allows creation of Shoot clusters with no worker pools.
@@ -126,17 +112,15 @@ const (
 var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 
 var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	HVPA:               {Default: false, PreRelease: featuregate.Alpha},
-	HVPAForShootedSeed: {Default: false, PreRelease: featuregate.Alpha},
-	APIServerSNI:       {Default: true, PreRelease: featuregate.Deprecated, LockToDefault: true},
-	SeedChange:         {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	CopyEtcdBackupsDuringControlPlaneMigration: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	HAControlPlanes:                     {Default: true, PreRelease: featuregate.Beta},
+	HVPA:                                {Default: false, PreRelease: featuregate.Alpha},
+	HVPAForShootedSeed:                  {Default: false, PreRelease: featuregate.Alpha},
+	APIServerSNI:                        {Default: true, PreRelease: featuregate.Deprecated, LockToDefault: true},
+	HAControlPlanes:                     {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	DefaultSeccompProfile:               {Default: false, PreRelease: featuregate.Alpha},
 	CoreDNSQueryRewriting:               {Default: false, PreRelease: featuregate.Alpha},
 	IPv6SingleStack:                     {Default: false, PreRelease: featuregate.Alpha},
 	MutableShootSpecNetworkingNodes:     {Default: false, PreRelease: featuregate.Alpha},
-	FullNetworkPoliciesInRuntimeCluster: {Default: true, PreRelease: featuregate.Beta},
+	FullNetworkPoliciesInRuntimeCluster: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	WorkerlessShoots:                    {Default: false, PreRelease: featuregate.Alpha},
 }
 

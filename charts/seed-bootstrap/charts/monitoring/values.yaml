@@ -4,7 +4,6 @@ global:
     configmap-reloader: image-repository:image-tag
 
 prometheus:
-  deployAllowAllAccessNetworkPolicy: true
   resources:
     prometheus:
       limits:

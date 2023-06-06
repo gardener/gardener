@@ -315,7 +315,6 @@ var _ = Describe("ResourceManager", func() {
 			ConcurrentSyncs:                                  &concurrentSyncs,
 			DefaultNotReadyToleration:                        defaultNotReadyTolerationSeconds,
 			DefaultUnreachableToleration:                     defaultUnreachableTolerationSeconds,
-			FullNetworkPolicies:                              true,
 			NetworkPolicyAdditionalNamespaceSelectors:        additionalNetworkPolicyNamespaceSelectors,
 			NetworkPolicyControllerIngressControllerSelector: ingressControllerSelector,
 			HealthSyncPeriod:                                 &healthSyncPeriod,
@@ -480,12 +479,12 @@ var _ = Describe("ResourceManager", func() {
 					Enabled: true,
 					NamespaceSelectors: []metav1.LabelSelector{
 						{MatchLabels: map[string]string{"gardener.cloud/role": "shoot"}},
+						{MatchLabels: map[string]string{"gardener.cloud/role": "extension"}},
 						{MatchLabels: map[string]string{"gardener.cloud/role": "istio-system"}},
 						{MatchLabels: map[string]string{"gardener.cloud/role": "istio-ingress"}},
 						{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "handler.exposureclass.gardener.cloud/name", Operator: metav1.LabelSelectorOpExists}}},
 						{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "garden"}},
 						{MatchLabels: map[string]string{"foo": "bar"}},
-						{MatchLabels: map[string]string{"gardener.cloud/role": "extension"}},
 					},
 					IngressControllerSelector: ingressControllerSelector,
 				}

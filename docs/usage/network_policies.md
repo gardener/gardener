@@ -12,7 +12,7 @@ The `gardener-operator` runs a [`NetworkPolicy` controller](../concepts/operator
 - `istio-system`
 - `*istio-ingress-*`
 - `shoot-*`
-- `extension-*` (only when the [`FullNetworkPoliciesInRuntimeCluster` feature gate](../deployment/feature_gates.md) is enabled (in case the garden cluster is a seed cluster at the same time))
+- `extension-*` (in case the garden cluster is a seed cluster at the same time)
 
 It deploys the following so-called "general `NetworkPolicy`s":
 
