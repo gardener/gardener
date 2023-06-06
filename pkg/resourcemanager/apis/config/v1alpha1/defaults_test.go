@@ -276,6 +276,26 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 
+	Describe("#SetDefaults_NetworkPolicyConfig", func() {
+		It("should not default the object", func() {
+			obj := &NetworkPolicyControllerConfig{}
+
+			SetDefaults_NetworkPolicyControllerConfig(obj)
+
+			Expect(obj.ConcurrentSyncs).To(BeNil())
+		})
+
+		It("should not overwrite existing values", func() {
+			obj := &NetworkPolicyControllerConfig{
+				Enabled: true,
+			}
+
+			SetDefaults_NetworkPolicyControllerConfig(obj)
+
+			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
+		})
+	})
+
 	Describe("#SetDefaults_HealthControllerConfig", func() {
 		It("should not default the object", func() {
 			obj := &HealthControllerConfig{}
