@@ -43,7 +43,7 @@ func GetManagedSeedWithReader(ctx context.Context, r client.Reader, shootNamespa
 	return &managedSeedList.Items[0], nil
 }
 
-// GetManagedSeedByName tries to reads a ManagedSeed in the garden namespace. If it's not found then `nil` is returned.
+// GetManagedSeedByName tries to read a ManagedSeed in the garden namespace. If it's not found then `nil` is returned.
 func GetManagedSeedByName(ctx context.Context, client client.Client, name string) (*seedmanagementv1alpha1.ManagedSeed, error) {
 	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
 	if err := client.Get(ctx, Key(constants.GardenNamespace, name), managedSeed); err != nil {
