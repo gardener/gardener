@@ -52,6 +52,15 @@ func ControllerInstallationSeedRefNameIndexerFunc(obj client.Object) []string {
 	return []string{controllerInstallation.Spec.SeedRef.Name}
 }
 
+// InternalSecretTypeIndexerFunc extracts the .type field of an InternalSecret.
+func InternalSecretTypeIndexerFunc(obj client.Object) []string {
+	internalSecret, ok := obj.(*gardencorev1beta1.InternalSecret)
+	if !ok {
+		return []string{""}
+	}
+	return []string{string(internalSecret.Type)}
+}
+
 // AddProjectNamespace adds an index for core.ProjectNamespace to the given indexer.
 func AddProjectNamespace(ctx context.Context, indexer client.FieldIndexer) error {
 	if err := indexer.IndexField(ctx, &gardencorev1beta1.Project{}, core.ProjectNamespace, ProjectNamespaceIndexerFunc); err != nil {
@@ -142,6 +151,14 @@ func AddControllerInstallationRegistrationRefName(ctx context.Context, indexer c
 		return []string{controllerInstallation.Spec.RegistrationRef.Name}
 	}); err != nil {
 		return fmt.Errorf("failed to add indexer for %s to ControllerInstallation Informer: %w", core.RegistrationRefName, err)
+	}
+	return nil
+}
+
+// AddInternalSecretType adds an index for core.InternalSecretType to the given indexer.
+func AddInternalSecretType(ctx context.Context, indexer client.FieldIndexer) error {
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.InternalSecret{}, core.InternalSecretType, InternalSecretTypeIndexerFunc); err != nil {
+		return fmt.Errorf("failed to add indexer for %s to InternalSecret Informer: %w", core.InternalSecretType, err)
 	}
 	return nil
 }

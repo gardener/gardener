@@ -32,6 +32,8 @@ type ControllerRegistrationExpansion interface{}
 
 type ExposureClassExpansion interface{}
 
+type InternalSecretExpansion interface{}
+
 type ProjectExpansion interface{}
 
 type QuotaExpansion interface{}

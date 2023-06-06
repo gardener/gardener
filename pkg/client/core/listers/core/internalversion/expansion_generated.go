@@ -50,6 +50,14 @@ type ControllerRegistrationListerExpansion interface{}
 // ExposureClassLister.
 type ExposureClassListerExpansion interface{}
 
+// InternalSecretListerExpansion allows custom methods to be added to
+// InternalSecretLister.
+type InternalSecretListerExpansion interface{}
+
+// InternalSecretNamespaceListerExpansion allows custom methods to be added to
+// InternalSecretNamespaceLister.
+type InternalSecretNamespaceListerExpansion interface{}
+
 // ProjectListerExpansion allows custom methods to be added to
 // ProjectLister.
 type ProjectListerExpansion interface{}

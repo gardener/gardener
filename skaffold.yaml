@@ -121,6 +121,8 @@ build:
         - pkg/registry/core/controllerregistration/storage
         - pkg/registry/core/exposureclass
         - pkg/registry/core/exposureclass/storage
+        - pkg/registry/core/internalsecret
+        - pkg/registry/core/internalsecret/storage
         - pkg/registry/core/project
         - pkg/registry/core/project/storage
         - pkg/registry/core/quota

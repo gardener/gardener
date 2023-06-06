@@ -27,6 +27,10 @@ const (
 	// the BackupBucket for a core.gardener.cloud/v1beta1 BackupEntry.
 	BackupEntryBucketName = "spec.bucketName"
 
+	// InternalSecretType is the field selector path for finding
+	// the secret type of a core.gardener.cloud/v1beta1 InternalSecret.
+	InternalSecretType = "type"
+
 	// ProjectNamespace is the field selector path for filtering by namespace
 	// for core.gardener.cloud/v1beta1 Project.
 	ProjectNamespace = "spec.namespace"

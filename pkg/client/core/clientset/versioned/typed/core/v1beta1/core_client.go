@@ -35,6 +35,7 @@ type CoreV1beta1Interface interface {
 	ControllerInstallationsGetter
 	ControllerRegistrationsGetter
 	ExposureClassesGetter
+	InternalSecretsGetter
 	ProjectsGetter
 	QuotasGetter
 	SecretBindingsGetter
@@ -74,6 +75,10 @@ func (c *CoreV1beta1Client) ControllerRegistrations() ControllerRegistrationInte
 
 func (c *CoreV1beta1Client) ExposureClasses() ExposureClassInterface {
 	return newExposureClasses(c)
+}
+
+func (c *CoreV1beta1Client) InternalSecrets(namespace string) InternalSecretInterface {
+	return newInternalSecrets(c, namespace)
 }
 
 func (c *CoreV1beta1Client) Projects() ProjectInterface {

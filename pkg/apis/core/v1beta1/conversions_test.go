@@ -32,7 +32,7 @@ var _ = Describe("Conversion", func() {
 		Expect(SchemeBuilder.AddToScheme(scheme)).ToNot(HaveOccurred())
 	})
 
-	Context("project conversions", func() {
+	Describe("Project conversion", func() {
 		Describe("#Convert_v1alpha1_ProjectSpec_To_core_ProjectSpec", func() {
 			var (
 				owner = rbacv1.Subject{
@@ -493,6 +493,42 @@ var _ = Describe("Conversion", func() {
 					Roles: []string{"bar"},
 				}))
 			})
+		})
+	})
+
+	Describe("InternalSecret conversion", func() {
+		var (
+			in  *InternalSecret
+			out *core.InternalSecret
+		)
+
+		BeforeEach(func() {
+			in = &InternalSecret{}
+			out = &core.InternalSecret{}
+		})
+
+		It("should merge data and stringData", func() {
+			in.Data = map[string][]byte{"foo": []byte("bla"), "baz": []byte("bing")}
+			in.StringData = map[string]string{"bar": "blub"}
+
+			Expect(scheme.Convert(in, out, nil)).NotTo(HaveOccurred())
+			Expect(out.Data).To(And(
+				HaveKeyWithValue("foo", BeEquivalentTo("bla")),
+				HaveKeyWithValue("baz", BeEquivalentTo("bing")),
+				HaveKeyWithValue("bar", BeEquivalentTo("blub")),
+			))
+		})
+
+		It("should overwrite data with stringData", func() {
+			in.Data = map[string][]byte{"foo": []byte("bla"), "baz": []byte("bing")}
+			in.StringData = map[string]string{"foo": "boo", "bar": "blub"}
+
+			Expect(scheme.Convert(in, out, nil)).NotTo(HaveOccurred())
+			Expect(out.Data).To(And(
+				HaveKeyWithValue("foo", BeEquivalentTo("boo")),
+				HaveKeyWithValue("baz", BeEquivalentTo("bing")),
+				HaveKeyWithValue("bar", BeEquivalentTo("blub")),
+			))
 		})
 	})
 })
