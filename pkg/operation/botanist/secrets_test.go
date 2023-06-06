@@ -52,6 +52,7 @@ var _ = Describe("Secrets", func() {
 
 		caSecretNames = []string{
 			"ca",
+			"ca-client",
 			"ca-etcd",
 			"ca-front-proxy",
 			"ca-kubelet",
@@ -109,7 +110,7 @@ var _ = Describe("Secrets", func() {
 
 	Describe("#InitializeSecretsManagement", func() {
 		Context("when shoot is not in restoration phase", func() {
-			It("should generate the certificate authorities and sync the cluster CA to the garden", func() {
+			It("should generate the certificate authorities and sync cluster and client CA to the garden", func() {
 				Expect(botanist.InitializeSecretsManagement(ctx)).To(Succeed())
 
 				for _, name := range caSecretNames {
@@ -121,6 +122,11 @@ var _ = Describe("Secrets", func() {
 				gardenSecret := &corev1.Secret{}
 				Expect(gardenClient.Get(ctx, kubernetesutils.Key(gardenNamespace, shootName+".ca-cluster"), gardenSecret)).To(Succeed())
 				Expect(gardenSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "ca-cluster"))
+
+				internalSecret := &gardencorev1beta1.InternalSecret{}
+				Expect(gardenClient.Get(ctx, kubernetesutils.Key(gardenNamespace, shootName+".ca-client"), internalSecret)).To(Succeed())
+				Expect(internalSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "ca-client"))
+				Expect(internalSecret.Data).To(And(HaveKey("ca.crt"), HaveKey("ca.key")))
 			})
 
 			It("should generate the generic token kubeconfig", func() {
@@ -229,6 +235,12 @@ var _ = Describe("Secrets", func() {
 								Data:   runtime.RawExtension{Raw: rawData("data-for", "ca")},
 							},
 							{
+								Name:   "ca-client",
+								Type:   "secret",
+								Labels: map[string]string{"managed-by": "secrets-manager", "manager-identity": fakesecretsmanager.ManagerIdentity},
+								Data:   runtime.RawExtension{Raw: rawData("data-for", "ca-client")},
+							},
+							{
 								Name:   "ca-etcd",
 								Type:   "secret",
 								Labels: map[string]string{"managed-by": "secrets-manager", "manager-identity": fakesecretsmanager.ManagerIdentity},
@@ -261,14 +273,14 @@ var _ = Describe("Secrets", func() {
 				Expect(botanist.InitializeSecretsManagement(ctx)).To(Succeed())
 
 				By("Verify existing CA secrets got restored")
-				for _, name := range caSecretNames[:1] {
+				for _, name := range caSecretNames[:2] {
 					secret := &corev1.Secret{}
 					Expect(seedClient.Get(ctx, kubernetesutils.Key(seedNamespace, name), secret)).To(Succeed())
 					verifyCASecret(name, secret, Equal(map[string][]byte{"data-for": []byte(secret.Name)}))
 				}
 
 				By("Verify missing CA secrets got generated")
-				for _, name := range caSecretNames[2:] {
+				for _, name := range caSecretNames[3:] {
 					secret := &corev1.Secret{}
 					Expect(seedClient.Get(ctx, kubernetesutils.Key(seedNamespace, name), secret)).To(Succeed())
 					verifyCASecret(name, secret, And(HaveKey("ca.crt"), HaveKey("ca.key")))

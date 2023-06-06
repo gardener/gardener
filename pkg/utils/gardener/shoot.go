@@ -209,6 +209,8 @@ const (
 	ShootProjectSecretSuffixKubeconfig = "kubeconfig"
 	// ShootProjectSecretSuffixCACluster is a constant for a shoot project secret with suffix 'ca-cluster'.
 	ShootProjectSecretSuffixCACluster = "ca-cluster"
+	// ShootProjectSecretSuffixCAClient is a constant for a shoot project secret with suffix 'ca-client'.
+	ShootProjectSecretSuffixCAClient = "ca-client"
 	// ShootProjectSecretSuffixSSHKeypair is a constant for a shoot project secret with suffix 'ssh-keypair'.
 	ShootProjectSecretSuffixSSHKeypair = v1beta1constants.SecretNameSSHKeyPair
 	// ShootProjectSecretSuffixOldSSHKeypair is a constant for a shoot project secret with suffix 'ssh-keypair.old'.
