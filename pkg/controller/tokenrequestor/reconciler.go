@@ -54,6 +54,10 @@ type Reconciler struct {
 	Clock              clock.Clock
 	JitterFunc         func(time.Duration, float64) time.Duration
 	Class              *string
+	// TargetNamespace is the namespace that requested ServiceAccounts should be created in.
+	// If TargetNamespace is empty, the controller uses the namespace specified in the
+	// serviceaccount.resources.gardener.cloud/namespace annotation.
+	TargetNamespace string
 }
 
 // Reconcile requests and populates tokens.
@@ -113,7 +117,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 }
 
 func (r *Reconciler) reconcileServiceAccount(ctx context.Context, secret *corev1.Secret) (*corev1.ServiceAccount, error) {
-	serviceAccount := getServiceAccountFromAnnotations(secret.Annotations)
+	serviceAccount := r.getServiceAccountFromAnnotations(secret.Annotations)
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.TargetClient, serviceAccount, func() error {
 		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
@@ -252,11 +256,16 @@ func tokenExpirationSeconds(secret *corev1.Secret) (int64, error) {
 	return int64(expirationDuration / time.Second), nil
 }
 
-func getServiceAccountFromAnnotations(annotations map[string]string) *corev1.ServiceAccount {
+func (r *Reconciler) getServiceAccountFromAnnotations(annotations map[string]string) *corev1.ServiceAccount {
+	namespace := r.TargetNamespace
+	if namespace == "" {
+		namespace = annotations[resourcesv1alpha1.ServiceAccountNamespace]
+	}
+
 	return &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      annotations[resourcesv1alpha1.ServiceAccountName],
-			Namespace: annotations[resourcesv1alpha1.ServiceAccountNamespace],
+			Namespace: namespace,
 		},
 	}
 }
