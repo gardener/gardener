@@ -64,6 +64,7 @@ var (
 	// WebhookConstraintMatchersForLeases contains a list of lease API resources that can break
 	// leader election of essential control plane controllers.
 	WebhookConstraintMatchersForLeases = []WebhookConstraintMatcher{
+		// object selector here is added to support the use case described in - https://github.com/gardener/gardener/pull/8034
 		{GVR: coordinationv1.SchemeGroupVersion.WithResource("leases"), NamespaceLabels: kubeSystemNamespaceLabels, ObjectLabels: labels.Set{}},
 		{GVR: coordinationv1beta1.SchemeGroupVersion.WithResource("leases"), NamespaceLabels: kubeSystemNamespaceLabels, ObjectLabels: labels.Set{}},
 	}
