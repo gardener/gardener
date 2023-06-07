@@ -26,6 +26,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -81,6 +82,30 @@ func (f *CommonFramework) WaitUntilStatefulSetIsRunning(ctx context.Context, nam
 
 		log.Info("StatefulSet is ready now")
 		return retry.Ok()
+	})
+}
+
+// WaitUntilIngressIsReady waits until the given ingress is ready
+func (f *CommonFramework) WaitUntilIngressIsReady(ctx context.Context, name string, namespace string, k8sClient kubernetes.Interface) error {
+	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
+		ingress := &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}
+		log := f.Logger.WithValues("ingress", client.ObjectKeyFromObject(ingress))
+
+		if err := k8sClient.Client().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, ingress); err != nil {
+			if apierrors.IsNotFound(err) {
+				log.Info("Waiting for ingress to be ready")
+				return retry.MinorError(fmt.Errorf("ingress %q in namespace %q does not exist", name, namespace))
+			}
+			return retry.SevereError(err)
+		}
+
+		if len(ingress.Status.LoadBalancer.Ingress) > 0 {
+			log.Info("Ingress is ready now")
+			return retry.Ok()
+		}
+
+		log.Info("Waiting for Ingress to be ready")
+		return retry.MinorError(fmt.Errorf("ingress %q in namespace %q is not healthy", name, namespace))
 	})
 }
 
