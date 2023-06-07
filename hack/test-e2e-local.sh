@@ -33,13 +33,11 @@ fi
 
 # If we are not running the gardener-operator tests then we have to make the shoot domains accessible.
 if [[ "$1" != "operator" ]]; then
-  seed_name="local";
-  if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "node" ]] ; then
-    seed_name="local-ha-single-zone";
-  fi
-
-  if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "zone" ]] ; then
-    seed_name="local-ha-multi-zone";
+  seed_name="local"
+  if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "node" ]]; then
+    seed_name="local-ha-single-zone"
+  elif [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "zone" ]]; then
+    seed_name="local-ha-multi-zone"
   fi
 
   shoot_names=(
@@ -82,19 +80,19 @@ if [[ "$1" != "operator" ]]; then
     printf "\n127.0.0.1 api.e2e-managedseed.garden.external.local.gardener.cloud\n127.0.0.1 api.e2e-managedseed.garden.internal.local.gardener.cloud\n" >>/etc/hosts
   else
     missing_entries=()
-    
-    for shoot in "${shoot_names[@]}" ; do
+
+    for shoot in "${shoot_names[@]}"; do
       if [[ ("${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "zone" || -z "${SHOOT_FAILURE_TOLERANCE_TYPE:-}") && ("$shoot" == "e2e-upg-ha.local" || "$shoot" == "e2e-upg-ha-wl.local") ]]; then
         # Do not check the entry for the e2e-upg-ha and e2e-upg-ha-wl tests as the target IP is dynamic.
         continue
       fi
-      for ip in internal external ; do
+      for ip in internal external; do
         if ! grep -q -x "127.0.0.1 api.$shoot.$ip.local.gardener.cloud" /etc/hosts; then
           missing_entries+=("127.0.0.1 api.$shoot.$ip.local.gardener.cloud")
         fi
       done
     done
-    
+
     if [ ${#missing_entries[@]} -gt 0 ]; then
       printf "Hostnames for the following Shoots are missing in /etc/hosts:\n"
       for entry in "${missing_entries[@]}"; do
@@ -110,7 +108,7 @@ else
     printf "\n127.0.0.1 api.virtual-garden.local.gardener.cloud\n" >>/etc/hosts
   else
     if ! grep -q -x "127.0.0.1 api.virtual-garden.local.gardener.cloud" /etc/hosts; then
-      printf "Hostname for virtual garden cluster is missing in /etc/hosts. To access the virtual garden cluster and run e2e tests, you have to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster\n\n"
+      printf "Hostname for the virtual garden cluster is missing in /etc/hosts. To access the virtual garden cluster and run e2e tests, you need to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster\n\n"
       exit 1
     fi
   fi
