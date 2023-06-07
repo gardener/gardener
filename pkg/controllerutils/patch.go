@@ -20,6 +20,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // patchFn returns a client.Patch with the given client.Object as the base object.
@@ -47,6 +48,14 @@ type PatchOptions struct {
 type PatchOption interface {
 	// ApplyToPatchOptions applies this configuration to the given patch options.
 	ApplyToPatchOptions(*PatchOptions)
+}
+
+// SkipEmptyPatch is a patch option that causes empty patches not being sent.
+type SkipEmptyPatch struct{}
+
+// ApplyToPatchOptions applies the skipEmptyPatch option to the given PatchOption.
+func (SkipEmptyPatch) ApplyToPatchOptions(in *PatchOptions) {
+	in.skipEmptyPatch = true
 }
 
 // MergeFromOption is a patch option that allows to use a `client.MergeFromOption`.
@@ -81,6 +90,9 @@ func GetAndCreateOrStrategicMergePatch(ctx context.Context, c client.Client, obj
 	return getAndCreateOrPatch(ctx, c, obj, strategicMergeFrom, f, opts...)
 }
 
+// EmptyJson is an empty json object string.
+const EmptyJson = "{}"
+
 func getAndCreateOrPatch(ctx context.Context, c client.Client, obj client.Object, patchFunc patchFn, f controllerutil.MutateFn, opts ...PatchOption) (controllerutil.OperationResult, error) {
 	patchOpts := &PatchOptions{}
 	for _, opt := range opts {
@@ -106,7 +118,17 @@ func getAndCreateOrPatch(ctx context.Context, c client.Client, obj client.Object
 		return controllerutil.OperationResultNone, err
 	}
 
-	if err := c.Patch(ctx, obj, patch); err != nil {
+	patchData, err := patch.Data(obj)
+	if err != nil {
+		return controllerutil.OperationResultNone, err
+	}
+
+	if patchOpts.skipEmptyPatch && string(patchData) == EmptyJson {
+		logf.Log.V(1).Info("Skip sending empty patch", "objectKey", client.ObjectKeyFromObject(obj))
+		return controllerutil.OperationResultNone, nil
+	}
+
+	if err := c.Patch(ctx, obj, client.RawPatch(patch.Type(), patchData)); err != nil {
 		return controllerutil.OperationResultNone, err
 	}
 	return controllerutil.OperationResultUpdated, nil

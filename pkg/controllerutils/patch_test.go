@@ -163,6 +163,24 @@ var _ = Describe("Patch", func() {
 				Expect(result).To(Equal(controllerutil.OperationResultUpdated))
 				Expect(err).NotTo(HaveOccurred())
 			})
+
+			It("should skip sending an empty patch", func() {
+				objCopy := obj.DeepCopy()
+				mutateFn := func(o *corev1.ServiceAccount) func() error {
+					return func() error {
+						return nil
+					}
+				}
+				_ = mutateFn(objCopy)()
+
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(obj), obj),
+				)
+
+				result, err := f(ctx, c, obj, mutateFn(obj), SkipEmptyPatch{})
+				Expect(result).To(Equal(controllerutil.OperationResultNone))
+				Expect(err).NotTo(HaveOccurred())
+			})
 		}
 
 		Describe("#GetAndCreateOrMergePatch", func() { testSuite(GetAndCreateOrMergePatch, types.MergePatchType) })
