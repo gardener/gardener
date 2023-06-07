@@ -420,24 +420,24 @@ func (h *Handler) mutateNodeAffinity(
 			podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution = &corev1.NodeSelector{}
 		}
 
-		// Filter existing terms with the same expression key to prevent that we are trying to add an expression with
-		// the same key multiple times.
-		var filteredNodeSelectorTerms []corev1.NodeSelectorTerm
-		for _, term := range podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms {
-			for _, expr := range term.MatchExpressions {
-				if expr.Key != corev1.LabelTopologyZone {
-					filteredNodeSelectorTerms = append(filteredNodeSelectorTerms, term)
-				}
-			}
-		}
-		podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms = filteredNodeSelectorTerms
-
 		if len(podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms) == 0 {
 			podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms = []corev1.NodeSelectorTerm{{}}
 		}
 
-		for i := range podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms {
-			podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[i].MatchExpressions = append(podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[i].MatchExpressions, *nodeSelectorRequirement)
+		nodeSelectorTerms := podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms
+		for i, term := range nodeSelectorTerms {
+			filteredExpressions := make([]corev1.NodeSelectorRequirement, 0, len(term.MatchExpressions))
+			// Remove exiting expressions for `topology.kubernetes.io/zone` to
+			// - avoid duplicates for the same key
+			// - remove expressions that prevent zone pinning
+			for _, expr := range term.MatchExpressions {
+				if expr.Key != corev1.LabelTopologyZone {
+					filteredExpressions = append(filteredExpressions, expr)
+				}
+			}
+
+			// Add remaining expressions with intended zone expression.
+			nodeSelectorTerms[i].MatchExpressions = append(filteredExpressions, *nodeSelectorRequirement)
 		}
 	}
 }
