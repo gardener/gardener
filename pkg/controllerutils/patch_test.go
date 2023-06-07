@@ -66,7 +66,7 @@ var _ = Describe("Patch", func() {
 	})
 
 	Describe("GetAndCreateOr*Patch", func() {
-		testSuite := func(f func(ctx context.Context, c client.Client, obj client.Object, f controllerutil.MutateFn, opts ...client.MergeFromOption) (controllerutil.OperationResult, error), patchType types.PatchType) {
+		testSuite := func(f func(ctx context.Context, c client.Client, obj client.Object, f controllerutil.MutateFn, opts ...PatchOption) (controllerutil.OperationResult, error), patchType types.PatchType) {
 			It("should return an error because reading the object fails", func() {
 				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(obj), obj).Return(fakeErr)
 
@@ -159,7 +159,7 @@ var _ = Describe("Patch", func() {
 					test.EXPECTPatchWithOptimisticLock(ctx, c, objCopy, obj, patchType),
 				)
 
-				result, err := f(ctx, c, obj, mutateFn(obj), client.MergeFromWithOptimisticLock{})
+				result, err := f(ctx, c, obj, mutateFn(obj), MergeFromOption{client.MergeFromWithOptimisticLock{}})
 				Expect(result).To(Equal(controllerutil.OperationResultUpdated))
 				Expect(err).NotTo(HaveOccurred())
 			})

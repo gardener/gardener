@@ -379,7 +379,7 @@ func (s *ShootAccessSecret) Reconcile(ctx context.Context, c client.Client) erro
 		// The token-requestor might concurrently update the kubeconfig secret key to populate the token.
 		// Hence, we need to use optimistic locking here to ensure we don't accidentally overwrite the concurrent update.
 		// ref https://github.com/gardener/gardener/issues/6092#issuecomment-1156244514
-		client.MergeFromWithOptimisticLock{})
+		controllerutils.MergeFromOption{MergeFromOption: client.MergeFromWithOptimisticLock{}})
 	return err
 }
 
