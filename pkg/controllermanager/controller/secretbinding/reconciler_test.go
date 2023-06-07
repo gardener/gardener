@@ -16,7 +16,6 @@ package secretbinding
 
 import (
 	"context"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -165,11 +164,7 @@ var _ = Describe("SecretBindingControl", func() {
 			_, err := reconciler.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretBinding), secretBinding)).To(Succeed())
-			secretBinding.DeletionTimestamp = &metav1.Time{Time: time.Date(1, 1, 1, 1, 1, 1, 1, time.UTC)}
-			// Add dummy finalizer to prevent deletion
-			secretBinding.Finalizers = append(secretBinding.Finalizers, "finalizer")
-			Expect(fakeClient.Update(ctx, secretBinding)).To(Succeed())
+			Expect(fakeClient.Delete(ctx, secretBinding)).To(Succeed())
 
 			_, err = reconciler.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
@@ -194,11 +189,7 @@ var _ = Describe("SecretBindingControl", func() {
 			_, err := reconciler.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretBinding), secretBinding)).To(Succeed())
-			secretBinding.DeletionTimestamp = &metav1.Time{Time: time.Date(1, 1, 1, 1, 1, 1, 1, time.UTC)}
-			// Add dummy finalizer to prevent deletion
-			secretBinding.Finalizers = append(secretBinding.Finalizers, "finalizer")
-			Expect(fakeClient.Update(ctx, secretBinding)).To(Succeed())
+			Expect(fakeClient.Delete(ctx, secretBinding)).To(Succeed())
 
 			_, err = reconciler.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
@@ -319,10 +310,7 @@ var _ = Describe("SecretBindingControl", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretBinding1), secretBinding1)).To(Succeed())
-			secretBinding1.DeletionTimestamp = &metav1.Time{Time: time.Date(1, 1, 1, 1, 1, 1, 1, time.UTC)}
-			// Add dummy finalizer to prevent deletion
-			secretBinding1.Finalizers = append(secretBinding1.Finalizers, "finalizer")
-			Expect(fakeClient.Update(ctx, secretBinding1)).To(Succeed())
+			Expect(fakeClient.Delete(ctx, secretBinding1)).To(Succeed())
 
 			_, err = reconciler.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
@@ -335,18 +323,12 @@ var _ = Describe("SecretBindingControl", func() {
 				"reference.gardener.cloud/secretbinding", "true",
 			))
 
-			// Remove the finalizer from secretBinding1 so that the deletion can proceed
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretBinding1), secretBinding1)).To(Succeed())
-			secretBinding1.Finalizers = nil
-			Expect(fakeClient.Update(ctx, secretBinding1)).To(Succeed())
-
-			// Now delete the other secretbinding referencing the quota
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretBinding2), secretBinding2)).To(Succeed())
-			secretBinding2.DeletionTimestamp = &metav1.Time{Time: time.Date(1, 1, 1, 1, 1, 1, 1, time.UTC)}
-			secretBinding2.Finalizers = append(secretBinding2.Finalizers, "finalizer")
-			Expect(fakeClient.Update(ctx, secretBinding2)).To(Succeed())
-
 			request = reconcile.Request{NamespacedName: types.NamespacedName{Namespace: secretBindingNamespace2, Name: secretBindingName2}}
+			_, err = reconciler.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeClient.Delete(ctx, secretBinding2)).To(Succeed())
+
 			_, err = reconciler.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
 
