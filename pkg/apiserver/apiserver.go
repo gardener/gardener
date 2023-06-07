@@ -21,7 +21,9 @@ import (
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/util/sets"
 	genericapiserver "k8s.io/apiserver/pkg/server"
+	kubeinformers "k8s.io/client-go/informers"
 
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	"github.com/gardener/gardener/pkg/logger"
 	corerest "github.com/gardener/gardener/pkg/registry/core/rest"
 	operationsrest "github.com/gardener/gardener/pkg/registry/operations/rest"
@@ -37,8 +39,10 @@ type ExtraConfig struct {
 
 // Config contains Gardener API server configuration.
 type Config struct {
-	GenericConfig *genericapiserver.RecommendedConfig
-	ExtraConfig   ExtraConfig
+	GenericConfig       *genericapiserver.RecommendedConfig
+	ExtraConfig         ExtraConfig
+	KubeInformerFactory kubeinformers.SharedInformerFactory
+	CoreInformerFactory gardencoreinformers.SharedInformerFactory
 }
 
 // GardenerServer contains state for a Gardener API server.
@@ -49,6 +53,9 @@ type GardenerServer struct {
 type completedConfig struct {
 	GenericConfig genericapiserver.CompletedConfig
 	ExtraConfig   *ExtraConfig
+
+	kubeInformerFactory kubeinformers.SharedInformerFactory
+	coreInformerFactory gardencoreinformers.SharedInformerFactory
 }
 
 // CompletedConfig contains completed Gardener API server configuration.
@@ -61,6 +68,8 @@ func (cfg *Config) Complete() CompletedConfig {
 	c := completedConfig{
 		cfg.GenericConfig.Complete(),
 		&cfg.ExtraConfig,
+		cfg.KubeInformerFactory,
+		cfg.CoreInformerFactory,
 	}
 
 	return CompletedConfig{&c}
@@ -78,6 +87,8 @@ func (c completedConfig) New() (*GardenerServer, error) {
 		coreAPIGroupInfo = (corerest.StorageProvider{
 			AdminKubeconfigMaxExpiration: c.ExtraConfig.AdminKubeconfigMaxExpiration,
 			CredentialsRotationInterval:  c.ExtraConfig.CredentialsRotationInterval,
+			KubeInformerFactory:          c.kubeInformerFactory,
+			CoreInformerFactory:          c.coreInformerFactory,
 		}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		seedManagementAPIGroupInfo = (seedmanagementrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		settingsAPIGroupInfo       = (settingsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)

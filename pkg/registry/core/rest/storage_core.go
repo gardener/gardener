@@ -21,10 +21,12 @@ import (
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
 	genericapiserver "k8s.io/apiserver/pkg/server"
+	kubeinformers "k8s.io/client-go/informers"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	backupbucketstore "github.com/gardener/gardener/pkg/registry/core/backupbucket/storage"
 	backupentrystore "github.com/gardener/gardener/pkg/registry/core/backupentry/storage"
 	cloudprofilestore "github.com/gardener/gardener/pkg/registry/core/cloudprofile/storage"
@@ -45,6 +47,8 @@ import (
 type StorageProvider struct {
 	AdminKubeconfigMaxExpiration time.Duration
 	CredentialsRotationInterval  time.Duration
+	KubeInformerFactory          kubeinformers.SharedInformerFactory
+	CoreInformerFactory          gardencoreinformers.SharedInformerFactory
 }
 
 // NewRESTStorage creates a new API group info object and registers the v1beta1 core storage.
