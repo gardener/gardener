@@ -33,13 +33,11 @@ fi
 
 # If we are not running the gardener-operator tests then we have to make the shoot domains accessible.
 if [[ "$1" != "operator" ]]; then
-  seed_name="local";
-  if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "node" ]] ; then
-    seed_name="local-ha-single-zone";
-  fi
-
-  if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "zone" ]] ; then
-    seed_name="local-ha-multi-zone";
+  seed_name="local"
+  if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "node" ]]; then
+    seed_name="local-ha-single-zone"
+  elif [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "zone" ]]; then
+    seed_name="local-ha-multi-zone"
   fi
 
   shoot_names=(
@@ -57,8 +55,6 @@ if [[ "$1" != "operator" ]]; then
     e2e-default-wl.local
     e2e-upd-node.local
     e2e-upd-node-wl.local
-    e2e-upd-zone.local
-    e2e-upd-zone-wl.local
     e2e-upgrade.local
     e2e-upgrade-wl.local
     e2e-upg-ha.local
@@ -69,7 +65,7 @@ if [[ "$1" != "operator" ]]; then
 
   if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
     for shoot in "${shoot_names[@]}" ; do
-      if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "zone" && ("$shoot" == "e2e-upg-ha.local" || "$shoot" == "e2e-upg-ha-wl.local" || "$shoot" == "e2e-upd-zone.local" || "$shoot" == "e2e-upd-zone-wl.local") ]]; then
+      if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "zone" && ("$shoot" == "e2e-upg-ha.local" || "$shoot" == "e2e-upg-ha-wl.local") ]]; then
         # Do not add the entry for the e2e-upd-zone test as the target ip is dynamic.
         # The shoot cluster in e2e-upd-zone is created as single-zone control plane and afterwards updated to a multi-zone control plane.
         # This means that the external loadbalancer IP will change from a zone-specific istio ingress gateway to the default istio ingress gateway.
@@ -83,18 +79,28 @@ if [[ "$1" != "operator" ]]; then
     printf "\n127.0.0.1 gu-local--e2e-rotate-wl.ingress.$seed_name.seed.local.gardener.cloud\n" >>/etc/hosts
     printf "\n127.0.0.1 api.e2e-managedseed.garden.external.local.gardener.cloud\n127.0.0.1 api.e2e-managedseed.garden.internal.local.gardener.cloud\n" >>/etc/hosts
   else
-    for shoot in "${shoot_names[@]}" ; do
-      if [[ "${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "zone" && ("$shoot" == "e2e-upg-ha.local" || "$shoot" == "e2e-upg-ha-wl.local" || "$shoot" == "e2e-upd-zone.local" || "$shoot" == "e2e-upd-zone-wl.local") ]]; then
-        # Do not check the entry for the e2e-upd-zone test as the target ip is dynamic.
+    missing_entries=()
+
+    for shoot in "${shoot_names[@]}"; do
+      if [[ ("${SHOOT_FAILURE_TOLERANCE_TYPE:-}" == "zone" || -z "${SHOOT_FAILURE_TOLERANCE_TYPE:-}") && ("$shoot" == "e2e-upg-ha.local" || "$shoot" == "e2e-upg-ha-wl.local") ]]; then
+        # Do not check the entry for the e2e-upg-ha and e2e-upg-ha-wl tests as the target IP is dynamic.
         continue
       fi
-      for ip in internal external ; do
+      for ip in internal external; do
         if ! grep -q -x "127.0.0.1 api.$shoot.$ip.local.gardener.cloud" /etc/hosts; then
-          printf "Hostnames for Shoot $shoot is missing in /etc/hosts. To access shoot clusters and run e2e tests, you have to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster\n\n"
-          exit 1
+          missing_entries+=("127.0.0.1 api.$shoot.$ip.local.gardener.cloud")
         fi
       done
     done
+
+    if [ ${#missing_entries[@]} -gt 0 ]; then
+      printf "Hostnames for the following Shoots are missing in /etc/hosts:\n"
+      for entry in "${missing_entries[@]}"; do
+        printf " - %s\n" "$entry"
+      done
+      printf "To access shoot clusters and run e2e tests, you have to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster\n\n"
+      exit 1
+    fi
   fi
 # If we are running the gardener-operator tests then we have to make the virtual garden domains accessible.
 else
@@ -102,7 +108,7 @@ else
     printf "\n127.0.0.1 api.virtual-garden.local.gardener.cloud\n" >>/etc/hosts
   else
     if ! grep -q -x "127.0.0.1 api.virtual-garden.local.gardener.cloud" /etc/hosts; then
-      printf "Hostname for virtual garden cluster is missing in /etc/hosts. To access the virtual garden cluster and run e2e tests, you have to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster\n\n"
+      printf "Hostname for the virtual garden cluster is missing in /etc/hosts. To access the virtual garden cluster and run e2e tests, you need to extend your /etc/hosts file.\nPlease refer to https://github.com/gardener/gardener/blob/master/docs/deployment/getting_started_locally.md#accessing-the-shoot-cluster\n\n"
       exit 1
     fi
   fi
