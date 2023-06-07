@@ -137,6 +137,13 @@ func SetDefaults_GarbageCollectorControllerConfig(obj *GarbageCollectorControlle
 	}
 }
 
+// SetDefaults_NetworkPolicyControllerConfig sets defaults for the NetworkPolicyControllerConfig object.
+func SetDefaults_NetworkPolicyControllerConfig(obj *NetworkPolicyControllerConfig) {
+	if obj.Enabled && obj.ConcurrentSyncs == nil {
+		obj.ConcurrentSyncs = pointer.Int(5)
+	}
+}
+
 // SetDefaults_HealthControllerConfig sets defaults for the HealthControllerConfig object.
 func SetDefaults_HealthControllerConfig(obj *HealthControllerConfig) {
 	if obj.ConcurrentSyncs == nil {

@@ -265,14 +265,16 @@ type Values struct {
 	LogLevel string
 	// LogFormat is the output format for the logs. Must be one of [text,json].
 	LogFormat string
-	// MaxConcurrentHealthWorkers configures the number of worker threads for concurrent health reconciliation of resources
+	// MaxConcurrentHealthWorkers configures the number of worker threads for concurrent health reconciliation of resources.
 	MaxConcurrentHealthWorkers *int
-	// MaxConcurrentTokenInvalidatorWorkers configures the number of worker threads for concurrent token invalidator reconciliations
+	// MaxConcurrentTokenInvalidatorWorkers configures the number of worker threads for concurrent token invalidator reconciliations.
 	MaxConcurrentTokenInvalidatorWorkers *int
-	// MaxConcurrentTokenRequestorWorkers configures the number of worker threads for concurrent token requestor reconciliations
+	// MaxConcurrentTokenRequestorWorkers configures the number of worker threads for concurrent token requestor reconciliations.
 	MaxConcurrentTokenRequestorWorkers *int
-	// MaxConcurrentCSRApproverWorkers configures the number of worker threads for concurrent kubelet CSR approver reconciliations
+	// MaxConcurrentCSRApproverWorkers configures the number of worker threads for concurrent kubelet CSR approver reconciliations.
 	MaxConcurrentCSRApproverWorkers *int
+	// MaxConcurrentCSRApproverWorkers configures the number of worker threads for the network policy controller.
+	MaxConcurrentNetworkPolicyWorkers *int
 	// PriorityClassName is the name of the priority class.
 	PriorityClassName string
 	// Replicas is the number of replicas for the gardener-resource-manager deployment.
@@ -579,7 +581,8 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 		}
 	} else {
 		config.Controllers.NetworkPolicy = resourcemanagerv1alpha1.NetworkPolicyControllerConfig{
-			Enabled: true,
+			Enabled:         true,
+			ConcurrentSyncs: r.values.MaxConcurrentNetworkPolicyWorkers,
 			NamespaceSelectors: []metav1.LabelSelector{
 				{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}},
 				{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem}},
