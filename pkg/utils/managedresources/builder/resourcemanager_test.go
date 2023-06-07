@@ -81,13 +81,53 @@ var _ = Describe("Resource Manager", func() {
 			}))
 		})
 
+		It("should correctly create an unique managed secret", func() {
+			data := map[string][]byte{"foo": []byte("bar")}
+			uniqueSecretName, secretBuilder := NewSecret(fakeClient).
+				WithNamespacedName(namespace, name).
+				WithKeyValues(data).
+				WithLabels(labels).
+				WithAnnotations(annotations).
+				Unique()
+
+			Expect(secretBuilder.Reconcile(ctx)).To(Succeed())
+
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      uniqueSecretName,
+					Namespace: namespace,
+				},
+			}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+
+			Expect(secret).To(Equal(&corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Secret",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        uniqueSecretName,
+					Namespace:   namespace,
+					Annotations: annotations,
+					Labels: map[string]string{
+						"boo": "goo",
+						"resources.gardener.cloud/garbage-collectable-reference": "true",
+					},
+					ResourceVersion: "1",
+				},
+				Type:      corev1.SecretTypeOpaque,
+				Data:      data,
+				Immutable: pointer.Bool(true),
+			}))
+		})
+
 		It("should remove existing annotations or labels", func() {
 			var (
 				existingLabels      = map[string]string{"existing": "label"}
 				existingAnnotations = map[string]string{"existing": "annotation"}
 			)
 
-			mr := &corev1.Secret{
+			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        name,
 					Namespace:   namespace,
@@ -95,7 +135,7 @@ var _ = Describe("Resource Manager", func() {
 					Annotations: existingAnnotations,
 				},
 			}
-			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
 			Expect(
 				NewSecret(fakeClient).
@@ -105,9 +145,9 @@ var _ = Describe("Resource Manager", func() {
 					Reconcile(ctx),
 			).To(Succeed())
 
-			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), mr)).To(Succeed())
+			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), secret)).To(Succeed())
 
-			Expect(mr).To(Equal(&corev1.Secret{
+			Expect(secret).To(Equal(&corev1.Secret{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "v1",
 					Kind:       "Secret",

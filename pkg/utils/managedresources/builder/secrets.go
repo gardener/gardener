@@ -17,8 +17,11 @@ package builder
 import (
 	"context"
 
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -65,6 +68,13 @@ func (s *Secret) WithKeyValues(keyValues map[string][]byte) *Secret {
 	return s
 }
 
+// Unique makes the secret unique and immutable. Returns the new and unique name of the secret and the builder object.
+// This function should be called at last place, i.e. after the secret object is constructed.
+func (s *Secret) Unique() (string, *Secret) {
+	utilruntime.Must(kubernetesutils.MakeUnique(s.secret))
+	return s.secret.Name, s
+}
+
 // Reconcile creates or updates the secret.
 func (s *Secret) Reconcile(ctx context.Context) error {
 	secret := &corev1.Secret{
@@ -76,6 +86,7 @@ func (s *Secret) Reconcile(ctx context.Context) error {
 		secret.Annotations = s.secret.Annotations
 		secret.Type = corev1.SecretTypeOpaque
 		secret.Data = s.secret.Data
+		secret.Immutable = s.secret.Immutable
 		return nil
 	})
 	return err
