@@ -18,11 +18,14 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 )
 
 // ManagedResource is a structure managing a ManagedResource.
@@ -112,28 +115,94 @@ func (m *ManagedResource) DeletePersistentVolumeClaims(v bool) *ManagedResource 
 	return m
 }
 
-// Reconcile creates or updates the ManagedResource.
+// Reconcile creates or updates the ManagedResource as well as marks all referenced secrets as garbage collectable.
 func (m *ManagedResource) Reconcile(ctx context.Context) error {
 	resource := &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{Name: m.resource.Name, Namespace: m.resource.Namespace},
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, m.client, resource, func() error {
+	mutateFn := func(obj *resourcesv1alpha1.ManagedResource) {
 		for k, v := range m.labels {
-			metav1.SetMetaDataLabel(&resource.ObjectMeta, k, v)
+			metav1.SetMetaDataLabel(&obj.ObjectMeta, k, v)
 		}
 
 		for k, v := range m.annotations {
-			metav1.SetMetaDataAnnotation(&resource.ObjectMeta, k, v)
+			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, k, v)
 		}
 
-		resource.Spec = m.resource.Spec
+		obj.Spec = m.resource.Spec
+
+		// the annotations should be injected after the spec is updated!
+		utilruntime.Must(references.InjectAnnotations(obj))
+	}
+
+	if err := m.client.Get(ctx, client.ObjectKeyFromObject(resource), resource); err != nil {
+		if apierrors.IsNotFound(err) {
+			// if the mr is not found just create it
+			mutateFn(resource)
+
+			// only mark the new secrets
+			if err := markSecretsAsGarbageCollectable(ctx, m.client, secretsFromRefs(resource)); err != nil {
+				return err
+			}
+
+			return m.client.Create(ctx, resource)
+		}
+		return err
+	}
+
+	// mark all old secrets as garbage collectable
+	if err := markSecretsAsGarbageCollectable(ctx, m.client, secretsFromRefs(resource)); err != nil {
+		return err
+	}
+
+	// Update the managed resource if necessary
+	existing := resource.DeepCopyObject()
+	mutateFn(resource)
+	if equality.Semantic.DeepEqual(existing, resource) {
 		return nil
-	})
-	return err
+	}
+
+	// mark new secrets (if any) as garbage collectable
+	if err := markSecretsAsGarbageCollectable(ctx, m.client, secretsFromRefs(resource)); err != nil {
+		return err
+	}
+
+	return m.client.Update(ctx, resource)
 }
 
 // Delete deletes the ManagedResource.
 func (m *ManagedResource) Delete(ctx context.Context) error {
 	return client.IgnoreNotFound(m.client.Delete(ctx, m.resource))
+}
+
+func markSecretsAsGarbageCollectable(ctx context.Context, c client.Client, secrets []*corev1.Secret) error {
+	for _, secret := range secrets {
+		if err := c.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+			return err
+		}
+		patch := client.StrategicMergeFrom(secret.DeepCopy())
+		if secret.Labels == nil {
+			secret.Labels = map[string]string{}
+		}
+		secret.Labels[references.LabelKeyGarbageCollectable] = references.LabelValueGarbageCollectable
+		if err := c.Patch(ctx, secret, patch); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func secretsFromRefs(obj *resourcesv1alpha1.ManagedResource) []*corev1.Secret {
+	secrets := make([]*corev1.Secret, 0, len(obj.Spec.SecretRefs))
+	for _, secretRef := range obj.Spec.SecretRefs {
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      secretRef.Name,
+				Namespace: obj.Namespace,
+			},
+		}
+		secrets = append(secrets, secret)
+	}
+	return secrets
 }
