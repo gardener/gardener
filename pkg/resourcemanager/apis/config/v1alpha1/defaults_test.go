@@ -285,7 +285,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.ConcurrentSyncs).To(BeNil())
 		})
 
-		It("should not overwrite existing values", func() {
+		It("should default the object", func() {
 			obj := &NetworkPolicyControllerConfig{
 				Enabled: true,
 			}
@@ -293,6 +293,17 @@ var _ = Describe("Defaults", func() {
 			SetDefaults_NetworkPolicyControllerConfig(obj)
 
 			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
+		})
+
+		It("should not overwrite existing values", func() {
+			obj := &NetworkPolicyControllerConfig{
+				Enabled:         true,
+				ConcurrentSyncs: pointer.Int(6),
+			}
+
+			SetDefaults_NetworkPolicyControllerConfig(obj)
+
+			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(6)))
 		})
 	})
 
