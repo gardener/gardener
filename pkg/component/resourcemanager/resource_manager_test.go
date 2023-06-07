@@ -101,6 +101,7 @@ var _ = Describe("ResourceManager", func() {
 		maxConcurrentTokenInvalidatorWorkers = 23
 		maxConcurrentTokenRequestorWorkers   = 21
 		maxConcurrentCSRApproverWorkers      = 24
+		maxConcurrentNetworkPolicyWorkers    = 25
 		resourceClass                        = "fake-ResourceClass"
 		syncPeriod                           = metav1.Duration{Duration: time.Second * 80}
 		watchedNamespace                     = "fake-ns"
@@ -325,6 +326,7 @@ var _ = Describe("ResourceManager", func() {
 			MaxConcurrentTokenInvalidatorWorkers:             &maxConcurrentTokenInvalidatorWorkers,
 			MaxConcurrentTokenRequestorWorkers:               &maxConcurrentTokenRequestorWorkers,
 			MaxConcurrentCSRApproverWorkers:                  &maxConcurrentCSRApproverWorkers,
+			MaxConcurrentNetworkPolicyWorkers:                &maxConcurrentNetworkPolicyWorkers,
 			PriorityClassName:                                priorityClassName,
 			Replicas:                                         &replicas,
 			ResourceClass:                                    &resourceClass,
@@ -477,7 +479,8 @@ var _ = Describe("ResourceManager", func() {
 				}
 			} else {
 				config.Controllers.NetworkPolicy = resourcemanagerv1alpha1.NetworkPolicyControllerConfig{
-					Enabled: true,
+					Enabled:         true,
+					ConcurrentSyncs: &maxConcurrentNetworkPolicyWorkers,
 					NamespaceSelectors: []metav1.LabelSelector{
 						{MatchLabels: map[string]string{"gardener.cloud/role": "shoot"}},
 						{MatchLabels: map[string]string{"gardener.cloud/role": "istio-system"}},
