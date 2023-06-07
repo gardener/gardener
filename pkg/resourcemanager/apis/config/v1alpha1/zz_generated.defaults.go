@@ -50,6 +50,7 @@ func SetObjectDefaults_ResourceManagerConfiguration(in *ResourceManagerConfigura
 	SetDefaults_HealthControllerConfig(&in.Controllers.Health)
 	SetDefaults_KubeletCSRApproverControllerConfig(&in.Controllers.KubeletCSRApprover)
 	SetDefaults_ManagedResourceControllerConfig(&in.Controllers.ManagedResource)
+	SetDefaults_NetworkPolicyControllerConfig(&in.Controllers.NetworkPolicy)
 	SetDefaults_NodeControllerConfig(&in.Controllers.Node)
 	SetDefaults_SecretControllerConfig(&in.Controllers.Secret)
 	SetDefaults_TokenInvalidatorControllerConfig(&in.Controllers.TokenInvalidator)

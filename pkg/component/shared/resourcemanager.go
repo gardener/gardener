@@ -87,6 +87,7 @@ func NewRuntimeGardenerResourceManager(
 		DefaultUnreachableToleration:              defaultUnreachableToleration,
 		EndpointSliceHintsEnabled:                 endpointSliceHintsEnabled,
 		FullNetworkPolicies:                       fullNetworkPoliciesEnabled,
+		MaxConcurrentNetworkPolicyWorkers:         pointer.Int(20),
 		NetworkPolicyAdditionalNamespaceSelectors: additionalNetworkPolicyNamespaceSelectors,
 		NetworkPolicyControllerIngressControllerSelector: &resourcemanagerv1alpha1.IngressControllerSelector{
 			Namespace: v1beta1constants.GardenNamespace,
