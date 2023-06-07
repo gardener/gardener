@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"time"
 
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,6 +35,7 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/rest"
+	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 
 	authenticationapi "github.com/gardener/gardener/pkg/apis/authentication"
 	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
@@ -43,14 +44,18 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // AdminKubeconfigREST implements a RESTStorage for shoots/adminkubeconfig.
 type AdminKubeconfigREST struct {
+	secretLister         kubecorev1listers.SecretLister
+	internalSecretLister gardencorelisters.InternalSecretLister
 	shootStateStorage    getter
 	shootStorage         getter
 	maxExpirationSeconds int64
@@ -78,7 +83,7 @@ func (r *AdminKubeconfigREST) Destroy() {
 	// we don't destroy it here explicitly.
 }
 
-// Create returns a AdminKubeconfigRequest with kubeconfig based on
+// Create returns an AdminKubeconfigRequest with kubeconfig based on
 // - shoot's advertised addresses
 // - shoot's certificate authority
 // - user making the request
@@ -91,22 +96,12 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 
 	out := obj.(*authenticationapi.AdminKubeconfigRequest)
 	if errs := authenticationvalidation.ValidateAdminKubeconfigRequest(out); len(errs) != 0 {
-		return nil, errors.NewInvalid(gvk.GroupKind(), "", errs)
+		return nil, apierrors.NewInvalid(gvk.GroupKind(), "", errs)
 	}
 
 	userInfo, ok := genericapirequest.UserFrom(ctx)
 	if !ok {
-		return nil, errors.NewBadRequest("no user in context")
-	}
-
-	shootStateObj, err := r.shootStateStorage.Get(ctx, name, &metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	shootState := &gardencorev1beta1.ShootState{}
-	if err := kubernetes.GardenScheme.Convert(shootStateObj, shootState, nil); err != nil {
-		return nil, err
+		return nil, apierrors.NewBadRequest("no user in context")
 	}
 
 	shootObj, err := r.shootStorage.Get(ctx, name, &metav1.GetOptions{})
@@ -116,24 +111,66 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 
 	shoot, ok := shootObj.(*core.Shoot)
 	if !ok {
-		return nil, errors.NewInternalError(fmt.Errorf("cannot convert to *core.Shoot object - got type %T", shootObj))
+		return nil, apierrors.NewInternalError(fmt.Errorf("cannot convert to *core.Shoot object - got type %T", shootObj))
 	}
 
 	if len(shoot.Status.AdvertisedAddresses) == 0 {
 		fieldErr := field.Invalid(field.NewPath("status", "status"), shoot.Status.AdvertisedAddresses, "no kube-apiserver advertised addresses in Shoot .status.advertisedAddresses")
-		return nil, errors.NewInvalid(gvk.GroupKind(), shoot.Name, field.ErrorList{fieldErr})
+		return nil, apierrors.NewInvalid(gvk.GroupKind(), shoot.Name, field.ErrorList{fieldErr})
 	}
 
-	resourceDataList := v1beta1helper.GardenerResourceDataList(shootState.Spec.Gardener)
+	var (
+		clusterCABundle      []byte
+		clientCACertificate  *secrets.Certificate
+		fallbackToShootState = false
+	)
 
-	clusterCABundle, err := getClusterCABundle(resourceDataList)
+	caClientSecret, err := r.internalSecretLister.InternalSecrets(shoot.Namespace).Get(gardenerutils.ComputeShootProjectSecretName(shoot.Name, gardenerutils.ShootProjectSecretSuffixCAClient))
 	if err != nil {
-		return nil, errors.NewInternalError(fmt.Errorf("could not find cluster CA bundle: %w", err))
+		if !apierrors.IsNotFound(err) {
+			return nil, apierrors.NewInternalError(fmt.Errorf("could not find client CA secret: %w", err))
+		}
+		fallbackToShootState = true
+	} else {
+		clientCACertificate, err = secrets.LoadCertificate("", caClientSecret.Data[secrets.DataKeyPrivateKeyCA], caClientSecret.Data[secrets.DataKeyCertificateCA])
+		if err != nil {
+			return nil, apierrors.NewInternalError(fmt.Errorf("could not load client CA certificate from secret: %w", err))
+		}
+
+		caClusterSecret, err := r.secretLister.Secrets(shoot.Namespace).Get(gardenerutils.ComputeShootProjectSecretName(shoot.Name, gardenerutils.ShootProjectSecretSuffixCACluster))
+		if err != nil {
+			return nil, apierrors.NewInternalError(fmt.Errorf("could not find cluster CA bundle: %w", err))
+		}
+		clusterCABundle = caClusterSecret.Data[secrets.DataKeyCertificateCA]
+
+		if len(clusterCABundle) == 0 {
+			return nil, apierrors.NewInternalError(fmt.Errorf("could not load cluster CA bundle from secret"))
+		}
 	}
 
-	clientCACertificate, err := getClientCACertificate(resourceDataList)
-	if err != nil {
-		return nil, errors.NewInternalError(fmt.Errorf("could not find client CA certificate: %w", err))
+	// TODO(timebertt): drop this fallback after v1.74 has been released.
+	if fallbackToShootState {
+		shootStateObj, err := r.shootStateStorage.Get(ctx, name, &metav1.GetOptions{})
+		if err != nil {
+			return nil, err
+		}
+
+		shootState := &gardencorev1beta1.ShootState{}
+		if err := kubernetes.GardenScheme.Convert(shootStateObj, shootState, nil); err != nil {
+			return nil, err
+		}
+
+		resourceDataList := v1beta1helper.GardenerResourceDataList(shootState.Spec.Gardener)
+
+		clusterCABundle, err = getClusterCABundle(resourceDataList)
+		if err != nil {
+			return nil, apierrors.NewInternalError(fmt.Errorf("could not find cluster CA bundle: %w", err))
+		}
+
+		clientCACertificate, err = getClientCACertificate(resourceDataList)
+		if err != nil {
+			return nil, apierrors.NewInternalError(fmt.Errorf("could not find client CA certificate: %w", err))
+		}
 	}
 
 	if r.maxExpirationSeconds > 0 && out.Spec.ExpirationSeconds > r.maxExpirationSeconds {

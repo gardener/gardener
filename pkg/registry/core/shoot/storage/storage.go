@@ -24,8 +24,10 @@ import (
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
+	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	"github.com/gardener/gardener/pkg/registry/core/shoot"
 )
 
@@ -46,6 +48,8 @@ type ShootStorage struct {
 func NewStorage(
 	optsGetter generic.RESTOptionsGetter,
 	shootStateStore *genericregistry.Store,
+	internalSecretLister gardencorelisters.InternalSecretLister,
+	secretLister kubecorev1listers.SecretLister,
 	adminKubeconfigMaxExpiration time.Duration,
 	credentialsRotationInterval time.Duration,
 ) ShootStorage {
@@ -58,6 +62,8 @@ func NewStorage(
 	}
 
 	s.AdminKubeconfig = &AdminKubeconfigREST{
+		secretLister:         secretLister,
+		internalSecretLister: internalSecretLister,
 		shootStateStorage:    shootStateStore,
 		shootStorage:         shootRest,
 		maxExpirationSeconds: int64(adminKubeconfigMaxExpiration.Seconds()),

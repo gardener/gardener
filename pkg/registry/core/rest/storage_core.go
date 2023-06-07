@@ -109,10 +109,16 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 	shootStateStorage := shootstatestore.NewStorage(restOptionsGetter)
 	storage["shootstates"] = shootStateStorage.ShootState
 
-	shootStorage := shootstore.NewStorage(restOptionsGetter, shootstatestore.NewStorage(restOptionsGetter).ShootState.Store, p.AdminKubeconfigMaxExpiration, p.CredentialsRotationInterval)
+	shootStorage := shootstore.NewStorage(
+		restOptionsGetter,
+		shootstatestore.NewStorage(restOptionsGetter).ShootState.Store,
+		p.CoreInformerFactory.Core().InternalVersion().InternalSecrets().Lister(),
+		p.KubeInformerFactory.Core().V1().Secrets().Lister(),
+		p.AdminKubeconfigMaxExpiration,
+		p.CredentialsRotationInterval,
+	)
 	storage["shoots"] = shootStorage.Shoot
 	storage["shoots/status"] = shootStorage.Status
-
 	storage["shoots/binding"] = shootStorage.Binding
 
 	if shootStorage.AdminKubeconfig != nil {

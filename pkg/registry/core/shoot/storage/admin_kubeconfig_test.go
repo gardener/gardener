@@ -26,17 +26,20 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 	registryrest "k8s.io/apiserver/pkg/registry/rest"
+	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	testclock "k8s.io/utils/clock/testing"
 
 	authenticationapi "github.com/gardener/gardener/pkg/apis/authentication"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	"github.com/gardener/gardener/pkg/utils"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -44,14 +47,21 @@ import (
 
 var _ = Describe("Admin Kubeconfig", func() {
 	var (
-		shootState       *gardencore.ShootState
-		shoot            *gardencore.Shoot
+		ctx context.Context
+		obj *authenticationapi.AdminKubeconfigRequest
+
+		shoot           *gardencore.Shoot
+		shootState      *gardencore.ShootState
+		caClusterSecret *corev1.Secret
+		caClientSecret  *gardencore.InternalSecret
+
 		akcREST          *AdminKubeconfigREST
-		shootStateGetter *fakeGetter
-		shootGetter      *fakeGetter
-		ctx              context.Context
-		obj              *authenticationapi.AdminKubeconfigRequest
 		createValidation registryrest.ValidateObjectFunc
+
+		shootStateGetter     *fakeGetter
+		shootGetter          *fakeGetter
+		secretLister         *fakeSecretLister
+		internalSecretLister *fakeInternalSecretLister
 
 		clusterCACert1 = []byte("cluster-ca-cert1")
 		clusterCACert2 = []byte("cluster-ca-cert2")
@@ -193,6 +203,21 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 				},
 			},
 		}
+
+		caClusterSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: name + ".ca-cluster", Namespace: namespace},
+			Data: map[string][]byte{
+				"ca.crt": clusterCACert1,
+			},
+		}
+		caClientSecret = &gardencore.InternalSecret{
+			ObjectMeta: metav1.ObjectMeta{Name: name + ".ca-client", Namespace: namespace},
+			Data: map[string][]byte{
+				"ca.crt": clientCACert1,
+				"ca.key": clientCAKey1,
+			},
+		}
+
 		createValidation = func(ctx context.Context, obj runtime.Object) error { return nil }
 		shoot = &gardencore.Shoot{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
@@ -209,8 +234,13 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 				},
 			},
 		}
+
 		shootGetter = &fakeGetter{obj: shoot}
 		shootStateGetter = &fakeGetter{obj: shootState}
+
+		secretLister = &fakeSecretLister{obj: caClusterSecret}
+		internalSecretLister = &fakeInternalSecretLister{obj: caClientSecret}
+
 		obj = &authenticationapi.AdminKubeconfigRequest{
 			Spec: authenticationapi.AdminKubeconfigRequestSpec{
 				ExpirationSeconds: int64(time.Minute.Seconds() * 11),
@@ -218,8 +248,10 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 		}
 
 		akcREST = &AdminKubeconfigREST{
-			shootStorage:      shootGetter,
-			shootStateStorage: shootStateGetter,
+			secretLister:         secretLister,
+			internalSecretLister: internalSecretLister,
+			shootStorage:         shootGetter,
+			shootStateStorage:    shootStateGetter,
 		}
 
 		ctx = request.WithUser(context.Background(), &user.DefaultInfo{
@@ -242,208 +274,315 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 			Expect(actual).To(BeNil())
 		})
 
-		It("returns error when create validation fails", func() {
-			createValidation = func(ctx context.Context, obj runtime.Object) error {
-				return errors.New("some error")
-			}
-		})
+		Context("retrieving CAs from secrets", func() {
+			It("returns an error if create validation fails", func() {
+				createValidation = func(ctx context.Context, obj runtime.Object) error {
+					return errors.New("some error")
+				}
+			})
 
-		It("returns error when validation fails", func() {
-			obj.Spec.ExpirationSeconds = -1
-		})
+			It("returns an error if validation fails", func() {
+				obj.Spec.ExpirationSeconds = -1
+			})
 
-		It("returns error when there is no user in context", func() {
-			ctx = context.TODO()
-		})
+			It("returns an error if there is no user in the context", func() {
+				ctx = context.TODO()
+			})
 
-		It("returns error when cannot get shoot state", func() {
-			shootStateGetter.err = errors.New("can't get shoot state")
-		})
+			It("returns an error if it cannot get the ca-client secret", func() {
+				internalSecretLister.err = errors.New("fake")
+			})
 
-		It("returns error when cannot convert to shoot state", func() {
-			shootStateGetter.obj = &corev1.Pod{}
-		})
+			It("returns an error if the ca-client secret is missing the public key", func() {
+				delete(caClientSecret.Data, "ca.crt")
+			})
 
-		It("returns error when cannot get shoot", func() {
-			shootGetter.err = errors.New("can't get shoot")
-		})
+			It("returns an error if the ca-client secret is missing the private key", func() {
+				delete(caClientSecret.Data, "ca.key")
+			})
 
-		It("returns error when cannot convert to shoot", func() {
-			shootGetter.obj = &corev1.Pod{}
-		})
+			It("returns an error if it cannot get the ca-cluster secret", func() {
+				secretLister.err = errors.New("fake")
+			})
 
-		It("returns error when there are no advertised addresses in shoot status", func() {
-			shoot.Status.AdvertisedAddresses = nil
-		})
+			It("returns an error if the ca-cluster secret is missing the public key", func() {
+				delete(caClusterSecret.Data, "ca.crt")
+			})
 
-		It("returns error when the cluster certificate authority is not yet provisioned", func() {
-			shootState.Spec.Gardener = append(shootState.Spec.Gardener[:0], shootState.Spec.Gardener[1:]...)
-		})
+			It("returns an error if the ca-cluster secret doesn't exist", func() {
+				secretLister.err = apierrors.NewNotFound(gardencore.Resource("internalsecrets"), caClusterSecret.Name)
+			})
 
-		It("returns error when the cluster certificate authority contains no certificate", func() {
-			shootState.Spec.Gardener[0].Data.Raw = []byte("{}")
-		})
+			It("returns an error if it cannot get the shoot", func() {
+				shootGetter.err = errors.New("can't get shoot")
+			})
 
-		It("returns error when the client certificate authority is not yet provisioned", func() {
-			shootState.Spec.Gardener = append(shootState.Spec.Gardener[:1], shootState.Spec.Gardener[2:]...)
-		})
+			It("returns an error if it cannot convert the object to a shoot", func() {
+				shootGetter.obj = &corev1.Pod{}
+			})
 
-		It("returns error when the client certificate authority contains no certificate", func() {
-			shootState.Spec.Gardener[1].Data.Raw = []byte("{}")
-		})
-
-		It("returns error when the issued-at-time label on a CA cert secret is missing", func() {
-			shootState.Spec.Gardener = append(shootState.Spec.Gardener, gardencore.GardenerResourceData{
-				Name: "ca-2",
-				Type: "secret",
-				Labels: map[string]string{
-					"name":             "ca",
-					"managed-by":       "secrets-manager",
-					"manager-identity": "gardenlet",
-				},
+			It("returns an error if there are no advertised addresses in shoot status", func() {
+				shoot.Status.AdvertisedAddresses = nil
 			})
 		})
-	})
 
-	DescribeTable("request succeeds",
-		func(expectedIssuerName string, expectedClusterCABundle []byte, prepEnv func()) {
-			if prepEnv != nil {
-				prepEnv()
-			}
-
-			actual, err := akcREST.Create(ctx, name, obj, nil, nil)
-
-			Expect(err).ToNot(HaveOccurred())
-			Expect(actual).ToNot(BeNil())
-			Expect(actual).To(BeAssignableToTypeOf(&authenticationapi.AdminKubeconfigRequest{}))
-
-			akcr := actual.(*authenticationapi.AdminKubeconfigRequest)
-
-			Expect(akcr.Status.ExpirationTimestamp.Time).To(Equal(time.Unix(10, 0).Add(time.Minute * 11)))
-
-			config := &clientcmdv1.Config{}
-			Expect(runtime.DecodeInto(clientcmdlatest.Codec, akcr.Status.Kubeconfig, config)).To(Succeed())
-
-			Expect(config.Clusters).To(ConsistOf(
-				clientcmdv1.NamedCluster{
-					Name: "baz--test-external",
-					Cluster: clientcmdv1.Cluster{
-						Server:                   "https://foo.bar.external:9443",
-						CertificateAuthorityData: expectedClusterCABundle,
-					},
-				},
-				clientcmdv1.NamedCluster{
-					Name: "baz--test-internal",
-					Cluster: clientcmdv1.Cluster{
-						Server:                   "https://foo.bar.internal:9443",
-						CertificateAuthorityData: expectedClusterCABundle,
-					},
-				},
-			))
-
-			Expect(config.Contexts).To(ConsistOf(
-				clientcmdv1.NamedContext{
-					Name: "baz--test-external",
-					Context: clientcmdv1.Context{
-						Cluster:  "baz--test-external",
-						AuthInfo: "baz--test-external",
-					},
-				},
-				clientcmdv1.NamedContext{
-					Name: "baz--test-internal",
-					Context: clientcmdv1.Context{
-						Cluster:  "baz--test-internal",
-						AuthInfo: "baz--test-external",
-					},
-				},
-			))
-			Expect(config.CurrentContext).To(Equal("baz--test-external"))
-
-			Expect(config.AuthInfos).To(HaveLen(1))
-			Expect(config.AuthInfos[0].Name).To(Equal("baz--test-external"))
-			Expect(config.AuthInfos[0].AuthInfo.ClientCertificateData).ToNot(BeEmpty())
-			Expect(config.AuthInfos[0].AuthInfo.ClientKeyData).ToNot(BeEmpty())
-
-			certPem, _ := pem.Decode(config.AuthInfos[0].AuthInfo.ClientCertificateData)
-			cert, err := x509.ParseCertificate(certPem.Bytes)
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(cert.Subject.CommonName).To(Equal(userName))
-			Expect(cert.Subject.Organization).To(ConsistOf("system:masters"))
-			Expect(cert.NotAfter.Unix()).To(Equal(akcr.Status.ExpirationTimestamp.Time.Unix())) // certificates do not have nano seconds in them
-			Expect(cert.NotBefore.UTC()).To(Equal(time.Unix(10, 0).UTC()))
-			Expect(cert.Issuer.CommonName).To(Equal(expectedIssuerName))
-		},
-
-		Entry("one client CA, one cluster CA", clientCACert1Name, clusterCACert1, nil),
-
-		Entry("one client CA, multiple cluster CA", clientCACert1Name, append(clusterCACert2, clusterCACert1...), func() {
-			shootState.Spec.Gardener = append(shootState.Spec.Gardener, gardencore.GardenerResourceData{
-				Name: "ca-cluster-2",
-				Type: "secret",
-				Labels: map[string]string{
-					"name":             "ca",
-					"managed-by":       "secrets-manager",
-					"manager-identity": "gardenlet",
-					"issued-at-time":   "1",
-				},
-				Data: runtime.RawExtension{
-					Raw: []byte(`{"ca.crt":"` + utils.EncodeBase64(clusterCACert2) + `"}`),
-				},
+		Context("falling back to the shoot state", func() {
+			BeforeEach(func() {
+				internalSecretLister.err = apierrors.NewNotFound(gardencore.Resource("internalsecrets"), caClientSecret.Name)
 			})
-		}),
 
-		Entry("multiple client CA (in case of rotation), one cluster CA", clientCACert2Name, clusterCACert1, func() {
-			shootState.Spec.Gardener = append(shootState.Spec.Gardener, gardencore.GardenerResourceData{
-				Name: "ca-client-bar",
-				Type: "secret",
-				Labels: map[string]string{
-					"name":             "ca-client",
-					"managed-by":       "secrets-manager",
-					"manager-identity": "gardenlet",
-					"issued-at-time":   "1",
-				},
-				Data: runtime.RawExtension{
-					Raw: []byte(`{"ca.crt":"` + utils.EncodeBase64(clientCACert2) + `","ca.key":"` + utils.EncodeBase64(clientCAKey2) + `"}`),
-				},
+			It("returns an error if it cannot get the shoot state", func() {
+				shootStateGetter.err = errors.New("can't get shoot state")
 			})
-		}),
 
-		Entry("multiple client CA (in case of rotation), multiple cluster CA", clientCACert2Name, append(clusterCACert2, clusterCACert1...), func() {
-			shootState.Spec.Gardener = append(shootState.Spec.Gardener,
-				gardencore.GardenerResourceData{
-					Name: "ca-client-bar",
-					Type: "secret",
-					Labels: map[string]string{
-						"name":             "ca-client",
-						"managed-by":       "secrets-manager",
-						"manager-identity": "gardenlet",
-						"issued-at-time":   "1",
-					},
-					Data: runtime.RawExtension{
-						Raw: []byte(`{"ca.crt":"` + utils.EncodeBase64(clientCACert2) + `","ca.key":"` + utils.EncodeBase64(clientCAKey2) + `"}`),
-					},
-				},
-				gardencore.GardenerResourceData{
-					Name: "ca-cluster-2",
+			It("returns an error if it cannot convert the object to a shoot state", func() {
+				shootStateGetter.obj = &corev1.Pod{}
+			})
+
+			It("returns an error if the cluster certificate authority is not yet provisioned", func() {
+				shootState.Spec.Gardener = append(shootState.Spec.Gardener[:0], shootState.Spec.Gardener[1:]...)
+			})
+
+			It("returns an error if the cluster certificate authority contains no certificate", func() {
+				shootState.Spec.Gardener[0].Data.Raw = []byte("{}")
+			})
+
+			It("returns an error if the client certificate authority is not yet provisioned", func() {
+				shootState.Spec.Gardener = append(shootState.Spec.Gardener[:1], shootState.Spec.Gardener[2:]...)
+			})
+
+			It("returns an error if the client certificate authority contains no certificate", func() {
+				shootState.Spec.Gardener[1].Data.Raw = []byte("{}")
+			})
+
+			It("returns an error if the issued-at-time label on a CA cert secret is missing", func() {
+				shootState.Spec.Gardener = append(shootState.Spec.Gardener, gardencore.GardenerResourceData{
+					Name: "ca-2",
 					Type: "secret",
 					Labels: map[string]string{
 						"name":             "ca",
 						"managed-by":       "secrets-manager",
 						"manager-identity": "gardenlet",
-						"issued-at-time":   "1",
 					},
-					Data: runtime.RawExtension{
-						Raw: []byte(`{"ca.crt":"` + utils.EncodeBase64(clusterCACert2) + `"}`),
-					},
-				},
-			)
-		}),
+				})
+			})
+		})
+	})
 
-		Entry("no client CA, one cluster CA", clientCACert1Name, clusterCACert1, func() {
-			shootState.Spec.Gardener[0].Labels["name"] = "ca"
-		}),
-	)
+	Context("request succeeds", func() {
+		Context("retrieving CAs from secrets", func() {
+			It("should successfully issue admin kubeconfig", func() {
+				actual, err := akcREST.Create(ctx, name, obj, nil, nil)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(actual).ToNot(BeNil())
+				Expect(actual).To(BeAssignableToTypeOf(&authenticationapi.AdminKubeconfigRequest{}))
+
+				akcr := actual.(*authenticationapi.AdminKubeconfigRequest)
+
+				Expect(akcr.Status.ExpirationTimestamp.Time).To(Equal(time.Unix(10, 0).Add(time.Minute * 11)))
+
+				config := &clientcmdv1.Config{}
+				Expect(runtime.DecodeInto(clientcmdlatest.Codec, akcr.Status.Kubeconfig, config)).To(Succeed())
+
+				Expect(config.Clusters).To(ConsistOf(
+					clientcmdv1.NamedCluster{
+						Name: "baz--test-external",
+						Cluster: clientcmdv1.Cluster{
+							Server:                   "https://foo.bar.external:9443",
+							CertificateAuthorityData: clusterCACert1,
+						},
+					},
+					clientcmdv1.NamedCluster{
+						Name: "baz--test-internal",
+						Cluster: clientcmdv1.Cluster{
+							Server:                   "https://foo.bar.internal:9443",
+							CertificateAuthorityData: clusterCACert1,
+						},
+					},
+				))
+
+				Expect(config.Contexts).To(ConsistOf(
+					clientcmdv1.NamedContext{
+						Name: "baz--test-external",
+						Context: clientcmdv1.Context{
+							Cluster:  "baz--test-external",
+							AuthInfo: "baz--test-external",
+						},
+					},
+					clientcmdv1.NamedContext{
+						Name: "baz--test-internal",
+						Context: clientcmdv1.Context{
+							Cluster:  "baz--test-internal",
+							AuthInfo: "baz--test-external",
+						},
+					},
+				))
+				Expect(config.CurrentContext).To(Equal("baz--test-external"))
+
+				Expect(config.AuthInfos).To(HaveLen(1))
+				Expect(config.AuthInfos[0].Name).To(Equal("baz--test-external"))
+				Expect(config.AuthInfos[0].AuthInfo.ClientCertificateData).ToNot(BeEmpty())
+				Expect(config.AuthInfos[0].AuthInfo.ClientKeyData).ToNot(BeEmpty())
+
+				certPem, _ := pem.Decode(config.AuthInfos[0].AuthInfo.ClientCertificateData)
+				cert, err := x509.ParseCertificate(certPem.Bytes)
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(cert.Subject.CommonName).To(Equal(userName))
+				Expect(cert.Subject.Organization).To(ConsistOf("system:masters"))
+				Expect(cert.NotAfter.Unix()).To(Equal(akcr.Status.ExpirationTimestamp.Time.Unix())) // certificates do not have nano seconds in them
+				Expect(cert.NotBefore.UTC()).To(Equal(time.Unix(10, 0).UTC()))
+				Expect(cert.Issuer.CommonName).To(Equal(clientCACert1Name))
+			})
+		})
+
+		Context("falling back to the shoot state", func() {
+			BeforeEach(func() {
+				internalSecretLister.err = apierrors.NewNotFound(gardencore.Resource("internalsecrets"), caClientSecret.Name)
+			})
+
+			DescribeTable("request succeeds",
+				func(expectedIssuerName string, expectedClusterCABundle []byte, prepEnv func()) {
+					if prepEnv != nil {
+						prepEnv()
+					}
+
+					actual, err := akcREST.Create(ctx, name, obj, nil, nil)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(actual).ToNot(BeNil())
+					Expect(actual).To(BeAssignableToTypeOf(&authenticationapi.AdminKubeconfigRequest{}))
+
+					akcr := actual.(*authenticationapi.AdminKubeconfigRequest)
+
+					Expect(akcr.Status.ExpirationTimestamp.Time).To(Equal(time.Unix(10, 0).Add(time.Minute * 11)))
+
+					config := &clientcmdv1.Config{}
+					Expect(runtime.DecodeInto(clientcmdlatest.Codec, akcr.Status.Kubeconfig, config)).To(Succeed())
+
+					Expect(config.Clusters).To(ConsistOf(
+						clientcmdv1.NamedCluster{
+							Name: "baz--test-external",
+							Cluster: clientcmdv1.Cluster{
+								Server:                   "https://foo.bar.external:9443",
+								CertificateAuthorityData: expectedClusterCABundle,
+							},
+						},
+						clientcmdv1.NamedCluster{
+							Name: "baz--test-internal",
+							Cluster: clientcmdv1.Cluster{
+								Server:                   "https://foo.bar.internal:9443",
+								CertificateAuthorityData: expectedClusterCABundle,
+							},
+						},
+					))
+
+					Expect(config.Contexts).To(ConsistOf(
+						clientcmdv1.NamedContext{
+							Name: "baz--test-external",
+							Context: clientcmdv1.Context{
+								Cluster:  "baz--test-external",
+								AuthInfo: "baz--test-external",
+							},
+						},
+						clientcmdv1.NamedContext{
+							Name: "baz--test-internal",
+							Context: clientcmdv1.Context{
+								Cluster:  "baz--test-internal",
+								AuthInfo: "baz--test-external",
+							},
+						},
+					))
+					Expect(config.CurrentContext).To(Equal("baz--test-external"))
+
+					Expect(config.AuthInfos).To(HaveLen(1))
+					Expect(config.AuthInfos[0].Name).To(Equal("baz--test-external"))
+					Expect(config.AuthInfos[0].AuthInfo.ClientCertificateData).ToNot(BeEmpty())
+					Expect(config.AuthInfos[0].AuthInfo.ClientKeyData).ToNot(BeEmpty())
+
+					certPem, _ := pem.Decode(config.AuthInfos[0].AuthInfo.ClientCertificateData)
+					cert, err := x509.ParseCertificate(certPem.Bytes)
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(cert.Subject.CommonName).To(Equal(userName))
+					Expect(cert.Subject.Organization).To(ConsistOf("system:masters"))
+					Expect(cert.NotAfter.Unix()).To(Equal(akcr.Status.ExpirationTimestamp.Time.Unix())) // certificates do not have nano seconds in them
+					Expect(cert.NotBefore.UTC()).To(Equal(time.Unix(10, 0).UTC()))
+					Expect(cert.Issuer.CommonName).To(Equal(expectedIssuerName))
+				},
+
+				Entry("one client CA, one cluster CA", clientCACert1Name, clusterCACert1, nil),
+
+				Entry("one client CA, multiple cluster CA", clientCACert1Name, append(clusterCACert2, clusterCACert1...), func() {
+					shootState.Spec.Gardener = append(shootState.Spec.Gardener, gardencore.GardenerResourceData{
+						Name: "ca-cluster-2",
+						Type: "secret",
+						Labels: map[string]string{
+							"name":             "ca",
+							"managed-by":       "secrets-manager",
+							"manager-identity": "gardenlet",
+							"issued-at-time":   "1",
+						},
+						Data: runtime.RawExtension{
+							Raw: []byte(`{"ca.crt":"` + utils.EncodeBase64(clusterCACert2) + `"}`),
+						},
+					})
+				}),
+
+				Entry("multiple client CA (in case of rotation), one cluster CA", clientCACert2Name, clusterCACert1, func() {
+					shootState.Spec.Gardener = append(shootState.Spec.Gardener, gardencore.GardenerResourceData{
+						Name: "ca-client-bar",
+						Type: "secret",
+						Labels: map[string]string{
+							"name":             "ca-client",
+							"managed-by":       "secrets-manager",
+							"manager-identity": "gardenlet",
+							"issued-at-time":   "1",
+						},
+						Data: runtime.RawExtension{
+							Raw: []byte(`{"ca.crt":"` + utils.EncodeBase64(clientCACert2) + `","ca.key":"` + utils.EncodeBase64(clientCAKey2) + `"}`),
+						},
+					})
+				}),
+
+				Entry("multiple client CA (in case of rotation), multiple cluster CA", clientCACert2Name, append(clusterCACert2, clusterCACert1...), func() {
+					shootState.Spec.Gardener = append(shootState.Spec.Gardener,
+						gardencore.GardenerResourceData{
+							Name: "ca-client-bar",
+							Type: "secret",
+							Labels: map[string]string{
+								"name":             "ca-client",
+								"managed-by":       "secrets-manager",
+								"manager-identity": "gardenlet",
+								"issued-at-time":   "1",
+							},
+							Data: runtime.RawExtension{
+								Raw: []byte(`{"ca.crt":"` + utils.EncodeBase64(clientCACert2) + `","ca.key":"` + utils.EncodeBase64(clientCAKey2) + `"}`),
+							},
+						},
+						gardencore.GardenerResourceData{
+							Name: "ca-cluster-2",
+							Type: "secret",
+							Labels: map[string]string{
+								"name":             "ca",
+								"managed-by":       "secrets-manager",
+								"manager-identity": "gardenlet",
+								"issued-at-time":   "1",
+							},
+							Data: runtime.RawExtension{
+								Raw: []byte(`{"ca.crt":"` + utils.EncodeBase64(clusterCACert2) + `"}`),
+							},
+						},
+					)
+				}),
+
+				Entry("no client CA, one cluster CA", clientCACert1Name, clusterCACert1, func() {
+					shootState.Spec.Gardener[0].Labels["name"] = "ca"
+				}),
+			)
+		})
+	})
 })
 
 type fakeGetter struct {
@@ -452,5 +591,33 @@ type fakeGetter struct {
 }
 
 func (f *fakeGetter) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
+	return f.obj, f.err
+}
+
+type fakeSecretLister struct {
+	kubecorev1listers.SecretLister
+	obj *corev1.Secret
+	err error
+}
+
+func (f fakeSecretLister) Secrets(string) kubecorev1listers.SecretNamespaceLister {
+	return f
+}
+
+func (f fakeSecretLister) Get(name string) (*corev1.Secret, error) {
+	return f.obj, f.err
+}
+
+type fakeInternalSecretLister struct {
+	gardencorelisters.InternalSecretLister
+	obj *gardencore.InternalSecret
+	err error
+}
+
+func (f fakeInternalSecretLister) InternalSecrets(string) gardencorelisters.InternalSecretNamespaceLister {
+	return f
+}
+
+func (f fakeInternalSecretLister) Get(name string) (*gardencore.InternalSecret, error) {
 	return f.obj, f.err
 }
