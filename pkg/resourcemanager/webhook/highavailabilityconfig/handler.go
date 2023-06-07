@@ -427,7 +427,7 @@ func (h *Handler) mutateNodeAffinity(
 		nodeSelectorTerms := podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms
 		for i, term := range nodeSelectorTerms {
 			filteredExpressions := make([]corev1.NodeSelectorRequirement, 0, len(term.MatchExpressions))
-			// Remove exiting expressions for `topology.kubernetes.io/zone` to
+			// Remove existing expressions for `topology.kubernetes.io/zone` to
 			// - avoid duplicates for the same key
 			// - remove expressions that prevent zone pinning
 			for _, expr := range term.MatchExpressions {
