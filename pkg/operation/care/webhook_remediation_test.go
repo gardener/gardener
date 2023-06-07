@@ -335,8 +335,20 @@ var _ = Describe("WebhookRemediation", func() {
 							TimeoutSeconds: pointer.Int32(30),
 							FailurePolicy:  &ignore,
 						},
+					}
+					Expect(fakeClient.Create(ctx, mutatingWebhookConfiguration)).To(Succeed())
+
+					Expect(remediator.Remediate(ctx)).To(Succeed())
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhookConfiguration), mutatingWebhookConfiguration)).To(Succeed())
+					Expect(mutatingWebhookConfiguration.Annotations).To(HaveKey("gardener.cloud/warning"))
+					Expect(mutatingWebhookConfiguration.Webhooks[0].TimeoutSeconds).To(Equal(pointer.Int32(15)))
+				})
+
+				It("timeoutSeconds when failurePolicy=Ignore for lease resource", func() {
+					mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{
 						{
-							Name:           "some-webhook2.example.com",
+							Name:           "some-webhook1.example.com",
 							TimeoutSeconds: pointer.Int32(10),
 							FailurePolicy:  &ignore,
 							ObjectSelector: &metav1.LabelSelector{
@@ -358,7 +370,7 @@ var _ = Describe("WebhookRemediation", func() {
 							},
 						},
 						{
-							Name:           "some-webhook3.example.com",
+							Name:           "some-webhook2.example.com",
 							TimeoutSeconds: pointer.Int32(10),
 							FailurePolicy:  &ignore,
 							Rules: []admissionregistrationv1.RuleWithOperations{
@@ -375,7 +387,7 @@ var _ = Describe("WebhookRemediation", func() {
 							},
 						},
 						{
-							Name:           "some-webhook4.example.com",
+							Name:           "some-webhook3.example.com",
 							TimeoutSeconds: pointer.Int32(1),
 							FailurePolicy:  &ignore,
 							Rules: []admissionregistrationv1.RuleWithOperations{
@@ -398,10 +410,9 @@ var _ = Describe("WebhookRemediation", func() {
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhookConfiguration), mutatingWebhookConfiguration)).To(Succeed())
 					Expect(mutatingWebhookConfiguration.Annotations).To(HaveKey("gardener.cloud/warning"))
-					Expect(mutatingWebhookConfiguration.Webhooks[0].TimeoutSeconds).To(Equal(pointer.Int32(15)))
-					Expect(mutatingWebhookConfiguration.Webhooks[1].TimeoutSeconds).To(Equal(pointer.Int32(10)))
-					Expect(mutatingWebhookConfiguration.Webhooks[2].TimeoutSeconds).To(Equal(pointer.Int32(3)))
-					Expect(mutatingWebhookConfiguration.Webhooks[3].TimeoutSeconds).To(Equal(pointer.Int32(1)))
+					Expect(mutatingWebhookConfiguration.Webhooks[0].TimeoutSeconds).To(Equal(pointer.Int32(10)))
+					Expect(mutatingWebhookConfiguration.Webhooks[1].TimeoutSeconds).To(Equal(pointer.Int32(3)))
+					Expect(mutatingWebhookConfiguration.Webhooks[2].TimeoutSeconds).To(Equal(pointer.Int32(1)))
 				})
 
 				It("failurePolicy", func() {
