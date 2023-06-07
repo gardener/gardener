@@ -158,6 +158,10 @@ var _ = Describe("Constraints", func() {
 						Entry("failurePolicy 'Ignore' and timeoutSeconds ok", webhookTestCase{failurePolicy: &failurePolicyIgnore, timeoutSeconds: &timeoutSecondsNotProblematic}))
 				} else {
 					notProblematic = append(notProblematic,
+						Entry("failurePolicy 'Ignore' and timeoutSeconds ok", webhookTestCase{failurePolicy: &failurePolicyIgnore, timeoutSeconds: &timeoutSecondsNotProblematic, objectSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"app.kubernetes.io/name": "test",
+							}}}),
 						Entry("failurePolicy 'Ignore' and timeoutSeconds ok", webhookTestCase{failurePolicy: &failurePolicyIgnore, timeoutSeconds: &timeoutSecondsNotProblematic}))
 				}
 
