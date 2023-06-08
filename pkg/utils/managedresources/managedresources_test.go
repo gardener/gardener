@@ -26,6 +26,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -33,6 +34,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -45,7 +47,19 @@ type errorClient struct {
 	failSecretCreate bool
 	failMRCreate     bool
 	failMRPatch      bool
+	failMRGet        bool
 	err              error
+}
+
+func (e *errorClient) Get(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
+	switch obj.(type) {
+	case *resourcesv1alpha1.ManagedResource:
+		if e.failMRGet {
+			return e.err
+		}
+	}
+
+	return e.Client.Get(ctx, key, obj, opts...)
 }
 
 func (e *errorClient) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
@@ -386,39 +400,42 @@ var _ = Describe("managedresources", func() {
 
 	Describe("#WaitUntilHealthy", func() {
 		It("should fail when the managed resource cannot be read", func() {
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr)
-
-			Expect(WaitUntilHealthy(ctx, c, namespace, name)).To(MatchError(fakeErr))
+			errClient := &errorClient{err: fakeErr, failMRGet: true, Client: fakeClient}
+			Expect(WaitUntilHealthy(ctx, errClient, namespace, name)).To(MatchError(fakeErr))
 		})
 
 		It("should retry when the managed resource is not healthy yet", func() {
 			oldInterval := IntervalWait
 			defer func() { IntervalWait = oldInterval }()
-			IntervalWait = time.Millisecond
+			IntervalWait = time.Millisecond * 10
 
-			gomock.InOrder(
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Generation: 2,
-					},
-					Status: resourcesv1alpha1.ManagedResourceStatus{
+			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
+			shouldFail := true
+			go func() {
+				defer GinkgoRecover()
+				_, err := controllerutils.GetAndCreateOrMergePatch(ctx, fakeClient, mr, func() error {
+					mr.ObjectMeta.Generation = 2
+					mr.Status = resourcesv1alpha1.ManagedResourceStatus{
 						ObservedGeneration: 1,
-					},
-				})),
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Generation: 2,
-					},
-					Status: resourcesv1alpha1.ManagedResourceStatus{
+					}
+					return nil
+				})
+				Expect(err).To(Not(HaveOccurred()))
+				time.Sleep(time.Millisecond * 50)
+
+				_, err = controllerutils.GetAndCreateOrMergePatch(ctx, fakeClient, mr, func() error {
+					mr.ObjectMeta.Generation = 2
+					mr.Status = resourcesv1alpha1.ManagedResourceStatus{
 						ObservedGeneration: 2,
-					},
-				})),
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Generation: 2,
-					},
-					Status: resourcesv1alpha1.ManagedResourceStatus{
+					}
+					return nil
+				})
+				Expect(err).To(Not(HaveOccurred()))
+				time.Sleep(time.Millisecond * 50)
+
+				_, err = controllerutils.GetAndCreateOrMergePatch(ctx, fakeClient, mr, func() error {
+					mr.ObjectMeta.Generation = 2
+					mr.Status = resourcesv1alpha1.ManagedResourceStatus{
 						ObservedGeneration: 2,
 						Conditions: []gardencorev1beta1.Condition{
 							{
@@ -426,13 +443,15 @@ var _ = Describe("managedresources", func() {
 								Status: gardencorev1beta1.ConditionTrue,
 							},
 						},
-					},
-				})),
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Generation: 2,
-					},
-					Status: resourcesv1alpha1.ManagedResourceStatus{
+					}
+					return nil
+				})
+				Expect(err).To(Not(HaveOccurred()))
+				time.Sleep(time.Millisecond * 50)
+
+				_, err = controllerutils.GetAndCreateOrMergePatch(ctx, fakeClient, mr, func() error {
+					mr.ObjectMeta.Generation = 2
+					mr.Status = resourcesv1alpha1.ManagedResourceStatus{
 						ObservedGeneration: 2,
 						Conditions: []gardencorev1beta1.Condition{
 							{
@@ -440,13 +459,15 @@ var _ = Describe("managedresources", func() {
 								Status: gardencorev1beta1.ConditionTrue,
 							},
 						},
-					},
-				})),
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Generation: 1,
-					},
-					Status: resourcesv1alpha1.ManagedResourceStatus{
+					}
+					return nil
+				})
+				Expect(err).To(Not(HaveOccurred()))
+				time.Sleep(time.Millisecond * 50)
+
+				_, err = controllerutils.GetAndCreateOrMergePatch(ctx, fakeClient, mr, func() error {
+					mr.ObjectMeta.Generation = 1
+					mr.Status = resourcesv1alpha1.ManagedResourceStatus{
 						ObservedGeneration: 1,
 						Conditions: []gardencorev1beta1.Condition{
 							{
@@ -458,13 +479,15 @@ var _ = Describe("managedresources", func() {
 								Status: gardencorev1beta1.ConditionFalse,
 							},
 						},
-					},
-				})),
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Generation: 1,
-					},
-					Status: resourcesv1alpha1.ManagedResourceStatus{
+					}
+					return nil
+				})
+				Expect(err).To(Not(HaveOccurred()))
+				time.Sleep(time.Millisecond * 50)
+
+				_, err = controllerutils.GetAndCreateOrMergePatch(ctx, fakeClient, mr, func() error {
+					mr.ObjectMeta.Generation = 1
+					mr.Status = resourcesv1alpha1.ManagedResourceStatus{
 						ObservedGeneration: 1,
 						Conditions: []gardencorev1beta1.Condition{
 							{
@@ -476,11 +499,17 @@ var _ = Describe("managedresources", func() {
 								Status: gardencorev1beta1.ConditionTrue,
 							},
 						},
-					},
-				})),
-			)
+					}
+					return nil
+				})
+				Expect(err).To(Not(HaveOccurred()))
+				shouldFail = false
+			}()
 
-			Expect(WaitUntilHealthy(ctx, c, namespace, name)).To(Succeed())
+			timeoutCtx, cancel := context.WithTimeout(ctx, time.Second*5)
+			defer cancel()
+			Expect(WaitUntilHealthy(timeoutCtx, fakeClient, namespace, name)).To(Succeed())
+			Expect(shouldFail).To(BeFalse()) // to ensure that the goroutine actually applies all patches
 		})
 	})
 
