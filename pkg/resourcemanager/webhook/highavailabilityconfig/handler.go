@@ -424,8 +424,7 @@ func (h *Handler) mutateNodeAffinity(
 			podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms = []corev1.NodeSelectorTerm{{}}
 		}
 
-		nodeSelectorTerms := podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms
-		for i, term := range nodeSelectorTerms {
+		for i, term := range podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms {
 			filteredExpressions := make([]corev1.NodeSelectorRequirement, 0, len(term.MatchExpressions))
 			// Remove existing expressions for `topology.kubernetes.io/zone` to
 			// - avoid duplicates for the same key
@@ -437,7 +436,7 @@ func (h *Handler) mutateNodeAffinity(
 			}
 
 			// Add remaining expressions with intended zone expression.
-			nodeSelectorTerms[i].MatchExpressions = append(filteredExpressions, *nodeSelectorRequirement)
+			podTemplateSpec.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[i].MatchExpressions = append(filteredExpressions, *nodeSelectorRequirement)
 		}
 	}
 }
