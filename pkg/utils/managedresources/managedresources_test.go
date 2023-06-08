@@ -23,9 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,7 +33,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/managedresources"
@@ -90,9 +87,6 @@ func (e *errorClient) Patch(ctx context.Context, obj client.Object, patch client
 
 var _ = Describe("managedresources", func() {
 	var (
-		ctrl *gomock.Controller
-		c    *mockclient.MockClient
-
 		ctx     = context.TODO()
 		fakeErr = fmt.Errorf("fake")
 
@@ -118,10 +112,6 @@ var _ = Describe("managedresources", func() {
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-
-		c = mockclient.NewMockClient(ctrl)
-
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		mr = &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -515,70 +505,59 @@ var _ = Describe("managedresources", func() {
 
 	Describe("WaitUntilDeleted", func() {
 		It("should not return error if managed resource does not exist", func() {
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, name))
-			Expect(WaitUntilDeleted(ctx, c, namespace, name)).To(Succeed())
+			Expect(WaitUntilDeleted(ctx, fakeClient, namespace, name)).To(Succeed())
 		})
 
 		It("should return a severe error if managed resource retrieval fails", func() {
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr)
-			Expect(WaitUntilDeleted(ctx, c, namespace, name)).To(MatchError(fakeErr))
+			errClient := &errorClient{err: fakeErr, failMRGet: true, Client: fakeClient}
+			Expect(WaitUntilDeleted(ctx, errClient, namespace, name)).To(MatchError(fakeErr))
 		})
 
 		It("should return a generic timeout error if the resource does not get deleted in time", func() {
 			timeoutCtx, cancel := context.WithTimeout(ctx, time.Millisecond)
 			defer cancel()
-			c.EXPECT().Get(timeoutCtx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).AnyTimes()
-			Expect(WaitUntilDeleted(timeoutCtx, c, namespace, name)).To(MatchError(ContainSubstring(fmt.Sprintf("resource %s/%s still exists", namespace, name))))
+			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
+			Expect(WaitUntilDeleted(timeoutCtx, fakeClient, namespace, name)).To(MatchError(ContainSubstring(fmt.Sprintf("resource %s/%s still exists", namespace, name))))
 		})
 
 		It("should return a timeout error containing the resources which are blocking the deletion when the reason is DeletionFailed", func() {
 			blockingResourcesMessage := "resource test-secret still exists"
+			mr.Status = resourcesv1alpha1.ManagedResourceStatus{
+				ObservedGeneration: 1,
+				Conditions: []gardencorev1beta1.Condition{
+					{
+						Type:    resourcesv1alpha1.ResourcesApplied,
+						Status:  gardencorev1beta1.ConditionFalse,
+						Reason:  resourcesv1alpha1.ConditionDeletionFailed,
+						Message: blockingResourcesMessage,
+					},
+				},
+			}
+			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
+
 			timeoutCtx, cancel := context.WithTimeout(ctx, time.Millisecond)
 			defer cancel()
-			c.EXPECT().Get(timeoutCtx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(
-				clientGet(&resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: namespace,
-						Name:      name,
-					},
-					Status: resourcesv1alpha1.ManagedResourceStatus{
-						ObservedGeneration: 1,
-						Conditions: []gardencorev1beta1.Condition{
-							{
-								Type:    resourcesv1alpha1.ResourcesApplied,
-								Status:  gardencorev1beta1.ConditionFalse,
-								Reason:  resourcesv1alpha1.ConditionDeletionFailed,
-								Message: blockingResourcesMessage,
-							},
-						},
-					},
-				})).AnyTimes()
-			Expect(WaitUntilDeleted(timeoutCtx, c, namespace, name)).To(MatchError(ContainSubstring(blockingResourcesMessage)))
+			Expect(WaitUntilDeleted(timeoutCtx, fakeClient, namespace, name)).To(MatchError(ContainSubstring(blockingResourcesMessage)))
 		})
 
 		It("should return a timeout error containing the resources which are blocking the deletion when the reason is DeletionPending", func() {
+			blockingResourcesMessage := "resource test-secret still exists"
+			mr.Status = resourcesv1alpha1.ManagedResourceStatus{
+				ObservedGeneration: 1,
+				Conditions: []gardencorev1beta1.Condition{
+					{
+						Type:    resourcesv1alpha1.ResourcesApplied,
+						Status:  gardencorev1beta1.ConditionFalse,
+						Reason:  resourcesv1alpha1.ConditionDeletionPending,
+						Message: blockingResourcesMessage,
+					},
+				},
+			}
+			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
+
 			timeoutCtx, cancel := context.WithTimeout(ctx, time.Millisecond)
 			defer cancel()
-			blockingResourcesMessage := "resource test-secret still exists"
-			c.EXPECT().Get(timeoutCtx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(
-				clientGet(&resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: namespace,
-						Name:      name,
-					},
-					Status: resourcesv1alpha1.ManagedResourceStatus{
-						ObservedGeneration: 1,
-						Conditions: []gardencorev1beta1.Condition{
-							{
-								Type:    resourcesv1alpha1.ResourcesApplied,
-								Status:  gardencorev1beta1.ConditionFalse,
-								Reason:  resourcesv1alpha1.ConditionDeletionPending,
-								Message: blockingResourcesMessage,
-							},
-						},
-					},
-				})).AnyTimes()
-			Expect(WaitUntilDeleted(timeoutCtx, c, namespace, name)).To(MatchError(ContainSubstring(blockingResourcesMessage)))
+			Expect(WaitUntilDeleted(timeoutCtx, fakeClient, namespace, name)).To(MatchError(ContainSubstring(blockingResourcesMessage)))
 		})
 	})
 
