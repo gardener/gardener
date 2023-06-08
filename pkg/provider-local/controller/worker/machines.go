@@ -17,15 +17,16 @@ package worker
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	genericworkeractuator "github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 )
@@ -53,7 +54,19 @@ func (w *workerDelegate) DeployMachineClasses(ctx context.Context) error {
 		}
 	}
 
-	return w.seedChartApplier.Apply(ctx, filepath.Join(local.InternalChartsPath, "machineclass"), w.worker.Namespace, "machineclass", kubernetes.Values(map[string]interface{}{"machineClasses": w.machineClasses}))
+	for _, obj := range w.machineClassSecrets {
+		if err := w.Client().Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
+			return fmt.Errorf("failed to apply machine class secret %s: %w", obj.GetName(), err)
+		}
+	}
+
+	for _, obj := range w.machineClasses {
+		if err := w.Client().Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
+			return fmt.Errorf("failed to apply machine class %s: %w", obj.GetName(), err)
+		}
+	}
+
+	return nil
 }
 
 // GenerateMachineDeployments generates the configuration for the desired machine deployments.
@@ -68,9 +81,10 @@ func (w *workerDelegate) GenerateMachineDeployments(_ context.Context) (worker.M
 
 func (w *workerDelegate) generateMachineConfig() error {
 	var (
-		machineDeployments = worker.MachineDeployments{}
-		machineClasses     []map[string]interface{}
-		machineImages      []api.MachineImage
+		machineClassSecrets []*corev1.Secret
+		machineClasses      []*machinev1alpha1.MachineClass
+		machineImages       []api.MachineImage
+		machineDeployments  worker.MachineDeployments
 	)
 
 	for _, pool := range w.worker.Spec.Pools {
@@ -89,22 +103,45 @@ func (w *workerDelegate) generateMachineConfig() error {
 			Image:   image,
 		})
 
-		machineClassSpec := map[string]interface{}{
-			"image": image,
-			"secret": map[string]interface{}{
-				"cloudConfig": string(pool.UserData),
-				"labels":      map[string]interface{}{v1beta1constants.GardenerPurpose: genericworkeractuator.GardenPurposeMachineClass},
-			},
-			"credentialsSecretRef": map[string]interface{}{
-				"name":      w.worker.Spec.SecretRef.Name,
-				"namespace": w.worker.Spec.SecretRef.Namespace,
-			},
-		}
-
 		var (
 			deploymentName = fmt.Sprintf("%s-%s", w.worker.Namespace, pool.Name)
 			className      = fmt.Sprintf("%s-%s", deploymentName, workerPoolHash)
 		)
+
+		machineClassSecrets = append(machineClassSecrets, &corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: corev1.SchemeGroupVersion.String(),
+				Kind:       "Secret",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      className,
+				Namespace: w.worker.Namespace,
+				Labels:    map[string]string{v1beta1constants.GardenerPurpose: genericworkeractuator.GardenPurposeMachineClass},
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{"userData": pool.UserData},
+		})
+
+		machineClasses = append(machineClasses, &machinev1alpha1.MachineClass{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: machinev1alpha1.SchemeGroupVersion.String(),
+				Kind:       "MachineClass",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      className,
+				Namespace: w.worker.Namespace,
+			},
+			SecretRef: &corev1.SecretReference{
+				Name:      className,
+				Namespace: w.worker.Namespace,
+			},
+			CredentialsSecretRef: &corev1.SecretReference{
+				Name:      w.worker.Spec.SecretRef.Name,
+				Namespace: w.worker.Spec.SecretRef.Namespace,
+			},
+			Provider:     local.Type,
+			ProviderSpec: runtime.RawExtension{Raw: []byte(`{"image":"` + image + `"}`)},
+		})
 
 		machineDeployments = append(machineDeployments, worker.MachineDeployment{
 			Name:                 deploymentName,
@@ -119,15 +156,12 @@ func (w *workerDelegate) generateMachineConfig() error {
 			Taints:               pool.Taints,
 			MachineConfiguration: genericworkeractuator.ReadMachineConfiguration(pool),
 		})
-
-		machineClassSpec["name"] = className
-
-		machineClasses = append(machineClasses, machineClassSpec)
 	}
 
-	w.machineDeployments = machineDeployments
+	w.machineClassSecrets = machineClassSecrets
 	w.machineClasses = machineClasses
 	w.machineImages = machineImages
+	w.machineDeployments = machineDeployments
 
 	return nil
 }

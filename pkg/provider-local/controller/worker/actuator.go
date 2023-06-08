@@ -161,14 +161,15 @@ func (d *delegateFactory) WorkerDelegate(_ context.Context, worker *extensionsv1
 
 type workerDelegate struct {
 	common.ClientContext
-	seedChartApplier   kubernetesclient.ChartApplier
-	serverVersion      string
-	cloudProfileConfig *api.CloudProfileConfig
-	cluster            *extensionscontroller.Cluster
-	worker             *extensionsv1alpha1.Worker
-	machineClasses     []map[string]interface{}
-	machineDeployments worker.MachineDeployments
-	machineImages      []api.MachineImage
+	seedChartApplier    kubernetesclient.ChartApplier
+	serverVersion       string
+	cloudProfileConfig  *api.CloudProfileConfig
+	cluster             *extensionscontroller.Cluster
+	worker              *extensionsv1alpha1.Worker
+	machineClassSecrets []*corev1.Secret
+	machineClasses      []*machinev1alpha1.MachineClass
+	machineImages       []api.MachineImage
+	machineDeployments  worker.MachineDeployments
 }
 
 // NewWorkerDelegate creates a new context for a worker reconciliation.
