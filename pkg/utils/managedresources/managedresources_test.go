@@ -562,14 +562,7 @@ var _ = Describe("managedresources", func() {
 	})
 
 	Describe("#CheckIfManagedResourcesExist", func() {
-		var (
-			fakeClient client.Client
-			class      = "foo"
-		)
-
-		BeforeEach(func() {
-			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		})
+		var class = "foo"
 
 		Context("w/o class", func() {
 			It("should return false because no resources exist", func() {
@@ -626,10 +619,3 @@ var _ = Describe("managedresources", func() {
 		})
 	})
 })
-
-func clientGet(managedResource *resourcesv1alpha1.ManagedResource) interface{} {
-	return func(_ context.Context, _ client.ObjectKey, mr *resourcesv1alpha1.ManagedResource, _ ...client.GetOption) error {
-		*mr = *managedResource
-		return nil
-	}
-}
