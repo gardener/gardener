@@ -41,6 +41,28 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
+type errorClient struct {
+	client.Client
+	failSecretCreate bool
+	failMRCreate     bool
+	err              error
+}
+
+func (e *errorClient) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+	switch obj.(type) {
+	case *corev1.Secret:
+		if e.failSecretCreate {
+			return e.err
+		}
+	case *resourcesv1alpha1.ManagedResource:
+		if e.failMRCreate {
+			return e.err
+		}
+	}
+
+	return e.Client.Create(ctx, obj, opts...)
+}
+
 var _ = Describe("managedresources", func() {
 	var (
 		ctrl *gomock.Controller
@@ -116,6 +138,16 @@ var _ = Describe("managedresources", func() {
 	})
 
 	Describe("#CreateForShoot", func() {
+		It("should return the error of the secret reconciliation", func() {
+			errClient := &errorClient{err: fakeErr, failSecretCreate: true, Client: fakeClient}
+			Expect(CreateForShoot(ctx, errClient, namespace, name, LabelValueGardener, keepObjects, data)).To(MatchError(fakeErr))
+		})
+
+		It("should return the error of the managed resource reconciliation", func() {
+			errClient := &errorClient{err: fakeErr, failMRCreate: true, Client: fakeClient}
+			Expect(CreateForShoot(ctx, errClient, namespace, name, LabelValueGardener, keepObjects, data)).To(MatchError(fakeErr))
+		})
+
 		It("should successfully create secret and managed resource", func() {
 			secretName, _ := NewSecret(fakeClient, namespace, name, data, true)
 			expectedMR := &resourcesv1alpha1.ManagedResource{
@@ -218,6 +250,16 @@ var _ = Describe("managedresources", func() {
 					Class:       pointer.String("seed"),
 				},
 			}
+		})
+
+		It("should return the error of the secret reconciliation", func() {
+			errClient := &errorClient{err: fakeErr, failSecretCreate: true, Client: fakeClient}
+			Expect(CreateForSeed(ctx, errClient, namespace, name, keepObjects, data)).To(MatchError(fakeErr))
+		})
+
+		It("should return the error of the managed resource reconciliation", func() {
+			errClient := &errorClient{err: fakeErr, failSecretCreate: true, Client: fakeClient}
+			Expect(CreateForSeed(ctx, errClient, namespace, name, keepObjects, data)).To(MatchError(fakeErr))
 		})
 
 		It("should successfully create secret and managed resource", func() {
