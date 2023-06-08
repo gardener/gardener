@@ -16,7 +16,6 @@ package managedresources_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -45,6 +44,7 @@ type errorClient struct {
 	client.Client
 	failSecretCreate bool
 	failMRCreate     bool
+	failMRPatch      bool
 	err              error
 }
 
@@ -61,6 +61,17 @@ func (e *errorClient) Create(ctx context.Context, obj client.Object, opts ...cli
 	}
 
 	return e.Client.Create(ctx, obj, opts...)
+}
+
+func (e *errorClient) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+	switch obj.(type) {
+	case *resourcesv1alpha1.ManagedResource:
+		if e.failMRPatch {
+			return e.err
+		}
+	}
+
+	return e.Client.Patch(ctx, obj, patch, opts...)
 }
 
 var _ = Describe("managedresources", func() {
@@ -355,26 +366,21 @@ var _ = Describe("managedresources", func() {
 
 	Describe("#SetKeepObjects", func() {
 		It("should patch the managed resource", func() {
-			c.EXPECT().Patch(ctx, managedResource(true), gomock.Any())
+			mr := managedResource(false)
+			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
 
-			err := SetKeepObjects(ctx, c, namespace, name, true)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(SetKeepObjects(ctx, fakeClient, namespace, name, true)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
+			Expect(*mr.Spec.KeepObjects).To(BeTrue())
 		})
 
 		It("should not fail if the managed resource is not found", func() {
-			c.EXPECT().Patch(ctx, managedResource(true), gomock.Any()).
-				Return(apierrors.NewNotFound(schema.GroupResource{}, name))
-
-			err := SetKeepObjects(ctx, c, namespace, name, true)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(SetKeepObjects(ctx, fakeClient, namespace, name, true)).To(Succeed())
 		})
 
 		It("should fail if the managed resource could not be updated", func() {
-			c.EXPECT().Patch(ctx, managedResource(true), gomock.Any()).
-				Return(errors.New("error"))
-
-			err := SetKeepObjects(ctx, c, namespace, name, true)
-			Expect(err).To(HaveOccurred())
+			errClient := &errorClient{err: fakeErr, failMRPatch: true, Client: fakeClient}
+			Expect(SetKeepObjects(ctx, errClient, namespace, name, true)).To(MatchError(fakeErr))
 		})
 	})
 
