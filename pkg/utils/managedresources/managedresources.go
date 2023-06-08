@@ -21,6 +21,8 @@ import (
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
@@ -99,12 +101,13 @@ func NewForSeed(c client.Client, namespace, name string, keepObjects bool) *buil
 	return New(c, namespace, name, v1beta1constants.SeedResourceManagerClass, &keepObjects, labels, nil, nil)
 }
 
-// NewSecret initiates a new Secret object which can be reconciled.
+// NewSecret initiates a new immutable Secret object which can be reconciled.
 func NewSecret(client client.Client, namespace, name string, data map[string][]byte, secretNameWithPrefix bool) (string, *builder.Secret) {
 	secretName := SecretName(name, secretNameWithPrefix)
-	return secretName, builder.NewSecret(client).
+	return builder.NewSecret(client).
 		WithNamespacedName(namespace, secretName).
-		WithKeyValues(data)
+		WithKeyValues(data).
+		Unique()
 }
 
 // CreateFromUnstructured creates a managed resource and its secret with the given name, class, and objects in the given namespace.
@@ -186,20 +189,43 @@ func deployManagedResource(ctx context.Context, secret *builder.Secret, managedR
 	return nil
 }
 
-// Delete deletes the managed resource and its secret with the given name in the given namespace.
-func Delete(ctx context.Context, client client.Client, namespace string, name string, secretNameWithPrefix bool) error {
+// Delete deletes the managed resource and its secrets with the given name in the given namespace.
+func Delete(ctx context.Context, c client.Client, namespace string, name string, secretNameWithPrefix bool) error {
 	secretName := SecretName(name, secretNameWithPrefix)
 
-	if err := builder.NewManagedResource(client).
-		WithNamespacedName(namespace, name).
-		Delete(ctx); err != nil {
-		return fmt.Errorf("could not delete managed resource '%s/%s': %w", namespace, name, err)
+	mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}
+	mrKey := client.ObjectKeyFromObject(mr)
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: namespace}}
+
+	err := c.Get(ctx, mrKey, mr)
+	if err != nil && apierrors.IsNotFound(err) {
+		// just try to delete the secret with generated name
+		if err := client.IgnoreNotFound(c.Delete(ctx, secret)); err != nil {
+			return fmt.Errorf("could not delete secret '%s' of managed resource: %w", client.ObjectKeyFromObject(secret).String(), err)
+		}
+	} else if err != nil {
+		return fmt.Errorf("could not get managed resource '%s': %w", mrKey.String(), err)
 	}
 
-	if err := builder.NewSecret(client).
-		WithNamespacedName(namespace, secretName).
-		Delete(ctx); err != nil {
-		return fmt.Errorf("could not delete secret '%s/%s' of managed resource: %w", namespace, secretName, err)
+	secretsToDelete := []*corev1.Secret{secret}
+	for _, secretRef := range mr.Spec.SecretRefs {
+		secretsToDelete = append(secretsToDelete, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+			Name:      secretRef.Name,
+			Namespace: namespace,
+		}})
+	}
+
+	// Delete the secrets first so we do not lose reference to them
+	// in case the mr gets deleted and something fails immediately after that.
+	// Finalizers should prevent the deletion of the secrets before the managed resource is deleted.
+	for _, s := range secretsToDelete {
+		if err := client.IgnoreNotFound(c.Delete(ctx, s)); err != nil {
+			return fmt.Errorf("could not delete secret '%s' of managed resource: %w", client.ObjectKeyFromObject(s).String(), err)
+		}
+	}
+
+	if err := client.IgnoreNotFound(c.Delete(ctx, mr)); err != nil {
+		return fmt.Errorf("could not delete managed resource '%s': %w", mrKey.String(), err)
 	}
 
 	return nil

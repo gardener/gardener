@@ -35,8 +35,10 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/managedresources"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("managedresources", func() {
@@ -63,12 +65,21 @@ var _ = Describe("managedresources", func() {
 				},
 			}
 		}
+
+		fakeClient client.Client
+		mr         *resourcesv1alpha1.ManagedResource
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 
 		c = mockclient.NewMockClient(ctrl)
+
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		mr = &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		}}
 	})
 
 	Describe("#NewForShoot", func() {
@@ -105,210 +116,198 @@ var _ = Describe("managedresources", func() {
 	})
 
 	Describe("#CreateForShoot", func() {
-		It("should return the error of the secret reconciliation", func() {
-			gomock.InOrder(
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
-			)
-
-			Expect(CreateForShoot(ctx, c, namespace, name, LabelValueGardener, keepObjects, data)).To(MatchError(fakeErr))
-		})
-
-		It("should return the error of the managed resource reconciliation", func() {
-			gomock.InOrder(
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
-			)
-
-			Expect(CreateForShoot(ctx, c, namespace, name, LabelValueGardener, keepObjects, data)).To(MatchError(fakeErr))
-		})
-
 		It("should successfully create secret and managed resource", func() {
-			gomock.InOrder(
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Update(ctx, &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "managedresource-" + name,
-						Namespace: namespace,
-					},
-					Type: corev1.SecretTypeOpaque,
-					Data: data,
-				}),
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-				c.EXPECT().Update(ctx, &resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      name,
-						Namespace: namespace,
-						Labels:    map[string]string{"origin": "gardener"},
-					},
-					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						SecretRefs:   []corev1.LocalObjectReference{{Name: "managedresource-" + name}},
-						KeepObjects:  pointer.Bool(keepObjects),
-						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-					},
-				}),
-			)
+			secretName, _ := NewSecret(fakeClient, namespace, name, data, true)
+			expectedMR := &resourcesv1alpha1.ManagedResource{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ManagedResource",
+					APIVersion: "resources.gardener.cloud/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            name,
+					Namespace:       namespace,
+					ResourceVersion: "1",
+					Labels:          map[string]string{"origin": "gardener"},
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					SecretRefs:   []corev1.LocalObjectReference{{Name: secretName}},
+					KeepObjects:  pointer.Bool(keepObjects),
+					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+				},
+			}
 
-			Expect(CreateForShoot(ctx, c, namespace, name, LabelValueGardener, keepObjects, data)).To(Succeed())
+			Expect(references.InjectAnnotations(expectedMR)).To(Succeed())
+
+			Expect(CreateForShoot(ctx, fakeClient, namespace, name, LabelValueGardener, keepObjects, data)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
+			Expect(mr).To(Equal(expectedMR))
+
+			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+				Name:      secretName,
+				Namespace: namespace,
+			}}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			Expect(secret).To(Equal(&corev1.Secret{
+				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            secretName,
+					Namespace:       namespace,
+					ResourceVersion: "2",
+					Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+				},
+				Data:      data,
+				Immutable: pointer.Bool(true),
+				Type:      corev1.SecretTypeOpaque,
+			}))
 		})
 	})
 
 	Describe("#DeleteForShoot", func() {
-		var (
-			secret          = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "managedresource-" + name}}
-			managedResource = &resourcesv1alpha1.ManagedResource{
+		It("should successfully delete all related resources", func() {
+			secret1 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-" + name, Namespace: namespace}}
+			secret2 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-" + name, Namespace: namespace}}
+			Expect(kubernetesutils.MakeUnique(secret2)).To(Succeed())
+
+			mr := &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
 				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					// Reference only the second secret
+					// The delete function should delete both secrets for backwards compatible reasons
+					SecretRefs: []corev1.LocalObjectReference{{Name: secret2.Name}},
+				},
 			}
-		)
 
-		It("should fail when the managed resource cannot be deleted", func() {
-			gomock.InOrder(
-				c.EXPECT().Delete(ctx, managedResource).Return(fakeErr),
-			)
+			for _, o := range []client.Object{secret1, secret2, mr} {
+				Expect(fakeClient.Create(ctx, o)).To(Succeed())
+			}
 
-			Expect(DeleteForShoot(ctx, c, namespace, name)).To(MatchError(fakeErr))
-		})
+			Expect(DeleteForShoot(ctx, fakeClient, namespace, name)).To(Succeed())
 
-		It("should fail when the secret cannot be deleted", func() {
-			gomock.InOrder(
-				c.EXPECT().Delete(ctx, managedResource),
-				c.EXPECT().Delete(ctx, secret).Return(fakeErr),
-			)
-
-			Expect(DeleteForShoot(ctx, c, namespace, name)).To(MatchError(fakeErr))
-		})
-
-		It("should successfully delete all related resources", func() {
-			gomock.InOrder(
-				c.EXPECT().Delete(ctx, managedResource),
-				c.EXPECT().Delete(ctx, secret),
-			)
-
-			Expect(DeleteForShoot(ctx, c, namespace, name)).To(Succeed())
+			for _, o := range []client.Object{secret1, secret2, mr} {
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(o), o)).To(BeNotFoundError())
+			}
 		})
 	})
 
 	Describe("#CreateForSeed", func() {
-		It("should return the error of the secret reconciliation", func() {
-			gomock.InOrder(
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
-			)
 
-			Expect(CreateForSeed(ctx, c, namespace, name, keepObjects, data)).To(MatchError(fakeErr))
-		})
+		var (
+			secretName string
+			expectedMR *resourcesv1alpha1.ManagedResource
+		)
 
-		It("should return the error of the managed resource reconciliation", func() {
-			gomock.InOrder(
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
-			)
-
-			Expect(CreateForSeed(ctx, c, namespace, name, keepObjects, data)).To(MatchError(fakeErr))
+		BeforeEach(func() {
+			secretName, _ = NewSecret(fakeClient, namespace, name, data, true)
+			expectedMR = &resourcesv1alpha1.ManagedResource{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ManagedResource",
+					APIVersion: "resources.gardener.cloud/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            name,
+					Namespace:       namespace,
+					ResourceVersion: "1",
+					Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					SecretRefs:  []corev1.LocalObjectReference{{Name: secretName}},
+					KeepObjects: pointer.Bool(keepObjects),
+					Class:       pointer.String("seed"),
+				},
+			}
 		})
 
 		It("should successfully create secret and managed resource", func() {
-			gomock.InOrder(
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Update(ctx, &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "managedresource-" + name,
-						Namespace: namespace,
-					},
-					Type: corev1.SecretTypeOpaque,
-					Data: data,
-				}),
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-				c.EXPECT().Update(ctx, &resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      name,
-						Namespace: namespace,
-						Labels:    map[string]string{"gardener.cloud/role": "seed-system-component"},
-					},
-					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						SecretRefs:  []corev1.LocalObjectReference{{Name: "managedresource-" + name}},
-						KeepObjects: pointer.Bool(keepObjects),
-						Class:       pointer.String("seed"),
-					},
-				}),
-			)
+			Expect(references.InjectAnnotations(expectedMR)).To(Succeed())
 
-			Expect(CreateForSeed(ctx, c, namespace, name, keepObjects, data)).To(Succeed())
+			Expect(CreateForSeed(ctx, fakeClient, namespace, name, keepObjects, data)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
+			Expect(mr).To(Equal(expectedMR))
+
+			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+				Name:      secretName,
+				Namespace: namespace,
+			}}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			Expect(secret).To(Equal(&corev1.Secret{
+				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            secretName,
+					Namespace:       namespace,
+					ResourceVersion: "2",
+					Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+				},
+				Data:      data,
+				Immutable: pointer.Bool(true),
+				Type:      corev1.SecretTypeOpaque,
+			}))
 		})
 
 		It("should successfully create secret and managed resource if the namespace is 'shoot--foo--bar'", func() {
 			namespace := "shoot--foo--bar"
+			secretName, _ := NewSecret(fakeClient, namespace, name, data, true)
+			expectedMR.Namespace = namespace
+			expectedMR.Labels = nil
+			expectedMR.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: secretName}}
+			Expect(references.InjectAnnotations(expectedMR)).To(Succeed())
 
-			gomock.InOrder(
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Update(ctx, &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "managedresource-" + name,
-						Namespace: namespace,
-					},
-					Type: corev1.SecretTypeOpaque,
-					Data: data,
-				}),
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, name), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-				c.EXPECT().Update(ctx, &resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      name,
-						Namespace: namespace,
-					},
-					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						SecretRefs:  []corev1.LocalObjectReference{{Name: "managedresource-" + name}},
-						KeepObjects: pointer.Bool(keepObjects),
-						Class:       pointer.String("seed"),
-					},
-				}),
-			)
+			mr.Namespace = namespace
 
-			Expect(CreateForSeed(ctx, c, namespace, name, keepObjects, data)).To(Succeed())
+			Expect(CreateForSeed(ctx, fakeClient, namespace, name, keepObjects, data)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
+			Expect(mr).To(Equal(expectedMR))
+
+			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+				Name:      secretName,
+				Namespace: namespace,
+			}}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			Expect(secret).To(Equal(&corev1.Secret{
+				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            secretName,
+					Namespace:       namespace,
+					ResourceVersion: "2",
+					Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+				},
+				Data:      data,
+				Immutable: pointer.Bool(true),
+				Type:      corev1.SecretTypeOpaque,
+			}))
 		})
 	})
 
 	Describe("#DeleteForSeed", func() {
-		var (
-			secret          = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "managedresource-" + name}}
-			managedResource = &resourcesv1alpha1.ManagedResource{
+		It("should successfully delete all related resources", func() {
+			secret1 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-" + name, Namespace: namespace}}
+			secret2 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-" + name, Namespace: namespace}}
+			Expect(kubernetesutils.MakeUnique(secret2)).To(Succeed())
+
+			mr := &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
 				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					// Reference only the second secret
+					// The delete function should delete both secrets for backwards compatible reasons
+					SecretRefs: []corev1.LocalObjectReference{{Name: secret2.Name}},
+				},
 			}
-		)
 
-		It("should fail when the managed resource cannot be deleted", func() {
-			gomock.InOrder(
-				c.EXPECT().Delete(ctx, managedResource).Return(fakeErr),
-			)
+			for _, o := range []client.Object{secret1, secret2, mr} {
+				Expect(fakeClient.Create(ctx, o)).To(Succeed())
+			}
 
-			Expect(DeleteForSeed(ctx, c, namespace, name)).To(MatchError(fakeErr))
-		})
+			Expect(DeleteForSeed(ctx, fakeClient, namespace, name)).To(Succeed())
 
-		It("should fail when the secret cannot be deleted", func() {
-			gomock.InOrder(
-				c.EXPECT().Delete(ctx, managedResource),
-				c.EXPECT().Delete(ctx, secret).Return(fakeErr),
-			)
-
-			Expect(DeleteForSeed(ctx, c, namespace, name)).To(MatchError(fakeErr))
-		})
-
-		It("should successfully delete all related resources", func() {
-			gomock.InOrder(
-				c.EXPECT().Delete(ctx, managedResource),
-				c.EXPECT().Delete(ctx, secret),
-			)
-
-			Expect(DeleteForSeed(ctx, c, namespace, name)).To(Succeed())
+			for _, o := range []client.Object{secret1, secret2, mr} {
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(o), o)).To(BeNotFoundError())
+			}
 		})
 	})
 
