@@ -130,7 +130,11 @@ func CreateFromUnstructured(
 		data = append(data, []byte("\n---\n")...)
 		data = append(data, bytes...)
 	}
-	return Create(ctx, client, namespace, name, nil, secretNameWithPrefix, class, map[string][]byte{name: data}, &keepObjects, injectedLabels, pointer.Bool(false))
+	dataMap := map[string][]byte{}
+	if len(data) > 0 {
+		dataMap[name] = data
+	}
+	return Create(ctx, client, namespace, name, nil, secretNameWithPrefix, class, dataMap, &keepObjects, injectedLabels, pointer.Bool(false))
 }
 
 // Create creates a managed resource and its secret with the given name, class, key, and data in the given namespace.
