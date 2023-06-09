@@ -170,6 +170,10 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			}).Should(Succeed())
 
 			By("Ensure chart was deployed correctly")
+			// Note that the list of feature gates is unexpectedly longer than in reality since the envtest starts
+			// gardener-apiserver which adds its own as well as the default Kubernetes features gates to the same
+			// map that is reused in gardenlet:
+			// `features.DefaultFeatureGate` is the same as `utilfeature.DefaultMutableFeatureGate`
 			Eventually(func(g Gomega) string {
 				managedResource := &resourcesv1alpha1.ManagedResource{}
 				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: "garden", Name: controllerInstallation.Name}, managedResource)).To(Succeed())
@@ -184,6 +188,42 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			}).Should(Equal(`gardener:
   garden:
     clusterIdentity: ` + gardenClusterIdentity + `
+  gardenlet:
+    featureGates:
+      APIListChunking: true
+      APIPriorityAndFairness: true
+      APIResponseCompression: true
+      APIServerIdentity: true
+      APIServerSNI: true
+      APIServerTracing: false
+      AdvancedAuditing: true
+      AggregatedDiscoveryEndpoint: false
+      AllAlpha: false
+      AllBeta: false
+      ComponentSLIs: false
+      CoreDNSQueryRewriting: false
+      CustomResourceValidationExpressions: true
+      DefaultSeccompProfile: false
+      DryRun: true
+      EfficientWatchResumption: true
+      FullNetworkPoliciesInRuntimeCluster: true
+      HAControlPlanes: true
+      HVPA: false
+      HVPAForShootedSeed: false
+      IPv6SingleStack: false
+      KMSv2: false
+      MutableShootSpecNetworkingNodes: false
+      OpenAPIEnums: true
+      OpenAPIV3: true
+      RemainingItemCount: true
+      RemoveSelfLink: true
+      ServerSideApply: true
+      ServerSideFieldValidation: true
+      StorageVersionAPI: false
+      StorageVersionHash: true
+      ValidatingAdmissionPolicy: false
+      WatchBookmark: true
+      WorkerlessShoots: false
   seed:
     annotations: null
     blockCIDRs: null

@@ -27,6 +27,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/component-base/featuregate"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -39,6 +40,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	ctrlinstutils "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/utils"
 	"github.com/gardener/gardener/pkg/utils"
@@ -171,6 +173,10 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
+	if seed.Status.ClusterIdentity == nil {
+		return reconcile.Result{}, fmt.Errorf("cluster-identity of seed '%s' not set", seed.Name)
+	}
+
 	var (
 		volumeProvider  string
 		volumeProviders []gardencorev1beta1.SeedVolumeProvider
@@ -183,10 +189,10 @@ func (r *Reconciler) reconcile(
 		}
 	}
 
-	if seed.Status.ClusterIdentity == nil {
-		return reconcile.Result{}, fmt.Errorf("cluster-identity of seed '%s' not set", seed.Name)
+	featureToEnabled := make(map[featuregate.Feature]bool)
+	for feature := range features.DefaultFeatureGate.GetAll() {
+		featureToEnabled[feature] = features.DefaultFeatureGate.Enabled(feature)
 	}
-	seedClusterIdentity := *seed.Status.ClusterIdentity
 
 	// Mix-in some standard values for garden and seed.
 	gardenerValues := map[string]interface{}{
@@ -197,7 +203,7 @@ func (r *Reconciler) reconcile(
 			},
 			"seed": map[string]interface{}{
 				"name":            seed.Name,
-				"clusterIdentity": seedClusterIdentity,
+				"clusterIdentity": *seed.Status.ClusterIdentity,
 				"annotations":     seed.Annotations,
 				"labels":          seed.Labels,
 				"provider":        seed.Spec.Provider.Type,
@@ -211,6 +217,9 @@ func (r *Reconciler) reconcile(
 				"networks":        seed.Spec.Networks,
 				"blockCIDRs":      seed.Spec.Networks.BlockCIDRs,
 				"spec":            seed.Spec,
+			},
+			"gardenlet": map[string]interface{}{
+				"featureGates": featureToEnabled,
 			},
 		},
 	}
