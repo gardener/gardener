@@ -199,7 +199,7 @@ echo "Create host and client keys for SSH reverse tunnel"
 "$SCRIPT_DIR"/../ssh-reverse-tunnel/create-client-keys.sh "$seed_name" "$relay_domain"
 
 echo "Deploying kyverno, SSH reverse tunnel and container registry"
-kubectl --server-side=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../kyverno
+kubectl --server-side=true --force-conflicts=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../kyverno
 until kubectl --kubeconfig "$seed_kubeconfig" get clusterpolicies.kyverno.io ; do date; sleep 1; echo ""; done
 kubectl --server-side=true --force-conflicts=true --kubeconfig "$seed_kubeconfig" apply -k "$SCRIPT_DIR"/../kyverno-policies
 kubectl --server-side=true --kubeconfig "$seed_kubeconfig" apply -k "$seed_base_dir"/sshd
