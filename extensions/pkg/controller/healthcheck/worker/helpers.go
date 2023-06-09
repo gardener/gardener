@@ -16,70 +16,14 @@ package worker
 
 import (
 	"fmt"
-	"strings"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
-
-var (
-	trueMachineDeploymentConditionTypes = []machinev1alpha1.MachineDeploymentConditionType{
-		machinev1alpha1.MachineDeploymentAvailable,
-	}
-
-	trueOptionalMachineDeploymentConditionTypes = []machinev1alpha1.MachineDeploymentConditionType{
-		machinev1alpha1.MachineDeploymentProgressing,
-	}
-
-	falseMachineDeploymentConditionTypes = []machinev1alpha1.MachineDeploymentConditionType{
-		machinev1alpha1.MachineDeploymentReplicaFailure,
-		machinev1alpha1.MachineDeploymentFrozen,
-	}
-)
-
-// CheckMachineDeployment checks whether the given MachineDeployment is healthy.
-// A MachineDeployment is considered healthy if its controller observed its current revision and if
-// its desired number of replicas is equal to its updated replicas.
-func CheckMachineDeployment(deployment *machinev1alpha1.MachineDeployment) error {
-	if deployment.Status.ObservedGeneration < deployment.Generation {
-		return fmt.Errorf("observed generation outdated (%d/%d)", deployment.Status.ObservedGeneration, deployment.Generation)
-	}
-
-	for _, trueConditionType := range trueMachineDeploymentConditionTypes {
-		condition := getMachineDeploymentCondition(deployment.Status.Conditions, trueConditionType)
-		if condition == nil {
-			return requiredConditionMissing(trueConditionType)
-		}
-		if err := checkConditionStatus(condition, machinev1alpha1.ConditionTrue); err != nil {
-			return err
-		}
-	}
-
-	for _, trueOptionalConditionType := range trueOptionalMachineDeploymentConditionTypes {
-		condition := getMachineDeploymentCondition(deployment.Status.Conditions, trueOptionalConditionType)
-		if condition == nil {
-			continue
-		}
-		if err := checkConditionStatus(condition, machinev1alpha1.ConditionTrue); err != nil {
-			return err
-		}
-	}
-
-	for _, falseConditionType := range falseMachineDeploymentConditionTypes {
-		condition := getMachineDeploymentCondition(deployment.Status.Conditions, falseConditionType)
-		if condition == nil {
-			continue
-		}
-		if err := checkConditionStatus(condition, machinev1alpha1.ConditionFalse); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
 
 func checkMachineDeploymentsHealthy(machineDeployments []machinev1alpha1.MachineDeployment) (bool, error) {
 	for _, deployment := range machineDeployments {
@@ -87,7 +31,7 @@ func checkMachineDeploymentsHealthy(machineDeployments []machinev1alpha1.Machine
 			return false, fmt.Errorf("machine %q failed: %s", failedMachine.Name, failedMachine.LastOperation.Description)
 		}
 
-		if err := CheckMachineDeployment(&deployment); err != nil {
+		if err := health.CheckMachineDeployment(&deployment); err != nil {
 			return false, fmt.Errorf("machine deployment %q in namespace %q is unhealthy: %w", deployment.Name, deployment.Namespace, err)
 		}
 	}
@@ -176,26 +120,6 @@ func getDesiredMachineCount(machineDeployments []machinev1alpha1.MachineDeployme
 		}
 	}
 	return desiredMachines
-}
-
-func checkConditionStatus(condition *machinev1alpha1.MachineDeploymentCondition, expectedStatus machinev1alpha1.ConditionStatus) error {
-	if condition.Status != expectedStatus {
-		return fmt.Errorf("%s (%s)", strings.Trim(condition.Message, "."), condition.Reason)
-	}
-	return nil
-}
-
-func getMachineDeploymentCondition(conditions []machinev1alpha1.MachineDeploymentCondition, conditionType machinev1alpha1.MachineDeploymentConditionType) *machinev1alpha1.MachineDeploymentCondition {
-	for _, condition := range conditions {
-		if condition.Type == conditionType {
-			return &condition
-		}
-	}
-	return nil
-}
-
-func requiredConditionMissing(conditionType machinev1alpha1.MachineDeploymentConditionType) error {
-	return fmt.Errorf("condition %q is missing", conditionType)
 }
 
 func cosmeticMachineMessage(numberOfMachines int) string {

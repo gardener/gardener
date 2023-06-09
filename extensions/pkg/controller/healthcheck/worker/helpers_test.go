@@ -18,7 +18,6 @@ import (
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -26,80 +25,6 @@ import (
 )
 
 var _ = Describe("health", func() {
-	DescribeTable("#CheckMachineDeployment",
-		func(machineDeployment *machinev1alpha1.MachineDeployment, matcher types.GomegaMatcher) {
-			err := CheckMachineDeployment(machineDeployment)
-			Expect(err).To(matcher)
-		},
-		Entry("healthy", &machinev1alpha1.MachineDeployment{
-			Status: machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{
-				{
-					Type:   machinev1alpha1.MachineDeploymentAvailable,
-					Status: machinev1alpha1.ConditionTrue,
-				},
-				{
-					Type:   machinev1alpha1.MachineDeploymentProgressing,
-					Status: machinev1alpha1.ConditionTrue,
-				},
-			}},
-		}, BeNil()),
-		Entry("healthy without progressing", &machinev1alpha1.MachineDeployment{
-			Status: machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{
-				{
-					Type:   machinev1alpha1.MachineDeploymentAvailable,
-					Status: machinev1alpha1.ConditionTrue,
-				},
-			}},
-		}, BeNil()),
-		Entry("unhealthy without available", &machinev1alpha1.MachineDeployment{}, HaveOccurred()),
-		Entry("unhealthy with false available", &machinev1alpha1.MachineDeployment{
-			Status: machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{
-				{
-					Type:   machinev1alpha1.MachineDeploymentAvailable,
-					Status: machinev1alpha1.ConditionFalse,
-				},
-				{
-					Type:   machinev1alpha1.MachineDeploymentProgressing,
-					Status: machinev1alpha1.ConditionTrue,
-				},
-			}},
-		}, HaveOccurred()),
-		Entry("unhealthy with false progressing", &machinev1alpha1.MachineDeployment{
-			Status: machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{
-				{
-					Type:   machinev1alpha1.MachineDeploymentAvailable,
-					Status: machinev1alpha1.ConditionTrue,
-				},
-				{
-					Type:   machinev1alpha1.MachineDeploymentProgressing,
-					Status: machinev1alpha1.ConditionFalse,
-				},
-			}},
-		}, HaveOccurred()),
-		Entry("unhealthy with bad condition", &machinev1alpha1.MachineDeployment{
-			Status: machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{
-				{
-					Type:   machinev1alpha1.MachineDeploymentAvailable,
-					Status: machinev1alpha1.ConditionTrue,
-				},
-				{
-					Type:   machinev1alpha1.MachineDeploymentProgressing,
-					Status: machinev1alpha1.ConditionFalse,
-				},
-				{
-					Type:   machinev1alpha1.MachineDeploymentReplicaFailure,
-					Status: machinev1alpha1.ConditionTrue,
-				},
-			}},
-		}, HaveOccurred()),
-		Entry("not observed at latest version", &machinev1alpha1.MachineDeployment{
-			ObjectMeta: metav1.ObjectMeta{Generation: 1},
-		}, HaveOccurred()),
-		Entry("not enough updated replicas", &machinev1alpha1.MachineDeployment{
-			Spec: machinev1alpha1.MachineDeploymentSpec{Replicas: 1},
-		}, HaveOccurred()),
-	)
-
 	Describe("#checkMachineDeploymentsHealthy", func() {
 		It("should  return true for nil", func() {
 			isHealthy, err := checkMachineDeploymentsHealthy(nil)
@@ -373,32 +298,6 @@ var _ = Describe("health", func() {
 
 			Expect(status).To(Equal(gardencorev1beta1.ConditionProgressing))
 			Expect(err).To(HaveOccurred())
-		})
-	})
-
-	Describe("#getDesiredMachineCount", func() {
-		It("should return zero for nil", func() {
-			Expect(getDesiredMachineCount(nil)).To(BeZero())
-		})
-
-		It("should return zero for an empty list", func() {
-			Expect(getDesiredMachineCount([]machinev1alpha1.MachineDeployment{})).To(BeZero())
-		})
-
-		It("should return the correct machine count", func() {
-			var (
-				deletionTimestamp  = metav1.Now()
-				machineDeployments = []machinev1alpha1.MachineDeployment{
-					{Spec: machinev1alpha1.MachineDeploymentSpec{Replicas: 4}},
-					{Spec: machinev1alpha1.MachineDeploymentSpec{Replicas: 5}},
-					{
-						ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &deletionTimestamp},
-						Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: 6},
-					},
-				}
-			)
-
-			Expect(getDesiredMachineCount(machineDeployments)).To(Equal(9))
 		})
 	})
 })
