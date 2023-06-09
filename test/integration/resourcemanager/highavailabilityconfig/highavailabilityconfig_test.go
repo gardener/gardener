@@ -434,42 +434,124 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 								})
 							})
 
-							It("should add a node affinity", func() {
-								Expect(getPodSpec().Affinity).To(Equal(&corev1.Affinity{
-									NodeAffinity: &corev1.NodeAffinity{
-										RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
-											NodeSelectorTerms: []corev1.NodeSelectorTerm{
-												{
-													MatchExpressions: []corev1.NodeSelectorRequirement{
+							Context("when correct affinity is already defined", func() {
+								BeforeEach(func() {
+									setPodSpec(func(spec *corev1.PodSpec) {
+										spec.Affinity = &corev1.Affinity{
+											NodeAffinity: &corev1.NodeAffinity{
+												RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+													NodeSelectorTerms: []corev1.NodeSelectorTerm{
 														{
-															Key:      corev1.LabelHostname,
-															Operator: corev1.NodeSelectorOpExists,
-														},
-														{
-															Key:      corev1.LabelTopologyZone,
-															Operator: corev1.NodeSelectorOpIn,
-															Values:   zones,
+															MatchExpressions: []corev1.NodeSelectorRequirement{
+																{
+																	Key:      corev1.LabelHostname,
+																	Operator: corev1.NodeSelectorOpExists,
+																},
+																{
+																	Key:      corev1.LabelTopologyZone,
+																	Operator: corev1.NodeSelectorOpIn,
+																	Values:   zones,
+																},
+															},
 														},
 													},
 												},
-												{
-													MatchExpressions: []corev1.NodeSelectorRequirement{
-														{
-															Key:      "foo",
-															Operator: corev1.NodeSelectorOpNotIn,
-															Values:   []string{"bar"},
-														},
-														{
-															Key:      corev1.LabelTopologyZone,
-															Operator: corev1.NodeSelectorOpIn,
-															Values:   zones,
+											},
+										}
+									})
+								})
+
+								It("should not re-add the same expressions", func() {
+									Expect(getPodSpec().Affinity).To(Equal(&corev1.Affinity{
+										NodeAffinity: &corev1.NodeAffinity{
+											RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+												NodeSelectorTerms: []corev1.NodeSelectorTerm{
+													{
+														MatchExpressions: []corev1.NodeSelectorRequirement{
+															{
+																Key:      corev1.LabelHostname,
+																Operator: corev1.NodeSelectorOpExists,
+															},
+															{
+																Key:      corev1.LabelTopologyZone,
+																Operator: corev1.NodeSelectorOpIn,
+																Values:   zones,
+															},
 														},
 													},
 												},
 											},
 										},
-									},
-								}))
+									}))
+								})
+							})
+
+							Context("when correct affinities are already defined", func() {
+								BeforeEach(func() {
+									setPodSpec(func(spec *corev1.PodSpec) {
+										spec.Affinity = &corev1.Affinity{
+											NodeAffinity: &corev1.NodeAffinity{
+												RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+													NodeSelectorTerms: []corev1.NodeSelectorTerm{
+														{
+															MatchExpressions: []corev1.NodeSelectorRequirement{
+																{
+																	Key:      corev1.LabelHostname,
+																	Operator: corev1.NodeSelectorOpExists,
+																},
+																{
+																	Key:      corev1.LabelTopologyZone,
+																	Operator: corev1.NodeSelectorOpIn,
+																	Values:   zones,
+																},
+															},
+														},
+														{
+															MatchExpressions: []corev1.NodeSelectorRequirement{{
+																Key:      corev1.LabelTopologyZone,
+																Operator: corev1.NodeSelectorOpIn,
+																Values:   zones,
+															}},
+														},
+													},
+												},
+											},
+										}
+									})
+								})
+
+								It("should not re-add the same expressions", func() {
+									Expect(getPodSpec().Affinity).To(Equal(&corev1.Affinity{
+										NodeAffinity: &corev1.NodeAffinity{
+											RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+												NodeSelectorTerms: []corev1.NodeSelectorTerm{
+													{
+														MatchExpressions: []corev1.NodeSelectorRequirement{
+															{
+																Key:      corev1.LabelHostname,
+																Operator: corev1.NodeSelectorOpExists,
+															},
+															{
+																Key:      corev1.LabelTopologyZone,
+																Operator: corev1.NodeSelectorOpIn,
+																Values:   zones,
+															},
+														},
+													},
+													{
+														MatchExpressions: []corev1.NodeSelectorRequirement{
+															{
+																Key:      corev1.LabelTopologyZone,
+																Operator: corev1.NodeSelectorOpIn,
+																Values:   zones,
+															},
+														},
+													},
+												},
+											},
+										},
+									}))
+								})
 							})
 						})
 					})
@@ -743,14 +825,12 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 					})
 
 					Context("when 'not-ready' toleration exists", func() {
-						existingTolerations := []corev1.Toleration{
-							corev1.Toleration{
-								Key:               "node.kubernetes.io/not-ready",
-								Operator:          "Exists",
-								Effect:            "NoExecute",
-								TolerationSeconds: pointer.Int64(300),
-							},
-						}
+						existingTolerations := []corev1.Toleration{{
+							Key:               "node.kubernetes.io/not-ready",
+							Operator:          "Exists",
+							Effect:            "NoExecute",
+							TolerationSeconds: pointer.Int64(300),
+						}}
 
 						BeforeEach(func() {
 							setPodSpec(func(spec *corev1.PodSpec) {
@@ -777,14 +857,12 @@ var _ = Describe("HighAvailabilityConfig tests", func() {
 					})
 
 					Context("when 'unreachable' toleration exists", func() {
-						existingTolerations := []corev1.Toleration{
-							corev1.Toleration{
-								Key:               "node.kubernetes.io/unreachable",
-								Operator:          "Exists",
-								Effect:            "NoExecute",
-								TolerationSeconds: pointer.Int64(300),
-							},
-						}
+						existingTolerations := []corev1.Toleration{{
+							Key:               "node.kubernetes.io/unreachable",
+							Operator:          "Exists",
+							Effect:            "NoExecute",
+							TolerationSeconds: pointer.Int64(300),
+						}}
 
 						BeforeEach(func() {
 							setPodSpec(func(spec *corev1.PodSpec) {
