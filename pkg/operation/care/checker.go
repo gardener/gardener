@@ -613,20 +613,20 @@ func (b *HealthChecker) CheckClusterNodes(
 		return nil, err
 	}
 
-	for _, worker := range workers {
-		nodes := workerPoolToNodes[worker.Name]
+	for _, pool := range workers {
+		nodes := workerPoolToNodes[pool.Name]
 
-		kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(b.kubernetesVersion, worker.Kubernetes)
+		kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(b.kubernetesVersion, pool.Kubernetes)
 		if err != nil {
 			return nil, err
 		}
 
-		if exitCondition := b.checkNodes(condition, nodes, worker.Name, kubernetesVersion); exitCondition != nil {
+		if exitCondition := b.checkNodes(condition, nodes, pool.Name, kubernetesVersion); exitCondition != nil {
 			return exitCondition, nil
 		}
 
-		if len(nodes) < int(worker.Minimum) {
-			c := b.FailedCondition(condition, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool %q to meet minimum desired machine count. (%d/%d).", worker.Name, len(nodes), worker.Minimum))
+		if len(nodes) < int(pool.Minimum) {
+			c := b.FailedCondition(condition, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool %q to meet minimum desired machine count. (%d/%d).", pool.Name, len(nodes), pool.Minimum))
 			return &c, nil
 		}
 	}
