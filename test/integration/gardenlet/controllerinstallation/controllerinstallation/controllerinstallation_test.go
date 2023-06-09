@@ -154,6 +154,116 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			}).Should(ConsistOf("core.gardener.cloud/controllerinstallation"))
 		})
 
+		It("should create a namespace and deploy the chart", func() {
+			By("Ensure namespace was created")
+			namespace := &corev1.Namespace{}
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "extension-" + controllerInstallation.Name}, namespace)).To(Succeed())
+				g.Expect(namespace.Labels).To(And(
+					HaveKeyWithValue("gardener.cloud/role", "extension"),
+					HaveKeyWithValue("controllerregistration.core.gardener.cloud/name", controllerRegistration.Name),
+					HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
+				))
+				g.Expect(namespace.Annotations).To(And(
+					HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b,c"),
+				))
+			}).Should(Succeed())
+
+			By("Ensure chart was deployed correctly")
+			Eventually(func(g Gomega) string {
+				managedResource := &resourcesv1alpha1.ManagedResource{}
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: "garden", Name: controllerInstallation.Name}, managedResource)).To(Succeed())
+
+				secret := &corev1.Secret{}
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: managedResource.Namespace, Name: managedResource.Spec.SecretRefs[0].Name}, secret)).To(Succeed())
+
+				configMap := &corev1.ConfigMap{}
+				Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_config.yaml"], configMap)).To(Succeed())
+
+				return configMap.Data["values"]
+			}).Should(Equal(`gardener:
+  garden:
+    clusterIdentity: ` + gardenClusterIdentity + `
+  seed:
+    annotations: null
+    blockCIDRs: null
+    clusterIdentity: ` + seedClusterIdentity + `
+    ingressDomain: ` + seed.Spec.Ingress.Domain + `
+    labels:
+      ` + testID + `: ` + testRunID + `
+      dnsrecord.extensions.gardener.cloud/` + seed.Spec.DNS.Provider.Type + `: "true"
+      provider.extensions.gardener.cloud/` + seed.Spec.Provider.Type + `: "true"
+    name: ` + seed.Name + `
+    networks:
+      ipFamilies:
+      - IPv4
+      nodes: ` + *seed.Spec.Networks.Nodes + `
+      pods: ` + seed.Spec.Networks.Pods + `
+      services: ` + seed.Spec.Networks.Services + `
+    protected: false
+    provider: ` + seed.Spec.Provider.Type + `
+    region: ` + seed.Spec.Provider.Region + `
+    spec:
+      dns:
+        provider:
+          secretRef:
+            name: ` + seed.Spec.DNS.Provider.SecretRef.Name + `
+            namespace: ` + seed.Spec.DNS.Provider.SecretRef.Namespace + `
+          type: ` + seed.Spec.DNS.Provider.Type + `
+      ingress:
+        controller:
+          kind: ` + seed.Spec.Ingress.Controller.Kind + `
+        domain: ` + seed.Spec.Ingress.Domain + `
+      networks:
+        ipFamilies:
+        - IPv4
+        nodes: ` + *seed.Spec.Networks.Nodes + `
+        pods: ` + seed.Spec.Networks.Pods + `
+        services: ` + seed.Spec.Networks.Services + `
+      provider:
+        region: ` + seed.Spec.Provider.Region + `
+        type: ` + seed.Spec.Provider.Type + `
+        zones:
+        - a
+        - b
+        - c
+      settings:
+        dependencyWatchdog:
+          endpoint:
+            enabled: true
+          probe:
+            enabled: true
+          prober:
+            enabled: true
+          weeder:
+            enabled: true
+        excessCapacityReservation:
+          enabled: true
+        ownerChecks:
+          enabled: false
+        scheduling:
+          visible: true
+        topologyAwareRouting:
+          enabled: false
+        verticalPodAutoscaler:
+          enabled: true
+    taints: null
+    visible: true
+    volumeProvider: ""
+    volumeProviders: null
+  version: 1.2.3
+`))
+
+			By("Ensure conditions are maintained correctly")
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
+				return controllerInstallation.Status.Conditions
+			}).Should(And(
+				ContainCondition(OfType(gardencorev1beta1.ControllerInstallationValid), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("RegistrationValid")),
+				ContainCondition(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("InstallationPending")),
+			))
+		})
+
 		It("should properly clean up on ControllerInstallation deletion", func() {
 			var (
 				namespace       = &corev1.Namespace{}
