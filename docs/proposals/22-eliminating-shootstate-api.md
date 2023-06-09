@@ -27,7 +27,7 @@ reviewers:
 
 ## Summary
 
-For each `Shoot` resource, `gardenlet` creates a corresponding `ShootState` resource which has the same lifecycle of the `Shoot`.
+For each `Shoot` resource, `gardenlet` creates a corresponding `ShootState` resource which has the same lifecycle as the `Shoot`.
 Today, such resources are used for two purposes:
 
 1. Exposing the client CA certificate and key of the shoot cluster such that the `gardener-apiserver` is able to issue short-lived client certificates via the [`shoots/adminkubeconfig` subresource](../usage/shoot_access.md#shootsadminkubeconfig-subresource).
@@ -177,10 +177,10 @@ Hence, implementing this alternative approach is considered unnecessary.
 
 ## Future Improvements
 
-With [Move `machine-controller-manager` reconciliation responsibility from extensions to `gardenlet` #7594](https://github.com/gardener/gardener/issues/7594), `gardenlet` will become known of the `machine.sapcloud.io/v1alpha1` API used for managing the worker machines of shoot clusters.
+With [Move `machine-controller-manager` reconciliation responsibility from extensions to `gardenlet` #7594](https://github.com/gardener/gardener/issues/7594), `gardenlet` will become aware of the `machine.sapcloud.io/v1alpha1` API used for managing the worker machines of shoot clusters.
 
 This allows to drop the [`Worker` state reconciler](https://github.com/gardener/gardener/blob/master/extensions/pkg/controller/worker/state_reconciler.go) which currently watches all `MachineDeployment`s, `MachineSet`s, and `Machine`s, and replicates their specifications into the `.status.state` of the related `extensions.gardener.cloud/v1alpha1.Worker` resource.
-Instead, `gardenlet` could now collect these resources during the `Migrate` phase itself, effectively compute the necessary `Worker` state, and also restore it during the `Restore` phase.
+Instead, `gardenlet` could then collect these resources during the `Migrate` phase itself, effectively compute the necessary `Worker` state, and also restore it during the `Restore` phase.
 
 With this approach, we could also reduce the load on the seed clusters' API servers since it would no longer be necessary to continuously duplicate the machine-related resources into the `Worker` status.
 For now, this GEP focuses on the `ShootState` API only, but as soon as [Move `machine-controller-manager` reconciliation responsibility from extensions to `gardenlet` #7594](https://github.com/gardener/gardener/issues/7594) has been implemented, we could start looking into this next-step improvement.
