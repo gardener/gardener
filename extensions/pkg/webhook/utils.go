@@ -22,6 +22,7 @@ import (
 	"github.com/coreos/go-systemd/v22/unit"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
@@ -227,6 +228,17 @@ func EnsureNoContainerWithName(items []corev1.Container, name string) []corev1.C
 	return items
 }
 
+// EnsureVPAContainerResourcePolicyWithName ensures that a container policy with a name equal to the name of the given
+// container policy exists in the given slice and is equal to the given container policy.
+func EnsureVPAContainerResourcePolicyWithName(items []vpaautoscalingv1.ContainerResourcePolicy, item vpaautoscalingv1.ContainerResourcePolicy) []vpaautoscalingv1.ContainerResourcePolicy {
+	if i := vpaContainerResourcePolicyWithNameIndex(items, item.ContainerName); i < 0 {
+		items = append(items, item)
+	} else if !reflect.DeepEqual(items[i], item) {
+		items = append(append(items[:i], item), items[i+1:]...)
+	}
+	return items
+}
+
 // EnsurePVCWithName ensures that a PVC with a name equal to the name of the given PVC exists
 // in the given slice and is equal to the given PVC.
 func EnsurePVCWithName(items []corev1.PersistentVolumeClaim, item corev1.PersistentVolumeClaim) []corev1.PersistentVolumeClaim {
@@ -297,6 +309,15 @@ func StringWithPrefixIndex(items []string, prefix string) int {
 func containerWithNameIndex(items []corev1.Container, name string) int {
 	for i, item := range items {
 		if item.Name == name {
+			return i
+		}
+	}
+	return -1
+}
+
+func vpaContainerResourcePolicyWithNameIndex(items []vpaautoscalingv1.ContainerResourcePolicy, name string) int {
+	for i, item := range items {
+		if item.ContainerName == name {
 			return i
 		}
 	}

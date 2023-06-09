@@ -30,6 +30,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/utils/errors"
@@ -401,6 +402,13 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 				return botanist.Shoot.Components.Extensions.Worker.WaitCleanup(ctx)
 			}).SkipIf(o.Shoot.IsWorkerless),
 			Dependencies: flow.NewTaskIDs(destroyWorker),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deleting machine-controller-manager",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.Shoot.Components.ControlPlane.MachineControllerManager.Destroy(ctx)
+			}).SkipIf(o.Shoot.IsWorkerless).DoIf(features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment)),
+			Dependencies: flow.NewTaskIDs(waitUntilWorkerDeleted),
 		})
 		deleteAllOperatingSystemConfigs = g.Add(flow.Task{
 			Name: "Deleting operating system config resources",

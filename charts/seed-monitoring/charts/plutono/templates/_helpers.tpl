@@ -69,6 +69,12 @@ plutono-datasources-{{ include "plutono.datasources.data" . | sha256sum | trunc 
 {{          toString $bytes | include "plutono.toCompactedJson" | indent 2 }}
 {{-       end }}
 {{-     end }}
+{{-     if .Values.gardenletManagesMCM }}
+{{        range $name, $bytes := .Files.Glob "dashboards/machine-controller-manager/**.json" }}
+{{          base $name }}: |-
+{{          toString $bytes | include "plutono.toCompactedJson" | indent 2 }}
+{{-       end }}
+{{-     end }}
 {{      range $name, $bytes := .Files.Glob "dashboards/owners/worker/**.json" }}
 {{        base $name }}: |-
 {{        toString $bytes | include "plutono.toCompactedJson" | indent 2 }}

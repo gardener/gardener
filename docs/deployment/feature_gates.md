@@ -36,6 +36,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | FullNetworkPoliciesInRuntimeCluster        | `true`  | `Beta`  | `1.71` | `1.72` |
 | FullNetworkPoliciesInRuntimeCluster        | `true`  | `GA`    | `1.73` |        |
 | WorkerlessShoots                           | `false` | `Alpha` | `1.70` |        |
+| MachineControllerManagerDeployment         | `false` | `Alpha` | `1.73` |        |
 
 ## Feature Gates for Graduated or Deprecated Features
 
@@ -173,3 +174,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | MutableShootSpecNetworkingNodes            | `gardener-apiserver`              | Allows updating the field `spec.networking.nodes`. The validity of the values has to be checked in the provider extensions. Only enable this feature gate when your system runs provider extensions which have implemented the validation.                                                                                                                                         |
 | FullNetworkPoliciesInRuntimeCluster        | `gardenlet`, `gardener-operator`  | Enables the `NetworkPolicy` controller to place 'deny-all' network policies in all relevant namespaces in the runtime cluster.                                                                                                                                                                                                                                                     |
 | WorkerlessShoots                           | `gardener-apiserver`              | WorkerlessShoots allows creation of Shoot clusters with no worker pools.                                                                                                                                                                                                                                                                                                           |
+| MachineControllerManagerDeployment         | `gardenlet`                       | Enables Gardener to take over the deployment of the machine-controller-manager. If enabled, all registered provider extensions must support injecting the provider-specific MCM sidecar container into the deployment via the `controlplane` webhook.                                                                                                                              |

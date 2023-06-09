@@ -52,6 +52,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -192,17 +193,18 @@ func (r *Reconciler) runDeleteSeedFlow(
 
 	// setup for flow graph
 	var (
-		dnsRecord            = getManagedIngressDNSRecord(log, seedClient, r.GardenNamespace, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), "")
-		autoscaler           = clusterautoscaler.NewBootstrapper(seedClient, r.GardenNamespace)
-		kubeAPIServerIngress = kubeapiserverexposure.NewIngress(seedClient, r.GardenNamespace, kubeapiserverexposure.IngressValues{})
-		kubeAPIServerService = kubeapiserverexposure.NewInternalNameService(seedClient, r.GardenNamespace)
-		nginxIngress         = nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{})
-		dwdWeeder            = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleWeeder})
-		dwdProber            = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProber})
-		systemResources      = seedsystem.New(seedClient, r.GardenNamespace, seedsystem.Values{})
-		vpnAuthzServer       = vpnauthzserver.New(seedClient, r.GardenNamespace, "", kubernetesVersion)
-		istioCRDs            = istio.NewCRD(r.SeedClientSet.ChartApplier())
-		istio                = istio.NewIstio(seedClient, r.SeedClientSet.ChartRenderer(), istio.Values{
+		dnsRecord                = getManagedIngressDNSRecord(log, seedClient, r.GardenNamespace, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), "")
+		clusterAutoscaler        = clusterautoscaler.NewBootstrapper(seedClient, r.GardenNamespace)
+		machineControllerManager = machinecontrollermanager.NewBootstrapper(seedClient, r.GardenNamespace)
+		kubeAPIServerIngress     = kubeapiserverexposure.NewIngress(seedClient, r.GardenNamespace, kubeapiserverexposure.IngressValues{})
+		kubeAPIServerService     = kubeapiserverexposure.NewInternalNameService(seedClient, r.GardenNamespace)
+		nginxIngress             = nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{})
+		dwdWeeder                = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleWeeder})
+		dwdProber                = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProber})
+		systemResources          = seedsystem.New(seedClient, r.GardenNamespace, seedsystem.Values{})
+		vpnAuthzServer           = vpnauthzserver.New(seedClient, r.GardenNamespace, "", kubernetesVersion)
+		istioCRDs                = istio.NewCRD(r.SeedClientSet.ChartApplier())
+		istio                    = istio.NewIstio(seedClient, r.SeedClientSet.ChartRenderer(), istio.Values{
 			Istiod: istio.IstiodValues{
 				Enabled:   !seedIsGarden,
 				Namespace: v1beta1constants.IstioSystemNamespace,
@@ -225,8 +227,12 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Dependencies: flow.NewTaskIDs(destroyDNSRecord),
 		})
 		destroyClusterAutoscaler = g.Add(flow.Task{
-			Name: "Destroying cluster-autoscaler",
-			Fn:   component.OpDestroyAndWait(autoscaler).Destroy,
+			Name: "Destroying cluster-autoscaler resources",
+			Fn:   component.OpDestroyAndWait(clusterAutoscaler).Destroy,
+		})
+		destroyMachineControllerManager = g.Add(flow.Task{
+			Name: "Destroying machine-controller-manager resources",
+			Fn:   flow.TaskFn(component.OpDestroyAndWait(machineControllerManager).Destroy).DoIf(features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment)),
 		})
 		destroyNginxIngress = g.Add(flow.Task{
 			Name: "Destroying nginx-ingress",
@@ -274,6 +280,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 		syncPointCleanedUp = flow.NewTaskIDs(
 			destroyNginxIngress,
 			destroyClusterAutoscaler,
+			destroyMachineControllerManager,
 			destroyDWDWeeder,
 			destroyDWDProber,
 			destroyKubeAPIServerIngress,

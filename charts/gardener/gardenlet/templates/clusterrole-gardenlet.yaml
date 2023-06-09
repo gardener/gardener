@@ -435,3 +435,11 @@ rules:
   - envoyfilters
   verbs:
   - delete
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - machinedeployments
+  verbs:
+  - list
+  - watch
+  - get

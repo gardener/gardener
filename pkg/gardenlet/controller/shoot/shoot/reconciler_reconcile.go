@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
@@ -637,10 +638,15 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.ScaleClusterAutoscalerToZero).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsWorkerless).DoIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployManagedResourcesForAddons, deployManagedResourceForCloudConfigExecutor),
 		})
+		deployMachineControllerManager = g.Add(flow.Task{
+			Name:         "Deploying machine-controller-manager",
+			Fn:           flow.TaskFn(botanist.DeployMachineControllerManager).SkipIf(o.Shoot.IsWorkerless).DoIf(features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment)),
+			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, deployReferencedResources, waitUntilInfrastructureReady, initializeShootClients, waitUntilOperatingSystemConfigReady, waitUntilNetworkIsReady, createNewServiceAccountSecrets, scaleClusterAutoscalerToZero),
+		})
 		deployWorker = g.Add(flow.Task{
 			Name:         "Configuring shoot worker pools",
 			Fn:           flow.TaskFn(botanist.DeployWorker).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsWorkerless),
-			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, deployReferencedResources, waitUntilInfrastructureReady, initializeShootClients, waitUntilOperatingSystemConfigReady, waitUntilNetworkIsReady, createNewServiceAccountSecrets, scaleClusterAutoscalerToZero),
+			Dependencies: flow.NewTaskIDs(deployMachineControllerManager),
 		})
 		waitUntilWorkerStatusUpdate = g.Add(flow.Task{
 			Name: "Waiting until worker resource status is updated with latest machine deployments",
@@ -654,17 +660,23 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.DeployClusterAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerStatusUpdate, deployManagedResourcesForAddons, deployManagedResourceForCloudConfigExecutor),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Reconciling Plutono for Shoot in Seed for the logging stack",
-			Fn:           flow.TaskFn(botanist.DeploySeedPlutono).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(deploySeedLogging),
-		})
 		waitUntilWorkerReady = g.Add(flow.Task{
 			Name: "Waiting until shoot worker nodes have been reconciled",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.Shoot.Components.Extensions.Worker.Wait(ctx)
 			}).SkipIf(o.Shoot.IsWorkerless || skipReadiness),
 			Dependencies: flow.NewTaskIDs(deployWorker, waitUntilWorkerStatusUpdate, deployManagedResourceForCloudConfigExecutor),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Scaling down machine-controller-manager",
+			Fn:           flow.TaskFn(botanist.ScaleMachineControllerManagerToZero).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsWorkerless).DoIf(o.Shoot.HibernationEnabled && features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment)),
+			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
+		})
+
+		_ = g.Add(flow.Task{
+			Name:         "Reconciling Plutono for Shoot in Seed for the logging stack",
+			Fn:           flow.TaskFn(botanist.DeploySeedPlutono).RetryUntilTimeout(defaultInterval, 2*time.Minute),
+			Dependencies: flow.NewTaskIDs(deploySeedLogging),
 		})
 		nginxLBReady = g.Add(flow.Task{
 			Name:         "Waiting until nginx ingress LoadBalancer is ready",

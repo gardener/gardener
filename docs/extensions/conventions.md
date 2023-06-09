@@ -29,7 +29,7 @@ As there is no formal process to validate non-existence of conflicts between two
 
 *The resource name should be prefixed with `extensions.gardener.cloud:<extension-type>-<extension-name>:<resource-name>`*, for example:
 
-* `extensions.gardener.cloud:provider-aws:machine-controller-manager`
+* `extensions.gardener.cloud:provider-aws:some-controller-manager`
 * `extensions.gardener.cloud:extension-certificate-service:cert-broker`
 
 ## How to create resources in the shoot cluster?

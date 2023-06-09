@@ -42,13 +42,15 @@ func (a *genericActuator) Migrate(ctx context.Context, log logr.Logger, worker *
 		return fmt.Errorf("could not keep objects of managed resource containing mcm chart for worker '%s': %w", kubernetesutils.ObjectName(worker), err)
 	}
 
-	// Make sure machine-controller-manager is deleted before deleting the machines.
-	if err := a.deleteMachineControllerManager(ctx, log, worker); err != nil {
-		return fmt.Errorf("failed deleting machine-controller-manager: %w", err)
-	}
+	if a.mcmManaged {
+		// Make sure machine-controller-manager is deleted before deleting the machines.
+		if err := a.deleteMachineControllerManager(ctx, log, worker); err != nil {
+			return fmt.Errorf("failed deleting machine-controller-manager: %w", err)
+		}
 
-	if err := a.waitUntilMachineControllerManagerIsDeleted(ctx, log, worker.Namespace); err != nil {
-		return fmt.Errorf("failed deleting machine-controller-manager: %w", err)
+		if err := a.waitUntilMachineControllerManagerIsDeleted(ctx, log, worker.Namespace); err != nil {
+			return fmt.Errorf("failed deleting machine-controller-manager: %w", err)
+		}
 	}
 
 	if err := a.shallowDeleteAllObjects(ctx, log, worker.Namespace, &machinev1alpha1.MachineList{}); err != nil {

@@ -59,6 +59,8 @@ const (
 	containerName             = "machine-controller-manager"
 	serviceName               = "machine-controller-manager"
 	managedResourceTargetName = "shoot-core-machine-controller-manager"
+	// VPAName is the name of the vertical pod autoscaler for the machine-controller-manager.
+	VPAName = "machine-controller-manager-vpa"
 )
 
 // Interface contains functions for a machine-controller-manager deployer.
@@ -489,7 +491,7 @@ func (m *machineControllerManager) emptyPodDisruptionBudget() client.Object {
 }
 
 func (m *machineControllerManager) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
-	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager-vpa", Namespace: m.namespace}}
+	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: VPAName, Namespace: m.namespace}}
 }
 
 func (m *machineControllerManager) emptyManagedResource() *resourcesv1alpha1.ManagedResource {

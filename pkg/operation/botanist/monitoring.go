@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -98,6 +99,10 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 
 		if b.Shoot.WantsClusterAutoscaler {
 			monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.ClusterAutoscaler)
+		}
+
+		if features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment) {
+			monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.MachineControllerManager)
 		}
 	}
 
@@ -195,6 +200,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"nodeLocalDNS": map[string]interface{}{
 				"enabled": b.Shoot.NodeLocalDNSEnabled,
 			},
+			"gardenletManagesMCM": features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment),
 			"ingress": map[string]interface{}{
 				"class":          ingressClass,
 				"authSecretName": credentialsSecret.Name,
@@ -402,7 +408,7 @@ func (b *Botanist) DeploySeedPlutono(ctx context.Context) error {
 		return kubernetesutils.DeleteObject(ctx, b.GardenClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}})
 	}
 
-	//TODO(rickardsjp, istvanballok): Remove in release v1.77 once the Grafana to Plutono migration is complete.
+	// TODO(rickardsjp, istvanballok): Remove in release v1.77 once the Grafana to Plutono migration is complete.
 	if err := b.DeleteGrafana(ctx); err != nil {
 		return err
 	}

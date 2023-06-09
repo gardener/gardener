@@ -624,6 +624,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 			componentsFunctions = append(componentsFunctions, eventlogger.CentralLoggingConfiguration)
 		}
 
+		if features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment) {
+			componentsFunctions = append(componentsFunctions, machinecontrollermanager.CentralLoggingConfiguration)
+		}
+
 		// Fetch component specific logging configurations
 		for _, componentFn := range componentsFunctions {
 			loggingConfig, err := componentFn()
@@ -901,8 +905,12 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Dependencies: flow.NewTaskIDs(nginxLBReady),
 		})
 		_ = g.Add(flow.Task{
-			Name: "Deploying cluster-autoscaler",
+			Name: "Deploying cluster-autoscaler resources",
 			Fn:   clusterautoscaler.NewBootstrapper(seedClient, r.GardenNamespace).Deploy,
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying machine-controller-manager resources",
+			Fn:   flow.TaskFn(machinecontrollermanager.NewBootstrapper(seedClient, r.GardenNamespace).Deploy).DoIf(features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment)),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying dependency-watchdog-weeder",

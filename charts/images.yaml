@@ -122,6 +122,19 @@ images:
 - name: kube-proxy
   sourceRepository: github.com/kubernetes/kubernetes
   repository: registry.k8s.io/kube-proxy
+- name: machine-controller-manager
+  sourceRepository: github.com/gardener/machine-controller-manager
+  repository: eu.gcr.io/gardener-project/gardener/machine-controller-manager
+  tag: "v0.49.2"
+  labels:
+  - name: gardener.cloud/cve-categorisation
+    value:
+      network_exposure: protected
+      authentication_enforced: false
+      user_interaction: gardener-operator
+      confidentiality_requirement: high
+      integrity_requirement: high
+      availability_requirement: low
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler

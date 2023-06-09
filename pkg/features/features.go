@@ -86,6 +86,13 @@ const (
 	// owner: @acumino @ary1992 @shafeeqes
 	// alpha: v1.70.0
 	WorkerlessShoots featuregate.Feature = "WorkerlessShoots"
+
+	// MachineControllerManagerDeployment enables Gardener to take over the deployment of the
+	// machine-controller-manager. If enabled, all registered provider extensions must support injecting the
+	// provider-specific MCM provider sidecar container into the deployment via the `controlplane` webhook.
+	// owner: @rfranzke @JensAc @mreiger
+	// alpha: v1.73.0
+	MachineControllerManagerDeployment featuregate.Feature = "MachineControllerManagerDeployment"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -122,6 +129,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	MutableShootSpecNetworkingNodes:     {Default: false, PreRelease: featuregate.Alpha},
 	FullNetworkPoliciesInRuntimeCluster: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	WorkerlessShoots:                    {Default: false, PreRelease: featuregate.Alpha},
+	MachineControllerManagerDeployment:  {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

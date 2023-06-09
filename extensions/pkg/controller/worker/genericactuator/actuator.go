@@ -51,6 +51,7 @@ const GardenPurposeMachineClass = "machineclass"
 
 type genericActuator struct {
 	delegateFactory DelegateFactory
+	mcmManaged      bool
 	mcmName         string
 	mcmSeedChart    chart.Interface
 	mcmShootChart   chart.Interface
@@ -68,6 +69,7 @@ type genericActuator struct {
 // NewActuator creates a new Actuator that reconciles
 // Worker resources of Gardener's `extensions.gardener.cloud` API group.
 // It provides a default implementation that allows easier integration of providers.
+// If machine-controller-manager should not be managed then only the delegateFactory must be provided.
 func NewActuator(
 	delegateFactory DelegateFactory,
 	mcmName string,
@@ -78,6 +80,7 @@ func NewActuator(
 ) worker.Actuator {
 	return &genericActuator{
 		delegateFactory:      delegateFactory,
+		mcmManaged:           mcmName != "" && mcmSeedChart != nil && mcmShootChart != nil && imageVector != nil && chartRendererFactory != nil,
 		mcmName:              mcmName,
 		mcmSeedChart:         mcmSeedChart,
 		mcmShootChart:        mcmShootChart,

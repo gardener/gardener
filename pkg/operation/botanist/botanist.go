@@ -29,6 +29,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/logging/kuberbacproxy"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -165,6 +166,12 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		o.Shoot.Components.ControlPlane.VPNSeedServer, err = b.DefaultVPNSeedServer()
 		if err != nil {
 			return nil, err
+		}
+		if features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment) {
+			o.Shoot.Components.ControlPlane.MachineControllerManager, err = b.DefaultMachineControllerManager(ctx)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 

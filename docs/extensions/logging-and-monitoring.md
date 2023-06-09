@@ -110,7 +110,7 @@ To contribute its own configuration to the fluent-bit agents data pipelines, an 
 
 > **Note:** Take care to provide the correct data pipeline elements in the corresponding fields and not to mix them.
 
-**Example:** Logging configuration for provider-specific (OpenStack) worker controller deploying a `machine-controller-manager` component into a shoot namespace that reuses the `kube-apiserver-parser` defined in [logging.go](../../pkg/component/kubeapiserver/logging.go) to parse the component logs:
+**Example:** Logging configuration for provider-specific `cloud-controller-manager` deployed into shoot namespaces that reuses the `kube-apiserver-parser` defined in [logging.go](../../pkg/component/kubeapiserver/logging.go) to parse the component logs:
 
 ```yaml
 apiVersion: fluentbit.fluent.io/v1alpha2
@@ -118,14 +118,14 @@ kind: ClusterFilter
 metadata:
   labels:
     fluentbit.gardener/type: "seed"
-  name: machine-controller-manager-openstack
+  name: cloud-controller-manager-aws-cloud-controller-manager
 spec:
   filters:
   - parser:
       keyName: log
       parser: kube-apiserver-parser
       reserveData: true
-  match: kubernetes.*machine-controller-manager*openstack*
+  match: kubernetes.*cloud-controller-manager*aws-cloud-controller-manager*
 ```
 
 Further details how to define parsers and use them with examples can be found in the following [guide](../development/log_parsers.md).

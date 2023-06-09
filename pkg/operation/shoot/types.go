@@ -46,6 +46,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/kubernetesdashboard"
 	"github.com/gardener/gardener/pkg/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
+	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/vpa"
@@ -116,21 +117,22 @@ type Components struct {
 
 // ControlPlane contains references to K8S control plane components.
 type ControlPlane struct {
-	ClusterAutoscaler     clusterautoscaler.Interface
-	EtcdMain              etcd.Interface
-	EtcdEvents            etcd.Interface
-	EtcdCopyBackupsTask   etcdcopybackupstask.Interface
-	KubeAPIServerIngress  component.Deployer
-	KubeAPIServerService  component.DeployWaiter
-	KubeAPIServerSNI      component.DeployWaiter
-	KubeAPIServerSNIPhase component.Phase
-	KubeAPIServer         kubeapiserver.Interface
-	KubeScheduler         kubescheduler.Interface
-	KubeControllerManager kubecontrollermanager.Interface
-	KubeStateMetrics      kubestatemetrics.Interface
-	ResourceManager       resourcemanager.Interface
-	VerticalPodAutoscaler vpa.Interface
-	VPNSeedServer         vpnseedserver.Interface
+	ClusterAutoscaler        clusterautoscaler.Interface
+	EtcdMain                 etcd.Interface
+	EtcdEvents               etcd.Interface
+	EtcdCopyBackupsTask      etcdcopybackupstask.Interface
+	KubeAPIServerIngress     component.Deployer
+	KubeAPIServerService     component.DeployWaiter
+	KubeAPIServerSNI         component.DeployWaiter
+	KubeAPIServerSNIPhase    component.Phase
+	KubeAPIServer            kubeapiserver.Interface
+	KubeScheduler            kubescheduler.Interface
+	KubeControllerManager    kubecontrollermanager.Interface
+	KubeStateMetrics         kubestatemetrics.Interface
+	MachineControllerManager machinecontrollermanager.Interface
+	ResourceManager          resourcemanager.Interface
+	VerticalPodAutoscaler    vpa.Interface
+	VPNSeedServer            vpnseedserver.Interface
 }
 
 // Extensions contains references to extension resources.

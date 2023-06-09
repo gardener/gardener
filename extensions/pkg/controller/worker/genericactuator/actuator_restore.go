@@ -93,6 +93,13 @@ func RestoreWithoutReconcile(
 		return fmt.Errorf("failed to restore the machine deployment config: %w", err)
 	}
 
+	// Scale the machine-controller-manager to 1 now that all resources have been restored.
+	if !extensionscontroller.IsHibernated(cluster) {
+		if err := scaleMachineControllerManager(ctx, log, cl, worker, 1); err != nil {
+			return fmt.Errorf("failed to scale up machine-controller-manager: %w", err)
+		}
+	}
+
 	return nil
 }
 
