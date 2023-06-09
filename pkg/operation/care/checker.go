@@ -37,6 +37,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
@@ -259,6 +260,16 @@ func (b *HealthChecker) checkNodes(condition gardencorev1beta1.Condition, nodes 
 // annotationKeyNotManagedByMCM is a constant for an annotation on the node resource that indicates that the node is not
 // handled by machine-controller-manager.
 const annotationKeyNotManagedByMCM = "node.machine.sapcloud.io/not-managed-by-mcm"
+
+func convertWorkerPoolToNodesMappingToNodeList(workerPoolToNodes map[string][]corev1.Node) *corev1.NodeList {
+	nodeList := &corev1.NodeList{}
+
+	for _, nodes := range workerPoolToNodes {
+		nodeList.Items = append(nodeList.Items, nodes...)
+	}
+
+	return nodeList
+}
 
 func checkMachineDeploymentsHealthy(machineDeployments []machinev1alpha1.MachineDeployment) (bool, error) {
 	for _, deployment := range machineDeployments {
@@ -597,6 +608,7 @@ func (b *HealthChecker) FailedCondition(condition gardencorev1beta1.Condition, r
 func (b *HealthChecker) CheckClusterNodes(
 	ctx context.Context,
 	shootClient client.Client,
+	seedNamespace string,
 	workers []gardencorev1beta1.Worker,
 	condition gardencorev1beta1.Condition,
 ) (
@@ -633,6 +645,86 @@ func (b *HealthChecker) CheckClusterNodes(
 
 	if err := botanist.CloudConfigUpdatedForAllWorkerPools(workers, workerPoolToNodes, workerPoolToCloudConfigSecretMeta); err != nil {
 		c := b.FailedCondition(condition, "CloudConfigOutdated", err.Error())
+		return &c, nil
+	}
+
+	if !features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment) {
+		return nil, nil
+	}
+
+	machineDeploymentList := &machinev1alpha1.MachineDeploymentList{}
+	if err := b.reader.List(ctx, machineDeploymentList, client.InNamespace(seedNamespace)); err != nil {
+		return nil, err
+	}
+
+	var (
+		nodeList            = convertWorkerPoolToNodesMappingToNodeList(workerPoolToNodes)
+		readyNodes          int
+		registeredNodes     = len(nodeList.Items)
+		desiredMachines     = getDesiredMachineCount(machineDeploymentList.Items)
+		nodeNotManagedByMCM int
+	)
+
+	for _, node := range nodeList.Items {
+		if metav1.HasAnnotation(node.ObjectMeta, annotationKeyNotManagedByMCM) && node.Annotations[annotationKeyNotManagedByMCM] == "1" {
+			nodeNotManagedByMCM++
+			continue
+		}
+		if node.Spec.Unschedulable {
+			continue
+		}
+		for _, condition := range node.Status.Conditions {
+			if condition.Type == corev1.NodeReady && condition.Status == corev1.ConditionTrue {
+				readyNodes++
+			}
+		}
+	}
+
+	// only nodes that are managed by MCM is considered
+	registeredNodes = registeredNodes - nodeNotManagedByMCM
+
+	machineList := &machinev1alpha1.MachineList{}
+	if registeredNodes != desiredMachines || readyNodes != desiredMachines {
+		if err := b.reader.List(ctx, machineList, client.InNamespace(seedNamespace)); err != nil {
+			return nil, err
+		}
+	}
+
+	// First check if the MachineDeployments report failed machines. If false then check if the MachineDeployments are
+	// "available". If false then check if there is a regular scale-up happening or if there are machines with an erroneous
+	// phase. Only then check the other MachineDeployment conditions. As last check, check if there is a scale-down happening
+	// (e.g., in case of an rolling-update).
+
+	checkScaleUp := false
+
+	for _, deployment := range machineDeploymentList.Items {
+		for _, failedMachine := range deployment.Status.FailedMachines {
+			c := b.FailedCondition(condition, "FailedMachine", fmt.Sprintf("machine %q failed: %s", failedMachine.Name, failedMachine.LastOperation.Description))
+			return &c, nil
+		}
+
+		for _, condition := range deployment.Status.Conditions {
+			if condition.Type == machinev1alpha1.MachineDeploymentAvailable && condition.Status != machinev1alpha1.ConditionTrue {
+				checkScaleUp = true
+				break
+			}
+		}
+	}
+
+	if checkScaleUp {
+		if err := checkNodesScalingUp(machineList, readyNodes, desiredMachines); err != nil {
+			c := b.FailedCondition(condition, "NodesScalingUp", err.Error())
+			return &c, nil
+		}
+	}
+
+	if isHealthy, err := checkMachineDeploymentsHealthy(machineDeploymentList.Items); !isHealthy {
+		c := b.FailedCondition(condition, "MachineDeploymentsUnhealthy", err.Error())
+		return &c, nil
+	}
+
+	if err := checkNodesScalingDown(machineList, nodeList, registeredNodes, desiredMachines); err != nil {
+		c := b.FailedCondition(condition, "NodesScalingDown", err.Error())
 		return &c, nil
 	}
 

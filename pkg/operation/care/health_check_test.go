@@ -679,7 +679,7 @@ var _ = Describe("health check", func() {
 
 				checker := care.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion, gardenerVersion)
 
-				exitCondition, err := checker.CheckClusterNodes(ctx, c, workerPools, condition)
+				exitCondition, err := checker.CheckClusterNodes(ctx, c, seedNamespace, workerPools, condition)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(exitCondition).To(conditionMatcher)
 			},

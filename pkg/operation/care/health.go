@@ -351,7 +351,7 @@ func (h *Health) healthChecks(
 
 	taskFns = append(taskFns,
 		func(ctx context.Context) error {
-			newNodes, err := h.checkClusterNodes(ctx, h.shootClient.Client(), checker, nodes, extensionConditionsEveryNodeReady)
+			newNodes, err := h.checkClusterNodes(ctx, h.shootClient.Client(), h.shoot.SeedNamespace, checker, nodes, extensionConditionsEveryNodeReady)
 			nodes = NewConditionOrError(h.clock, nodes, newNodes, err)
 			return nil
 		},
@@ -473,11 +473,12 @@ func (h *Health) checkSystemComponents(
 func (h *Health) checkClusterNodes(
 	ctx context.Context,
 	shootClient client.Client,
+	seedNamespace string,
 	checker *HealthChecker,
 	condition gardencorev1beta1.Condition,
 	extensionConditions []ExtensionCondition,
 ) (*gardencorev1beta1.Condition, error) {
-	if exitCondition, err := checker.CheckClusterNodes(ctx, shootClient, h.shoot.GetInfo().Spec.Provider.Workers, condition); err != nil || exitCondition != nil {
+	if exitCondition, err := checker.CheckClusterNodes(ctx, shootClient, seedNamespace, h.shoot.GetInfo().Spec.Provider.Workers, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions); exitCondition != nil {
