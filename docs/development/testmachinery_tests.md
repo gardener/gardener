@@ -64,7 +64,7 @@ A suite can be executed by running the suite definition with ginkgo's `focus` an
 to control the execution of specific labeled test. See the example below:
 ```console
 go test -timeout=0 -mod=vendor ./test/testmachinery/suites/shoot \
-      --v -ginkgo.v -ginkgo.progress -ginkgo.no-color \
+      --v -ginkgo.v -ginkgo.show-node-events -ginkgo.no-color \
       --report-file=/tmp/report.json \                     # write elasticsearch formatted output to a file
       --disable-dump=false \                               # disables dumping of teh current state if a test fails
       -kubecfg=/path/to/gardener/kubeconfig \
@@ -96,7 +96,7 @@ The newly created test can be tested by focusing the test with the default ginkg
 and running the shoot test suite with:
 ```
 go test -timeout=0 -mod=vendor ./test/testmachinery/suites/shoot \
-      --v -ginkgo.v -ginkgo.progress -ginkgo.no-color \
+      --v -ginkgo.v -ginkgo.show-node-events -ginkgo.no-color \
       --report-file=/tmp/report.json \                     # write elasticsearch formatted output to a file
       --disable-dump=false \                               # disables dumping of the current state if a test fails
       -kubecfg=/path/to/gardener/kubeconfig \
@@ -107,7 +107,7 @@ go test -timeout=0 -mod=vendor ./test/testmachinery/suites/shoot \
 or for the gardener suite with:
 ```
 go test -timeout=0 -mod=vendor ./test/testmachinery/suites/gardener \
-      --v -ginkgo.v -ginkgo.progress -ginkgo.no-color \
+      --v -ginkgo.v -ginkgo.show-node-events -ginkgo.no-color \
       --report-file=/tmp/report.json \                     # write elasticsearch formatted output to a file
       --disable-dump=false \                               # disables dumping of the current state if a test fails
       -kubecfg=/path/to/gardener/kubeconfig \
@@ -119,7 +119,7 @@ go test -timeout=0 -mod=vendor ./test/testmachinery/suites/gardener \
 Alternatively, a test can be triggered by specifying a ginkgo focus regex with the name of the test e.g.
 ```
 go test -timeout=0 -mod=vendor ./test/testmachinery/suites/gardener \
-      --v -ginkgo.v -ginkgo.progress -ginkgo.no-color \
+      --v -ginkgo.v -ginkgo.show-node-events -ginkgo.no-color \
       --report-file=/tmp/report.json \                     # write elasticsearch formatted output to a file
       -kubecfg=/path/to/gardener/kubeconfig \
       -project-namespace=<gardener project namespace> \
@@ -250,7 +250,7 @@ Create Shoot test is meant to test shoot creation.
 
 ```console
 go test -mod=vendor -timeout=0 ./test/testmachinery/system/shoot_creation \
-  --v -ginkgo.v -ginkgo.progress \
+  --v -ginkgo.v -ginkgo.show-node-events \
   -kubecfg=$HOME/.kube/config \
   -shoot-name=$SHOOT_NAME \
   -cloud-profile=$CLOUDPROFILE \
@@ -278,7 +278,7 @@ Delete Shoot test is meant to test the deletion of a shoot.
 **Example Run**
 
 ```console
-go test -mod=vendor -timeout=0 -ginkgo.v -ginkgo.progress \
+go test -mod=vendor -timeout=0 -ginkgo.v -ginkgo.show-node-events \
   ./test/testmachinery/system/shoot_deletion \
   -kubecfg=$HOME/.kube/config \
   -shoot-name=$SHOOT_NAME \
@@ -295,7 +295,7 @@ If there is no available newer version, this test is a noop.
 
 ```console
 go test -mod=vendor -timeout=0 ./test/testmachinery/system/shoot_update \
-  --v -ginkgo.v -ginkgo.progress \
+  --v -ginkgo.v -ginkgo.show-node-events \
   -kubecfg=$HOME/.kube/config \
   -shoot-name=$SHOOT_NAME \
   -project-namespace=$PROJECT_NAMESPACE \
@@ -310,7 +310,7 @@ The Gardener Full Reconcile test is meant to test if all shoots of a Gardener in
 
 ```console
 go test -mod=vendor -timeout=0 ./test/testmachinery/system/complete_reconcile \
-  --v -ginkgo.v -ginkgo.progress \
+  --v -ginkgo.v -ginkgo.show-node-events \
   -kubecfg=$HOME/.kube/config \
   -project-namespace=$PROJECT_NAMESPACE \
   -gardenerVersion=$GARDENER_VERSION # needed to validate the last acted gardener version of a shoot

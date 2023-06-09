@@ -11,7 +11,7 @@ spec:
   args:
   - >-
     go test -timeout=0 -mod=vendor ./test/testmachinery/system/shoot_cp_migration
-    --v -ginkgo.v -ginkgo.progress -ginkgo.no-color
+    --v -ginkgo.v -ginkgo.show-node-events -ginkgo.no-color
     -target-seed-name=$SEED_NAME
     -shoot-name=$SHOOT_NAME
     -shoot-namespace=$PROJECT_NAMESPACE
