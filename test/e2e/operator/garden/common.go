@@ -111,7 +111,7 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 					},
 				},
 				Kubernetes: operatorv1alpha1.Kubernetes{
-					Version: "1.26.3",
+					Version: "1.27.1",
 				},
 				Maintenance: operatorv1alpha1.Maintenance{
 					TimeWindow: gardencorev1beta1.MaintenanceTimeWindow{
