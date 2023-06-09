@@ -413,7 +413,11 @@ webhooks:
 			vp.EXPECT().GetStorageClassesChartValues(ctx, cp, cluster).Return(storageClassesChartValues, nil)
 
 			// Handle shoot access secrets and legacy secret cleanup
-			c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, shootAccessSecretsFunc(namespace)[0].Secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
+			c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, shootAccessSecretsFunc(namespace)[0].Secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
+				Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
+					obj.SetResourceVersion("0")
+				})
+
 			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
 				Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(&corev1.Secret{
@@ -427,6 +431,7 @@ webhooks:
 							Labels: map[string]string{
 								"resources.gardener.cloud/purpose": "token-requestor",
 							},
+							ResourceVersion: "0",
 						},
 						Type: corev1.SecretTypeOpaque,
 					}))
@@ -539,7 +544,10 @@ webhooks:
 			vp.EXPECT().GetControlPlaneExposureChartValues(ctx, cpExposure, cluster, gomock.Any(), exposureChecksums).Return(controlPlaneExposureChartValues, nil)
 
 			// Handle shoot access secrets and legacy secret cleanup
-			c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, exposureShootAccessSecretsFunc(namespace)[0].Secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
+			c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, exposureShootAccessSecretsFunc(namespace)[0].Secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
+				Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
+					obj.SetResourceVersion("0")
+				})
 			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
 				Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(&corev1.Secret{
@@ -553,6 +561,7 @@ webhooks:
 							Labels: map[string]string{
 								"resources.gardener.cloud/purpose": "token-requestor",
 							},
+							ResourceVersion: "0",
 						},
 						Type: corev1.SecretTypeOpaque,
 					}))

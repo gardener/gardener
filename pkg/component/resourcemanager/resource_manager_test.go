@@ -272,6 +272,7 @@ var _ = Describe("ResourceManager", func() {
 				Labels: map[string]string{
 					"resources.gardener.cloud/purpose": "token-requestor",
 				},
+				ResourceVersion: "0",
 			},
 			Type: corev1.SecretTypeOpaque,
 		}
@@ -1886,7 +1887,10 @@ subjects:
 			Context("should successfully deploy all resources (w/ shoot access secret)", func() {
 				JustBeforeEach(func() {
 					gomock.InOrder(
-						c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
+							Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
+								obj.SetResourceVersion("0")
+							}),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
 							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 								Expect(obj).To(DeepEqual(secret))
@@ -1980,7 +1984,10 @@ subjects:
 					deployment = deploymentFor(configMap.Name, cfg.RuntimeKubernetesVersion, &watchedNamespace, pointer.String(gardenerutils.PathGenericKubeconfig), true, &secretNameBootstrapKubeconfig)
 
 					gomock.InOrder(
-						c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
+							Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
+								obj.SetResourceVersion("0")
+							}),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
 							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 								Expect(obj).To(DeepEqual(secret))
@@ -2078,7 +2085,10 @@ subjects:
 
 			It("should deploy a ClusterRole allowing access to mr related resources", func() {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
+						Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
+							obj.SetResourceVersion("0")
+						}),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(secret))
@@ -2136,7 +2146,10 @@ subjects:
 
 			It("should fail because the ClusterRole can not be created", func() {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
+						Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
+							obj.SetResourceVersion("0")
+						}),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
@@ -2150,7 +2163,10 @@ subjects:
 
 			It("should fail because the ClusterRoleBinding can not be created", func() {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
+						Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
+							obj.SetResourceVersion("0")
+						}),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
@@ -2180,7 +2196,10 @@ subjects:
 
 			It("should disable controllers and webhooks properly in resource manager configuration", func() {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
+						Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
+							obj.SetResourceVersion("0")
+						}),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(secret))

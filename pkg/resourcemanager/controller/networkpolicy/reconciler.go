@@ -317,7 +317,7 @@ func (r *Reconciler) reconcileIngressPolicy(
 		networkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeIngress}
 
 		return nil
-	})
+	}, controllerutils.SkipEmptyPatch{})
 
 	return err
 }
@@ -352,7 +352,7 @@ func (r *Reconciler) reconcileEgressPolicy(
 		networkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeEgress}
 
 		return nil
-	})
+	}, controllerutils.SkipEmptyPatch{})
 
 	return err
 }
@@ -378,7 +378,7 @@ func (r *Reconciler) reconcileIngressFromWorldPolicy(ctx context.Context, servic
 		networkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeIngress}
 
 		return nil
-	})
+	}, controllerutils.SkipEmptyPatch{})
 	return err
 }
 

@@ -111,6 +111,7 @@ var _ = Describe("KubeScheduler", func() {
 				Labels: map[string]string{
 					"resources.gardener.cloud/purpose": "token-requestor",
 				},
+				ResourceVersion: "0",
 			},
 			Type: corev1.SecretTypeOpaque,
 		}
@@ -435,7 +436,10 @@ subjects:
 				c.EXPECT().Create(ctx, configMapFor("testdata/component-config-1.23.yaml")),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
+					Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
+						obj.SetResourceVersion("0")
+					}),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Return(fakeErr),
 			)
 
@@ -447,7 +451,10 @@ subjects:
 				c.EXPECT().Create(ctx, configMapFor("testdata/component-config-1.23.yaml")),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).
+					Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
+						obj.SetResourceVersion("0")
+					}),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).Return(fakeErr),
@@ -461,7 +468,10 @@ subjects:
 				c.EXPECT().Create(ctx, configMapFor("testdata/component-config-1.23.yaml")),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).
+					Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
+						obj.SetResourceVersion("0")
+					}),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
@@ -477,7 +487,10 @@ subjects:
 				c.EXPECT().Create(ctx, configMapFor("testdata/component-config-1.23.yaml")),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).
+					Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
+						obj.SetResourceVersion("0")
+					}),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
@@ -495,7 +508,10 @@ subjects:
 				c.EXPECT().Create(ctx, configMapFor("testdata/component-config-1.23.yaml")),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
+					Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
+						obj.SetResourceVersion("0")
+					}),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
@@ -515,7 +531,10 @@ subjects:
 				c.EXPECT().Create(ctx, configMapFor("testdata/component-config-1.23.yaml")),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
+					Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
+						obj.SetResourceVersion("0")
+					}),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
@@ -549,7 +568,10 @@ subjects:
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(serviceFor(version)))
 						}),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
+						Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
+							obj.SetResourceVersion("0")
+						}),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(secret))

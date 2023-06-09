@@ -358,7 +358,7 @@ func (g *garden) Start(ctx context.Context) error {
 	// and can ensure the required policies are created.
 	// TODO(timuthy, rfranzke): To be removed in a future release.
 	log.Info("Migrating all relevant shoot control plane services to create required network policies")
-	if err := g.migrateAllShootServicesForNetworkPolicies(ctx, log); err != nil {
+	if err := g.migrateAllShootServicesForNetworkPolicies(ctx); err != nil {
 		return err
 	}
 
@@ -453,7 +453,7 @@ func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) e
 	})
 }
 
-func (g *garden) migrateAllShootServicesForNetworkPolicies(ctx context.Context, log logr.Logger) error {
+func (g *garden) migrateAllShootServicesForNetworkPolicies(ctx context.Context) error {
 	var taskFns []flow.TaskFn
 
 	// kube-apiserver services
