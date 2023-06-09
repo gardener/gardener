@@ -17,6 +17,7 @@ package managedresources_test
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -400,7 +401,8 @@ var _ = Describe("managedresources", func() {
 			IntervalWait = time.Millisecond * 10
 
 			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
-			shouldFail := true
+			shouldFail := atomic.Bool{}
+			shouldFail.Store(true)
 			go func() {
 				defer GinkgoRecover()
 				_, err := controllerutils.GetAndCreateOrMergePatch(ctx, fakeClient, mr, func() error {
@@ -493,13 +495,13 @@ var _ = Describe("managedresources", func() {
 					return nil
 				})
 				Expect(err).To(Not(HaveOccurred()))
-				shouldFail = false
+				shouldFail.Store(false)
 			}()
 
 			timeoutCtx, cancel := context.WithTimeout(ctx, time.Second*5)
 			defer cancel()
 			Expect(WaitUntilHealthy(timeoutCtx, fakeClient, namespace, name)).To(Succeed())
-			Expect(shouldFail).To(BeFalse()) // to ensure that the goroutine actually applies all patches
+			Expect(shouldFail.Load()).To(BeFalse()) // to ensure that the goroutine actually applies all patches
 		})
 	})
 
