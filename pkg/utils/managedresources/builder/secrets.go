@@ -56,6 +56,17 @@ func (s *Secret) WithLabels(labels map[string]string) *Secret {
 	return s
 }
 
+// AddLabels adds the labels to the existing secret labels.
+func (s *Secret) AddLabels(labels map[string]string) *Secret {
+	if s.secret.Labels == nil {
+		s.secret.Labels = map[string]string{}
+	}
+	for k, v := range labels {
+		s.secret.Labels[k] = v
+	}
+	return s
+}
+
 // WithAnnotations sets the annotations.
 func (s *Secret) WithAnnotations(annotations map[string]string) *Secret {
 	s.secret.Annotations = annotations

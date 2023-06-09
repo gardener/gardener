@@ -59,6 +59,7 @@ var _ = Describe("Resource Manager", func() {
 					WithKeyValues(data).
 					WithLabels(labels).
 					WithAnnotations(annotations).
+					AddLabels(map[string]string{"one": "two"}).
 					Reconcile(ctx),
 			).To(Succeed())
 
@@ -71,10 +72,13 @@ var _ = Describe("Resource Manager", func() {
 					Kind:       "Secret",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            name,
-					Namespace:       namespace,
-					Annotations:     annotations,
-					Labels:          labels,
+					Name:        name,
+					Namespace:   namespace,
+					Annotations: annotations,
+					Labels: map[string]string{
+						"boo": "goo",
+						"one": "two",
+					},
 					ResourceVersion: "1",
 				},
 				Type: corev1.SecretTypeOpaque,
@@ -90,6 +94,8 @@ var _ = Describe("Resource Manager", func() {
 				WithLabels(labels).
 				WithAnnotations(annotations).
 				Unique()
+
+			secretBuilder.AddLabels(map[string]string{"one": "two"})
 
 			Expect(secretBuilder.Reconcile(ctx)).To(Succeed())
 
@@ -113,6 +119,7 @@ var _ = Describe("Resource Manager", func() {
 					Labels: map[string]string{
 						"boo": "goo",
 						"resources.gardener.cloud/garbage-collectable-reference": "true",
+						"one": "two",
 					},
 					ResourceVersion: "1",
 				},
