@@ -97,7 +97,7 @@ func GetAndCreateOrStrategicMergePatch(ctx context.Context, c client.Client, obj
 
 func isEmptyPatch(data []byte, optimisticLocking bool, resourceVersion string) bool {
 	if optimisticLocking {
-		// The resource vesion is always set when optimistic locking is used
+		// Resource version is always set when optimistic locking is used
 		// see https://github.com/kubernetes-sigs/controller-runtime/blob/e54088c8c7da82111b4508bdaf189c45d1344f00/pkg/client/patch.go#L104
 		return string(data) == fmt.Sprintf(`{"metadata":{"resourceVersion":"%s"}}`, resourceVersion)
 	}
