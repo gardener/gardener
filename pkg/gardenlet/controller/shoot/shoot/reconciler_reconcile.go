@@ -646,7 +646,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Name: "Waiting until worker resource status is updated with latest machine deployments",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.Shoot.Components.Extensions.Worker.WaitUntilWorkerStatusMachineDeploymentsUpdated(ctx)
-			}).SkipIf(o.Shoot.IsWorkerless),
+			}).SkipIf(o.Shoot.IsWorkerless || o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployWorker),
 		})
 		deployClusterAutoscaler = g.Add(flow.Task{
