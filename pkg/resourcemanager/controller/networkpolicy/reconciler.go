@@ -22,6 +22,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -257,6 +258,21 @@ func (r *Reconciler) deleteStalePolicies(networkPolicyList *metav1.PartialObject
 	return taskFns
 }
 
+// This is used as a compatible alternative of https://github.com/gardener/gardener/pull/8043
+// and is only included by minor releases of >= v1.72.1, v1.71.4, v1.70.3
+type objectUnchangedError struct{}
+
+func (o *objectUnchangedError) Error() string {
+	return "object unchanged"
+}
+
+func ignoreObjectUnchangedError(err error) error {
+	if _, ok := err.(*objectUnchangedError); ok {
+		return nil
+	}
+	return err
+}
+
 func (r *Reconciler) reconcileIngressPolicy(
 	ctx context.Context,
 	service *corev1.Service,
@@ -268,6 +284,8 @@ func (r *Reconciler) reconcileIngressPolicy(
 	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: networkPolicyObjectMeta}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.TargetClient, networkPolicy, func() error {
+		networkPolicyBefore := networkPolicy.DeepCopy()
+
 		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceName, service.Name)
 		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceNamespace, service.Namespace)
 
@@ -286,10 +304,16 @@ func (r *Reconciler) reconcileIngressPolicy(
 		networkPolicy.Spec.PodSelector = metav1.LabelSelector{MatchLabels: service.Spec.Selector}
 		networkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeIngress}
 
+		// This block is used as a compatible alternative of https://github.com/gardener/gardener/pull/8043
+		// and is only included by minor releases of >= v1.72.1, v1.71.4, v1.70.3
+		if apiequality.Semantic.DeepEqual(networkPolicyBefore, networkPolicy) {
+			logf.Log.V(1).Info("Object unchanged", "objectKey", client.ObjectKeyFromObject(networkPolicy))
+			return &objectUnchangedError{}
+		}
 		return nil
 	})
 
-	return err
+	return ignoreObjectUnchangedError(err)
 }
 
 func (r *Reconciler) reconcileEgressPolicy(
@@ -303,6 +327,8 @@ func (r *Reconciler) reconcileEgressPolicy(
 	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: networkPolicyObjectMeta}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.TargetClient, networkPolicy, func() error {
+		networkPolicyBefore := networkPolicy.DeepCopy()
+
 		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceName, service.Name)
 		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceNamespace, service.Namespace)
 
@@ -321,10 +347,16 @@ func (r *Reconciler) reconcileEgressPolicy(
 		networkPolicy.Spec.PodSelector = podLabelSelector
 		networkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeEgress}
 
+		// This is used as a compatible alternative of https://github.com/gardener/gardener/pull/8043
+		// and is only included by minor releases of >= v1.72.1, v1.71.4, v1.70.3
+		if apiequality.Semantic.DeepEqual(networkPolicyBefore, networkPolicy) {
+			logf.Log.V(1).Info("Object unchanged", "objectKey", client.ObjectKeyFromObject(networkPolicy))
+			return &objectUnchangedError{}
+		}
 		return nil
 	})
 
-	return err
+	return ignoreObjectUnchangedError(err)
 }
 
 func (r *Reconciler) reconcileIngressFromWorldPolicy(ctx context.Context, service *corev1.Service, networkPolicyObjectMeta metav1.ObjectMeta) error {
@@ -335,6 +367,8 @@ func (r *Reconciler) reconcileIngressFromWorldPolicy(ctx context.Context, servic
 
 	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: networkPolicyObjectMeta}
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.TargetClient, networkPolicy, func() error {
+		networkPolicyBefore := networkPolicy.DeepCopy()
+
 		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceName, service.Name)
 		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceNamespace, service.Namespace)
 
@@ -347,9 +381,15 @@ func (r *Reconciler) reconcileIngressFromWorldPolicy(ctx context.Context, servic
 		networkPolicy.Spec.PodSelector = metav1.LabelSelector{MatchLabels: service.Spec.Selector}
 		networkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeIngress}
 
+		// This is used as a compatible alternative of https://github.com/gardener/gardener/pull/8043
+		// and is only included by minor releases of >= v1.72.1, v1.71.4, v1.70.3
+		if apiequality.Semantic.DeepEqual(networkPolicyBefore, networkPolicy) {
+			logf.Log.V(1).Info("Object unchanged", "objectKey", client.ObjectKeyFromObject(networkPolicy))
+			return &objectUnchangedError{}
+		}
 		return nil
 	})
-	return err
+	return ignoreObjectUnchangedError(err)
 }
 
 func portAndProtocolOf(ports []networkingv1.NetworkPolicyPort) []string {
