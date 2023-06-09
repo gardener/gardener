@@ -181,6 +181,24 @@ var _ = Describe("Patch", func() {
 				Expect(result).To(Equal(controllerutil.OperationResultNone))
 				Expect(err).NotTo(HaveOccurred())
 			})
+
+			It("should skip sending an empty patch with optimistic locking", func() {
+				objCopy := obj.DeepCopy()
+				mutateFn := func(o *corev1.ServiceAccount) func() error {
+					return func() error {
+						return nil
+					}
+				}
+				_ = mutateFn(objCopy)()
+
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(obj), obj),
+				)
+
+				result, err := f(ctx, c, obj, mutateFn(obj), MergeFromOption{client.MergeFromWithOptimisticLock{}}, SkipEmptyPatch{})
+				Expect(result).To(Equal(controllerutil.OperationResultNone))
+				Expect(err).NotTo(HaveOccurred())
+			})
 		}
 
 		Describe("#GetAndCreateOrMergePatch", func() { testSuite(GetAndCreateOrMergePatch, types.MergePatchType) })
@@ -301,6 +319,26 @@ var _ = Describe("Patch", func() {
 				)
 
 				result, err := f(ctx, c, obj, mutateFn(obj), SkipEmptyPatch{})
+				Expect(result).To(Equal(controllerutil.OperationResultNone))
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should skip sending an empty patch with optimistic locking", func() {
+				objCopy := obj.DeepCopy()
+				mutateFn := func(o *corev1.ServiceAccount) func() error {
+					return func() error { return nil }
+				}
+				_ = mutateFn(objCopy)()
+
+				gomock.InOrder(
+					c.EXPECT().Create(ctx, obj).Return(apierrors.NewAlreadyExists(schema.GroupResource{}, "")),
+					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(obj), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, objToReturn *corev1.ServiceAccount, _ ...client.GetOption) error {
+						obj.DeepCopyInto(objToReturn)
+						return nil
+					}),
+				)
+
+				result, err := f(ctx, c, obj, mutateFn(obj), MergeFromOption{MergeFromOption: client.MergeFromWithOptimisticLock{}}, SkipEmptyPatch{})
 				Expect(result).To(Equal(controllerutil.OperationResultNone))
 				Expect(err).NotTo(HaveOccurred())
 			})

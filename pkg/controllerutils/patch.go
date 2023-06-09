@@ -16,6 +16,7 @@ package controllerutils
 
 import (
 	"context"
+	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,6 +42,7 @@ func strategicMergeFrom(obj client.Object, opts ...client.MergeFromOption) clien
 // PatchOptions contains several options used for calculating and sending patch requests.
 type PatchOptions struct {
 	mergeFromOptions []client.MergeFromOption
+	optimisticLock   bool
 	skipEmptyPatch   bool
 }
 
@@ -65,6 +67,9 @@ type MergeFromOption struct {
 
 // ApplyToPatchOptions applies the `MergeFromOption`s to the given PatchOption.
 func (m MergeFromOption) ApplyToPatchOptions(in *PatchOptions) {
+	if _, ok := m.MergeFromOption.(client.MergeFromWithOptimisticLock); ok {
+		in.optimisticLock = true
+	}
 	in.mergeFromOptions = append(in.mergeFromOptions, m)
 }
 
@@ -90,8 +95,15 @@ func GetAndCreateOrStrategicMergePatch(ctx context.Context, c client.Client, obj
 	return getAndCreateOrPatch(ctx, c, obj, strategicMergeFrom, f, opts...)
 }
 
-// EmptyJson is an empty json object string.
-const EmptyJson = "{}"
+func isEmptyPatch(data []byte, optimisticLocking bool, resourceVersion string) bool {
+	if optimisticLocking {
+		// The resource vesion is always set when optimistic locking is used
+		// see https://github.com/kubernetes-sigs/controller-runtime/blob/e54088c8c7da82111b4508bdaf189c45d1344f00/pkg/client/patch.go#L104
+		return string(data) == fmt.Sprintf(`{"metadata":{"resourceVersion":"%s"}}`, resourceVersion)
+	}
+
+	return string(data) == "{}"
+}
 
 func getAndCreateOrPatch(ctx context.Context, c client.Client, obj client.Object, patchFunc patchFn, f controllerutil.MutateFn, opts ...PatchOption) (controllerutil.OperationResult, error) {
 	patchOpts := &PatchOptions{}
@@ -123,7 +135,7 @@ func getAndCreateOrPatch(ctx context.Context, c client.Client, obj client.Object
 		return controllerutil.OperationResultNone, err
 	}
 
-	if patchOpts.skipEmptyPatch && string(patchData) == EmptyJson {
+	if patchOpts.skipEmptyPatch && isEmptyPatch(patchData, patchOpts.optimisticLock, obj.GetResourceVersion()) {
 		logf.Log.V(1).Info("Skip sending empty patch", "objectKey", client.ObjectKeyFromObject(obj))
 		return controllerutil.OperationResultNone, nil
 	}
@@ -181,7 +193,7 @@ func createOrGetAndPatch(ctx context.Context, c client.Client, obj client.Object
 			return controllerutil.OperationResultNone, err
 		}
 
-		if patchOpts.skipEmptyPatch && string(patchData) == EmptyJson {
+		if patchOpts.skipEmptyPatch && isEmptyPatch(patchData, patchOpts.optimisticLock, obj.GetResourceVersion()) {
 			logf.Log.V(1).Info("Skip sending empty patch", "objectKey", client.ObjectKeyFromObject(obj))
 			return controllerutil.OperationResultNone, nil
 		}
