@@ -142,7 +142,7 @@ func (m *ManagedResource) Reconcile(ctx context.Context) error {
 			mutateFn(resource)
 
 			// only mark the new secrets
-			if err := markSecretsAsGarbageCollectable(ctx, m.client, secretsFromRefs(resource)); err != nil {
+			if err := markSecretsAsGarbageCollectable(ctx, m.client, secretsFromRefs(resource, map[string]struct{}{})); err != nil {
 				return err
 			}
 
@@ -152,7 +152,9 @@ func (m *ManagedResource) Reconcile(ctx context.Context) error {
 	}
 
 	// mark all old secrets as garbage collectable
-	if err := markSecretsAsGarbageCollectable(ctx, m.client, secretsFromRefs(resource)); err != nil {
+	excludedNames := map[string]struct{}{}
+	oldSecrets := secretsFromRefs(resource, excludedNames)
+	if err := markSecretsAsGarbageCollectable(ctx, m.client, oldSecrets); err != nil {
 		return err
 	}
 
@@ -163,8 +165,14 @@ func (m *ManagedResource) Reconcile(ctx context.Context) error {
 		return nil
 	}
 
+	// exclude all already patched secrets
+	for _, s := range oldSecrets {
+		excludedNames[s.Name] = struct{}{}
+	}
+
 	// mark new secrets (if any) as garbage collectable
-	if err := markSecretsAsGarbageCollectable(ctx, m.client, secretsFromRefs(resource)); err != nil {
+	newSecrets := secretsFromRefs(resource, excludedNames)
+	if err := markSecretsAsGarbageCollectable(ctx, m.client, newSecrets); err != nil {
 		return err
 	}
 
@@ -193,16 +201,18 @@ func markSecretsAsGarbageCollectable(ctx context.Context, c client.Client, secre
 	return nil
 }
 
-func secretsFromRefs(obj *resourcesv1alpha1.ManagedResource) []*corev1.Secret {
+func secretsFromRefs(obj *resourcesv1alpha1.ManagedResource, excludedNames map[string]struct{}) []*corev1.Secret {
 	secrets := make([]*corev1.Secret, 0, len(obj.Spec.SecretRefs))
 	for _, secretRef := range obj.Spec.SecretRefs {
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      secretRef.Name,
-				Namespace: obj.Namespace,
-			},
+		if _, ok := excludedNames[secretRef.Name]; !ok {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      secretRef.Name,
+					Namespace: obj.Namespace,
+				},
+			}
+			secrets = append(secrets, secret)
 		}
-		secrets = append(secrets, secret)
 	}
 	return secrets
 }

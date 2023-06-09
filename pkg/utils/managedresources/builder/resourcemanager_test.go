@@ -316,7 +316,7 @@ var _ = Describe("Resource Manager", func() {
 				secret := &corev1.Secret{}
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(s), secret)).To(Succeed())
 				expected := s.DeepCopy()
-				expected.ObjectMeta.ResourceVersion = "3"
+				expected.ObjectMeta.ResourceVersion = "2"
 				expected.Labels["resources.gardener.cloud/garbage-collectable-reference"] = "true"
 				expected.TypeMeta = metav1.TypeMeta{
 					APIVersion: "v1",
