@@ -74,7 +74,7 @@ func init() {
 // Deprecated: This function is deprecated and will be dropped after v1.76 was released. Starting from
 // gardener/gardener@v1.73, gardenlet is managing the CRDs for the machine-controller-manager. Hence, extensions do not
 // need to take care about it anymore.
-// TODO(rfranzke): Remove this flag after v1.76 was released.
+// TODO(rfranzke): Remove this function after v1.76 was released.
 func ApplyMachineResourcesForConfig(ctx context.Context, config *rest.Config) error {
 	c, err := client.New(config, client.Options{Scheme: apiextensionsScheme})
 	if err != nil {
@@ -88,7 +88,7 @@ func ApplyMachineResourcesForConfig(ctx context.Context, config *rest.Config) er
 // Deprecated: This function is deprecated and will be dropped after v1.76 was released. Starting from
 // gardener/gardener@v1.73, gardenlet is managing the CRDs for the machine-controller-manager. Hence, extensions do not
 // need to take care about it anymore.
-// TODO(rfranzke): Remove this flag after v1.76 was released.
+// TODO(rfranzke): Remove this function after v1.76 was released.
 func ApplyMachineResources(ctx context.Context, c client.Client) error {
 	var content bytes.Buffer
 	for _, crdTpl := range machineCRDTpls {
