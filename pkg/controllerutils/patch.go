@@ -139,7 +139,7 @@ func getAndCreateOrPatch(ctx context.Context, c client.Client, obj client.Object
 // The MutateFn is called regardless of creating or patching an object.
 //
 // It returns the executed operation and an error.
-func CreateOrGetAndMergePatch(ctx context.Context, c client.Client, obj client.Object, f controllerutil.MutateFn, opts ...client.MergeFromOption) (controllerutil.OperationResult, error) {
+func CreateOrGetAndMergePatch(ctx context.Context, c client.Client, obj client.Object, f controllerutil.MutateFn, opts ...PatchOption) (controllerutil.OperationResult, error) {
 	return createOrGetAndPatch(ctx, c, obj, mergeFrom, f, opts...)
 }
 
@@ -148,11 +148,16 @@ func CreateOrGetAndMergePatch(ctx context.Context, c client.Client, obj client.O
 // The MutateFn is called regardless of creating or patching an object.
 //
 // It returns the executed operation and an error.
-func CreateOrGetAndStrategicMergePatch(ctx context.Context, c client.Client, obj client.Object, f controllerutil.MutateFn, opts ...client.MergeFromOption) (controllerutil.OperationResult, error) {
+func CreateOrGetAndStrategicMergePatch(ctx context.Context, c client.Client, obj client.Object, f controllerutil.MutateFn, opts ...PatchOption) (controllerutil.OperationResult, error) {
 	return createOrGetAndPatch(ctx, c, obj, strategicMergeFrom, f, opts...)
 }
 
-func createOrGetAndPatch(ctx context.Context, c client.Client, obj client.Object, patchFunc patchFn, f controllerutil.MutateFn, opts ...client.MergeFromOption) (controllerutil.OperationResult, error) {
+func createOrGetAndPatch(ctx context.Context, c client.Client, obj client.Object, patchFunc patchFn, f controllerutil.MutateFn, opts ...PatchOption) (controllerutil.OperationResult, error) {
+	patchOpts := &PatchOptions{}
+	for _, opt := range opts {
+		opt.ApplyToPatchOptions(patchOpts)
+	}
+
 	if err := f(); err != nil {
 		return controllerutil.OperationResultNone, err
 	}
@@ -166,15 +171,24 @@ func createOrGetAndPatch(ctx context.Context, c client.Client, obj client.Object
 			return controllerutil.OperationResultNone, err2
 		}
 
-		patch := patchFunc(obj.DeepCopyObject().(client.Object), opts...)
+		patch := patchFunc(obj.DeepCopyObject().(client.Object), patchOpts.mergeFromOptions...)
 		if err2 := f(); err2 != nil {
 			return controllerutil.OperationResultNone, err2
+		}
+
+		patchData, err := patch.Data(obj)
+		if err != nil {
+			return controllerutil.OperationResultNone, err
+		}
+
+		if patchOpts.skipEmptyPatch && string(patchData) == EmptyJson {
+			logf.Log.V(1).Info("Skip sending empty patch", "objectKey", client.ObjectKeyFromObject(obj))
+			return controllerutil.OperationResultNone, nil
 		}
 
 		if err2 := c.Patch(ctx, obj, patch); err2 != nil {
 			return controllerutil.OperationResultNone, err2
 		}
-
 		return controllerutil.OperationResultUpdated, nil
 	}
 
