@@ -25,6 +25,10 @@ const (
 )
 
 // Options are command line options that can be set for controller.Options.
+// Deprecated: This functionality is deprecated and will be dropped after v1.76 was released. Starting from
+// gardener/gardener@v1.73, gardenlet is managing the CRDs for the machine-controller-manager. Hence, extensions do not
+// need to take care about it anymore.
+// TODO(rfranzke): Remove this struct after v1.76 was released.
 type Options struct {
 	// DeployCRDs defines whether to ignore the operation annotation or not.
 	DeployCRDs bool

@@ -57,7 +57,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/extensions"
-	"github.com/gardener/gardener/pkg/component/extensions/crds"
+	extensioncrds "github.com/gardener/gardener/pkg/component/extensions/crds"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
@@ -74,6 +74,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
+	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/metricsserver"
 	"github.com/gardener/gardener/pkg/component/monitoring"
 	"github.com/gardener/gardener/pkg/component/nginxingress"
@@ -376,46 +377,40 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 	// Deploy the CRDs in the seed cluster.
 	log.Info("Deploying custom resource definitions")
+	if err := fluentoperator.NewCRDs(applier).Deploy(ctx); err != nil {
+		return err
+	}
+
+	if err := machinecontrollermanager.NewCRD(seedClient, applier).Deploy(ctx); err != nil {
+		return err
+	}
+
+	if err := extensioncrds.NewCRD(applier).Deploy(ctx); err != nil {
+		return err
+	}
 
 	if !seedIsGarden {
 		if err := etcd.NewCRD(seedClient, applier).Deploy(ctx); err != nil {
 			return err
 		}
+
+		if err := istio.NewCRD(chartApplier).Deploy(ctx); err != nil {
+			return err
+		}
+
 		if vpaEnabled {
 			if err := vpa.NewCRD(applier, nil).Deploy(ctx); err != nil {
 				return err
 			}
 		}
-	}
 
-	if hvpaEnabled {
-		if err := kubernetesutils.DeleteObjects(ctx, seedClient,
-			&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-vpa", Namespace: r.GardenNamespace}},
-			&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus-vpa", Namespace: r.GardenNamespace}},
-		); err != nil {
-			return err
+		if hvpaEnabled {
+			if err := hvpa.NewCRD(applier).Deploy(ctx); err != nil {
+				return err
+			}
 		}
 
-		if err := hvpa.NewCRD(applier).Deploy(ctx); err != nil {
-			return err
-		}
-	}
-
-	istioCRDs := istio.NewCRD(chartApplier)
-	if err := istioCRDs.Deploy(ctx); err != nil {
-		return err
-	}
-
-	if err := fluentoperator.NewCRDs(applier).Deploy(ctx); err != nil {
-		return err
-	}
-
-	if err := crds.NewExtensionsCRD(applier).Deploy(ctx); err != nil {
-		return err
-	}
-
-	// When the seed is the garden cluster then gardener-resource-manager is reconciled by the gardener-operator.
-	if !seedIsGarden {
+		// When the seed is the garden cluster then gardener-resource-manager is reconciled by the gardener-operator.
 		var defaultNotReadyTolerationSeconds, defaultUnreachableTolerationSeconds *int64
 		if nodeToleration := r.Config.NodeToleration; nodeToleration != nil {
 			defaultNotReadyTolerationSeconds = nodeToleration.DefaultNotReadyTolerationSeconds
@@ -468,6 +463,15 @@ func (r *Reconciler) runReconcileSeedFlow(
 	// Wait until required extensions are ready because they might be needed by following deployments
 	if err := WaitUntilRequiredExtensionsReady(ctx, r.GardenClient, seed.GetInfo(), 5*time.Second, 1*time.Minute); err != nil {
 		return err
+	}
+
+	if hvpaEnabled {
+		if err := kubernetesutils.DeleteObjects(ctx, seedClient,
+			&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-vpa", Namespace: r.GardenNamespace}},
+			&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus-vpa", Namespace: r.GardenNamespace}},
+		); err != nil {
+			return err
+		}
 	}
 
 	// Fetch component-specific aggregate and central monitoring configuration

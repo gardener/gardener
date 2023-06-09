@@ -44,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
+	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/nginxingress"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/seedsystem"
@@ -208,6 +209,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			},
 			IngressGateway: istioIngressGateway,
 		})
+		mcmCRDs            = machinecontrollermanager.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
 		fluentOperatorCRDs = fluentoperator.NewCRDs(r.SeedClientSet.Applier())
 	)
 
@@ -265,6 +267,10 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Name: "Destroy Fluent Operator CRDs",
 			Fn:   component.OpDestroyAndWait(fluentOperatorCRDs).Destroy,
 		})
+		destroyMachineControllerManagerCRDs = g.Add(flow.Task{
+			Name: "Destroy machine-controller-manager CRDs",
+			Fn:   component.OpDestroyAndWait(mcmCRDs).Destroy,
+		})
 		syncPointCleanedUp = flow.NewTaskIDs(
 			destroyNginxIngress,
 			destroyClusterAutoscaler,
@@ -276,6 +282,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyIstio,
 			destroyIstioCRDs,
 			destroyFluentOperatorCRDs,
+			destroyMachineControllerManagerCRDs,
 			noControllerInstallations,
 		)
 		destroySystemResources = g.Add(flow.Task{

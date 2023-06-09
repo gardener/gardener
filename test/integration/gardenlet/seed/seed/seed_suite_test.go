@@ -60,8 +60,6 @@ var (
 
 	//go:embed testdata/crd-managedresources.yaml
 	managedResourcesCRD string
-	//go:embed testdata/crd-verticalpodautoscalers.yaml
-	verticalPodAutoscalerCRD string
 )
 
 var _ = BeforeSuite(func() {

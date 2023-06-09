@@ -44,8 +44,10 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
+	"github.com/gardener/gardener/pkg/component/istio"
 	"github.com/gardener/gardener/pkg/component/nginxingress"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
+	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -504,7 +506,86 @@ var _ = Describe("Seed controller tests", func() {
 						g.Expect(secret.Data).To(HaveKey("auth"))
 					}).Should(Succeed())
 
+					var (
+						crdsOnlyForSeedClusters = []gomegatypes.GomegaMatcher{
+							// fluent-operator
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterfilters.fluentbit.fluent.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterfluentbitconfigs.fluentbit.fluent.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterinputs.fluentbit.fluent.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusteroutputs.fluentbit.fluent.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterparsers.fluentbit.fluent.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("fluentbits.fluentbit.fluent.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("collectors.fluentbit.fluent.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("fluentbitconfigs.fluentbit.fluent.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("filters.fluentbit.fluent.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("parsers.fluentbit.fluent.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("outputs.fluentbit.fluent.io")})}),
+							// machine-controller-manager
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("alicloudmachineclasses.machine.sapcloud.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("awsmachineclasses.machine.sapcloud.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("azuremachineclasses.machine.sapcloud.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gcpmachineclasses.machine.sapcloud.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("machineclasses.machine.sapcloud.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("machinedeployments.machine.sapcloud.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("machines.machine.sapcloud.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("machinesets.machine.sapcloud.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("openstackmachineclasses.machine.sapcloud.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("packetmachineclasses.machine.sapcloud.io")})}),
+							// extensions
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("backupbuckets.extensions.gardener.cloud")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("backupentries.extensions.gardener.cloud")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("bastions.extensions.gardener.cloud")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusters.extensions.gardener.cloud")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("containerruntimes.extensions.gardener.cloud")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("controlplanes.extensions.gardener.cloud")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("dnsrecords.extensions.gardener.cloud")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("extensions.extensions.gardener.cloud")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("infrastructures.extensions.gardener.cloud")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("networks.extensions.gardener.cloud")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("operatingsystemconfigs.extensions.gardener.cloud")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("workers.extensions.gardener.cloud")})}),
+						}
+						crdsSharedWithGardenCluster = []gomegatypes.GomegaMatcher{
+							// etcd-druid
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcds.druid.gardener.cloud")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcdcopybackupstasks.druid.gardener.cloud")})}),
+							// istio
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("destinationrules.networking.istio.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("envoyfilters.networking.istio.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gateways.networking.istio.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("serviceentries.networking.istio.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("sidecars.networking.istio.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("virtualservices.networking.istio.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("authorizationpolicies.security.istio.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("peerauthentications.security.istio.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("requestauthentications.security.istio.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("workloadentries.networking.istio.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("workloadgroups.networking.istio.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("telemetries.telemetry.istio.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("wasmplugins.extensions.istio.io")})}),
+							// vertical-pod-autoscaler
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("verticalpodautoscalers.autoscaling.k8s.io")})}),
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("verticalpodautoscalercheckpoints.autoscaling.k8s.io")})}),
+							// hvpa-controller
+							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("hvpas.autoscaling.k8s.io")})}),
+						}
+					)
+
+					By("Verify that the seed-specific CRDs have been deployed")
+					Eventually(func(g Gomega) []apiextensionsv1.CustomResourceDefinition {
+						crdList := &apiextensionsv1.CustomResourceDefinitionList{}
+						g.Expect(testClient.List(ctx, crdList)).To(Succeed())
+						return crdList.Items
+					}).Should(ContainElements(crdsOnlyForSeedClusters))
+
 					if !seedIsGarden {
+						By("Verify that the CRDs shared with the garden cluster have been deployed")
+						Eventually(func(g Gomega) []apiextensionsv1.CustomResourceDefinition {
+							crdList := &apiextensionsv1.CustomResourceDefinitionList{}
+							g.Expect(testClient.List(ctx, crdList)).To(Succeed())
+							return crdList.Items
+						}).Should(ContainElements(crdsSharedWithGardenCluster))
+
 						// The seed controller waits for the gardener-resource-manager Deployment to be healthy, so
 						// let's fake this here.
 						By("Patch gardener-resource-manager deployment to report healthiness")
@@ -517,37 +598,38 @@ var _ = Describe("Seed controller tests", func() {
 							deployment.Status.Conditions = []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue}}
 							g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
 						}).Should(Succeed())
-
-						By("Verify that the ETCD-related CRDs have been deployed")
-						expectedEtcdCRDs := []gomegatypes.GomegaMatcher{
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcds.druid.gardener.cloud")})}),
-							MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcdcopybackupstasks.druid.gardener.cloud")})}),
-						}
-
+					} else {
+						By("Verify that the CRDs shared with the garden cluster have not been deployed (gardener-operator deploys them)")
 						Eventually(func(g Gomega) []apiextensionsv1.CustomResourceDefinition {
 							crdList := &apiextensionsv1.CustomResourceDefinitionList{}
 							g.Expect(testClient.List(ctx, crdList)).To(Succeed())
 							return crdList.Items
-						}).Should(ContainElements(expectedEtcdCRDs))
-					} else {
+						}).ShouldNot(ContainElements(crdsSharedWithGardenCluster))
+
 						// Usually, the gardener-operator deploys and manages the following resources.
 						// However, it is not really running, so we have to fake its behaviour here.
 						By("Create resources managed by gardener-operator")
+						chartApplier, err := kubernetes.NewChartApplierForConfig(restConfig)
+						Expect(err).NotTo(HaveOccurred())
+
 						var (
-							applier              = kubernetes.NewApplier(testClient, testClient.RESTMapper())
-							mrCRD                = kubernetes.NewManifestReader([]byte(managedResourcesCRD))
-							vpaCRD               = kubernetes.NewManifestReader([]byte(verticalPodAutoscalerCRD))
-							istioSystenNamespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "istio-system"}}
+							applier                  = kubernetes.NewApplier(testClient, testClient.RESTMapper())
+							managedResourceCRDReader = kubernetes.NewManifestReader([]byte(managedResourcesCRD))
+							istioSystemNamespace     = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "istio-system"}}
+							istioCRDs                = istio.NewCRD(chartApplier)
+							vpaCRD                   = vpa.NewCRD(applier, nil)
 						)
 
-						Expect(applier.ApplyManifest(ctx, mrCRD, kubernetes.DefaultMergeFuncs)).To(Succeed())
-						Expect(applier.ApplyManifest(ctx, vpaCRD, kubernetes.DefaultMergeFuncs)).To(Succeed())
-						Expect(testClient.Create(ctx, istioSystenNamespace)).To(Succeed())
+						Expect(applier.ApplyManifest(ctx, managedResourceCRDReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
+						Expect(testClient.Create(ctx, istioSystemNamespace)).To(Succeed())
+						Expect(istioCRDs.Deploy(ctx)).To(Succeed())
+						Expect(vpaCRD.Deploy(ctx)).To(Succeed())
 
 						DeferCleanup(func() {
-							Expect(applier.DeleteManifest(ctx, mrCRD)).To(Succeed())
-							Expect(applier.DeleteManifest(ctx, vpaCRD)).To(Succeed())
-							Expect(testClient.Delete(ctx, istioSystenNamespace)).To(Succeed())
+							Expect(applier.DeleteManifest(ctx, managedResourceCRDReader)).To(Succeed())
+							Expect(testClient.Delete(ctx, istioSystemNamespace)).To(Succeed())
+							Expect(istioCRDs.Destroy(ctx)).To(Succeed())
+							Expect(vpaCRD.Destroy(ctx)).To(Succeed())
 						})
 					}
 
@@ -572,7 +654,6 @@ var _ = Describe("Seed controller tests", func() {
 					Eventually(func(g Gomega) []resourcesv1alpha1.ManagedResource {
 						managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 						g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
-
 						return managedResourceList.Items
 					}).Should(ConsistOf(expectedManagedResources))
 
@@ -586,30 +667,8 @@ var _ = Describe("Seed controller tests", func() {
 					Eventually(func(g Gomega) []resourcesv1alpha1.ManagedResource {
 						managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 						g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace("istio-system"))).To(Succeed())
-
 						return managedResourceList.Items
 					}).Should(ConsistOf(expectedIstioManagedResources))
-
-					By("Verify that the fluent operator CRDs have been deployed")
-					expectedFluentOperatorCRDs := []gomegatypes.GomegaMatcher{
-						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterfilters.fluentbit.fluent.io")})}),
-						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterfluentbitconfigs.fluentbit.fluent.io")})}),
-						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterinputs.fluentbit.fluent.io")})}),
-						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusteroutputs.fluentbit.fluent.io")})}),
-						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("clusterparsers.fluentbit.fluent.io")})}),
-						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("fluentbits.fluentbit.fluent.io")})}),
-						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("collectors.fluentbit.fluent.io")})}),
-						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("fluentbitconfigs.fluentbit.fluent.io")})}),
-						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("filters.fluentbit.fluent.io")})}),
-						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("outputs.fluentbit.fluent.io")})}),
-						MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("parsers.fluentbit.fluent.io")})}),
-					}
-
-					Eventually(func(g Gomega) []apiextensionsv1.CustomResourceDefinition {
-						crdList := &apiextensionsv1.CustomResourceDefinitionList{}
-						g.Expect(testClient.List(ctx, crdList)).To(Succeed())
-						return crdList.Items
-					}).Should(ContainElements(expectedFluentOperatorCRDs))
 
 					By("Wait for Bootstrapped condition to be set to True")
 					Eventually(func(g Gomega) []gardencorev1beta1.Condition {
