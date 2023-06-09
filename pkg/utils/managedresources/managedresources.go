@@ -51,15 +51,6 @@ const (
 	LabelValueGardener = "gardener"
 )
 
-// SecretName returns the name of a corev1.Secret for the given name of a resourcesv1alpha1.ManagedResource. If
-// <withPrefix> is set then the name will be prefixed with 'managedresource-'.
-func SecretName(name string, withPrefix bool) string {
-	if withPrefix {
-		return SecretPrefix + name
-	}
-	return name
-}
-
 // New initiates a new ManagedResource object which can be reconciled.
 func New(client client.Client, namespace, name, class string, keepObjects *bool, labels, injectedLabels map[string]string, forceOverwriteAnnotations *bool) *builder.ManagedResource {
 	mr := builder.NewManagedResource(client).
@@ -103,11 +94,20 @@ func NewForSeed(c client.Client, namespace, name string, keepObjects bool) *buil
 
 // NewSecret initiates a new immutable Secret object which can be reconciled.
 func NewSecret(client client.Client, namespace, name string, data map[string][]byte, secretNameWithPrefix bool) (string, *builder.Secret) {
-	secretName := SecretName(name, secretNameWithPrefix)
+	secretName := secretName(name, secretNameWithPrefix)
 	return builder.NewSecret(client).
 		WithNamespacedName(namespace, secretName).
 		WithKeyValues(data).
 		Unique()
+}
+
+// secretName returns the name of a corev1.Secret for the given name of a resourcesv1alpha1.ManagedResource. If
+// <withPrefix> is set then the name will be prefixed with 'managedresource-'.
+func secretName(name string, withPrefix bool) string {
+	if withPrefix {
+		return SecretPrefix + name
+	}
+	return name
 }
 
 // CreateFromUnstructured creates a managed resource and its secret with the given name, class, and objects in the given namespace.
@@ -195,7 +195,7 @@ func deployManagedResource(ctx context.Context, secret *builder.Secret, managedR
 
 // Delete deletes the managed resource and its secrets with the given name in the given namespace.
 func Delete(ctx context.Context, c client.Client, namespace string, name string, secretNameWithPrefix bool) error {
-	secretName := SecretName(name, secretNameWithPrefix)
+	secretName := secretName(name, secretNameWithPrefix)
 
 	mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}
 	mrKey := client.ObjectKeyFromObject(mr)

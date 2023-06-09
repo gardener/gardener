@@ -32,7 +32,8 @@ func (k *kubeAPIServer) emptyManagedResource() *resourcesv1alpha1.ManagedResourc
 }
 
 func (k *kubeAPIServer) emptyManagedResourceSecret() *corev1.Secret {
-	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedresources.SecretName(ManagedResourceName, true), Namespace: k.namespace}}
+	// TODO(dimityrmirchev): Remove this once mr secrets are turned into garbage-collectable, immutable secrets
+	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-" + ManagedResourceName, Namespace: k.namespace}}
 }
 
 func (k *kubeAPIServer) computeShootResourcesData() (map[string][]byte, error) {
