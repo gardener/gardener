@@ -12,7 +12,7 @@ spec:
   args:
     - >-
       go test -timeout=0 -mod=vendor ./test/testmachinery/suites/shoot
-      --v -ginkgo.v -ginkgo.progress -ginkgo.no-color
+      --v -ginkgo.v -ginkgo.show-node-events -ginkgo.no-color
       --report-file=$TM_EXPORT_PATH/report.json
       -kubecfg=$TM_KUBECONFIG_PATH/gardener.config
       -shoot-name=$SHOOT_NAME

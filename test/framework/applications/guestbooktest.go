@@ -84,6 +84,12 @@ func (t *GuestBookTest) WaitUntilGuestbookDeploymentIsReady(ctx context.Context)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }
 
+// WaitUntilGuestbookIngressIsReady waits until the guestbook ingress is ready.
+func (t *GuestBookTest) WaitUntilGuestbookIngressIsReady(ctx context.Context) {
+	err := t.framework.WaitUntilIngressIsReady(ctx, GuestBook, t.framework.Namespace, t.framework.ShootClient)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+}
+
 // WaitUntilGuestbookURLsRespondOK waits until the deployed guestbook application can be reached via http
 func (t *GuestBookTest) WaitUntilGuestbookURLsRespondOK(ctx context.Context, guestbookAppUrls []string) error {
 	defaultPollInterval := time.Minute
@@ -181,6 +187,7 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	t.WaitUntilGuestbookDeploymentIsReady(ctx)
+	t.WaitUntilGuestbookIngressIsReady(ctx)
 
 	ginkgo.By("Guestbook app was deployed successfully!")
 }

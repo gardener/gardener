@@ -11,7 +11,7 @@ spec:
   args:
   - >-
     go test -timeout=0 -mod=vendor ./test/testmachinery/system/shoot_hibernation_wakeup
-    --v -ginkgo.v -ginkgo.progress -ginkgo.no-color
+    --v -ginkgo.v -ginkgo.show-node-events -ginkgo.no-color
     --shoot-name=$SHOOT_NAME
     --project-namespace=$PROJECT_NAMESPACE
     --kubecfg="$TM_KUBECONFIG_PATH/gardener.config"
