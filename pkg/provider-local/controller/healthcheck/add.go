@@ -52,6 +52,22 @@ var (
 // RegisterHealthChecks registers health checks for each extension resource
 // HealthChecks are grouped by extension (e.g worker), extension.type (e.g local) and  Health Check Type (e.g SystemComponentsHealthy)
 func RegisterHealthChecks(mgr manager.Manager, opts healthcheck.DefaultAddArgs) error {
+	var (
+		healthChecks = []healthcheck.ConditionTypeToHealthCheck{{
+			ConditionType: string(gardencorev1beta1.ShootEveryNodeReady),
+			HealthCheck:   worker.NewNodesChecker(),
+		}}
+		conditionTypesToRemove = sets.New(gardencorev1beta1.ShootControlPlaneHealthy)
+	)
+
+	if !GardenletManagesMCM {
+		healthChecks = append(healthChecks, healthcheck.ConditionTypeToHealthCheck{
+			ConditionType: string(gardencorev1beta1.ShootControlPlaneHealthy),
+			HealthCheck:   general.NewSeedDeploymentHealthChecker(local.MachineControllerManagerName),
+		})
+		conditionTypesToRemove = conditionTypesToRemove.Delete(gardencorev1beta1.ShootControlPlaneHealthy)
+	}
+
 	return healthcheck.DefaultRegistration(
 		local.Type,
 		extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.WorkerResource),
@@ -60,17 +76,8 @@ func RegisterHealthChecks(mgr manager.Manager, opts healthcheck.DefaultAddArgs) 
 		mgr,
 		opts,
 		nil,
-		[]healthcheck.ConditionTypeToHealthCheck{
-			{
-				ConditionType: string(gardencorev1beta1.ShootControlPlaneHealthy),
-				HealthCheck:   general.NewSeedDeploymentHealthChecker(local.MachineControllerManagerName),
-			},
-			{
-				ConditionType: string(gardencorev1beta1.ShootEveryNodeReady),
-				HealthCheck:   worker.NewNodesChecker(),
-			},
-		},
-		sets.Set[gardencorev1beta1.ConditionType]{},
+		healthChecks,
+		conditionTypesToRemove,
 	)
 }
 
