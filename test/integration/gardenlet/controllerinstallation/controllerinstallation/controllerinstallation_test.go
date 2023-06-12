@@ -204,6 +204,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
       CoreDNSQueryRewriting: false
       CustomResourceValidationExpressions: true
       DefaultSeccompProfile: false
+      DisableScalingClassesForShoots: false
       DryRun: true
       EfficientWatchResumption: true
       FullNetworkPoliciesInRuntimeCluster: true

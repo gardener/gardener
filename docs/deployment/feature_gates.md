@@ -18,25 +18,26 @@ The following tables are a summary of the feature gates that you can set on diff
 
 ## Feature Gates for Alpha or Beta Features
 
-| Feature                                    | Default | Stage   | Since  | Until  |
-|--------------------------------------------|---------|---------|--------|--------|
-| HVPA                                       | `false` | `Alpha` | `0.31` |        |
-| HVPAForShootedSeed                         | `false` | `Alpha` | `0.32` |        |
-| APIServerSNI                               | `false` | `Alpha` | `1.7`  | `1.18` |
-| APIServerSNI                               | `true`  | `Beta`  | `1.19` |        |
-| APIServerSNI (deprecated)                  | `true`  | `Beta`  | `1.48` |        |
-| HAControlPlanes                            | `false` | `Alpha` | `1.49` | `1.70` |
-| HAControlPlanes                            | `true`  | `Beta`  | `1.71` | `1.72` |
-| HAControlPlanes                            | `true`  | `GA`    | `1.73` |        |
-| DefaultSeccompProfile                      | `false` | `Alpha` | `1.54` |        |
-| CoreDNSQueryRewriting                      | `false` | `Alpha` | `1.55` |        |
-| IPv6SingleStack                            | `false` | `Alpha` | `1.63` |        |
-| MutableShootSpecNetworkingNodes            | `false` | `Alpha` | `1.64` |        |
-| FullNetworkPoliciesInRuntimeCluster        | `false` | `Alpha` | `1.66` | `1.70` |
-| FullNetworkPoliciesInRuntimeCluster        | `true`  | `Beta`  | `1.71` | `1.72` |
-| FullNetworkPoliciesInRuntimeCluster        | `true`  | `GA`    | `1.73` |        |
-| WorkerlessShoots                           | `false` | `Alpha` | `1.70` |        |
-| MachineControllerManagerDeployment         | `false` | `Alpha` | `1.73` |        |
+| Feature                             | Default | Stage   | Since  | Until  |
+|-------------------------------------|---------|---------|--------|--------|
+| HVPA                                | `false` | `Alpha` | `0.31` |        |
+| HVPAForShootedSeed                  | `false` | `Alpha` | `0.32` |        |
+| APIServerSNI                        | `false` | `Alpha` | `1.7`  | `1.18` |
+| APIServerSNI                        | `true`  | `Beta`  | `1.19` |        |
+| APIServerSNI (deprecated)           | `true`  | `Beta`  | `1.48` |        |
+| HAControlPlanes                     | `false` | `Alpha` | `1.49` | `1.70` |
+| HAControlPlanes                     | `true`  | `Beta`  | `1.71` | `1.72` |
+| HAControlPlanes                     | `true`  | `GA`    | `1.73` |        |
+| DefaultSeccompProfile               | `false` | `Alpha` | `1.54` |        |
+| CoreDNSQueryRewriting               | `false` | `Alpha` | `1.55` |        |
+| IPv6SingleStack                     | `false` | `Alpha` | `1.63` |        |
+| MutableShootSpecNetworkingNodes     | `false` | `Alpha` | `1.64` |        |
+| FullNetworkPoliciesInRuntimeCluster | `false` | `Alpha` | `1.66` | `1.70` |
+| FullNetworkPoliciesInRuntimeCluster | `true`  | `Beta`  | `1.71` | `1.72` |
+| FullNetworkPoliciesInRuntimeCluster | `true`  | `GA`    | `1.73` |        |
+| WorkerlessShoots                    | `false` | `Alpha` | `1.70` |        |
+| MachineControllerManagerDeployment  | `false` | `Alpha` | `1.73` |        |
+| DisableScalingClassesForShoots      | `false` | `Alpha` | `1.73` |        |
 
 ## Feature Gates for Graduated or Deprecated Features
 
@@ -175,3 +176,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | FullNetworkPoliciesInRuntimeCluster        | `gardenlet`, `gardener-operator`  | Enables the `NetworkPolicy` controller to place 'deny-all' network policies in all relevant namespaces in the runtime cluster.                                                                                                                                                                                                                                                     |
 | WorkerlessShoots                           | `gardener-apiserver`              | WorkerlessShoots allows creation of Shoot clusters with no worker pools.                                                                                                                                                                                                                                                                                                           |
 | MachineControllerManagerDeployment         | `gardenlet`                       | Enables Gardener to take over the deployment of the machine-controller-manager. If enabled, all registered provider extensions must support injecting the provider-specific MCM sidecar container into the deployment via the `controlplane` webhook.                                                                                                                              |
+| DisableScalingClassesForShoots             | `gardenlet`                       | Disables assigning a ScalingClass to Shoots based on their maximum Node count. All Shoot kube-apiservers will get the same initial resource requests for CPU and memory instead of making this depend on the ScalingClass.                                                                                                                                                         |

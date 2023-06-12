@@ -153,6 +153,12 @@ var _ = Describe("KubeAPIServer", func() {
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					Version: "1.22.0",
 				},
+				Provider: gardencorev1beta1.Provider{
+					Workers: []gardencorev1beta1.Worker{
+						{Minimum: 2, Maximum: 20},
+						{Minimum: 2, Maximum: 20},
+					},
+				},
 			},
 			Status: gardencorev1beta1.ShootStatus{
 				TechnicalID: seedNamespace,
@@ -176,13 +182,13 @@ var _ = Describe("KubeAPIServer", func() {
 	Describe("#DefaultKubeAPIServer", func() {
 		Describe("AutoscalingConfig", func() {
 			DescribeTable("should have the expected autoscaling config",
-				func(prepTest func(), featureGate *featuregate.Feature, value *bool, expectedConfig kubeapiserver.AutoscalingConfig) {
+				func(prepTest func(), featureGates map[featuregate.Feature]bool, expectedConfig kubeapiserver.AutoscalingConfig) {
 					if prepTest != nil {
 						prepTest()
 					}
 
-					if featureGate != nil && value != nil {
-						defer test.WithFeatureGate(features.DefaultFeatureGate, *featureGate, *value)()
+					for featureGate, value := range featureGates {
+						defer test.WithFeatureGate(features.DefaultFeatureGate, featureGate, value)()
 					}
 
 					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
@@ -192,9 +198,9 @@ var _ = Describe("KubeAPIServer", func() {
 
 				Entry("default behaviour, HVPA is disabled",
 					nil,
-					featureGatePtr(features.HVPA), pointer.Bool(false),
+					map[featuregate.Feature]bool{features.HVPA: false},
 					kubeapiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
 						HVPAEnabled:               false,
 						MinReplicas:               1,
 						MaxReplicas:               4,
@@ -204,10 +210,45 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("default behaviour, HVPA is enabled",
 					nil,
-					featureGatePtr(features.HVPA), pointer.Bool(true),
+					map[featuregate.Feature]bool{features.HVPA: true},
 					kubeapiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(40, ""),
 						HVPAEnabled:               true,
+						MinReplicas:               1,
+						MaxReplicas:               4,
+						UseMemoryMetricForHvpaHPA: false,
+						ScaleDownDisabledForHvpa:  false,
+					},
+				),
+				Entry("default behaviour, HVPA is enabled and DisableScalingClassesForShoots is enabled",
+					nil,
+					map[featuregate.Feature]bool{
+						features.HVPA:                           true,
+						features.DisableScalingClassesForShoots: true,
+					},
+					kubeapiserver.AutoscalingConfig{
+						APIServerResources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("500m"),
+								corev1.ResourceMemory: resource.MustParse("1Gi"),
+							},
+						},
+						HVPAEnabled:               true,
+						MinReplicas:               1,
+						MaxReplicas:               4,
+						UseMemoryMetricForHvpaHPA: false,
+						ScaleDownDisabledForHvpa:  false,
+					},
+				),
+				Entry("default behaviour, HVPA is disabled and DisableScalingClassesForShoots is enabled",
+					nil,
+					map[featuregate.Feature]bool{
+						features.HVPA:                           false,
+						features.DisableScalingClassesForShoots: true,
+					},
+					kubeapiserver.AutoscalingConfig{
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
+						HVPAEnabled:               false,
 						MinReplicas:               1,
 						MaxReplicas:               4,
 						UseMemoryMetricForHvpaHPA: false,
@@ -218,9 +259,9 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						botanist.Shoot.Purpose = gardencorev1beta1.ShootPurposeProduction
 					},
-					nil, nil,
+					nil,
 					kubeapiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
 						HVPAEnabled:               false,
 						MinReplicas:               2,
 						MaxReplicas:               4,
@@ -232,9 +273,9 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						botanist.Shoot.GetInfo().Annotations = map[string]string{"alpha.control-plane.scaling.shoot.gardener.cloud/scale-down-disabled": "true"}
 					},
-					nil, nil,
+					nil,
 					kubeapiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
 						HVPAEnabled:               false,
 						MinReplicas:               4,
 						MaxReplicas:               4,
@@ -246,9 +287,9 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 					},
-					featureGatePtr(features.HVPAForShootedSeed), pointer.Bool(false),
+					map[featuregate.Feature]bool{features.HVPAForShootedSeed: false},
 					kubeapiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
 						HVPAEnabled:               false,
 						MinReplicas:               1,
 						MaxReplicas:               4,
@@ -260,9 +301,9 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 					},
-					featureGatePtr(features.HVPAForShootedSeed), pointer.Bool(true),
+					map[featuregate.Feature]bool{features.HVPAForShootedSeed: true},
 					kubeapiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(40, ""),
 						HVPAEnabled:               true,
 						MinReplicas:               1,
 						MaxReplicas:               4,
@@ -281,9 +322,38 @@ var _ = Describe("KubeAPIServer", func() {
 							Replicas: pointer.Int32(24),
 						}
 					},
-					featureGatePtr(features.HVPAForShootedSeed), pointer.Bool(true),
+					map[featuregate.Feature]bool{features.HVPAForShootedSeed: true},
 					kubeapiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(40, ""),
+						HVPAEnabled:               true,
+						MinReplicas:               16,
+						MaxReplicas:               32,
+						UseMemoryMetricForHvpaHPA: true,
+						ScaleDownDisabledForHvpa:  false,
+					},
+				),
+				Entry("shoot is a managed seed w/ APIServer settings and HVPAForShootedSeed is enabled and DisableScalingClassesForShoots is enabled",
+					func() {
+						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
+						botanist.ManagedSeedAPIServer = &helper.ManagedSeedAPIServer{
+							Autoscaler: &helper.ManagedSeedAPIServerAutoscaler{
+								MinReplicas: pointer.Int32(16),
+								MaxReplicas: 32,
+							},
+							Replicas: pointer.Int32(24),
+						}
+					},
+					map[featuregate.Feature]bool{
+						features.HVPAForShootedSeed:             true,
+						features.DisableScalingClassesForShoots: true,
+					},
+					kubeapiserver.AutoscalingConfig{
+						APIServerResources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("500m"),
+								corev1.ResourceMemory: resource.MustParse("1Gi"),
+							},
+						},
 						HVPAEnabled:               true,
 						MinReplicas:               16,
 						MaxReplicas:               32,
@@ -302,7 +372,37 @@ var _ = Describe("KubeAPIServer", func() {
 							Replicas: pointer.Int32(24),
 						}
 					},
-					featureGatePtr(features.HVPAForShootedSeed), pointer.Bool(false),
+					map[featuregate.Feature]bool{features.HVPAForShootedSeed: false},
+					kubeapiserver.AutoscalingConfig{
+						APIServerResources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("1750m"),
+								corev1.ResourceMemory: resource.MustParse("2Gi"),
+							},
+						},
+						HVPAEnabled:               false,
+						MinReplicas:               16,
+						MaxReplicas:               32,
+						Replicas:                  pointer.Int32(24),
+						UseMemoryMetricForHvpaHPA: true,
+						ScaleDownDisabledForHvpa:  false,
+					},
+				),
+				Entry("shoot is a managed seed w/ APIServer settings and HVPAForShootedSeed is disabled and DisableScalingClassesForShoots is enabled",
+					func() {
+						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
+						botanist.ManagedSeedAPIServer = &helper.ManagedSeedAPIServer{
+							Autoscaler: &helper.ManagedSeedAPIServerAutoscaler{
+								MinReplicas: pointer.Int32(16),
+								MaxReplicas: 32,
+							},
+							Replicas: pointer.Int32(24),
+						}
+					},
+					map[featuregate.Feature]bool{
+						features.HVPAForShootedSeed:             false,
+						features.DisableScalingClassesForShoots: true,
+					},
 					kubeapiserver.AutoscalingConfig{
 						APIServerResources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
@@ -326,9 +426,9 @@ var _ = Describe("KubeAPIServer", func() {
 							},
 						}
 					},
-					nil, nil,
+					nil,
 					kubeapiserver.AutoscalingConfig{
-						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
 						HVPAEnabled:               false,
 						MinReplicas:               3,
 						MaxReplicas:               4,
