@@ -21,7 +21,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controller/service"
 )
 
@@ -43,18 +42,19 @@ type AddOptions struct {
 	Zone1IP string
 	// Zone2IP is the IP address to be used for the zone 2 istio ingress gateway.
 	Zone2IP string
-	// APIServerSNIEnabled states whether the APIServerSNI feature gate of the gardenlet is set to true.
-	APIServerSNIEnabled bool
 }
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 	var istioIngressGatewayPredicates []predicate.Predicate
-	for _, zone := range []*string{nil, pointer.String("0"), pointer.String("1"), pointer.String("2")} {
-		predicate, err := predicate.LabelSelectorPredicate(
-			metav1.LabelSelector{MatchExpressions: matchExpressionsIstioIngressGateway(opts.APIServerSNIEnabled, zone)},
-		)
+	for _, zone := range []*string{
+		nil,
+		pointer.String("0"),
+		pointer.String("1"),
+		pointer.String("2"),
+	} {
+		predicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchExpressions: matchExpressionsIstioIngressGateway(zone)})
 		if err != nil {
 			return err
 		}
@@ -82,42 +82,22 @@ func AddToManager(mgr manager.Manager) error {
 	return AddToManagerWithOptions(mgr, DefaultAddOptions)
 }
 
-func matchExpressionsIstioIngressGateway(apiServerSNIEnabled bool, zone *string) []metav1.LabelSelectorRequirement {
-	if apiServerSNIEnabled {
-		istioLabelValue := "ingressgateway"
-		if zone != nil {
-			istioLabelValue += "--zone--" + *zone
-		}
-
-		return []metav1.LabelSelectorRequirement{
-			{
-				Key:      "app",
-				Operator: metav1.LabelSelectorOpIn,
-				Values:   []string{"istio-ingressgateway"},
-			},
-			{
-				Key:      "istio",
-				Operator: metav1.LabelSelectorOpIn,
-				Values:   []string{istioLabelValue},
-			},
-		}
+func matchExpressionsIstioIngressGateway(zone *string) []metav1.LabelSelectorRequirement {
+	istioLabelValue := "ingressgateway"
+	if zone != nil {
+		istioLabelValue += "--zone--" + *zone
 	}
 
 	return []metav1.LabelSelectorRequirement{
 		{
-			Key:      v1beta1constants.LabelApp,
+			Key:      "app",
 			Operator: metav1.LabelSelectorOpIn,
-			Values:   []string{v1beta1constants.LabelKubernetes},
+			Values:   []string{"istio-ingressgateway"},
 		},
 		{
-			Key:      v1beta1constants.LabelRole,
+			Key:      "istio",
 			Operator: metav1.LabelSelectorOpIn,
-			Values:   []string{v1beta1constants.LabelAPIServer},
-		},
-		{
-			Key:      v1beta1constants.LabelAPIServerExposure,
-			Operator: metav1.LabelSelectorOpNotIn,
-			Values:   []string{v1beta1constants.LabelAPIServerExposureGardenerManaged},
+			Values:   []string{istioLabelValue},
 		},
 	}
 }

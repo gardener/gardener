@@ -629,7 +629,6 @@ build:
         - pkg/provider-local/imagevector
         - pkg/provider-local/local
         - pkg/provider-local/webhook/controlplane
-        - pkg/provider-local/webhook/controlplaneexposure
         - pkg/provider-local/webhook/dnsconfig
         - pkg/provider-local/webhook/networkpolicy
         - pkg/provider-local/webhook/node

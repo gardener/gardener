@@ -58,7 +58,6 @@ spec:
         - --service-zone-0-ip={{ .Values.controllers.service.zone0IP }}
         - --service-zone-1-ip={{ .Values.controllers.service.zone1IP }}
         - --service-zone-2-ip={{ .Values.controllers.service.zone2IP }}
-        - --service-apiserver-sni-enabled={{ .Values.controllers.service.apiServerSNIEnabled }}
         - --backupbucket-local-dir={{ .Values.controllers.backupbucket.localDir }}
         - --backupbucket-container-mount-path={{ .Values.controllers.backupbucket.containerMountPath }}
         - --heartbeat-namespace={{ .Release.Namespace }}

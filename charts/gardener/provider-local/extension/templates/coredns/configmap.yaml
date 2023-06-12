@@ -6,7 +6,6 @@ metadata:
   namespace: gardener-extension-provider-local-coredns
 data:
   Corefile: |
-    {{- if .Values.controllers.service.apiServerSNIEnabled }}
     .:9053 {
         view external {
           expr proto() == 'tcp'
@@ -33,20 +32,13 @@ data:
         reload
         loadbalance
     }
-    {{- end }}
     .:9053 {
         errors
         health {
            lameduck 5s
         }
         ready
-    {{- if .Values.controllers.service.apiServerSNIEnabled }}
         import custom/*.override
-    {{- else }}
-        rewrite stop {
-          name regex api\.(.*)\.(.*)\.(.*)\.local\.gardener\.cloud kube-apiserver.shoot--{2}--{1}.svc.cluster.local answer auto
-        }
-    {{- end }}
         rewrite stop {
           name regex (.*)\.ingress\.local\.seed\.local\.gardener\.cloud nginx-ingress-controller.garden.svc.cluster.local answer auto
         }

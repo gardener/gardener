@@ -65,7 +65,7 @@ The Helm chart of the `provider-local` extension defined in its [`ControllerDepl
 
 This CoreDNS instance is responsible for enabling the components running in the shoot clusters to be able to resolve the DNS names when they communicate with their `kube-apiserver`s.
 
-It contains a static configuration to resolve the DNS names based on `local.gardener.cloud` to either the `istio-ingressgateway.istio-ingress.svc` or the `kube-apiserver.<shoot-namespace>.svc` addresses (depending on whether the `--apiserver-sni-enabled` flag is set to `true` or `false`).
+It contains a static configuration to resolve the DNS names based on `local.gardener.cloud` to the `istio-ingressgateway.istio-ingress.svc`.
 
 ### Controllers
 
@@ -136,7 +136,7 @@ This controller reconciles `Services` of type `LoadBalancer` in the local `Seed`
 Since the local Kubernetes clusters used as Seed clusters typically don't support such services, this controller sets the `.status.ingress.loadBalancer.ip[0]` to the IP of the host.
 It makes important LoadBalancer Services (e.g. `istio-ingress/istio-ingressgateway` and `garden/nginx-ingress-controller`) available to the host by setting `spec.ports[].nodePort` to well-known ports that are mapped to `hostPorts` in the kind cluster configuration.
 
-If the `--apiserver-sni-enabled` flag is set to `true` (default), `istio-ingress/istio-ingressgateway` is set to be exposed on `nodePort` `30433` by this controller. Otherwise, the `kube-apiserver` `Service` in the shoot namespaces in the seed cluster needs to be patched to be exposed on `30443` by the [Control Plane Exposure Webhook](#control-plane-exposure).
+`istio-ingress/istio-ingressgateway` is set to be exposed on `nodePort` `30433` by this controller.
 
 In case the seed has multiple availability zones (`.spec.provider.zones`) and it uses SNI, the different zone-specific `istio-ingressgateway` loadbalancers are exposed via different IP addresses. Per default, IP addresses `127.0.0.10`, `127.0.0.11`, and `127.0.0.12` are used for the zones `0`, `1`, and `2` respectively.
 
@@ -164,11 +164,6 @@ The health check controller leverages the [health check library](healthcheck-lib
 #### Control Plane
 
 This webhook reacts on the `OperatingSystemConfig` containing the configuration of the kubelet and sets the `failSwapOn` to `false` (independent of what is configured in the `Shoot` spec) ([ref](https://github.com/kubernetes-sigs/kind/blob/b6bc112522651d98c81823df56b7afa511459a3b/site/content/docs/design/node-image.md#design)).
-
-#### Control Plane Exposure
-
-This webhook reacts on the `kube-apiserver` `Service` in shoot namespaces in the seed in case the gardenlet's `APIServerSNI` feature gate is disabled.
-It sets the `nodePort` to `30443` to enable communication from the host (this requires a port mapping to work when creating the local cluster).
 
 #### DNS Config
 
