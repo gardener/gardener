@@ -507,9 +507,13 @@ const (
 
 	// LabelAPIServerExposure is a constant for label key which gardener can add to various objects related
 	// to kube-apiserver exposure.
+	// Deprecated: This label key is deprecated and will be removed after Gardener v1.80 has been released.
+	// TODO(rfranzke): Drop this after v1.80 has been released.
 	LabelAPIServerExposure = "core.gardener.cloud/apiserver-exposure"
 	// LabelAPIServerExposureGardenerManaged is a constant for label value which gardener sets on the label key
 	// "core.gardener.cloud/apiserver-exposure" to indicate that it's responsible for apiserver exposure (via SNI).
+	// Deprecated: This label key is deprecated and will be removed after Gardener v1.80 has been released.
+	// TODO(rfranzke): Drop this after v1.80 has been released.
 	LabelAPIServerExposureGardenerManaged = "gardener-managed"
 	// LabelExposureClassHandlerName is the label key for exposure class handler names.
 	LabelExposureClassHandlerName = "handler.exposureclass.gardener.cloud/name"
