@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Masterminds/semver"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	istionetworkingv1beta1 "istio.io/api/networking/v1beta1"
@@ -27,7 +26,6 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -44,7 +42,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -59,13 +56,11 @@ func New(
 	client client.Client,
 	namespace string,
 	imageExtAuthzServer string,
-	kubernetesVersion *semver.Version,
 ) component.DeployWaiter {
 	return &authzServer{
 		client:              client,
 		namespace:           namespace,
 		imageExtAuthzServer: imageExtAuthzServer,
-		kubernetesVersion:   kubernetesVersion,
 	}
 }
 
@@ -73,7 +68,6 @@ type authzServer struct {
 	client              client.Client
 	namespace           string
 	imageExtAuthzServer string
-	kubernetesVersion   *semver.Version
 }
 
 func (a *authzServer) Deploy(ctx context.Context) error {
@@ -83,12 +77,10 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 		service         = a.emptyService()
 		virtualService  = a.emptyVirtualService()
 		vpa             = a.emptyVPA()
-		pdb             client.Object
+		pdb             = a.emptyPDB()
 
 		vpaUpdateMode = vpaautoscalingv1.UpdateModeAuto
 	)
-
-	pdb = a.emptyPDB()
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, deployment, func() error {
 		maxSurge := intstr.FromInt(100)
@@ -284,45 +276,20 @@ func (a *authzServer) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: Name + "-vpa", Namespace: a.namespace}}
 }
 
-func (a *authzServer) emptyPDB() client.Object {
-	pdbObjectMeta := metav1.ObjectMeta{
-		Name:      Name + "-pdb",
-		Namespace: a.namespace,
-	}
-
-	if version.ConstraintK8sGreaterEqual121.Check(a.kubernetesVersion) {
-		return &policyv1.PodDisruptionBudget{
-			ObjectMeta: pdbObjectMeta,
-		}
-	}
-	return &policyv1beta1.PodDisruptionBudget{
-		ObjectMeta: pdbObjectMeta,
-	}
-
+func (a *authzServer) emptyPDB() *policyv1.PodDisruptionBudget {
+	return &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: Name + "-pdb", Namespace: a.namespace}}
 }
 
-func (a *authzServer) reconcilePodDisruptionBudget(ctx context.Context, obj client.Object) error {
-	var (
-		maxUnavailable = intstr.FromInt(1)
-		pdbSelector    = &metav1.LabelSelector{
-			MatchLabels: getLabels(),
-		}
-	)
+func (a *authzServer) reconcilePodDisruptionBudget(ctx context.Context, pdb *policyv1.PodDisruptionBudget) error {
+	maxUnavailable := intstr.FromInt(1)
 
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, obj, func() error {
-		switch pdb := obj.(type) {
-		case *policyv1.PodDisruptionBudget:
-			pdb.Labels = getLabels()
-			pdb.Spec = policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &maxUnavailable,
-				Selector:       pdbSelector,
-			}
-		case *policyv1beta1.PodDisruptionBudget:
-			pdb.Labels = getLabels()
-			pdb.Spec = policyv1beta1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &maxUnavailable,
-				Selector:       pdbSelector,
-			}
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, pdb, func() error {
+		pdb.Labels = getLabels()
+		pdb.Spec = policyv1.PodDisruptionBudgetSpec{
+			MaxUnavailable: &maxUnavailable,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: getLabels(),
+			},
 		}
 		return nil
 	})

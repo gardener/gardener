@@ -375,7 +375,7 @@ type kubeAPIServer struct {
 func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	var (
 		deployment                            = k.emptyDeployment()
-		podDisruptionBudget                   client.Object
+		podDisruptionBudget                   = k.emptyPodDisruptionBudget()
 		horizontalPodAutoscaler               client.Object
 		verticalPodAutoscaler                 = k.emptyVerticalPodAutoscaler()
 		hvpa                                  = k.emptyHVPA()
@@ -391,7 +391,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		configMapTerminationHandler           = k.emptyConfigMap(watchdogConfigMapNamePrefix)
 	)
 
-	podDisruptionBudget = k.emptyPodDisruptionBudget()
 	horizontalPodAutoscaler = k.emptyHorizontalPodAutoscaler()
 
 	if err := k.reconcilePodDisruptionBudget(ctx, podDisruptionBudget); err != nil {

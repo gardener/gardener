@@ -18,12 +18,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,7 +42,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -85,8 +82,6 @@ type Values struct {
 	VPAEnabled bool
 	// KubeAPIServerHost is the kube-apiserver host name.
 	KubeAPIServerHost *string
-	// KubernetesVersion is the Kubernetes version of the Shoot.
-	KubernetesVersion *semver.Version
 }
 
 type metricsServer struct {
@@ -370,18 +365,6 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 		}
 
 		intStrOne           = intstr.FromInt(1)
-		podDisruptionBudget client.Object
-		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
-	)
-
-	if m.values.KubeAPIServerHost != nil {
-		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
-			Name:  "KUBERNETES_SERVICE_HOST",
-			Value: *m.values.KubeAPIServerHost,
-		})
-	}
-
-	if version.ConstraintK8sGreaterEqual121.Check(m.values.KubernetesVersion) {
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "metrics-server",
@@ -393,18 +376,15 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 				Selector:       deployment.Spec.Selector,
 			},
 		}
-	} else {
-		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "metrics-server",
-				Namespace: metav1.NamespaceSystem,
-				Labels:    getLabels(),
-			},
-			Spec: policyv1beta1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &intStrOne,
-				Selector:       deployment.Spec.Selector,
-			},
-		}
+
+		vpa *vpaautoscalingv1.VerticalPodAutoscaler
+	)
+
+	if m.values.KubeAPIServerHost != nil {
+		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+			Name:  "KUBERNETES_SERVICE_HOST",
+			Value: *m.values.KubeAPIServerHost,
+		})
 	}
 
 	if m.values.VPAEnabled {

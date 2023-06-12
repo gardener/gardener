@@ -23,7 +23,6 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -40,7 +39,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -285,13 +283,6 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 
-		podDisruptionBudget client.Object
-		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
-	)
-
-	utilruntime.Must(references.InjectAnnotations(deployment))
-
-	if version.ConstraintK8sGreaterEqual121.Check(b.values.KubernetesVersion) {
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "blackbox-exporter",
@@ -306,22 +297,11 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				Selector:       deployment.Spec.Selector,
 			},
 		}
-	} else {
-		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "blackbox-exporter",
-				Namespace: metav1.NamespaceSystem,
-				Labels: map[string]string{
-					v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring,
-					labelKeyComponent:           labelValue,
-				},
-			},
-			Spec: policyv1beta1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &intStrOne,
-				Selector:       deployment.Spec.Selector,
-			},
-		}
-	}
+
+		vpa *vpaautoscalingv1.VerticalPodAutoscaler
+	)
+
+	utilruntime.Must(references.InjectAnnotations(deployment))
 
 	if b.values.VPAEnabled {
 		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto

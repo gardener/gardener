@@ -25,7 +25,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -238,13 +237,8 @@ func (v *vpa) emptyDeployment(name string) *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: v.namespace}}
 }
 
-func (v *vpa) emptyPodDisruptionBudget(name string, k8sVersionGreaterEqual121 bool) client.Object {
-	objectMeta := metav1.ObjectMeta{Name: name, Namespace: v.namespace}
-
-	if k8sVersionGreaterEqual121 {
-		return &policyv1.PodDisruptionBudget{ObjectMeta: objectMeta}
-	}
-	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: objectMeta}
+func (v *vpa) emptyPodDisruptionBudget(name string) *policyv1.PodDisruptionBudget {
+	return &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: v.namespace}}
 }
 
 func (v *vpa) emptyVerticalPodAutoscaler(name string) *vpaautoscalingv1.VerticalPodAutoscaler {

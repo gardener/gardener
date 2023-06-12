@@ -25,7 +25,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -549,11 +548,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 
-		ingressClass        *networkingv1.IngressClass
-		podDisruptionBudget client.Object
-	)
-
-	if version.ConstraintK8sGreaterEqual121.Check(n.values.KubernetesVersion) {
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      controllerName,
@@ -567,21 +561,9 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				},
 			},
 		}
-	} else {
-		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      controllerName,
-				Namespace: n.namespace,
-				Labels:    getLabels(LabelValueController, ""),
-			},
-			Spec: policyv1beta1.PodDisruptionBudgetSpec{
-				MinAvailable: &intStrOne,
-				Selector: &metav1.LabelSelector{
-					MatchLabels: getLabels(LabelValueController, labelValueAddons),
-				},
-			},
-		}
-	}
+
+		ingressClass *networkingv1.IngressClass
+	)
 
 	// Skipped until https://github.com/kubernetes/ingress-nginx/issues/8640 is resolved
 	// and special seccomp profile is implemented for the nginx-ingress

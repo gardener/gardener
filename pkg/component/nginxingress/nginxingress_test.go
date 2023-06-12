@@ -346,12 +346,7 @@ metadata:
 spec:
   controller: k8s.io/` + v1beta1constants.SeedNginxIngressClass122 + `
 `
-			podDisruptionBudgetYAMLFor = func(k8sGreaterEqual121 bool) string {
-				apiVersion := "policy/v1beta1"
-				if k8sGreaterEqual121 {
-					apiVersion = "policy/v1"
-				}
-				out := `apiVersion: ` + apiVersion + `
+			podDisruptionBudgetYAML = `apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   creationTimestamp: null
@@ -373,8 +368,6 @@ status:
   disruptionsAllowed: 0
   expectedPods: 0
 `
-				return out
-			}
 			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
@@ -616,6 +609,7 @@ status: {}
 			Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(vpaYAML))
 			Expect(string(managedResourceSecret.Data["configmap__"+namespace+"__"+configMapName+".yaml"])).To(Equal(configMapYAML))
 			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-k8s-backend.yaml"])).To(Equal(deploymentBackendYAML))
+			Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(podDisruptionBudgetYAML))
 		})
 
 		Context("Kubernetes version >= 1.22", func() {
@@ -628,7 +622,6 @@ status: {}
 
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true)))
 				Expect(string(managedResourceSecret.Data["ingressclass____"+v1beta1constants.SeedNginxIngressClass122+".yaml"])).To(Equal(ingressClassYAML))
-				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(podDisruptionBudgetYAMLFor(true)))
 			})
 		})
 
@@ -640,7 +633,6 @@ status: {}
 
 			It("should successfully deploy all resources", func() {
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(false)))
-				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(podDisruptionBudgetYAMLFor(false)))
 			})
 		})
 	})

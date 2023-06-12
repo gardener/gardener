@@ -393,12 +393,7 @@ status: {}
 `
 			return out
 		}
-		pdbYAMLFor = func(k8sGreaterEqual121 bool) string {
-			apiVersion := "policy/v1beta1"
-			if k8sGreaterEqual121 {
-				apiVersion = "policy/v1"
-			}
-			out := `apiVersion: ` + apiVersion + `
+		pdbYAML = `apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   creationTimestamp: null
@@ -417,8 +412,6 @@ status:
   disruptionsAllowed: 0
   expectedPods: 0
 `
-			return out
-		}
 		hpaYAMLFor = func(k8sGreaterEqual123 bool) string {
 			apiVersion := "autoscaling/v2beta1"
 			target := `
@@ -691,6 +684,7 @@ status: {}
 			Expect(string(managedResourceSecret.Data["configmap__kube-system__coredns-custom.yaml"])).To(Equal(configMapCustomYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__kube-dns.yaml"])).To(Equal(serviceYAML))
 			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-dns.yaml"])).To(Equal(networkPolicyYAML))
+			Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__coredns.yaml"])).To(Equal(pdbYAML))
 			if cpaEnabled {
 				Expect(string(managedResourceSecret.Data["horizontalpodautoscaler__kube-system__coredns.yaml"])).To(Equal(""))
 				Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__coredns-autoscaler.yaml"])).To(Equal(cpasaYAML))
@@ -712,7 +706,6 @@ status: {}
 
 		Context("kubernetes version > 1.23.0", func() {
 			JustBeforeEach(func() {
-				Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__coredns.yaml"])).To(Equal(pdbYAMLFor(true)))
 				if !cpaEnabled {
 					Expect(string(managedResourceSecret.Data["horizontalpodautoscaler__kube-system__coredns.yaml"])).To(Equal(hpaYAMLFor(true)))
 				}
@@ -808,7 +801,7 @@ status: {}
 			})
 		})
 
-		Context("kubernetes version < 1.21.0, w/ apiserver host, w/ pod annotations", func() {
+		Context("kubernetes version < 1.23.0, w/ apiserver host, w/ pod annotations", func() {
 			var (
 				apiserverHost  = "apiserver.host"
 				podAnnotations = map[string]string{"foo": "bar"}
@@ -822,7 +815,6 @@ status: {}
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__coredns.yaml"])).To(Equal(pdbYAMLFor(false)))
 				Expect(string(managedResourceSecret.Data["horizontalpodautoscaler__kube-system__coredns.yaml"])).To(Equal(hpaYAMLFor(false)))
 				Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor(apiserverHost, podAnnotations, true, true)))
 			})
