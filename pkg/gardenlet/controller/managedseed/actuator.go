@@ -167,7 +167,7 @@ func (a *actuator) Reconcile(
 	// Create or update seed secrets
 	log.Info("Reconciling seed secrets")
 	a.recorder.Event(ms, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
-	if err := a.reconcileSeedSecrets(ctx, &seedTemplate.Spec, ms, shoot); err != nil {
+	if err := a.reconcileSeedSecrets(ctx, log, &seedTemplate.Spec, ms, shoot); err != nil {
 		return status, false, fmt.Errorf("could not reconcile seed %s secrets: %w", ms.Name, err)
 	}
 
@@ -481,7 +481,7 @@ func (a *actuator) checkSeedSpec(ctx context.Context, spec *gardencorev1beta1.Se
 	return nil
 }
 
-func (a *actuator) reconcileSeedSecrets(ctx context.Context, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed, shoot *gardencorev1beta1.Shoot) error {
+func (a *actuator) reconcileSeedSecrets(ctx context.Context, log logr.Logger, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed, shoot *gardencorev1beta1.Shoot) error {
 	// Get shoot secret
 	shootSecret, err := a.getShootSecret(ctx, shoot)
 	if err != nil {
@@ -548,8 +548,8 @@ func (a *actuator) reconcileSeedSecrets(ctx context.Context, spec *gardencorev1b
 		secret, err := kubernetesutils.GetSecretByReference(ctx,
 			a.gardenClient,
 			&corev1.SecretReference{
-				Name:      managedSeed.GetAnnotations()[seedmanagementv1alpha1constants.AnnotationSeedSecretName],
-				Namespace: managedSeed.GetAnnotations()[seedmanagementv1alpha1constants.AnnotationSeedSecretNamespace],
+				Name:      managedSeed.Annotations[seedmanagementv1alpha1constants.AnnotationSeedSecretName],
+				Namespace: managedSeed.Annotations[seedmanagementv1alpha1constants.AnnotationSeedSecretNamespace],
 			},
 		)
 		if err != nil {
@@ -567,6 +567,7 @@ func (a *actuator) reconcileSeedSecrets(ctx context.Context, spec *gardencorev1b
 			if err := a.gardenClient.Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
 				return fmt.Errorf("error deleting seed secret referred by managedseed: %w", err)
 			}
+			log.Info("Deleted seed secret referred by managedseed", "secretName", secret.Name, "secretNamespace", secret.Namespace)
 
 			patch := client.MergeFrom(managedSeed.DeepCopy())
 			delete(managedSeed.Annotations, seedmanagementv1alpha1constants.AnnotationSeedSecretName)
