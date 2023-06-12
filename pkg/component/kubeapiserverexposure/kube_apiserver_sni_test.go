@@ -17,7 +17,6 @@ package kubeapiserverexposure_test
 import (
 	"context"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -25,11 +24,8 @@ import (
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/version"
 	fakediscovery "k8s.io/client-go/discovery/fake"
@@ -44,7 +40,6 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
 	comptest "github.com/gardener/gardener/pkg/component/test"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -287,82 +282,6 @@ var _ = Describe("#SNI", func() {
 	Describe("#WaitCleanup", func() {
 		It("should succeed because it's not implemented", func() {
 			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(Succeed())
-		})
-	})
-
-	Describe("#AnyDeployedSNI", func() {
-		var (
-			c        client.Client
-			createVS = func(name string, namespace string) *unstructured.Unstructured {
-				return &unstructured.Unstructured{
-					Object: map[string]interface{}{
-						"apiVersion": "networking.istio.io/v1beta1",
-						"kind":       "VirtualService",
-						"metadata": map[string]interface{}{
-							"name":      name,
-							"namespace": namespace,
-						},
-					},
-				}
-			}
-		)
-
-		Context("CRD available", func() {
-			BeforeEach(func() {
-				s := runtime.NewScheme()
-				s.AddKnownTypeWithName(schema.FromAPIVersionAndKind("networking.istio.io/v1beta1", "VirtualServiceList"), &unstructured.UnstructuredList{})
-				s.AddKnownTypeWithName(schema.FromAPIVersionAndKind("networking.istio.io/v1beta1", "VirtualService"), &unstructured.Unstructured{})
-				virtualServiceObj := &unstructured.Unstructured{}
-				virtualServiceObj.SetGroupVersionKind(schema.FromAPIVersionAndKind("networking.istio.io/v1beta1", "VirtualService"))
-
-				c = fake.NewClientBuilder().
-					WithScheme(s).
-					WithIndex(
-						virtualServiceObj, "metadata.name", func(o client.Object) []string {
-							return []string{o.GetName()}
-						},
-					).
-					Build()
-			})
-
-			It("returns true when exists", func() {
-				Expect(c.Create(ctx, createVS("kube-apiserver", "test"))).NotTo(HaveOccurred())
-				ok, err := AnyDeployedSNI(ctx, c)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(ok).To(BeTrue())
-			})
-
-			It("returns false when does not exists", func() {
-				ok, err := AnyDeployedSNI(ctx, c)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(ok).To(BeFalse())
-			})
-		})
-
-		Context("CRD not available", func() {
-			var (
-				ctrl   *gomock.Controller
-				client *mockclient.MockClient
-			)
-
-			BeforeEach(func() {
-				ctrl = gomock.NewController(GinkgoT())
-				client = mockclient.NewMockClient(ctrl)
-			})
-
-			AfterEach(func() {
-				ctrl.Finish()
-			})
-
-			It("returns false", func() {
-				client.EXPECT().List(ctx, gomock.AssignableToTypeOf(&unstructured.UnstructuredList{}), gomock.Any()).Return(&meta.NoKindMatchError{})
-				ok, err := AnyDeployedSNI(ctx, client)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(ok).To(BeFalse())
-			})
 		})
 	})
 })

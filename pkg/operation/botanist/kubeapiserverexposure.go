@@ -74,6 +74,11 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 	))
 }
 
+// DeployKubeAPIServerSNI deploys the kube-apiserver SNI resources.
+func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
+	return b.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(ctx)
+}
+
 func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 	b.APIServerClusterIP = clusterIP
 	b.Shoot.Components.ControlPlane.KubeAPIServerSNI = kubeapiserverexposure.NewSNI(

@@ -567,24 +567,12 @@ var _ = Describe("GardenletConfiguration", func() {
 					Expect(errorList).To(BeEmpty())
 				})
 
-				It("should allow to use an external service ip as APIServerSNI feature gate is explicitly activated", func() {
+				It("should allow to use an external service ip", func() {
 					cfg.ExposureClassHandlers[0].SNI.Ingress.ServiceExternalIP = pointer.String("1.1.1.1")
-					cfg.FeatureGates["APIServerSNI"] = true
 
 					errorList := ValidateGardenletConfiguration(cfg, nil, false)
 
 					Expect(errorList).To(BeEmpty())
-				})
-
-				It("should forbid to use an external service ip when APIServerSNI feature gate is disabled", func() {
-					cfg.ExposureClassHandlers[0].SNI.Ingress.ServiceExternalIP = pointer.String("1.1.1.1")
-					cfg.FeatureGates["APIServerSNI"] = false
-
-					errorList := ValidateGardenletConfiguration(cfg, nil, false)
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("exposureClassHandlers[0].sni.ingress.serviceExternalIP"),
-					}))))
 				})
 
 				It("should forbid to use an empty external service ip", func() {

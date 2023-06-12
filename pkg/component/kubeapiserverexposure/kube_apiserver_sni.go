@@ -28,9 +28,7 @@ import (
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -255,20 +253,4 @@ func (s *sni) emptyGateway() *istionetworkingv1beta1.Gateway {
 
 func (s *sni) emptyVirtualService() *istionetworkingv1beta1.VirtualService {
 	return &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: s.name, Namespace: s.namespace}}
-}
-
-// AnyDeployedSNI returns true if any SNI is deployed in the cluster.
-func AnyDeployedSNI(ctx context.Context, c client.Client) (bool, error) {
-	l := &unstructured.UnstructuredList{
-		Object: map[string]interface{}{
-			"apiVersion": istionetworkingv1beta1.SchemeGroupVersion.String(),
-			"kind":       "VirtualServiceList",
-		},
-	}
-
-	if err := c.List(ctx, l, client.MatchingFields{"metadata.name": "kube-apiserver"}, client.Limit(1)); err != nil && !meta.IsNoMatchError(err) {
-		return false, err
-	}
-
-	return len(l.Items) > 0, nil
 }

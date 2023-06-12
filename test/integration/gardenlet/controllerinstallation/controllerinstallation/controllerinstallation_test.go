@@ -194,7 +194,6 @@ var _ = Describe("ControllerInstallation controller tests", func() {
       APIPriorityAndFairness: true
       APIResponseCompression: true
       APIServerIdentity: true
-      APIServerSNI: true
       APIServerTracing: false
       AdvancedAuditing: true
       AggregatedDiscoveryEndpoint: false

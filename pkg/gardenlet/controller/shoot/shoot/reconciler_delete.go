@@ -150,7 +150,6 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		defaultTimeout          = 30 * time.Second
 		staticNodesCIDR         = o.Shoot.GetInfo().Spec.Networking != nil && o.Shoot.GetInfo().Spec.Networking.Nodes != nil
 		useDNS                  = botanist.ShootUsesDNS()
-		sniPhase                = botanist.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase
 
 		g = flow.NewGraph("Shoot cluster deletion")
 
@@ -172,10 +171,8 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:   flow.TaskFn(botanist.DeployCloudProviderSecret).DoIf(nonTerminatingNamespace).SkipIf(o.Shoot.IsWorkerless),
 		})
 		deployKubeAPIServerService = g.Add(flow.Task{
-			Name: "Deploying Kubernetes API server service in the Seed cluster",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.DeployKubeAPIService(ctx, sniPhase)
-			}).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Name:         "Deploying Kubernetes API server service in the Seed cluster",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServerService.Deploy).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(ensureShootClusterIdentity),
 		})
 		_ = g.Add(flow.Task{

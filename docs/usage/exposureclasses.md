@@ -146,6 +146,6 @@ The load balancer service needs to be configured in a way that it is reachable f
 Therefore, the configuration of load balancer service need to be specified, which can be done via the `.loadBalancerService` section.
 The common way to influence load balancer service behaviour is via annotations where the respective cloud-controller-manager will react on and configure the infrastructure load balancer accordingly.
 
-In case the gardenlet runs with activated `APIServerSNI` feature flag (default), the control planes on a `Seed` will be exposed via a central load balancer and with Envoy via TLS SNI passthrough proxy.
+The control planes on a `Seed` will be exposed via a central load balancer and with Envoy via TLS SNI passthrough proxy.
 In this case, the gardenlet will install a dedicated ingress gateway (Envoy + load balancer + respective configuration) for each handler on the `Seed`.
 The configuration of the ingress gateways can be controlled via the `.sni` section in the same way like for the default ingress gateways.

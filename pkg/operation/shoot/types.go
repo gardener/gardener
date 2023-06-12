@@ -124,7 +124,6 @@ type ControlPlane struct {
 	KubeAPIServerIngress     component.Deployer
 	KubeAPIServerService     component.DeployWaiter
 	KubeAPIServerSNI         component.DeployWaiter
-	KubeAPIServerSNIPhase    component.Phase
 	KubeAPIServer            kubeapiserver.Interface
 	KubeScheduler            kubescheduler.Interface
 	KubeControllerManager    kubecontrollermanager.Interface
