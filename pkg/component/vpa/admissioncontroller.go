@@ -313,8 +313,9 @@ func (v *vpa) reconcileAdmissionControllerVPA(vpa *vpaautoscalingv1.VerticalPodA
 func (v *vpa) computeAdmissionControllerCommands() []string {
 	out := []string{"./admission-controller"}
 
-	// TODO: add --kubeconfig here (similar to updater, recommender) as soon as support for seeds and shoots < 1.21 is
-	//  dropped.
+	if v.values.ClusterType == component.ClusterTypeShoot {
+		out = append(out, "--kubeconfig="+gardenerutils.PathGenericKubeconfig)
+	}
 
 	return out
 }
