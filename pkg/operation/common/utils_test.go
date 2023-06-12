@@ -15,22 +15,12 @@
 package common_test
 
 import (
-	"context"
 	"fmt"
 	"net"
 
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/operation/common"
 )
 
@@ -187,53 +177,6 @@ var _ = Describe("common", func() {
 					))
 				})
 			})
-		})
-	})
-
-	Describe("#DeleteVali", func() {
-		var (
-			ctrl *gomock.Controller
-			c    *mockclient.MockClient
-			ctx  context.Context
-		)
-
-		resources := []client.Object{
-			&hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: v1beta1constants.GardenNamespace}},
-			&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: v1beta1constants.GardenNamespace}},
-			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-valitail", Namespace: v1beta1constants.GardenNamespace}},
-			&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: v1beta1constants.GardenNamespace}},
-			&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "logging",
-				Namespace: v1beta1constants.GardenNamespace}},
-			&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: v1beta1constants.GardenNamespace}},
-			&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "vali-vali-0", Namespace: v1beta1constants.GardenNamespace}},
-		}
-
-		BeforeEach(func() {
-			ctrl = gomock.NewController(GinkgoT())
-			c = mockclient.NewMockClient(ctrl)
-
-			ctx = context.TODO()
-		})
-
-		AfterEach(func() {
-			ctrl.Finish()
-		})
-
-		It("should delete all vali resources", func() {
-			for _, resource := range resources {
-				c.EXPECT().Delete(ctx, resource)
-			}
-
-			deleteOptions := []interface{}{
-				client.InNamespace(v1beta1constants.GardenNamespace),
-				client.MatchingLabels{
-					v1beta1constants.GardenRole: "logging",
-					v1beta1constants.LabelApp:   "vali",
-				}}
-			c.EXPECT().DeleteAllOf(ctx, &corev1.ConfigMap{}, deleteOptions...)
-
-			err := DeleteVali(ctx, c, v1beta1constants.GardenNamespace)
-			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 

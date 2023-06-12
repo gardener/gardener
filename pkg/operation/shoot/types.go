@@ -172,6 +172,7 @@ type SystemComponents struct {
 type Logging struct {
 	ShootRBACProxy   component.Deployer
 	ShootEventLogger component.Deployer
+	Vali             component.Deployer
 }
 
 // Addons contains references for the addons.

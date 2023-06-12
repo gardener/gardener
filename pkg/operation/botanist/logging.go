@@ -17,31 +17,37 @@ package botanist
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/Masterminds/semver"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/logging/eventlogger"
+	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/secrets"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
-// DeploySeedLogging will install the Helm release "seed-bootstrap/charts/vali" in the Seed clusters.
+// DeploySeedLogging will install the logging stack for the Shoot in the Seed clusters.
 func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	if !b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) {
-		return b.destroyShootLoggingStack(ctx)
+		if err := b.Shoot.Components.Logging.ShootRBACProxy.Destroy(ctx); err != nil {
+			return err
+		}
+
+		if err := b.Shoot.Components.Logging.ShootEventLogger.Destroy(ctx); err != nil {
+			return err
+		}
+
+		return b.Shoot.Components.Logging.Vali.Destroy(ctx)
 	}
 
 	// TODO(rickardsjp, istvanballok): Remove in release v1.77 once the Loki to Vali migration is complete.
@@ -57,18 +63,6 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		}
 	}
 
-	seedImages, err := b.InjectSeedSeedImages(map[string]interface{}{},
-		images.ImageNameVali,
-		images.ImageNameValiCurator,
-		images.ImageNameKubeRbacProxy,
-		images.ImageNameTelegraf,
-		images.ImageNameTune2fs,
-		images.ImageNameAlpine,
-	)
-	if err != nil {
-		return err
-	}
-
 	if b.isShootEventLoggerEnabled() {
 		if err := b.Shoot.Components.Logging.ShootEventLogger.Deploy(ctx); err != nil {
 			return err
@@ -79,101 +73,28 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		}
 	}
 
-	valiValues := map[string]interface{}{
-		"global":      seedImages,
-		"replicas":    b.Shoot.GetReplicas(1),
-		"clusterType": "shoot",
-	}
-
 	// check if vali is enabled in gardenlet config, default is true
 	if !gardenlethelper.IsValiEnabled(b.Config) {
 		// Because ShootNodeLogging is installed as part of the Vali pod
 		// we have to delete it too in case it was previously deployed
-		if err := b.destroyShootNodeLogging(ctx); err != nil {
+		if err := b.Shoot.Components.Logging.ShootRBACProxy.Destroy(ctx); err != nil {
 			return err
 		}
-		return common.DeleteVali(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
-	}
 
-	hvpaValues := make(map[string]interface{})
-	hvpaEnabled := features.DefaultFeatureGate.Enabled(features.HVPA)
-	if b.ManagedSeed != nil {
-		hvpaEnabled = features.DefaultFeatureGate.Enabled(features.HVPAForShootedSeed)
+		return b.Shoot.Components.Logging.Vali.Destroy(ctx)
 	}
 
 	if b.isShootNodeLoggingEnabled() {
 		if err := b.Shoot.Components.Logging.ShootRBACProxy.Deploy(ctx); err != nil {
 			return err
 		}
-
-		genericTokenKubeconfigSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
-		if !found {
-			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
-		}
-
-		ingressTLSSecret, err := b.SecretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
-			Name:                        "vali-tls",
-			CommonName:                  b.ComputeValiHost(),
-			Organization:                []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:                    b.ComputeValiHosts(),
-			CertType:                    secrets.ServerCert,
-			Validity:                    &ingressTLSCertificateValidity,
-			SkipPublishingCACertificate: true,
-		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
-		if err != nil {
-			return err
-		}
-
-		valiValues["rbacSidecarEnabled"] = true
-		valiValues["ingress"] = map[string]interface{}{
-			"class": v1beta1constants.SeedNginxIngressClass,
-			"hosts": []map[string]interface{}{
-				{
-					"hostName":    b.ComputeValiHost(),
-					"secretName":  ingressTLSSecret.Name,
-					"serviceName": "vali",
-					"servicePort": 8080,
-					"backendPath": "/vali/api/v1/push",
-				},
-			},
-		}
-		valiValues["genericTokenKubeconfigSecretName"] = genericTokenKubeconfigSecret.Name
 	} else {
-		if err := b.destroyShootNodeLogging(ctx); err != nil {
+		if err := b.Shoot.Components.Logging.ShootRBACProxy.Destroy(ctx); err != nil {
 			return err
 		}
 	}
 
-	hvpaValues["enabled"] = hvpaEnabled
-	valiValues["hvpa"] = hvpaValues
-	valiValues["priorityClassName"] = v1beta1constants.PriorityClassNameShootControlPlane100
-
-	if hvpaEnabled {
-		currentResources, err := kubernetesutils.GetContainerResourcesInStatefulSet(ctx, b.SeedClientSet.Client(), kubernetesutils.Key(b.Shoot.SeedNamespace, "vali"))
-		if err != nil {
-			return err
-		}
-		if len(currentResources) != 0 && currentResources["vali"] != nil {
-			valiValues["resources"] = map[string]interface{}{
-				// Copy requests only, effectively removing limits
-				"vali": &corev1.ResourceRequirements{Requests: currentResources["vali"].Requests},
-			}
-		}
-	}
-
-	return b.SeedClientSet.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-bootstrap", "charts", "vali"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-logging", b.Shoot.SeedNamespace), kubernetes.Values(valiValues))
-}
-
-func (b *Botanist) destroyShootLoggingStack(ctx context.Context) error {
-	if err := b.destroyShootNodeLogging(ctx); err != nil {
-		return err
-	}
-
-	if err := b.Shoot.Components.Logging.ShootEventLogger.Destroy(ctx); err != nil {
-		return err
-	}
-
-	return common.DeleteVali(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
+	return b.Shoot.Components.Logging.Vali.Deploy(ctx)
 }
 
 func (b *Botanist) lokiPvcExists(ctx context.Context) (bool, error) {
@@ -195,17 +116,6 @@ func (b *Botanist) destroyLokiBasedShootLoggingStackRetainingPvc(ctx context.Con
 	// }
 
 	return common.DeleteLokiRetainPvc(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.Logger)
-}
-
-func (b *Botanist) destroyShootNodeLogging(ctx context.Context) error {
-	if err := b.Shoot.Components.Logging.ShootRBACProxy.Destroy(ctx); err != nil {
-		return err
-	}
-
-	return kubernetesutils.DeleteObjects(ctx, b.SeedClientSet.Client(),
-		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "vali", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: b.Shoot.SeedNamespace}},
-	)
 }
 
 func (b *Botanist) destroyLokiBasedShootNodeLogging(ctx context.Context) error {
@@ -253,4 +163,42 @@ func (b *Botanist) DefaultEventLogger() (component.Deployer, error) {
 			Image:    imageEventLogger.String(),
 			Replicas: b.Shoot.GetReplicas(1),
 		})
+}
+
+func (b *Botanist) defaultVali() (component.Deployer, error) {
+	var ingressClass string
+
+	k8Version, err := semver.NewVersion(*b.Seed.GetInfo().Status.KubernetesVersion)
+	if err != nil {
+		return nil, fmt.Errorf("can't get seed k8s version: %w", err)
+	}
+
+	hvpaEnabled := features.DefaultFeatureGate.Enabled(features.HVPA)
+	if b.ManagedSeed != nil {
+		hvpaEnabled = features.DefaultFeatureGate.Enabled(features.HVPAForShootedSeed)
+	}
+
+	if b.isShootNodeLoggingEnabled() {
+		ingressClass, err = gardenerutils.ComputeNginxIngressClassForSeed(b.Seed.GetInfo(), b.Seed.GetInfo().Status.KubernetesVersion)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return shared.NewVali(
+		b.SeedClientSet.Client(),
+		b.ImageVector,
+		b.Shoot.GetReplicas(1),
+		b.Shoot.SeedNamespace,
+		ingressClass,
+		v1beta1constants.PriorityClassNameShootControlPlane100,
+		"shoot",
+		b.ComputeValiHost(),
+		b.SecretsManager,
+		nil,
+		k8Version,
+		b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config),
+		b.isShootNodeLoggingEnabled(),
+		true,
+		hvpaEnabled, "", "")
 }
