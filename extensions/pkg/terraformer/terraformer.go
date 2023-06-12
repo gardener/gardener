@@ -271,8 +271,7 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 			podLogger.Info("Skipping Terraformer pod deletion because context was cancelled")
 		case errors.Is(ctx.Err(), context.DeadlineExceeded):
 			// If the context error is deadline exceeded, create a new context for deleting the pod since attempting to use the
-			// original context will fail. The context might get cancelled for example by the owner check watchdog and the pod
-			// should be deleted to prevent the terraform script from running after the context was cancelled.
+			// original context will fail.
 			var cancel context.CancelFunc
 			ctx, cancel = context.WithTimeout(context.Background(), 1*time.Minute)
 			defer cancel()
