@@ -95,12 +95,9 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 			appsv1.SchemeGroupVersion.WithKind("DaemonSetList"),
 			batchv1.SchemeGroupVersion.WithKind("JobList"),
 			corev1.SchemeGroupVersion.WithKind("PodList"),
+			batchv1.SchemeGroupVersion.WithKind("CronJobList"),
 		}
 	)
-
-	if versionutils.ConstraintK8sGreaterEqual121.Check(r.TargetKubernetesVersion) {
-		groupVersionKinds = append(groupVersionKinds, batchv1.SchemeGroupVersion.WithKind("CronJobList"))
-	}
 
 	if versionutils.ConstraintK8sLess125.Check(r.TargetKubernetesVersion) {
 		groupVersionKinds = append(groupVersionKinds, batchv1beta1.SchemeGroupVersion.WithKind("CronJobList"))
