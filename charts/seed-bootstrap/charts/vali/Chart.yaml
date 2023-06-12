@@ -1,4 +1,0 @@
-apiVersion: "v1"
-name: vali
-version: 0.28.1
-description: "Vali: like Prometheus, but for logs."
