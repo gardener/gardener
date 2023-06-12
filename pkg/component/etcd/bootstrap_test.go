@@ -452,7 +452,6 @@ spec:
     targetPort: 8080
   selector:
     gardener.cloud/role: etcd-druid
-  sessionAffinity: None
   type: ClusterIP
 status:
   loadBalancer: {}

@@ -256,9 +256,8 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				}, labels()),
 			},
 			Spec: corev1.ServiceSpec{
-				Type:            corev1.ServiceTypeClusterIP,
-				SessionAffinity: corev1.ServiceAffinityNone,
-				Selector:        labels(),
+				Type:     corev1.ServiceTypeClusterIP,
+				Selector: labels(),
 				Ports: []corev1.ServicePort{
 					{
 						Name:       "metrics",
