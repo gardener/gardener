@@ -25,7 +25,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -167,13 +166,8 @@ const (
       description: Etcd3 {{ .role }} DB size has crossed its current practical limit of 8GB. Etcd quota must be increased to allow updates.
       summary: Etcd3 {{ .role }} DB size has crossed its current practical limit.
 
-  {{- if .k8sGTE121 }}
   - record: shoot:apiserver_storage_objects:sum_by_resource
     expr: max(apiserver_storage_objects) by (resource)
-  {{- else }}
-  - record: shoot:etcd_object_counts:sum_by_resource
-    expr: max(etcd_object_counts) by (resource)
-  {{- end }}
 
   {{- if .backupEnabled }}
   # etcd backup failure alerts
@@ -409,7 +403,6 @@ func (e *etcd) AlertingRules() (map[string]string, error) {
 		"class":              e.values.Class,
 		"classImportant":     ClassImportant,
 		"backupEnabled":      e.values.BackupConfig != nil,
-		"k8sGTE121":          versionutils.ConstraintK8sGreaterEqual121.Check(e.values.KubernetesVersion),
 		"etcdQuorumReplicas": int(etcdReplicas/2) + 1,
 		"isHA":               etcdReplicas > 1,
 	}); err != nil {
