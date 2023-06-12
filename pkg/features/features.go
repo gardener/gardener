@@ -37,15 +37,6 @@ const (
 	// alpha: v0.32.0
 	HVPAForShootedSeed featuregate.Feature = "HVPAForShootedSeed"
 
-	// APIServerSNI allows to use only one LoadBalancer in the Seed cluster
-	// for all Shoot clusters.
-	// See https://github.com/gardener/gardener/blob/master/docs/proposals/08-shoot-apiserver-via-sni.md
-	// owner @ScheererJ @DockToFuture
-	// alpha: v1.7.0
-	// beta: v1.19.0
-	// deprecated: v1.48.0
-	APIServerSNI featuregate.Feature = "APIServerSNI"
-
 	// HAControlPlanes allows shoot control planes to be run in high availability mode.
 	// owner: @shreyas-s-rao @timuthy
 	// alpha: v1.49.0
@@ -128,7 +119,6 @@ var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HVPA:                                {Default: false, PreRelease: featuregate.Alpha},
 	HVPAForShootedSeed:                  {Default: false, PreRelease: featuregate.Alpha},
-	APIServerSNI:                        {Default: true, PreRelease: featuregate.Deprecated, LockToDefault: true},
 	HAControlPlanes:                     {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	DefaultSeccompProfile:               {Default: false, PreRelease: featuregate.Alpha},
 	CoreDNSQueryRewriting:               {Default: false, PreRelease: featuregate.Alpha},

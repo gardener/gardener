@@ -10,8 +10,6 @@ metadata:
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
 rules:
-{{- if eq (include "gardenlet.apiserver-sni-enabled" .) "true" }}
-# Istio related rules that are required only when APIServerSNI feature gate is enabled.
 - apiGroups:
   - networking.istio.io
   resources:
@@ -41,23 +39,3 @@ rules:
   - get
   - patch
   - update
-{{- else }}
-# Istio related rules that are required only when APIServerSNI feature gate is disabled.
-- apiGroups:
-  - networking.istio.io
-  resources:
-  - envoyfilters
-  - gateways
-  resourceNames:
-  - proxy-protocol
-  verbs:
-  - delete
-- apiGroups:
-  - networking.istio.io
-  resources:
-  - virtualservices
-  resourceNames:
-  - proxy-protocol-blackhole
-  verbs:
-  - delete
-{{- end }}

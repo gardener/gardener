@@ -61,7 +61,7 @@ type GardenletConfiguration struct {
 	// Logging contains an optional configurations for the logging stack deployed
 	// by the Gardenlet in the seed clusters.
 	Logging *Logging
-	// SNI contains an optional configuration for the APIServerSNI feature used
+	// SNI contains an optional configuration for the SNI settings used
 	// by the Gardenlet in the seed clusters.
 	SNI *SNI
 	// ETCDConfig contains an optional configuration for the

@@ -73,7 +73,7 @@ type GardenletConfiguration struct {
 	// by the Gardenlet in the seed clusters.
 	// +optional
 	Logging *Logging `json:"logging,omitempty"`
-	// SNI contains an optional configuration for the APIServerSNI feature used
+	// SNI contains an optional configuration for the SNI settings used
 	// by the Gardenlet in the seed clusters.
 	// +optional
 	SNI *SNI `json:"sni,omitempty"`
