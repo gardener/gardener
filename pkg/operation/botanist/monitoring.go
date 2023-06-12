@@ -236,7 +236,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"shoot": map[string]interface{}{
 				"apiserver":           fmt.Sprintf("https://%s", gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain)),
 				"apiserverServerName": gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
-				"sniEnabled":          b.APIServerSNIEnabled(),
+				"sniEnabled":          b.ShootUsesDNS(),
 				"provider":            b.Shoot.GetInfo().Spec.Provider.Type,
 				"name":                b.Shoot.GetInfo().Name,
 				"project":             b.Garden.Project.Name,
@@ -588,7 +588,7 @@ func (b *Botanist) deployPlutonoCharts(ctx context.Context, credentialsSecret *c
 		},
 		"vpaEnabled": b.Shoot.WantsVerticalPodAutoscaler,
 		"sni": map[string]interface{}{
-			"enabled": b.APIServerSNIEnabled(),
+			"enabled": b.ShootUsesDNS(),
 		},
 		"nodeLocalDNS": map[string]interface{}{
 			"enabled": b.Shoot.NodeLocalDNSEnabled,

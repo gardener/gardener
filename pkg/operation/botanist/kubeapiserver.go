@@ -246,7 +246,7 @@ func (b *Botanist) computeKubeAPIServerServerCertificateConfig() kubeapiserver.S
 func (b *Botanist) computeKubeAPIServerSNIConfig() kubeapiserver.SNIConfig {
 	var config kubeapiserver.SNIConfig
 
-	if b.APIServerSNIEnabled() {
+	if b.ShootUsesDNS() {
 		config.Enabled = true
 		config.AdvertiseAddress = b.APIServerClusterIP
 	}
@@ -348,7 +348,7 @@ func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
 	if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Wait(ctx); err != nil {
 		return err
 	}
-	if b.APIServerSNIEnabled() {
+	if b.ShootUsesDNS() {
 		if err := b.DeployKubeAPIServerSNI(ctx); err != nil {
 			return err
 		}

@@ -23,7 +23,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
-	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -63,10 +62,9 @@ func (b *Botanist) DeployKubeAPIService(ctx context.Context, sniPhase component.
 	return b.newKubeAPIServiceServiceComponent(sniPhase).Deploy(ctx)
 }
 
-// APIServerSNIEnabled returns true if APIServerSNI feature gate is enabled and the shoot uses internal and external
-// DNS.
-func (b *Botanist) APIServerSNIEnabled() bool {
-	return features.DefaultFeatureGate.Enabled(features.APIServerSNI) && b.NeedsInternalDNS() && b.NeedsExternalDNS()
+// ShootUsesDNS returns true if the shoot uses internal and external DNS.
+func (b *Botanist) ShootUsesDNS() bool {
+	return b.NeedsInternalDNS() && b.NeedsExternalDNS()
 }
 
 // DefaultKubeAPIServerSNI returns a deployer for the kube-apiserver SNI.
@@ -96,7 +94,7 @@ func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
 func (b *Botanist) SNIPhase(ctx context.Context) (component.Phase, error) {
 	var (
 		svc        = &corev1.Service{}
-		sniEnabled = b.APIServerSNIEnabled()
+		sniEnabled = b.ShootUsesDNS()
 	)
 
 	if err := b.SeedClientSet.APIReader().Get(

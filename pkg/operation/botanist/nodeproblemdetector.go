@@ -37,7 +37,7 @@ func (b *Botanist) DefaultNodeProblemDetector() (component.DeployWaiter, error) 
 		KubernetesVersion: b.Shoot.KubernetesVersion,
 	}
 
-	if b.APIServerSNIEnabled() {
+	if b.ShootUsesDNS() {
 		values.APIServerHost = pointer.String(b.outOfClusterAPIServerFQDN())
 	}
 

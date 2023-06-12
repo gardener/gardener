@@ -44,7 +44,7 @@ func (b *Botanist) DefaultKubernetesDashboard() (kubernetesdashboard.Interface, 
 		KubernetesVersion:   b.Shoot.KubernetesVersion,
 	}
 
-	if b.APIServerSNIEnabled() {
+	if b.ShootUsesDNS() {
 		values.APIServerHost = pointer.String(b.outOfClusterAPIServerFQDN())
 	}
 

@@ -54,7 +54,7 @@ func (b *Botanist) DefaultCoreDNS() (coredns.Interface, error) {
 		SearchPathRewriteCommonSuffixes: getCommonSuffixesForRewriting(b.Shoot.GetInfo().Spec.SystemComponents),
 	}
 
-	if b.APIServerSNIEnabled() {
+	if b.ShootUsesDNS() {
 		values.APIServerHost = pointer.String(b.outOfClusterAPIServerFQDN())
 	}
 
