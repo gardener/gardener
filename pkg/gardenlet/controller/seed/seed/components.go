@@ -15,10 +15,14 @@
 package seed
 
 import (
+	"context"
+
 	"github.com/Masterminds/semver"
 	proberapi "github.com/gardener/dependency-watchdog/api/prober"
 	weederapi "github.com/gardener/dependency-watchdog/api/weeder"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,6 +46,8 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
 
 func defaultIstio(
@@ -272,4 +278,45 @@ func defaultSystem(
 			},
 		},
 	), nil
+}
+
+func defaultVali(
+	ctx context.Context,
+	c client.Client,
+	imageVector imagevector.ImageVector,
+	storage *resource.Quantity,
+	gardenNamespaceName string,
+	isLoggingEnabled bool,
+	hvpaEnabled bool,
+) (
+	component.Deployer,
+	error,
+) {
+	maintenanceBegin := "220000-0000"
+	maintenanceEnd := "230000-0000"
+	if hvpaEnabled {
+		shootInfo := &corev1.ConfigMap{}
+		if err := c.Get(ctx, kubernetesutils.Key(metav1.NamespaceSystem, v1beta1constants.ConfigMapNameShootInfo), shootInfo); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, err
+			}
+		} else {
+			shootMaintenanceBegin, err := timewindow.ParseMaintenanceTime(shootInfo.Data["maintenanceBegin"])
+			if err != nil {
+				return nil, err
+			}
+			maintenanceBegin = shootMaintenanceBegin.Add(1, 0, 0).Formatted()
+
+			shootMaintenanceEnd, err := timewindow.ParseMaintenanceTime(shootInfo.Data["maintenanceEnd"])
+			if err != nil {
+				return nil, err
+			}
+			maintenanceEnd = shootMaintenanceEnd.Add(1, 0, 0).Formatted()
+		}
+	}
+
+	return shared.NewVali(c, imageVector, 1, gardenNamespaceName, "",
+		v1beta1constants.PriorityClassNameSeedSystem600, "seed",
+		"", nil, storage, nil, isLoggingEnabled, false, false,
+		hvpaEnabled, maintenanceBegin, maintenanceEnd)
 }

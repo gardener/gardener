@@ -29,7 +29,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -99,7 +98,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/timewindow"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -521,69 +519,9 @@ func (r *Reconciler) runReconcileSeedFlow(
 		filters []*fluentbitv1alpha2.ClusterFilter
 		parsers []*fluentbitv1alpha2.ClusterParser
 	)
-	valiValues["enabled"] = loggingEnabled
+	valiValues["enabled"] = false
 
 	if loggingEnabled {
-		// check if vali is disabled in gardenlet config
-		if !gardenlethelper.IsValiEnabled(&r.Config) {
-			valiValues["enabled"] = false
-			if err := common.DeleteVali(ctx, seedClient, gardenNamespace.Name); err != nil {
-				return err
-			}
-		} else {
-			valiValues["authEnabled"] = false
-			valiValues["storage"] = loggingConfig.Vali.Garden.Storage
-			if err := ResizeOrDeleteValiDataVolumeIfStorageNotTheSame(ctx, log, seedClient, *loggingConfig.Vali.Garden.Storage); err != nil {
-				return err
-			}
-
-			if hvpaEnabled {
-				shootInfo := &corev1.ConfigMap{}
-				maintenanceBegin := "220000-0000"
-				maintenanceEnd := "230000-0000"
-				if err := seedClient.Get(ctx, kubernetesutils.Key(metav1.NamespaceSystem, v1beta1constants.ConfigMapNameShootInfo), shootInfo); err != nil {
-					if !apierrors.IsNotFound(err) {
-						return err
-					}
-				} else {
-					shootMaintenanceBegin, err := timewindow.ParseMaintenanceTime(shootInfo.Data["maintenanceBegin"])
-					if err != nil {
-						return err
-					}
-					maintenanceBegin = shootMaintenanceBegin.Add(1, 0, 0).Formatted()
-
-					shootMaintenanceEnd, err := timewindow.ParseMaintenanceTime(shootInfo.Data["maintenanceEnd"])
-					if err != nil {
-						return err
-					}
-					maintenanceEnd = shootMaintenanceEnd.Add(1, 0, 0).Formatted()
-				}
-
-				valiValues["hvpa"] = map[string]interface{}{
-					"enabled": true,
-					"maintenanceTimeWindow": map[string]interface{}{
-						"begin": maintenanceBegin,
-						"end":   maintenanceEnd,
-					},
-				}
-
-				currentResources, err := kubernetesutils.GetContainerResourcesInStatefulSet(ctx, seedClient, kubernetesutils.Key(r.GardenNamespace, v1beta1constants.StatefulSetNameVali))
-				if err != nil {
-					return err
-				}
-				if len(currentResources) != 0 && currentResources[v1beta1constants.StatefulSetNameVali] != nil {
-					valiValues["resources"] = map[string]interface{}{
-						// Copy requests only, effectively removing limits
-						v1beta1constants.StatefulSetNameVali: &corev1.ResourceRequirements{
-							Requests: currentResources[v1beta1constants.StatefulSetNameVali].Requests,
-						},
-					}
-				}
-			}
-
-			valiValues["priorityClassName"] = v1beta1constants.PriorityClassNameSeedSystem600
-		}
-
 		componentsFunctions := []component.CentralLoggingConfiguration{
 			// journald components
 			kubelet.CentralLoggingConfiguration,
@@ -644,10 +582,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			if len(loggingConfig.Parsers) > 0 {
 				parsers = append(parsers, loggingConfig.Parsers...)
 			}
-		}
-	} else {
-		if err := common.DeleteVali(ctx, seedClient, v1beta1constants.GardenNamespace); err != nil {
-			return err
 		}
 	}
 
@@ -789,7 +723,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			"hostName":   plutonoHost,
 			"secretName": plutonoIngressTLSSecretName,
 		},
-		"vali":         valiValues,
 		"alertmanager": alertManagerConfig,
 		"hvpa": map[string]interface{}{
 			"enabled": hvpaEnabled,
@@ -969,6 +902,18 @@ func (r *Reconciler) runReconcileSeedFlow(
 			return err
 		}
 
+		vali, err := defaultVali(
+			ctx,
+			seedClient,
+			r.ImageVector,
+			loggingConfig.Vali.Garden.Storage,
+			r.GardenNamespace,
+			loggingEnabled && gardenlethelper.IsValiEnabled(&r.Config),
+			hvpaEnabled)
+		if err != nil {
+			return err
+		}
+
 		kubeStateMetrics, err := sharedcomponent.NewKubeStateMetrics(
 			seedClient,
 			r.GardenNamespace,
@@ -1005,6 +950,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 				Name:         "Deploying Fluent Operator",
 				Fn:           component.OpWait(fluentOperator).Deploy,
 				Dependencies: flow.NewTaskIDs(reconcileFluentOperatorResources),
+			})
+			_ = g.Add(flow.Task{
+				Name: "Deploying Vali StatefulSet",
+				Fn:   vali.Deploy,
 			})
 		)
 	}
@@ -1082,6 +1031,8 @@ func deployBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Clie
 	})
 	return err
 }
+
+// TODO: (vlvasilev) move this function to the vali component.
 
 // ResizeOrDeleteValiDataVolumeIfStorageNotTheSame updates the garden Vali PVC if passed storage value is not the same as the current one.
 // Caution: If the passed storage capacity is less than the current one the existing PVC and its PV will be deleted.
