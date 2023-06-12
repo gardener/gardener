@@ -17,7 +17,6 @@ package botanist
 import (
 	"context"
 
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -26,13 +25,13 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-func (b *Botanist) newKubeAPIServiceServiceComponent(sniPhase component.Phase) component.DeployWaiter {
+// DefaultKubeAPIServerService returns a deployer for the kube-apiserver service.
+func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
 	return kubeapiserverexposure.NewService(
 		b.Logger,
 		b.SeedClientSet.Client(),
 		&kubeapiserverexposure.ServiceValues{
 			AnnotationsFunc:             func() map[string]string { return b.IstioLoadBalancerAnnotations() },
-			SNIPhase:                    sniPhase,
 			TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled,
 			RuntimeKubernetesVersion:    b.Seed.KubernetesVersion,
 		},
@@ -50,16 +49,6 @@ func (b *Botanist) newKubeAPIServiceServiceComponent(sniPhase component.Phase) c
 		},
 		"",
 	)
-}
-
-// DefaultKubeAPIServerService returns a deployer for the kube-apiserver service.
-func (b *Botanist) DefaultKubeAPIServerService(sniPhase component.Phase) component.DeployWaiter {
-	return b.newKubeAPIServiceServiceComponent(sniPhase)
-}
-
-// DeployKubeAPIService deploys the kube-apiserver service.
-func (b *Botanist) DeployKubeAPIService(ctx context.Context, sniPhase component.Phase) error {
-	return b.newKubeAPIServiceServiceComponent(sniPhase).Deploy(ctx)
 }
 
 // ShootUsesDNS returns true if the shoot uses internal and external DNS.
@@ -85,48 +74,7 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 	))
 }
 
-// DeployKubeAPIServerSNI deploys the kube-apiserver-sni chart.
-func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
-	return b.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(ctx)
-}
-
-// SNIPhase returns the current phase of the SNI enablement of kube-apiserver's service.
-func (b *Botanist) SNIPhase(ctx context.Context) (component.Phase, error) {
-	var (
-		svc        = &corev1.Service{}
-		sniEnabled = b.ShootUsesDNS()
-	)
-
-	if err := b.SeedClientSet.APIReader().Get(
-		ctx,
-		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
-		svc,
-	); client.IgnoreNotFound(err) != nil {
-		return component.PhaseUnknown, err
-	}
-
-	switch {
-	case svc.Spec.Type == corev1.ServiceTypeLoadBalancer && sniEnabled:
-		return component.PhaseEnabling, nil
-	case svc.Spec.Type == corev1.ServiceTypeClusterIP && sniEnabled:
-		return component.PhaseEnabled, nil
-	case svc.Spec.Type == corev1.ServiceTypeClusterIP && !sniEnabled:
-		return component.PhaseDisabling, nil
-	default:
-		if sniEnabled {
-			// initial cluster creation with SNI enabled (enabling only relevant for migration).
-			return component.PhaseEnabled, nil
-		}
-		// initial cluster creation with SNI disabled.
-		return component.PhaseDisabled, nil
-	}
-}
-
 func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
-	if b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase == component.PhaseDisabled {
-		return
-	}
-
 	b.APIServerClusterIP = clusterIP
 	b.Shoot.Components.ControlPlane.KubeAPIServerSNI = kubeapiserverexposure.NewSNI(
 		b.SeedClientSet.Client(),

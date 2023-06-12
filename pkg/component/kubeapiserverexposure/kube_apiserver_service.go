@@ -53,12 +53,13 @@ var (
 type ServiceValues struct {
 	// AnnotationsFunc is a function that returns annotations that should be added to the service.
 	AnnotationsFunc func() map[string]string
-	// SNIPhase is the current status of the SNI configuration.
-	SNIPhase component.Phase
 	// TopologyAwareRoutingEnabled indicates whether topology-aware routing is enabled for the kube-apiserver service.
 	TopologyAwareRoutingEnabled bool
 	// RuntimeKubernetesVersion is the Kubernetes version of the runtime cluster.
 	RuntimeKubernetesVersion *semver.Version
+	// TODO(timuthy): Drop this annotation once the gardener-operator no longer needs to specify 'LoadBalancer' as type.
+	// ServiceType is the type of the Service.
+	ServiceType *corev1.ServiceType
 }
 
 // serviceValues configure the kube-apiserver service.
@@ -66,12 +67,11 @@ type ServiceValues struct {
 // from the outside.
 type serviceValues struct {
 	annotationsFunc             func() map[string]string
-	serviceType                 corev1.ServiceType
-	enableSNI                   bool
-	gardenerManaged             bool
 	topologyAwareRoutingEnabled bool
 	runtimeKubernetesVersion    *semver.Version
 	clusterIP                   string
+	// TODO(timuthy): Drop this annotation once the gardener-operator no longer needs to specify 'LoadBalancer' as type.
+	serviceType corev1.ServiceType
 }
 
 // NewService creates a new instance of DeployWaiter for the Service used to expose the kube-apiserver.
@@ -103,36 +103,17 @@ func NewService(
 		internalValues = &serviceValues{
 			annotationsFunc: func() map[string]string { return map[string]string{} },
 			clusterIP:       clusterIP,
+			serviceType:     corev1.ServiceTypeClusterIP,
 		}
 		loadBalancerServiceKeyFunc func() client.ObjectKey
 	)
 
 	if values != nil {
-		switch values.SNIPhase {
-		case component.PhaseEnabled:
-			internalValues.serviceType = corev1.ServiceTypeClusterIP
-			internalValues.enableSNI = true
-			internalValues.gardenerManaged = true
-			loadBalancerServiceKeyFunc = sniServiceKeyFunc
-		case component.PhaseEnabling:
-			// existing traffic must still access the old loadbalancer
-			// IP (due to DNS cache).
-			internalValues.serviceType = corev1.ServiceTypeLoadBalancer
-			internalValues.enableSNI = true
-			internalValues.gardenerManaged = false
-			loadBalancerServiceKeyFunc = sniServiceKeyFunc
-		case component.PhaseDisabling:
-			internalValues.serviceType = corev1.ServiceTypeLoadBalancer
-			internalValues.enableSNI = true
-			internalValues.gardenerManaged = true
-			loadBalancerServiceKeyFunc = serviceKeyFunc
-		default:
-			internalValues.serviceType = corev1.ServiceTypeLoadBalancer
-			internalValues.enableSNI = false
-			internalValues.gardenerManaged = false
-			loadBalancerServiceKeyFunc = serviceKeyFunc
-		}
+		loadBalancerServiceKeyFunc = sniServiceKeyFunc
 
+		if values.ServiceType != nil {
+			internalValues.serviceType = *values.ServiceType
+		}
 		internalValues.annotationsFunc = values.AnnotationsFunc
 		internalValues.topologyAwareRoutingEnabled = values.TopologyAwareRoutingEnabled
 		internalValues.runtimeKubernetesVersion = values.RuntimeKubernetesVersion
@@ -166,15 +147,13 @@ func (s *service) Deploy(ctx context.Context) error {
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, obj, func() error {
 		obj.Annotations = utils.MergeStringMaps(obj.Annotations, s.values.annotationsFunc())
+		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", "*")
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(obj, networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(kubeapiserverconstants.Port), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)}))
-		// TODO(rfranzke): Drop this annotation once the APIServerSNI feature gate is dropped (then API servers are only
-		//  exposed indirectly via Istio) and the NetworkPolicy controller in gardener-resource-manager is enabled for
-		//  all relevant namespaces in the seed cluster.
-		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, kubeapiserverconstants.Port))
 
-		if s.values.enableSNI {
-			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", "*")
-		}
+		// TODO(timuthy): Drop this annotation once the gardener-operator no longer specifies 'LoadBalancer' as service
+		//  type (then API servers are only exposed indirectly via Istio) and the NetworkPolicy controller in
+		//  gardener-resource-manager is enabled for all relevant namespaces in the seed cluster.
+		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, kubeapiserverconstants.Port))
 
 		namespaceSelectors := []metav1.LabelSelector{
 			{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
@@ -195,11 +174,7 @@ func (s *service) Deploy(ctx context.Context) error {
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(obj, namespaceSelectors...))
 
 		obj.Labels = utils.MergeStringMaps(obj.Labels, getLabels())
-		if s.values.gardenerManaged {
-			metav1.SetMetaDataLabel(&obj.ObjectMeta, v1beta1constants.LabelAPIServerExposure, v1beta1constants.LabelAPIServerExposureGardenerManaged)
-		} else {
-			delete(obj.Labels, v1beta1constants.LabelAPIServerExposure)
-		}
+		metav1.SetMetaDataLabel(&obj.ObjectMeta, v1beta1constants.LabelAPIServerExposure, v1beta1constants.LabelAPIServerExposureGardenerManaged)
 
 		gardenerutils.ReconcileTopologyAwareRoutingMetadata(obj, s.values.topologyAwareRoutingEnabled, s.values.runtimeKubernetesVersion)
 
