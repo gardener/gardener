@@ -124,13 +124,7 @@ var _ = Describe("utils", func() {
 				seed.Spec.Ingress = &gardencorev1beta1.Ingress{Controller: gardencorev1beta1.IngressController{Kind: v1beta1constants.IngressKindNginx}}
 			})
 
-			It("should return 'nginx-gardener' when kubernetes version < 1.22", func() {
-				class, err := ComputeNginxIngressClassForSeed(seed, kubernetesVersion)
-				Expect(class).To(Equal("nginx-gardener"))
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("should return 'nginx-ingress-gardener' when kubernetes version >= 1.22", func() {
+			It("should return 'nginx-ingress-gardener'", func() {
 				kubernetesVersion = pointer.String("1.22.0")
 
 				class, err := ComputeNginxIngressClassForSeed(seed, kubernetesVersion)

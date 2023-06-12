@@ -22,7 +22,6 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -41,7 +40,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const annotationSeedIngressClass = "seed.gardener.cloud/ingress-class"
@@ -152,25 +150,6 @@ func migrateIngressClassForShootIngresses(ctx context.Context, gardenClient, see
 }
 
 func switchIngressClass(ctx context.Context, seedClient client.Client, ingressKey types.NamespacedName, newClass string, kubernetesVersion *semver.Version) error {
-	if versionutils.ConstraintK8sLessEqual121.Check(kubernetesVersion) {
-		ingress := &extensionsv1beta1.Ingress{}
-		if err := seedClient.Get(ctx, ingressKey, ingress); err != nil {
-			if apierrors.IsNotFound(err) {
-				return nil
-			}
-			return err
-		}
-
-		annotations := ingress.GetAnnotations()
-		if annotations == nil {
-			annotations = make(map[string]string)
-		}
-		annotations[networkingv1beta1.AnnotationIngressClass] = newClass
-		ingress.SetAnnotations(annotations)
-
-		return seedClient.Update(ctx, ingress)
-	}
-
 	ingress := &networkingv1.Ingress{}
 	if err := seedClient.Get(ctx, ingressKey, ingress); err != nil {
 		if apierrors.IsNotFound(err) {
