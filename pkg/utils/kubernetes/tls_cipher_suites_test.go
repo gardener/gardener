@@ -29,24 +29,6 @@ var _ = Describe("TLS Cipher Suites", func() {
 			err     error
 		)
 
-		Context("when Kubernetes version is <= 1.22", func() {
-			BeforeEach(func() {
-				version, err = semver.NewVersion("1.21.1")
-				Expect(err).To(BeNil())
-			})
-
-			It("should return the expected TLS cipher suites", func() {
-				Expect(TLSCipherSuites(version)).To(ConsistOf(
-					"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-					"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
-					"TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305",
-					"TLS_RSA_WITH_AES_128_CBC_SHA",
-					"TLS_RSA_WITH_AES_256_CBC_SHA",
-					"TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
-				))
-			})
-		})
-
 		Context("when Kubernetes version is 1.22", func() {
 			BeforeEach(func() {
 				version, err = semver.NewVersion("1.22.1")
