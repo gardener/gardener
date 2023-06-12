@@ -230,22 +230,9 @@ metadata:
 				}
 			)
 
-			Context("k8s = 1.20", func() {
+			Context("k8s = 1.22", func() {
 				BeforeEach(func() {
-					values.Shoot.KubernetesVersion = semver.MustParse("1.20.4")
-					component = New(c, namespace, values)
-				})
-
-				It("should successfully deploy all resources", func() {
-					for _, name := range append(defaultKCMControllerSANames, "default", "endpointslicemirroring-controller", "ephemeral-volume-controller", "storage-version-garbage-collector") {
-						Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__"+name+".yaml"])).To(Equal(serviceAccountYAMLFor(name)), name)
-					}
-				})
-			})
-
-			Context("k8s >= 1.21", func() {
-				BeforeEach(func() {
-					values.Shoot.KubernetesVersion = semver.MustParse("1.21.4")
+					values.Shoot.KubernetesVersion = semver.MustParse("1.22.6")
 					component = New(c, namespace, values)
 				})
 

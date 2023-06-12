@@ -295,18 +295,9 @@ func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
 		"endpointslicemirroring-controller",
 		"ephemeral-volume-controller",
 		"storage-version-garbage-collector",
-	}
-
-	// The cloud-controller-manager library was only adapted beginning with Kubernetes 1.21 to not rely on the static
-	// ServiceAccount secrets anymore. Prior versions still need them, so let's add the ServiceAccount names for
-	// controllers which are part of cloud-controller-managers only for 1.21+.
-	// See https://github.com/kubernetes/kubernetes/pull/99291 for more details.
-	if versionutils.ConstraintK8sGreaterEqual121.Check(s.values.Shoot.KubernetesVersion) {
-		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
-			"node-controller",
-			"route-controller",
-			"service-controller",
-		)
+		"node-controller",
+		"route-controller",
+		"service-controller",
 	}
 
 	if versionutils.ConstraintK8sGreaterEqual126.Check(s.values.Shoot.KubernetesVersion) {
