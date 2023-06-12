@@ -1431,6 +1431,8 @@ Kubernetes core/v1.SecretReference
 <em>(Optional)</em>
 <p>SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
 cluster to be registered as Seed.</p>
+<p>Deprecated: This field is deprecated, gardenlet must run in the Seed cluster,
+hence it should use the in-cluster rest config via ServiceAccount to communicate with the Seed cluster.</p>
 </td>
 </tr>
 <tr>
@@ -9569,6 +9571,8 @@ Kubernetes core/v1.SecretReference
 <em>(Optional)</em>
 <p>SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
 cluster to be registered as Seed.</p>
+<p>Deprecated: This field is deprecated, gardenlet must run in the Seed cluster,
+hence it should use the in-cluster rest config via ServiceAccount to communicate with the Seed cluster.</p>
 </td>
 </tr>
 <tr>
@@ -9911,6 +9915,8 @@ Kubernetes core/v1.SecretReference
 <em>(Optional)</em>
 <p>SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
 cluster to be registered as Seed.</p>
+<p>Deprecated: This field is deprecated, gardenlet must run in the Seed cluster,
+hence it should use the in-cluster rest config via ServiceAccount to communicate with the Seed cluster.</p>
 </td>
 </tr>
 <tr>

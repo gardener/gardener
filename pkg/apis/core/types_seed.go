@@ -70,6 +70,9 @@ type SeedSpec struct {
 	Provider SeedProvider
 	// SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
 	// cluster to be registered as Seed.
+	//
+	// Deprecated: This field is deprecated, gardenlet must run in the Seed cluster,
+	// hence it should use the in-cluster rest config via ServiceAccount to communicate with the Seed cluster.
 	SecretRef *corev1.SecretReference
 	// Settings contains certain settings for this seed cluster.
 	Settings *SeedSettings
