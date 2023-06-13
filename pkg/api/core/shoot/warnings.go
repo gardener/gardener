@@ -24,6 +24,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -38,6 +39,8 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 	if pointer.BoolDeref(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, true) {
 		warnings = append(warnings, "you should consider disabling the static token kubeconfig, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_access.md for details")
 	}
+
+	warnings = append(warnings, getWarningsForDeprecatedNodeLocalDNSLabels(shoot)...)
 
 	if oldShoot != nil {
 		warnings = append(warnings, getWarningsForDueCredentialsRotations(shoot, credentialsRotationInterval)...)
@@ -55,6 +58,26 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 
 	if kubeControllerManager := shoot.Spec.Kubernetes.KubeControllerManager; kubeControllerManager != nil && kubeControllerManager.PodEvictionTimeout != nil {
 		warnings = append(warnings, "you are setting the spec.kubernetes.kubeControllerManager.podEvictionTimeout field. The field does not have effect since Kubernetes 1.13. Instead, use the spec.kubernetes.kubeAPIServer.(defaultNotReadyTolerationSeconds/defaultUnreachableTolerationSeconds) fields.")
+	}
+
+	return warnings
+}
+
+func getWarningsForDeprecatedNodeLocalDNSLabels(shoot *core.Shoot) []string {
+	var (
+		warnings []string
+	)
+
+	if _, ok := shoot.Annotations[v1beta1constants.AnnotationNodeLocalDNS]; ok {
+		warnings = append(warnings, fmt.Sprintf("annotation %v is deprecated. Use field `.spec.systemComponents.nodeLocalDNS.enabled` in Shoot instead.", v1beta1constants.AnnotationNodeLocalDNS))
+	}
+
+	if _, ok := shoot.Annotations[v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns]; ok {
+		warnings = append(warnings, fmt.Sprintf("annotation %v is deprecated. Use field `.spec.systemComponents.nodeLocalDNSforceTCPToClusterDNS` in Shoot instead.", v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns))
+	}
+
+	if _, ok := shoot.Annotations[v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns]; ok {
+		warnings = append(warnings, fmt.Sprintf("annotation %v is deprecated. Use field `.spec.systemComponents.nodeLocalDNSforceTCPToUpstreamDNS` in Shoot instead.", v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns))
 	}
 
 	return warnings
