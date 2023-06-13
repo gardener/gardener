@@ -350,14 +350,14 @@ var _ = Describe("Warnings", func() {
 				shoot.Annotations = map[string]string{
 					v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns: "true",
 				}
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("annotation alpha.featuregates.shoot.gardener.cloud/node-local-dns-force-tcp-to-cluster-dns is deprecated. Use field `.spec.systemComponents.nodeLocalDNSforceTCPToClusterDNS` in Shoot instead.")))
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("annotation alpha.featuregates.shoot.gardener.cloud/node-local-dns-force-tcp-to-cluster-dns is deprecated. Use field `.spec.systemComponents.nodeLocalDNS.forceTCPToClusterDNS` in Shoot instead.")))
 			})
 
 			It("should return a warning when annotation `alpha.featuregates.shoot.gardener.cloud/node-local-dns-force-tcp-to-upstream-dns` is present", func() {
 				shoot.Annotations = map[string]string{
 					v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns: "true",
 				}
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("annotation alpha.featuregates.shoot.gardener.cloud/node-local-dns-force-tcp-to-upstream-dns is deprecated. Use field `.spec.systemComponents.nodeLocalDNSforceTCPToUpstreamDNS` in Shoot instead.")))
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("annotation alpha.featuregates.shoot.gardener.cloud/node-local-dns-force-tcp-to-upstream-dns is deprecated. Use field `.spec.systemComponents.nodeLocalDNS.forceTCPToUpstreamDNS` in Shoot instead.")))
 			})
 
 			It("should not return a warning when the node-local-dns related annotation is not present", func() {

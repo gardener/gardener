@@ -40,7 +40,7 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 		warnings = append(warnings, "you should consider disabling the static token kubeconfig, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_access.md for details")
 	}
 
-	// TODO(acumino): Drop this warning in v1.77, with droping of annotaion to enable node-local-dns.
+	// TODO(acumino): Drop this warning in v1.78, with dropping of annotation to enable node-local-dns.
 	warnings = append(warnings, getWarningsForDeprecatedNodeLocalDNSLabels(shoot)...)
 
 	if oldShoot != nil {
@@ -65,20 +65,18 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 }
 
 func getWarningsForDeprecatedNodeLocalDNSLabels(shoot *core.Shoot) []string {
-	var (
-		warnings []string
-	)
+	var warnings []string
 
 	if _, ok := shoot.Annotations[v1beta1constants.AnnotationNodeLocalDNS]; ok {
 		warnings = append(warnings, fmt.Sprintf("annotation %v is deprecated. Use field `.spec.systemComponents.nodeLocalDNS.enabled` in Shoot instead.", v1beta1constants.AnnotationNodeLocalDNS))
 	}
 
 	if _, ok := shoot.Annotations[v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns]; ok {
-		warnings = append(warnings, fmt.Sprintf("annotation %v is deprecated. Use field `.spec.systemComponents.nodeLocalDNSforceTCPToClusterDNS` in Shoot instead.", v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns))
+		warnings = append(warnings, fmt.Sprintf("annotation %v is deprecated. Use field `.spec.systemComponents.nodeLocalDNS.forceTCPToClusterDNS` in Shoot instead.", v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns))
 	}
 
 	if _, ok := shoot.Annotations[v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns]; ok {
-		warnings = append(warnings, fmt.Sprintf("annotation %v is deprecated. Use field `.spec.systemComponents.nodeLocalDNSforceTCPToUpstreamDNS` in Shoot instead.", v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns))
+		warnings = append(warnings, fmt.Sprintf("annotation %v is deprecated. Use field `.spec.systemComponents.nodeLocalDNS.forceTCPToUpstreamDNS` in Shoot instead.", v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns))
 	}
 
 	return warnings
