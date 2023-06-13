@@ -498,6 +498,10 @@ func computeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (set
 				requiredControlPlaneDeployments.Insert(vpaDeployment)
 			}
 		}
+
+		if features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment) {
+			requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameMachineControllerManager)
+		}
 	}
 
 	return requiredControlPlaneDeployments, nil
