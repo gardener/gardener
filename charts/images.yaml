@@ -339,8 +339,7 @@ images:
 - name: kubernetes-dashboard
   sourceRepository: github.com/kubernetes/dashboard
   repository: eu.gcr.io/gardener-project/3rd/kubernetesui/dashboard
-  tag: v2.2.0
-  targetVersion: "< 1.21"
+  tag: v2.5.1
   labels: &optionalAddonLabels
   - name: cloud.gardener.cnudie/dso/scanning-hints/binary_id/v1
     value:
@@ -348,18 +347,6 @@ images:
       comment: >
         not deployed as part of gardener infrastructure. Offered to users for development
         purposes only, accompanied w/ warning that no support be provided.
-- name: kubernetes-dashboard
-  sourceRepository: github.com/kubernetes/dashboard
-  repository: eu.gcr.io/gardener-project/3rd/kubernetesui/dashboard
-  tag: v2.4.0
-  targetVersion: ">= 1.21, < 1.22"
-  labels: *optionalAddonLabels
-- name: kubernetes-dashboard
-  sourceRepository: github.com/kubernetes/dashboard
-  repository: eu.gcr.io/gardener-project/3rd/kubernetesui/dashboard
-  tag: v2.5.1
-  targetVersion: ">= 1.22"
-  labels: *optionalAddonLabels
 - name: kubernetes-dashboard-metrics-scraper
   sourceRepository: github.com/kubernetes/dashboard
   repository: eu.gcr.io/gardener-project/3rd/kubernetesui/metrics-scraper

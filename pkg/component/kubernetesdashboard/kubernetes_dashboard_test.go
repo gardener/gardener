@@ -344,7 +344,7 @@ spec:
   template:
     metadata:
 `
-			if version.ConstraintK8sLessEqual122.Check(kubernetesVersion) {
+			if version.ConstraintK8sEqual122.Check(kubernetesVersion) {
 				out += `      annotations:
         seccomp.security.alpha.kubernetes.io/pod: runtime/default
 `

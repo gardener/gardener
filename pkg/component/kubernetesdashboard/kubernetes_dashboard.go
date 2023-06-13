@@ -516,7 +516,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 		}
 	}
 
-	if version.ConstraintK8sLessEqual122.Check(k.values.KubernetesVersion) {
+	if version.ConstraintK8sEqual122.Check(k.values.KubernetesVersion) {
 		deploymentMetricsScraper.Spec.Template.Annotations = map[string]string{corev1.SeccompPodAnnotationKey: corev1.SeccompProfileRuntimeDefault}
 	} else {
 		deploymentMetricsScraper.Spec.Template.Spec.Containers[0].SecurityContext.SeccompProfile = &corev1.SeccompProfile{
