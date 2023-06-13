@@ -79,6 +79,50 @@ ENVTEST_TYPE ?= kubernetes
 start-envtest: $(SETUP_ENVTEST)
 	@./hack/start-envtest.sh --environment-type=$(ENVTEST_TYPE)
 
+.PHONY: validate-dashboard
+validate-dashboard:
+	@./hack/validate-dashboard.sh 
+
+.PHONY: remote-garden-up
+remote-garden-up: $(HELM)
+	@./hack/local-development/remote-garden/start.sh $(REMOTE_GARDEN_LABEL)
+
+.PHONY: remote-garden-down
+remote-garden-down:
+	@./hack/local-development/remote-garden/stop.sh $(REMOTE_GARDEN_LABEL)
+
+.PHONY: start-apiserver
+start-apiserver:
+	@./hack/local-development/start-apiserver
+
+.PHONY: start-controller-manager
+start-controller-manager:
+	@./hack/local-development/start-controller-manager
+
+.PHONY: start-scheduler
+start-scheduler:
+	@./hack/local-development/start-scheduler
+
+.PHONY: start-admission-controller
+start-admission-controller:
+	@./hack/local-development/start-admission-controller
+
+.PHONY: start-resource-manager
+start-resource-manager:
+	@./hack/local-development/start-resource-manager
+
+.PHONY: start-operator
+start-operator: $(YQ)
+	@./hack/local-development/start-operator
+
+.PHONY: start-gardenlet
+start-gardenlet: $(HELM) $(YAML2JSON) $(YQ)
+	@./hack/local-development/start-gardenlet
+
+.PHONY: start-extension-provider-local
+start-extension-provider-local:
+	@./hack/local-development/start-extension-provider-local
+
 #################################################################
 # Rules related to binary build, Docker image build and release #
 #################################################################
