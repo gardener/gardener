@@ -133,8 +133,15 @@ func (k *kubeProxy) Deploy(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		dataForMajorMinorVersionOnly, err := k.computePoolResourcesDataForMajorMinorVersionOnly(pool)
+		if err != nil {
+			return err
+		}
 
-		return k.reconcileManagedResource(ctx, data, &pool, pointer.Bool(false))
+		if err := k.reconcileManagedResource(ctx, data, &pool, pointer.Bool(false)); err != nil {
+			return err
+		}
+		return k.reconcileManagedResource(ctx, dataForMajorMinorVersionOnly, &pool, pointer.Bool(true))
 	})
 }
 
@@ -145,8 +152,8 @@ func (k *kubeProxy) reconcileManagedResource(ctx context.Context, data map[strin
 		managedResource    = managedresources.NewForShoot(k.client, k.namespace, mrName, managedresources.LabelValueGardener, false).WithSecretRef(secretName)
 	)
 
-	secret = secret.WithLabels(getManagedResourceLabels(pool))
-	managedResource = managedResource.WithLabels(getManagedResourceLabels(pool))
+	secret = secret.WithLabels(getManagedResourceLabels(pool, useMajorMinorVersionOnly))
+	managedResource = managedResource.WithLabels(getManagedResourceLabels(pool, useMajorMinorVersionOnly))
 
 	if err := secret.Reconcile(ctx); err != nil {
 		return err
@@ -180,7 +187,10 @@ func (k *kubeProxy) Wait(ctx context.Context) error {
 	}
 
 	return k.forEachWorkerPool(ctx, true, func(ctx context.Context, pool WorkerPool) error {
-		return managedresources.WaitUntilHealthy(ctx, k.client, k.namespace, managedResourceName(&pool, pointer.Bool(false)))
+		if err := managedresources.WaitUntilHealthy(ctx, k.client, k.namespace, managedResourceName(&pool, pointer.Bool(false))); err != nil {
+			return err
+		}
+		return managedresources.WaitUntilHealthy(ctx, k.client, k.namespace, managedResourceName(&pool, pointer.Bool(true)))
 	})
 }
 
@@ -253,7 +263,8 @@ func runParallelFunctions(ctx context.Context, withTimeout bool, fns []flow.Task
 
 func (k *kubeProxy) isExistingManagedResourceStillDesired(labels map[string]string) bool {
 	for _, pool := range k.values.WorkerPools {
-		if pool.Name == labels[labelKeyPoolName] && pool.KubernetesVersion.String() == labels[labelKeyKubernetesVersion] {
+		if pool.Name == labels[labelKeyPoolName] &&
+			(pool.KubernetesVersion.String() == labels[labelKeyKubernetesVersion] || version(pool, pointer.Bool(true)) == labels[labelKeyKubernetesVersion]) {
 			return true
 		}
 	}
@@ -261,7 +272,7 @@ func (k *kubeProxy) isExistingManagedResourceStillDesired(labels map[string]stri
 	return false
 }
 
-func getManagedResourceLabels(pool *WorkerPool) map[string]string {
+func getManagedResourceLabels(pool *WorkerPool, useMajorMinorVersionOnly *bool) map[string]string {
 	labels := map[string]string{
 		labelKeyManagedResourceName:     labelValueManagedResourceName,
 		managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
@@ -270,7 +281,7 @@ func getManagedResourceLabels(pool *WorkerPool) map[string]string {
 	if pool != nil {
 		labels[v1beta1constants.LabelRole] = labelValueRole
 		labels[labelKeyPoolName] = pool.Name
-		labels[labelKeyKubernetesVersion] = pool.KubernetesVersion.String()
+		labels[labelKeyKubernetesVersion] = version(*pool, useMajorMinorVersionOnly)
 	}
 
 	return labels
@@ -284,12 +295,14 @@ func managedResourceName(pool *WorkerPool, useMajorMinorVersionOnly *bool) strin
 }
 
 func name(pool WorkerPool, useMajorMinorVersionOnly *bool) string {
-	version := pool.KubernetesVersion.String()
-	if pointer.BoolDeref(useMajorMinorVersionOnly, false) {
-		version = fmt.Sprintf("%d.%d", pool.KubernetesVersion.Major(), pool.KubernetesVersion.Minor())
-	}
+	return fmt.Sprintf("kube-proxy-%s-v%s", pool.Name, version(pool, useMajorMinorVersionOnly))
+}
 
-	return fmt.Sprintf("kube-proxy-%s-v%s", pool.Name, version)
+func version(pool WorkerPool, useMajorMinorVersionOnly *bool) string {
+	if pointer.BoolDeref(useMajorMinorVersionOnly, false) {
+		return fmt.Sprintf("%d.%d", pool.KubernetesVersion.Major(), pool.KubernetesVersion.Minor())
+	}
+	return pool.KubernetesVersion.String()
 }
 
 func (k *kubeProxy) SetKubeconfig(kubeconfig []byte)   { k.values.Kubeconfig = kubeconfig }
