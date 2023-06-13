@@ -62,7 +62,7 @@ type cidrPath struct {
 
 // NewCIDR creates a new instance of cidrPath
 func NewCIDR(c string, f *field.Path) CIDR {
-	_, ipNet, err := net.ParseCIDR(string(c))
+	_, ipNet, err := net.ParseCIDR(c)
 	return &cidrPath{c, f, ipNet, err}
 }
 
