@@ -301,7 +301,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 
 		daemonSet = &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name(pool),
+				Name:      name(pool, pointer.Bool(false)),
 				Namespace: metav1.NamespaceSystem,
 				Labels: utils.MergeStringMaps(
 					getSystemComponentLabels(),
@@ -566,7 +566,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 		controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name(pool),
+				Name:      name(pool, pointer.Bool(false)),
 				Namespace: metav1.NamespaceSystem,
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{

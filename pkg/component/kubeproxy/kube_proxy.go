@@ -21,6 +21,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -123,7 +124,7 @@ func (k *kubeProxy) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := k.reconcileManagedResource(ctx, data, nil); err != nil {
+	if err := k.reconcileManagedResource(ctx, data, nil, nil); err != nil {
 		return err
 	}
 
@@ -133,13 +134,13 @@ func (k *kubeProxy) Deploy(ctx context.Context) error {
 			return err
 		}
 
-		return k.reconcileManagedResource(ctx, data, &pool)
+		return k.reconcileManagedResource(ctx, data, &pool, pointer.Bool(false))
 	})
 }
 
-func (k *kubeProxy) reconcileManagedResource(ctx context.Context, data map[string][]byte, pool *WorkerPool) error {
+func (k *kubeProxy) reconcileManagedResource(ctx context.Context, data map[string][]byte, pool *WorkerPool, useMajorMinorVersionOnly *bool) error {
 	var (
-		mrName             = managedResourceName(pool)
+		mrName             = managedResourceName(pool, useMajorMinorVersionOnly)
 		secretName, secret = managedresources.NewSecret(k.client, k.namespace, mrName, data, true)
 		managedResource    = managedresources.NewForShoot(k.client, k.namespace, mrName, managedresources.LabelValueGardener, false).WithSecretRef(secretName)
 	)
@@ -174,12 +175,12 @@ func (k *kubeProxy) DeleteStaleResources(ctx context.Context) error {
 var TimeoutWaitForManagedResource = 2 * time.Minute
 
 func (k *kubeProxy) Wait(ctx context.Context) error {
-	if err := managedresources.WaitUntilHealthy(ctx, k.client, k.namespace, managedResourceName(nil)); err != nil {
+	if err := managedresources.WaitUntilHealthy(ctx, k.client, k.namespace, managedResourceName(nil, nil)); err != nil {
 		return err
 	}
 
 	return k.forEachWorkerPool(ctx, true, func(ctx context.Context, pool WorkerPool) error {
-		return managedresources.WaitUntilHealthy(ctx, k.client, k.namespace, managedResourceName(&pool))
+		return managedresources.WaitUntilHealthy(ctx, k.client, k.namespace, managedResourceName(&pool, pointer.Bool(false)))
 	})
 }
 
@@ -275,15 +276,20 @@ func getManagedResourceLabels(pool *WorkerPool) map[string]string {
 	return labels
 }
 
-func managedResourceName(pool *WorkerPool) string {
+func managedResourceName(pool *WorkerPool, useMajorMinorVersionOnly *bool) string {
 	if pool == nil {
 		return "shoot-core-kube-proxy"
 	}
-	return fmt.Sprintf("shoot-core-%s", name(*pool))
+	return fmt.Sprintf("shoot-core-%s", name(*pool, useMajorMinorVersionOnly))
 }
 
-func name(pool WorkerPool) string {
-	return fmt.Sprintf("kube-proxy-%s-v%s", pool.Name, pool.KubernetesVersion)
+func name(pool WorkerPool, useMajorMinorVersionOnly *bool) string {
+	version := pool.KubernetesVersion.String()
+	if pointer.BoolDeref(useMajorMinorVersionOnly, false) {
+		version = fmt.Sprintf("%d.%d", pool.KubernetesVersion.Major(), pool.KubernetesVersion.Minor())
+	}
+
+	return fmt.Sprintf("kube-proxy-%s-v%s", pool.Name, version)
 }
 
 func (k *kubeProxy) SetKubeconfig(kubeconfig []byte)   { k.values.Kubeconfig = kubeconfig }
