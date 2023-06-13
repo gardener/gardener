@@ -266,8 +266,8 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 		switch {
 		case errors.Is(ctx.Err(), context.Canceled):
 			// If the context error is Canceled, the parent context has been canceled. Because the Terraform is fairly unstable
-			// and interruptions may cause it to not properly store the state, we will allow it to continue. The next reconciliation will
-			// adopt the running pod.
+			// and interruptions may cause it to not properly store the state (ref https://github.com/hashicorp/terraform/issues/33358),
+			// we will allow it to continue. The next reconciliation will adopt the running pod.
 			podLogger.Info("Skipping Terraformer pod deletion because context was cancelled")
 		case errors.Is(ctx.Err(), context.DeadlineExceeded):
 			// If the context error is deadline exceeded, create a new context for deleting the pod since attempting to use the
