@@ -54,11 +54,6 @@ type DefaultHealthChecker struct {
 
 // NewNodesChecker is a health check function which performs certain checks about the nodes registered in the cluster.
 // It implements the healthcheck.HealthCheck interface.
-// Deprecated: This function and the entire nodes checker is deprecated and will be dropped after v1.76 was released.
-// Starting from gardener/gardener@v1.73, the new feature gate `MachineControllerManagerDeployment` in gardenlet
-// controls whether gardenlet manages the machine-controller-manager and performs the related health checks. Hence,
-// extensions do not need to take care about it anymore.
-// TODO(rfranzke): Remove this function after v1.76 was released.
 func NewNodesChecker() *DefaultHealthChecker {
 	scaleUpProgressingThreshold := 5 * time.Minute
 	scaleDownProgressingThreshold := 15 * time.Minute
@@ -179,6 +174,7 @@ func (h *DefaultHealthChecker) Check(ctx context.Context, request types.Namespac
 	}
 
 	if checkScaleUp {
+		// TODO(rfranzke): Remove this check after v1.76 was released.
 		if status, err := checkNodesScalingUp(machineList, readyNodes, desiredMachines); status != gardencorev1beta1.ConditionTrue {
 			h.logger.Error(err, "Health check failed")
 			return &healthcheck.SingleCheckResult{
@@ -197,6 +193,7 @@ func (h *DefaultHealthChecker) Check(ctx context.Context, request types.Namespac
 		}, nil
 	}
 
+	// TODO(rfranzke): Remove this check after v1.76 was released.
 	if status, err := checkNodesScalingDown(machineList, nodeList, registeredNodes, desiredMachines); status != gardencorev1beta1.ConditionTrue {
 		h.logger.Error(err, "Health check failed")
 		return &healthcheck.SingleCheckResult{

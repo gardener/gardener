@@ -271,20 +271,6 @@ func convertWorkerPoolToNodesMappingToNodeList(workerPoolToNodes map[string][]co
 	return nodeList
 }
 
-func checkMachineDeploymentsHealthy(machineDeployments []machinev1alpha1.MachineDeployment) (bool, error) {
-	for _, deployment := range machineDeployments {
-		for _, failedMachine := range deployment.Status.FailedMachines {
-			return false, fmt.Errorf("machine %q failed: %s", failedMachine.Name, failedMachine.LastOperation.Description)
-		}
-
-		if err := health.CheckMachineDeployment(&deployment); err != nil {
-			return false, fmt.Errorf("machine deployment %q in namespace %q is unhealthy: %w", deployment.Name, deployment.Namespace, err)
-		}
-	}
-
-	return true, nil
-}
-
 func getDesiredMachineCount(machineDeployments []machinev1alpha1.MachineDeployment) int {
 	desiredMachines := 0
 	for _, deployment := range machineDeployments {
@@ -700,11 +686,9 @@ func (b *HealthChecker) CheckClusterNodes(
 	// (e.g., in case of an rolling-update).
 
 	checkScaleUp := false
-
 	for _, deployment := range machineDeploymentList.Items {
-		for _, failedMachine := range deployment.Status.FailedMachines {
-			c := b.FailedCondition(condition, "FailedMachine", fmt.Sprintf("machine %q failed: %s", failedMachine.Name, failedMachine.LastOperation.Description))
-			return &c, nil
+		if len(deployment.Status.FailedMachines) > 0 {
+			break
 		}
 
 		for _, condition := range deployment.Status.Conditions {
@@ -720,11 +704,6 @@ func (b *HealthChecker) CheckClusterNodes(
 			c := b.FailedCondition(condition, "NodesScalingUp", err.Error())
 			return &c, nil
 		}
-	}
-
-	if isHealthy, err := checkMachineDeploymentsHealthy(machineDeploymentList.Items); !isHealthy {
-		c := b.FailedCondition(condition, "MachineDeploymentsUnhealthy", err.Error())
-		return &c, nil
 	}
 
 	if err := checkNodesScalingDown(machineList, nodeList, registeredNodes, desiredMachines); err != nil {
