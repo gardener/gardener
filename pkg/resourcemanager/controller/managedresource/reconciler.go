@@ -56,7 +56,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	resourceshelper "github.com/gardener/gardener/pkg/apis/resources/v1alpha1/helper"
+	resourcesv1alpha1helper "github.com/gardener/gardener/pkg/apis/resources/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -141,7 +141,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, mr *resourc
 
 		equivalences           = NewEquivalences(mr.Spec.Equivalences...)
 		existingResourcesIndex = NewObjectIndex(mr.Status.Resources, equivalences)
-		origin                 = resourceshelper.OriginForManagedResource(r.ClusterID, mr)
+		origin                 = resourcesv1alpha1helper.OriginForManagedResource(r.ClusterID, mr)
 
 		forceOverwriteLabels      bool
 		forceOverwriteAnnotations bool
