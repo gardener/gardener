@@ -553,27 +553,39 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 				},
 			},
 		}
-
-		vpa *vpaautoscalingv1.VerticalPodAutoscaler
 	)
 
 	if k.values.VPAEnabled {
 		daemonSet.Spec.Template.Spec.Containers[0].Resources.Limits = corev1.ResourceList{
 			corev1.ResourceMemory: resource.MustParse("2048Mi"),
 		}
+	}
 
+	utilruntime.Must(references.InjectAnnotations(daemonSet))
+
+	return registry.AddAllAndSerialize(daemonSet)
+}
+
+func (k *kubeProxy) computePoolResourcesDataForMajorMinorVersionOnly(pool WorkerPool) (map[string][]byte, error) {
+	var (
+		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+
+		vpa *vpaautoscalingv1.VerticalPodAutoscaler
+	)
+
+	if k.values.VPAEnabled {
 		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
 		controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name(pool, pointer.Bool(false)),
+				Name:      name(pool, pointer.Bool(true)),
 				Namespace: metav1.NamespaceSystem,
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 					Kind:       "DaemonSet",
-					Name:       daemonSet.Name,
+					Name:       name(pool, pointer.Bool(false)),
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 					UpdateMode: &vpaUpdateMode,
@@ -592,12 +604,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 		}
 	}
 
-	utilruntime.Must(references.InjectAnnotations(daemonSet))
-
-	return registry.AddAllAndSerialize(
-		daemonSet,
-		vpa,
-	)
+	return registry.AddAllAndSerialize(vpa)
 }
 
 func getLabels() map[string]string {
