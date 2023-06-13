@@ -65,7 +65,7 @@ The Helm chart of the `provider-local` extension defined in its [`ControllerDepl
 
 This CoreDNS instance is responsible for enabling the components running in the shoot clusters to be able to resolve the DNS names when they communicate with their `kube-apiserver`s.
 
-It contains a static configuration to resolve the DNS names based on `local.gardener.cloud` to the `istio-ingressgateway.istio-ingress.svc`.
+It contains a static configuration to resolve the DNS names based on `local.gardener.cloud` to `istio-ingressgateway.istio-ingress.svc`.
 
 ### Controllers
 
