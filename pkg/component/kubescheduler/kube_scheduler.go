@@ -489,10 +489,8 @@ func (k *kubeScheduler) computeComponentConfig() (string, error) {
 		apiVersion = "kubescheduler.config.k8s.io/v1"
 	} else if versionutils.ConstraintK8sGreaterEqual123.Check(k.version) {
 		apiVersion = "kubescheduler.config.k8s.io/v1beta3"
-	} else if versionutils.ConstraintK8sGreaterEqual122.Check(k.version) {
-		apiVersion = "kubescheduler.config.k8s.io/v1beta2"
 	} else {
-		apiVersion = "kubescheduler.config.k8s.io/v1beta1"
+		apiVersion = "kubescheduler.config.k8s.io/v1beta2"
 	}
 
 	profile := gardencorev1beta1.SchedulingProfileBalanced
@@ -528,7 +526,7 @@ func (k *kubeScheduler) computeCommand(port int32) []string {
 		fmt.Sprintf("--secure-port=%d", port),
 	)
 
-	if versionutils.ConstraintK8sLessEqual122.Check(k.version) {
+	if versionutils.ConstraintK8sEqual122.Check(k.version) {
 		command = append(command, "--port=0")
 	}
 

@@ -1,6 +1,0 @@
-apiVersion: kubescheduler.config.k8s.io/v1beta1
-kind: KubeSchedulerConfiguration
-clientConnection:
-  kubeconfig: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
-leaderElection:
-  leaderElect: true
