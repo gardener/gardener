@@ -349,7 +349,7 @@ func (v ImageVector) FindImage(name string, opts ...FindOptionFunc) (*Image, err
 // In case multiple images match the search, the first which was found is returned.
 // In case no image was found, an error is returned.
 func FindImages(v ImageVector, names []string, opts ...FindOptionFunc) (map[string]*Image, error) {
-	images := map[string]*Image{}
+	images := make(map[string]*Image, len(names))
 	for _, imageName := range names {
 		image, err := v.FindImage(imageName, opts...)
 		if err != nil {

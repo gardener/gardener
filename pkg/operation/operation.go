@@ -216,7 +216,7 @@ func (b *Builder) Build(
 	if err != nil {
 		return nil, err
 	}
-	secrets := make(map[string]*corev1.Secret)
+	secrets := make(map[string]*corev1.Secret, len(secretsMap))
 	for k, v := range secretsMap {
 		secrets[k] = v
 	}

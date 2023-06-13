@@ -194,7 +194,7 @@ func verifyKubernetesVersions(ctx context.Context, shootClient kubernetes.Interf
 		return fmt.Errorf("control plane version is %q but expected %q", shootClient.Version(), expectedControlPlaneKubernetesVersion)
 	}
 
-	poolNameToKubernetesVersion := map[string]string{}
+	poolNameToKubernetesVersion := make(map[string]string, len(shoot.Spec.Provider.Workers))
 	for _, worker := range shoot.Spec.Provider.Workers {
 		poolKubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(controlPlaneKubernetesVersion, worker.Kubernetes)
 		if err != nil {
