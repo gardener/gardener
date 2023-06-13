@@ -20,7 +20,6 @@ backupBucket:
 
 registry:
   deployed: true
-  hostname: garden.local.gardener.cloud
 
 networking:
   ipFamily: ipv4

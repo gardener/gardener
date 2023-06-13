@@ -8,7 +8,6 @@ gardener:
 
 registry:
   deployed: false
-  hostname: gardener-local-ha-single-zone-control-plane
 
 workers:
 - zone: "0"
