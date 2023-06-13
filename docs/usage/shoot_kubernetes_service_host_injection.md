@@ -1,8 +1,4 @@
----
-title: APIServer SNI Injection
----
-
-# APIServerSNI Environment Variable Injection
+# `KUBERNETES_SERVICE_HOST` Environment Variable Injection
 
 In each Shoot cluster's `kube-system` namespace a `DaemonSet` called `apiserver-proxy` is deployed. It routes traffic to the upstream Shoot Kube APIServer. See the [APIServer SNI GEP](../proposals/08-shoot-apiserver-via-sni.md) for more details.
 

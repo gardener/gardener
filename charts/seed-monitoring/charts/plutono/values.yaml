@@ -23,6 +23,7 @@ sni:
 nodeLocalDNS:
   enabled: false
 
+includeIstioDashboards: false
 gardenletManagesMCM: false
 
 reversedVPN:
