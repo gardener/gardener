@@ -417,9 +417,8 @@ func validateAddons(addons *core.Addons, kubernetes core.Kubernetes, purpose *co
 		return allErrs
 	}
 
-	versionGreaterOrEqual122, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.22")
-	if (helper.NginxIngressEnabled(addons) || helper.KubernetesDashboardEnabled(addons)) && versionGreaterOrEqual122 && (purpose != nil && *purpose != core.ShootPurposeEvaluation) {
-		allErrs = append(allErrs, field.Forbidden(fldPath, "for Kubernetes versions >= 1.22 addons can only be enabled on shoots with .spec.purpose=evaluation"))
+	if (helper.NginxIngressEnabled(addons) || helper.KubernetesDashboardEnabled(addons)) && (purpose != nil && *purpose != core.ShootPurposeEvaluation) {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "addons can only be enabled on shoots with .spec.purpose=evaluation"))
 	}
 
 	if helper.NginxIngressEnabled(addons) {

@@ -519,6 +519,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shootCopy := shoot.DeepCopy()
 				shootCopy.Namespace = namespace
 				shootCopy.Spec.Purpose = &purpose
+				shootCopy.Spec.Addons = nil
 				errorList := ValidateShoot(shootCopy)
 				Expect(errorList).To(matcher)
 			},
@@ -539,10 +540,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 		)
 
 		DescribeTable("addons validation",
-			func(purpose core.ShootPurpose, version string, allowed bool) {
+			func(purpose core.ShootPurpose, allowed bool) {
 				shootCopy := shoot.DeepCopy()
 				shootCopy.Spec.Purpose = &purpose
-				shootCopy.Spec.Kubernetes.Version = version
+				shootCopy.Spec.Kubernetes.Version = "1.22.0"
 
 				errorList := ValidateShoot(shootCopy)
 
@@ -555,18 +556,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}))))
 				}
 			},
-			Entry("should allow addons on evaluation shoots with version >= 1.22", core.ShootPurposeEvaluation, "1.22.0", true),
-			Entry("should forbid addons on testing shoots with version >= 1.22", core.ShootPurposeTesting, "1.22.0", false),
-			Entry("should forbid addons on development shoots with version >= 1.22", core.ShootPurposeDevelopment, "1.22.0", false),
-			Entry("should forbid addons on production shoots with version >= 1.22", core.ShootPurposeProduction, "1.22.0", false),
-			Entry("should allow addons on evaluation shoots with a pre-release version >= 1.22", core.ShootPurposeEvaluation, "1.22.0-alpha.1", true),
-			Entry("should forbid addons on production shoots with a pre-release version >= 1.22", core.ShootPurposeProduction, "1.22.0-alpha.1", false),
-			Entry("should forbid addons on development shoots with a pre-release version >= 1.22", core.ShootPurposeDevelopment, "1.22.0-alpha.1", false),
-			Entry("should forbid addons on production shoots with a pre-release version >= 1.22", core.ShootPurposeProduction, "1.22.0-alpha.1", false),
-			Entry("should allow addons on evaluation shoots with version < 1.22", core.ShootPurposeEvaluation, "1.21.10", true),
-			Entry("should allow addons on testing shoots with version < 1.22", core.ShootPurposeTesting, "1.21.10", true),
-			Entry("should allow addons on development shoots with version < 1.22", core.ShootPurposeDevelopment, "1.21.10", true),
-			Entry("should allow addons on production shoots with version < 1.22", core.ShootPurposeProduction, "1.21.10", true),
+			Entry("should allow addons on evaluation shoots", core.ShootPurposeEvaluation, true),
+			Entry("should forbid addons on testing shoots", core.ShootPurposeTesting, false),
+			Entry("should forbid addons on development shoots", core.ShootPurposeDevelopment, false),
+			Entry("should forbid addons on production shoots", core.ShootPurposeProduction, false),
 		)
 
 		It("should forbid addon configuration if the shoot is workerless", func() {
