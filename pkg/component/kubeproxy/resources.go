@@ -39,7 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/version"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -293,11 +293,6 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 }
 
 func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte, error) {
-	k8sVersionLess125, err := version.CheckVersionMeetsConstraint(pool.KubernetesVersion, "< 1.25")
-	if err != nil {
-		return nil, err
-	}
-
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
@@ -331,7 +326,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 					Spec: corev1.PodSpec{
 						NodeSelector: map[string]string{
 							v1beta1constants.LabelWorkerPool:              pool.Name,
-							v1beta1constants.LabelWorkerKubernetesVersion: pool.KubernetesVersion,
+							v1beta1constants.LabelWorkerKubernetesVersion: pool.KubernetesVersion.String(),
 						},
 						InitContainers: []corev1.Container{{
 							Name:            "cleanup",
@@ -349,7 +344,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 								},
 								{
 									Name:  "EXECUTE_WORKAROUND_FOR_K8S_ISSUE_109286",
-									Value: strconv.FormatBool(k8sVersionLess125),
+									Value: strconv.FormatBool(versionutils.ConstraintK8sLess125.Check(pool.KubernetesVersion)),
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
@@ -622,7 +617,7 @@ func getSystemComponentLabels() map[string]string {
 func getPoolLabels(pool WorkerPool) map[string]string {
 	return utils.MergeStringMaps(getLabels(), map[string]string{
 		"pool":    pool.Name,
-		"version": pool.KubernetesVersion,
+		"version": pool.KubernetesVersion.String(),
 	})
 }
 

@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
@@ -106,7 +107,7 @@ func (b *Botanist) computeWorkerPoolsForKubeProxy(ctx context.Context) ([]kubepr
 		key := workerPoolKey(worker.Name, kubernetesVersion.String())
 		poolKeyToPoolInfo[key] = kubeproxy.WorkerPool{
 			Name:              worker.Name,
-			KubernetesVersion: kubernetesVersion.String(),
+			KubernetesVersion: kubernetesVersion,
 			Image:             image.String(),
 		}
 	}
@@ -118,17 +119,21 @@ func (b *Botanist) computeWorkerPoolsForKubeProxy(ctx context.Context) ([]kubepr
 
 	for _, node := range nodeList.Items {
 		poolName, ok1 := node.Labels[v1beta1constants.LabelWorkerPool]
-		kubernetesVersion, ok2 := node.Labels[v1beta1constants.LabelWorkerKubernetesVersion]
+		kubernetesVersionString, ok2 := node.Labels[v1beta1constants.LabelWorkerKubernetesVersion]
 		if !ok1 || !ok2 {
 			continue
 		}
-
-		image, err := b.ImageVector.FindImage(images.ImageNameKubeProxy, imagevector.RuntimeVersion(kubernetesVersion), imagevector.TargetVersion(kubernetesVersion))
+		kubernetesVersion, err := semver.NewVersion(kubernetesVersionString)
 		if err != nil {
 			return nil, err
 		}
 
-		key := workerPoolKey(poolName, kubernetesVersion)
+		image, err := b.ImageVector.FindImage(images.ImageNameKubeProxy, imagevector.RuntimeVersion(kubernetesVersionString), imagevector.TargetVersion(kubernetesVersionString))
+		if err != nil {
+			return nil, err
+		}
+
+		key := workerPoolKey(poolName, kubernetesVersionString)
 		poolKeyToPoolInfo[key] = kubeproxy.WorkerPool{
 			Name:              poolName,
 			KubernetesVersion: kubernetesVersion,

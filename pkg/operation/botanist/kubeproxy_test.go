@@ -62,8 +62,8 @@ var _ = Describe("KubeProxy", func() {
 		poolName1                     = "pool1"
 		poolName2                     = "pool2"
 		poolName3                     = "pool3"
-		kubernetesVersionControlPlane = "1.24.3"
-		kubernetesVersionPool2        = "1.23.4"
+		kubernetesVersionControlPlane = semver.MustParse("1.24.3")
+		kubernetesVersionPool2        = semver.MustParse("1.23.4")
 		kubernetesVersionPool3        = kubernetesVersionControlPlane
 	)
 
@@ -106,7 +106,7 @@ var _ = Describe("KubeProxy", func() {
 				SecretsManager: sm,
 				Shoot: &shootpkg.Shoot{
 					InternalClusterDomain: internalClusterDomain,
-					KubernetesVersion:     semver.MustParse(kubernetesVersionControlPlane),
+					KubernetesVersion:     kubernetesVersionControlPlane,
 					SeedNamespace:         namespace,
 				},
 			},
@@ -114,7 +114,7 @@ var _ = Describe("KubeProxy", func() {
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 			Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: kubernetesVersionControlPlane,
+					Version: kubernetesVersionControlPlane.String(),
 				},
 				Provider: gardencorev1beta1.Provider{
 					Workers: []gardencorev1beta1.Worker{
@@ -124,13 +124,13 @@ var _ = Describe("KubeProxy", func() {
 						{
 							Name: poolName2,
 							Kubernetes: &gardencorev1beta1.WorkerKubernetes{
-								Version: &kubernetesVersionPool2,
+								Version: pointer.String(kubernetesVersionPool2.String()),
 							},
 						},
 						{
 							Name: poolName3,
 							Kubernetes: &gardencorev1beta1.WorkerKubernetes{
-								Version: &kubernetesVersionPool3,
+								Version: pointer.String(kubernetesVersionPool3.String()),
 							},
 						},
 					},
@@ -216,17 +216,17 @@ users:
 						{
 							Name:              poolName1,
 							KubernetesVersion: kubernetesVersionControlPlane,
-							Image:             repositoryKubeProxyImage + ":v" + kubernetesVersionControlPlane,
+							Image:             repositoryKubeProxyImage + ":v" + kubernetesVersionControlPlane.String(),
 						},
 						{
 							Name:              poolName2,
 							KubernetesVersion: kubernetesVersionPool2,
-							Image:             repositoryKubeProxyImage + ":v" + kubernetesVersionPool2,
+							Image:             repositoryKubeProxyImage + ":v" + kubernetesVersionPool2.String(),
 						},
 						{
 							Name:              poolName3,
 							KubernetesVersion: kubernetesVersionPool3,
-							Image:             repositoryKubeProxyImage + ":v" + kubernetesVersionPool3,
+							Image:             repositoryKubeProxyImage + ":v" + kubernetesVersionPool3.String(),
 						},
 					})
 				})
@@ -242,7 +242,7 @@ users:
 							Name: "node1",
 							Labels: map[string]string{
 								"worker.gardener.cloud/pool":               poolName1,
-								"worker.gardener.cloud/kubernetes-version": kubernetesVersionControlPlane,
+								"worker.gardener.cloud/kubernetes-version": kubernetesVersionControlPlane.String(),
 							},
 						},
 					},
@@ -260,7 +260,7 @@ users:
 							Name: "node3",
 							Labels: map[string]string{
 								"worker.gardener.cloud/pool":               poolName2,
-								"worker.gardener.cloud/kubernetes-version": kubernetesVersionPool2,
+								"worker.gardener.cloud/kubernetes-version": kubernetesVersionPool2.String(),
 							},
 						},
 					},
@@ -282,26 +282,26 @@ users:
 						{
 							Name:              poolName1,
 							KubernetesVersion: kubernetesVersionControlPlane,
-							Image:             repositoryKubeProxyImage + ":v" + kubernetesVersionControlPlane,
+							Image:             repositoryKubeProxyImage + ":v" + kubernetesVersionControlPlane.String(),
 						},
 						{
 							Name:              poolName2,
 							KubernetesVersion: kubernetesVersionPool2,
-							Image:             repositoryKubeProxyImage + ":v" + kubernetesVersionPool2,
+							Image:             repositoryKubeProxyImage + ":v" + kubernetesVersionPool2.String(),
 						},
 						{
 							Name:              poolName3,
 							KubernetesVersion: kubernetesVersionPool3,
-							Image:             repositoryKubeProxyImage + ":v" + kubernetesVersionPool3,
+							Image:             repositoryKubeProxyImage + ":v" + kubernetesVersionPool3.String(),
 						},
 						{
 							Name:              poolName2,
-							KubernetesVersion: "1.24.3",
+							KubernetesVersion: semver.MustParse("1.24.3"),
 							Image:             repositoryKubeProxyImage + ":v1.24.3",
 						},
 						{
 							Name:              "pool4",
-							KubernetesVersion: "1.24.3",
+							KubernetesVersion: semver.MustParse("1.24.3"),
 							Image:             repositoryKubeProxyImage + ":v1.24.3",
 						},
 					})
@@ -323,7 +323,7 @@ func verifyWorkerPools(expected, actual []kubeproxy.WorkerPool) {
 			if slice[i].Name > slice[j].Name {
 				return false
 			}
-			return slice[i].KubernetesVersion < slice[j].KubernetesVersion
+			return slice[i].KubernetesVersion.String() < slice[j].KubernetesVersion.String()
 		}
 	}
 

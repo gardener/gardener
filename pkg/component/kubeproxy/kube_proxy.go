@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -111,7 +112,7 @@ type WorkerPool struct {
 	// Name is the name of the worker pool.
 	Name string
 	// KubernetesVersion is the Kubernetes version of the worker pool.
-	KubernetesVersion string
+	KubernetesVersion *semver.Version
 	// Image is the container image used for kube-proxy for this worker pool.
 	Image string
 }
@@ -251,7 +252,7 @@ func runParallelFunctions(ctx context.Context, withTimeout bool, fns []flow.Task
 
 func (k *kubeProxy) isExistingManagedResourceStillDesired(labels map[string]string) bool {
 	for _, pool := range k.values.WorkerPools {
-		if pool.Name == labels[labelKeyPoolName] && pool.KubernetesVersion == labels[labelKeyKubernetesVersion] {
+		if pool.Name == labels[labelKeyPoolName] && pool.KubernetesVersion.String() == labels[labelKeyKubernetesVersion] {
 			return true
 		}
 	}
@@ -268,7 +269,7 @@ func getManagedResourceLabels(pool *WorkerPool) map[string]string {
 	if pool != nil {
 		labels[v1beta1constants.LabelRole] = labelValueRole
 		labels[labelKeyPoolName] = pool.Name
-		labels[labelKeyKubernetesVersion] = pool.KubernetesVersion
+		labels[labelKeyKubernetesVersion] = pool.KubernetesVersion.String()
 	}
 
 	return labels

@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -61,13 +62,13 @@ var _ = Describe("KubeProxy", func() {
 		managedResourceForPool = func(pool WorkerPool) *resourcesv1alpha1.ManagedResource {
 			return &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "shoot-core-kube-proxy-" + pool.Name + "-v" + pool.KubernetesVersion,
+					Name:      "shoot-core-kube-proxy-" + pool.Name + "-v" + pool.KubernetesVersion.String(),
 					Namespace: namespace,
 					Labels: map[string]string{
 						"component":          "kube-proxy",
 						"role":               "pool",
 						"pool-name":          pool.Name,
-						"kubernetes-version": pool.KubernetesVersion,
+						"kubernetes-version": pool.KubernetesVersion.String(),
 					},
 				},
 			}
@@ -81,7 +82,7 @@ var _ = Describe("KubeProxy", func() {
 						"component":          "kube-proxy",
 						"role":               "pool",
 						"pool-name":          pool.Name,
-						"kubernetes-version": pool.KubernetesVersion,
+						"kubernetes-version": pool.KubernetesVersion.String(),
 					},
 				},
 			}
@@ -100,8 +101,8 @@ var _ = Describe("KubeProxy", func() {
 			Kubeconfig:  kubeconfig,
 			VPAEnabled:  false,
 			WorkerPools: []WorkerPool{
-				{Name: "pool1", KubernetesVersion: "1.24.13", Image: "some-image:some-tag1"},
-				{Name: "pool2", KubernetesVersion: "1.25.4", Image: "some-image:some-tag2"},
+				{Name: "pool1", KubernetesVersion: semver.MustParse("1.24.13"), Image: "some-image:some-tag1"},
+				{Name: "pool2", KubernetesVersion: semver.MustParse("1.25.4"), Image: "some-image:some-tag2"},
 			},
 		}
 		component = New(c, namespace, values)
@@ -428,7 +429,7 @@ subjects:
 `
 
 			daemonSetNameFor = func(pool WorkerPool) string {
-				return "kube-proxy-" + pool.Name + "-v" + pool.KubernetesVersion
+				return "kube-proxy-" + pool.Name + "-v" + pool.KubernetesVersion.String()
 			}
 			daemonSetYAMLFor = func(pool WorkerPool, ipvsEnabled, vpaEnabled bool) string {
 
@@ -454,9 +455,6 @@ subjects:
 					return strings.Join(annotations, "\n")
 				}
 
-				k8sVersionLess125, err := version.CheckVersionMeetsConstraint(pool.KubernetesVersion, "< 1.25")
-				Expect(err).NotTo(HaveOccurred())
-
 				out := `apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -475,7 +473,7 @@ spec:
       app: kubernetes
       pool: ` + pool.Name + `
       role: proxy
-      version: ` + pool.KubernetesVersion + `
+      version: ` + pool.KubernetesVersion.String() + `
   template:
     metadata:
       annotations:
@@ -488,7 +486,7 @@ spec:
         origin: gardener
         pool: ` + pool.Name + `
         role: proxy
-        version: ` + pool.KubernetesVersion + `
+        version: ` + pool.KubernetesVersion.String() + `
     spec:
       containers:
       - command:
@@ -562,7 +560,7 @@ spec:
 
 				out += `
         - name: EXECUTE_WORKAROUND_FOR_K8S_ISSUE_109286
-          value: "` + strconv.FormatBool(k8sVersionLess125) + `"
+          value: "` + strconv.FormatBool(version.ConstraintK8sLess125.Check(pool.KubernetesVersion)) + `"
         image: ` + pool.Image + `
         imagePullPolicy: IfNotPresent
         name: cleanup
@@ -583,7 +581,7 @@ spec:
         - mountPath: /var/lib/kube-proxy-config
           name: kube-proxy-config
       nodeSelector:
-        worker.gardener.cloud/kubernetes-version: ` + pool.KubernetesVersion + `
+        worker.gardener.cloud/kubernetes-version: ` + pool.KubernetesVersion.String() + `
         worker.gardener.cloud/pool: ` + pool.Name + `
       priorityClassName: system-node-critical
       securityContext:
@@ -736,7 +734,7 @@ status: {}
 								"component":          "kube-proxy",
 								"role":               "pool",
 								"pool-name":          pool.Name,
-								"kubernetes-version": pool.KubernetesVersion,
+								"kubernetes-version": pool.KubernetesVersion.String(),
 							},
 						},
 						Spec: resourcesv1alpha1.ManagedResourceSpec{
@@ -837,7 +835,7 @@ status: {}
 							"component":          "kube-proxy",
 							"role":               "pool",
 							"pool-name":          pool.Name,
-							"kubernetes-version": pool.KubernetesVersion,
+							"kubernetes-version": pool.KubernetesVersion.String(),
 						},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
@@ -883,7 +881,7 @@ status: {}
 							"component":          "kube-proxy",
 							"role":               "pool",
 							"pool-name":          pool.Name,
-							"kubernetes-version": pool.KubernetesVersion,
+							"kubernetes-version": pool.KubernetesVersion.String(),
 						},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
@@ -909,7 +907,7 @@ status: {}
 			Expect(c.Create(ctx, managedResourceCentral)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceSecretCentral)).To(Succeed())
 
-			undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: "bar"}
+			undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: semver.MustParse("1.1.1")}
 			undesiredManagedResource := managedResourceForPool(undesiredPool)
 			undesiredManagedResourceSecret := managedResourceSecretForPool(undesiredPool)
 
@@ -954,7 +952,7 @@ status: {}
 			Expect(c.Create(ctx, managedResourceCentral)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceSecretCentral)).To(Succeed())
 
-			undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: "bar"}
+			undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: semver.MustParse("1.1.1")}
 			undesiredManagedResource := managedResourceForPool(undesiredPool)
 			undesiredManagedResourceSecret := managedResourceSecretForPool(undesiredPool)
 
@@ -1197,7 +1195,7 @@ status: {}
 					},
 				})).To(Succeed())
 
-				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: "bar"}
+				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: semver.MustParse("1.1.1")}
 				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       managedResourceForPool(undesiredPool).Name,
@@ -1293,7 +1291,7 @@ status: {}
 				Expect(c.Create(ctx, managedResourceCentral)).To(Succeed())
 				Expect(c.Delete(ctx, managedResourceCentral)).To(Succeed())
 
-				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: "bar"}
+				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: semver.MustParse("1.1.1")}
 				undesiredManagedResource := managedResourceForPool(undesiredPool)
 				Expect(c.Create(ctx, undesiredManagedResource)).To(Succeed())
 				Expect(c.Delete(ctx, undesiredManagedResource)).To(Succeed())
@@ -1327,7 +1325,7 @@ status: {}
 
 				Expect(c.Create(ctx, managedResourceCentral)).To(Succeed())
 
-				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: "bar"}
+				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: semver.MustParse("1.1.1")}
 				Expect(c.Create(ctx, managedResourceForPool(undesiredPool))).To(Succeed())
 
 				Expect(component.WaitCleanupStaleResources(ctx)).To(MatchError(ContainSubstring("still exists")))
@@ -1338,7 +1336,7 @@ status: {}
 
 				Expect(c.Create(ctx, managedResourceCentral)).To(Succeed())
 
-				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: "bar"}
+				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: semver.MustParse("1.1.1")}
 				undesiredManagedResource := managedResourceForPool(undesiredPool)
 				Expect(c.Create(ctx, undesiredManagedResource)).To(Succeed())
 				Expect(c.Delete(ctx, undesiredManagedResource)).To(Succeed())
@@ -1353,7 +1351,7 @@ status: {}
 					Expect(c.Create(ctx, managedResourceForPool(pool))).To(Succeed())
 				}
 
-				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: "bar"}
+				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: semver.MustParse("1.1.1")}
 				undesiredManagedResource := managedResourceForPool(undesiredPool)
 				Expect(c.Create(ctx, undesiredManagedResource)).To(Succeed())
 				Expect(c.Delete(ctx, undesiredManagedResource)).To(Succeed())
