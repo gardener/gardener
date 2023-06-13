@@ -6884,7 +6884,7 @@ func schema_pkg_apis_core_v1beta1_SeedSpec(ref common.ReferenceCallback) common.
 					},
 					"secretRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes cluster to be registered as Seed.",
+							Description: "SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes cluster to be registered as Seed.\n\nDeprecated: This field is deprecated, gardenlet must run in the Seed cluster, hence it should use the in-cluster rest config via ServiceAccount to communicate with the Seed cluster.",
 							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
 						},
 					},
