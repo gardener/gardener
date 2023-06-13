@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -43,7 +42,6 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -86,8 +84,6 @@ type Values struct {
 	ImageController string
 	// ImageDefaultBackend is the container image used for default ingress backend.
 	ImageDefaultBackend string
-	// KubernetesVersion is the version of kubernetes for the seed cluster.
-	KubernetesVersion *semver.Version
 	// IngressClass is the ingress class for the seed nginx-ingress controller
 	IngressClass string
 	// ConfigData contains the configuration details for the nginx-ingress controller
@@ -439,7 +435,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 							SecurityContext: &corev1.SecurityContext{
 								Capabilities: &corev1.Capabilities{
 									Drop: []corev1.Capability{"ALL"},
-									Add:  []corev1.Capability{"NET_BIND_SERVICE"},
+									Add:  []corev1.Capability{"NET_BIND_SERVICE", "SYS_CHROOT"},
 								},
 								RunAsUser:                pointer.Int64(101),
 								AllowPrivilegeEscalation: pointer.Bool(true),
@@ -562,14 +558,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 
-		ingressClass *networkingv1.IngressClass
-	)
-
-	// Skipped until https://github.com/kubernetes/ingress-nginx/issues/8640 is resolved
-	// and special seccomp profile is implemented for the nginx-ingress
-	deploymentController.Spec.Template.Labels[resourcesv1alpha1.SeccompProfileSkip] = "true"
-
-	if version.ConstraintK8sGreaterEqual122.Check(n.values.KubernetesVersion) {
 		ingressClass = &networkingv1.IngressClass{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   n.values.IngressClass,
@@ -579,9 +567,11 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Controller: "k8s.io/" + n.values.IngressClass,
 			},
 		}
+	)
 
-		deploymentController.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities.Add = append(deploymentController.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities.Add, "SYS_CHROOT")
-	}
+	// Skipped until https://github.com/kubernetes/ingress-nginx/issues/8640 is resolved
+	// and special seccomp profile is implemented for the nginx-ingress
+	deploymentController.Spec.Template.Labels[resourcesv1alpha1.SeccompProfileSkip] = "true"
 
 	metav1.SetMetaDataAnnotation(&serviceController.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d},{"protocol":"TCP","port":%d}]`, containerPortControllerHttp, containerPortControllerHttps))
 
@@ -624,10 +614,7 @@ func (n *nginxIngress) getArgs(configMap *corev1.ConfigMap) []string {
 		"--annotations-prefix=nginx.ingress.kubernetes.io",
 		"--configmap=" + n.namespace + "/" + configMap.Name,
 		"--ingress-class=" + n.values.IngressClass,
-	}
-
-	if version.ConstraintK8sGreaterEqual122.Check(n.values.KubernetesVersion) {
-		out = append(out, "--controller-class=k8s.io/"+n.values.IngressClass)
+		"--controller-class=k8s.io/" + n.values.IngressClass,
 	}
 
 	return out

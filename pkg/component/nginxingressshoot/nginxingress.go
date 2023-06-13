@@ -18,7 +18,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -37,7 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -82,8 +80,6 @@ type Values struct {
 	NginxControllerImage string
 	// DefaultBackendImage is the container image used for default ingress backend.
 	DefaultBackendImage string
-	// KubernetesVersion is the kubernetes version of the shoot.
-	KubernetesVersion *semver.Version
 	// ConfigData contains the configuration details for the nginx-ingress controller.
 	ConfigData map[string]string
 	// KubeAPIServerHost is the host of the kube-apiserver.
@@ -388,7 +384,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 							SecurityContext: &corev1.SecurityContext{
 								Capabilities: &corev1.Capabilities{
 									Drop: []corev1.Capability{"ALL"},
-									Add:  []corev1.Capability{"NET_BIND_SERVICE"},
+									Add:  []corev1.Capability{"NET_BIND_SERVICE", "SYS_CHROOT"},
 								},
 								RunAsUser:                pointer.Int64(101),
 								AllowPrivilegeEscalation: pointer.Bool(true),
@@ -615,7 +611,22 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 
-		ingressClass   *networkingv1.IngressClass
+		ingressClass = &networkingv1.IngressClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: ingressClassName,
+				Labels: map[string]string{
+					v1beta1constants.LabelApp:   labelAppValue,
+					labelKeyComponent:           labelValueController,
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleOptionalAddon,
+					labelKeyRelease:             labelValueAddons,
+					"origin":                    "gardener",
+				},
+			},
+			Spec: networkingv1.IngressClassSpec{
+				Controller: "k8s.io/nginx",
+			},
+		}
+
 		vpa            *vpaautoscalingv1.VerticalPodAutoscaler
 		roleBindingPSP *rbacv1.RoleBinding
 	)
@@ -672,26 +683,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		}
 	}
 
-	if version.ConstraintK8sGreaterEqual122.Check(n.values.KubernetesVersion) {
-		ingressClass = &networkingv1.IngressClass{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: ingressClassName,
-				Labels: map[string]string{
-					v1beta1constants.LabelApp:   labelAppValue,
-					labelKeyComponent:           labelValueController,
-					v1beta1constants.GardenRole: v1beta1constants.GardenRoleOptionalAddon,
-					labelKeyRelease:             labelValueAddons,
-					"origin":                    "gardener",
-				},
-			},
-			Spec: networkingv1.IngressClassSpec{
-				Controller: "k8s.io/nginx",
-			},
-		}
-
-		deploymentController.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities.Add = append(deploymentController.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities.Add, "SYS_CHROOT")
-	}
-
 	return registry.AddAllAndSerialize(
 		clusterRole,
 		clusterRoleBinding,
@@ -721,11 +712,8 @@ func (n *nginxIngress) getArgs(configMapName string) []string {
 		"--annotations-prefix=nginx.ingress.kubernetes.io",
 		"--ingress-class=nginx",
 		"--configmap=" + metav1.NamespaceSystem + "/" + configMapName,
-	}
-
-	if version.ConstraintK8sGreaterEqual122.Check(n.values.KubernetesVersion) {
-		out = append(out, "--controller-class=k8s.io/nginx")
-		out = append(out, "--watch-ingress-without-class=true")
+		"--controller-class=k8s.io/nginx",
+		"--watch-ingress-without-class=true",
 	}
 
 	return out

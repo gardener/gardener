@@ -17,7 +17,6 @@ package nginxingress_test
 import (
 	"context"
 
-	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -484,16 +483,9 @@ spec:
         - --election-id=ingress-controller-seed-leader
         - --update-status=true
         - --annotations-prefix=nginx.ingress.kubernetes.io
-        - --configmap=` + namespace + `/` + configMapName
-
-				if k8sVersionGreaterEqual122 {
-					out += `
+        - --configmap=` + namespace + `/` + configMapName + `
         - --ingress-class=` + v1beta1constants.SeedNginxIngressClass122 + `
         - --controller-class=k8s.io/` + v1beta1constants.SeedNginxIngressClass122
-				} else {
-					out += `
-        - --ingress-class=` + v1beta1constants.SeedNginxIngressClass
-				}
 
 				out += `
         env:
@@ -545,12 +537,8 @@ spec:
           allowPrivilegeEscalation: true
           capabilities:
             add:
-            - NET_BIND_SERVICE`
-
-				if k8sVersionGreaterEqual122 {
-					out += `
+            - NET_BIND_SERVICE
             - SYS_CHROOT`
-				}
 
 				out += `
             drop:
@@ -568,6 +556,7 @@ status: {}
 		)
 
 		JustBeforeEach(func() {
+			values.IngressClass = "nginx-ingress-gardener"
 			nginxIngress = New(c, namespace, values)
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
@@ -612,28 +601,9 @@ status: {}
 			Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(podDisruptionBudgetYAML))
 		})
 
-		Context("Kubernetes version >= 1.22", func() {
-			BeforeEach(func() {
-				values.KubernetesVersion = semver.MustParse("v1.22.12")
-				values.IngressClass = "nginx-ingress-gardener"
-			})
-
-			It("should successfully deploy all resources", func() {
-
-				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true)))
-				Expect(string(managedResourceSecret.Data["ingressclass____"+v1beta1constants.SeedNginxIngressClass122+".yaml"])).To(Equal(ingressClassYAML))
-			})
-		})
-
-		Context("Kubernetes version < 1.22", func() {
-			BeforeEach(func() {
-				values.KubernetesVersion = semver.MustParse("1.20")
-				values.IngressClass = "nginx-gardener"
-			})
-
-			It("should successfully deploy all resources", func() {
-				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(false)))
-			})
+		It("should successfully deploy all resources", func() {
+			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true)))
+			Expect(string(managedResourceSecret.Data["ingressclass____"+v1beta1constants.SeedNginxIngressClass122+".yaml"])).To(Equal(ingressClassYAML))
 		})
 	})
 
