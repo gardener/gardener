@@ -10141,8 +10141,7 @@ This field must be within [30d,90d].</p>
 <em>(Optional)</em>
 <p>AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted.
 These values are not used to generate new service account tokens. Only useful when service account tokens are also
-issued by another external system or a change of the current issuer that is used for generating tokens is being performed.
-This field is only available for Kubernetes v1.22 or later.</p>
+issued by another external system or a change of the current issuer that is used for generating tokens is being performed.</p>
 </td>
 </tr>
 </tbody>

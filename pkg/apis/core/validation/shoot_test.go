@@ -1887,21 +1887,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration"),
 				}))))
 			})
-
-			It("should not allow to specify multiple issuers if kubernetes is lower than 1.22", func() {
-				shoot.Spec.Kubernetes.Version = "1.21.9"
-				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
-					Issuer:          pointer.String("issuer"),
-					AcceptedIssuers: []string{"issuer1"},
-				}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.acceptedIssuers"),
-				}))))
-			})
 		})
 
 		It("should not allow to specify a negative event ttl duration", func() {

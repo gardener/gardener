@@ -1141,11 +1141,6 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child("serviceAccountConfig", "maxTokenExpiration"), "must be at most 2160h (90d)"))
 			}
 		}
-
-		geqKubernetes122, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.22")
-		if kubeAPIServer.ServiceAccountConfig.AcceptedIssuers != nil && !geqKubernetes122 {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("serviceAccountConfig", "acceptedIssuers"), "this field is only available in Kubernetes v1.22+"))
-		}
 	}
 
 	if kubeAPIServer.EventTTL != nil {
