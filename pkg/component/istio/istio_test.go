@@ -1751,6 +1751,10 @@ spec:
     spec:
       serviceAccountName: istio-ingressgateway
       securityContext:
+        # Safe since 1.22: https://github.com/kubernetes/kubernetes/pull/103326
+        sysctls:
+        - name: net.ipv4.ip_unprivileged_port_start
+          value: "0"
         fsGroup: 1337
         runAsGroup: 1337
         runAsNonRoot: true
