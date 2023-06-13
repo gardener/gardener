@@ -74,69 +74,13 @@ GOMEGACHECK_DIR := $(TOOLS_DIR)/gomegacheck
 # Rules for local development scenarios #
 #########################################
 
-dev-setup register-local-env start-extension-provider-local: export IPFAMILY := $(IPFAMILY)
-
-.PHONY: dev-setup
-dev-setup:
-	@if [ "$(DEV_SETUP_WITH_WEBHOOKS)" = "true" ]; then ./hack/local-development/dev-setup --with-webhooks; else ./hack/local-development/dev-setup; fi
-
-.PHONY: dev-setup-register-gardener
-dev-setup-register-gardener:
-	@./hack/local-development/dev-setup-register-gardener
-
-.PHONY: local-garden-up
-local-garden-up: $(HELM)
-	@./hack/local-development/local-garden/start.sh $(LOCAL_GARDEN_LABEL) $(ACTIVATE_SEEDAUTHORIZER)
-
-.PHONY: local-garden-down
-local-garden-down:
-	@./hack/local-development/local-garden/stop.sh $(LOCAL_GARDEN_LABEL)
+register-local-env: export IPFAMILY := $(IPFAMILY)
 
 ENVTEST_TYPE ?= kubernetes
 
 .PHONY: start-envtest
 start-envtest: $(SETUP_ENVTEST)
 	@./hack/start-envtest.sh --environment-type=$(ENVTEST_TYPE)
-
-.PHONY: remote-garden-up
-remote-garden-up: $(HELM)
-	@./hack/local-development/remote-garden/start.sh $(REMOTE_GARDEN_LABEL)
-
-.PHONY: remote-garden-down
-remote-garden-down:
-	@./hack/local-development/remote-garden/stop.sh $(REMOTE_GARDEN_LABEL)
-
-.PHONY: start-apiserver
-start-apiserver:
-	@./hack/local-development/start-apiserver
-
-.PHONY: start-controller-manager
-start-controller-manager:
-	@./hack/local-development/start-controller-manager
-
-.PHONY: start-scheduler
-start-scheduler:
-	@./hack/local-development/start-scheduler
-
-.PHONY: start-admission-controller
-start-admission-controller:
-	@./hack/local-development/start-admission-controller
-
-.PHONY: start-resource-manager
-start-resource-manager:
-	@./hack/local-development/start-resource-manager
-
-.PHONY: start-operator
-start-operator: $(YQ)
-	@./hack/local-development/start-operator
-
-.PHONY: start-gardenlet
-start-gardenlet: $(HELM) $(YAML2JSON) $(YQ)
-	@./hack/local-development/start-gardenlet
-
-.PHONY: start-extension-provider-local
-start-extension-provider-local:
-	@./hack/local-development/start-extension-provider-local
 
 #################################################################
 # Rules related to binary build, Docker image build and release #
