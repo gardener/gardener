@@ -21,7 +21,6 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -325,44 +324,6 @@ var _ = Describe("Predicate", func() {
 			Expect(predicate.Update(updateEvent)).To(BeFalse())
 			Expect(predicate.Delete(deleteEvent)).To(BeFalse())
 			Expect(predicate.Generic(genericEvent)).To(BeFalse())
-		})
-	})
-
-	Describe("#ClusterShootKubernetesVersionForCSIMigrationAtLeast", func() {
-		It("should match the minimum kubernetes version", func() {
-			var (
-				predicate                                           = ClusterShootKubernetesVersionForCSIMigrationAtLeast(version)
-				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, version, nil)
-			)
-
-			Expect(predicate.Create(createEvent)).To(BeTrue())
-			Expect(predicate.Update(updateEvent)).To(BeTrue())
-			Expect(predicate.Delete(deleteEvent)).To(BeTrue())
-			Expect(predicate.Generic(genericEvent)).To(BeTrue())
-		})
-
-		It("should not match the minimum kubernetes version", func() {
-			var (
-				predicate                                           = ClusterShootKubernetesVersionForCSIMigrationAtLeast(version)
-				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, "1.17", nil)
-			)
-
-			Expect(predicate.Create(createEvent)).To(BeFalse())
-			Expect(predicate.Update(updateEvent)).To(BeFalse())
-			Expect(predicate.Delete(deleteEvent)).To(BeFalse())
-			Expect(predicate.Generic(genericEvent)).To(BeFalse())
-		})
-
-		It("should not match minimum kubernetes version due to overwrite", func() {
-			var (
-				predicate                                           = ClusterShootKubernetesVersionForCSIMigrationAtLeast(version)
-				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, "1.17", pointer.String("1.17"))
-			)
-
-			Expect(predicate.Create(createEvent)).To(BeTrue())
-			Expect(predicate.Update(updateEvent)).To(BeTrue())
-			Expect(predicate.Delete(deleteEvent)).To(BeTrue())
-			Expect(predicate.Generic(genericEvent)).To(BeTrue())
 		})
 	})
 })
