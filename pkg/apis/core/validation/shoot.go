@@ -1579,10 +1579,6 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, doc
 	}
 
 	if v := kubeletConfig.MemorySwap; v != nil {
-		if k8sVersionIsLessThan122, _ := versionutils.CompareVersions(version, "<", "1.22"); k8sVersionIsLessThan122 {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("memorySwap"), "configuring swap behaviour is not available for kubernetes versions < 1.22"))
-		}
-
 		if pointer.BoolDeref(kubeletConfig.FailSwapOn, false) {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("memorySwap"), "configuring swap behaviour is not available when the kubelet is configured with 'FailSwapOn=true'"))
 		}

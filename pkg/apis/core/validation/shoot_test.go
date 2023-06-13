@@ -5490,17 +5490,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Entry("should allow empty memory swap - NodeSwap set and FailSwap=false", true, nil, "1.22", BeEmpty()),
 			Entry("should allow LimitedSwap behavior", true, pointer.String("LimitedSwap"), "1.22", BeEmpty()),
 			Entry("should allow UnlimitedSwap behavior", true, pointer.String("UnlimitedSwap"), "1.22", BeEmpty()),
-			Entry("should forbid configuration of swap behaviour for k8s < 1.22", true, pointer.String("LimitedSwap"), "1.21", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal("memorySwap"),
-				"Detail": Equal("configuring swap behaviour is not available for kubernetes versions < 1.22"),
-			})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("featureGates.NodeSwap"),
-					"Detail": Equal("not supported in Kubernetes version 1.21"),
-				}))),
-			),
 			Entry("should forbid configuration of swap behaviour if either the feature gate NodeSwap is not set or FailSwap=true", false, pointer.String("LimitedSwap"), "1.22", ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
