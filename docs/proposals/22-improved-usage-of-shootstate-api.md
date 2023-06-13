@@ -1,5 +1,5 @@
 ---
-title: Eliminating the `ShootState` API
+title: Improved Usage of the `ShootState` API
 gep-number: 22
 creation-date: 2023-06-01
 status: implementable
@@ -9,12 +9,12 @@ reviewers:
 - "@timebertt"
 ---
 
-# GEP-22: Eliminating the `ShootState` API
+# GEP-22: Improved Usage of the `ShootState` API
 
 ## Table of Contents
 
 <!-- TOC -->
-- [GEP-22: Eliminating the `ShootState` API](#gep-22-eliminating-the-shootstate-api)
+- [GEP-22: Improved Usage of the `ShootState` API](#gep-22-improved-usage-of-the-shootstate-api)
   - [Table of Contents](#table-of-contents)
   - [Summary](#summary)
   - [Motivation](#motivation)
@@ -64,21 +64,19 @@ As the current seed cluster is unavailable in this scenario and cannot be access
 
 With [Finalise "Bad Case" Control Plane Migration #6302](https://github.com/gardener/gardener/issues/6302), however, this use case has been eliminated.
 It was decided that it won't be implemented, especially after [☂️ [GEP-20] Highly Available Seed and Shoot Clusters #6529](https://github.com/gardener/gardener/issues/6529) brings the ability to run seed clusters in a highly available manner (which reduces the chances to ever need a "bad case control plane migration" even further).
-With this, it is no longer necessary to continuously replicate the relevant state to the garden cluster, allowing us to drop the `ShootState` API for good.
-
-More generally, even with the "bad case control plane migration" scenario, the `ShootState` API is a design flaw since it was misused for persisting frequently changing data that should better be stored in an object store (similar to ETCD backups).
+With this, it is no longer necessary to continuously replicate the relevant state to the garden cluster, allowing us to reduce the usage of the `ShootState` API.
 
 ### Goals
 
 - Reduce network traffic and resulting costs due to continuous replication of state from seed clusters to garden clusters.
 - Reduce size of garden cluster's ETCD, and with it the risk to run into its practical space limit of 8 GB.
 - Simplify code that was mainly introduced in the context of the "bad case control plane migration".
+- Perform regular backups of the shoot states for shoots running on unmanaged seeds.
 
 ### Non-Goals
 
 - Adaptation of the ["first use-case"](#summary) of the `ShootState` API (this is handled separately in [Introduce `core.gardener.cloud/v1beta1.InternalSecret` API #7999](https://github.com/gardener/gardener/issues/7999)).
 - Provide means to restore a deleted `Shoot` from its persisted state.
-- Perform regular backups of the shoot states.
 
 ## Proposal
 
@@ -91,17 +89,17 @@ We are proposing the following changes:
 1. The [`shootstate-extensions`](../../pkg/gardenlet/controller/shootstate/extensions) controller of `gardenlet` will be dropped, i.e., it will no longer replicate the extensions states to the `ShootState` resources in the garden cluster.
 2. The [`shootstate-secret`](../../pkg/gardenlet/controller/shootstate/secret) controller will also be dropped as soon as [Introduce `core.gardener.cloud/v1beta1.InternalSecret` API #7999](https://github.com/gardener/gardener/issues/7999) has been implemented.
 
-With this, the `ShootState` API can be dropped entirely.
+With this, the usage of the `ShootState` API can be drastically reduced.
 
 3. During the `Migrate` phase of a `Shoot`, `gardenlet` will fetch all relevant state in the shoot namespaces of the current seed, similar to what the two controllers are doing as of today:
 
    1. all labels and data for `Secret`s labeled with `persist=true`.
    2. all `.status.state` and `.status.resources` for resources in the `extensions.gardener.cloud/v1alpha1` API group.
 
-   The `gardenlet` puts this state into a structure similar to the [`core.gardener.cloud/v1beta1.ShootStateSpec`](https://github.com/gardener/gardener/blob/27b76d8d825461b9edc75c2d4472829e309af05e/pkg/apis/core/v1beta1/types_shootstate.go#L49-L101), marshals it to JSON, and puts it into the data of an [`core.gardener.cloud/v1beta1.InternalSecret`](https://github.com/gardener/gardener/issues/7999) stored in the namespace of the respective `Shoot` in the garden cluster.
+   The `gardenlet` puts this state into regular `core.gardener.cloud/v1beta1.ShootState` resource stored in the namespace of the respective `Shoot` in the garden cluster.
 
-4. During the `Restore` phase of a `Shoot`, `gardenlet` will read the created [`core.gardener.cloud/v1beta1.InternalSecret`](https://github.com/gardener/gardener/issues/7999) from the namespace of the respective `Shoot` in the garden cluster, unmarshals its data from JSON to a structure similar to the [`core.gardener.cloud/v1beta1.ShootStateSpec`](https://github.com/gardener/gardener/blob/27b76d8d825461b9edc75c2d4472829e309af05e/pkg/apis/core/v1beta1/types_shootstate.go#L49-L101), and uses it to populate the state in the new seed cluster just like today.
-5. After successful restoration, the created [`core.gardener.cloud/v1beta1.InternalSecret`](https://github.com/gardener/gardener/issues/7999) is deleted again from the namespace of the respective `Shoot` in the garden cluster.
+4. During the `Restore` phase of a `Shoot`, `gardenlet` will read the created `core.gardener.cloud/v1beta1.ShootState` from the namespace of the respective `Shoot` in the garden cluster and uses it to populate the state in the new seed cluster just like today.
+5. After successful restoration, the created `core.gardener.cloud/v1beta1.ShootState` is deleted again from the namespace of the respective `Shoot` in the garden cluster.
 
 This approach addresses all the concerns and downsides of today's implementation:
 Control plane migrations happen rather rarely and usually only take a few minutes.
@@ -109,15 +107,24 @@ The shoot state is still replicated to the garden cluster during this process, h
 It will also not be continuously updated anymore.
 Only when a migration is performed, the current state is collected, and deleted again after the migration has been completed.
 
+> ⚠️There will be one exception to the above which applies for `Shoot`s running on so-called "unmanaged `Seed`s". Such `Seed`s are those not backed by a `seedmanagement.gardener.cloud/v1alpha1.ManagedSeed` object.
+>
+> For `Shoot`s running on such unmanaged `Seed`s, we cannot make any assumptions about the ETCD backups.
+> While we can easily access the ETCD backup of a `ManagedSeed` in case of a disaster in order to get access to the relevant state of a particular `Shoot`, we can't do so for unmanaged `Seed`s.
+> 
+> Hence, we propose to run a periodic job that backs up the shoot state for `Shoot`s running on unmanaged `Seed`s.
+> This periodic job will be implemented as part of a new controller in `gardenlet` which runs according to the configured period (default: `6h`).
+
 In summary:
 
 - the size of the ETCD of the garden cluster will be drastically reduced, especially for large Gardener installations.
 - the load on the API server and ETCD of the garden cluster will be drastically reduced, preparing the components for further scale.
 - the network traffic and related costs will be drastically reduced.
+- only very few `ShootState`s will remain (and those get updated less frequently), since productive Gardener landscapes typically don't run a lot of `Shoot`s on unmanaged `Seed`s.
 
 ## Alternatives
 
-Instead of persisting the shoot state via an [`core.gardener.cloud/v1beta1.InternalSecret`](https://github.com/gardener/gardener/issues/7999) to the garden cluster during the control plane migration period, the relevant data could be pushed into the backup buckets that already exist as of today and are used for the ETCD backups.
+Instead of persisting the shoot state via the `core.gardener.cloud/v1beta1.ShootState` resource into ETCD of the garden cluster, the relevant data could be pushed into the backup buckets that already exist as of today and are used for the ETCD backups.
 
 We have implemented a [PoC](https://github.com/rfranzke/gardener/commits/hackathon/shootstate-s3) during the [Hack the Garden 05/2023 hackathon](https://github.com/gardener-community/hackathon/tree/main/2023-05_Leverkusen) which extends the `extensions.gardener.cloud/v1alpha1` API with two new resources:
 
@@ -177,6 +184,8 @@ Hence, implementing this alternative approach is considered unnecessary.
 
 ## Future Improvements
 
+### Eliminating the `Worker` State Reconciler
+
 With [Move `machine-controller-manager` reconciliation responsibility from extensions to `gardenlet` #7594](https://github.com/gardener/gardener/issues/7594), `gardenlet` will become aware of the `machine.sapcloud.io/v1alpha1` API used for managing the worker machines of shoot clusters.
 
 This allows to drop the [`Worker` state reconciler](https://github.com/gardener/gardener/blob/master/extensions/pkg/controller/worker/state_reconciler.go) which currently watches all `MachineDeployment`s, `MachineSet`s, and `Machine`s, and replicates their specifications into the `.status.state` of the related `extensions.gardener.cloud/v1alpha1.Worker` resource.
@@ -184,3 +193,10 @@ Instead, `gardenlet` could then collect these resources during the `Migrate` pha
 
 With this approach, we could also reduce the load on the seed clusters' API servers since it would no longer be necessary to continuously duplicate the machine-related resources into the `Worker` status.
 For now, this GEP focuses on the `ShootState` API only, but as soon as [Move `machine-controller-manager` reconciliation responsibility from extensions to `gardenlet` #7594](https://github.com/gardener/gardener/issues/7594) has been implemented, we could start looking into this next-step improvement.
+
+### Compressing the `ShootState` Data
+
+Typically, the size of a `ShootState` resource is dominated by the `MachineDeployment`s, `MachineSet`s, and `Machine`s.
+In case the few remaining `ShootState` resources still grow too large, one could implement compression strategies for the machine state (and maybe other state as well, if necessary) to reduce the overall storage size.
+
+Since we expect only a very small number of `ShootState`s to remain for productive Gardener installations, this optimization is out of scope for now.
