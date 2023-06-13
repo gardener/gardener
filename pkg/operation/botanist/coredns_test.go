@@ -33,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockcoredns "github.com/gardener/gardener/pkg/component/coredns/mock"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/garden"
@@ -81,8 +80,6 @@ var _ = Describe("CoreDNS", func() {
 		})
 
 		It("should successfully create a coredns interface", func() {
-			defer test.WithFeatureGate(features.DefaultFeatureGate, features.APIServerSNI, true)()
-
 			kubernetesClient.EXPECT().Client()
 			botanist.ImageVector = imagevector.ImageVector{{Name: "coredns"}}
 
@@ -119,8 +116,6 @@ var _ = Describe("CoreDNS", func() {
 			})
 
 			It("should successfully create a coredns interface with cluster-proportional autoscaling enabled", func() {
-				defer test.WithFeatureGate(features.DefaultFeatureGate, features.APIServerSNI, true)()
-
 				kubernetesClient.EXPECT().Client()
 				botanist.ImageVector = imagevector.ImageVector{{Name: "coredns"}, {Name: "cluster-proportional-autoscaler"}}
 

@@ -487,13 +487,9 @@ var _ = Describe("KubeAPIServer", func() {
 			}
 
 			DescribeTable("should have the expected SNI config",
-				func(prepTest func(), featureGate *featuregate.Feature, value *bool, expectedConfig kubeapiserver.SNIConfig) {
+				func(prepTest func(), expectedConfig kubeapiserver.SNIConfig) {
 					if prepTest != nil {
 						prepTest()
-					}
-
-					if featureGate != nil && value != nil {
-						defer test.WithFeatureGate(features.DefaultFeatureGate, *featureGate, *value)()
 					}
 
 					kubeAPIServer.EXPECT().GetValues()
@@ -509,27 +505,23 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
 				},
 
-				Entry("SNI enabled but no need for internal DNS",
-					func() {
-
-					},
-					featureGatePtr(features.APIServerSNI), pointer.Bool(true),
+				Entry("no need for internal DNS",
+					func() {},
 					kubeapiserver.SNIConfig{
 						Enabled: false,
 					},
 				),
-				Entry("SNI enabled but no need for external DNS",
+				Entry("no need for external DNS",
 					func() {
 						botanist.Shoot.GetInfo().Spec.DNS.Providers = []gardencorev1beta1.DNSProvider{{Type: pointer.String("unmanaged")}}
 						botanist.Shoot.ExternalClusterDomain = nil
 						botanist.Garden.InternalDomain = &gardenerutils.Domain{}
 					},
-					featureGatePtr(features.APIServerSNI), pointer.Bool(true),
 					kubeapiserver.SNIConfig{
 						Enabled: false,
 					},
 				),
-				Entry("SNI and both DNS enabled",
+				Entry("both DNS needed",
 					func() {
 						botanist.Garden.InternalDomain = &gardenerutils.Domain{}
 						botanist.Shoot.ExternalDomain = &gardenerutils.Domain{}
@@ -539,7 +531,6 @@ var _ = Describe("KubeAPIServer", func() {
 							Providers: []gardencorev1beta1.DNSProvider{{}},
 						}
 					},
-					featureGatePtr(features.APIServerSNI), pointer.Bool(true),
 					kubeapiserver.SNIConfig{
 						Enabled:          true,
 						AdvertiseAddress: apiServerClusterIP,
@@ -549,7 +540,6 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						botanist.ControlPlaneWildcardCert = secret
 					},
-					featureGatePtr(features.APIServerSNI), pointer.Bool(true),
 					kubeapiserver.SNIConfig{
 						Enabled: false,
 						TLS: []kubeapiserver.TLSSNIConfig{

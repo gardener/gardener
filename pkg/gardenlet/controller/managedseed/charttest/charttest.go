@@ -43,7 +43,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	"github.com/gardener/gardener/pkg/features"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -111,8 +110,7 @@ func getEmptyPriorityClass() *schedulingv1.PriorityClass {
 func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLabels map[string]string, serviceAccountName string, featureGates map[string]bool) {
 	// ClusterRoles
 	gardenletClusterRole := getGardenletClusterRole(expectedLabels)
-	apiServerSNIEnabled, ok := featureGates[string(features.APIServerSNI)]
-	apiServerSNIClusterRole := getAPIServerSNIClusterRole(expectedLabels, !ok || apiServerSNIEnabled)
+	apiServerSNIClusterRole := getAPIServerSNIClusterRole(expectedLabels)
 	managedIstioClusterRole := getManagedIstioClusterRole(expectedLabels)
 	expectedClusterRoles := map[types.NamespacedName]*rbacv1.ClusterRole{
 		{Name: gardenletClusterRole.Name}:    gardenletClusterRole,
@@ -401,18 +399,15 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 	}
 }
 
-func getAPIServerSNIClusterRole(labels map[string]string, apiServerSNIEnabled bool) *rbacv1.ClusterRole {
-	clusterRole := rbacv1.ClusterRole{
+func getAPIServerSNIClusterRole(labels map[string]string) *rbacv1.ClusterRole {
+	return &rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{Kind: "ClusterRole", APIVersion: rbacv1.SchemeGroupVersion.String()},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            "gardener.cloud:system:gardenlet:apiserver-sni",
 			Labels:          labels,
 			ResourceVersion: "1",
 		},
-	}
-
-	if apiServerSNIEnabled {
-		clusterRole.Rules = []rbacv1.PolicyRule{
+		Rules: []rbacv1.PolicyRule{
 			{
 				APIGroups: []string{"networking.istio.io"},
 				Resources: []string{"envoyfilters", "gateways", "virtualservices"},
@@ -430,24 +425,8 @@ func getAPIServerSNIClusterRole(labels map[string]string, apiServerSNIEnabled bo
 				ResourceNames: []string{"proxy-protocol-blackhole"},
 				Verbs:         []string{"get", "patch", "update"},
 			},
-		}
-	} else {
-		clusterRole.Rules = []rbacv1.PolicyRule{
-			{
-				APIGroups:     []string{"networking.istio.io"},
-				Resources:     []string{"envoyfilters", "gateways"},
-				ResourceNames: []string{"proxy-protocol"},
-				Verbs:         []string{"delete"},
-			},
-			{
-				APIGroups:     []string{"networking.istio.io"},
-				Resources:     []string{"virtualservices"},
-				ResourceNames: []string{"proxy-protocol-blackhole"},
-				Verbs:         []string{"delete"},
-			},
-		}
+		},
 	}
-	return &clusterRole
 }
 
 func getManagedIstioClusterRole(labels map[string]string) *rbacv1.ClusterRole {

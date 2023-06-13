@@ -759,12 +759,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		imageVectorOverwrites[name] = data
 	}
 
-	anySNIInUse, err := kubeapiserverexposure.AnyDeployedSNI(ctx, seedClient)
-	if err != nil {
-		return err
-	}
-	sniEnabledOrInUse := anySNIInUse || features.DefaultFeatureGate.Enabled(features.APIServerSNI)
-
 	seedIsOriginOfClusterIdentity, err := clusteridentity.IsClusterIdentityEmptyOrFromOrigin(ctx, seedClient, v1beta1constants.ClusterIdentityOriginSeed)
 	if err != nil {
 		return err
@@ -863,7 +857,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	// setup for flow graph
 	var dnsRecord component.DeployMigrateWaiter
 
-	istio, err := defaultIstio(seedClient, r.ImageVector, chartRenderer, seed, &r.Config, sniEnabledOrInUse, seedIsGarden)
+	istio, err := defaultIstio(seedClient, r.ImageVector, chartRenderer, seed, &r.Config, seedIsGarden)
 	if err != nil {
 		return err
 	}

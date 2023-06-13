@@ -149,8 +149,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		defaultInterval         = 5 * time.Second
 		defaultTimeout          = 30 * time.Second
 		staticNodesCIDR         = o.Shoot.GetInfo().Spec.Networking != nil && o.Shoot.GetInfo().Spec.Networking.Nodes != nil
-		useSNI                  = botanist.APIServerSNIEnabled()
-		sniPhase                = botanist.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase
+		useDNS                  = botanist.ShootUsesDNS()
 
 		g = flow.NewGraph("Shoot cluster deletion")
 
@@ -172,10 +171,8 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:   flow.TaskFn(botanist.DeployCloudProviderSecret).DoIf(nonTerminatingNamespace).SkipIf(o.Shoot.IsWorkerless),
 		})
 		deployKubeAPIServerService = g.Add(flow.Task{
-			Name: "Deploying Kubernetes API server service in the Seed cluster",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.DeployKubeAPIService(ctx, sniPhase)
-			}).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Name:         "Deploying Kubernetes API server service in the Seed cluster",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServerService.Deploy).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(ensureShootClusterIdentity),
 		})
 		_ = g.Add(flow.Task{
@@ -291,14 +288,14 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		deployControlPlaneExposure = g.Add(flow.Task{
 			Name:         "Deploying shoot control plane exposure components",
-			Fn:           flow.TaskFn(botanist.DeployControlPlaneExposure).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsWorkerless || useSNI).DoIf(cleanupShootResources),
+			Fn:           flow.TaskFn(botanist.DeployControlPlaneExposure).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsWorkerless || useDNS).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerIsReady),
 		})
 		waitUntilControlPlaneExposureReady = g.Add(flow.Task{
 			Name: "Waiting until Shoot control plane exposure has been reconciled",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.Shoot.Components.Extensions.ControlPlaneExposure.Wait(ctx)
-			}).SkipIf(o.Shoot.IsWorkerless || useSNI).DoIf(cleanupShootResources),
+			}).SkipIf(o.Shoot.IsWorkerless || useDNS).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(deployControlPlaneExposure),
 		})
 		initializeShootClients = g.Add(flow.Task{

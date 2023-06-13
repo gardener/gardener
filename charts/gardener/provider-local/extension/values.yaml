@@ -34,7 +34,6 @@ controllers:
     zone0IP: "127.0.0.10"
     zone1IP: "127.0.0.11"
     zone2IP: "127.0.0.12"
-    apiServerSNIEnabled: true
   backupbucket:
     localDir: "/dev/local-backupbuckets"
     containerMountPath: "/etc/gardener/local-backupbuckets"

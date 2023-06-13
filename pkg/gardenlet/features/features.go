@@ -25,7 +25,6 @@ func RegisterFeatureGates() {
 	utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(
 		features.HVPA,
 		features.HVPAForShootedSeed,
-		features.APIServerSNI,
 		features.DefaultSeccompProfile,
 		features.CoreDNSQueryRewriting,
 		features.IPv6SingleStack,

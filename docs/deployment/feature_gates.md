@@ -22,9 +22,6 @@ The following tables are a summary of the feature gates that you can set on diff
 |-------------------------------------|---------|---------|--------|--------|
 | HVPA                                | `false` | `Alpha` | `0.31` |        |
 | HVPAForShootedSeed                  | `false` | `Alpha` | `0.32` |        |
-| APIServerSNI                        | `false` | `Alpha` | `1.7`  | `1.18` |
-| APIServerSNI                        | `true`  | `Beta`  | `1.19` |        |
-| APIServerSNI (deprecated)           | `true`  | `Beta`  | `1.48` |        |
 | HAControlPlanes                     | `false` | `Alpha` | `1.49` | `1.70` |
 | HAControlPlanes                     | `true`  | `Beta`  | `1.71` | `1.72` |
 | HAControlPlanes                     | `true`  | `GA`    | `1.73` |        |
@@ -125,6 +122,10 @@ The following tables are a summary of the feature gates that you can set on diff
 | ManagedIstio                                 | `true`  | `Beta`       | `1.19` |        |
 | ManagedIstio                                 | `true`  | `Deprecated` | `1.48` | `1.69` |
 | ManagedIstio                                 |         | `Removed`    | `1.70` |        |
+| APIServerSNI                                 | `false` | `Alpha`      | `1.7`  | `1.18` |
+| APIServerSNI                                 | `true`  | `Beta`       | `1.19` |        |
+| APIServerSNI                                 | `true`  | `Deprecated` | `1.48` | `1.72` |
+| APIServerSNI                                 | `true`  | `Removed`    | `1.73` |        |
 
 ## Using a Feature
 
@@ -166,7 +167,6 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 |--------------------------------------------|-----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | HVPA                                       | `gardenlet`, `gardener-operator`  | Enables simultaneous horizontal and vertical scaling in garden or seed clusters.                                                                                                                                                                                                                                                                                                   |
 | HVPAForShootedSeed                         | `gardenlet`                       | Enables simultaneous horizontal and vertical scaling in managed seed (aka "shooted seed") clusters.                                                                                                                                                                                                                                                                                |
-| APIServerSNI (deprecated)                  | `gardenlet`                       | Enables only one LoadBalancer to be used for every Shoot cluster API server in a Seed. Enable this feature when `ManagedIstio` is enabled or Istio is manually deployed in the Seed cluster. See [GEP-8](../proposals/08-shoot-apiserver-via-sni.md) for more details.                                                                                                             |
 | SecretBindingProviderValidation            | `gardener-apiserver`              | Enables validations on Gardener API server that:<br>- requires the provider type of a SecretBinding to be set (on SecretBinding creation)<br>- requires the SecretBinding provider type to match the Shoot provider type (on Shoot creation)<br>- enforces immutability on the provider type of a SecretBinding                                                                    |
 | HAControlPlanes                            | `gardener-apiserver`              | HAControlPlanes allows shoot control planes to be run in high availability mode.                                                                                                                                                                                                                                                                                                   |
 | DefaultSeccompProfile                      | `gardenlet`, `gardener-operator`  | Enables the defaulting of the seccomp profile for Gardener managed workload in the garden or seed to `RuntimeDefault`.                                                                                                                                                                                                                                                             |

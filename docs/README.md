@@ -24,7 +24,6 @@
 
 ## Usage
 
-* [APIServerSNI environment variable injection](usage/apiserver-sni-injection.md)
 * [Audit a Kubernetes cluster](usage/shoot_auditpolicy.md)
 * [Auto-Scaling for shoot clusters](usage/shoot_autoscaling.md)
 * [Cleanup of Shoot clusters in deletion](usage/shoot_cleanup.md)
@@ -55,6 +54,7 @@
 * [Shoot Scheduling Profiles](usage/shoot_scheduling_profiles.md)
 * [Shoot Credentials Rotation](usage/shoot_credentials_rotation.md)
 * [Shoot Kubernetes and Operating System Versioning](usage/shoot_versions.md)
+* [Shoot `KUBERNETES_SERVICE_HOST` Environment Variable Injection](usage/shoot_kubernetes_service_host_injection.md)
 * [Shoot Networking](usage/shoot_networking.md)
 * [Shoot Maintenance](usage/shoot_maintenance.md)
 * [Shoot `ServiceAccount` Configurations](usage/shoot_serviceaccounts.md)

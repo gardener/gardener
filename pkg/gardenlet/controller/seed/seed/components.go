@@ -36,7 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/component/vpnseedserver"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
@@ -51,26 +50,15 @@ func defaultIstio(
 	chartRenderer chartrenderer.Interface,
 	seed *seedpkg.Seed,
 	conf *config.GardenletConfiguration,
-	sniEnabledOrInUse bool,
 	isGardenCluster bool,
 ) (
 	component.DeployWaiter,
 	error,
 ) {
-	seedObj := seed.GetInfo()
-
-	labels := shared.GetIstioZoneLabels(conf.SNI.Ingress.Labels, nil)
-
-	// even if SNI is being disabled, the existing ports must stay the same
-	// until all APIServer SNI resources are removed.
-	var servicePorts []corev1.ServicePort
-	if sniEnabledOrInUse {
-		servicePorts = []corev1.ServicePort{
-			{Name: "proxy", Port: 8443, TargetPort: intstr.FromInt(8443)},
-			{Name: "tcp", Port: 443, TargetPort: intstr.FromInt(9443)},
-			{Name: "tls-tunnel", Port: vpnseedserver.GatewayPort, TargetPort: intstr.FromInt(vpnseedserver.GatewayPort)},
-		}
-	}
+	var (
+		seedObj = seed.GetInfo()
+		labels  = shared.GetIstioZoneLabels(conf.SNI.Ingress.Labels, nil)
+	)
 
 	istioDeployer, err := shared.NewIstio(
 		seedClient,
@@ -85,8 +73,12 @@ func defaultIstio(
 		seed.GetLoadBalancerServiceAnnotations(),
 		seed.GetLoadBalancerServiceExternalTrafficPolicy(),
 		conf.SNI.Ingress.ServiceExternalIP,
-		servicePorts,
-		features.DefaultFeatureGate.Enabled(features.APIServerSNI),
+		[]corev1.ServicePort{
+			{Name: "proxy", Port: 8443, TargetPort: intstr.FromInt(8443)},
+			{Name: "tcp", Port: 443, TargetPort: intstr.FromInt(9443)},
+			{Name: "tls-tunnel", Port: vpnseedserver.GatewayPort, TargetPort: intstr.FromInt(vpnseedserver.GatewayPort)},
+		},
+		true,
 		true,
 		seedObj.Spec.Provider.Zones,
 	)

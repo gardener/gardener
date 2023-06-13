@@ -73,7 +73,7 @@ type GardenletConfiguration struct {
 	// by the Gardenlet in the seed clusters.
 	// +optional
 	Logging *Logging `json:"logging,omitempty"`
-	// SNI contains an optional configuration for the APIServerSNI feature used
+	// SNI contains an optional configuration for the SNI settings used
 	// by the Gardenlet in the seed clusters.
 	// +optional
 	SNI *SNI `json:"sni,omitempty"`
@@ -509,7 +509,7 @@ type Server struct {
 	Port int `json:"port"`
 }
 
-// SNI contains an optional configuration for the APIServerSNI feature used
+// SNI contains an optional configuration for the SNI settings used
 // by the Gardenlet in the seed clusters.
 type SNI struct {
 	// Ingress is the ingressgateway configuration.
@@ -608,7 +608,7 @@ type ExposureClassHandler struct {
 	// load balancer to apply the control plane endpoint exposure strategy.
 	LoadBalancerService LoadBalancerServiceConfig `json:"loadBalancerService"`
 	// SNI contains optional configuration for a dedicated ingressgateway belonging to
-	// an exposure class handler. This is only required in context of the APIServerSNI feature of the gardenlet.
+	// an exposure class handler.
 	// +optional
 	SNI *SNI `json:"sni,omitempty"`
 }

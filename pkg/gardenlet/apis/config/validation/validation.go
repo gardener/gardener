@@ -28,7 +28,6 @@ import (
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
 )
@@ -128,10 +127,6 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 		}
 
 		if handler.SNI != nil && handler.SNI.Ingress != nil && handler.SNI.Ingress.ServiceExternalIP != nil {
-			if apiServerSNIEnabled, ok := cfg.FeatureGates[string(features.APIServerSNI)]; ok && !apiServerSNIEnabled {
-				allErrs = append(allErrs, field.Forbidden(handlerPath.Child("sni", "ingress", "serviceExternalIP"), "cannot use an external service ip when APIServerSNI feature gate is disabled"))
-			}
-
 			if ip := net.ParseIP(*handler.SNI.Ingress.ServiceExternalIP); ip == nil {
 				allErrs = append(allErrs, field.Invalid(handlerPath.Child("sni", "ingress", "serviceExternalIP"), handler.SNI.Ingress.ServiceExternalIP, "external service ip is invalid"))
 			}

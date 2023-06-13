@@ -40,7 +40,6 @@ import (
 	servicecontroller "github.com/gardener/gardener/pkg/provider-local/controller/service"
 	workercontroller "github.com/gardener/gardener/pkg/provider-local/controller/worker"
 	controlplanewebhook "github.com/gardener/gardener/pkg/provider-local/webhook/controlplane"
-	controlplaneexposurewebhook "github.com/gardener/gardener/pkg/provider-local/webhook/controlplaneexposure"
 	dnsconfigwebhook "github.com/gardener/gardener/pkg/provider-local/webhook/dnsconfig"
 	networkpolicywebhook "github.com/gardener/gardener/pkg/provider-local/webhook/networkpolicy"
 	nodewebhook "github.com/gardener/gardener/pkg/provider-local/webhook/node"
@@ -70,7 +69,6 @@ func ControllerSwitchOptions() *extensionscmdcontroller.SwitchOptions {
 // WebhookSwitchOptions are the extensionscmdwebhook.SwitchOptions for the provider webhooks.
 func WebhookSwitchOptions() *extensionscmdwebhook.SwitchOptions {
 	return extensionscmdwebhook.NewSwitchOptions(
-		extensionscmdwebhook.Switch(extensionscontrolplanewebhook.ExposureWebhookName, controlplaneexposurewebhook.AddToManager),
 		extensionscmdwebhook.Switch(extensionscontrolplanewebhook.WebhookName, controlplanewebhook.AddToManager),
 		extensionscmdwebhook.Switch(extensionsshootwebhook.WebhookName, shootwebhook.AddToManager),
 		extensionscmdwebhook.Switch(dnsconfigwebhook.WebhookName, dnsconfigwebhook.AddToManager),

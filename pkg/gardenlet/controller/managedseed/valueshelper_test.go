@@ -27,7 +27,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
@@ -62,7 +61,6 @@ var _ = Describe("ValuesHelper", func() {
 		gardenletfeatures.RegisterFeatureGates()
 
 		cleanupFuncs = []func(){
-			test.WithFeatureGate(features.DefaultFeatureGate, features.APIServerSNI, true),
 			test.WithTempFile("", "image-vector-overwrite", []byte("image vector overwrite"), &imageVectorOverwritePath),
 			test.WithTempFile("", "component-image-vector-overwrites", []byte("component image vector overwrites"), &componentImageVectorOverwritesPath),
 			test.WithTempFile("", "garden-kubeconfig", []byte("garden kubeconfig"), &gardenKubeconfigPath),

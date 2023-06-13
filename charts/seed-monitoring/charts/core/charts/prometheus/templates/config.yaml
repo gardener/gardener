@@ -307,7 +307,7 @@ data:
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.nodeExporter | indent 6 }}
 
-{{- if .Values.shoot.sniEnabled }}
+{{- if .Values.shoot.apiServerProxyEnabled }}
     - job_name: apiserver-proxy
       metrics_path: /metrics
       scheme: https

@@ -51,7 +51,7 @@ func (b *Botanist) DefaultNginxIngress() (component.DeployWaiter, error) {
 		PSPDisabled:          b.Shoot.PSPDisabled,
 	}
 
-	if b.APIServerSNIEnabled() {
+	if b.ShootUsesDNS() {
 		values.KubeAPIServerHost = pointer.String(b.outOfClusterAPIServerFQDN())
 	}
 

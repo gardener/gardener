@@ -35,7 +35,6 @@ config:
   featureGates:
     HVPA: true
     HVPAForShootedSeed: true
-    APIServerSNI: true
     DefaultSeccompProfile: true
     CoreDNSQueryRewriting: true
     # Enable IPv6SingleStack to allow creating IPv6 seed clusters without changing the config.

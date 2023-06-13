@@ -36,14 +36,12 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockdnsrecord "github.com/gardener/gardener/pkg/component/extensions/dnsrecord/mock"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("dns", func() {
@@ -166,19 +164,18 @@ var _ = Describe("dns", func() {
 		})
 	})
 
-	Context("APIServerSNIEnabled", func() {
+	Context("ShootUsesDNS", func() {
 		BeforeEach(func() {
 			gardenletfeatures.RegisterFeatureGates()
 		})
 
-		It("returns true when feature gate is enabled", func() {
-			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.APIServerSNI, true))
+		It("returns true when DNS is used", func() {
 			b.Garden.InternalDomain = &gardenerutils.Domain{Provider: "some-provider"}
 			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 			b.Shoot.ExternalClusterDomain = pointer.String("baz")
 			b.Shoot.ExternalDomain = &gardenerutils.Domain{Provider: "valid-provider"}
 
-			Expect(b.APIServerSNIEnabled()).To(BeTrue())
+			Expect(b.ShootUsesDNS()).To(BeTrue())
 		})
 	})
 

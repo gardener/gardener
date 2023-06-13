@@ -120,7 +120,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 		serviceCtrlOpts = &localservice.ControllerOptions{
 			MaxConcurrentReconciles: 5,
 			HostIP:                  hostIP,
-			APIServerSNIEnabled:     true,
 		}
 
 		// options for the local backupbucket controller

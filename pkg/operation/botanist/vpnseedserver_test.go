@@ -34,7 +34,6 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/vpnseedserver"
 	mockvpnseedserver "github.com/gardener/gardener/pkg/component/vpnseedserver/mock"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
@@ -43,7 +42,6 @@ import (
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("VPNSeedServer", func() {
@@ -100,7 +98,6 @@ var _ = Describe("VPNSeedServer", func() {
 		})
 
 		It("should successfully create a vpn seed server interface", func() {
-			defer test.WithFeatureGate(features.DefaultFeatureGate, features.APIServerSNI, true)()
 			kubernetesClient.EXPECT().Client()
 			kubernetesClient.EXPECT().Version()
 			botanist.ImageVector = imagevector.ImageVector{{Name: images.ImageNameVpnSeedServer}, {Name: images.ImageNameApiserverProxy}}
@@ -112,7 +109,6 @@ var _ = Describe("VPNSeedServer", func() {
 
 		DescribeTable("should correctly set the deployment replicas",
 			func(hibernated, highAvailable bool, expectedReplicas int) {
-				defer test.WithFeatureGate(features.DefaultFeatureGate, features.APIServerSNI, true)()
 				kubernetesClient.EXPECT().Client()
 				kubernetesClient.EXPECT().Version()
 				botanist.ImageVector = imagevector.ImageVector{{Name: images.ImageNameVpnSeedServer}, {Name: images.ImageNameApiserverProxy}}

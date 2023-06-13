@@ -31,7 +31,7 @@ func (b *Botanist) DefaultMetricsServer() (component.DeployWaiter, error) {
 	}
 
 	var kubeAPIServerHost *string
-	if b.APIServerSNIEnabled() {
+	if b.ShootUsesDNS() {
 		kubeAPIServerHost = pointer.String(b.outOfClusterAPIServerFQDN())
 	}
 

@@ -57,7 +57,7 @@ plutono-datasources-{{ include "plutono.datasources.data" . | sha256sum | trunc 
 
 {{- define "plutono.dashboards.data" -}}
 {{-   if eq $.Values.workerless false }}
-{{-     if .Values.sni.enabled }}
+{{-     if .Values.includeIstioDashboards }}
 {{        range $name, $bytes := .Files.Glob "dashboards/owners/istio/**.json" }}
 {{          base $name }}: |-
 {{          toString $bytes | include "plutono.toCompactedJson" | indent 2 }}

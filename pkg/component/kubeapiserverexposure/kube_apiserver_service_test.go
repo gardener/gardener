@@ -46,7 +46,6 @@ var _ = Describe("#Service", func() {
 
 		ingressIP        string
 		clusterIP        string
-		sniPhase         component.Phase
 		clusterIPFunc    func(string)
 		ingressIPFunc    func(string)
 		serviceObjKey    client.ObjectKey
@@ -63,7 +62,6 @@ var _ = Describe("#Service", func() {
 
 		ingressIP = ""
 		clusterIP = ""
-		sniPhase = component.PhaseUnknown
 		serviceObjKey = client.ObjectKey{Name: "test-deploy", Namespace: "test-namespace"}
 		sniServiceObjKey = client.ObjectKey{Name: "foo", Namespace: "bar"}
 		clusterIPFunc = func(c string) { clusterIP = c }
@@ -78,12 +76,13 @@ var _ = Describe("#Service", func() {
 				Name:      serviceObjKey.Name,
 				Namespace: serviceObjKey.Namespace,
 				Labels: map[string]string{
-					"app":  "kubernetes",
-					"role": "apiserver",
+					"app":                                    "kubernetes",
+					"role":                                   "apiserver",
+					"core.gardener.cloud/apiserver-exposure": "gardener-managed",
 				},
 			},
 			Spec: corev1.ServiceSpec{
-				Type: corev1.ServiceTypeLoadBalancer,
+				Type: corev1.ServiceTypeClusterIP,
 				Ports: []corev1.ServicePort{{
 					Name:       "kube-apiserver",
 					Port:       443,
@@ -122,7 +121,6 @@ var _ = Describe("#Service", func() {
 			c,
 			&ServiceValues{
 				AnnotationsFunc: func() map[string]string { return map[string]string{"foo": "bar"} },
-				SNIPhase:        sniPhase,
 			},
 			func() client.ObjectKey { return serviceObjKey },
 			func() client.ObjectKey { return sniServiceObjKey },
@@ -132,49 +130,6 @@ var _ = Describe("#Service", func() {
 			"",
 		)
 	})
-
-	var assertDisabledSNI = func() {
-		It("deploys service", func() {
-			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
-
-			actual := &corev1.Service{}
-			Expect(c.Get(ctx, serviceObjKey, actual)).To(Succeed())
-
-			Expect(actual).To(DeepEqual(expected))
-
-			Expect(ingressIP).To(BeEmpty())
-			Expect(clusterIP).To(Equal("1.1.1.1"))
-		})
-
-		It("waits for service", func() {
-			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
-
-			key := client.ObjectKeyFromObject(expected)
-			Expect(c.Get(ctx, key, expected)).To(Succeed())
-
-			expected.Status = corev1.ServiceStatus{
-				LoadBalancer: corev1.LoadBalancerStatus{
-					Ingress: []corev1.LoadBalancerIngress{{IP: "3.3.3.3"}},
-				},
-			}
-			Expect(c.Status().Update(ctx, expected)).To(Succeed())
-			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed())
-			Expect(ingressIP).To(Equal("3.3.3.3"))
-		})
-
-		It("deletes service", func() {
-			Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
-
-			Expect(c.Get(ctx, serviceObjKey, &corev1.Service{})).To(BeNotFoundError())
-		})
-
-		It("waits for deletion service", func() {
-			Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
-			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(Succeed())
-
-			Expect(c.Get(ctx, serviceObjKey, &corev1.Service{})).To(BeNotFoundError())
-		})
-	}
 
 	var assertEnabledSNI = func() {
 		It("deploys service", func() {
@@ -208,53 +163,12 @@ var _ = Describe("#Service", func() {
 		})
 	}
 
-	Context("SNI disabled", func() {
-		BeforeEach(func() {
-			sniPhase = component.PhaseDisabled
-			expected.Annotations = utils.MergeStringMaps(map[string]string{
-				"foo": "bar",
-			}, netpolAnnotations())
-		})
-
-		assertDisabledSNI()
-	})
-
-	Context("SNI being disabled", func() {
-		BeforeEach(func() {
-			sniPhase = component.PhaseDisabling
-			expected.Annotations = utils.MergeStringMaps(map[string]string{
-				"foo":                          "bar",
-				"networking.istio.io/exportTo": "*",
-			}, netpolAnnotations())
-			expected.Spec.Type = corev1.ServiceTypeLoadBalancer
-			expected.Labels["core.gardener.cloud/apiserver-exposure"] = "gardener-managed"
-		})
-
-		assertDisabledSNI()
-	})
-
 	Context("SNI enabled", func() {
 		BeforeEach(func() {
-			sniPhase = component.PhaseEnabled
 			expected.Annotations = utils.MergeStringMaps(map[string]string{
 				"foo":                          "bar",
 				"networking.istio.io/exportTo": "*",
 			}, netpolAnnotations())
-			expected.Spec.Type = corev1.ServiceTypeClusterIP
-			expected.Labels["core.gardener.cloud/apiserver-exposure"] = "gardener-managed"
-		})
-
-		assertEnabledSNI()
-	})
-
-	Context("SNI being enabled", func() {
-		BeforeEach(func() {
-			sniPhase = component.PhaseEnabling
-			expected.Annotations = utils.MergeStringMaps(map[string]string{
-				"foo":                          "bar",
-				"networking.istio.io/exportTo": "*",
-			}, netpolAnnotations())
-			expected.Spec.Type = corev1.ServiceTypeLoadBalancer
 		})
 
 		assertEnabledSNI()
@@ -264,14 +178,12 @@ var _ = Describe("#Service", func() {
 		BeforeEach(func() {
 			namespace := "shoot-" + expected.Namespace
 
-			sniPhase = component.PhaseEnabling
 			serviceObjKey = client.ObjectKey{Name: serviceObjKey.Name, Namespace: namespace}
 			expected.Annotations = utils.MergeStringMaps(map[string]string{
 				"foo":                          "bar",
 				"networking.istio.io/exportTo": "*",
 			}, shootNetpolAnnotations())
 			expected.Namespace = namespace
-			expected.Spec.Type = corev1.ServiceTypeLoadBalancer
 		})
 
 		assertEnabledSNI()
@@ -280,13 +192,11 @@ var _ = Describe("#Service", func() {
 	Describe("#Deploy", func() {
 		Context("when TopologyAwareRoutingEnabled=true", func() {
 			It("should successfully deploy with expected kube-apiserver service annotations and labels", func() {
-				sniPhase = component.PhaseEnabled
 				defaultDepWaiter = NewService(
 					log,
 					c,
 					&ServiceValues{
 						AnnotationsFunc:             func() map[string]string { return map[string]string{"foo": "bar"} },
-						SNIPhase:                    sniPhase,
 						TopologyAwareRoutingEnabled: true,
 						RuntimeKubernetesVersion:    semver.MustParse("1.26.1"),
 					},

@@ -246,7 +246,7 @@ func (b *Botanist) computeKubeAPIServerServerCertificateConfig() kubeapiserver.S
 func (b *Botanist) computeKubeAPIServerSNIConfig() kubeapiserver.SNIConfig {
 	var config kubeapiserver.SNIConfig
 
-	if b.APIServerSNIEnabled() {
+	if b.ShootUsesDNS() {
 		config.Enabled = true
 		config.AdvertiseAddress = b.APIServerClusterIP
 	}
@@ -340,15 +340,13 @@ func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 
 // WakeUpKubeAPIServer creates a service and ensures API Server is scaled up
 func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
-	sniPhase := b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase.Done()
-
-	if err := b.DeployKubeAPIService(ctx, sniPhase); err != nil {
+	if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Deploy(ctx); err != nil {
 		return err
 	}
 	if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Wait(ctx); err != nil {
 		return err
 	}
-	if b.APIServerSNIEnabled() {
+	if b.ShootUsesDNS() {
 		if err := b.DeployKubeAPIServerSNI(ctx); err != nil {
 			return err
 		}

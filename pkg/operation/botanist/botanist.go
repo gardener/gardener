@@ -111,13 +111,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		o.Shoot.Components.Extensions.Worker = b.DefaultWorker()
 	}
 
-	sniPhase, err := b.SNIPhase(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	// control plane components
-
 	o.Shoot.Components.ControlPlane.EtcdCopyBackupsTask = b.DefaultEtcdCopyBackupsTask()
 	o.Shoot.Components.ControlPlane.EtcdMain, err = b.DefaultEtcd(v1beta1constants.ETCDRoleMain, etcd.ClassImportant)
 	if err != nil {
@@ -131,9 +125,8 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
-	o.Shoot.Components.ControlPlane.KubeAPIServerService = b.DefaultKubeAPIServerService(sniPhase)
+	o.Shoot.Components.ControlPlane.KubeAPIServerService = b.DefaultKubeAPIServerService()
 	o.Shoot.Components.ControlPlane.KubeAPIServerSNI = b.DefaultKubeAPIServerSNI()
-	o.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase = sniPhase
 	o.Shoot.Components.ControlPlane.KubeAPIServer, err = b.DefaultKubeAPIServer(ctx)
 	if err != nil {
 		return nil, err

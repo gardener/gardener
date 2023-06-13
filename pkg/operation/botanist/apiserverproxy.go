@@ -46,7 +46,7 @@ func (b *Botanist) DefaultAPIServerProxy() (apiserverproxy.Interface, error) {
 
 // DeployAPIServerProxy deploys the apiserver-proxy.
 func (b *Botanist) DeployAPIServerProxy(ctx context.Context) error {
-	if !b.APIServerSNIEnabled() {
+	if !b.ShootUsesDNS() {
 		return b.Shoot.Components.SystemComponents.APIServerProxy.Destroy(ctx)
 	}
 

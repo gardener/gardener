@@ -192,7 +192,7 @@ shoot:
   apiserver: https://api.foo.bar
   apiserverServerName: api.foo.bar
   provider: aws
-  sniEnabled: false
+  apiServerProxyEnabled: false
   workerless: false
 
 rules:

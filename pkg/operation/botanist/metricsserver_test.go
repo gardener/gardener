@@ -21,13 +21,11 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("MetricsServer", func() {
@@ -65,8 +63,6 @@ var _ = Describe("MetricsServer", func() {
 		})
 
 		It("should successfully create a metrics-server interface", func() {
-			defer test.WithFeatureGate(features.DefaultFeatureGate, features.APIServerSNI, true)()
-
 			kubernetesClient.EXPECT().Client()
 			botanist.ImageVector = imagevector.ImageVector{{Name: "metrics-server"}}
 

@@ -110,7 +110,6 @@ debugging:
 featureGates:
   HVPA: true
   HVPAForShootedSeed: true
-  APIServerSNI: true
   DefaultSeccompProfile: true
   CoreDNSQueryRewriting: true
   # Enable IPv6SingleStack to allow creating IPv6 seed clusters without changing the config.
@@ -143,7 +142,7 @@ logging:
 #     - "development"
 #   shootEventLogging:
 #     enabled: true
-# sni: # SNI configuration used for APIServerSNI feature gate with default values.
+# sni:
 #   ingress:
 #     serviceName: istio-ingress
 #     namespace: istio-ingress
