@@ -68,7 +68,7 @@ func getWarningsForDeprecatedNodeLocalDNSLabels(shoot *core.Shoot) []string {
 	var warnings []string
 
 	if _, ok := shoot.Annotations[v1beta1constants.AnnotationNodeLocalDNS]; ok {
-		warnings = append(warnings, fmt.Sprintf("annotation %v is deprecated. Use field `.spec.systemComponents.nodeLocalDNS.enabled` in Shoot instead.", v1beta1constants.AnnotationNodeLocalDNS))
+		warnings = append(warnings, fmt.Sprintf("annotation %v is deprecated. Use field `.spec.systemComponents.nodeLocalDNS.enabled` in Shoot instead. Switching on node-local-dns via shoot specification will roll the nodes even if node-local-dns was enabled beforehand via annotation.", v1beta1constants.AnnotationNodeLocalDNS))
 	}
 
 	if _, ok := shoot.Annotations[v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns]; ok {

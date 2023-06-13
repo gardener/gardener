@@ -343,7 +343,7 @@ var _ = Describe("Warnings", func() {
 				shoot.Annotations = map[string]string{
 					v1beta1constants.AnnotationNodeLocalDNS: "true",
 				}
-				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("annotation alpha.featuregates.shoot.gardener.cloud/node-local-dns is deprecated. Use field `.spec.systemComponents.nodeLocalDNS.enabled` in Shoot instead.")))
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("annotation alpha.featuregates.shoot.gardener.cloud/node-local-dns is deprecated. Use field `.spec.systemComponents.nodeLocalDNS.enabled` in Shoot instead. Switching on node-local-dns via shoot specification will roll the nodes even if node-local-dns was enabled beforehand via annotation.")))
 			})
 
 			It("should return a warning when annotation `alpha.featuregates.shoot.gardener.cloud/node-local-dns-force-tcp-to-cluster-dns` is present", func() {
