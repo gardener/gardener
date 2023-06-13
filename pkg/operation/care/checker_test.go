@@ -22,7 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("health", func() {
+var _ = Describe("Health", func() {
 	Describe("#checkNodesScalingUp", func() {
 		It("should return true if number of ready nodes equal number of desired machines", func() {
 			Expect(checkNodesScalingUp(nil, 1, 1)).To(Succeed())
