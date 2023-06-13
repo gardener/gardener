@@ -112,11 +112,6 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
 		}
 
-		ingressClass, err := gardenerutils.ComputeNginxIngressClassForSeed(b.Seed.GetInfo(), b.Seed.GetInfo().Status.KubernetesVersion)
-		if err != nil {
-			return err
-		}
-
 		ingressTLSSecret, err := b.SecretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 			Name:                        "vali-tls",
 			CommonName:                  b.ComputeValiHost(),
@@ -132,7 +127,7 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 
 		valiValues["rbacSidecarEnabled"] = true
 		valiValues["ingress"] = map[string]interface{}{
-			"class": ingressClass,
+			"class": gardenerutils.ComputeNginxIngressClassForSeed(b.Seed.GetInfo()),
 			"hosts": []map[string]interface{}{
 				{
 					"hostName":    b.ComputeValiHost(),

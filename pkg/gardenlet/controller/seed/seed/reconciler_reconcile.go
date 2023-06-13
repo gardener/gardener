@@ -768,10 +768,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
-	ingressClass, err := gardenerutils.ComputeNginxIngressClassForSeed(seed.GetInfo(), seed.GetInfo().Status.KubernetesVersion)
-	if err != nil {
-		return err
-	}
+	ingressClass := gardenerutils.ComputeNginxIngressClassForSeed(seed.GetInfo())
 
 	values := kubernetes.Values(map[string]interface{}{
 		"global": map[string]interface{}{

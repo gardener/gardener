@@ -341,9 +341,9 @@ metadata:
   labels:
     app: nginx-ingress
     component: controller
-  name: ` + v1beta1constants.SeedNginxIngressClass122 + `
+  name: ` + v1beta1constants.SeedNginxIngressClass + `
 spec:
-  controller: k8s.io/` + v1beta1constants.SeedNginxIngressClass122 + `
+  controller: k8s.io/` + v1beta1constants.SeedNginxIngressClass + `
 `
 			podDisruptionBudgetYAML = `apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -484,8 +484,8 @@ spec:
         - --update-status=true
         - --annotations-prefix=nginx.ingress.kubernetes.io
         - --configmap=` + namespace + `/` + configMapName + `
-        - --ingress-class=` + v1beta1constants.SeedNginxIngressClass122 + `
-        - --controller-class=k8s.io/` + v1beta1constants.SeedNginxIngressClass122
+        - --ingress-class=` + v1beta1constants.SeedNginxIngressClass + `
+        - --controller-class=k8s.io/` + v1beta1constants.SeedNginxIngressClass
 
 				out += `
         env:
@@ -603,7 +603,7 @@ status: {}
 
 		It("should successfully deploy all resources", func() {
 			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true)))
-			Expect(string(managedResourceSecret.Data["ingressclass____"+v1beta1constants.SeedNginxIngressClass122+".yaml"])).To(Equal(ingressClassYAML))
+			Expect(string(managedResourceSecret.Data["ingressclass____"+v1beta1constants.SeedNginxIngressClass+".yaml"])).To(Equal(ingressClassYAML))
 		})
 	})
 

@@ -17,6 +17,7 @@ package botanist
 import (
 	"context"
 
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -106,20 +107,15 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 }
 
 // DefaultKubeAPIServerIngress returns a deployer for the kube-apiserver ingress.
-func (b *Botanist) DefaultKubeAPIServerIngress() (component.Deployer, error) {
-	ingressClass, err := gardenerutils.ComputeNginxIngressClassForSeed(b.Seed.GetInfo(), b.Seed.GetInfo().Status.KubernetesVersion)
-	if err != nil {
-		return nil, err
-	}
-
+func (b *Botanist) DefaultKubeAPIServerIngress() component.Deployer {
 	return kubeapiserverexposure.NewIngress(
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		kubeapiserverexposure.IngressValues{
 			ServiceName:      v1beta1constants.DeploymentNameKubeAPIServer,
 			Host:             b.ComputeKubeAPIServerHost(),
-			IngressClassName: &ingressClass,
-		}), nil
+			IngressClassName: pointer.String(gardenerutils.ComputeNginxIngressClassForSeed(b.Seed.GetInfo())),
+		})
 }
 
 // DeployKubeAPIServerIngress deploys the ingress for the kube-apiserver.

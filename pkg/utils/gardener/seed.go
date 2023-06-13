@@ -34,7 +34,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -107,23 +106,8 @@ func hasExactUsages(usages, requiredUsages []certificatesv1.KeyUsage) bool {
 }
 
 // ComputeNginxIngressClassForSeed returns the IngressClass for the Nginx Ingress controller.
-func ComputeNginxIngressClassForSeed(seed *gardencorev1beta1.Seed, kubernetesVersion *string) (string, error) {
-	if kubernetesVersion == nil {
-		return "", fmt.Errorf("kubernetes version is missing for seed %q", seed.Name)
-	}
-
-	// We need to use `versionutils.CompareVersions` because this function normalizes the seed version first.
-	// This is especially necessary if the seed cluster is a non Gardener managed cluster and thus might have some
-	// custom version suffix.
-	greaterEqual122, err := version.CompareVersions(*kubernetesVersion, ">=", "1.22")
-	if err != nil {
-		return "", err
-	}
-
-	if greaterEqual122 {
-		return v1beta1constants.SeedNginxIngressClass122, nil
-	}
-	return v1beta1constants.SeedNginxIngressClass, nil
+func ComputeNginxIngressClassForSeed(seed *gardencorev1beta1.Seed) string {
+	return v1beta1constants.SeedNginxIngressClass
 }
 
 // GetWildcardCertificate gets the wildcard certificate for the seed's ingress domain.
