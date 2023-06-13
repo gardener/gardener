@@ -40,6 +40,7 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 		warnings = append(warnings, "you should consider disabling the static token kubeconfig, see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_access.md for details")
 	}
 
+	// TODO(acumino): Drop this warning in v1.77, with droping of annotaion to enable node-local-dns.
 	warnings = append(warnings, getWarningsForDeprecatedNodeLocalDNSLabels(shoot)...)
 
 	if oldShoot != nil {
