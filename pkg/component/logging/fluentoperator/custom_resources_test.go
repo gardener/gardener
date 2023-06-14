@@ -114,7 +114,7 @@ var _ = Describe("Fluent Operator Custom Resources", func() {
 			Expect(customResourcesManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveLen(12))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey(MatchRegexp("configmap__" + namespace + "__fluent-bit-lua-config-.*" + ".yaml")))
-			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("fluentbit__" + namespace + "__fluent-bit-7efa8b.yaml"))
+			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("fluentbit__" + namespace + "__fluent-bit-093d91.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterfluentbitconfig____fluent-bit-config.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterinput____tail-kubernetes.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterfilter____01-docker.yaml"))

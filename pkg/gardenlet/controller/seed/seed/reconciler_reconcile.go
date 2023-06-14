@@ -977,7 +977,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		fluentOperatorCustomResources, err := sharedcomponent.NewFluentOperatorCustomResources(
 			seedClient,
 			r.GardenNamespace,
-			kubernetesVersion,
 			r.ImageVector,
 			loggingEnabled,
 			v1beta1constants.PriorityClassNameSeedSystem600,
