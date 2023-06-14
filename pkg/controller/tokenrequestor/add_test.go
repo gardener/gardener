@@ -84,7 +84,7 @@ var _ = Describe("Add", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectNew: secret})).To(BeFalse())
 			})
 
-			It("should return false when secret is no longer relevant because class changed", func() {
+			It("should return true when secret is no longer relevant because class changed", func() {
 				p = (&Reconciler{Class: pointer.String("foo")}).SecretPredicate()
 				oldSecret := secret.DeepCopy()
 				metav1.SetMetaDataLabel(&oldSecret.ObjectMeta, "resources.gardener.cloud/class", "foo")

@@ -52,7 +52,7 @@ var _ = Describe("Reconciler", func() {
 			sourceClient, targetClient client.Client
 			coreV1Client               *corev1fake.FakeCoreV1
 
-			ctrl reconcile.Reconciler
+			ctrl *Reconciler
 
 			secret         *corev1.Secret
 			serviceAccount *corev1.ServiceAccount
@@ -453,6 +453,30 @@ var _ = Describe("Reconciler", func() {
 				result, err := ctrl.Reconcile(ctx, request)
 				Expect(err).To(MatchError(ContainSubstring("could not parse renew timestamp")))
 				Expect(result).To(Equal(reconcile.Result{}))
+			})
+		})
+
+		Context("fixed target namespace", func() {
+			BeforeEach(func() {
+				ctrl.TargetNamespace = serviceAccountNamespace + "-other"
+				serviceAccount.Namespace = ctrl.TargetNamespace
+			})
+
+			It("should create a new service account in the fixed target namespace, generate a new token and requeue", func() {
+				fakeCreateServiceAccountToken()
+				Expect(sourceClient.Create(ctx, secret)).To(Succeed())
+				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(BeNotFoundError())
+
+				result, err := ctrl.Reconcile(ctx, request)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+
+				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(Succeed())
+				Expect(serviceAccount.AutomountServiceAccountToken).To(PointTo(BeFalse()))
+
+				Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+				Expect(secret.Data).To(HaveKeyWithValue("token", []byte(token)))
+				Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(time.RFC3339)))
 			})
 		})
 	})
