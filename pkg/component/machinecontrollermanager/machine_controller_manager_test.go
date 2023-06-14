@@ -185,8 +185,9 @@ var _ = Describe("MachineControllerManager", func() {
 				Name:      "machine-controller-manager",
 				Namespace: namespace,
 				Labels: map[string]string{
-					"app":  "kubernetes",
-					"role": "machine-controller-manager",
+					"app":                 "kubernetes",
+					"role":                "machine-controller-manager",
+					"gardener.cloud/role": "controlplane",
 					"high-availability-config.resources.gardener.cloud/type": "controller",
 				},
 			},

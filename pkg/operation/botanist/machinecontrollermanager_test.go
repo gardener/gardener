@@ -119,6 +119,10 @@ var _ = Describe("MachineControllerManager", func() {
 			},
 
 			Entry("with default replicas", 1, nil),
+			Entry("when shoot shall be deleted", 1, func() {
+				shoot.DeletionTimestamp = &metav1.Time{}
+				botanist.Shoot.SetInfo(shoot)
+			}),
 			Entry("when machine deployments with positive replica count exist", 1, func() {
 				machineDeployment := &machinev1alpha1.MachineDeployment{
 					ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: namespace},

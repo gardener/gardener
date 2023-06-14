@@ -186,6 +186,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, m.client, deployment, func() error {
 		deployment.Labels = utils.MergeStringMaps(deployment.Labels, getLabels(), map[string]string{
+			v1beta1constants.GardenRole:                  v1beta1constants.GardenRoleControlPlane,
 			resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
 		})
 		deployment.Spec.Replicas = &m.values.Replicas

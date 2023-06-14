@@ -43,6 +43,9 @@ func (b *Botanist) DefaultMachineControllerManager(ctx context.Context) (machine
 
 	var replicas int32 = 1
 	switch {
+	// When the shoot shall be deleted then MCM is required to make sure the worker nodes can be removed
+	case b.Shoot.GetInfo().DeletionTimestamp != nil:
+		replicas = 1
 	// if there are any existing machine deployments present with a positive replica count then MCM is needed.
 	case machineDeploymentWithPositiveReplicaCountExist(machineDeploymentList):
 		replicas = 1
@@ -52,7 +55,8 @@ func (b *Botanist) DefaultMachineControllerManager(ctx context.Context) (machine
 	// If the cluster is created with hibernation enabled, then desired replicas for MCM is 0
 	case b.Shoot.HibernationEnabled && (b.Shoot.GetInfo().Status.LastOperation == nil || b.Shoot.GetInfo().Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate):
 		replicas = 0
-	// If shoot is either waking up or in the process of hibernation then, MCM is required and therefore its desired replicas is 1
+	// If shoot is either waking up or in the process of hibernation then, MCM is required and therefore its desired
+	// replicas is 1
 	case b.Shoot.HibernationEnabled != b.Shoot.GetInfo().Status.IsHibernated:
 		replicas = 1
 	}
