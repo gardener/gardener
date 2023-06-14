@@ -20,10 +20,15 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	apiextensions "github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	unstructuredutils "github.com/gardener/gardener/pkg/utils/kubernetes/unstructured"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -60,4 +65,84 @@ func computeGardenerData(
 	}
 
 	return dataList, nil
+}
+
+func computeExtensionsDataAndResources(
+	ctx context.Context,
+	seedClient client.Client,
+	seedNamespace string,
+) (
+	[]gardencorev1beta1.ExtensionResourceState,
+	[]gardencorev1beta1.ResourceData,
+	error,
+) {
+	var (
+		dataList  []gardencorev1beta1.ExtensionResourceState
+		resources []gardencorev1beta1.ResourceData
+	)
+
+	for _, extension := range []struct {
+		objKind           string
+		newObjectListFunc func() client.ObjectList
+	}{
+		{extensionsv1alpha1.BackupEntryResource, func() client.ObjectList { return &extensionsv1alpha1.BackupEntryList{} }},
+		{extensionsv1alpha1.ContainerRuntimeResource, func() client.ObjectList { return &extensionsv1alpha1.ContainerRuntimeList{} }},
+		{extensionsv1alpha1.ControlPlaneResource, func() client.ObjectList { return &extensionsv1alpha1.ControlPlaneList{} }},
+		{extensionsv1alpha1.DNSRecordResource, func() client.ObjectList { return &extensionsv1alpha1.DNSRecordList{} }},
+		{extensionsv1alpha1.ExtensionResource, func() client.ObjectList { return &extensionsv1alpha1.ExtensionList{} }},
+		{extensionsv1alpha1.InfrastructureResource, func() client.ObjectList { return &extensionsv1alpha1.InfrastructureList{} }},
+		{extensionsv1alpha1.NetworkResource, func() client.ObjectList { return &extensionsv1alpha1.NetworkList{} }},
+		{extensionsv1alpha1.OperatingSystemConfigResource, func() client.ObjectList { return &extensionsv1alpha1.OperatingSystemConfigList{} }},
+		{extensionsv1alpha1.WorkerResource, func() client.ObjectList { return &extensionsv1alpha1.WorkerList{} }},
+	} {
+		objList := extension.newObjectListFunc()
+		if err := seedClient.List(ctx, objList, client.InNamespace(seedNamespace)); err != nil {
+			return nil, nil, fmt.Errorf("failed to list extension resources of kind %s: %w", extension.objKind, err)
+		}
+
+		if err := meta.EachListItem(objList, func(obj runtime.Object) error {
+			extensionObj, err := apiextensions.Accessor(obj)
+			if err != nil {
+				return fmt.Errorf("failed accessing extension object: %w", err)
+			}
+
+			if extensionObj.GetDeletionTimestamp() != nil {
+				return nil
+			}
+
+			dataList = append(dataList, gardencorev1beta1.ExtensionResourceState{
+				Kind:      extension.objKind,
+				Name:      pointer.String(extensionObj.GetName()),
+				Purpose:   extensionObj.GetExtensionSpec().GetExtensionPurpose(),
+				State:     extensionObj.GetExtensionStatus().GetState(),
+				Resources: extensionObj.GetExtensionStatus().GetResources(),
+			})
+
+			for _, newResource := range extensionObj.GetExtensionStatus().GetResources() {
+				referencedObj, err := unstructuredutils.GetObjectByRef(ctx, seedClient, &newResource.ResourceRef, seedNamespace)
+				if err != nil {
+					return fmt.Errorf("failed reading referenced object %s: %w", client.ObjectKey{Name: newResource.ResourceRef.Name, Namespace: seedNamespace}, err)
+				}
+				if obj == nil {
+					return fmt.Errorf("object %v not found", newResource.ResourceRef)
+				}
+
+				raw := &runtime.RawExtension{}
+				if err := runtime.DefaultUnstructuredConverter.FromUnstructured(referencedObj, raw); err != nil {
+					return fmt.Errorf("failed converting referenced object %s to raw extension: %w", client.ObjectKey{Name: newResource.ResourceRef.Name, Namespace: seedNamespace}, err)
+				}
+
+				resources = append(resources, gardencorev1beta1.ResourceData{
+					CrossVersionObjectReference: newResource.ResourceRef,
+					Data:                        *raw,
+				})
+			}
+
+			return nil
+		}); err != nil {
+			return nil, nil, fmt.Errorf("failed computing extension data for kind %s: %w", extension.objKind, err)
+		}
+	}
+
+	return dataList, resources, nil
 }

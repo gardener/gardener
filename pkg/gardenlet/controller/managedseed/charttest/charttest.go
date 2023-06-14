@@ -320,7 +320,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			},
 			{
 				APIGroups: []string{"extensions.gardener.cloud"},
-				Resources: []string{"backupbuckets/status", "backupentries/status", "containerruntimes/status", "controlplanes/status", "extensions/status", "infrastructures/status", "networks/status", "operatingsystemconfigs/status", "workers/status"},
+				Resources: []string{"backupbuckets/status", "backupentries/status", "containerruntimes/status", "controlplanes/status", "dnsrecords/status", "extensions/status", "infrastructures/status", "networks/status", "operatingsystemconfigs/status", "workers/status"},
 				Verbs:     []string{"patch", "update"},
 			},
 			{
