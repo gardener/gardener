@@ -578,25 +578,6 @@ var _ = Describe("KubeAPIServer", func() {
 			))
 		})
 
-		It("should delete the old etcd encryption config secret", func() {
-			kubeAPIServer.EXPECT().GetValues()
-			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
-			kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-			kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
-			kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
-			kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
-			kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
-			kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
-			kubeAPIServer.EXPECT().Deploy(ctx)
-
-			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "etcd-encryption-secret"}}
-			Expect(seedClient.Create(ctx, secret)).To(Succeed())
-
-			Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
-
-			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(secret), &corev1.Secret{})).To(BeNotFoundError())
-		})
-
 		It("should not sync the kubeconfig to garden project namespace when enableStaticTokenKubeconfig is set to false", func() {
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{

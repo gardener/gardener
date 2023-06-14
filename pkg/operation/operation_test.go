@@ -25,15 +25,12 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	. "github.com/gardener/gardener/pkg/operation"
@@ -225,56 +222,6 @@ var _ = Describe("operation", func() {
 				o.SetShootState(shootState)
 				Expect(o.GetShootState()).To(Equal(shootState))
 			})
-		})
-	})
-
-	Describe("#SaveGardenerResourcesInShootState", func() {
-		var (
-			o            *Operation
-			ctrl         *gomock.Controller
-			gardenClient *mockclient.MockClient
-		)
-
-		BeforeEach(func() {
-			ctrl = gomock.NewController(GinkgoT())
-			gardenClient = mockclient.NewMockClient(ctrl)
-			o = &Operation{
-				GardenClient: gardenClient,
-			}
-			shootState := &gardencorev1beta1.ShootState{
-				ObjectMeta: metav1.ObjectMeta{
-					ResourceVersion: "1",
-				},
-			}
-			o.SetShootState(shootState)
-		})
-
-		AfterEach(func() {
-			ctrl.Finish()
-		})
-
-		It("should save the gardener resource list in the shootstate", func() {
-			gardenerResourceList := v1beta1helper.GardenerResourceDataList{
-				{
-					Name: "test",
-					Type: "test",
-					Data: runtime.RawExtension{Raw: []byte(`{}`)},
-				},
-			}
-
-			shootState := o.GetShootState().DeepCopy()
-			shootState.Spec.Gardener = gardenerResourceList
-			test.EXPECTPatch(ctx, gardenClient, shootState, o.GetShootState(), types.StrategicMergePatchType)
-
-			Expect(
-				o.SaveGardenerResourceDataInShootState(
-					ctx,
-					func(gardenerResources *[]gardencorev1beta1.GardenerResourceData) error {
-						*gardenerResources = gardenerResourceList
-						return nil
-					},
-				)).To(Succeed())
-			Expect(o.GetShootState().Spec.Gardener).To(BeEquivalentTo(gardenerResourceList))
 		})
 	})
 

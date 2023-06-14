@@ -509,32 +509,6 @@ func (o *Operation) SetShootState(shootState *gardencorev1beta1.ShootState) {
 	o.shootState.Store(shootState)
 }
 
-// SaveGardenerResourceDataInShootState updates the shootstate resource of this Shoot in a concurrency safe way,
-// using the given context and mutate function.
-// The mutate function should modify the passed GardenerResourceData so that changes are persisted.
-// This method is protected by a mutex, so only a single SaveGardenerResourceDataInShootState operation can be
-// executed at any point in time.
-func (o *Operation) SaveGardenerResourceDataInShootState(ctx context.Context, f func(*[]gardencorev1beta1.GardenerResourceData) error) error {
-	o.shootStateMutex.Lock()
-	defer o.shootStateMutex.Unlock()
-
-	shootState := o.GetShootState().DeepCopy()
-	original := shootState.DeepCopy()
-	patch := client.StrategicMergeFrom(original)
-
-	if err := f(&shootState.Spec.Gardener); err != nil {
-		return err
-	}
-	if equality.Semantic.DeepEqual(original.Spec.Gardener, shootState.Spec.Gardener) {
-		return nil
-	}
-	if err := o.GardenClient.Patch(ctx, shootState, patch); err != nil {
-		return err
-	}
-	o.SetShootState(shootState)
-	return nil
-}
-
 // DeleteClusterResourceFromSeed deletes the `Cluster` extension resource for the shoot in the seed cluster.
 func (o *Operation) DeleteClusterResourceFromSeed(ctx context.Context) error {
 	return client.IgnoreNotFound(o.SeedClientSet.Client().Delete(ctx, &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}))
