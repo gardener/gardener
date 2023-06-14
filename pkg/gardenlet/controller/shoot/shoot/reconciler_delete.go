@@ -386,12 +386,17 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			}).SkipIf(o.Shoot.IsWorkerless),
 			Dependencies: flow.NewTaskIDs(destroyNetwork),
 		})
+		deployMachineControllerManager = g.Add(flow.Task{
+			Name:         "Deploying machine-controller-manager",
+			Fn:           flow.TaskFn(botanist.DeployMachineControllerManager).SkipIf(o.Shoot.IsWorkerless).DoIf(features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment)),
+			Dependencies: flow.NewTaskIDs(syncPointCleanedKubernetesResources),
+		})
 		destroyWorker = g.Add(flow.Task{
 			Name: "Destroying shoot workers",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.Shoot.Components.Extensions.Worker.Destroy(ctx)
 			}).SkipIf(o.Shoot.IsWorkerless).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(syncPointCleanedKubernetesResources),
+			Dependencies: flow.NewTaskIDs(deployMachineControllerManager),
 		})
 		waitUntilWorkerDeleted = g.Add(flow.Task{
 			Name: "Waiting until shoot worker nodes have been terminated",
