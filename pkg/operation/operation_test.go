@@ -17,7 +17,6 @@ package operation_test
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -30,15 +29,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	. "github.com/gardener/gardener/pkg/operation"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("operation", func() {
@@ -168,48 +163,6 @@ var _ = Describe("operation", func() {
 				)
 
 				Expect(o.EnsureShootStateExists(ctx)).To(Equal(fakeErr))
-			})
-		})
-
-		Describe("#DeleteShootState", func() {
-			It("should add deletion confirmation and delete", func() {
-				var (
-					now     time.Time
-					mockNow = mocktime.NewMockNow(ctrl)
-				)
-				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
-				defer test.WithVars(
-					&gardener.TimeNow, mockNow.Do,
-				)()
-
-				shootState.Annotations = map[string]string{gardener.ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano)}
-				gomock.InOrder(
-					gardenClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()),
-					gardenClient.EXPECT().Delete(ctx, shootState).Return(nil),
-				)
-				Expect(o.DeleteShootState(ctx)).To(Succeed())
-			})
-
-			It("should succeed if ShootState is already deleted", func() {
-				gomock.InOrder(
-					gardenClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Return(apierrors.NewNotFound(gr, "foo")),
-				)
-				Expect(o.DeleteShootState(ctx)).To(Succeed())
-			})
-
-			It("should fail if patch returns an error other than NotFound", func() {
-				gomock.InOrder(
-					gardenClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Return(fakeErr),
-				)
-				Expect(o.DeleteShootState(ctx)).To(Equal(fakeErr))
-			})
-
-			It("should fail if Delete returns an error other than NotFound", func() {
-				gomock.InOrder(
-					gardenClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()),
-					gardenClient.EXPECT().Delete(gomock.Any(), gomock.Any()).Return(fakeErr),
-				)
-				Expect(o.DeleteShootState(ctx)).To(Equal(fakeErr))
 			})
 		})
 

@@ -20,7 +20,9 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,9 +30,70 @@ import (
 	apiextensions "github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	unstructuredutils "github.com/gardener/gardener/pkg/utils/kubernetes/unstructured"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
+
+// Deploy deploys the ShootState resource with the effective state for the given shoot into the garden
+// cluster.
+func Deploy(ctx context.Context, gardenClient, seedClient client.Client, shoot *gardencorev1beta1.Shoot) error {
+	shootState := &gardencorev1beta1.ShootState{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      shoot.Name,
+			Namespace: shoot.Namespace,
+		},
+	}
+
+	spec, err := computeSpec(ctx, seedClient, shoot.Status.TechnicalID)
+	if err != nil {
+		return fmt.Errorf("failed computing spec of ShootState for shoot %s: %w", client.ObjectKeyFromObject(shoot), err)
+	}
+
+	_, err = controllerutils.GetAndCreateOrStrategicMergePatch(ctx, gardenClient, shootState, func() error {
+		shootState.Spec = *spec
+		return nil
+	})
+	return err
+}
+
+// Delete deletes the ShootState resource for the given shoot from the garden cluster.
+func Delete(ctx context.Context, gardenClient client.Client, shoot *gardencorev1beta1.Shoot) error {
+	shootState := &gardencorev1beta1.ShootState{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      shoot.Name,
+			Namespace: shoot.Namespace,
+		},
+	}
+
+	if err := gardenerutils.ConfirmDeletion(ctx, gardenClient, shootState); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+
+	return client.IgnoreNotFound(gardenClient.Delete(ctx, shootState))
+}
+
+func computeSpec(ctx context.Context, seedClient client.Client, seedNamespace string) (*gardencorev1beta1.ShootStateSpec, error) {
+	gardener, err := computeGardenerData(ctx, seedClient, seedNamespace)
+	if err != nil {
+		return nil, fmt.Errorf("failed computing Gardener data: %w", err)
+	}
+
+	extensions, resources, err := computeExtensionsDataAndResources(ctx, seedClient, seedNamespace)
+	if err != nil {
+		return nil, fmt.Errorf("failed computing extensions data and resources: %w", err)
+	}
+
+	return &gardencorev1beta1.ShootStateSpec{
+		Gardener:   gardener,
+		Extensions: extensions,
+		Resources:  resources,
+	}, nil
+}
 
 func computeGardenerData(
 	ctx context.Context,

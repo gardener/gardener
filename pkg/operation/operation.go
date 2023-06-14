@@ -24,7 +24,6 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -467,25 +466,6 @@ func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
 	o.SetShootState(shootState)
 
 	return nil
-}
-
-// DeleteShootState deletes the ShootState resource for the corresponding shoot.
-func (o *Operation) DeleteShootState(ctx context.Context) error {
-	shootState := &gardencorev1beta1.ShootState{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      o.Shoot.GetInfo().Name,
-			Namespace: o.Shoot.GetInfo().Namespace,
-		},
-	}
-
-	if err := gardenerutils.ConfirmDeletion(ctx, o.GardenClient, shootState); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-
-	return client.IgnoreNotFound(o.GardenClient.Delete(ctx, shootState))
 }
 
 // GetShootState returns the shootstate resource of this Shoot in a concurrency safe way.

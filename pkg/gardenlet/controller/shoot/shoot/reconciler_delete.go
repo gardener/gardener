@@ -35,6 +35,7 @@ import (
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
@@ -681,8 +682,10 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Dependencies: flow.NewTaskIDs(deleteNamespace),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deleting Shoot State",
-			Fn:           botanist.DeleteShootState,
+			Name: "Deleting Shoot State",
+			Fn: func(ctx context.Context) error {
+				return shootstate.Delete(ctx, botanist.GardenClient, botanist.Shoot.GetInfo())
+			},
 			Dependencies: flow.NewTaskIDs(deleteNamespace),
 		})
 		f = g.Compile()
