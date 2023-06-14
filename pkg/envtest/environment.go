@@ -35,8 +35,7 @@ const envUseExistingGardener = "USE_EXISTING_GARDENER"
 type GardenerTestEnvironment struct {
 	*envtest.Environment
 
-	// UseExistingGardener specifies whether to run the test against an existing gardener control plane, e.g. a kind
-	// cluster including a registered gardener-apiserver (`make kind-up dev-setup start-apiserver`).
+	// UseExistingGardener specifies whether to run the test against an existing gardener control plane.
 	// If it is set to true, Start will skip starting a temporary control plane and gardener-apiserver, and connect to the
 	// cluster targeted by $KUBECONFIG instead.
 	// If it is unset, setting the USE_EXISTING_GARDENER env var to `true` will have the same effects.
