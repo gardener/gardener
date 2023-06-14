@@ -92,6 +92,18 @@ annotations:
 
 This automatically allows the network traffic from the API server pods.
 
+In case the servers run in a different namespace than the `kube-apiserver`s, the following annotations are needed:
+
+```yaml
+annotations:
+  networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports: '[{"port":<server-port-on-pod>,"protocol":"<protocol, typically TCP>"}]'
+  networking.resources.gardener.cloud/pod-label-selector-namespace-alias: extensions
+  # for the virtual garden cluster:
+  networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]'
+  # for shoot clusters:
+  networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"shoot"}}]'
+```
+
 ## Additional Namespace Coverage in Garden/Seed Cluster
 
 In some cases, garden or seed clusters might run components in dedicated namespaces which are not covered by the controller by default (see list above).
@@ -122,11 +134,9 @@ As a result, the respective component pods just need to be labeled with
 
 ### Ingress Traffic
 
-Components running in such custom namespaces might serve webhook handlers that must be reached by the `kube-apiservers` of the virtual garden cluster or a shoot cluster.
-In order to achieve this, their `Service` must be annotated with `networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports=<ports>` as well as
-
-- `networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]` (virtual garden cluster)
-- `networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"shoot"}}]` (shoot clusters)
+Components running in such custom namespaces might serve webhook handlers that must be reached by the `kube-apiserver`s of the virtual garden cluster or a shoot cluster.
+In order to achieve this, their `Service` must be annotated.
+Please refer to [this section](#webhook-servers) for more information.
 
 ## Shoot Cluster
 
