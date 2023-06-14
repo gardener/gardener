@@ -225,12 +225,13 @@ func (k *kubeAPIServer) reconcileDeployment(
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: utils.MergeStringMaps(GetLabels(), map[string]string{
-						v1beta1constants.LabelNetworkPolicyToDNS:                                                                                                       v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyToPublicNetworks:                                                                                            v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyToPrivateNetworks:                                                                                           v1beta1constants.LabelNetworkPolicyAllowed,
-						"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicyWebhookTargets:                                                  v1beta1constants.LabelNetworkPolicyAllowed,
-						gardenerutils.NetworkPolicyLabel(k.values.NamePrefix+etcdconstants.ServiceName(v1beta1constants.ETCDRoleMain), etcdconstants.PortEtcdClient):   v1beta1constants.LabelNetworkPolicyAllowed,
-						gardenerutils.NetworkPolicyLabel(k.values.NamePrefix+etcdconstants.ServiceName(v1beta1constants.ETCDRoleEvents), etcdconstants.PortEtcdClient): v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToDNS:                                                      v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToPublicNetworks:                                           v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToPrivateNetworks:                                          v1beta1constants.LabelNetworkPolicyAllowed,
+						"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicyWebhookTargets: v1beta1constants.LabelNetworkPolicyAllowed,
+						"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicyExtensionsNamespaceAlias + "-" + v1beta1constants.LabelNetworkPolicyWebhookTargets: v1beta1constants.LabelNetworkPolicyAllowed,
+						gardenerutils.NetworkPolicyLabel(k.values.NamePrefix+etcdconstants.ServiceName(v1beta1constants.ETCDRoleMain), etcdconstants.PortEtcdClient):                      v1beta1constants.LabelNetworkPolicyAllowed,
+						gardenerutils.NetworkPolicyLabel(k.values.NamePrefix+etcdconstants.ServiceName(v1beta1constants.ETCDRoleEvents), etcdconstants.PortEtcdClient):                    v1beta1constants.LabelNetworkPolicyAllowed,
 						// TODO(rfranzke): Remove these labels after v1.74 has been released.
 						gardenerutils.NetworkPolicyLabel(k.values.NamePrefix+resourcemanagerconstants.ServiceName, resourcemanagerconstants.ServerPort): v1beta1constants.LabelNetworkPolicyAllowed,
 						gardenerutils.NetworkPolicyLabel(vpaconstants.AdmissionControllerServiceName, vpaconstants.AdmissionControllerPort):             v1beta1constants.LabelNetworkPolicyAllowed,

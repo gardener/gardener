@@ -480,6 +480,9 @@ const (
 	// LabelNetworkPolicyShootNamespaceAlias is a constant for the alias for shoot namespaces used in NetworkPolicy
 	// labels.
 	LabelNetworkPolicyShootNamespaceAlias = "all-shoots"
+	// LabelNetworkPolicyExtensionsNamespaceAlias is a constant for the alias for extension namespaces used in
+	// NetworkPolicy labels.
+	LabelNetworkPolicyExtensionsNamespaceAlias = "extensions"
 	// LabelNetworkPolicyIstioIngressNamespaceAlias is a constant for the alias for shoot namespaces used in
 	// NetworkPolicy labels.
 	LabelNetworkPolicyIstioIngressNamespaceAlias = "all-istio-ingresses"
