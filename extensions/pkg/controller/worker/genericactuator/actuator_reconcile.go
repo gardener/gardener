@@ -30,7 +30,6 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	workerhealthcheck "github.com/gardener/gardener/extensions/pkg/controller/healthcheck/worker"
 	extensionsworkercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
 	extensionsworkerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -39,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
 
@@ -406,7 +406,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 
 			// If the Shoot is not hibernated we want to wait until all wanted machine deployments have as many
 			// available replicas as desired (specified in the .spec.replicas).
-			if workerhealthcheck.CheckMachineDeployment(&deployment) == nil {
+			if health.CheckMachineDeployment(&deployment) == nil {
 				numHealthyDeployments++
 			}
 			numDesired += deployment.Spec.Replicas
