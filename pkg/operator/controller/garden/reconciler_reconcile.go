@@ -132,7 +132,7 @@ func (r *Reconciler) reconcile(
 			Fn:           component.OpWait(c.gardenerResourceManager).Deploy,
 			Dependencies: flow.NewTaskIDs(deployEtcdCRD, deployVPACRD, reconcileHVPACRD, deployIstioCRD),
 		})
-		deployNginxIngressController = g.Add(flow.Task{
+		_ = g.Add(flow.Task{
 			Name:         "Deploying and waiting for nginx-ingress controller to be healthy",
 			Fn:           component.OpWait(c.nginxIngressController).Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
@@ -169,7 +169,6 @@ func (r *Reconciler) reconcile(
 			deployHVPA,
 			deployEtcdDruid,
 			deployIstio,
-			deployNginxIngressController,
 		)
 
 		deployEtcds = g.Add(flow.Task{

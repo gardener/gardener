@@ -18,6 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -63,6 +64,9 @@ type GardenSpec struct {
 
 // RuntimeCluster contains configuration for the runtime cluster.
 type RuntimeCluster struct {
+	// Ingress configures Ingress specific settings for the Garden cluster. This field is immutable.
+	// +optional
+	Ingress *Ingress `json:"ingress,omitempty"`
 	// Networking defines the networking configuration of the runtime cluster.
 	Networking RuntimeNetworking `json:"networking"`
 	// Provider defines the provider-specific information for this cluster.
@@ -70,6 +74,24 @@ type RuntimeCluster struct {
 	// Settings contains certain settings for this cluster.
 	// +optional
 	Settings *Settings `json:"settings,omitempty"`
+}
+
+// Ingress configures the Ingress specific settings of the Garden cluster.
+type Ingress struct {
+	// Domain specifies the IngressDomain of the Garden cluster pointing to the ingress controller endpoint. It will be used
+	// to construct ingress URLs for system applications running in the Garden cluster. Once set this field is immutable.
+	Domain string `json:"domain"`
+	// Controller configures a Gardener managed Ingress Controller listening on the ingressDomain
+	Controller IngressController `json:"controller"`
+}
+
+// IngressController enables a Gardener managed Ingress Controller listening on the ingressDomain
+type IngressController struct {
+	// Kind defines which kind of IngressController to use, for example `nginx`
+	Kind string `json:"kind"`
+	// ProviderConfig specifies infrastructure specific configuration for the ingressController
+	// +optional
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty"`
 }
 
 // RuntimeNetworking defines the networking configuration of the runtime cluster.

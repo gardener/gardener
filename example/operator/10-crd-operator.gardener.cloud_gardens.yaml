@@ -50,6 +50,36 @@ spec:
                 description: RuntimeCluster contains configuration for the runtime
                   cluster.
                 properties:
+                  ingress:
+                    description: Ingress configures Ingress specific settings for
+                      the Garden cluster. This field is immutable.
+                    properties:
+                      controller:
+                        description: Controller configures a Gardener managed Ingress
+                          Controller listening on the ingressDomain
+                        properties:
+                          kind:
+                            description: Kind defines which kind of IngressController
+                              to use, for example `nginx`
+                            type: string
+                          providerConfig:
+                            description: ProviderConfig specifies infrastructure specific
+                              configuration for the ingressController
+                            type: object
+                            x-kubernetes-preserve-unknown-fields: true
+                        required:
+                        - kind
+                        type: object
+                      domain:
+                        description: Domain specifies the IngressDomain of the Garden
+                          cluster pointing to the ingress controller endpoint. It
+                          will be used to construct ingress URLs for system applications
+                          running in the Garden cluster. Once set this field is immutable.
+                        type: string
+                    required:
+                    - controller
+                    - domain
+                    type: object
                   networking:
                     description: Networking defines the networking configuration of
                       the runtime cluster.

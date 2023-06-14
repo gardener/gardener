@@ -36,7 +36,12 @@ import (
 	"github.com/gardener/gardener/pkg/utils/validation/kubernetesversion"
 )
 
-var gardenCoreScheme *runtime.Scheme
+var (
+	gardenCoreScheme      *runtime.Scheme
+	availableIngressKinds = sets.New(
+		v1beta1constants.IngressKindNginx,
+	)
+)
 
 func init() {
 	gardenCoreScheme = runtime.NewScheme()
@@ -117,6 +122,31 @@ func validateRuntimeCluster(runtimeCluster operatorv1alpha1.RuntimeCluster, fldP
 		if cidrvalidation.NetworksIntersect(*runtimeCluster.Networking.Nodes, runtimeCluster.Networking.Services) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "nodes"), *runtimeCluster.Networking.Nodes, "node network of runtime cluster intersects with service network of runtime cluster"))
 		}
+	}
+
+	allErrs = append(allErrs, validateIngress(runtimeCluster.Ingress, fldPath)...)
+
+	return allErrs
+}
+
+func validateIngress(ingress *operatorv1alpha1.Ingress, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if ingress == nil {
+		return append(allErrs, field.Required(fldPath.Child("ingress"), "cannot be empty"))
+	}
+
+	if len(ingress.Domain) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("ingress", "domain"), "cannot be empty"))
+	} else {
+		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(ingress.Domain, fldPath.Child("ingress", "domain"))...)
+	}
+	if !availableIngressKinds.Has(ingress.Controller.Kind) {
+		allErrs = append(allErrs, field.NotSupported(
+			fldPath.Child("ingress", "controller", "kind"),
+			ingress.Controller.Kind,
+			availableIngressKinds.UnsortedList()),
+		)
 	}
 
 	return allErrs

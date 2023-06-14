@@ -18,8 +18,8 @@ import (
 	"github.com/Masterminds/semver"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
+	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/nginxingress"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
