@@ -41,12 +41,15 @@ var _ = Describe("Logging", func() {
 		)
 
 		It("should return the expected FluentBit custom resource", func() {
-			fluentBitCustomResource := GetFluentBit(labels, name, namespace, image, image, priorityClass)
+			var (
+				fluentBitCustomResource = GetFluentBit(labels, name, namespace, image, image, priorityClass)
+				annotations             = map[string]string{"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": `[{"port":2020,"protocol":"TCP"},{"port":2021,"protocol":"TCP"}]`}
+			)
 
 			Expect(fluentBitCustomResource).To(Equal(
 				&fluentbitv1alpha2.FluentBit{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      fmt.Sprintf("%v-%v", name, utils.ComputeSHA256Hex([]byte(fmt.Sprintf("%v", labels)))[:6]),
+						Name:      fmt.Sprintf("%v-%v", name, utils.ComputeSHA256Hex([]byte(fmt.Sprintf("%v%v", labels, annotations)))[:6]),
 						Namespace: namespace,
 						Labels:    labels,
 					},
@@ -170,7 +173,7 @@ var _ = Describe("Logging", func() {
 						},
 						Service: fluentbitv1alpha2.FluentBitService{
 							Name:        name,
-							Annotations: map[string]string{"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": `[{"port":"2020","protocol":"TCP"},{"port":"2021","protocol":"TCP"}]`},
+							Annotations: annotations,
 							Labels:      labels,
 						},
 					},
