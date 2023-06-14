@@ -93,7 +93,7 @@ var _ = Describe("ManagedSeed", func() {
 						Domain: pointer.String(domain),
 					},
 					Kubernetes: core.Kubernetes{
-						EnableStaticTokenKubeconfig: pointer.Bool(false),
+						EnableStaticTokenKubeconfig: pointer.Bool(true),
 						Version:                     "1.23.9",
 						VerticalPodAutoscaler: &core.VerticalPodAutoscaler{
 							Enabled: true,
@@ -156,6 +156,10 @@ var _ = Describe("ManagedSeed", func() {
 						VerticalPodAutoscaler: &core.SeedSettingVerticalPodAutoscaler{
 							Enabled: false,
 						},
+					},
+					SecretRef: &corev1.SecretReference{
+						Name:      "seed-secret",
+						Namespace: "garden",
 					},
 					Ingress: &core.Ingress{
 						Domain: "ingress." + domain,
@@ -332,6 +336,10 @@ var _ = Describe("ManagedSeed", func() {
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: gardencorev1beta1.SeedSpec{
 									Backup: &gardencorev1beta1.SeedBackup{},
+									SecretRef: &corev1.SecretReference{
+										Name:      "seed-secret",
+										Namespace: "garden",
+									},
 								},
 							},
 						},
@@ -362,6 +370,33 @@ var _ = Describe("ManagedSeed", func() {
 						},
 					},
 				}))
+			})
+
+			It("should forbid setting seed secretRef if static token kubeconfig is disabled in the shoot", func() {
+				shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(false)
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
+
+				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
+				Expect(err).To(BeInvalidError())
+				Expect(getErrorList(err)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.gardenlet.config.seedConfig.spec.secretRef"),
+						"Detail": ContainSubstring("seed secretRef cannot be specified when the shoot static token kubeconfig is disabled"),
+					})),
+				))
+			})
+
+			It("should add the secret reference annotations to the managedseed if spec.secretRef is present in the seed template", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
+
+				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(managedSeed.Annotations).To(And(
+					HaveKeyWithValue("seedmanagement.gardener.cloud/seed-secret-name", "seed-secret"),
+					HaveKeyWithValue("seedmanagement.gardener.cloud/seed-secret-namespace", "garden"),
+				))
 			})
 
 			It("should fail if config could not be converted to GardenletConfiguration", func() {
@@ -458,11 +493,6 @@ var _ = Describe("ManagedSeed", func() {
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.gardenlet.config.seedConfig.spec.settings.verticalPodAutoscaler.enabled"),
 						"Detail": ContainSubstring("seed VPA is not supported for managed seeds - use the shoot VPA"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.gardenlet.config.seedConfig.spec.secretRef"),
-						"Detail": ContainSubstring("seed secretRef cannot be specified when the shoot static token kubeconfig is disabled"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
@@ -643,6 +673,10 @@ var _ = Describe("ManagedSeed", func() {
 						SeedConfig: &gardenletv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: gardencorev1beta1.SeedSpec{
+									SecretRef: &corev1.SecretReference{
+										Name:      "seed-secret",
+										Namespace: "garden",
+									},
 									Ingress: seedx.Spec.Ingress,
 									Provider: gardencorev1beta1.SeedProvider{
 										Zones: []string{zone1, zone2},
@@ -655,6 +689,45 @@ var _ = Describe("ManagedSeed", func() {
 					newManagedSeed = managedSeed.DeepCopy()
 
 					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
+				})
+
+				It("should not remove the secret reference annotations if spec.secretRef is unset in the new managedseed", func() {
+					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
+
+					err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(managedSeed.Annotations).To(And(
+						HaveKeyWithValue("seedmanagement.gardener.cloud/seed-secret-name", "seed-secret"),
+						HaveKeyWithValue("seedmanagement.gardener.cloud/seed-secret-namespace", "garden"),
+					))
+
+					gardenletConfig := &gardenletv1alpha1.GardenletConfiguration{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: gardenletv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "GardenletConfiguration",
+						},
+						SeedConfig: &gardenletv1alpha1.SeedConfig{
+							SeedTemplate: gardencorev1beta1.SeedTemplate{
+								Spec: gardencorev1beta1.SeedSpec{
+									SecretRef: nil,
+									Ingress:   seedx.Spec.Ingress,
+									Provider: gardencorev1beta1.SeedProvider{
+										Zones: []string{zone1, zone2},
+									},
+								},
+							},
+						},
+					}
+					newManagedSeed = managedSeed.DeepCopy()
+					newManagedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{Config: gardenletConfig}
+
+					Expect(admissionHandler.Admit(ctx, getManagedSeedUpdateAttributes(managedSeed, newManagedSeed), nil)).To(Succeed())
+
+					Expect(newManagedSeed.Annotations).To(And(
+						HaveKeyWithValue("seedmanagement.gardener.cloud/seed-secret-name", "seed-secret"),
+						HaveKeyWithValue("seedmanagement.gardener.cloud/seed-secret-namespace", "garden"),
+					))
 				})
 
 				It("should allow zone removal when there are no shoots running on seed", func() {

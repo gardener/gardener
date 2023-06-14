@@ -42,6 +42,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	seedmanagementv1alpha1constants "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
@@ -984,7 +985,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1SecretRef.Namespace, managedSeed1SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeedBootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 
-		By("Update (backup secret ref)")
+		By("Update (secret ref)")
 		managedSeed1Copy = managedSeed1.DeepCopy()
 		seedConfig1.Spec.SecretRef = &corev1.SecretReference{Namespace: "new", Name: "newaswell"}
 		fakeInformerManagedSeed.Update(managedSeed1Copy, managedSeed1)
@@ -996,7 +997,34 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, seedConfig1.Spec.SecretRef.Namespace, seedConfig1.Spec.SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeedBootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 
-		By("Update (secret ref), seed exists")
+		By("Update (secret ref set), annotation exists")
+		managedSeed1Copy = managedSeed1.DeepCopy()
+		seedConfig1.Spec.SecretRef = &corev1.SecretReference{Namespace: "new", Name: "newaswell"}
+		metav1.SetMetaDataAnnotation(&managedSeed1.ObjectMeta, seedmanagementv1alpha1constants.AnnotationSeedSecretName, seedConfig1.Spec.SecretRef.Name)
+		metav1.SetMetaDataAnnotation(&managedSeed1.ObjectMeta, seedmanagementv1alpha1constants.AnnotationSeedSecretNamespace, seedConfig1.Spec.SecretRef.Namespace)
+		fakeInformerManagedSeed.Update(managedSeed1Copy, managedSeed1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(5))
+		Expect(graph.graph.Edges().Len()).To(Equal(4))
+		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1BackupSecretRef.Namespace, managedSeed1BackupSecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1SecretRef.Namespace, managedSeed1SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, seedConfig1.Spec.SecretRef.Namespace, seedConfig1.Spec.SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeedBootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
+
+		By("Update (secret ref unset), annotation exists")
+		managedSeed1Copy = managedSeed1.DeepCopy()
+		secretRef := seedConfig1.Spec.SecretRef
+		seedConfig1.Spec.SecretRef = nil
+		fakeInformerManagedSeed.Update(managedSeed1Copy, managedSeed1)
+		seedConfig1.Spec.SecretRef = secretRef
+		Expect(graph.graph.Nodes().Len()).To(Equal(5))
+		Expect(graph.graph.Edges().Len()).To(Equal(4))
+		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1BackupSecretRef.Namespace, managedSeed1BackupSecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, seedConfig1.Spec.SecretRef.Namespace, seedConfig1.Spec.SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeedBootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
+
+		By("Update (backup secret ref), seed exists")
 		seed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: managedSeed1.Name}}
 		Expect(fakeClient.Create(ctx, seed)).To(Succeed())
 		managedSeed1Copy = managedSeed1.DeepCopy()

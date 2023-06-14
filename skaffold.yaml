@@ -54,6 +54,7 @@ build:
         - pkg/apis/seedmanagement/helper
         - pkg/apis/seedmanagement/install
         - pkg/apis/seedmanagement/v1alpha1
+        - pkg/apis/seedmanagement/v1alpha1/constants
         - pkg/apis/seedmanagement/v1alpha1/helper
         - pkg/apis/seedmanagement/validation
         - pkg/apis/settings
@@ -411,6 +412,7 @@ build:
         - pkg/apis/seedmanagement/encoding
         - pkg/apis/seedmanagement/install
         - pkg/apis/seedmanagement/v1alpha1
+        - pkg/apis/seedmanagement/v1alpha1/constants
         - pkg/apis/seedmanagement/v1alpha1/helper
         - pkg/apis/settings
         - pkg/apis/settings/install
@@ -776,6 +778,7 @@ build:
         - pkg/apis/seedmanagement/encoding
         - pkg/apis/seedmanagement/install
         - pkg/apis/seedmanagement/v1alpha1
+        - pkg/apis/seedmanagement/v1alpha1/constants
         - pkg/apis/seedmanagement/v1alpha1/helper
         - pkg/apis/settings
         - pkg/apis/settings/install

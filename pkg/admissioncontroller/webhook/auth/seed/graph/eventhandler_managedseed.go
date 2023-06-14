@@ -27,6 +27,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	seedmanagementv1alpha1constants "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/constants"
 	seedmanagementv1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -99,6 +100,12 @@ func (g *graph) handleManagedSeedCreateOrUpdate(ctx context.Context, managedSeed
 			secretVertex := g.getOrCreateVertex(VertexTypeSecret, seedTemplate.Spec.SecretRef.Namespace, seedTemplate.Spec.SecretRef.Name)
 			g.addEdge(secretVertex, managedSeedVertex)
 		}
+	}
+
+	if metav1.HasAnnotation(managedSeed.ObjectMeta, seedmanagementv1alpha1constants.AnnotationSeedSecretName) &&
+		metav1.HasAnnotation(managedSeed.ObjectMeta, seedmanagementv1alpha1constants.AnnotationSeedSecretNamespace) {
+		secretVertex := g.getOrCreateVertex(VertexTypeSecret, managedSeed.GetAnnotations()[seedmanagementv1alpha1constants.AnnotationSeedSecretNamespace], managedSeed.GetAnnotations()[seedmanagementv1alpha1constants.AnnotationSeedSecretName])
+		g.addEdge(secretVertex, managedSeedVertex)
 	}
 
 	if gardenletConfig == nil || managedSeed.Spec.Gardenlet.Bootstrap == nil {

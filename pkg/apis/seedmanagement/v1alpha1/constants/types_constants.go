@@ -18,4 +18,9 @@ const (
 	// AnnotationProtectFromDeletion is a constant for an annotation on a replica of a ManagedSeedSet
 	//(either ManagedSeed or Shoot) to protect it from deletion..
 	AnnotationProtectFromDeletion = "seedmanagement.gardener.cloud/protect-from-deletion"
+
+	// AnnotationSeedSecretName is the name of the secret which is referred in the Seed spec of a ManagedSeed.
+	AnnotationSeedSecretName = "seedmanagement.gardener.cloud/seed-secret-name"
+	// AnnotationSeedSecretNamespace is the namespace of the secret which is referred in the Seed spec of a ManagedSeed.
+	AnnotationSeedSecretNamespace = "seedmanagement.gardener.cloud/seed-secret-namespace"
 )

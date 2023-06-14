@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	resourceshelper "github.com/gardener/gardener/pkg/apis/resources/v1alpha1/helper"
+	resourcesv1alpha1helper "github.com/gardener/gardener/pkg/apis/resources/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 )
 
@@ -78,7 +78,7 @@ func MapToOriginManagedResource(clusterID string) mapper.MapFunc {
 			return nil
 		}
 
-		originClusterID, key, err := resourceshelper.SplitOrigin(origin)
+		originClusterID, key, err := resourcesv1alpha1helper.SplitOrigin(origin)
 		if err != nil {
 			log.Error(err, "Failed to parse origin of object", "object", obj, "origin", origin)
 			return nil
