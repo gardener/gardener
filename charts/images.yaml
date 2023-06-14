@@ -189,6 +189,10 @@ images:
       confidentiality_requirement: high
       integrity_requirement: high
       availability_requirement: low
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/monitoring-maintainers'  
 - name: prometheus
   sourceRepository: github.com/prometheus/prometheus
   repository: quay.io/prometheus/prometheus
@@ -202,6 +206,10 @@ images:
       confidentiality_requirement: high
       integrity_requirement: high
       availability_requirement: low
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/monitoring-maintainers'
 - name: configmap-reloader
   sourceRepository: github.com/prometheus-operator/prometheus-operator
   repository: ghcr.io/prometheus-operator/prometheus-config-reloader
@@ -215,6 +223,10 @@ images:
       confidentiality_requirement: high
       integrity_requirement: high
       availability_requirement: low
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/monitoring-maintainers'
 - name: kube-state-metrics
   sourceRepository: github.com/kubernetes/kube-state-metrics
   repository: registry.k8s.io/kube-state-metrics/kube-state-metrics
@@ -228,6 +240,10 @@ images:
       confidentiality_requirement: high
       integrity_requirement: high
       availability_requirement: low
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/monitoring-maintainers'
 - name: node-exporter
   sourceRepository: github.com/prometheus/node_exporter
   repository: quay.io/prometheus/node-exporter
@@ -242,6 +258,10 @@ images:
       integrity_requirement: high
       availability_requirement: low
       comment: the node-exporter is also deployed to the shoot cluster
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/monitoring-maintainers'
 - name: plutono
   sourceRepository: github.com/credativ/plutono
   repository: ghcr.io/credativ/plutono
@@ -255,6 +275,10 @@ images:
       confidentiality_requirement: high
       integrity_requirement: high
       availability_requirement: low
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/monitoring-maintainers'
 - name: blackbox-exporter
   sourceRepository: github.com/prometheus/blackbox_exporter
   repository: quay.io/prometheus/blackbox-exporter
@@ -269,6 +293,10 @@ images:
       integrity_requirement: high
       availability_requirement: low
       comment: the blackbox-exporter is also deployed to the shoot cluster
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/monitoring-maintainers'
 - name: metrics-server
   sourceRepository: github.com/kubernetes-sigs/metrics-server
   repository: registry.k8s.io/metrics-server/metrics-server
@@ -282,6 +310,10 @@ images:
       confidentiality_requirement: high
       integrity_requirement: high
       availability_requirement: low
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/monitoring-maintainers'
 
 # Shoot core addons
 - name: vpn-shoot-client
