@@ -34,7 +34,10 @@ func GetNetworkPolicyMeta(shootNamespace, extensionName string) *networkingv1.Ne
 }
 
 // EnsureEgressNetworkPolicy ensures that the required egress network policy is installed that allows the kube-apiserver
-// running in the given shoot namespace to talk to the extension webhook .
+// running in the given shoot namespace to talk to the extension webhook.
+// Deprecated: This function is deprecated and will be removed after Gardener v1.80 has been released. Extensions should
+// make sure that they can be accessed via the 'all-webhook-targets' alias.
+// TODO(rfranzke): Drop this after v1.80 has been released.
 func EnsureEgressNetworkPolicy(ctx context.Context, c client.Client, shootNamespace, extensionNamespace, extensionName string, port int) error {
 	networkPolicy := GetNetworkPolicyMeta(shootNamespace, extensionName)
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, networkPolicy, func() error {
@@ -78,6 +81,9 @@ func EnsureEgressNetworkPolicy(ctx context.Context, c client.Client, shootNamesp
 
 // EnsureIngressNetworkPolicy ensures that the required ingress network policy is installed that allows the
 // kube-apiservers of shoot namespaces to talk to the extension webhook.
+// Deprecated: This function is deprecated and will be removed after Gardener v1.80 has been released. Extensions should
+// make sure that they can be accessed via the 'all-webhook-targets' alias.
+// TODO(rfranzke): Drop this after v1.80 has been released.
 func EnsureIngressNetworkPolicy(ctx context.Context, c client.Client, extensionNamespace, extensionName string, port int) error {
 	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: extensionNamespace, Name: "ingress-from-all-shoots-kube-apiserver"}}
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, networkPolicy, func() error {
