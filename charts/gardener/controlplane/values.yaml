@@ -50,6 +50,7 @@ global:
           - resources:
             - controllerdeployments.core.gardener.cloud
             - controllerregistrations.core.gardener.cloud
+            - internalsecrets.core.gardener.cloud
             - shootstates.core.gardener.cloud
             providers:
             - identity: {}
