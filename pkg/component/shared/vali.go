@@ -15,15 +15,16 @@
 package shared
 
 import (
+	"github.com/Masterminds/semver"
+	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"k8s.io/apimachinery/pkg/api/resource"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/Masterminds/semver"
 )
 
 // NewVali returns new Vali deployer
@@ -34,7 +35,7 @@ func NewVali(
 	namespace string,
 	ingressClass string,
 	priorityClassName string,
-	clusterType string,
+	clusterType component.ClusterType,
 	valiHost string,
 	secretsManager secretsmanager.Interface,
 	storage *resource.Quantity,
@@ -43,31 +44,11 @@ func NewVali(
 	isShootNodeLoggingEnabled bool,
 	authEnabled bool,
 	hvpaEnabled bool,
-	maintenanceBegin string,
-	maintenanceEnd string,
-
+	maintenanceTimeWindow *hvpav1alpha1.MaintenanceTimeWindow,
 ) (
-	component.Deployer, error,
+	component.Deployer,
+	error,
 ) {
-	var (
-		kubeRBACProxyImageStr string
-		telegrafImageStr      string
-	)
-
-	if !isLoggingEnabled {
-		v, err := vali.New(
-			c,
-			namespace,
-			nil,
-			new(semver.Version),
-			vali.Values{})
-		if err != nil {
-			return nil, err
-		}
-
-		return component.OpDestroy(v), nil
-	}
-
 	valiImage, err := imageVector.FindImage(images.ImageNameVali)
 	if err != nil {
 		return nil, err
@@ -88,23 +69,21 @@ func NewVali(
 		return nil, err
 	}
 
-	if isShootNodeLoggingEnabled {
-		kubeRBACProxyImage, err := imageVector.FindImage(images.ImageNameKubeRbacProxy)
-		if err != nil {
-			return nil, err
-		}
-		kubeRBACProxyImageStr = kubeRBACProxyImage.String()
-
-		telegrafImage, err := imageVector.FindImage(images.ImageNameTelegraf)
-		if err != nil {
-			return nil, err
-		}
-		telegrafImageStr = telegrafImage.String()
+	kubeRBACProxyImage, err := imageVector.FindImage(images.ImageNameKubeRbacProxy)
+	if err != nil {
+		return nil, err
 	}
 
-	return vali.New(c, namespace, secretsManager, k8Version, vali.Values{
+	telegrafImage, err := imageVector.FindImage(images.ImageNameTelegraf)
+	if err != nil {
+		return nil, err
+	}
+
+	deployer := vali.New(c, namespace, secretsManager, k8Version, vali.Values{
 		Replicas:              replicas,
 		HvpaEnabled:           hvpaEnabled,
+		MaintenanceTimeWindow: maintenanceTimeWindow,
+		RBACProxyEnabled:      isShootNodeLoggingEnabled,
 		PriorityClassName:     priorityClassName,
 		Storage:               storage,
 		AuthEnabled:           authEnabled,
@@ -115,7 +94,13 @@ func NewVali(
 		CuratorImage:          curatorImage.String(),
 		RenameLokiToValiImage: alpineImage.String(),
 		InitLargeDirImage:     tune2fsImage.String(),
-		KubeRBACProxyImage:    kubeRBACProxyImageStr,
-		TelegrafImage:         telegrafImageStr,
+		KubeRBACProxyImage:    kubeRBACProxyImage.String(),
+		TelegrafImage:         telegrafImage.String(),
 	})
+
+	if !isLoggingEnabled {
+		return component.OpDestroy(deployer), nil
+	}
+
+	return deployer, err
 }

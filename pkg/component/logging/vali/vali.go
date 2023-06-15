@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
-	"errors"
 	"fmt"
 	"io"
 	"text/template"
@@ -27,8 +26,6 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/Masterminds/sprig"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
-
-	//"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -47,6 +44,8 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -71,6 +70,7 @@ const (
 	serviceValiPortNumber   = 3100
 	curatorPortNumber       = 2718
 	valiMetricsPortName     = "metrics"
+	curatorMetricsPortName  = "curatormetrics"
 	valiUserAndGroupId      = 10001
 	valiConfigMapVolumeName = "config"
 	valiPVCName             = "vali"
@@ -86,19 +86,16 @@ var (
 	//go:embed templates/vali-config.tpl
 	tplContentValiConfig string
 	valiConfigTmpl       *template.Template
-	//valiConfigYAMLTmpl     = template.Must(template.ParseFS(valiConfigYAMLTmplFile, "templates/vali-config.tpl"))
 
 	tplNameTelegrafConfig = "telegraf-config"
 	//go:embed templates/telegraf-config.tpl
 	tplContentTelegrafConfig string
 	telegrafConfigTmpl       *template.Template
-	//telegrafConfigYAMLTmpl   = template.Must(template.ParseFS(telegrafConfigYAMLTmplFile, "telegraf-config.tpl"))
 
 	tplNameTelegrafStart = "telegraf-start"
 	//go:embed templates/telegraf-start.sh.tpl
 	tplContentTelegrafStart string
 	telegrafStartTmpl       *template.Template
-	//telegrafStartTmpl     = template.Must(template.ParseFS(telegrafStartTmplFile, "templates/telegraf-start.sh.tpl"))
 
 	controlledValues            = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 	containerPolicyOff          = vpaautoscalingv1.ContainerScalingModeOff
@@ -109,40 +106,31 @@ var (
 )
 
 func init() {
-	var err error
-	valiConfigTmpl, err = template.
+	valiConfigTmpl = template.Must(template.
 		New(tplNameValiConfig).
 		Funcs(sprig.TxtFuncMap()).
-		Parse(tplContentValiConfig)
-	if err != nil {
-		panic(err)
-	}
+		Parse(tplContentValiConfig),
+	)
 
-	telegrafConfigTmpl, err = template.
+	telegrafConfigTmpl = template.Must(template.
 		New(tplNameTelegrafStart).
 		Funcs(sprig.TxtFuncMap()).
-		Parse(tplContentTelegrafConfig)
-	if err != nil {
-		panic(err)
-	}
+		Parse(tplContentTelegrafConfig),
+	)
 
-	telegrafStartTmpl, err = template.
+	telegrafStartTmpl = template.Must(template.
 		New(tplNameTelegrafConfig).
 		Funcs(sprig.TxtFuncMap()).
-		Parse(tplContentTelegrafStart)
-	if err != nil {
-		panic(err)
-	}
+		Parse(tplContentTelegrafStart),
+	)
 }
 
 // Values are the values for the Vali.
 type Values struct {
 	Replicas              int32
 	AuthEnabled           bool
-	Storage               *resource.Quantity
+	RBACProxyEnabled      bool
 	HvpaEnabled           bool
-	MaintenanceBegin      string
-	MaintenanceEnd        string
 	ValiImage             string
 	CuratorImage          string
 	RenameLokiToValiImage string
@@ -150,17 +138,19 @@ type Values struct {
 	PriorityClassName     string
 	TelegrafImage         string
 	KubeRBACProxyImage    string
-	ClusterType           string
 	IngressClass          string
 	ValiHost              string
+	ClusterType           component.ClusterType
+	Storage               *resource.Quantity
+	MaintenanceTimeWindow *hvpav1alpha1.MaintenanceTimeWindow
 }
 
 type vali struct {
-	client         client.Client
-	namespace      string
-	secretsManager secretsmanager.Interface
-	k8sVersion     *semver.Version
-	values         Values
+	client                   client.Client
+	namespace                string
+	secretsManager           secretsmanager.Interface
+	runtimeKubernetesVersion *semver.Version
+	values                   Values
 }
 
 var _ component.Deployer = &vali{}
@@ -170,37 +160,16 @@ func New(
 	client client.Client,
 	namespace string,
 	secretsManager secretsmanager.Interface,
-	k8sVersion *semver.Version,
-	values Values) (component.Deployer, error) {
-
-	switch {
-	case client == nil:
-		return nil, errors.New("client cannot be nil")
-	case len(namespace) == 0:
-		return nil, errors.New("namespace cannot be empty")
-	case len(values.ValiImage) == 0:
-		return nil, errors.New("vali image cannot be empty")
-	case len(values.CuratorImage) == 0:
-		return nil, errors.New("vali curator image cannot be empty")
-	case len(values.InitLargeDirImage) == 0:
-		return nil, errors.New("init-large-dir image cannot be empty")
-	case len(values.KubeRBACProxyImage) > 0 && len(values.TelegrafImage) == 0:
-		return nil, errors.New("when kube-RBAC-proxy image is present the telegraf image cannot be empty")
-	case len(values.TelegrafImage) > 0 && len(values.KubeRBACProxyImage) == 0:
-		return nil, errors.New("when telegraf image is present the kube-RBAC-proxy image cannot be empty")
-	case len(values.KubeRBACProxyImage) > 0 && len(values.TelegrafImage) > 0 && secretsManager == nil:
-		return nil, errors.New("secretManager cannot be nil")
-	case len(values.KubeRBACProxyImage) > 0 && len(values.TelegrafImage) > 0 && k8sVersion == nil:
-		return nil, errors.New("kubernetes version cannot be nil")
-	}
-
+	runtimeKubernetesVersion *semver.Version,
+	values Values,
+) component.Deployer {
 	return &vali{
-		client:         client,
-		namespace:      namespace,
-		secretsManager: secretsManager,
-		k8sVersion:     k8sVersion,
-		values:         values,
-	}, nil
+		client:                   client,
+		namespace:                namespace,
+		secretsManager:           secretsManager,
+		runtimeKubernetesVersion: runtimeKubernetesVersion,
+		values:                   values,
+	}
 }
 
 func (v *vali) Deploy(ctx context.Context) error {
@@ -208,27 +177,14 @@ func (v *vali) Deploy(ctx context.Context) error {
 		valiConfigMapName                string
 		telegrafConfigMapName            string
 		genericTokenKubeconfigSecretName string
-		valiResources                    *corev1.ResourceRequirements
 		registry                         = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-		resources                        = []client.Object{}
+		resources                        []client.Object
 	)
 	if v.values.HvpaEnabled && v.values.Replicas > 0 {
 		resources = append(resources, v.getHVPA())
-
-		//If HVPA is enabled then we have to set the resources as same the current ones to avoid redundant scale up.
-		currentResources, err := kubernetesutils.GetContainerResourcesInStatefulSet(ctx, v.client, kubernetesutils.Key(v.namespace, v1beta1constants.StatefulSetNameVali))
-		if err != nil {
-			return err
-		}
-		if len(currentResources) != 0 && currentResources[valiName] != nil {
-			valiResources = &corev1.ResourceRequirements{
-				Requests: currentResources[valiName].Requests,
-				Limits:   currentResources[valiName].Limits,
-			}
-		}
 	}
 
-	if v.isRBACProxyEnabled() {
+	if v.values.RBACProxyEnabled {
 		ingressTLSSecret, err := v.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 			Name:                        "vali-tls",
 			CommonName:                  v.values.ValiHost,
@@ -266,7 +222,7 @@ func (v *vali) Deploy(ctx context.Context) error {
 	valiConfigMapName = valiConfigMap.Name
 	resources = append(resources, valiConfigMap)
 
-	resources = append(resources, v.getStatefulset(valiConfigMapName, telegrafConfigMapName, genericTokenKubeconfigSecretName, valiResources))
+	resources = append(resources, v.getStatefulset(valiConfigMapName, telegrafConfigMapName, genericTokenKubeconfigSecretName))
 
 	serializedResources, err := registry.AddAllAndSerialize(resources...)
 	if err != nil {
@@ -422,23 +378,20 @@ func (v *vali) getHVPA() *hvpav1alpha1.Hvpa {
 				},
 			},
 			TargetRef: &autoscalingv2beta1.CrossVersionObjectReference{
-				APIVersion: "apps/v1",
+				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "StatefulSet",
 				Name:       valiName,
 			},
 		},
 	}
 
-	if v.values.MaintenanceBegin != "" && v.values.MaintenanceEnd != "" {
-		obj.Spec.MaintenanceTimeWindow = &hvpav1alpha1.MaintenanceTimeWindow{
-			Begin: v.values.MaintenanceBegin,
-			End:   v.values.MaintenanceEnd,
-		}
+	if v.values.MaintenanceTimeWindow != nil {
+		obj.Spec.MaintenanceTimeWindow = v.values.MaintenanceTimeWindow
 
 		obj.Spec.Vpa.ScaleDown.UpdatePolicy.UpdateMode = pointer.String(hvpav1alpha1.UpdateModeMaintenanceWindow)
 	}
 
-	if v.isRBACProxyEnabled() {
+	if v.values.RBACProxyEnabled {
 		obj.Spec.Vpa.Template.Spec.ResourcePolicy.ContainerPolicies = append(obj.Spec.Vpa.Template.Spec.ResourcePolicy.ContainerPolicies,
 			[]vpaautoscalingv1.ContainerResourcePolicy{
 				{
@@ -499,7 +452,7 @@ func (v *vali) getKubeRBACProxyIngress(secretName string) *networkingv1.Ingress 
 		},
 	}
 
-	if version.ConstraintK8sGreaterEqual122.Check(v.k8sVersion) {
+	if version.ConstraintK8sGreaterEqual122.Check(v.runtimeKubernetesVersion) {
 		ingress.Spec.IngressClassName = pointer.String(v.values.IngressClass)
 	} else {
 		ingress.Annotations["kubernetes.io/ingress.class"] = v.values.IngressClass
@@ -530,7 +483,14 @@ func (v *vali) getService() *corev1.Service {
 		},
 	}
 
-	if v.isRBACProxyEnabled() {
+	netPolPorts := []networkingv1.NetworkPolicyPort{
+		{
+			Port:     utils.IntStrPtrFromInt(serviceValiPortNumber),
+			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+		},
+	}
+
+	if v.values.RBACProxyEnabled {
 		svc.Spec.Ports = append(svc.Spec.Ports, []corev1.ServicePort{
 			{
 				Port:       serviceRBACProxyPortNumber,
@@ -545,15 +505,20 @@ func (v *vali) getService() *corev1.Service {
 				Name:       telegrafName,
 			},
 		}...)
+
+		netPolPorts = append(netPolPorts, networkingv1.NetworkPolicyPort{
+			Port:     utils.IntStrPtrFromInt(serviceTelegrafPortNumber),
+			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+		})
 	}
 
 	switch v.values.ClusterType {
-	case "seed":
-		svc.Annotations["networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports"] = fromAllSeedScrapeTargetsAllowedPorts(v.isRBACProxyEnabled())
-	case "shoot":
-		svc.Annotations["networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports"] = fromAllScrapeTargetsAllowedPorts(v.isRBACProxyEnabled())
-		svc.Annotations[resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias] = v1beta1constants.LabelNetworkPolicyShootNamespaceAlias
-		svc.Annotations[resourcesv1alpha1.NetworkingNamespaceSelectors] = `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`
+	case component.ClusterTypeSeed:
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(svc, netPolPorts...))
+	case component.ClusterTypeShoot:
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(svc, netPolPorts...))
+		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(svc, metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}}))
+		metav1.SetMetaDataAnnotation(&svc.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
 	}
 
 	return svc
@@ -610,7 +575,7 @@ func (v *vali) getTelegrafConfig() (*corev1.ConfigMap, error) {
 	return configMap, nil
 }
 
-func (v *vali) getStatefulset(valiConfigMapName, telegrafConfigMapName, genericTokenKubeconfigSecretName string, valiResources *corev1.ResourceRequirements) *appsv1.StatefulSet {
+func (v *vali) getStatefulset(valiConfigMapName, telegrafConfigMapName, genericTokenKubeconfigSecretName string) *appsv1.StatefulSet {
 	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      valiName,
@@ -750,8 +715,7 @@ func (v *vali) getStatefulset(valiConfigMapName, telegrafConfigMapName, genericT
 							},
 							Ports: []corev1.ContainerPort{
 								{
-									//TODO:(vlvasilev) why the curator and the vali ports are named metrics?
-									Name:          valiMetricsPortName,
+									Name:          curatorMetricsPortName,
 									ContainerPort: curatorPortNumber,
 									Protocol:      corev1.ProtocolTCP,
 								},
@@ -819,16 +783,7 @@ func (v *vali) getStatefulset(valiConfigMapName, telegrafConfigMapName, genericT
 		},
 	}
 
-	if valiResources != nil {
-		for i, container := range sts.Spec.Template.Spec.Containers {
-			if container.Name == valiName {
-				sts.Spec.Template.Spec.Containers[i].Resources = *valiResources
-			}
-		}
-	}
-
 	if v.values.Storage != nil {
-		//TODO: (vlvasilev) move here the resize check
 		sts.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests[corev1.ResourceStorage] = *v.values.Storage
 	}
 
@@ -836,7 +791,7 @@ func (v *vali) getStatefulset(valiConfigMapName, telegrafConfigMapName, genericT
 		sts.Spec.Template.Spec.PriorityClassName = v.values.PriorityClassName
 	}
 
-	if v.isRBACProxyEnabled() {
+	if v.values.RBACProxyEnabled {
 		sts.Spec.Template.ObjectMeta.Labels[v1beta1constants.LabelNetworkPolicyToDNS] = v1beta1constants.LabelNetworkPolicyAllowed
 		sts.Spec.Template.ObjectMeta.Labels["networking.resources.gardener.cloud/to-kube-apiserver-tcp-443"] = v1beta1constants.LabelNetworkPolicyAllowed
 
@@ -988,30 +943,12 @@ func (v *vali) getStatefulset(valiConfigMapName, telegrafConfigMapName, genericT
 	return sts
 }
 
-func (v *vali) isRBACProxyEnabled() bool {
-	return v.values.KubeRBACProxyImage != "" && v.values.TelegrafImage != ""
-}
-
 func getLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging,
 		v1beta1constants.LabelRole:  "logging",
 		v1beta1constants.LabelApp:   valiName,
 	}
-}
-
-func fromAllSeedScrapeTargetsAllowedPorts(rbacProxyEnabled bool) string {
-	if rbacProxyEnabled {
-		return fmt.Sprintf(`[{"port":%d,"protocol":"TCP"},{"port":%d,"protocol":"TCP"}]`, serviceValiPortNumber, serviceTelegrafPortNumber)
-	}
-	return fmt.Sprintf(`[{"port":%d,"protocol":"TCP"}]`, serviceValiPortNumber)
-}
-
-func fromAllScrapeTargetsAllowedPorts(rbacProxyEnabled bool) string {
-	if rbacProxyEnabled {
-		return fmt.Sprintf(`[{"port":%d,"protocol":"TCP"},{"port":%d,"protocol":"TCP"}]`, serviceValiPortNumber, serviceTelegrafPortNumber)
-	}
-	return fmt.Sprintf(`[{"port":%d,"protocol":"TCP"}]`, serviceValiPortNumber)
 }
 
 func buildValiConfiguration(authEnabled bool) ([]byte, error) {
@@ -1041,8 +978,7 @@ func buildTelegrafStartScript() ([]byte, error) {
 	return io.ReadAll(w)
 }
 
-// TODO: (vlvasilev) adjust the function to use managed resource instead of working directly on the pvc and sts!
-// ResizeOrDeleteValiDataVolumeIfStorageNotTheSame updates the garden Vali PVC if passed storage value is not the same as the current one.
+// resizeOrDeleteValiDataVolumeIfStorageNotTheSame updates the garden Vali PVC if passed storage value is not the same as the current one.
 // Caution: If the passed storage capacity is less than the current one the existing PVC and its PV will be deleted.
 func (v *vali) resizeOrDeleteValiDataVolumeIfStorageNotTheSame(ctx context.Context) error {
 	// Check if we need resizing

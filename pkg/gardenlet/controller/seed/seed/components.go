@@ -20,6 +20,7 @@ import (
 	"github.com/Masterminds/semver"
 	proberapi "github.com/gardener/dependency-watchdog/api/prober"
 	weederapi "github.com/gardener/dependency-watchdog/api/weeder"
+	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -315,8 +316,24 @@ func defaultVali(
 		}
 	}
 
-	return shared.NewVali(c, imageVector, 1, gardenNamespaceName, "",
-		v1beta1constants.PriorityClassNameSeedSystem600, "seed",
-		"", nil, storage, nil, isLoggingEnabled, false, false,
-		hvpaEnabled, maintenanceBegin, maintenanceEnd)
+	return shared.NewVali(
+		c,
+		imageVector,
+		1,
+		gardenNamespaceName,
+		"",
+		v1beta1constants.PriorityClassNameSeedSystem600,
+		component.ClusterTypeSeed,
+		"",
+		nil,
+		storage,
+		nil,
+		isLoggingEnabled,
+		false,
+		false,
+		hvpaEnabled,
+		&hvpav1alpha1.MaintenanceTimeWindow{
+			Begin: maintenanceBegin,
+			End:   maintenanceEnd,
+		})
 }

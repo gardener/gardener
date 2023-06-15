@@ -18,11 +18,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/Masterminds/semver"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
@@ -192,7 +192,7 @@ func (b *Botanist) defaultVali() (component.Deployer, error) {
 		b.Shoot.SeedNamespace,
 		ingressClass,
 		v1beta1constants.PriorityClassNameShootControlPlane100,
-		"shoot",
+		component.ClusterTypeShoot,
 		b.ComputeValiHost(),
 		b.SecretsManager,
 		nil,
@@ -200,5 +200,6 @@ func (b *Botanist) defaultVali() (component.Deployer, error) {
 		b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config),
 		b.isShootNodeLoggingEnabled(),
 		true,
-		hvpaEnabled, "", "")
+		hvpaEnabled,
+		nil)
 }

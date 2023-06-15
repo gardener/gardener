@@ -21,7 +21,6 @@ import (
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -90,128 +89,6 @@ var _ = Describe("Vali", func() {
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 	})
 
-	type newValiArgs struct {
-		client             client.Client
-		namespace          string
-		valiImage          string
-		curatorImage       string
-		initLargeDirImage  string
-		kubeRBACProxyImage string
-		telegrafImage      string
-		secretsManager     secretsmanager.Interface
-		k8sVersion         *semver.Version
-	}
-
-	DescribeTable("#New",
-		func(args newValiArgs, matchError, matchDeployer types.GomegaMatcher) {
-			deployer, err := New(args.client, args.namespace, args.secretsManager, args.k8sVersion, Values{
-				ValiImage:          args.valiImage,
-				CuratorImage:       args.curatorImage,
-				InitLargeDirImage:  args.initLargeDirImage,
-				KubeRBACProxyImage: args.kubeRBACProxyImage,
-				TelegrafImage:      args.telegrafImage,
-			})
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(err).To(matchError)
-			Expect(deployer).To(matchDeployer)
-		},
-		Entry("pass options with nil shoot client", newValiArgs{
-			client: nil,
-		},
-			MatchError(ContainSubstring("client cannot be nil")),
-			BeNil()),
-		Entry("pass options with empty namespace", newValiArgs{
-			client:    client.NewDryRunClient(nil),
-			namespace: "",
-		},
-			MatchError(ContainSubstring("namespace cannot be empty")),
-			BeNil()),
-		Entry("pass options with empty Vali image", newValiArgs{
-			client:    client.NewDryRunClient(nil),
-			namespace: "foo",
-			valiImage: "",
-		},
-			MatchError(ContainSubstring("vali image cannot be empty")),
-			BeNil()),
-		Entry("pass options with empty Vali curator image", newValiArgs{
-			client:       client.NewDryRunClient(nil),
-			namespace:    "foo",
-			valiImage:    "vali",
-			curatorImage: "",
-		},
-			MatchError(ContainSubstring("vali curator image cannot be empty")),
-			BeNil()),
-		Entry("pass options with empty init large dir image", newValiArgs{
-			client:            client.NewDryRunClient(nil),
-			namespace:         "foo",
-			valiImage:         "vali",
-			curatorImage:      "curator",
-			initLargeDirImage: "",
-		},
-			MatchError(ContainSubstring("init-large-dir image cannot be empty")),
-			BeNil()),
-		Entry("pass options with kube-RBAC-proxy image and empty Telegraf image", newValiArgs{
-			client:             client.NewDryRunClient(nil),
-			namespace:          "foo",
-			valiImage:          "vali",
-			curatorImage:       "curator",
-			initLargeDirImage:  "init-large-dir",
-			kubeRBACProxyImage: "kube-RBAC-proxy",
-			telegrafImage:      "",
-		},
-			MatchError(ContainSubstring("when kube-RBAC-proxy image is present the telegraf image cannot be empty")),
-			BeNil()),
-		Entry("pass options with kube-RBAC-proxy image and empty Telegraf image", newValiArgs{
-			client:             client.NewDryRunClient(nil),
-			namespace:          "foo",
-			valiImage:          "vali",
-			curatorImage:       "curator",
-			initLargeDirImage:  "init-large-dir",
-			kubeRBACProxyImage: "",
-			telegrafImage:      "telegraf",
-		},
-			MatchError(ContainSubstring("when telegraf image is present the kube-RBAC-proxy image cannot be empty")),
-			BeNil()),
-		Entry("pass options with kube-RBAC-proxy image and Telegraf image with nil secret manager", newValiArgs{
-			client:             client.NewDryRunClient(nil),
-			namespace:          "foo",
-			valiImage:          "vali",
-			curatorImage:       "curator",
-			initLargeDirImage:  "init-large-dir",
-			kubeRBACProxyImage: "kube-RBAC-proxy",
-			telegrafImage:      "telegraf",
-		},
-			MatchError(ContainSubstring("secretManager cannot be nil")),
-			BeNil()),
-		Entry("pass options with kube-RBAC-proxy image and Telegraf image with nil k8s version", newValiArgs{
-			client:             client.NewDryRunClient(nil),
-			namespace:          "foo",
-			valiImage:          "vali",
-			curatorImage:       "curator",
-			initLargeDirImage:  "init-large-dir",
-			kubeRBACProxyImage: "kube-RBAC-proxy",
-			telegrafImage:      "telegraf",
-			secretsManager:     fakesecretsmanager.New(c, namespace),
-		},
-			MatchError(ContainSubstring("kubernetes version cannot be nil")),
-			BeNil()),
-
-		Entry("pass valid options", newValiArgs{
-			client:             client.NewDryRunClient(nil),
-			namespace:          "foo",
-			valiImage:          "vali",
-			curatorImage:       "curator",
-			initLargeDirImage:  "init-large-dir",
-			kubeRBACProxyImage: "kube-RBAC-proxy",
-			telegrafImage:      "telegraf",
-			secretsManager:     fakesecretsmanager.New(c, namespace),
-			k8sVersion:         new(semver.Version),
-		},
-			BeNil(),
-			Not(BeNil())),
-	)
-
 	JustBeforeEach(func() {
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -229,18 +106,21 @@ var _ = Describe("Vali", func() {
 
 	Describe("#Deploy", func() {
 		It("should successfully deploy all resources for shoot", func() {
-			valiDeployer, err := New(
+			valiDeployer := New(
 				c,
 				namespace,
 				fakeSecretManager,
 				k8sVersion,
 				Values{
-					Replicas:              1,
-					AuthEnabled:           true,
-					Storage:               &storage,
-					HvpaEnabled:           true,
-					MaintenanceBegin:      maintenanceBegin,
-					MaintenanceEnd:        maintenanceEnd,
+					Replicas:         1,
+					AuthEnabled:      true,
+					Storage:          &storage,
+					RBACProxyEnabled: true,
+					HvpaEnabled:      true,
+					MaintenanceTimeWindow: &hvpav1alpha1.MaintenanceTimeWindow{
+						Begin: maintenanceBegin,
+						End:   maintenanceEnd,
+					},
 					ValiImage:             valiImage,
 					CuratorImage:          curatorImage,
 					RenameLokiToValiImage: alpineImage,
@@ -253,7 +133,6 @@ var _ = Describe("Vali", func() {
 					ValiHost:              valiHost,
 				},
 			)
-			Expect(err).ToNot(HaveOccurred())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
@@ -293,18 +172,20 @@ var _ = Describe("Vali", func() {
 		})
 
 		It("should successfully deploy all resources for seed", func() {
-			valiDeployer, err := New(
+			valiDeployer := New(
 				c,
 				namespace,
 				fakeSecretManager,
 				nil,
 				Values{
-					Replicas:              1,
-					AuthEnabled:           true,
-					Storage:               &storage,
-					HvpaEnabled:           true,
-					MaintenanceBegin:      maintenanceBegin,
-					MaintenanceEnd:        maintenanceEnd,
+					Replicas:    1,
+					AuthEnabled: true,
+					Storage:     &storage,
+					HvpaEnabled: true,
+					MaintenanceTimeWindow: &hvpav1alpha1.MaintenanceTimeWindow{
+						Begin: maintenanceBegin,
+						End:   maintenanceEnd,
+					},
 					ValiImage:             valiImage,
 					CuratorImage:          curatorImage,
 					RenameLokiToValiImage: alpineImage,
@@ -313,7 +194,6 @@ var _ = Describe("Vali", func() {
 					ClusterType:           "seed",
 				},
 			)
-			Expect(err).ToNot(HaveOccurred())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
@@ -351,7 +231,7 @@ var _ = Describe("Vali", func() {
 		})
 
 		It("should successfully deploy all resources for seed without HVPA", func() {
-			valiDeployer, err := New(
+			valiDeployer := New(
 				c,
 				namespace,
 				fakeSecretManager,
@@ -368,7 +248,6 @@ var _ = Describe("Vali", func() {
 					ClusterType:           "seed",
 				},
 			)
-			Expect(err).ToNot(HaveOccurred())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
@@ -448,15 +327,15 @@ func getService(isRBACProxyEnabled bool, clusterType string) *corev1.Service {
 	switch clusterType {
 	case "seed":
 		if isRBACProxyEnabled {
-			svc.Annotations["networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports"] = `[{"port":3100,"protocol":"TCP"},{"port":9273,"protocol":"TCP"}]`
+			svc.Annotations["networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports"] = `[{"protocol":"TCP","port":3100},{"protocol":"TCP","port":9273}]`
 		} else {
-			svc.Annotations["networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports"] = `[{"port":3100,"protocol":"TCP"}]`
+			svc.Annotations["networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports"] = `[{"protocol":"TCP","port":3100}]`
 		}
 	case "shoot":
 		if isRBACProxyEnabled {
-			svc.Annotations["networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports"] = `[{"port":3100,"protocol":"TCP"},{"port":9273,"protocol":"TCP"}]`
+			svc.Annotations["networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports"] = `[{"protocol":"TCP","port":3100},{"protocol":"TCP","port":9273}]`
 		} else {
-			svc.Annotations["networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports"] = `[{"port":3100,"protocol":"TCP"}]`
+			svc.Annotations["networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports"] = `[{"protocol":"TCP","port":3100}]`
 		}
 		svc.Annotations["networking.resources.gardener.cloud/pod-label-selector-namespace-alias"] = "all-shoots"
 		svc.Annotations["networking.resources.gardener.cloud/namespace-selectors"] = `[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]`
@@ -942,7 +821,7 @@ func getStatefulset(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 							},
 							Ports: []corev1.ContainerPort{
 								{
-									Name:          "metrics",
+									Name:          "curatormetrics",
 									ContainerPort: 2718,
 									Protocol:      corev1.ProtocolTCP,
 								},
