@@ -22,10 +22,7 @@ set -o pipefail
 echo "> Validating dashboards"
 
 
-cd "$(dirname "$0")/../test/validate-dashboard"
-
-# Prompt the user for the path to the Grafana dashboard JSON file
-read -p "Enter the path to the Grafana dashboard JSON file: " jsonFilePath
+cd "$(dirname "$0")/../tools/plutonodashboardcheck"
 
 
-go run . "$@" "$jsonFilePath"
+go run . "$@"

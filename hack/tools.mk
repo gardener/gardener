@@ -56,6 +56,7 @@ SETUP_ENVTEST              := $(TOOLS_BIN_DIR)/setup-envtest
 SKAFFOLD                   := $(TOOLS_BIN_DIR)/skaffold
 YAML2JSON                  := $(TOOLS_BIN_DIR)/yaml2json
 YQ                         := $(TOOLS_BIN_DIR)/yq
+CHECK_PLUTONO_DASHBOARDS   := $(TOOLS_BIN_DIR)/plutonodashboardcheck
 
 # default tool versions
 DOCFORGE_VERSION ?= v0.33.0
@@ -204,3 +205,6 @@ $(YAML2JSON): go.mod
 $(YQ): $(call tool_version_file,$(YQ),$(YQ_VERSION))
 	curl -L -o $(YQ) https://github.com/mikefarah/yq/releases/download/$(YQ_VERSION)/yq_$(shell uname -s | tr '[:upper:]' '[:lower:]')_$(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 	chmod +x $(YQ)
+
+$(CHECK_PLUTONO_DASHBOARDS): go.mod
+    go build -o $(CHECK_PLUTONO_DASHBOARDS) github.com/gardener/gardener/hack/tools/plutonodashboardcheck

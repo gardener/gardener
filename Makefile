@@ -79,9 +79,9 @@ ENVTEST_TYPE ?= kubernetes
 start-envtest: $(SETUP_ENVTEST)
 	@./hack/start-envtest.sh --environment-type=$(ENVTEST_TYPE)
 
-.PHONY: validate-dashboard
-validate-dashboard:
-	@./hack/validate-dashboard.sh 
+.PHONY: check-plutono-dashboards
+check-plutono-dashboards:
+	@./hack/validate-dashboard.sh
 
 .PHONY: remote-garden-up
 remote-garden-up: $(HELM)
@@ -191,7 +191,7 @@ check-generate:
 	@hack/check-generate.sh $(REPO_ROOT)
 
 .PHONY: check
-check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(LOGCHECK) $(GOMEGACHECK) $(YQ)
+check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(LOGCHECK) $(GOMEGACHECK) $(YQ) $(CHECK_PLUTONO_DASHBOARDS)
 	@hack/check.sh --golangci-lint-config=./.golangci.yaml ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
 	@hack/check-imports.sh ./charts/... ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/... ./third_party/...
 
@@ -209,7 +209,11 @@ check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(
 	@hack/check-license-header.sh
 	@hack/check-skaffold-deps.sh
 
+<<<<<<< HEAD
 tools-for-generate: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GOIMPORTS) $(GO_TO_PROTOBUF) $(HELM) $(MOCKGEN) $(OPENAPI_GEN) $(PROTOC) $(PROTOC_GEN_GOGO) $(YAML2JSON) $(YQ)
+=======
+tools-for-generate: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GOIMPORTS) $(GO_TO_PROTOBUF) $(HELM) $(MOCKGEN) $(OPENAPI_GEN) $(PROTOC_GEN_GOGO) $(YAML2JSON) $(YQ) $(CHECK_PLUTONO_DASHBOARDS)
+>>>>>>> 2a1fc7c67 (add license header and update to validate dashboards folder)
 
 .PHONY: generate
 generate: tools-for-generate
