@@ -902,11 +902,16 @@ func (r *Reconciler) runReconcileSeedFlow(
 			return err
 		}
 
+		var storage *resource.Quantity
+		if loggingConfig != nil && loggingConfig.Vali != nil && loggingConfig.Vali.Garden != nil {
+			storage = loggingConfig.Vali.Garden.Storage
+		}
+
 		vali, err := defaultVali(
 			ctx,
 			seedClient,
 			r.ImageVector,
-			loggingConfig.Vali.Garden.Storage,
+			storage,
 			r.GardenNamespace,
 			loggingEnabled && gardenlethelper.IsValiEnabled(&r.Config),
 			hvpaEnabled)
