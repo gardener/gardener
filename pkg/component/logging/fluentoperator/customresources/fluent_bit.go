@@ -31,9 +31,13 @@ import (
 
 // GetFluentBit returns instance of FluentBit custom resource.
 func GetFluentBit(labels map[string]string, fluentBitName, namespace, image, initImage, priorityClass string) *fluentbitv1alpha2.FluentBit {
+	annotations := map[string]string{
+		resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicySeedScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"port":2020,"protocol":"TCP"},{"port":2021,"protocol":"TCP"}]`,
+	}
+
 	return &fluentbitv1alpha2.FluentBit{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%v-%v", fluentBitName, utils.ComputeSHA256Hex([]byte(fmt.Sprintf("%v", labels)))[:6]),
+			Name:      fmt.Sprintf("%v-%v", fluentBitName, utils.ComputeSHA256Hex([]byte(fmt.Sprintf("%v%v", labels, annotations)))[:6]),
 			Namespace: namespace,
 			Labels:    labels,
 		},
@@ -156,11 +160,9 @@ func GetFluentBit(labels map[string]string, fluentBitName, namespace, image, ini
 				},
 			},
 			Service: fluentbitv1alpha2.FluentBitService{
-				Name: fluentBitName,
-				Annotations: map[string]string{
-					resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationPrefix + v1beta1constants.LabelNetworkPolicySeedScrapeTargets + resourcesv1alpha1.NetworkPolicyFromPolicyAnnotationSuffix: `[{"port":"2020","protocol":"TCP"},{"port":"2021","protocol":"TCP"}]`,
-				},
-				Labels: labels,
+				Name:        fluentBitName,
+				Annotations: annotations,
+				Labels:      labels,
 			},
 		},
 	}

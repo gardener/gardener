@@ -15,6 +15,8 @@
 package customresources_test
 
 import (
+	"fmt"
+
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -25,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	. "github.com/gardener/gardener/pkg/component/logging/fluentoperator/customresources"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 var _ = Describe("Logging", func() {
@@ -38,12 +41,15 @@ var _ = Describe("Logging", func() {
 		)
 
 		It("should return the expected FluentBit custom resource", func() {
-			fluentBitCustomResource := GetFluentBit(labels, name, namespace, image, image, priorityClass)
+			var (
+				fluentBitCustomResource = GetFluentBit(labels, name, namespace, image, image, priorityClass)
+				annotations             = map[string]string{"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": `[{"port":2020,"protocol":"TCP"},{"port":2021,"protocol":"TCP"}]`}
+			)
 
 			Expect(fluentBitCustomResource).To(Equal(
 				&fluentbitv1alpha2.FluentBit{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      name,
+						Name:      fmt.Sprintf("%v-%v", name, utils.ComputeSHA256Hex([]byte(fmt.Sprintf("%v%v", labels, annotations)))[:6]),
 						Namespace: namespace,
 						Labels:    labels,
 					},
@@ -166,11 +172,9 @@ var _ = Describe("Logging", func() {
 							},
 						},
 						Service: fluentbitv1alpha2.FluentBitService{
-							Name: name,
-							Annotations: map[string]string{
-								"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": `[{"port":"2020","protocol":"TCP"},{"port":"2021","protocol":"TCP"}]`,
-							},
-							Labels: labels,
+							Name:        name,
+							Annotations: annotations,
+							Labels:      labels,
 						},
 					},
 				}))
