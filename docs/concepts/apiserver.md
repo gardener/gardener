@@ -29,6 +29,8 @@ End-users can read and/or write `Secret`s in their project namespaces in the gar
 `InternalSecret`s are defined like plain Kubernetes `Secret`s, behave exactly like them, and can be used in the same manners. The only difference is, that the `InternalSecret` resource is a dedicated API resource (exposed by gardener-apiserver).
 This allows separating access to "normal" secrets and internal secrets by the usual RBAC means.
 
+Operators should configure `gardener-apiserver` to encrypt the `internalsecrets.core.gardener.cloud` resource in etcd.
+
 Please see [this](../../example/11-internal-secret.yaml) example manifest.
 
 ## `Seed`s
