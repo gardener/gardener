@@ -394,7 +394,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		deployMachineControllerManager = g.Add(flow.Task{
 			Name:         "Deploying machine-controller-manager",
-			Fn:           flow.TaskFn(botanist.DeployMachineControllerManager).SkipIf(o.Shoot.IsWorkerless).DoIf(features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment)),
+			Fn:           flow.TaskFn(botanist.DeployMachineControllerManager).SkipIf(o.Shoot.IsWorkerless).DoIf(features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment) && nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(syncPointCleanedKubernetesResources),
 		})
 		destroyWorker = g.Add(flow.Task{
