@@ -287,23 +287,6 @@ var _ = Describe("validator", func() {
 					},
 				},
 			}
-
-			shootStateBase = core.ShootState{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      shootBase.Name,
-					Namespace: shootBase.Namespace,
-				},
-				Spec: core.ShootStateSpec{
-					Gardener: []core.GardenerResourceData{
-						{
-							Labels: map[string]string{
-								"name":       "kube-apiserver-etcd-encryption-key",
-								"managed-by": "secrets-manager",
-							},
-						},
-					},
-				},
-			}
 		)
 
 		BeforeEach(func() {
@@ -726,23 +709,21 @@ var _ = Describe("validator", func() {
 
 		Context("seedName change", func() {
 			var (
-				oldShoot   core.Shoot
-				newSeed    core.Seed
-				shootState core.ShootState
+				oldShoot core.Shoot
+				newSeed  core.Seed
 			)
+
 			BeforeEach(func() {
 				oldShoot = *shootBase.DeepCopy()
 
 				seed = *seedBase.DeepCopy()
 				newSeed = *seedBase.DeepCopy()
 				newSeed.Name = "new-seed"
-				shootState = *shootStateBase.DeepCopy()
 
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&newSeed)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().ShootStates().Informer().GetStore().Add(&shootState)).To(Succeed())
 			})
 
 			It("should not allow changing the seedName on admission.Update if the subresource is not binding", func() {
@@ -1137,20 +1118,17 @@ var _ = Describe("validator", func() {
 		Context("tests for unknown provider", func() {
 			Context("scheduling checks for Create operation", func() {
 				var (
-					oldShoot   *core.Shoot
-					shootState core.ShootState
+					oldShoot *core.Shoot
 				)
 
 				BeforeEach(func() {
 					oldShoot = shoot.DeepCopy()
 					oldShoot.Spec.SeedName = nil
-					shootState = *shootStateBase.DeepCopy()
 
 					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().ShootStates().Informer().GetStore().Add(&shootState)).To(Succeed())
 				})
 
 				Context("taints and tolerations", func() {
@@ -3991,23 +3969,21 @@ var _ = Describe("validator", func() {
 
 		Context("binding subresource", func() {
 			var (
-				oldShoot   core.Shoot
-				newSeed    core.Seed
-				shootState core.ShootState
+				oldShoot core.Shoot
+				newSeed  core.Seed
 			)
+
 			BeforeEach(func() {
 				oldShoot = *shootBase.DeepCopy()
 				shoot = *shootBase.DeepCopy()
 				seed = *seedBase.DeepCopy()
 				newSeed = *seedBase.DeepCopy()
 				newSeed.Name = "new-seed"
-				shootState = *shootStateBase.DeepCopy()
 
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&newSeed)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().ShootStates().Informer().GetStore().Add(&shootState)).To(Succeed())
 			})
 
 			Context("when binding is updated", func() {
@@ -4030,13 +4006,6 @@ var _ = Describe("validator", func() {
 
 				It("should allow update of binding when shoot.spec.seedName is not nil", func() {
 					shoot.Spec.SeedName = pointer.String(newSeed.Name)
-
-					shootState.Spec.Gardener = append(shootState.Spec.Gardener, core.GardenerResourceData{
-						Labels: map[string]string{
-							"name":       "kube-apiserver-etcd-encryption-key",
-							"managed-by": "secrets-manager",
-						},
-					})
 
 					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
@@ -4125,16 +4094,6 @@ var _ = Describe("validator", func() {
 
 					Expect(err).To(BeForbiddenError())
 					Expect(err.Error()).To(ContainSubstring("cannot change seed because cloud provider for new seed (%s) is not equal to cloud provider for old seed (%s)", newSeed.Spec.Provider.Type, seed.Spec.Provider.Type))
-				})
-
-				It("should reject update of binding when etcd encryption key is missing", func() {
-					shootState.Spec.Gardener = nil
-
-					attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
-					err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-					Expect(err).To(BeForbiddenError())
-					Expect(err.Error()).To(ContainSubstring("cannot change seed because etcd encryption key not found in shoot state"))
 				})
 			})
 
