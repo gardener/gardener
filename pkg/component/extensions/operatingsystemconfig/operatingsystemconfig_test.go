@@ -322,6 +322,11 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 		Describe("#Deploy", func() {
 			It("should successfully deploy the shoot access secret for the cloud config downloader", func() {
+				defer test.WithVars(
+					&DownloaderConfigFn, downloaderConfigFn,
+					&OriginalConfigFn, originalConfigFn,
+				)()
+
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 				secret := &corev1.Secret{}

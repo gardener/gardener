@@ -22,8 +22,10 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Initializer", func() {
@@ -46,16 +48,19 @@ var _ = Describe("Initializer", func() {
 			ctx.Images = images
 		})
 
-		It("should return the expected units and files", func() {
-			units, files, err := component.Config(ctx)
+		DescribeTable("should return the expected units and files",
+			func(containerdRegistryHostsDirEnabled bool) {
+				defer test.WithFeatureGate(features.DefaultFeatureGate, features.ContainerdRegistryHostsDir, containerdRegistryHostsDirEnabled)()
 
-			Expect(err).NotTo(HaveOccurred())
-			Expect(units).To(ConsistOf(
-				extensionsv1alpha1.Unit{
-					Name:    "containerd-initializer.service",
-					Command: pointer.String("start"),
-					Enable:  pointer.Bool(true),
-					Content: pointer.String(`[Unit]
+				units, files, err := component.Config(ctx)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(units).To(ConsistOf(
+					extensionsv1alpha1.Unit{
+						Name:    "containerd-initializer.service",
+						Command: pointer.String("start"),
+						Enable:  pointer.Bool(true),
+						Content: pointer.String(`[Unit]
 Description=Containerd initializer
 [Install]
 WantedBy=multi-user.target
@@ -63,39 +68,76 @@ WantedBy=multi-user.target
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=/opt/bin/init-containerd`),
-				},
-			))
-			Expect(files).To(ConsistOf(
-				extensionsv1alpha1.File{
-					Path:        "/opt/bin/init-containerd",
-					Permissions: pointer.Int32(744),
-					Content: extensionsv1alpha1.FileContent{
-						Inline: &extensionsv1alpha1.FileContentInline{
-							Encoding: "b64",
-							Data:     utils.EncodeBase64([]byte(initScript)),
+					},
+				))
+				Expect(files).To(ConsistOf(
+					extensionsv1alpha1.File{
+						Path:        "/opt/bin/init-containerd",
+						Permissions: pointer.Int32(744),
+						Content: extensionsv1alpha1.FileContent{
+							Inline: &extensionsv1alpha1.FileContentInline{
+								Encoding: "b64",
+								Data:     utils.EncodeBase64([]byte(initScriptFor(containerdRegistryHostsDirEnabled))),
+							},
 						},
 					},
-				},
-				extensionsv1alpha1.File{
-					Path:        "/etc/systemd/system/containerd.service.d/10-require-containerd-initializer.conf",
-					Permissions: pointer.Int32(0644),
-					Content: extensionsv1alpha1.FileContent{
-						Inline: &extensionsv1alpha1.FileContentInline{
-							Data: `[Unit]
+					extensionsv1alpha1.File{
+						Path:        "/etc/systemd/system/containerd.service.d/10-require-containerd-initializer.conf",
+						Permissions: pointer.Int32(0644),
+						Content: extensionsv1alpha1.FileContent{
+							Inline: &extensionsv1alpha1.FileContentInline{
+								Data: `[Unit]
 After=containerd-initializer.service
 Requires=containerd-initializer.service`,
+							},
 						},
 					},
-				},
-			))
-		})
+				))
+			},
+
+			Entry("when ContainerdRegistryHostsDir feature gate is disabled", false),
+			Entry("when ContainerdRegistryHostsDir feature gate is enabled", true),
+		)
 	})
 })
 
 const (
 	pauseContainerImageRepo = "foo.io"
 	pauseContainerImageTag  = "v1.2.3"
-	initScript              = `#!/bin/bash
+)
+
+func initScriptFor(containerdRegistryHostsDirEnabled bool) string {
+	var registryHostsDirPart string
+	if containerdRegistryHostsDirEnabled {
+		registryHostsDirPart = `CONFIG_PATH=/etc/containerd/certs.d
+mkdir -p "$CONFIG_PATH"
+if ! grep --quiet --fixed-strings '[plugins."io.containerd.grpc.v1.cri".registry]' "$FILE"; then
+  echo "CRI registry section not found. Adding CRI registry section with config_path = \"$CONFIG_PATH\" in $FILE."
+  # TODO(ialidzhikov): Drop the "# gardener-managed" comment when removing the ContainerdRegistryHostsDir feature gate.
+  # Currently we need such comment to distinguish whether the config is added by this script or externally by the Shoot owner.
+  # When the feature gate is disabled, the config section is being removed only when it was added by this script.
+  cat <<EOF >> $FILE
+[plugins."io.containerd.grpc.v1.cri".registry] # gardener-managed
+  config_path = "/etc/containerd/certs.d"
+EOF
+else
+  if grep --quiet --fixed-strings '[plugins."io.containerd.grpc.v1.cri".registry] # gardener-managed' "$FILE"; then
+    echo "CRI registry section is already gardener managed. Nothing to do."
+  else
+    echo "CRI registry section is not gardener managed. Setting config_path = \"$CONFIG_PATH\" in $FILE."
+    sed --null-data --in-place 's/\(\[plugins\."io\.containerd\.grpc\.v1\.cri"\.registry\]\)\n\(\s*config_path = \)""\n/\1 \# gardener-managed\n\2"\/etc\/containerd\/certs.d"\n/' "$FILE"
+  fi
+fi`
+	} else {
+		registryHostsDirPart = `if grep --quiet --fixed-strings '[plugins."io.containerd.grpc.v1.cri".registry] # gardener-managed' "$FILE"; then
+  echo "CRI registry section is gardener managed. Removing CRI registry section from $FILE."
+  sed --null-data --in-place 's/\[plugins\."io\.containerd\.grpc\.v1\.cri"\.registry\]\ #\ gardener-managed\n\s*config_path.*\n//' "$FILE"
+else
+  echo "A gardener managed CRI section is not found. Nothing to do."
+fi`
+	}
+
+	return `#!/bin/bash
 
 FILE=/etc/containerd/config.toml
 if [ ! -s "$FILE" ]; then
@@ -107,6 +149,10 @@ fi
 sandbox_image_line="$(grep sandbox_image $FILE | sed -e 's/^[ ]*//')"
 pause_image=` + pauseContainerImageRepo + `:` + pauseContainerImageTag + `
 sed -i  "s|$sandbox_image_line|sandbox_image = \"$pause_image\"|g" $FILE
+
+# create and configure registry hosts directory
+# or remove registry hosts directory configuration
+` + registryHostsDirPart + `
 
 # allow to import custom configuration files
 CUSTOM_CONFIG_DIR=/etc/containerd/conf.d
@@ -138,4 +184,4 @@ EOF
   systemctl daemon-reload
 fi
 `
-)
+}
