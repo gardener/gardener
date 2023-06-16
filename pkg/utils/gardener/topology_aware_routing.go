@@ -36,14 +36,14 @@ func ReconcileTopologyAwareRoutingMetadata(service *corev1.Service, topologyAwar
 	if topologyAwareRoutingEnabled {
 		if version.ConstraintK8sGreaterEqual127.Check(k8sVersion) {
 			metav1.SetMetaDataAnnotation(&service.ObjectMeta, AnnotationTopologyMode, "auto")
-			delete(service.Annotations, corev1.AnnotationTopologyAwareHints)
+			delete(service.Annotations, corev1.DeprecatedAnnotationTopologyAwareHints)
 		} else {
-			metav1.SetMetaDataAnnotation(&service.ObjectMeta, corev1.AnnotationTopologyAwareHints, "auto")
+			metav1.SetMetaDataAnnotation(&service.ObjectMeta, corev1.DeprecatedAnnotationTopologyAwareHints, "auto")
 		}
 		metav1.SetMetaDataLabel(&service.ObjectMeta, resourcesv1alpha1.EndpointSliceHintsConsider, "true")
 	} else {
 		delete(service.Annotations, AnnotationTopologyMode)
-		delete(service.Annotations, corev1.AnnotationTopologyAwareHints)
+		delete(service.Annotations, corev1.DeprecatedAnnotationTopologyAwareHints)
 		delete(service.Labels, resourcesv1alpha1.EndpointSliceHintsConsider)
 	}
 }
