@@ -409,10 +409,24 @@ func (a *actuator) Delete(
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
 ) error {
-	if cp.Spec.Purpose != nil && *cp.Spec.Purpose == extensionsv1alpha1.Exposure {
-		return a.deleteControlPlaneExposure(ctx, log, cp, cluster)
+	sm, err := a.newSecretsManagerForControlPlane(ctx, log, cp, cluster, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create secrets manager for ControlPlane: %w", err)
 	}
-	return a.deleteControlPlane(ctx, log, cp, cluster)
+
+	if err := a.delete(ctx, log, cp); err != nil {
+		return err
+	}
+
+	return sm.Cleanup(ctx)
+}
+
+func (a *actuator) delete(ctx context.Context, log logr.Logger, cp *extensionsv1alpha1.ControlPlane) error {
+	if cp.Spec.Purpose != nil && *cp.Spec.Purpose == extensionsv1alpha1.Exposure {
+		return a.deleteControlPlaneExposure(ctx, log, cp)
+	}
+
+	return a.deleteControlPlane(ctx, log, cp)
 }
 
 // deleteControlPlaneExposure reconciles the given controlplane and cluster, deleting the additional Seed
@@ -421,13 +435,7 @@ func (a *actuator) deleteControlPlaneExposure(
 	ctx context.Context,
 	log logr.Logger,
 	cp *extensionsv1alpha1.ControlPlane,
-	cluster *extensionscontroller.Cluster,
 ) error {
-	sm, err := a.newSecretsManagerForControlPlane(ctx, log, cp, cluster, nil)
-	if err != nil {
-		return fmt.Errorf("failed to create secrets manager for ControlPlane: %w", err)
-	}
-
 	// Delete control plane objects
 	if a.controlPlaneExposureChart != nil {
 		log.Info("Deleting control plane exposure with objects")
@@ -444,7 +452,7 @@ func (a *actuator) deleteControlPlaneExposure(
 		}
 	}
 
-	return sm.Cleanup(ctx)
+	return nil
 }
 
 // deleteControlPlane reconciles the given controlplane and cluster, deleting the additional Shoot
@@ -453,13 +461,7 @@ func (a *actuator) deleteControlPlane(
 	ctx context.Context,
 	log logr.Logger,
 	cp *extensionsv1alpha1.ControlPlane,
-	cluster *extensionscontroller.Cluster,
 ) error {
-	sm, err := a.newSecretsManagerForControlPlane(ctx, log, cp, cluster, nil)
-	if err != nil {
-		return fmt.Errorf("failed to create secrets manager for ControlPlane: %w", err)
-	}
-
 	// Delete the managed resources
 	if err := managedresources.Delete(ctx, a.client, cp.Namespace, StorageClassesChartResourceName, false); err != nil {
 		return fmt.Errorf("could not delete managed resource containing storage classes chart for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
@@ -533,7 +535,7 @@ func (a *actuator) deleteControlPlane(
 		}
 	}
 
-	return sm.Cleanup(ctx)
+	return nil
 }
 
 // computeChecksums computes and returns all needed checksums. This includes the checksums for the given deployed secrets,
@@ -603,7 +605,7 @@ func (a *actuator) Migrate(
 		return fmt.Errorf("could not keep objects of managed resource containing storage classes chart for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 	}
 
-	return a.Delete(ctx, log, cp, cluster)
+	return a.delete(ctx, log, cp)
 }
 
 func (a *actuator) newSecretsManagerForControlPlane(ctx context.Context, log logr.Logger, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster, secretConfigs []extensionssecretsmanager.SecretConfigWithOptions) (secretsmanager.Interface, error) {

@@ -13,7 +13,7 @@ The following principles should always be upheld:
 
 Two new operations have been introduced in Gardener. They can be specified as values of the `gardener.cloud/operation` annotation on an extension resource to indicate that an operation different from a normal `reconcile` should be performed by the corresponding extension controller:
 
-* The `migrate` operation is used to ask the extension controller in the source seed to stop reconciling extension resources (in case they are requeued due to errors) and perform cleanup activities, if such are required. These cleanup activities might involve removing finalizers on resources in the shoot namespace that have been previously created by the extension controller and deleting them without actually deleting any resources external to the seed cluster.
+* The `migrate` operation is used to ask the extension controller in the source seed to stop reconciling extension resources (in case they are requeued due to errors) and perform cleanup activities, if such are required. These cleanup activities might involve removing finalizers on resources in the shoot namespace that have been previously created by the extension controller and deleting them without actually deleting any resources external to the seed cluster. This is also the last opportunity for extensions to persist their state into the `.status.state` field of the reconciled extension resource before its restored in the new destination seed cluster.
 * The `restore` operation is used to ask the extension controller in the destination seed to restore any state saved in the extension resource `status`, before performing the actual reconciliation.
 
 Unlike the [reconcile operation](https://github.com/gardener/gardener/blob/master/docs/extensions/reconcile-trigger.md), extension controllers must remove the `gardener.cloud/operation` annotation at the end of a successful reconciliation when the current operation is `migrate` or `restore`, not at the beginning of a reconciliation.
@@ -21,6 +21,8 @@ Unlike the [reconcile operation](https://github.com/gardener/gardener/blob/maste
 ## Cleaning-Up Source Seed Resources
 
 All resources in the source seed that have been created by an extension controller, for example secrets, config maps, [managed resources](managedresources.md), etc., should be properly cleaned up by the extension controller when the current operation is `migrate`. As mentioned above, such resources should be deleted without actually deleting any resources external to the seed cluster.
+
+There is one exception to this: `Secret`s labeled with `persist=true` created via the [secrets manager](../development/secrets_management.md). They should be kept (i.e., the `Cleanup` function of secrets manager should not be called) and will be garbage collected automatically at the end of the `migrate` operation. This ensures that they can be properly persisted in the `ShootState` resource and get restored on the new destination seed cluster.
 
 For many custom resources, for example MCM resources, the above requirement means in practice that any finalizers should be removed before deleting the resource, in addition to ensuring that the resource deletion is not reconciled by its respective controller if there is no finalizer. For managed resources, the above requirement means in practice that the `spec.keepObjects` field should be set to `true` before deleting the extension resource.
 
