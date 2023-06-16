@@ -122,11 +122,11 @@ The following tables are a summary of the feature gates that you can set on diff
 | APIServerSNI                                 | `true`  | `Removed`    | `1.73` |        |
 | HAControlPlanes                              | `false` | `Alpha`      | `1.49` | `1.70` |
 | HAControlPlanes                              | `true`  | `Beta`       | `1.71` | `1.72` |
-| HAControlPlanes                              | `true`  | `GA`         | `1.73` | `1.74` |
+| HAControlPlanes                              | `true`  | `GA`         | `1.73` | `1.73` |
 | HAControlPlanes                              | `true`  | `Removed`    | `1.74` |        |
 | FullNetworkPoliciesInRuntimeCluster          | `false` | `Alpha`      | `1.66` | `1.70` |
 | FullNetworkPoliciesInRuntimeCluster          | `true`  | `Beta`       | `1.71` | `1.72` |
-| FullNetworkPoliciesInRuntimeCluster          | `true`  | `GA`         | `1.73` | `1.74` |
+| FullNetworkPoliciesInRuntimeCluster          | `true`  | `GA`         | `1.73` | `1.73` |
 | FullNetworkPoliciesInRuntimeCluster          | `true`  | `Removed`    | `1.74` |        |
 
 ## Using a Feature
