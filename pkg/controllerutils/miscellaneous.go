@@ -29,7 +29,7 @@ import (
 )
 
 // DefaultReconciliationTimeout is the default timeout for the context of reconciliation functions.
-const DefaultReconciliationTimeout = 1 * time.Minute
+const DefaultReconciliationTimeout = 3 * time.Minute
 
 const separator = ","
 
