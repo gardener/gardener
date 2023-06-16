@@ -124,35 +124,35 @@ In this case, the version is again upgraded in the **next** maintenance time.
 **Depending on the circumstances described above, it can happen that the cluster receives multiple consecutive minor Kubernetes version updates!**
 
 Kubernetes "minor version jumps" are not allowed - meaning to skip the update to the consecutive minor version and directly update to any version after that.
-For instance, the version `1.20.x` can only update to a version `1.21.x`, not to `1.22.x` or any other version.
+For instance, the version `1.24.x` can only update to a version `1.24.x`, not to `1.26.x` or any other version.
 This is because Kubernetes does not guarantee upgradability in this case, leading to possibly broken Shoot clusters.
 The administrator has to set up the `CloudProfile` in such a way that consecutive Kubernetes minor versions are available.
 Otherwise, Shoot clusters will fail to upgrade during the maintenance time.
 
-Consider the `CloudProfile` below with a Shoot using the Kubernetes version `1.20.12`.
-Even though the version is `expired`, due to missing `1.21.x` versions, the Gardener Controller Manager cannot upgrade the Shoot's Kubernetes version.
+Consider the `CloudProfile` below with a Shoot using the Kubernetes version `1.24.12`.
+Even though the version is `expired`, due to missing `1.25.x` versions, the Gardener Controller Manager cannot upgrade the Shoot's Kubernetes version.
 
 ```yaml
 spec:
   kubernetes:
     versions:
-    - version: 1.22.8
-    - version: 1.22.7
-    - version: 1.20.12
+    - version: 1.26.10
+    - version: 1.26.9
+    - version: 1.24.12
       expirationDate: "<expiration date in the past>"
 ```
 
-The `CloudProfile` must specify versions `1.21.x` of the **consecutive** minor version.
-Configuring the `CloudProfile` in such a way, the Shoot's Kubernetes version will be upgraded to version `1.21.10` in the next maintenance time.
+The `CloudProfile` must specify versions `1.25.x` of the **consecutive** minor version.
+Configuring the `CloudProfile` in such a way, the Shoot's Kubernetes version will be upgraded to version `1.25.10` in the next maintenance time.
 
 ```yaml
 spec:
   kubernetes:
     versions:
-    - version: 1.22.8
-    - version: 1.21.10
-    - version: 1.21.09
-    - version: 1.20.12
+    - version: 1.26.9
+    - version: 1.25.10
+    - version: 1.25.9
+    - version: 1.24.12
       expirationDate: "<expiration date in the past>"
 ```
 

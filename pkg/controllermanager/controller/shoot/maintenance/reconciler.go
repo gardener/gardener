@@ -378,7 +378,7 @@ func determineKubernetesVersion(kubernetesVersion string, profile *gardencorev1b
 		if err != nil {
 			return "", fmt.Errorf("failure while determining newer Kubernetes minor version in the CloudProfile: %s", err.Error())
 		}
-		// cannot update as there is no consecutive minor version available (e.g shoot is on 1.20.X, but there is only 1.22.X, available and not 1.21.X)
+		// cannot update as there is no consecutive minor version available (e.g shoot is on 1.24.X, but there is only 1.26.X, available and not 1.25.X)
 		if !newMinorAvailable {
 			return "", fmt.Errorf("cannot perform minor Kubernetes version update for expired Kubernetes version %q. No suitable version found in CloudProfile - this is most likely a misconfiguration of the CloudProfile", kubernetesVersion)
 		}

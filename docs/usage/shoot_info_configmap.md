@@ -17,7 +17,7 @@ metadata:
 data:
   domain: crazy-botany.core.my-custom-domain.com     # .spec.dns.domain field from the Shoot resource
   extensions: foobar,foobaz                          # List of extensions that are enabled
-  kubernetesVersion: 1.20.1                          # .spec.kubernetes.version field from the Shoot resource
+  kubernetesVersion: 1.25.4                          # .spec.kubernetes.version field from the Shoot resource
   maintenanceBegin: 220000+0100                      # .spec.maintenance.timeWindow.begin field from the Shoot resource
   maintenanceEnd: 230000+0100                        # .spec.maintenance.timeWindow.end field from the Shoot resource
   nodeNetwork: 10.250.0.0/16                         # .spec.networking.nodes field from the Shoot resource

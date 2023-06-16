@@ -145,7 +145,7 @@ spec:
   #   sshAccess:
   #     enabled: false
   kubernetes:
-    version: 1.20.1
+    version: 1.25.4
   # enableStaticTokenKubeconfig: true
   # allowPrivilegedContainers: true # 'true' means that all authenticated users can use the "gardener.privileged" PodSecurityPolicy, allowing full unrestricted access to Pod features.
   # kubeAPIServer:
