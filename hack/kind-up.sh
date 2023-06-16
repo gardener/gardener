@@ -118,6 +118,44 @@ setup_loopback_device() {
   echo "Setting up loopback device ${LOOPBACK_DEVICE} completed."
 }
 
+# setup_containerd_registry_mirrors sets up all containerd registry mirrors.
+# Resources:
+# - https://github.com/containerd/containerd/blob/main/docs/hosts.md
+# - https://kind.sigs.k8s.io/docs/user/local-registry/
+setup_containerd_registry_mirrors() {
+  REGISTRY_HOSTNAME="garden.local.gardener.cloud"
+
+  for NODE in $(kind get nodes --name="$CLUSTER_NAME"); do
+    if [[ "$ENVIRONMENT" == "skaffold" ]]; then
+      setup_containerd_registry_mirror $NODE "localhost:5001" "http://localhost:5001" "http://${REGISTRY_HOSTNAME}:5001"
+    fi
+
+    setup_containerd_registry_mirror $NODE "gcr.io" "https://gcr.io" "http://${REGISTRY_HOSTNAME}:5003"
+    setup_containerd_registry_mirror $NODE "eu.gcr.io" "https://eu.gcr.io" "http://${REGISTRY_HOSTNAME}:5004"
+    setup_containerd_registry_mirror $NODE "ghcr.io" "https://ghcr.io" "http://${REGISTRY_HOSTNAME}:5005"
+    setup_containerd_registry_mirror $NODE "registry.k8s.io" "https://registry.k8s.io" "http://${REGISTRY_HOSTNAME}:5006"
+    setup_containerd_registry_mirror $NODE "quay.io" "https://quay.io" "http://${REGISTRY_HOSTNAME}:5007"
+  done
+}
+
+# setup_containerd_registry_mirror sets up a given contained registry mirror.
+setup_containerd_registry_mirror() {
+  NODE=$1
+  UPSTREAM_HOST=$2
+  UPSTREAM_SERVER=$3
+  MIRROR_HOST=$4
+
+  echo "Setting up containerd registry mirror for host ${UPSTREAM_HOST}.";
+  REGISTRY_DIR="/etc/containerd/certs.d/${UPSTREAM_HOST}"
+  docker exec "${NODE}" mkdir -p "${REGISTRY_DIR}"
+  cat <<EOF | docker exec -i "${NODE}" cp /dev/stdin "${REGISTRY_DIR}/hosts.toml"
+server = "${UPSTREAM_SERVER}"
+
+[host."${MIRROR_HOST}"]
+  capabilities = ["pull", "resolve"]
+EOF
+}
+
 parse_flags "$@"
 
 mkdir -m 0755 -p \
@@ -236,6 +274,8 @@ if [[ "$DEPLOY_REGISTRY" == "true" ]]; then
 fi
 kubectl apply -k "$(dirname "$0")/../example/gardener-local/calico/$IPFAMILY" --server-side
 kubectl apply -k "$(dirname "$0")/../example/gardener-local/metrics-server"   --server-side
+
+setup_containerd_registry_mirrors
 
 kubectl get nodes -l node-role.kubernetes.io/control-plane -o name |\
   cut -d/ -f2 |\
