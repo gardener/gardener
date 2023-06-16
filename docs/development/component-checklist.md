@@ -9,7 +9,7 @@ This document provides a checklist for them that you can walk through.
 1. **Avoid usage of Helm charts** ([example](https://github.com/gardener/gardener/tree/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver))
 
    Nowadays, we use [Golang components](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/interfaces.go) instead of Helm charts for deploying components to a cluster.
-   Please find a typical structure of such components in the provided [metrics_server.go](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/metricsserver/metrics_server.go#L80-L97) file (configuration values are typically managed in a `Values` structure).
+   Please find a typical structure of such components in the provided [metrics_server.go](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L80-L97) file (configuration values are typically managed in a `Values` structure).
    There are a few exceptions (e.g., [Istio](https://github.com/gardener/gardener/tree/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/istio)) still using charts, however the default should be using a Golang-based implementation.
    For the exceptional cases, use Golang's [embed](https://pkg.go.dev/embed) package to embed the Helm chart directory ([example 1](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/istio/istiod.go#L59-L60), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/istio/istiod.go#L297-L313)). 
 
@@ -31,7 +31,7 @@ This document provides a checklist for them that you can walk through.
    There is a [prow job](https://github.com/gardener/ci-infra/blob/92782bedd92815639abf4dc14b2c484f77c6e57d/config/jobs/ci-infra/copy-images.yaml) copying images from Docker Hub that are needed in gardener components to the gardener GCR under the prefix `eu.gcr.io/gardener-project/3rd/` (see the [documentation](https://github.com/gardener/ci-infra/tree/master/config/images) or [gardener/ci-infra#619](https://github.com/gardener/ci-infra/issues/619)).
    If you want to use a new image from Docker Hub or upgrade an already used image to a newer tag, please open a PR to the ci-infra repository that modifies the job's list of images to copy: [`images.yaml`](https://github.com/gardener/ci-infra/blob/master/config/images/images.yaml).
 
-5. **Use unique `ConfigMap`s/`Secret`s** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/kubescheduler/kube_scheduler.go#L181-L188), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/kubescheduler/kube_scheduler.go#L347))
+5. **Use unique `ConfigMap`s/`Secret`s** ([example 1](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubescheduler/kube_scheduler.go#L183-L190), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubescheduler/kube_scheduler.go#L353))
 
    [Unique `ConfigMap`s/`Secret`s](https://kubernetes.io/docs/concepts/configuration/configmap/#configmap-immutable) are immutable for modification and have a unique name.
    This has a couple of benefits, e.g. the `kubelet` doesn't watch these resources, and it is always clear which resource contains which data since it cannot be changed.
@@ -43,7 +43,7 @@ This document provides a checklist for them that you can walk through.
    The reason is that the old revision stays in the cluster even if unused until the garbage-collector acts.
    During this time, they would be wrongly aggregated to the full configuration.
 
-6. **Manage certificates/secrets via [secrets manager](https://github.com/gardener/gardener/tree/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/utils/secrets/manager)** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/metricsserver/metrics_server.go#L100-L109))
+6. **Manage certificates/secrets via [secrets manager](https://github.com/gardener/gardener/tree/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/utils/secrets/manager)** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L100-L109))
 
    You should use the [secrets manager](secrets_management.md) for the management of any kind of credentials.
    This makes sure that credentials rotation works out-of-the-box without you requiring to think about it.
@@ -66,16 +66,16 @@ This document provides a checklist for them that you can walk through.
 
 ## Security
 
-1. **Use a [dedicated `ServiceAccount`](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) and disable auto-mount** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/metricsserver/metrics_server.go#L145-L151))
+1. **Use a [dedicated `ServiceAccount`](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) and disable auto-mount** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L145-L151))
 
    Components that need to talk to the API server of their runtime cluster must always use a dedicated `ServiceAccount` (do not use `default`), with `automountServiceAccountToken` set to `false`.
    This makes `gardener-resource-manager`'s [TokenInvalidator](../concepts/resource-manager.md#tokeninvalidator) invalidate the static token secret and its [`ProjectedTokenMount` webhook](../concepts/resource-manager.md#auto-mounting-projected-serviceaccount-tokens) inject a projected token automatically.
 
-2. **Use shoot access tokens instead of a client certificates** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/kubescheduler/kube_scheduler.go#L227-L229))
+2. **Use shoot access tokens instead of a client certificates** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubescheduler/kube_scheduler.go#L234-L236))
 
    For components that need to talk to a target cluster different from their runtime cluster (e.g., running in seed cluster but talking to shoot) the `gardener-resource-manager`'s [TokenRequestor](../concepts/resource-manager.md#tokenrequestor) should be used to manage a so-called "shoot access token".
 
-3. **Define RBAC roles with minimal privileges** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/metricsserver/metrics_server.go#L153-L223))
+3. **Define RBAC roles with minimal privileges** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L153-L223))
 
    The component's `ServiceAccount` (if it exists) should have as little privileges as possible.
    Consequently, please define proper [RBAC roles](https://kubernetes.io/docs/reference/access-authn-authz/rbac/) for it.
@@ -104,21 +104,21 @@ This document provides a checklist for them that you can walk through.
 
 ## High Availability / Stability
 
-1. **Specify the component type label for high availability** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/kubescheduler/kube_scheduler.go#L234))
+1. **Specify the component type label for high availability** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubescheduler/kube_scheduler.go#L241))
 
    To support high-availability deployments, `gardener-resource-manager`s [HighAvailabilityConfig](../concepts/resource-manager.md#high-availability-config) webhook injects the proper specification like replica or topology spread constraints.
    You only need to specify the type label. For more information, see [High Availability Of Deployed Components](high-availability.md).
 
-2. **Define a `PodDisruptionBudget`** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/metricsserver/metrics_server.go#L398-L422))
+2. **Define a `PodDisruptionBudget`** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L384-L408))
 
    Closely related to high availability but also to stability in general: The definition of a [`PodDisruptionBudget`](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) with `maxUnavailable=1` should be provided by default.
 
-3. **Choose the right `PriorityClass`** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/kubescheduler/kube_scheduler.go#L301))
+3. **Choose the right `PriorityClass`** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubescheduler/kube_scheduler.go#L307))
 
    Each cluster runs many components with different priorities.
    Gardener provides a set of default [`PriorityClass`es](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/#priorityclass). For more information, see [Priority Classes](priority-classes.md).
 
-4. **Consider defining liveness and readiness probes** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/metricsserver/metrics_server.go#L335-L358))
+4. **Consider defining liveness and readiness probes** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L321-L344))
 
    To ensure smooth rolling update behaviour, consider the definition of [liveness and/or readiness probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/).
 
@@ -134,12 +134,12 @@ This document provides a checklist for them that you can walk through.
 
 ## Scalability
 
-1. **Provide resource requirements** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/metricsserver/metrics_server.go#L359-L367))
+1. **Provide resource requirements** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L345-L353))
 
    All components should have [resource requirements](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits).
    Generally, they should always request CPU and memory, while only memory shall be limited (no CPU limits!).
 
-2. **Define a `VerticalPodAutoscaler`** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/metricsserver/metrics_server.go#L424-L460))
+2. **Define a `VerticalPodAutoscaler`** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L416-L444))
 
    We typically perform vertical auto-scaling via the VPA managed by the [Kubernetes community](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler).
    Each component should have a respective `VerticalPodAutoscaler` with "min allowed" resources, "auto update mode", and "requests only"-mode.
@@ -163,7 +163,7 @@ This document provides a checklist for them that you can walk through.
    This should be done inside a dedicated `logging.go` file.
    Extensions should follow the guidelines described in [Fluent-bit log parsers and filters](../extensions/logging-and-monitoring.md#fluent-bit-log-parsers-and-filters).
 
-3. **Set the `revisionHistoryLimit` to `2` for `Deployment`s** ([example](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/metricsserver/metrics_server.go#L273))
+3. **Set the `revisionHistoryLimit` to `2` for `Deployment`s** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L272))
 
    In order to allow easy inspection of two `ReplicaSet`s to quickly find the changes that lead to a rolling update, the [revision history limit](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#revision-history-limit) should be set to `2`.
 
@@ -172,7 +172,7 @@ This document provides a checklist for them that you can walk through.
    `gardenlet`'s [care controllers](../concepts/gardenlet.md#controllers) regularly check the health status of system or control plane components.
    You need to enhance the lists of components to check if your component related to the seed system or shoot control plane (shoot system components are automatically checked via their respective [`ManagedResource` conditions](../concepts/resource-manager.md#managedresource-controller)), see examples above.
 
-5. **Configure automatic restarts in shoot maintenance time window** ([example 1](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/component/kubescheduler/kube_scheduler.go#L243), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/coredns.go#L90-L107))
+5. **Configure automatic restarts in shoot maintenance time window** ([example 1](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubescheduler/kube_scheduler.go#L250), [example 2](https://github.com/gardener/gardener/blob/6a0fea86850ffec8937d1956bdf1a8ca6d074f3b/pkg/operation/botanist/coredns.go#L90-L107))
 
    Gardener offers to restart components during the maintenance time window. For more information, see [Restart Control Plane Controllers](../usage/shoot_maintenance.md#restart-control-plane-controllers) and [Restart Some Core Addons](../usage/shoot_maintenance.md#restart-some-core-addons).
    You can consider adding the needed label to your control plane component to get this automatic restart (probably not needed for most components).
