@@ -2658,17 +2658,6 @@ var _ = Describe("helper", func() {
 		})
 	})
 
-	DescribeTable("#SeedWantsManagedIngress",
-		func(seed *gardencorev1beta1.Seed, expected gomegatypes.GomegaMatcher) {
-			Expect(SeedWantsManagedIngress(seed)).To(expected)
-		},
-
-		Entry("dns provider nil", &gardencorev1beta1.Seed{}, BeFalse()),
-		Entry("ingress nil", &gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{DNS: gardencorev1beta1.SeedDNS{Provider: &gardencorev1beta1.SeedDNSProvider{}}}}, BeFalse()),
-		Entry("ingress controller kind not nginx", &gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{DNS: gardencorev1beta1.SeedDNS{Provider: &gardencorev1beta1.SeedDNSProvider{}}, Ingress: &gardencorev1beta1.Ingress{Controller: gardencorev1beta1.IngressController{Kind: "foo"}}}}, BeFalse()),
-		Entry("ingress controller kind nginx", &gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{DNS: gardencorev1beta1.SeedDNS{Provider: &gardencorev1beta1.SeedDNSProvider{}}, Ingress: &gardencorev1beta1.Ingress{Controller: gardencorev1beta1.IngressController{Kind: "nginx"}}}}, BeTrue()),
-	)
-
 	DescribeTable("#IsTopologyAwareRoutingForShootControlPlaneEnabled",
 		func(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, matcher gomegatypes.GomegaMatcher) {
 			Expect(IsTopologyAwareRoutingForShootControlPlaneEnabled(seed, shoot)).To(matcher)

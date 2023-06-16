@@ -120,15 +120,10 @@ func ComputeNginxIngressClassForSeed(seed *gardencorev1beta1.Seed, kubernetesVer
 		return "", err
 	}
 
-	if managed := helper.SeedWantsManagedIngress(seed); managed {
-		if greaterEqual122 {
-			return v1beta1constants.SeedNginxIngressClass122, nil
-		} else {
-			return v1beta1constants.SeedNginxIngressClass, nil
-		}
+	if greaterEqual122 {
+		return v1beta1constants.SeedNginxIngressClass122, nil
 	}
-
-	return v1beta1constants.NginxIngressClass, nil
+	return v1beta1constants.SeedNginxIngressClass, nil
 }
 
 // GetWildcardCertificate gets the wildcard certificate for the seed's ingress domain.

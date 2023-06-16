@@ -885,12 +885,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying managed ingress DNS record",
-			Fn:           flow.TaskFn(func(ctx context.Context) error { return deployDNSResources(ctx, dnsRecord) }).DoIf(v1beta1helper.SeedWantsManagedIngress(seed.GetInfo())),
-			Dependencies: flow.NewTaskIDs(nginxLBReady),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Destroying managed ingress DNS record (if existing)",
-			Fn:           flow.TaskFn(func(ctx context.Context) error { return destroyDNSResources(ctx, dnsRecord) }).DoIf(!v1beta1helper.SeedWantsManagedIngress(seed.GetInfo())),
+			Fn:           flow.TaskFn(func(ctx context.Context) error { return deployDNSResources(ctx, dnsRecord) }),
 			Dependencies: flow.NewTaskIDs(nginxLBReady),
 		})
 		_ = g.Add(flow.Task{
