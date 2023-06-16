@@ -265,58 +265,6 @@ var _ = Describe("Config", func() {
 		},
 
 		Entry(
-			"kubernetes 1.20 w/o defaults",
-			"1.20.1",
-			clusterDNSAddress,
-			clusterDomain,
-			components.ConfigurableKubeletConfigParameters{},
-			kubeletConfigWithDefaults,
-			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
-				cfg.RotateCertificates = true
-				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-				cfg.MemorySwap = kubeletconfigv1beta1.MemorySwapConfiguration{}
-			},
-		),
-		Entry(
-			"kubernetes 1.20 w/ defaults",
-			"1.20.1",
-			clusterDNSAddress,
-			clusterDomain,
-			params,
-			kubeletConfigWithParams,
-			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
-				cfg.RotateCertificates = true
-				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-			},
-		),
-
-		Entry(
-			"kubernetes 1.21 w/o defaults",
-			"1.21.1",
-			clusterDNSAddress,
-			clusterDomain,
-			components.ConfigurableKubeletConfigParameters{},
-			kubeletConfigWithDefaults,
-			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
-				cfg.RotateCertificates = true
-				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-				cfg.MemorySwap = kubeletconfigv1beta1.MemorySwapConfiguration{}
-			},
-		),
-		Entry(
-			"kubernetes 1.21 w/ defaults",
-			"1.21.1",
-			clusterDNSAddress,
-			clusterDomain,
-			params,
-			kubeletConfigWithParams,
-			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
-				cfg.RotateCertificates = true
-				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-			},
-		),
-
-		Entry(
 			"kubernetes 1.22 w/o defaults",
 			"1.22.1",
 			clusterDNSAddress,
@@ -433,6 +381,33 @@ var _ = Describe("Config", func() {
 		Entry(
 			"kubernetes 1.26 w/ defaults",
 			"1.26.1",
+			clusterDNSAddress,
+			clusterDomain,
+			params,
+			kubeletConfigWithParams,
+			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
+				cfg.RotateCertificates = true
+				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
+			},
+		),
+
+		Entry(
+			"kubernetes 1.27 w/o defaults",
+			"1.27.1",
+			clusterDNSAddress,
+			clusterDomain,
+			components.ConfigurableKubeletConfigParameters{},
+			kubeletConfigWithDefaults,
+			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
+				cfg.RotateCertificates = true
+				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
+				cfg.ProtectKernelDefaults = true
+				cfg.StreamingConnectionIdleTimeout = metav1.Duration{Duration: time.Minute * 5}
+			},
+		),
+		Entry(
+			"kubernetes 1.27 w/ defaults",
+			"1.27.1",
 			clusterDNSAddress,
 			clusterDomain,
 			params,

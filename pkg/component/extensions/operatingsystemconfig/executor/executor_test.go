@@ -67,12 +67,6 @@ var _ = Describe("Executor", func() {
 				Expect(string(script)).To(Equal(testScript))
 			},
 
-			Entry("k8s 1.20, w/o kubelet data volume", "1.20.6", copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119, nil, nil),
-			Entry("k8s 1.20, w/ kubelet data volume", "1.20.6", copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119, defaultKubeletDataVolume, defaultKubeletDataVolumeSize),
-
-			Entry("k8s 1.21, w/o kubelet data volume", "1.21.7", copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119, nil, nil),
-			Entry("k8s 1.21, w/ kubelet data volume", "1.21.7", copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119, defaultKubeletDataVolume, defaultKubeletDataVolumeSize),
-
 			Entry("k8s 1.22, w/o kubelet data volume", "1.22.8", copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119, nil, nil),
 			Entry("k8s 1.22, w/ kubelet data volume", "1.22.8", copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119, defaultKubeletDataVolume, defaultKubeletDataVolumeSize),
 		)
