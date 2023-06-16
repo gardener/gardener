@@ -43,7 +43,6 @@ const (
 	OperatorManagedResourceName = "fluent-operator"
 	name                        = "fluent-operator"
 	roleName                    = "gardener.cloud:logging:fluent-operator"
-	vpaName                     = "fluent-operator-vpa"
 )
 
 var (
