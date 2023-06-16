@@ -207,7 +207,6 @@ var _ = Describe("ControllerInstallation controller tests", func() {
       DryRun: true
       EfficientWatchResumption: true
       FullNetworkPoliciesInRuntimeCluster: true
-      HAControlPlanes: true
       HVPA: false
       HVPAForShootedSeed: false
       IPv6SingleStack: false

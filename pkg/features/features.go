@@ -37,13 +37,6 @@ const (
 	// alpha: v0.32.0
 	HVPAForShootedSeed featuregate.Feature = "HVPAForShootedSeed"
 
-	// HAControlPlanes allows shoot control planes to be run in high availability mode.
-	// owner: @shreyas-s-rao @timuthy
-	// alpha: v1.49.0
-	// beta: v1.71.0
-	// GA: v1.73.0
-	HAControlPlanes featuregate.Feature = "HAControlPlanes"
-
 	// DefaultSeccompProfile defaults the seccomp profile for Gardener managed workload in the seed to RuntimeDefault.
 	// owner: @dimityrmirchev
 	// alpha: v1.54.0
@@ -97,7 +90,7 @@ const (
 // On startup, the component needs to register all feature gates that are available for this component via `Add`, e.g.:
 //
 //	 utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(
-//			features.HAControlPlanes,
+//			features.MyFeatureGateName,
 //		)))
 //
 // With this, every component has its individual set of available feature gates (different to Kubernetes, where all
@@ -119,7 +112,6 @@ var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HVPA:                                {Default: false, PreRelease: featuregate.Alpha},
 	HVPAForShootedSeed:                  {Default: false, PreRelease: featuregate.Alpha},
-	HAControlPlanes:                     {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	DefaultSeccompProfile:               {Default: false, PreRelease: featuregate.Alpha},
 	CoreDNSQueryRewriting:               {Default: false, PreRelease: featuregate.Alpha},
 	IPv6SingleStack:                     {Default: false, PreRelease: featuregate.Alpha},
