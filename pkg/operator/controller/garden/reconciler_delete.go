@@ -22,10 +22,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
-	networkingv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -36,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -187,21 +183,6 @@ func (r *Reconciler) delete(
 		ProgressReporter: r.reportProgress(log, garden),
 	}); err != nil {
 		return reconcilerutils.ReconcileErr(flow.Errors(err))
-	}
-
-	// TODO(rfranzke): Remove this block in a future version (after v1.72 is released).
-	{
-		objects := []client.Object{
-			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "etcd-to-world", Namespace: r.GardenNamespace}},
-			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-allow-all", Namespace: r.GardenNamespace}},
-			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "istio-allow-all", Namespace: c.istio.GetValues().Istiod.Namespace}},
-		}
-		for _, istioIngress := range c.istio.GetValues().IngressGateway {
-			objects = append(objects, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "istio-allow-all", Namespace: istioIngress.Namespace}})
-		}
-		if err := kubernetesutils.DeleteObjects(ctx, r.RuntimeClientSet.Client(), objects...); err != nil {
-			return reconcile.Result{}, err
-		}
 	}
 
 	if controllerutil.ContainsFinalizer(garden, finalizerName) {
