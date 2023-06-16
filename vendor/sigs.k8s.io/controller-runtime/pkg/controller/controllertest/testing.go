@@ -17,6 +17,7 @@ limitations under the License.
 package controllertest
 
 import (
+	"sync"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,28 +36,33 @@ func (ErrorType) GetObjectKind() schema.ObjectKind { return nil }
 // DeepCopyObject implements runtime.Object.
 func (ErrorType) DeepCopyObject() runtime.Object { return nil }
 
-var _ workqueue.RateLimitingInterface = Queue{}
+var _ workqueue.RateLimitingInterface = &Queue{}
 
 // Queue implements a RateLimiting queue as a non-ratelimited queue for testing.
 // This helps testing by having functions that use a RateLimiting queue synchronously add items to the queue.
 type Queue struct {
 	workqueue.Interface
+	AddedRateLimitedLock sync.Mutex
+	AddedRatelimited     []any
 }
 
 // AddAfter implements RateLimitingInterface.
-func (q Queue) AddAfter(item interface{}, duration time.Duration) {
+func (q *Queue) AddAfter(item interface{}, duration time.Duration) {
 	q.Add(item)
 }
 
 // AddRateLimited implements RateLimitingInterface.  TODO(community): Implement this.
-func (q Queue) AddRateLimited(item interface{}) {
+func (q *Queue) AddRateLimited(item interface{}) {
+	q.AddedRateLimitedLock.Lock()
+	q.AddedRatelimited = append(q.AddedRatelimited, item)
+	q.AddedRateLimitedLock.Unlock()
 	q.Add(item)
 }
 
 // Forget implements RateLimitingInterface.  TODO(community): Implement this.
-func (q Queue) Forget(item interface{}) {}
+func (q *Queue) Forget(item interface{}) {}
 
 // NumRequeues implements RateLimitingInterface.  TODO(community): Implement this.
-func (q Queue) NumRequeues(item interface{}) int {
+func (q *Queue) NumRequeues(item interface{}) int {
 	return 0
 }

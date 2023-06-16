@@ -110,9 +110,7 @@ var _ = Describe("Worker Reconcile", func() {
 	)
 
 	DescribeTable("Reconcile function", func(t *test) {
-		mgr.EXPECT().GetClient().Return(t.fields.client).AnyTimes()
-		mgr.EXPECT().GetAPIReader().Return(t.fields.client).AnyTimes()
-		reconciler := worker.NewReconciler(mgr, t.fields.actuator(ctrl))
+		reconciler := worker.NewReconciler(t.fields.actuator(ctrl))
 
 		got, err := reconciler.Reconcile(ctx, t.args.request)
 		Expect(err != nil).To(Equal(t.wantErr))
