@@ -58,14 +58,6 @@ const (
 	// alpha: v1.64.0
 	MutableShootSpecNetworkingNodes featuregate.Feature = "MutableShootSpecNetworkingNodes"
 
-	// FullNetworkPoliciesInRuntimeCluster enables gardenlet's NetworkPolicy controller to place 'deny-all' network policies in
-	// all relevant namespaces in the seed cluster.
-	// owner: @rfranzke
-	// alpha: v1.66.0
-	// beta: v1.71.0
-	// GA: v1.73.0
-	FullNetworkPoliciesInRuntimeCluster featuregate.Feature = "FullNetworkPoliciesInRuntimeCluster"
-
 	// WorkerlessShoots allows creation of Shoot clusters with no worker pools.
 	// owner: @acumino @ary1992 @shafeeqes
 	// alpha: v1.70.0
@@ -110,16 +102,15 @@ const (
 var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 
 var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	HVPA:                                {Default: false, PreRelease: featuregate.Alpha},
-	HVPAForShootedSeed:                  {Default: false, PreRelease: featuregate.Alpha},
-	DefaultSeccompProfile:               {Default: false, PreRelease: featuregate.Alpha},
-	CoreDNSQueryRewriting:               {Default: false, PreRelease: featuregate.Alpha},
-	IPv6SingleStack:                     {Default: false, PreRelease: featuregate.Alpha},
-	MutableShootSpecNetworkingNodes:     {Default: false, PreRelease: featuregate.Alpha},
-	FullNetworkPoliciesInRuntimeCluster: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	WorkerlessShoots:                    {Default: false, PreRelease: featuregate.Alpha},
-	MachineControllerManagerDeployment:  {Default: false, PreRelease: featuregate.Alpha},
-	DisableScalingClassesForShoots:      {Default: false, PreRelease: featuregate.Alpha},
+	HVPA:                               {Default: false, PreRelease: featuregate.Alpha},
+	HVPAForShootedSeed:                 {Default: false, PreRelease: featuregate.Alpha},
+	DefaultSeccompProfile:              {Default: false, PreRelease: featuregate.Alpha},
+	CoreDNSQueryRewriting:              {Default: false, PreRelease: featuregate.Alpha},
+	IPv6SingleStack:                    {Default: false, PreRelease: featuregate.Alpha},
+	MutableShootSpecNetworkingNodes:    {Default: false, PreRelease: featuregate.Alpha},
+	WorkerlessShoots:                   {Default: false, PreRelease: featuregate.Alpha},
+	MachineControllerManagerDeployment: {Default: false, PreRelease: featuregate.Alpha},
+	DisableScalingClassesForShoots:     {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

@@ -26,9 +26,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | CoreDNSQueryRewriting               | `false` | `Alpha` | `1.55` |        |
 | IPv6SingleStack                     | `false` | `Alpha` | `1.63` |        |
 | MutableShootSpecNetworkingNodes     | `false` | `Alpha` | `1.64` |        |
-| FullNetworkPoliciesInRuntimeCluster | `false` | `Alpha` | `1.66` | `1.70` |
-| FullNetworkPoliciesInRuntimeCluster | `true`  | `Beta`  | `1.71` | `1.72` |
-| FullNetworkPoliciesInRuntimeCluster | `true`  | `GA`    | `1.73` |        |
 | WorkerlessShoots                    | `false` | `Alpha` | `1.70` |        |
 | MachineControllerManagerDeployment  | `false` | `Alpha` | `1.73` |        |
 | DisableScalingClassesForShoots      | `false` | `Alpha` | `1.73` |        |
@@ -127,6 +124,10 @@ The following tables are a summary of the feature gates that you can set on diff
 | HAControlPlanes                              | `true`  | `Beta`       | `1.71` | `1.72` |
 | HAControlPlanes                              | `true`  | `GA`         | `1.73` | `1.74` |
 | HAControlPlanes                              | `true`  | `Removed`    | `1.74` |        |
+| FullNetworkPoliciesInRuntimeCluster          | `false` | `Alpha`      | `1.66` | `1.70` |
+| FullNetworkPoliciesInRuntimeCluster          | `true`  | `Beta`       | `1.71` | `1.72` |
+| FullNetworkPoliciesInRuntimeCluster          | `true`  | `GA`         | `1.73` | `1.74` |
+| FullNetworkPoliciesInRuntimeCluster          | `true`  | `Removed`    | `1.74` |        |
 
 ## Using a Feature
 
@@ -173,7 +174,6 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | CoreDNSQueryRewriting                      | `gardenlet`                       | Enables automatic DNS query rewriting in shoot cluster's CoreDNS to shortcut name resolution of fully qualified in-cluster and out-of-cluster names, which follow a user-defined pattern. Details can be found in [DNS Search Path Optimization](../usage/dns-search-path-optimization.md).                                                                                        |
 | IPv6SingleStack                            | `gardener-apiserver`, `gardenlet` | Allows creating seed and shoot clusters with [IPv6 single-stack networking](../usage/ipv6.md) enabled in their spec ([GEP-21](../proposals/21-ipv6-singlestack-local.md)). If enabled in gardenlet, the default behavior is unchanged, but setting `ipFamilies=[IPv6]` in the `seedConfig` is allowed. Only if the `ipFamilies` setting is changed, gardenlet behaves differently. |
 | MutableShootSpecNetworkingNodes            | `gardener-apiserver`              | Allows updating the field `spec.networking.nodes`. The validity of the values has to be checked in the provider extensions. Only enable this feature gate when your system runs provider extensions which have implemented the validation.                                                                                                                                         |
-| FullNetworkPoliciesInRuntimeCluster        | `gardenlet`, `gardener-operator`  | Enables the `NetworkPolicy` controller to place 'deny-all' network policies in all relevant namespaces in the runtime cluster.                                                                                                                                                                                                                                                     |
 | WorkerlessShoots                           | `gardener-apiserver`              | WorkerlessShoots allows creation of Shoot clusters with no worker pools.                                                                                                                                                                                                                                                                                                           |
 | MachineControllerManagerDeployment         | `gardenlet`                       | Enables Gardener to take over the deployment of the machine-controller-manager. If enabled, all registered provider extensions must support injecting the provider-specific MCM sidecar container into the deployment via the `controlplane` webhook.                                                                                                                              |
 | DisableScalingClassesForShoots             | `gardenlet`                       | Disables assigning a ScalingClass to Shoots based on their maximum Node count. All Shoot kube-apiservers will get the same initial resource requests for CPU and memory instead of making this depend on the ScalingClass.                                                                                                                                                         |

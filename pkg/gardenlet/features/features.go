@@ -28,7 +28,6 @@ func RegisterFeatureGates() {
 		features.DefaultSeccompProfile,
 		features.CoreDNSQueryRewriting,
 		features.IPv6SingleStack,
-		features.FullNetworkPoliciesInRuntimeCluster,
 		features.MachineControllerManagerDeployment,
 		features.DisableScalingClassesForShoots,
 	)))

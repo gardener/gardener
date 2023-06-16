@@ -20,7 +20,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -206,7 +205,6 @@ var _ = Describe("ControllerInstallation controller tests", func() {
       DisableScalingClassesForShoots: false
       DryRun: true
       EfficientWatchResumption: true
-      FullNetworkPoliciesInRuntimeCluster: true
       HVPA: false
       HVPAForShootedSeed: false
       IPv6SingleStack: false
@@ -348,31 +346,6 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
 				return controllerInstallation.Status.Conditions
 			}).Should(ContainCondition(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionTrue)))
-		})
-
-		It("should delete the 'gardenlet-allow-all-traffic' network policy", func() {
-			By("Ensure namespace was created")
-			namespace := &corev1.Namespace{}
-			Eventually(func() error {
-				return testClient.Get(ctx, client.ObjectKey{Name: "extension-" + controllerInstallation.Name}, namespace)
-			}).Should(Succeed())
-
-			By("Create 'gardenlet-allow-all-traffic' policy")
-			networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardenlet-allow-all-traffic",
-				Namespace: namespace.Name,
-			}}
-			Expect(testClient.Create(ctx, networkPolicy)).To(Or(Succeed(), BeAlreadyExistsError()))
-
-			By("Trigger reconciliation")
-			patch := client.MergeFrom(controllerInstallation.DeepCopy())
-			controllerInstallation.Spec.SeedRef.ResourceVersion = "foo"
-			Expect(testClient.Patch(ctx, controllerInstallation, patch)).To(Succeed())
-
-			By("Ensure 'gardenlet-allow-all-traffic' policy was deleted because FullNetworkPoliciesInRuntimeCluster feature gate is enabled")
-			Eventually(func() error {
-				return testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy), &networkingv1.NetworkPolicy{})
-			}).Should(BeNotFoundError())
 		})
 	})
 })
