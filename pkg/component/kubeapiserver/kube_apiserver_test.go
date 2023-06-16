@@ -1593,7 +1593,7 @@ rules:
 			})
 
 			Context("egress selector", func() {
-				It("should successfully deploy the configmap resource for K8s >= 1.20", func() {
+				It("should successfully deploy the configmap resource", func() {
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						RuntimeVersion: runtimeVersion,
 						Version:        version,

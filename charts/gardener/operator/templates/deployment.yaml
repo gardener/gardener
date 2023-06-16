@@ -119,11 +119,9 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
-        {{- if semverCompare ">= 1.20-0" .Capabilities.KubeVersion.GitVersion }}
         - name: kube-api-access-gardener
           mountPath: /var/run/secrets/kubernetes.io/serviceaccount
           readOnly: true
-        {{- end }}
         {{- if .Values.config.runtimeClientConnection.kubeconfig }}
         - name: kubeconfig
           mountPath: /etc/gardener-operator/kubeconfig
@@ -164,7 +162,6 @@ spec:
 {{- end }}
 {{- end }}
       volumes:
-      {{- if semverCompare ">= 1.20-0" .Capabilities.KubeVersion.GitVersion }}
       - name: kube-api-access-gardener
         projected:
           defaultMode: 420
@@ -183,7 +180,6 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: metadata.namespace
-      {{- end }}
       {{- if .Values.config.runtimeClientConnection.kubeconfig }}
       - name: kubeconfig
         secret:
