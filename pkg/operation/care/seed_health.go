@@ -47,6 +47,7 @@ var requiredManagedResourcesSeed = sets.New(
 	etcd.Druid,
 	clusterautoscaler.ManagedResourceControlName,
 	kubestatemetrics.ManagedResourceName,
+	nginxingress.ManagedResourceName,
 	seedsystem.ManagedResourceName,
 	vpa.ManagedResourceControlName,
 )
@@ -120,9 +121,6 @@ func (h *SeedHealth) checkSeedSystemComponents(
 	}
 	if v1beta1helper.SeedSettingDependencyWatchdogProberEnabled(h.seed.Spec.Settings) {
 		managedResources = append(managedResources, dependencywatchdog.ManagedResourceDependencyWatchdogProber)
-	}
-	if v1beta1helper.SeedUsesNginxIngressController(h.seed) {
-		managedResources = append(managedResources, nginxingress.ManagedResourceName)
 	}
 	if h.loggingEnabled {
 		managedResources = append(managedResources, fluentoperator.OperatorManagedResourceName)

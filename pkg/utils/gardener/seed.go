@@ -105,11 +105,6 @@ func hasExactUsages(usages, requiredUsages []certificatesv1.KeyUsage) bool {
 	return true
 }
 
-// ComputeNginxIngressClassForSeed returns the IngressClass for the Nginx Ingress controller.
-func ComputeNginxIngressClassForSeed(seed *gardencorev1beta1.Seed) string {
-	return v1beta1constants.SeedNginxIngressClass
-}
-
 // GetWildcardCertificate gets the wildcard certificate for the seed's ingress domain.
 // Nil is returned if no wildcard certificate is configured.
 func GetWildcardCertificate(ctx context.Context, c client.Client) (*corev1.Secret, error) {

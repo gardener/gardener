@@ -114,7 +114,7 @@ func (b *Botanist) DefaultKubeAPIServerIngress() component.Deployer {
 		kubeapiserverexposure.IngressValues{
 			ServiceName:      v1beta1constants.DeploymentNameKubeAPIServer,
 			Host:             b.ComputeKubeAPIServerHost(),
-			IngressClassName: pointer.String(gardenerutils.ComputeNginxIngressClassForSeed(b.Seed.GetInfo())),
+			IngressClassName: pointer.String(v1beta1constants.SeedNginxIngressClass),
 		})
 }
 

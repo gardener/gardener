@@ -882,22 +882,6 @@ var _ = Describe("helper", func() {
 		Entry("topology-aware routing disabled", &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: false}}, false),
 	)
 
-	DescribeTable("#SeedUsesNginxIngressController",
-		func(dns gardencorev1beta1.SeedDNS, ingress *gardencorev1beta1.Ingress, expected bool) {
-			seed := &gardencorev1beta1.Seed{
-				Spec: gardencorev1beta1.SeedSpec{
-					DNS:     dns,
-					Ingress: ingress,
-				},
-			}
-			Expect(SeedUsesNginxIngressController(seed)).To(Equal(expected))
-		},
-		Entry("no dns provider", gardencorev1beta1.SeedDNS{}, nil, false),
-		Entry("no ingress", gardencorev1beta1.SeedDNS{Provider: &gardencorev1beta1.SeedDNSProvider{}}, nil, false),
-		Entry("ingress controller kind is not nginx", gardencorev1beta1.SeedDNS{Provider: &gardencorev1beta1.SeedDNSProvider{}}, &gardencorev1beta1.Ingress{Controller: gardencorev1beta1.IngressController{Kind: "foo"}}, false),
-		Entry("ingress controller kind is nginx", gardencorev1beta1.SeedDNS{Provider: &gardencorev1beta1.SeedDNSProvider{}}, &gardencorev1beta1.Ingress{Controller: gardencorev1beta1.IngressController{Kind: "nginx"}}, true),
-	)
-
 	Describe("#FindMachineImageVersion", func() {
 		var machineImages []gardencorev1beta1.MachineImage
 

@@ -52,6 +52,7 @@ var (
 		clusteridentity.ManagedResourceControlName,
 		clusterautoscaler.ManagedResourceControlName,
 		kubestatemetrics.ManagedResourceName,
+		nginxingress.ManagedResourceName,
 		seedsystem.ManagedResourceName,
 		vpa.ManagedResourceControlName,
 		"istio",
@@ -60,7 +61,6 @@ var (
 	optionalManagedResources = []string{
 		dependencywatchdog.ManagedResourceDependencyWatchdogWeeder,
 		dependencywatchdog.ManagedResourceDependencyWatchdogProber,
-		nginxingress.ManagedResourceName,
 		hvpa.ManagedResourceName,
 		"istio-system",
 		fluentoperator.CustomResourcesManagedResourceName,
@@ -141,7 +141,6 @@ var _ = Describe("Seed health", func() {
 		Context("When optional managed resources are turned off, and required resources are deployed successfully", func() {
 			JustBeforeEach(func() {
 				defer test.WithFeatureGate(features.DefaultFeatureGate, features.HVPA, false)()
-				seed.Spec.Ingress.Controller.Kind = "foo"
 				seed.Spec.Settings.DependencyWatchdog.Endpoint.Enabled = false
 				seed.Spec.Settings.DependencyWatchdog.Probe.Enabled = false
 				seed.Spec.Settings.DependencyWatchdog.Weeder.Enabled = false

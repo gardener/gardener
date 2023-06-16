@@ -36,7 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -85,33 +84,6 @@ var _ = Describe("utils", func() {
 		Entry("common name does not match", &x509.CertificateRequest{Subject: pkix.Name{Organization: []string{"gardener.cloud:system:seeds"}}}, []certificatesv1.KeyUsage{certificatesv1.UsageKeyEncipherment, certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth}, false, ContainSubstring("CommonName")),
 		Entry("everything matches", &x509.CertificateRequest{Subject: pkix.Name{Organization: []string{"gardener.cloud:system:seeds"}, CommonName: "gardener.cloud:system:seed:foo"}}, []certificatesv1.KeyUsage{certificatesv1.UsageKeyEncipherment, certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth}, true, Equal("")),
 	)
-
-	Describe("#ComputeNginxIngressClassForSeed", func() {
-		var seed *gardencorev1beta1.Seed
-
-		BeforeEach(func() {
-			seed = &gardencorev1beta1.Seed{}
-		})
-
-		Context("when seed does not want managed ingress", func() {
-			It("should return 'nginx'", func() {
-				class := ComputeNginxIngressClassForSeed(seed)
-				Expect(class).To(Equal("nginx"))
-			})
-		})
-
-		Context("when seed wants managed ingress", func() {
-			BeforeEach(func() {
-				seed.Spec.DNS.Provider = &gardencorev1beta1.SeedDNSProvider{}
-				seed.Spec.Ingress = &gardencorev1beta1.Ingress{Controller: gardencorev1beta1.IngressController{Kind: v1beta1constants.IngressKindNginx}}
-			})
-
-			It("should return 'nginx-ingress-gardener'", func() {
-				class := ComputeNginxIngressClassForSeed(seed)
-				Expect(class).To(Equal("nginx-ingress-gardener"))
-			})
-		})
-	})
 
 	Describe("#GetWilcardCertificate", func() {
 		var (

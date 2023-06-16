@@ -170,8 +170,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		prometheusIngressTLSSecretName = ingressTLSSecret.Name
 	}
 
-	ingressClass := gardenerutils.ComputeNginxIngressClassForSeed(b.Seed.GetInfo())
-
 	clusterCASecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
@@ -199,7 +197,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			},
 			"gardenletManagesMCM": features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment),
 			"ingress": map[string]interface{}{
-				"class":          ingressClass,
+				"class":          v1beta1constants.SeedNginxIngressClass,
 				"authSecretName": credentialsSecret.Name,
 				"hosts": []map[string]interface{}{
 					{
@@ -370,7 +368,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 
 		alertManagerValues, err := b.InjectSeedShootImages(map[string]interface{}{
 			"ingress": map[string]interface{}{
-				"class":          ingressClass,
+				"class":          v1beta1constants.SeedNginxIngressClass,
 				"authSecretName": credentialsSecret.Name,
 				"hosts": []map[string]interface{}{
 					{
@@ -555,7 +553,7 @@ func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretK
 func (b *Botanist) deployPlutonoCharts(ctx context.Context, credentialsSecret *corev1.Secret, dashboards, subDomain, ingressTLSSecretName string) error {
 	values, err := b.InjectSeedShootImages(map[string]interface{}{
 		"ingress": map[string]interface{}{
-			"class":          gardenerutils.ComputeNginxIngressClassForSeed(b.Seed.GetInfo()),
+			"class":          v1beta1constants.SeedNginxIngressClass,
 			"authSecretName": credentialsSecret.Name,
 			"hosts": []map[string]interface{}{
 				{

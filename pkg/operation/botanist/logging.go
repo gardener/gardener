@@ -31,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -127,7 +126,7 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 
 		valiValues["rbacSidecarEnabled"] = true
 		valiValues["ingress"] = map[string]interface{}{
-			"class": gardenerutils.ComputeNginxIngressClassForSeed(b.Seed.GetInfo()),
+			"class": v1beta1constants.SeedNginxIngressClass,
 			"hosts": []map[string]interface{}{
 				{
 					"hostName":    b.ComputeValiHost(),
