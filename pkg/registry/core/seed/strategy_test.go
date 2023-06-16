@@ -124,4 +124,46 @@ var _ = Describe("Strategy", func() {
 			})
 		})
 	})
+
+	Describe("#Canonicalize", func() {
+		var seed *core.Seed
+
+		BeforeEach(func() {
+			seed = &core.Seed{}
+		})
+
+		Context("ownerChecks field", func() {
+			It("should drop the ownerChecks field when the settings is not nil", func() {
+				seed.Spec.Settings = &core.SeedSettings{
+					OwnerChecks: &core.SeedSettingOwnerChecks{
+						Enabled: false,
+					},
+				}
+
+				strategy.Canonicalize(seed)
+
+				Expect(seed.Spec.Settings.OwnerChecks).To(BeNil())
+
+			})
+
+			It("should do nothing when settings is nil", func() {
+				oldSeed := seed.DeepCopy()
+
+				strategy.Canonicalize(seed)
+
+				Expect(oldSeed).To(Equal(seed))
+			})
+
+			It("should do nothing when ownerChecks is nil", func() {
+				seed.Spec.Settings = &core.SeedSettings{
+					OwnerChecks: nil,
+				}
+				oldSeed := seed.DeepCopy()
+
+				strategy.Canonicalize(seed)
+
+				Expect(oldSeed).To(Equal(seed))
+			})
+		})
+	})
 })

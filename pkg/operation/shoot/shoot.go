@@ -355,7 +355,6 @@ func (s *Shoot) GetDNSRecordComponentsForMigration() []component.DeployMigrateWa
 		s.Components.Extensions.IngressDNSRecord,
 		s.Components.Extensions.ExternalDNSRecord,
 		s.Components.Extensions.InternalDNSRecord,
-		s.Components.Extensions.OwnerDNSRecord,
 	}
 }
 

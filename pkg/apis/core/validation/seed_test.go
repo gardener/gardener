@@ -889,46 +889,6 @@ var _ = Describe("Seed Validation Tests", func() {
 
 				Expect(errorList).To(BeEmpty())
 			})
-
-			Context("ownerChecks", func() {
-				It("should allow unspecified owner checks", func() {
-					seed.Spec.Settings = &core.SeedSettings{}
-
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(BeEmpty())
-				})
-
-				It("should allow owner checks disablement", func() {
-					seed.Spec.Settings = &core.SeedSettings{
-						OwnerChecks: &core.SeedSettingOwnerChecks{
-							Enabled: false,
-						},
-					}
-
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(BeEmpty())
-				})
-
-				It("should prevent owner checks enablement", func() {
-					seed.Spec.Settings = &core.SeedSettings{
-						OwnerChecks: &core.SeedSettingOwnerChecks{
-							Enabled: true,
-						},
-					}
-
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(ConsistOf(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeForbidden),
-							"Field":  Equal("spec.settings.ownerChecks.enabled"),
-							"Detail": Equal("owner checks is locked to false in Gardener v1.72+"),
-						})),
-					))
-				})
-			})
 		})
 
 		It("should fail updating immutable fields", func() {

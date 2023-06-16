@@ -853,17 +853,6 @@ var _ = Describe("helper", func() {
 		),
 	)
 
-	DescribeTable("#SeedSettingOwnerChecksEnabled",
-		func(settings *gardencorev1beta1.SeedSettings, expected bool) {
-			Expect(SeedSettingOwnerChecksEnabled(settings)).To(Equal(expected))
-		},
-
-		Entry("no settings", nil, false),
-		Entry("no owner checks setting", &gardencorev1beta1.SeedSettings{}, false),
-		Entry("owner checks enabled", &gardencorev1beta1.SeedSettings{OwnerChecks: &gardencorev1beta1.SeedSettingOwnerChecks{Enabled: true}}, true),
-		Entry("owner checks disabled", &gardencorev1beta1.SeedSettings{OwnerChecks: &gardencorev1beta1.SeedSettingOwnerChecks{Enabled: false}}, false),
-	)
-
 	DescribeTable("#SeedSettingDependencyWatchdogWeederEnabled",
 		func(settings *gardencorev1beta1.SeedSettings, expected bool) {
 			Expect(SeedSettingDependencyWatchdogWeederEnabled(settings)).To(Equal(expected))

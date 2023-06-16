@@ -259,9 +259,6 @@ func buildManagedSeed(shoot *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.M
 						ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{
 							Enabled: false,
 						},
-						OwnerChecks: &gardencorev1beta1.SeedSettingOwnerChecks{
-							Enabled: false,
-						},
 						Scheduling: &gardencorev1beta1.SeedSettingScheduling{
 							Visible: false,
 						},
