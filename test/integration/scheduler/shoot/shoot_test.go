@@ -332,7 +332,7 @@ func createCloudProfile(providerType, region string) *gardencorev1beta1.CloudPro
 		},
 		Spec: gardencorev1beta1.CloudProfileSpec{
 			Kubernetes: gardencorev1beta1.KubernetesSettings{
-				Versions: []gardencorev1beta1.ExpirableVersion{{Version: "1.21.1"}},
+				Versions: []gardencorev1beta1.ExpirableVersion{{Version: "1.25.1"}},
 			},
 			MachineImages: []gardencorev1beta1.MachineImage{
 				{
@@ -340,7 +340,14 @@ func createCloudProfile(providerType, region string) *gardencorev1beta1.CloudPro
 					Versions: []gardencorev1beta1.MachineImageVersion{
 						{
 							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.1"},
-							CRI:              []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+							CRI: []gardencorev1beta1.CRI{
+								{
+									Name: gardencorev1beta1.CRINameContainerD,
+								},
+								{
+									Name: gardencorev1beta1.CRINameDocker,
+								},
+							},
 						},
 					},
 				},
@@ -393,7 +400,7 @@ func createShoot(providerType, cloudProfile, region string, dnsDomain *string, c
 				Nodes:    pointer.String("10.5.0.0/16"),
 				Type:     pointer.String("some-type"),
 			},
-			Kubernetes:        gardencorev1beta1.Kubernetes{Version: "1.21.1"},
+			Kubernetes:        gardencorev1beta1.Kubernetes{Version: "1.25.1"},
 			SecretBindingName: pointer.String(testSecretBinding.Name),
 			DNS:               &gardencorev1beta1.DNS{Domain: dnsDomain},
 		},

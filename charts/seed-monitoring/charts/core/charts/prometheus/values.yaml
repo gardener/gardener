@@ -19,7 +19,7 @@ ingress:
   # admin : admin base64 encoded
   authSecretName: auth-secret-name
 
-kubernetesVersion: 1.20.1
+kubernetesVersion: 1.24.4
 secretNameClusterCA: ca
 secretNameEtcdCA: ca-etcd
 secretNameEtcdClientCert: etcd-client-tls

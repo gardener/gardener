@@ -81,7 +81,7 @@ var _ = Describe("#SNI", func() {
 		var err error
 		applier, err = test.NewTestApplier(c, &fakediscovery.FakeDiscovery{
 			Fake:               &testing.Fake{},
-			FakedServerVersion: &version.Info{GitVersion: "v1.21.0"},
+			FakedServerVersion: &version.Info{GitVersion: "v1.25.0"},
 		})
 		Expect(err).NotTo(HaveOccurred())
 

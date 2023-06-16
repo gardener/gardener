@@ -808,7 +808,7 @@ status: {}
 			)
 
 			BeforeEach(func() {
-				values.KubernetesVersion, _ = semver.NewVersion("v1.20.0")
+				values.KubernetesVersion, _ = semver.NewVersion("v1.22.0")
 				values.APIServerHost = &apiserverHost
 				values.PodAnnotations = podAnnotations
 				component = New(c, namespace, values)

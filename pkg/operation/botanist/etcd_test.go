@@ -110,7 +110,7 @@ var _ = Describe("Etcd", func() {
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Kubernetes: gardencorev1beta1.Kubernetes{
-						Version: "1.20.2",
+						Version: "1.25.2",
 					},
 					Maintenance: &gardencorev1beta1.Maintenance{
 						TimeWindow: &maintenanceTimeWindow,

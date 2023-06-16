@@ -52,7 +52,7 @@ var _ = Describe("Strategy", func() {
 					CloudProfileName: "aws-profile",
 					Region:           "eu-west-1",
 					Kubernetes: core.Kubernetes{
-						Version: "1.20.2",
+						Version: "1.25.2",
 					},
 					Provider: core.Provider{
 						Type:    "provider",

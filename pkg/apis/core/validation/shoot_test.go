@@ -2400,7 +2400,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Mode:             &mode,
 				}
 				shoot.Spec.Kubernetes.KubeProxy = &config
-				shoot.Spec.Kubernetes.Version = "1.20.1"
+				shoot.Spec.Kubernetes.Version = "1.25.1"
 				oldMode := core.ProxyMode("IPTables")
 				oldConfig := core.KubeProxyConfig{
 					KubernetesConfig: kubernetesConfig,
@@ -2447,7 +2447,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			ignoreTaintsUnique          = []string{"taint-1", "taint-2"}
 			ignoreTaintsDuplicate       = []string{"taint-1", "taint-1"}
 			ignoreTaintsInvalid         = []string{"taint 1", "taint-1"}
-			version                     = "1.20"
+			version                     = "1.24"
 		)
 
 		Context("ClusterAutoscaler validation", func() {

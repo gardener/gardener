@@ -75,8 +75,8 @@ const (
 	caNameControlPlane         = "ca-" + providerName + "-controlplane"
 	caNameControlPlaneExposure = caNameControlPlane + "-exposure"
 
-	seedVersion  = "1.20.0"
-	shootVersion = "1.20.0"
+	seedVersion  = "1.25.0"
+	shootVersion = "1.25.0"
 )
 
 var (

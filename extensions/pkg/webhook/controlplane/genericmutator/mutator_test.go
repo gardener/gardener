@@ -81,7 +81,7 @@ var _ = Describe("Mutator", func() {
 		ctrl   *gomock.Controller
 		logger = log.Log.WithName("test")
 
-		kubernetesVersion       = "1.20.4"
+		kubernetesVersion       = "1.25.4"
 		kubernetesVersionSemver = semver.MustParse(kubernetesVersion)
 
 		clusterKey = client.ObjectKey{Name: namespace}

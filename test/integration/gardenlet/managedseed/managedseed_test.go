@@ -161,7 +161,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 				SeedName:         &seed.Name,
 				CloudProfileName: "foo",
 				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: "1.20.1",
+					Version: "1.25.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
 					Type: pointer.String("foo"),

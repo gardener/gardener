@@ -26,19 +26,13 @@ import (
 )
 
 var _ = Describe("Monitoring", func() {
-	DescribeTable("success tests for scrape config various kubernetes versions",
-		func(version, expectedScrapeConfig string) {
-			kubeControllerManager := New(logr.Discard(), nil, "", nil, Values{RuntimeVersion: semver.MustParse("1.25.0"), TargetVersion: semver.MustParse(version)})
-			test.ScrapeConfigs(kubeControllerManager, expectedScrapeConfig)
-		},
-
-		Entry("kubernetes 1.20", "1.20.1", expectedScrapeConfig),
-		Entry("kubernetes 1.21", "1.21.2", expectedScrapeConfig),
-		Entry("kubernetes 1.22", "1.22.3", expectedScrapeConfig),
-	)
+	It("should successfully test the scrape config", func() {
+		kubeControllerManager := New(logr.Discard(), nil, "", nil, Values{RuntimeVersion: semver.MustParse("1.25.0"), TargetVersion: semver.MustParse("1.26.4")})
+		test.ScrapeConfigs(kubeControllerManager, expectedScrapeConfig)
+	})
 
 	It("should successfully test the alerting rules", func() {
-		kubeControllerManager := New(logr.Discard(), nil, "", nil, Values{RuntimeVersion: semver.MustParse("1.25.0"), TargetVersion: semver.MustParse("1.21.4")})
+		kubeControllerManager := New(logr.Discard(), nil, "", nil, Values{RuntimeVersion: semver.MustParse("1.25.0"), TargetVersion: semver.MustParse("1.26.4")})
 
 		test.AlertingRulesWithPromtool(
 			kubeControllerManager,

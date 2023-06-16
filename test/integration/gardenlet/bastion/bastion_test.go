@@ -136,7 +136,7 @@ var _ = Describe("Bastion controller tests", func() {
 					},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: "1.21.1",
+					Version: "1.22.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
 					Type: pointer.String("foo-networking"),

@@ -2029,7 +2029,7 @@ spec:
 		networkLabels = map[string]string{"to-target": "allowed"}
 
 		c = fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		renderer = chartrenderer.NewWithServerVersion(&version.Info{GitVersion: "v1.21.4"})
+		renderer = chartrenderer.NewWithServerVersion(&version.Info{GitVersion: "v1.22.4"})
 
 		gardenletfeatures.RegisterFeatureGates()
 

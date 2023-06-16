@@ -49,7 +49,7 @@ var _ = Describe("WaiterTest", func() {
 		fakeErr               = fmt.Errorf(errorMsg)
 		kubeControllerManager Interface
 		namespace             = "shoot--foo--bar"
-		version               = semver.MustParse("v1.21.8")
+		version               = semver.MustParse("v1.25.8")
 		isWorkerless          = false
 
 		// mock

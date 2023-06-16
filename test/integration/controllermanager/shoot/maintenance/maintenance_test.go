@@ -77,7 +77,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				Kubernetes: gardencorev1beta1.KubernetesSettings{
 					Versions: []gardencorev1beta1.ExpirableVersion{
 						{
-							Version: "1.21.1",
+							Version: "1.25.1",
 						},
 						testKubernetesVersionLowPatchLowMinor,
 						testKubernetesVersionHighestPatchLowMinor,
@@ -94,14 +94,28 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 									Version:        highestAMD64MachineImageVersion,
 									Classification: &supportedClassification,
 								},
-								CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI: []gardencorev1beta1.CRI{
+									{
+										Name: gardencorev1beta1.CRINameDocker,
+									},
+									{
+										Name: gardencorev1beta1.CRINameContainerD,
+									},
+								},
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 									Version:        highestARM64MachineImageVersion,
 									Classification: &supportedClassification,
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI: []gardencorev1beta1.CRI{
+									{
+										Name: gardencorev1beta1.CRINameDocker,
+									},
+									{
+										Name: gardencorev1beta1.CRINameContainerD,
+									},
+								},
 								Architectures: []string{"arm64"},
 							},
 							{
@@ -109,7 +123,14 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 									Version:        testMachineImageVersion,
 									Classification: &deprecatedClassification,
 								},
-								CRI:           []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+								CRI: []gardencorev1beta1.CRI{
+									{
+										Name: gardencorev1beta1.CRINameDocker,
+									},
+									{
+										Name: gardencorev1beta1.CRINameContainerD,
+									},
+								},
 								Architectures: []string{"amd64", "arm64"},
 							},
 						},
@@ -169,7 +190,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 					},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: "1.21.1",
+					Version: "1.25.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
 					Type: pointer.String("foo-networking"),

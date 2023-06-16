@@ -61,7 +61,7 @@ var _ = Describe("BlackboxExporter", func() {
 		values = Values{
 			Image:             image,
 			VPAEnabled:        false,
-			KubernetesVersion: semver.MustParse("1.20.5"),
+			KubernetesVersion: semver.MustParse("1.25.5"),
 		}
 		component = New(c, namespace, values)
 

@@ -3130,7 +3130,7 @@ rules:
 				})
 
 				It("should have the proper probes", func() {
-					kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, RuntimeVersion: runtimeVersion, Version: semver.MustParse("1.20.9"), StaticTokenKubeconfigEnabled: pointer.Bool(true)})
+					kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, RuntimeVersion: runtimeVersion, Version: semver.MustParse("1.24.9"), StaticTokenKubeconfigEnabled: pointer.Bool(true)})
 					deployAndRead()
 
 					validateProbe := func(probe *corev1.Probe, path string, initialDelaySeconds int32) {

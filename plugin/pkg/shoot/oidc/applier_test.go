@@ -73,7 +73,7 @@ var _ = Describe("Applier", func() {
 			ExtraConfig: map[string]string{"foo": "bar", "baz": "dap"},
 		}
 
-		shoot.Spec.Kubernetes.Version = "v1.20"
+		shoot.Spec.Kubernetes.Version = "v1.25.0"
 
 		expectedShoot := shoot.DeepCopy()
 		expectedShoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
