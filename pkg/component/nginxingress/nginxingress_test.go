@@ -42,19 +42,44 @@ import (
 )
 
 var _ = Describe("NginxIngress", func() {
+	var (
+		ctx                 = context.TODO()
+		namespace           = "some-namespace"
+		imageController     = "some-image:some-tag"
+		imageDefaultBackend = "some-image2:some-tag2"
+
+		c            client.Client
+		nginxIngress component.DeployWaiter
+		values       Values
+
+		managedResource       *resourcesv1alpha1.ManagedResource
+		managedResourceSecret *corev1.Secret
+		managedResourceName   string
+
+		configMapData, loadBalancerAnnotations map[string]string
+		configMapName                          string
+	)
+
+	JustBeforeEach(func() {
+		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+
+		managedResource = &resourcesv1alpha1.ManagedResource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      managedResourceName,
+				Namespace: namespace,
+			},
+		}
+		managedResourceSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "managedresource-" + managedResource.Name,
+				Namespace: namespace,
+			},
+		}
+	})
+
 	Context("Cluster type Seed", func() {
-		var (
-			ctx                 = context.TODO()
-			namespace           = "some-namespace"
-			imageController     = "some-image:some-tag"
-			imageDefaultBackend = "some-image2:some-tag2"
+		BeforeEach(func() {
 			managedResourceName = "nginx-ingress"
-
-			c            client.Client
-			nginxIngress component.DeployWaiter
-
-			managedResource       *resourcesv1alpha1.ManagedResource
-			managedResourceSecret *corev1.Secret
 
 			configMapData = map[string]string{
 				"foo":  "bar",
@@ -65,6 +90,7 @@ var _ = Describe("NginxIngress", func() {
 			loadBalancerAnnotations = map[string]string{
 				"some": "value",
 			}
+			configMapName = "nginx-ingress-controller-" + utils.ComputeConfigMapChecksum(configMapData)[:8]
 
 			values = Values{
 				ClusterType:             component.ClusterTypeSeed,
@@ -78,30 +104,12 @@ var _ = Describe("NginxIngress", func() {
 				PSPDisabled:             true,
 				VPAEnabled:              true,
 			}
-
-			configMapName = "nginx-ingress-controller-" + utils.ComputeConfigMapChecksum(configMapData)[:8]
-		)
-
-		BeforeEach(func() {
-			c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-
-			managedResource = &resourcesv1alpha1.ManagedResource{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      managedResourceName,
-					Namespace: namespace,
-				},
-			}
-			managedResourceSecret = &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "managedresource-" + managedResource.Name,
-					Namespace: namespace,
-				},
-			}
 		})
 
 		Describe("#Deploy", func() {
 			var (
-				configMapYAML = `apiVersion: v1
+				configMapYAMLFor = func(configMapName string) string {
+					out := `apiVersion: v1
 data:
   dash: "false"
   dot: "3"
@@ -117,6 +125,9 @@ metadata:
   name: ` + configMapName + `
   namespace: ` + namespace + `
 `
+					return out
+				}
+
 				clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -441,7 +452,7 @@ spec:
       terminationGracePeriodSeconds: 60
 status: {}
 `
-				deploymentControllerYAMLFor = func(k8sVersionGreaterEqual122 bool) string {
+				deploymentControllerYAMLFor = func(configMapName string) string {
 					out := `apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -485,9 +496,7 @@ spec:
         - --annotations-prefix=nginx.ingress.kubernetes.io
         - --configmap=` + namespace + `/` + configMapName + `
         - --ingress-class=` + v1beta1constants.SeedNginxIngressClass + `
-        - --controller-class=k8s.io/` + v1beta1constants.SeedNginxIngressClass
-
-					out += `
+        - --controller-class=k8s.io/` + v1beta1constants.SeedNginxIngressClass + `
         env:
         - name: POD_NAME
           valueFrom:
@@ -538,9 +547,7 @@ spec:
           capabilities:
             add:
             - NET_BIND_SERVICE
-            - SYS_CHROOT`
-
-					out += `
+            - SYS_CHROOT` + `
             drop:
             - ALL
           runAsUser: 101
@@ -555,7 +562,7 @@ status: {}
 				}
 			)
 
-			JustBeforeEach(func() {
+			It("should successfully deploy all resources", func() {
 				nginxIngress = New(c, namespace, values)
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
@@ -586,6 +593,7 @@ status: {}
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Data).To(HaveLen(13))
 
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_seed_nginx-ingress.yaml"])).To(Equal(clusterRoleYAML))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_seed_nginx-ingress.yaml"])).To(Equal(clusterRoleBindingYAML))
@@ -595,20 +603,17 @@ status: {}
 				Expect(string(managedResourceSecret.Data["service__"+namespace+"__nginx-ingress-k8s-backend.yaml"])).To(Equal(serviceBackendYAML))
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__nginx-ingress.yaml"])).To(Equal(serviceAccountYAML))
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(vpaYAML))
-				Expect(string(managedResourceSecret.Data["configmap__"+namespace+"__"+configMapName+".yaml"])).To(Equal(configMapYAML))
+				Expect(string(managedResourceSecret.Data["configmap__"+namespace+"__"+configMapName+".yaml"])).To(Equal(configMapYAMLFor(configMapName)))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-k8s-backend.yaml"])).To(Equal(deploymentBackendYAML))
 				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(podDisruptionBudgetYAML))
-			})
-
-			It("should successfully deploy all resources", func() {
-				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true)))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(configMapName)))
 				Expect(string(managedResourceSecret.Data["ingressclass____"+v1beta1constants.SeedNginxIngressClass+".yaml"])).To(Equal(ingressClassYAML))
 			})
 		})
 
 		Describe("#Destroy", func() {
 			It("should successfully destroy all resources", func() {
-				nginxIngress = New(c, namespace, Values{})
+				nginxIngress = New(c, namespace, values)
 
 				Expect(c.Create(ctx, managedResource)).To(Succeed())
 				Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
@@ -622,134 +627,10 @@ status: {}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 			})
 		})
-
-		Context("waiting functions", func() {
-			var (
-				fakeOps   *retryfake.Ops
-				resetVars func()
-			)
-
-			BeforeEach(func() {
-				nginxIngress = New(c, namespace, Values{})
-
-				fakeOps = &retryfake.Ops{MaxAttempts: 1}
-				resetVars = test.WithVars(
-					&retry.Until, fakeOps.Until,
-					&retry.UntilTimeout, fakeOps.UntilTimeout,
-				)
-			})
-
-			AfterEach(func() {
-				resetVars()
-			})
-
-			Describe("#Wait", func() {
-				It("should fail because reading the ManagedResource fails", func() {
-					Expect(nginxIngress.Wait(ctx)).To(MatchError(ContainSubstring("not found")))
-				})
-
-				It("should fail because the ManagedResource doesn't become healthy", func() {
-					fakeOps.MaxAttempts = 2
-
-					Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:       managedResourceName,
-							Namespace:  namespace,
-							Generation: 1,
-						},
-						Status: resourcesv1alpha1.ManagedResourceStatus{
-							ObservedGeneration: 1,
-							Conditions: []gardencorev1beta1.Condition{
-								{
-									Type:   resourcesv1alpha1.ResourcesApplied,
-									Status: gardencorev1beta1.ConditionFalse,
-								},
-								{
-									Type:   resourcesv1alpha1.ResourcesHealthy,
-									Status: gardencorev1beta1.ConditionFalse,
-								},
-							},
-						},
-					})).To(Succeed())
-					Expect(nginxIngress.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
-				})
-
-				It("should successfully wait for the managed resource to become healthy", func() {
-					fakeOps.MaxAttempts = 2
-
-					Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:       managedResourceName,
-							Namespace:  namespace,
-							Generation: 1,
-						},
-						Status: resourcesv1alpha1.ManagedResourceStatus{
-							ObservedGeneration: 1,
-							Conditions: []gardencorev1beta1.Condition{
-								{
-									Type:   resourcesv1alpha1.ResourcesApplied,
-									Status: gardencorev1beta1.ConditionTrue,
-								},
-								{
-									Type:   resourcesv1alpha1.ResourcesHealthy,
-									Status: gardencorev1beta1.ConditionTrue,
-								},
-							},
-						},
-					})).To(Succeed())
-					Expect(nginxIngress.Wait(ctx)).To(Succeed())
-				})
-			})
-
-			Describe("#WaitCleanup", func() {
-				It("should fail when the wait for the managed resource deletion times out", func() {
-					fakeOps.MaxAttempts = 2
-
-					Expect(c.Create(ctx, managedResource)).To(Succeed())
-
-					Expect(nginxIngress.WaitCleanup(ctx)).To(MatchError(ContainSubstring("still exists")))
-				})
-
-				It("should not return an error when it's already removed", func() {
-					Expect(nginxIngress.WaitCleanup(ctx)).To(Succeed())
-				})
-			})
-		})
 	})
 
 	Context("Cluster type Shoot", func() {
 		var (
-			ctx = context.TODO()
-
-			managedResourceName  = "shoot-addon-nginx-ingress"
-			namespace            = "some-namespace"
-			nginxControllerImage = "some-image:some-tag"
-			defaultBackendImage  = "some-image2:some-tag2"
-			configMapData        = map[string]string{
-				"foo":  "bar",
-				"dot":  "3",
-				"dash": "false",
-			}
-
-			c            client.Client
-			nginxIngress component.DeployWaiter
-
-			managedResource       *resourcesv1alpha1.ManagedResource
-			managedResourceSecret *corev1.Secret
-
-			values = Values{
-				ClusterType:         component.ClusterTypeShoot,
-				TargetNamespace:     metav1.NamespaceSystem,
-				IngressClass:        v1beta1constants.NginxIngressClass,
-				PriorityClassName:   v1beta1constants.PriorityClassNameShootSystem600,
-				ImageController:     nginxControllerImage,
-				ImageDefaultBackend: defaultBackendImage,
-				ConfigData:          configMapData,
-				PSPDisabled:         true,
-			}
-
-			configMapName = "addons-nginx-ingress-controller"
-
 			configMapYAML = `apiVersion: v1
 data:
   dash: "false"
@@ -762,7 +643,7 @@ metadata:
     app: nginx-ingress
     component: controller
     release: addons
-  name: ` + configMapName + `
+  name: addons-nginx-ingress-controller
   namespace: kube-system
 `
 
@@ -958,6 +839,8 @@ metadata:
   name: addons-nginx-ingress-controller
   namespace: kube-system
 spec:
+  loadBalancerSourceRanges:
+  - 10.0.0.0/8
   ports:
   - name: http
     port: 80
@@ -1008,7 +891,7 @@ spec:
         release: addons
     spec:
       containers:
-      - image: ` + defaultBackendImage + `
+      - image: ` + imageDefaultBackend + `
         imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
@@ -1041,7 +924,8 @@ spec:
 status: {}
 `
 
-			deploymentControllerYAML = `apiVersion: apps/v1
+			deploymentControllerYAMLFor = func(configMapData map[string]string) string {
+				out := `apiVersion: apps/v1
 kind: Deployment
 metadata:
   creationTimestamp: null
@@ -1083,7 +967,7 @@ spec:
         - --election-id=ingress-controller-leader
         - --update-status=true
         - --annotations-prefix=nginx.ingress.kubernetes.io
-        - --configmap=kube-system/` + configMapName + `
+        - --configmap=kube-system/addons-nginx-ingress-controller
         - --ingress-class=nginx
         - --controller-class=k8s.io/nginx
         - --watch-ingress-without-class=true
@@ -1096,7 +980,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        image: ` + nginxControllerImage + `
+        image: ` + imageController + `
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
@@ -1154,6 +1038,8 @@ spec:
       terminationGracePeriodSeconds: 60
 status: {}
 `
+				return out
+			}
 
 			roleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -1269,20 +1155,24 @@ status: {}
 		)
 
 		BeforeEach(func() {
-			c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+			managedResourceName = "shoot-addon-nginx-ingress"
 
-			managedResource = &resourcesv1alpha1.ManagedResource{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      managedResourceName,
-					Namespace: namespace,
-				},
+			configMapData = map[string]string{
+				"foo":  "bar",
+				"dot":  "3",
+				"dash": "false",
 			}
 
-			managedResourceSecret = &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "managedresource-" + managedResource.Name,
-					Namespace: namespace,
-				},
+			values = Values{
+				ClusterType:              component.ClusterTypeShoot,
+				TargetNamespace:          metav1.NamespaceSystem,
+				IngressClass:             v1beta1constants.NginxIngressClass,
+				PriorityClassName:        v1beta1constants.PriorityClassNameShootSystem600,
+				ImageController:          imageController,
+				ImageDefaultBackend:      imageDefaultBackend,
+				LoadBalancerSourceRanges: []string{"10.0.0.0/8"},
+				ConfigData:               configMapData,
+				PSPDisabled:              true,
 			}
 		})
 
@@ -1324,14 +1214,13 @@ status: {}
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____addons-nginx-ingress.yaml"])).To(Equal(clusterRoleBindingYAML))
 				Expect(string(managedResourceSecret.Data["service__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(serviceControllerYAML))
 				Expect(string(managedResourceSecret.Data["service__kube-system__addons-nginx-ingress-nginx-ingress-k8s-backend.yaml"])).To(Equal(serviceBackendYAML))
-				Expect(string(managedResourceSecret.Data["configmap__kube-system__"+configMapName+".yaml"])).To(Equal(configMapYAML))
+				Expect(string(managedResourceSecret.Data["configmap__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(configMapYAML))
 				Expect(string(managedResourceSecret.Data["role__kube-system__addons-nginx-ingress.yaml"])).To(Equal(roleYAML))
 				Expect(string(managedResourceSecret.Data["rolebinding__kube-system__addons-nginx-ingress.yaml"])).To(Equal(roleBindingYAML))
-
 				Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-nginx-ingress-k8s-backend.yaml"])).To(Equal(deploymentBackendYAML))
 				Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-to-from-nginx.yaml"])).To(Equal(networkPolicyYAML))
 				Expect(string(managedResourceSecret.Data["ingressclass____nginx.yaml"])).To(Equal(ingressClassYAML))
-				Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAML))
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(configMapData)))
 			})
 
 			Context("w/ VPA and PSP enabled", func() {
@@ -1402,99 +1291,104 @@ status: {}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 			})
 		})
+	})
 
-		Context("waiting functions", func() {
-			var (
-				fakeOps   *retryfake.Ops
-				resetVars func()
+	Context("waiting functions", func() {
+		var (
+			fakeOps   *retryfake.Ops
+			resetVars func()
+		)
+
+		BeforeEach(func() {
+			managedResourceName = "nginx-ingress"
+			namespace = "some-namespace"
+
+			fakeOps = &retryfake.Ops{MaxAttempts: 1}
+			resetVars = test.WithVars(
+				&retry.Until, fakeOps.Until,
+				&retry.UntilTimeout, fakeOps.UntilTimeout,
 			)
+		})
 
-			BeforeEach(func() {
-				nginxIngress = New(c, namespace, Values{ClusterType: component.ClusterTypeShoot})
+		JustBeforeEach(func() {
+			nginxIngress = New(c, namespace, Values{ClusterType: component.ClusterTypeSeed})
+		})
 
-				fakeOps = &retryfake.Ops{MaxAttempts: 1}
-				resetVars = test.WithVars(
-					&retry.Until, fakeOps.Until,
-					&retry.UntilTimeout, fakeOps.UntilTimeout,
-				)
+		AfterEach(func() {
+			resetVars()
+		})
+
+		Describe("#Wait", func() {
+			It("should fail because reading the ManagedResource fails", func() {
+				Expect(nginxIngress.Wait(ctx)).To(MatchError(ContainSubstring("not found")))
 			})
 
-			AfterEach(func() {
-				resetVars()
-			})
+			It("should fail because the ManagedResource doesn't become healthy", func() {
+				fakeOps.MaxAttempts = 2
 
-			Describe("#Wait", func() {
-				It("should fail because reading the ManagedResource fails", func() {
-					Expect(nginxIngress.Wait(ctx)).To(MatchError(ContainSubstring("not found")))
-				})
-
-				It("should fail because the ManagedResource doesn't become healthy", func() {
-					fakeOps.MaxAttempts = 2
-
-					Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:       managedResourceName,
-							Namespace:  namespace,
-							Generation: 1,
-						},
-						Status: resourcesv1alpha1.ManagedResourceStatus{
-							ObservedGeneration: 1,
-							Conditions: []gardencorev1beta1.Condition{
-								{
-									Type:   resourcesv1alpha1.ResourcesApplied,
-									Status: gardencorev1beta1.ConditionFalse,
-								},
-								{
-									Type:   resourcesv1alpha1.ResourcesHealthy,
-									Status: gardencorev1beta1.ConditionFalse,
-								},
+				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       managedResourceName,
+						Namespace:  namespace,
+						Generation: 1,
+					},
+					Status: resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 1,
+						Conditions: []gardencorev1beta1.Condition{
+							{
+								Type:   resourcesv1alpha1.ResourcesApplied,
+								Status: gardencorev1beta1.ConditionFalse,
+							},
+							{
+								Type:   resourcesv1alpha1.ResourcesHealthy,
+								Status: gardencorev1beta1.ConditionFalse,
 							},
 						},
-					})).To(Succeed())
+					},
+				})).To(Succeed())
 
-					Expect(nginxIngress.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
-				})
-
-				It("should successfully wait for the managed resource to become healthy", func() {
-					fakeOps.MaxAttempts = 2
-
-					Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:       managedResourceName,
-							Namespace:  namespace,
-							Generation: 1,
-						},
-						Status: resourcesv1alpha1.ManagedResourceStatus{
-							ObservedGeneration: 1,
-							Conditions: []gardencorev1beta1.Condition{
-								{
-									Type:   resourcesv1alpha1.ResourcesApplied,
-									Status: gardencorev1beta1.ConditionTrue,
-								},
-								{
-									Type:   resourcesv1alpha1.ResourcesHealthy,
-									Status: gardencorev1beta1.ConditionTrue,
-								},
-							},
-						},
-					})).To(Succeed())
-
-					Expect(nginxIngress.Wait(ctx)).To(Succeed())
-				})
+				Expect(nginxIngress.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
 			})
 
-			Describe("#WaitCleanup", func() {
-				It("should fail when the wait for the managed resource deletion times out", func() {
-					fakeOps.MaxAttempts = 2
+			It("should successfully wait for the managed resource to become healthy", func() {
+				fakeOps.MaxAttempts = 2
 
-					Expect(c.Create(ctx, managedResource)).To(Succeed())
+				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       managedResourceName,
+						Namespace:  namespace,
+						Generation: 1,
+					},
+					Status: resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 1,
+						Conditions: []gardencorev1beta1.Condition{
+							{
+								Type:   resourcesv1alpha1.ResourcesApplied,
+								Status: gardencorev1beta1.ConditionTrue,
+							},
+							{
+								Type:   resourcesv1alpha1.ResourcesHealthy,
+								Status: gardencorev1beta1.ConditionTrue,
+							},
+						},
+					},
+				})).To(Succeed())
 
-					Expect(nginxIngress.WaitCleanup(ctx)).To(MatchError(ContainSubstring("still exists")))
-				})
+				Expect(nginxIngress.Wait(ctx)).To(Succeed())
+			})
+		})
 
-				It("should not return an error when it's already removed", func() {
-					Expect(nginxIngress.WaitCleanup(ctx)).To(Succeed())
-				})
+		Describe("#WaitCleanup", func() {
+			It("should fail when the wait for the managed resource deletion times out", func() {
+				fakeOps.MaxAttempts = 2
+
+				Expect(c.Create(ctx, managedResource)).To(Succeed())
+
+				Expect(nginxIngress.WaitCleanup(ctx)).To(MatchError(ContainSubstring("still exists")))
+			})
+
+			It("should not return an error when it's already removed", func() {
+				Expect(nginxIngress.WaitCleanup(ctx)).To(Succeed())
 			})
 		})
 	})
