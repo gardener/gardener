@@ -159,8 +159,8 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		Data: n.values.ConfigData,
 	}
 
-	// We don't call kubernetesutils.MakeUnique() here because the configmap needs to be mutable, since the nginx controller
-	// mutates it in some cases. See https://github.com/gardener/gardener/pull/7386 for more details.
+	// We don't call kubernetesutils.MakeUnique() here because the provider-aws extension needs to mutate it
+	// and the name is hardcoded. See https://github.com/gardener/gardener/pull/7386 for more details.
 
 	var (
 		healthProbePort = intstr.FromInt(10254)
