@@ -39,15 +39,7 @@ import (
 // DeploySeedLogging will install the logging stack for the Shoot in the Seed clusters.
 func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	if !b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) {
-		if err := b.Shoot.Components.Logging.ShootRBACProxy.Destroy(ctx); err != nil {
-			return err
-		}
-
-		if err := b.Shoot.Components.Logging.ShootEventLogger.Destroy(ctx); err != nil {
-			return err
-		}
-
-		return b.Shoot.Components.Logging.Vali.Destroy(ctx)
+		return b.DestroySeedLogging(ctx)
 	}
 
 	// TODO(rickardsjp, istvanballok): Remove in release v1.77 once the Loki to Vali migration is complete.
@@ -95,6 +87,19 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	}
 
 	return b.Shoot.Components.Logging.Vali.Deploy(ctx)
+}
+
+// DestroySeedLogging will uninstall the logging stack for the Shoot in the Seed clusters.
+func (b *Botanist) DestroySeedLogging(ctx context.Context) error {
+	if err := b.Shoot.Components.Logging.ShootRBACProxy.Destroy(ctx); err != nil {
+		return err
+	}
+
+	if err := b.Shoot.Components.Logging.ShootEventLogger.Destroy(ctx); err != nil {
+		return err
+	}
+
+	return b.Shoot.Components.Logging.Vali.Destroy(ctx)
 }
 
 func (b *Botanist) lokiPvcExists(ctx context.Context) (bool, error) {
