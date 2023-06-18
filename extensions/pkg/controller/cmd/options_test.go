@@ -25,7 +25,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/utils/pointer"
-	controllerconfigv1alpha1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
+	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -612,7 +612,7 @@ var _ = Describe("Options", func() {
 					LeaderElectionResourceLock: leaderElectionResourceLock,
 					LeaderElectionID:           leaderElectionID,
 					LeaderElectionNamespace:    leaderElectionNamespace,
-					Controller: controllerconfigv1alpha1.ControllerConfigurationSpec{
+					Controller: controllerconfig.Controller{
 						RecoverPanic: pointer.Bool(true),
 					},
 				}))
