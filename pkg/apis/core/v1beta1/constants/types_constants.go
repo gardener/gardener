@@ -664,6 +664,8 @@ const (
 
 	// SeedNginxIngressClass defines the ingress class for the seed nginx ingress controller
 	SeedNginxIngressClass = "nginx-ingress-gardener"
+	// NginxIngressClass defines the ingress class for the shoot nginx ingress controller addon.
+	NginxIngressClass = "nginx"
 	// IngressKindNginx defines nginx as kind as managed Seed ingress
 	IngressKindNginx = "nginx"
 

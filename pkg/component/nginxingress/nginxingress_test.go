@@ -66,10 +66,16 @@ var _ = Describe("Nginx Ingress", func() {
 		}
 
 		values = Values{
+			ClusterType:             component.ClusterTypeSeed,
+			TargetNamespace:         namespace,
+			IngressClass:            v1beta1constants.SeedNginxIngressClass,
+			PriorityClassName:       v1beta1constants.PriorityClassNameSeedSystem600,
 			ImageController:         imageController,
 			ImageDefaultBackend:     imageDefaultBackend,
 			ConfigData:              configMapData,
 			LoadBalancerAnnotations: loadBalancerAnnotations,
+			PSPDisabled:             true,
+			VPAEnabled:              true,
 		}
 
 		configMapName = "nginx-ingress-controller-" + utils.ComputeConfigMapChecksum(configMapData)[:8]
@@ -299,7 +305,6 @@ spec:
   selector:
     app: nginx-ingress
     component: controller
-    release: addons
   type: LoadBalancer
 status:
   loadBalancer: {}
@@ -310,6 +315,7 @@ metadata:
   creationTimestamp: null
   labels:
     app: nginx-ingress
+    component: nginx-ingress-k8s-backend
   name: nginx-ingress-k8s-backend
   namespace: ` + namespace + `
 spec:
@@ -319,7 +325,6 @@ spec:
   selector:
     app: nginx-ingress
     component: nginx-ingress-k8s-backend
-    release: addons
   type: ClusterIP
 status:
   loadBalancer: {}
@@ -360,7 +365,6 @@ spec:
     matchLabels:
       app: nginx-ingress
       component: controller
-      release: addons
 status:
   currentHealthy: 0
   desiredHealthy: 0
@@ -393,6 +397,7 @@ metadata:
   creationTimestamp: null
   labels:
     app: nginx-ingress
+    component: nginx-ingress-k8s-backend
   name: nginx-ingress-k8s-backend
   namespace: ` + namespace + `
 spec:
@@ -402,7 +407,6 @@ spec:
     matchLabels:
       app: nginx-ingress
       component: nginx-ingress-k8s-backend
-      release: addons
   strategy: {}
   template:
     metadata:
@@ -410,7 +414,6 @@ spec:
       labels:
         app: nginx-ingress
         component: nginx-ingress-k8s-backend
-        release: addons
     spec:
       containers:
       - image: ` + imageDefaultBackend + `
@@ -458,7 +461,6 @@ spec:
     matchLabels:
       app: nginx-ingress
       component: controller
-      release: addons
   strategy: {}
   template:
     metadata:
@@ -471,7 +473,6 @@ spec:
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-runtime-apiserver: allowed
         networking.resources.gardener.cloud/to-nginx-ingress-k8s-backend-tcp-8080: allowed
-        release: addons
         seccompprofile.resources.gardener.cloud/skip: "true"
     spec:
       containers:
@@ -556,7 +557,6 @@ status: {}
 		)
 
 		JustBeforeEach(func() {
-			values.IngressClass = "nginx-ingress-gardener"
 			nginxIngress = New(c, namespace, values)
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
