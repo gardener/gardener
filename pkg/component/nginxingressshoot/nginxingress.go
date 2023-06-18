@@ -229,6 +229,11 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 					Resources: []string{"leases"},
 					Verbs:     []string{"list", "watch"},
 				},
+				{
+					APIGroups: []string{"discovery.k8s.io"},
+					Resources: []string{"endpointslices"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
 			},
 		}
 
@@ -494,15 +499,9 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 					Verbs:         []string{"get", "update"},
 				},
 				{
-					APIGroups: []string{""},
-					Resources: []string{"configmaps"},
-					Verbs:     []string{"create"},
-				},
-				{
-					APIGroups:     []string{""},
-					Resources:     []string{"configmaps"},
-					ResourceNames: []string{"ingress-controller-leader"},
-					Verbs:         []string{"get", "update"},
+					APIGroups: []string{"discovery.k8s.io"},
+					Resources: []string{"endpointslices"},
+					Verbs:     []string{"get", "list", "watch"},
 				},
 			},
 		}

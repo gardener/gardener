@@ -235,6 +235,14 @@ rules:
   verbs:
   - list
   - watch
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - get
+  - list
+  - watch
 `
 
 		clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
@@ -510,20 +518,13 @@ rules:
   - get
   - update
 - apiGroups:
-  - ""
+  - discovery.k8s.io
   resources:
-  - configmaps
-  verbs:
-  - create
-- apiGroups:
-  - ""
-  resourceNames:
-  - ingress-controller-leader
-  resources:
-  - configmaps
+  - endpointslices
   verbs:
   - get
-  - update
+  - list
+  - watch
 `
 
 		roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
