@@ -151,7 +151,6 @@ rules:
   - update
   - watch
 - apiGroups:
-  - extensions
   - networking.k8s.io
   resources:
   - ingresses
@@ -167,7 +166,6 @@ rules:
   - create
   - patch
 - apiGroups:
-  - extensions
   - networking.k8s.io
   resources:
   - ingresses/status

@@ -376,8 +376,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 					Verbs:     []string{"get", "list", "update", "watch"},
 				},
 				{
-					// TODO: drop extensions from the APIGroups
-					APIGroups: []string{"extensions", "networking.k8s.io"},
+					APIGroups: []string{"networking.k8s.io"},
 					Resources: []string{"ingresses"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
@@ -387,8 +386,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 					Verbs:     []string{"create", "patch"},
 				},
 				{
-					// TODO: drop extensions from the APIGroups
-					APIGroups: []string{"extensions", "networking.k8s.io"},
+					APIGroups: []string{"networking.k8s.io"},
 					Resources: []string{"ingresses/status"},
 					Verbs:     []string{"update"},
 				},
