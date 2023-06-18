@@ -77,7 +77,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/metricsserver"
 	"github.com/gardener/gardener/pkg/component/monitoring"
-	"github.com/gardener/gardener/pkg/component/nginxingressshoot"
+	"github.com/gardener/gardener/pkg/component/nginxingress"
 	"github.com/gardener/gardener/pkg/component/nodeexporter"
 	"github.com/gardener/gardener/pkg/component/nodeproblemdetector"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
@@ -616,7 +616,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			vpnshoot.CentralLoggingConfiguration,
 			// shoot addon components
 			kubernetesdashboard.CentralLoggingConfiguration,
-			nginxingressshoot.CentralLoggingConfiguration,
+			nginxingress.CentralLoggingConfiguration,
 		}
 
 		if gardenlethelper.IsEventLoggingEnabled(&r.Config) {

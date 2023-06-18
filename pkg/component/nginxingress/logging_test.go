@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package nginxingressshoot_test
+package nginxingress_test
 
 import (
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
@@ -22,7 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
-	. "github.com/gardener/gardener/pkg/component/nginxingressshoot"
+	. "github.com/gardener/gardener/pkg/component/nginxingress"
 )
 
 var _ = Describe("Logging", func() {
