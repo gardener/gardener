@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package nginxingressshoot
+package nginxingressshoot_test
 
 import (
 	"context"
@@ -28,9 +28,11 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	. "github.com/gardener/gardener/pkg/component/nginxingress"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -52,18 +54,21 @@ var _ = Describe("NginxIngress", func() {
 			"dash": "false",
 		}
 
-		c         client.Client
-		component component.DeployWaiter
+		c            client.Client
+		nginxIngress component.DeployWaiter
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
 		values = Values{
-			NginxControllerImage: nginxControllerImage,
-			DefaultBackendImage:  defaultBackendImage,
-			ConfigData:           configMapData,
-			PSPDisabled:          true,
-			KubeAPIServerHost:    pointer.String("foo.bar"),
+			ClusterType:         component.ClusterTypeShoot,
+			TargetNamespace:     metav1.NamespaceSystem,
+			IngressClass:        v1beta1constants.NginxIngressClass,
+			PriorityClassName:   v1beta1constants.PriorityClassNameShootSystem600,
+			ImageController:     nginxControllerImage,
+			ImageDefaultBackend: defaultBackendImage,
+			ConfigData:          configMapData,
+			PSPDisabled:         true,
 		}
 
 		configMapName = "addons-nginx-ingress-controller"
@@ -403,8 +408,8 @@ spec:
         - --election-id=ingress-controller-leader
         - --update-status=true
         - --annotations-prefix=nginx.ingress.kubernetes.io
-        - --ingress-class=nginx
         - --configmap=kube-system/` + configMapName + `
+        - --ingress-class=nginx
         - --controller-class=k8s.io/nginx
         - --watch-ingress-without-class=true
         env:
@@ -504,12 +509,6 @@ rules:
   - update
 - apiGroups:
   - coordination.k8s.io
-  resources:
-  - leases
-  verbs:
-  - create
-- apiGroups:
-  - coordination.k8s.io
   resourceNames:
   - ingress-controller-leader
   resources:
@@ -517,6 +516,12 @@ rules:
   verbs:
   - get
   - update
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
 - apiGroups:
   - discovery.k8s.io
   resources:
@@ -577,7 +582,7 @@ spec:
     containerPolicies:
     - containerName: '*'
       minAllowed:
-        memory: 128Mi
+        memory: 100Mi
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
@@ -608,12 +613,12 @@ status: {}
 
 	Describe("#Deploy", func() {
 		JustBeforeEach(func() {
-			component = New(c, namespace, values)
+			nginxIngress = New(c, namespace, values)
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 
-			Expect(component.Deploy(ctx)).To(Succeed())
+			Expect(nginxIngress.Deploy(ctx)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 			Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
@@ -707,7 +712,7 @@ status: {}
 
 	Describe("#Destroy", func() {
 		It("should successfully destroy all resources", func() {
-			component = New(c, namespace, Values{})
+			nginxIngress = New(c, namespace, Values{ClusterType: component.ClusterTypeShoot})
 
 			Expect(c.Create(ctx, managedResource)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
@@ -715,7 +720,7 @@ status: {}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 
-			Expect(component.Destroy(ctx)).To(Succeed())
+			Expect(nginxIngress.Destroy(ctx)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
@@ -729,7 +734,7 @@ status: {}
 		)
 
 		BeforeEach(func() {
-			component = New(c, namespace, Values{})
+			nginxIngress = New(c, namespace, Values{ClusterType: component.ClusterTypeShoot})
 
 			fakeOps = &retryfake.Ops{MaxAttempts: 1}
 			resetVars = test.WithVars(
@@ -744,7 +749,7 @@ status: {}
 
 		Describe("#Wait", func() {
 			It("should fail because reading the ManagedResource fails", func() {
-				Expect(component.Wait(ctx)).To(MatchError(ContainSubstring("not found")))
+				Expect(nginxIngress.Wait(ctx)).To(MatchError(ContainSubstring("not found")))
 			})
 
 			It("should fail because the ManagedResource doesn't become healthy", func() {
@@ -771,7 +776,7 @@ status: {}
 					},
 				})).To(Succeed())
 
-				Expect(component.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
+				Expect(nginxIngress.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
 			})
 
 			It("should successfully wait for the managed resource to become healthy", func() {
@@ -798,7 +803,7 @@ status: {}
 					},
 				})).To(Succeed())
 
-				Expect(component.Wait(ctx)).To(Succeed())
+				Expect(nginxIngress.Wait(ctx)).To(Succeed())
 			})
 		})
 
@@ -808,11 +813,11 @@ status: {}
 
 				Expect(c.Create(ctx, managedResource)).To(Succeed())
 
-				Expect(component.WaitCleanup(ctx)).To(MatchError(ContainSubstring("still exists")))
+				Expect(nginxIngress.WaitCleanup(ctx)).To(MatchError(ContainSubstring("still exists")))
 			})
 
 			It("should not return an error when it's already removed", func() {
-				Expect(component.WaitCleanup(ctx)).To(Succeed())
+				Expect(nginxIngress.WaitCleanup(ctx)).To(Succeed())
 			})
 		})
 	})
