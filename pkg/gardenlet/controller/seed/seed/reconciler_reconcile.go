@@ -1288,7 +1288,7 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 		return nil, err
 	}
 
-	nginxIngress, err := defaultNginxIngress(seedClient, imageVector, kubernetesVersion, v1beta1constants.SeedNginxIngressClass, providerConfig, seed.GetLoadBalancerServiceAnnotations(), gardenNamespaceName)
+	nginxIngress, err := defaultNginxIngress(seedClient, imageVector, kubernetesVersion, providerConfig, seed.GetLoadBalancerServiceAnnotations(), gardenNamespaceName)
 	if err != nil {
 		return nil, err
 	}
