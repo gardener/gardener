@@ -80,5 +80,5 @@ func (r *Reconciler) isRelevantSecret(obj client.Object) bool {
 }
 
 func (r *Reconciler) isRelevantSecretUpdate(oldObj, newObj client.Object) bool {
-	return r.isRelevantSecret(newObj) || (r.isRelevantSecret(oldObj) && !r.isRelevantSecret(newObj))
+	return r.isRelevantSecret(newObj) || r.isRelevantSecret(oldObj)
 }
