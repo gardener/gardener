@@ -161,6 +161,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				g.Expect(namespace.Labels).To(And(
 					HaveKeyWithValue("gardener.cloud/role", "extension"),
 					HaveKeyWithValue("controllerregistration.core.gardener.cloud/name", controllerRegistration.Name),
+					HaveKeyWithValue("pod-security.kubernetes.io/enforce", "baseline"),
 					HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
 				))
 				g.Expect(namespace.Annotations).To(And(
