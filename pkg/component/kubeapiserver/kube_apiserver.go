@@ -410,14 +410,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	// TODO(rfranzke): Remove this in a future release.
-	if err := kubernetesutils.DeleteObjects(ctx, k.client.Client(),
-		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-shoot-apiserver", Namespace: k.namespace}},
-		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-shoot-apiserver", Namespace: k.namespace}},
-	); err != nil {
-		return err
-	}
-
 	if err := k.reconcileSecretETCDEncryptionConfiguration(ctx, secretETCDEncryptionConfiguration); err != nil {
 		return err
 	}
