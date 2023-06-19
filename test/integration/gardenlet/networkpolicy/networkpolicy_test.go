@@ -212,7 +212,6 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 				g.Expect(testClient.List(ctx, networkPolicyList, client.InNamespace(gardenNamespace.Name))).To(Succeed())
 				return networkPolicyList.Items
 			}).Should(ConsistOf(
-				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("allow-to-seed-apiserver")})}),
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("allow-to-runtime-apiserver")})}),
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("allow-to-public-networks")})}),
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("allow-to-private-networks")})}),
@@ -365,30 +364,6 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 			inShootNamespaces:             true,
 			inExtensionNamespaces:         true,
 			inCustomNamespace:             true,
-		})
-	})
-
-	Describe("allow-to-seed-apiserver", func() {
-		var expectedNetworkPolicySpec networkingv1.NetworkPolicySpec
-
-		JustBeforeEach(func() {
-			kubernetesEndpoint := &corev1.Endpoints{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "kubernetes"}}
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(kubernetesEndpoint), kubernetesEndpoint)).To(Succeed())
-
-			expectedNetworkPolicySpec = networkingv1.NetworkPolicySpec{
-				Egress:      networkpolicyhelper.GetEgressRules(kubernetesEndpoint.Subsets...),
-				PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{"networking.gardener.cloud/to-seed-apiserver": "allowed"}},
-				PolicyTypes: []networkingv1.PolicyType{"Egress"},
-			}
-		})
-
-		defaultTests(testAttributes{
-			networkPolicyName:         "allow-to-seed-apiserver",
-			expectedNetworkPolicySpec: func(string) networkingv1.NetworkPolicySpec { return expectedNetworkPolicySpec },
-			inGardenNamespace:         true,
-			inIstioSystemNamespace:    true,
-			inShootNamespaces:         true,
-			inCustomNamespace:         true,
 		})
 	})
 

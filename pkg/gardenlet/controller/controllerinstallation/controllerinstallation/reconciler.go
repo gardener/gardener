@@ -23,7 +23,6 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -165,11 +164,6 @@ func (r *Reconciler) reconcile(
 		metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(seed.Spec.Provider.Zones, ","))
 		return nil
 	}); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	// TODO(rfranzke): Drop this code when the FullNetworkPoliciesInRuntimeCluster feature gate gets removed.
-	if err := r.SeedClientSet.Client().Delete(seedCtx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet-allow-all-traffic", Namespace: namespace.Name}}); client.IgnoreNotFound(err) != nil {
 		return reconcile.Result{}, err
 	}
 

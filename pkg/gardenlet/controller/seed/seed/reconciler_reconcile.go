@@ -870,11 +870,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
-	// TODO(rfranzke): Drop this code when the FullNetworkPoliciesInRuntimeCluster feature gate gets removed.
-	if err := kubernetesutils.DeleteObject(ctx, seedClient, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-seed-prometheus", Namespace: r.GardenNamespace}}); err != nil {
-		return err
-	}
-
 	var (
 		g = flow.NewGraph("Seed cluster creation")
 		_ = g.Add(flow.Task{

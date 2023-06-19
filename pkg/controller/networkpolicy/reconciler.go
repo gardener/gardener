@@ -166,19 +166,6 @@ func (r *Reconciler) networkPolicyConfigs() []networkPolicyConfig {
 				labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.LabelExposureClassHandlerName, selection.Exists)),
 			}, r.additionalNamespaceLabelSelectors...),
 		},
-		// TODO(rfranzke): This network policy is deprecated and will be removed soon in favor of
-		//  `allow-to-runtime-apiserver`.
-		{
-			name: "allow-to-seed-apiserver",
-			reconcileFunc: func(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
-				return r.reconcileNetworkPolicyAllowToAPIServer(ctx, log, networkPolicy, v1beta1constants.LabelNetworkPolicyToSeedAPIServer)
-			},
-			namespaceSelectors: append([]labels.Selector{
-				labels.SelectorFromSet(labels.Set{corev1.LabelMetadataName: v1beta1constants.GardenNamespace}),
-				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioSystem}),
-				labels.SelectorFromSet(labels.Set{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}),
-			}, r.additionalNamespaceLabelSelectors...),
-		},
 		{
 			name: "allow-to-runtime-apiserver",
 			reconcileFunc: func(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
