@@ -30,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,6 +39,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/component/machinecontrollermanager"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -462,8 +464,12 @@ subjects:
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "managedresource-shoot-core-machine-controller-manager",
 				Namespace: namespace,
+				Labels: map[string]string{
+					"resources.gardener.cloud/garbage-collectable-reference": "true",
+				},
 			},
-			Type: corev1.SecretTypeOpaque,
+			Type:      corev1.SecretTypeOpaque,
+			Immutable: pointer.Bool(true),
 			Data: map[string][]byte{
 				"clusterrole____gardener.cloud_target_machine-controller-manager.yaml":            []byte(clusterRoleYAML),
 				"clusterrolebinding____gardener.cloud_target_machine-controller-manager.yaml":     []byte(clusterRoleBindingYAML),
@@ -528,15 +534,18 @@ subjects:
 			vpa.ResourceVersion = "1"
 			Expect(actualVPA).To(Equal(vpa))
 
-			actualManagedResourceSecret := &corev1.Secret{}
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), actualManagedResourceSecret)).To(Succeed())
-			managedResourceSecret.ResourceVersion = "1"
-			Expect(actualManagedResourceSecret).To(Equal(managedResourceSecret))
-
 			actualManagedResource := &resourcesv1alpha1.ManagedResource{}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), actualManagedResource)).To(Succeed())
 			managedResource.ResourceVersion = "1"
+			managedResource.Spec.SecretRefs[0] = actualManagedResource.Spec.SecretRefs[0]
+			utilruntime.Must(references.InjectAnnotations(managedResource))
 			Expect(actualManagedResource).To(Equal(managedResource))
+
+			actualManagedResourceSecret := &corev1.Secret{}
+			managedResourceSecret.Name = actualManagedResource.Spec.SecretRefs[0].Name
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), actualManagedResourceSecret)).To(Succeed())
+			managedResourceSecret.ResourceVersion = "2"
+			Expect(actualManagedResourceSecret).To(Equal(managedResourceSecret))
 		})
 	})
 
