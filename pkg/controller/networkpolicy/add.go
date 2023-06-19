@@ -81,7 +81,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runt
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.ConcurrentSyncs, 0),
 		}).
-		Watches(
+		WatchesRawSource(
 			source.Kind(runtimeCluster.GetCache(), &corev1.Namespace{}),
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update)),

@@ -52,7 +52,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 			// with too many unnecessary requests for all secrets in cluster/namespace.
 			resourcemanagerpredicate.HasFinalizer(r.ClassFilter.FinalizerName()),
 		)).
-		Watches(
+		WatchesRawSource(
 			source.Kind(mgr.GetCache(), &resourcesv1alpha1.ManagedResource{}),
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapManagedResourcesToSecrets), mapper.UpdateWithOldAndNew, logr.Discard()),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}),

@@ -66,7 +66,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targ
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 		}).
-		Watches(
+		WatchesRawSource(
 			source.Kind(targetCluster.GetCache(), &corev1.Service{}),
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(r.ServicePredicate()),

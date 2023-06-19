@@ -61,7 +61,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 			RateLimiter:             r.RateLimiter,
 		}).
-		Watches(
+		WatchesRawSource(
 			source.Kind(gardenCluster.GetCache(), &operationsv1alpha1.Bastion{}),
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}),

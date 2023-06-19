@@ -66,7 +66,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 			// if going into exponential backoff, wait at most the configured sync period
 			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.SyncPeriod.Duration),
 		}).
-		Watches(
+		WatchesRawSource(
 			source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.ControllerInstallation{}),
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create)),

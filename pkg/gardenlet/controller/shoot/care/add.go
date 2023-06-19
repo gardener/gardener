@@ -55,7 +55,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 			// if going into exponential backoff, wait at most the configured sync period
 			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.Controllers.ShootCare.SyncPeriod.Duration),
 		}).
-		Watches(
+		WatchesRawSource(
 			source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.Shoot{}),
 			r.EventHandler(),
 			builder.WithPredicates(

@@ -48,7 +48,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 		}).
-		Watches(
+		WatchesRawSource(
 			source.Kind(targetCluster.GetCache(), &corev1.Node{}),
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(r.NodePredicate()),

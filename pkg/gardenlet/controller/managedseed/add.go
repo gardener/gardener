@@ -94,7 +94,7 @@ func (r *Reconciler) AddToManager(
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.Controllers.ManagedSeed.ConcurrentSyncs, 0),
 		}).
-		Watches(
+		WatchesRawSource(
 			source.Kind(gardenCluster.GetCache(), &seedmanagementv1alpha1.ManagedSeed{}),
 			r.EnqueueWithJitterDelay(),
 			builder.WithPredicates(
