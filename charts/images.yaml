@@ -421,6 +421,10 @@ images:
       confidentiality_requirement: 'low'
       integrity_requirement: 'low'
       availability_requirement: 'low'
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/logging-maintainers'
 - name: fluent-bit
   sourceRepository: github.com/fluent/fluent-operator
   repository: eu.gcr.io/gardener-project/3rd/kubesphere/fluent-bit
@@ -434,6 +438,10 @@ images:
       confidentiality_requirement: 'high'
       integrity_requirement: 'low'
       availability_requirement: 'low'
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/logging-maintainers'
 - name: fluent-bit-plugin-installer
   resourceId:
     name: fluent-bit-to-vali
@@ -450,6 +458,10 @@ images:
       integrity_requirement: 'none'
       availability_requirement: 'none'
       comment: no data is stored or processed by the installer
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/logging-maintainers'
 - name: vali
   sourceRepository: github.com/credativ/vali
   repository: ghcr.io/credativ/vali
@@ -463,6 +475,10 @@ images:
       confidentiality_requirement: 'high'
       integrity_requirement: 'high'
       availability_requirement: 'low'
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/logging-maintainers'
 - name: vali-curator
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/vali-curator
@@ -476,6 +492,10 @@ images:
       confidentiality_requirement: 'none'
       integrity_requirement: 'high'
       availability_requirement: 'low'
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/logging-maintainers'
 - name: kube-rbac-proxy
   sourceRepository: github.com/brancz/kube-rbac-proxy
   repository: quay.io/brancz/kube-rbac-proxy
@@ -490,6 +510,10 @@ images:
       integrity_requirement: 'high'
       availability_requirement: 'low'
       comment: kube-rbac-proxy is an authentication proxy working with credentials
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/logging-maintainers'
 - name: valitail
   sourceRepository: github.com/credativ/vali
   repository: ghcr.io/credativ/valitail
@@ -504,6 +528,10 @@ images:
       integrity_requirement: 'high'
       availability_requirement: 'low'
       comment: network exposure is public due to the outbound connectivity, there is no exposed endpoint requiring auth.
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/logging-maintainers'
 - name: telegraf
   resourceId:
     name: telegraf-iptables
@@ -522,6 +550,10 @@ images:
       comment: >
         telegraf is not accessible from outside the seed cluster and does not
         interact with confidential data
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/logging-maintainers'
 - name: event-logger
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/event-logger
@@ -535,6 +567,10 @@ images:
       confidentiality_requirement: 'high'
       integrity_requirement: 'high'
       availability_requirement: 'low'
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/logging-maintainers'
 - name: tune2fs
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/tune2fs
@@ -548,6 +584,10 @@ images:
       confidentiality_requirement: 'none'
       integrity_requirement: 'none'
       availability_requirement: 'low'
+  - name: 'cloud.gardener.cnudie/responsibles'
+    value:
+    - type: 'githubTeam'
+      teamname: 'gardener/logging-maintainers'
 
 # VPA
 - name: vpa-admission-controller
