@@ -55,6 +55,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.Shoot).NotTo(BeNil())
 			Expect(obj.Controllers.ShootCare).NotTo(BeNil())
 			Expect(obj.Controllers.SeedCare).NotTo(BeNil())
+			Expect(obj.Controllers.ShootState).NotTo(BeNil())
 			Expect(obj.Controllers.ShootStateSync).NotTo(BeNil())
 			Expect(obj.Controllers.ManagedSeed).NotTo(BeNil())
 			Expect(obj.LeaderElection).NotTo(BeNil())
@@ -342,6 +343,21 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.SyncPeriod).To(PointTo(Equal(DefaultControllerSyncPeriod)))
 			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(DefaultControllerConcurrentSyncs)))
 			Expect(obj.StaleExtensionHealthChecks).To(PointTo(Equal(StaleExtensionHealthChecks{Enabled: true})))
+		})
+	})
+
+	Describe("#SetDefaults_ShootStateControllerConfiguration", func() {
+		var obj *ShootStateControllerConfiguration
+
+		BeforeEach(func() {
+			obj = &ShootStateControllerConfiguration{}
+		})
+
+		It("should default the configuration", func() {
+			SetDefaults_ShootStateControllerConfiguration(obj)
+
+			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 6 * time.Hour})))
 		})
 	})
 

@@ -221,6 +221,11 @@ config.yaml: |
       {{- if .Values.config.controllers.seedCare.conditionThresholds }}
 {{ toYaml .Values.config.controllers.seedCare.conditionThresholds | indent 6 }}
       {{- end }}
+    {{- if .Values.config.controllers.shootState }}
+    shootState:
+      concurrentSyncs: {{ required ".Values.config.controllers.shootState.concurrentSyncs is required" .Values.config.controllers.shootState.concurrentSyncs }}
+      syncPeriod: {{ required ".Values.config.controllers.shootState.syncPeriod is required" .Values.config.controllers.shootState.syncPeriod }}
+    {{- end }}
     {{- if .Values.config.controllers.shootSecret }}
     shootSecret:
       concurrentSyncs: {{ required ".Values.config.controllers.shootSecret.concurrentSyncs is required" .Values.config.controllers.shootSecret.concurrentSyncs }}

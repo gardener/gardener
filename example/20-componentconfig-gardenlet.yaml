@@ -68,6 +68,9 @@ controllers:
     - type: EveryNodeReady
       duration: 5m
     webhookRemediatorEnabled: false
+  shootState:
+    concurrentSyncs: 5
+    syncPeriod: 6h
   shootSecret:
     concurrentSyncs: 5
   shootStateSync:
