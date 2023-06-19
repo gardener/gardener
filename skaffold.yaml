@@ -827,6 +827,7 @@ build:
         - pkg/gardenlet/controller/shoot/care
         - pkg/gardenlet/controller/shoot/shoot
         - pkg/gardenlet/controller/shoot/shoot/helper
+        - pkg/gardenlet/controller/shoot/state
         - pkg/gardenlet/controller/shootstate
         - pkg/gardenlet/controller/shootstate/secret
         - pkg/gardenlet/controller/shootstate/extensions
