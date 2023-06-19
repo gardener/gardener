@@ -417,6 +417,7 @@ spec:
     matchLabels:
       app: nginx-ingress
       component: nginx-ingress-k8s-backend
+      release: addons
   strategy: {}
   template:
     metadata:
@@ -424,6 +425,7 @@ spec:
       labels:
         app: nginx-ingress
         component: nginx-ingress-k8s-backend
+        release: addons
     spec:
       containers:
       - image: ` + imageDefaultBackend + `
@@ -471,6 +473,7 @@ spec:
     matchLabels:
       app: nginx-ingress
       component: controller
+      release: addons
   strategy: {}
   template:
     metadata:
@@ -483,6 +486,7 @@ spec:
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-runtime-apiserver: allowed
         networking.resources.gardener.cloud/to-nginx-ingress-k8s-backend-tcp-8080: allowed
+        release: addons
         seccompprofile.resources.gardener.cloud/skip: "true"
     spec:
       containers:

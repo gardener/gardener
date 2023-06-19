@@ -436,11 +436,15 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Replicas:             pointer.Int32(1),
 				RevisionHistoryLimit: pointer.Int32(2),
 				Selector: &metav1.LabelSelector{
-					MatchLabels: n.getLabels(labelValueBackend, false),
+					MatchLabels: utils.MergeStringMaps(n.getLabels(labelValueBackend, false), map[string]string{
+						labelKeyRelease: labelValueAddons,
+					}),
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: n.getLabels(labelValueBackend, true),
+						Labels: utils.MergeStringMaps(n.getLabels(labelValueBackend, true), map[string]string{
+							labelKeyRelease: labelValueAddons,
+						}),
 					},
 					Spec: corev1.PodSpec{
 						PriorityClassName: n.values.PriorityClassName,
@@ -494,11 +498,15 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Replicas:             pointer.Int32(2),
 				RevisionHistoryLimit: pointer.Int32(2),
 				Selector: &metav1.LabelSelector{
-					MatchLabels: n.getLabels(LabelValueController, false),
+					MatchLabels: utils.MergeStringMaps[string](n.getLabels(LabelValueController, false), map[string]string{
+						labelKeyRelease: labelValueAddons,
+					}),
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: n.getLabels(LabelValueController, true),
+						Labels: utils.MergeStringMaps[string](n.getLabels(LabelValueController, true), map[string]string{
+							labelKeyRelease: labelValueAddons,
+						}),
 					},
 					Spec: corev1.PodSpec{
 						PriorityClassName: n.values.PriorityClassName,
