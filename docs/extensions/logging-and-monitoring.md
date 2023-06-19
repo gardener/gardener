@@ -156,4 +156,5 @@ If the type of logs exposed in the Plutono instances needs to be changed, it is 
 
 * [GitHub Issue Describing the Concept](https://github.com/gardener/gardener/issues/1351)
 * [Exemplary Implementation (Monitoring) for the GCP Provider](https://github.com/gardener/gardener-extension-provider-gcp/blob/master/charts/internal/seed-controlplane/charts/cloud-controller-manager/templates/configmap-observability.yaml)
-* [Exemplary Implementation (Logging) for the OpenStack Provider](https://github.com/gardener/gardener-extension-provider-openstack/blob/master/charts/gardener-extension-provider-openstack/templates/configmap-logging.yaml)
+* [Exemplary Implementation (ClusterFilter) for the AWS Provider](https://github.com/gardener/gardener-extension-provider-aws/blob/master/charts/gardener-extension-provider-aws/templates/clusterfilters-logging.yaml)
+* [Exemplary Implementation (ClusterParser) for the AWS Provider](https://github.com/gardener/gardener-extension-provider-aws/blob/master/charts/gardener-extension-provider-aws/templates/clusterparsers-logging.yaml)
