@@ -2999,7 +2999,7 @@ message Worker {
   optional string caBundle = 2;
 
   // CRI contains configurations of CRI support of every machine in the worker pool.
-  // Defaults to a CRI with name `containerd` when the Kubernetes version of the `Shoot` is >= 1.22.
+  // Defaults to a CRI with name `containerd`.
   // +optional
   optional CRI cri = 3;
 

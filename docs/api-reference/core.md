@@ -12052,7 +12052,7 @@ CRI
 <td>
 <em>(Optional)</em>
 <p>CRI contains configurations of CRI support of every machine in the worker pool.
-Defaults to a CRI with name <code>containerd</code> when the Kubernetes version of the <code>Shoot</code> is &gt;= 1.22.</p>
+Defaults to a CRI with name <code>containerd</code>.</p>
 </td>
 </tr>
 <tr>

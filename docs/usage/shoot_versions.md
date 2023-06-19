@@ -70,7 +70,15 @@ spec:
   kubernetes:
     versions:
       - classification: preview
-        version: 1.25.0
+        version: 1.27.0
+      - classification: preview
+        version: 1.26.3
+      - classification: supported
+        version: 1.26.2
+      - classification: preview
+        version: 1.25.5
+      - classification: supported
+        version: 1.25.4
       - classification: supported
         version: 1.24.6
       - classification: deprecated
@@ -83,8 +91,6 @@ spec:
         version: 1.23.11
       - classification: supported
         version: 1.22.15
-      - classification: deprecated
-        version: 1.21.14
 ```
 
 ## Version Requirements (Kubernetes and Machine Image)
