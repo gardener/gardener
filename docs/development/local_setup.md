@@ -130,3 +130,7 @@ cd gardener
 ```
 
 > Note: Gardener is using Go modules and cloning the repository into `$GOPATH` is not a hard requirement. However it is still recommended to clone into `$GOPATH` because `k8s.io/code-generator` does not work yet outside of `$GOPATH` - [kubernetes/kubernetes#86753](https://github.com/kubernetes/kubernetes/issues/86753).
+
+# Start the Gardener
+
+Please see [getting_started_locally.md](../deployment/getting_started_locally.md) how to build and deploy Gardener from your local sources.
