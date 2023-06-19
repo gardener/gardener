@@ -16,13 +16,15 @@ package namespaces_test
 
 import (
 	"context"
-	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -32,8 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/namespaces"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -42,12 +43,10 @@ import (
 
 var _ = Describe("Namespaces", func() {
 	var (
-		ctrl       *gomock.Controller
-		c          *mockclient.MockClient
+		fakeClient client.Client
 		namespaces component.DeployWaiter
 
 		ctx         = context.TODO()
-		fakeErr     = fmt.Errorf("fake error")
 		namespace   = "shoot--foo--bar"
 		workerPools = []gardencorev1beta1.Worker{
 			{
@@ -85,10 +84,8 @@ status: {}
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
-
-		namespaces = New(c, namespace, workerPools)
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		namespaces = New(fakeClient, namespace, workerPools)
 
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -116,89 +113,65 @@ status: {}
 		}
 	})
 
-	AfterEach(func() {
-		ctrl.Finish()
-	})
-
 	Describe("#Deploy", func() {
-		It("should fail because the managed resource secret cannot be updated", func() {
-			gomock.InOrder(
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
-			)
-
-			Expect(namespaces.Deploy(ctx)).To(MatchError(fakeErr))
-		})
-
-		It("should fail because the managed resource cannot be updated", func() {
-			gomock.InOrder(
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
-			)
-
-			Expect(namespaces.Deploy(ctx)).To(MatchError(fakeErr))
-		})
-
 		It("should successfully deploy all resources", func() {
-			gomock.InOrder(
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-					Expect(obj).To(DeepEqual(managedResourceSecret))
-				}),
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-					Expect(obj).To(DeepEqual(managedResource))
-				}),
-			)
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 
 			Expect(namespaces.Deploy(ctx)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+			expectedMr := &resourcesv1alpha1.ManagedResource{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
+					Kind:       "ManagedResource",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            managedResource.Name,
+					Namespace:       managedResource.Namespace,
+					ResourceVersion: "1",
+					Labels:          map[string]string{"origin": "gardener"},
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+					SecretRefs: []corev1.LocalObjectReference{{
+						Name: managedResource.Spec.SecretRefs[0].Name,
+					}},
+					KeepObjects: pointer.Bool(true),
+				},
+			}
+			utilruntime.Must(references.InjectAnnotations(expectedMr))
+			Expect(managedResource).To(DeepEqual(expectedMr))
+
+			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+			Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 		})
 	})
 
 	Describe("#Destroy", func() {
-		managedResourceToDelete := &resourcesv1alpha1.ManagedResource{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      managedResourceName,
-				Namespace: namespace,
-			},
-		}
-
-		It("should fail because the managed resource cannot be deleted", func() {
-			c.EXPECT().Delete(ctx, managedResourceToDelete).Return(fakeErr)
-
-			Expect(namespaces.Destroy(ctx)).To(MatchError(fakeErr))
-		})
-
-		It("should fail because the managed resource secret cannot be deleted", func() {
-			gomock.InOrder(
-				c.EXPECT().Delete(ctx, managedResourceToDelete),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceSecretName}}).Return(fakeErr),
-			)
-
-			Expect(namespaces.Destroy(ctx)).To(MatchError(fakeErr))
-		})
-
 		It("should successfully delete all the resources", func() {
-			gomock.InOrder(
-				c.EXPECT().Delete(ctx, managedResourceToDelete),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceSecretName}}),
-			)
+			Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
+			Expect(fakeClient.Create(ctx, managedResourceSecret)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 
 			Expect(namespaces.Destroy(ctx)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 		})
 	})
 
 	Context("waiting functions", func() {
 		var (
-			fakeClient client.Client
-			fakeOps    *retryfake.Ops
-			resetVars  func()
+			fakeOps   *retryfake.Ops
+			resetVars func()
 		)
 
 		BeforeEach(func() {
-			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 			fakeOps = &retryfake.Ops{MaxAttempts: 1}
 			resetVars = test.WithVars(
 				&retry.Until, fakeOps.Until,
