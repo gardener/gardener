@@ -192,7 +192,7 @@ images:
   - name: 'cloud.gardener.cnudie/responsibles'
     value:
     - type: 'githubTeam'
-      teamname: 'gardener/monitoring-maintainers'  
+      teamname: 'gardener/monitoring-maintainers'
 - name: prometheus
   sourceRepository: github.com/prometheus/prometheus
   repository: quay.io/prometheus/prometheus
@@ -265,7 +265,7 @@ images:
 - name: plutono
   sourceRepository: github.com/credativ/plutono
   repository: ghcr.io/credativ/plutono
-  tag: "v7.5.21"
+  tag: "v7.5.22"
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
