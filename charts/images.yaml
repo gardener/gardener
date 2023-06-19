@@ -367,7 +367,7 @@ images:
 - name: fluent-operator
   sourceRepository: github.com/fluent/fluent-operator
   repository: eu.gcr.io/gardener-project/3rd/kubesphere/fluent-operator
-  tag: "v2.2.0"
+  tag: "v2.3.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -384,7 +384,7 @@ images:
 - name: fluent-bit
   sourceRepository: github.com/fluent/fluent-operator
   repository: eu.gcr.io/gardener-project/3rd/kubesphere/fluent-bit
-  tag: "v2.0.9"
+  tag: "v2.1.4"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -403,7 +403,7 @@ images:
     name: fluent-bit-to-vali
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/fluent-bit-to-vali
-  tag: "v0.55.2"
+  tag: "v0.55.3"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -438,7 +438,7 @@ images:
 - name: vali-curator
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/vali-curator
-  tag: "v0.55.2"
+  tag: "v0.55.3"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -493,7 +493,7 @@ images:
     name: telegraf-iptables
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/telegraf-iptables
-  tag: "v0.55.2"
+  tag: "v0.55.3"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -513,7 +513,7 @@ images:
 - name: event-logger
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/event-logger
-  tag: "v0.55.2"
+  tag: "v0.55.3"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -530,7 +530,7 @@ images:
 - name: tune2fs
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/tune2fs
-  tag: "v0.55.2"
+  tag: "v0.55.3"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
