@@ -56,7 +56,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), r.Config.Controllers.ShootCare.SyncPeriod.Duration),
 		}).
 		Watches(
-			source.NewKindWithCache(&gardencorev1beta1.Shoot{}, gardenCluster.GetCache()),
+			source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.Shoot{}),
 			r.EventHandler(),
 			builder.WithPredicates(
 				predicateutils.SeedNamePredicate(r.SeedName, gardenerutils.GetShootSeedNames),

@@ -65,7 +65,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	}
 
 	return c.Watch(
-		source.NewKindWithCache(&gardencorev1beta1.Shoot{}, gardenCluster.GetCache()),
+		source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.Shoot{}),
 		r.EventHandler(c.GetLogger()),
 		predicateutils.SeedNamePredicate(r.Config.SeedConfig.Name, gardenerutils.GetShootSeedNames),
 		&predicate.GenerationChangedPredicate{},

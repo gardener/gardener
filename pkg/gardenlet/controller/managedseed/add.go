@@ -95,7 +95,7 @@ func (r *Reconciler) AddToManager(
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.Controllers.ManagedSeed.ConcurrentSyncs, 0),
 		}).
 		Watches(
-			source.NewKindWithCache(&seedmanagementv1alpha1.ManagedSeed{}, gardenCluster.GetCache()),
+			source.Kind(gardenCluster.GetCache(), &seedmanagementv1alpha1.ManagedSeed{}),
 			r.EnqueueWithJitterDelay(),
 			builder.WithPredicates(
 				r.ManagedSeedPredicate(ctx, r.Config.SeedConfig.SeedTemplate.Name),
@@ -108,7 +108,7 @@ func (r *Reconciler) AddToManager(
 	}
 
 	return c.Watch(
-		source.NewKindWithCache(&gardencorev1beta1.Seed{}, gardenCluster.GetCache()),
+		source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.Seed{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapSeedToManagedSeed), mapper.UpdateWithNew, c.GetLogger()),
 		r.SeedOfManagedSeedPredicate(ctx, r.Config.SeedConfig.SeedTemplate.Name),
 	)

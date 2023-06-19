@@ -87,15 +87,15 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 		// If we want to have immediate updates for managed resources in Shoots in the future as well, we could consider
 		// adding labels to managed resources and watch them explicitly.
 		b = b.Watches(
-			source.NewKindWithCache(&appsv1.Deployment{}, targetCluster.GetCache()),
+			source.Kind(targetCluster.GetCache(), &appsv1.Deployment{}),
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
 			builder.WithPredicates(r.ProgressingStatusChanged()),
 		).Watches(
-			source.NewKindWithCache(&appsv1.StatefulSet{}, targetCluster.GetCache()),
+			source.Kind(targetCluster.GetCache(), &appsv1.StatefulSet{}),
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
 			builder.WithPredicates(r.ProgressingStatusChanged()),
 		).Watches(
-			source.NewKindWithCache(&appsv1.DaemonSet{}, targetCluster.GetCache()),
+			source.Kind(targetCluster.GetCache(), &appsv1.DaemonSet{}),
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
 			builder.WithPredicates(r.ProgressingStatusChanged()),
 		)

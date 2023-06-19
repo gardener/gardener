@@ -60,7 +60,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targ
 			RateLimiter:             r.RateLimiter,
 		}).
 		Watches(
-			source.NewKindWithCache(secret, targetCluster.GetCache()),
+			source.Kind(targetCluster.GetCache(), secret),
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(r.SecretPredicate()),
 		).
@@ -70,7 +70,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targ
 	}
 
 	return c.Watch(
-		source.NewKindWithCache(&corev1.ServiceAccount{}, targetCluster.GetCache()),
+		source.Kind(targetCluster.GetCache(), &corev1.ServiceAccount{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapServiceAccountToSecrets), mapper.UpdateWithOldAndNew, c.GetLogger()),
 		r.ServiceAccountPredicate(),
 	)

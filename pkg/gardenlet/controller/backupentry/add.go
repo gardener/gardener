@@ -71,7 +71,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 			RateLimiter:             r.RateLimiter,
 		}).
 		Watches(
-			source.NewKindWithCache(&gardencorev1beta1.BackupEntry{}, gardenCluster.GetCache()),
+			source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.BackupEntry{}),
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(
 				&predicate.GenerationChangedPredicate{},
@@ -84,7 +84,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 	}
 
 	if err := c.Watch(
-		source.NewKindWithCache(&gardencorev1beta1.BackupBucket{}, gardenCluster.GetCache()),
+		source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.BackupBucket{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapBackupBucketToBackupEntry), mapper.UpdateWithNew, c.GetLogger()),
 		predicateutils.LastOperationChanged(getBackupBucketLastOperation),
 	); err != nil {
@@ -92,7 +92,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 	}
 
 	return c.Watch(
-		source.NewKindWithCache(&extensionsv1alpha1.BackupEntry{}, seedCluster.GetCache()),
+		source.Kind(seedCluster.GetCache(), &extensionsv1alpha1.BackupEntry{}),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapExtensionBackupEntryToCoreBackupEntry), mapper.UpdateWithNew, c.GetLogger()),
 		predicateutils.LastOperationChanged(predicateutils.GetExtensionLastOperation),
 	)

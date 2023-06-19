@@ -53,7 +53,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 			resourcemanagerpredicate.HasFinalizer(r.ClassFilter.FinalizerName()),
 		)).
 		Watches(
-			&source.Kind{Type: &resourcesv1alpha1.ManagedResource{}},
+			source.Kind(mgr.GetCache(), &resourcesv1alpha1.ManagedResource{}),
 			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapManagedResourcesToSecrets), mapper.UpdateWithOldAndNew, logr.Discard()),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).

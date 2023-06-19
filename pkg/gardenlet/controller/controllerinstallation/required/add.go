@@ -108,7 +108,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 			return err
 		}
 
-		if err := c.Watch(source.NewKindWithCache(extension.object, seedCluster.GetCache()), eventHandler, r.ObjectPredicate()); err != nil {
+		if err := c.Watch(source.Kind(seedCluster.GetCache(), extension.object), eventHandler, r.ObjectPredicate()); err != nil {
 			return err
 		}
 	}

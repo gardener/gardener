@@ -66,7 +66,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 			MaxConcurrentReconciles: 1,
 		}).
 		Watches(
-			source.NewKindWithCache(&gardencorev1beta1.Seed{}, gardenCluster.GetCache()),
+			source.Kind(gardenCluster.GetCache(), &gardencorev1beta1.Seed{}),
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(
 				predicateutils.HasName(r.Config.SeedConfig.Name),

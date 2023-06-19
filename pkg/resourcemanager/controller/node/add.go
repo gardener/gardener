@@ -49,7 +49,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 		}).
 		Watches(
-			source.NewKindWithCache(&corev1.Node{}, targetCluster.GetCache()),
+			source.Kind(targetCluster.GetCache(), &corev1.Node{}),
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(r.NodePredicate()),
 		).
