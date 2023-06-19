@@ -2590,11 +2590,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 		Context("FeatureGates validation", func() {
 			It("should forbid invalid feature gates", func() {
 				featureGates := map[string]bool{
-					"AnyVolumeDataSource":      true,
-					"CustomResourceValidation": true,
-					"Foo":                      true,
+					"AnyVolumeDataSource":    true,
+					"GenericEphemeralVolume": true,
+					"Foo":                    true,
 				}
-				shoot.Spec.Kubernetes.Version = "1.18.14"
+				shoot.Spec.Kubernetes.Version = "1.26.14"
 				shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates = featureGates
 				shoot.Spec.Kubernetes.KubeControllerManager.FeatureGates = featureGates
 				shoot.Spec.Kubernetes.KubeScheduler = &core.KubeSchedulerConfig{
@@ -2621,7 +2621,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubeAPIServer.featureGates.CustomResourceValidation"),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.featureGates.GenericEphemeralVolume"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
@@ -2629,7 +2629,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubeControllerManager.featureGates.CustomResourceValidation"),
+						"Field": Equal("spec.kubernetes.kubeControllerManager.featureGates.GenericEphemeralVolume"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
@@ -2637,7 +2637,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubeScheduler.featureGates.CustomResourceValidation"),
+						"Field": Equal("spec.kubernetes.kubeScheduler.featureGates.GenericEphemeralVolume"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
@@ -2645,7 +2645,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubeProxy.featureGates.CustomResourceValidation"),
+						"Field": Equal("spec.kubernetes.kubeProxy.featureGates.GenericEphemeralVolume"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
@@ -2653,7 +2653,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubelet.featureGates.CustomResourceValidation"),
+						"Field": Equal("spec.kubernetes.kubelet.featureGates.GenericEphemeralVolume"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
@@ -5091,19 +5091,19 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Kubelet: &core.KubeletConfig{
 						KubernetesConfig: core.KubernetesConfig{
 							FeatureGates: map[string]bool{
-								"AnyVolumeDataSource":      true,
-								"CustomResourceValidation": true,
-								"Foo":                      true,
+								"AnyVolumeDataSource":  true,
+								"DynamicKubeletConfig": true,
+								"Foo":                  true,
 							},
 						},
 					},
 				},
 			}
-			errList := ValidateWorker(worker, core.Kubernetes{Version: "1.18.14"}, nil, false)
+			errList := ValidateWorker(worker, core.Kubernetes{Version: "1.27.3"}, nil, false)
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("kubernetes.kubelet.featureGates.CustomResourceValidation"),
+					"Field": Equal("kubernetes.kubelet.featureGates.DynamicKubeletConfig"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),

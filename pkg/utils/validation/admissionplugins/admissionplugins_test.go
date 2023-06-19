@@ -86,10 +86,15 @@ var _ = Describe("admissionplugins", func() {
 			},
 			Entry("empty list", nil, "1.18.14", BeEmpty()),
 			Entry("supported admission plugin", []core.AdmissionPlugin{{Name: "AlwaysAdmit"}}, "1.18.14", BeEmpty()),
-			Entry("unsupported admission plugin", []core.AdmissionPlugin{{Name: "DenyEscalatingExec"}}, "1.22.16", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("unsupported admission plugin", []core.AdmissionPlugin{{Name: "ClusterTrustBundleAttest"}}, "1.22.16", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
-				"Detail": Equal("admission plugin \"DenyEscalatingExec\" is not supported in Kubernetes version 1.22.16"),
+				"Detail": Equal("admission plugin \"ClusterTrustBundleAttest\" is not supported in Kubernetes version 1.22.16"),
+			})))),
+			Entry("unsupported admission plugin", []core.AdmissionPlugin{{Name: "PodSecurityPolicy"}}, "1.26.6", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
+				"Detail": Equal("admission plugin \"PodSecurityPolicy\" is not supported in Kubernetes version 1.26.6"),
 			})))),
 			Entry("admission plugin without name", []core.AdmissionPlugin{{}}, "1.18.14", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeRequired),
