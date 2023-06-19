@@ -777,7 +777,7 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("enableStaticTokenKubeconfig"), kubernetes.EnableStaticTokenKubeconfig, "for Kubernetes versions >= 1.27, enableStaticTokenKubeconfig field cannot not be set to true, please see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_access.md#static-token-kubeconfig"))
 	}
 
-	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, false, fldPath.Child("kubeAPIServer"))...)
+	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, fldPath.Child("kubeAPIServer"))...)
 	allErrs = append(allErrs, ValidateKubeControllerManager(kubernetes.KubeControllerManager, networking, kubernetes.Version, workerless, fldPath.Child("kubeControllerManager"))...)
 
 	if workerless {
@@ -1050,7 +1050,7 @@ func validateHibernationUpdate(new, old *core.Shoot) field.ErrorList {
 }
 
 // ValidateKubeAPIServer validates KubeAPIServerConfig.
-func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version string, kubeconfigAllowedForAdmissionPlugins bool, fldPath *field.Path) field.ErrorList {
+func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if kubeAPIServer == nil {
@@ -1110,7 +1110,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 		}
 	}
 
-	allErrs = append(allErrs, admissionpluginsvalidation.ValidateAdmissionPlugins(kubeAPIServer.AdmissionPlugins, version, kubeconfigAllowedForAdmissionPlugins, fldPath.Child("admissionPlugins"))...)
+	allErrs = append(allErrs, admissionpluginsvalidation.ValidateAdmissionPlugins(kubeAPIServer.AdmissionPlugins, version, fldPath.Child("admissionPlugins"))...)
 
 	if auditConfig := kubeAPIServer.AuditConfig; auditConfig != nil {
 		auditPath := fldPath.Child("auditConfig")
