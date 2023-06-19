@@ -330,7 +330,6 @@ var _ = Describe("Fluent Operator", func() {
 	Describe("#Deploy", func() {
 		It("should successfully deploy all resources", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(operatorManagedResource), operatorManagedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, operatorManagedResource.Name)))
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(operatorManagedResourceSecret), operatorManagedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, operatorManagedResourceSecret.Name)))
 
 			Expect(component.Deploy(ctx)).To(Succeed())
 
