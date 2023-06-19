@@ -16,6 +16,7 @@ package shootstate_test
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -23,6 +24,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/clock"
+	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -42,6 +45,7 @@ var _ = Describe("ShootState", func() {
 
 		fakeGardenClient client.Client
 		fakeSeedClient   client.Client
+		fakeClock        clock.Clock
 
 		shoot      *gardencorev1beta1.Shoot
 		shootState *gardencorev1beta1.ShootState
@@ -50,6 +54,7 @@ var _ = Describe("ShootState", func() {
 	BeforeEach(func() {
 		fakeGardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		fakeClock = testclock.NewFakeClock(time.Now())
 
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
@@ -70,9 +75,10 @@ var _ = Describe("ShootState", func() {
 
 	Describe("#Deploy", func() {
 		It("should deploy a ShootState with an empty spec when there is nothing to persist", func() {
-			Expect(Deploy(ctx, fakeGardenClient, fakeSeedClient, shoot)).To(Succeed())
+			Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot)).To(Succeed())
 			Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 			Expect(shootState.Spec).To(Equal(gardencorev1beta1.ShootStateSpec{}))
+			Expect(shootState.Annotations).To(HaveKeyWithValue("gardener.cloud/timestamp", fakeClock.Now().Format(time.RFC3339)))
 		})
 
 		It("should compute the expected spec for both gardener and extensions data", func() {
@@ -96,7 +102,7 @@ var _ = Describe("ShootState", func() {
 			createExtensionObject(ctx, fakeSeedClient, "osc", seedNamespace, &extensionsv1alpha1.OperatingSystemConfig{})
 			createExtensionObject(ctx, fakeSeedClient, "worker", seedNamespace, &extensionsv1alpha1.Worker{})
 
-			Expect(Deploy(ctx, fakeGardenClient, fakeSeedClient, shoot)).To(Succeed())
+			Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot)).To(Succeed())
 			Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 			Expect(shootState.Spec).To(Equal(gardencorev1beta1.ShootStateSpec{
 				Gardener: []gardencorev1beta1.GardenerResourceData{
