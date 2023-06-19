@@ -138,10 +138,18 @@ webhooks:
     operations:
     - CREATE
     resources:
-    - backupbuckets
     - backupentries
     - internalsecrets
     - shootstates
+  - apiGroups:
+    - core.gardener.cloud
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - DELETE
+    resources:
+    - backupbuckets
   - apiGroups:
     - core.gardener.cloud
     apiVersions:
