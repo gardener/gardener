@@ -80,8 +80,8 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelBackupProvider, b.Seed.GetInfo().Spec.Backup.Provider)
 		}
 
-		metav1.SetMetaDataLabel(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
 		metav1.SetMetaDataLabel(&namespace.ObjectMeta, podsecurityadmissionapi.EnforceLevelLabel, string(podsecurityadmissionapi.LevelPrivileged))
+		metav1.SetMetaDataLabel(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
 
 		failureToleranceType := v1beta1helper.GetFailureToleranceType(b.Shoot.GetInfo())
 		if failureToleranceType == nil {

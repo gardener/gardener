@@ -302,10 +302,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 	log.Info("Labeling and annotating namespace", "namespaceName", gardenNamespace.Name)
 	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, seedClient, gardenNamespace, func() error {
 		metav1.SetMetaDataLabel(&gardenNamespace.ObjectMeta, "role", v1beta1constants.GardenNamespace)
-		metav1.SetMetaDataLabel(&gardenNamespace.ObjectMeta, podsecurityadmissionapi.EnforceLevelLabel, string(podsecurityadmissionapi.LevelPrivileged))
 
 		// When the seed is the garden cluster then this information is managed by gardener-operator.
 		if !seedIsGarden {
+			metav1.SetMetaDataLabel(&gardenNamespace.ObjectMeta, podsecurityadmissionapi.EnforceLevelLabel, string(podsecurityadmissionapi.LevelPrivileged))
 			metav1.SetMetaDataLabel(&gardenNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
 			metav1.SetMetaDataAnnotation(&gardenNamespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(seed.GetInfo().Spec.Provider.Zones, ","))
 		}
