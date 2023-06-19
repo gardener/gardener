@@ -40,6 +40,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
@@ -55,6 +56,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	. "github.com/gardener/gardener/pkg/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/component/vpnseedserver"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -724,7 +726,7 @@ var _ = Describe("KubeAPIServer", func() {
 		})
 
 		Describe("Shoot Resources", func() {
-			It("should successfully deploy the managed resource secret", func() {
+			It("should successfully deploy the managed resource and its secret", func() {
 				var (
 					clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -763,33 +765,10 @@ subjects:
   name: system:kube-apiserver:kubelet
 `
 				)
-
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
-				Expect(kapi.Deploy(ctx)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
-				Expect(managedResourceSecret).To(DeepEqual(&corev1.Secret{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: corev1.SchemeGroupVersion.String(),
-						Kind:       "Secret",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            managedResourceSecret.Name,
-						Namespace:       managedResourceSecret.Namespace,
-						ResourceVersion: "1",
-					},
-					Type: corev1.SecretTypeOpaque,
-					Data: map[string][]byte{
-						"clusterrole____system_apiserver_kubelet.yaml":        []byte(clusterRoleYAML),
-						"clusterrolebinding____system_apiserver_kubelet.yaml": []byte(clusterRoleBindingYAML),
-					},
-				}))
-			})
-
-			It("should successfully deploy the managed resource", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 				Expect(kapi.Deploy(ctx)).To(Succeed())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-				Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+				expectedMr := &resourcesv1alpha1.ManagedResource{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
 						Kind:       "ManagedResource",
@@ -805,7 +784,32 @@ subjects:
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 						KeepObjects:  pointer.Bool(false),
-						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}},
+						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResource.Spec.SecretRefs[0].Name}},
+					},
+				}
+				utilruntime.Must(references.InjectAnnotations(expectedMr))
+				Expect(managedResource).To(DeepEqual(expectedMr))
+
+				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret).To(DeepEqual(&corev1.Secret{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: corev1.SchemeGroupVersion.String(),
+						Kind:       "Secret",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResourceSecret.Name,
+						Namespace:       managedResourceSecret.Namespace,
+						ResourceVersion: "2",
+						Labels: map[string]string{
+							"resources.gardener.cloud/garbage-collectable-reference": "true",
+						},
+					},
+					Type:      corev1.SecretTypeOpaque,
+					Immutable: pointer.Bool(true),
+					Data: map[string][]byte{
+						"clusterrole____system_apiserver_kubelet.yaml":        []byte(clusterRoleYAML),
+						"clusterrolebinding____system_apiserver_kubelet.yaml": []byte(clusterRoleBindingYAML),
 					},
 				}))
 			})
