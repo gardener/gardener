@@ -174,6 +174,7 @@ var _ = Describe("Namespaces", func() {
 				HaveKeyWithValue("shoot.gardener.cloud/provider", shootProviderType),
 				HaveKeyWithValue("networking.shoot.gardener.cloud/provider", networkingProviderType),
 				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
+				HaveKeyWithValue("pod-security.kubernetes.io/enforce", "privileged"),
 			))
 		}
 
