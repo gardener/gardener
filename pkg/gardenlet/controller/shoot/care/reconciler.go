@@ -126,6 +126,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		gardencorev1beta1.ShootHibernationPossible,
 		gardencorev1beta1.ShootMaintenancePreconditionsSatisfied,
 		gardencorev1beta1.ShootCACertificateValiditiesAcceptable,
+		gardencorev1beta1.ShootCRDsWithConversionWebhooksPresent,
 	}
 	var constraints []gardencorev1beta1.Condition
 	for _, constr := range constraintTypes {

@@ -24,9 +24,11 @@ import (
 	"github.com/go-logr/logr"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -118,6 +120,7 @@ func (c *Constraint) constraintsChecks(
 		hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint gardencorev1beta1.Condition
 		// optional constraints (not always present in .status.constraints)
 		caCertificateValiditiesAcceptableConstraint = gardencorev1beta1.Condition{Type: gardencorev1beta1.ShootCACertificateValiditiesAcceptable}
+		crdsWithConversionWebhooksPresent           = gardencorev1beta1.Condition{Type: gardencorev1beta1.ShootCRDsWithConversionWebhooksPresent}
 	)
 
 	for _, cons := range constraints {
@@ -128,6 +131,8 @@ func (c *Constraint) constraintsChecks(
 			maintenancePreconditionsSatisfiedConstraint = cons
 		case gardencorev1beta1.ShootCACertificateValiditiesAcceptable:
 			caCertificateValiditiesAcceptableConstraint = cons
+		case gardencorev1beta1.ShootCRDsWithConversionWebhooksPresent:
+			crdsWithConversionWebhooksPresent = cons
 		}
 	}
 
@@ -171,9 +176,16 @@ func (c *Constraint) constraintsChecks(
 		maintenancePreconditionsSatisfiedConstraint = v1beta1helper.UpdatedConditionWithClock(c.clock, maintenancePreconditionsSatisfiedConstraint, status, reason, message, errorCodes...)
 	}
 
+	status, reason, message, err = c.checkIfCRDsWithConversionWebhooksPresent(ctx)
+	if err != nil {
+		crdsWithConversionWebhooksPresent = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, crdsWithConversionWebhooksPresent, err)
+	} else {
+		crdsWithConversionWebhooksPresent = v1beta1helper.UpdatedConditionWithClock(c.clock, crdsWithConversionWebhooksPresent, status, reason, message)
+	}
+
 	return filterOptionalConstraints(
 		[]gardencorev1beta1.Condition{hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint},
-		[]gardencorev1beta1.Condition{caCertificateValiditiesAcceptableConstraint},
+		[]gardencorev1beta1.Condition{caCertificateValiditiesAcceptableConstraint, crdsWithConversionWebhooksPresent},
 	)
 }
 
@@ -249,6 +261,38 @@ func (c *Constraint) CheckIfCACertificateValiditiesAcceptable(ctx context.Contex
 		"NoExpiringCACertificates",
 		fmt.Sprintf("All CA certificates are still valid for at least %s.", minimumValidity),
 		nil,
+		nil
+}
+
+// checkIfCRDsWithConversionWebhooksPresent checks whether there are CRDs with multiple stored versions and
+// conversion webhooks are present in the cluster.
+func (c *Constraint) checkIfCRDsWithConversionWebhooksPresent(ctx context.Context) (gardencorev1beta1.ConditionStatus, string, string, error) {
+	var (
+		crdList                   = &apiextensionsv1.CustomResourceDefinitionList{}
+		crdsWithConversionWebhook = sets.New[string]()
+	)
+
+	if err := c.shootClient.List(ctx, crdList); err != nil {
+		return "", "", "", fmt.Errorf("could not list all CRDs in the shoot: %w", err)
+	}
+
+	for _, crd := range crdList.Items {
+		if len(crd.Status.StoredVersions) > 1 && crd.Spec.Conversion != nil && crd.Spec.Conversion.Strategy == apiextensionsv1.WebhookConverter {
+			crdsWithConversionWebhook.Insert(crd.Name)
+		}
+	}
+
+	if crdsWithConversionWebhook.Len() > 0 {
+		return gardencorev1beta1.ConditionFalse,
+			"CRDsWithConversionWebhooksPresent",
+			fmt.Sprintf("Some CRDs in your cluster have multiple stored versions present and have a conversion webhook configured: %s. Please see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_status.md#constraints for more details.",
+				strings.Join(sets.List(crdsWithConversionWebhook), ", ")),
+			nil
+	}
+
+	return gardencorev1beta1.ConditionTrue,
+		"NoCRDsWithConversionWebhooksPresent",
+		"No CRDs have multiple stored versions present and a conversion webhook configured",
 		nil
 }
 
