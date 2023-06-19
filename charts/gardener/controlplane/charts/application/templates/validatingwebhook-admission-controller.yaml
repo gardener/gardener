@@ -139,6 +139,7 @@ webhooks:
     - CREATE
     resources:
     - backupentries
+    - internalsecrets
     - shootstates
   - apiGroups:
     - core.gardener.cloud
@@ -150,14 +151,6 @@ webhooks:
     resources:
     - backupbuckets
   - apiGroups:
-    - operations.gardener.cloud
-    apiVersions:
-    - v1alpha1
-    operations:
-    - CREATE
-    resources:
-    - bastions
-  - apiGroups:
     - core.gardener.cloud
     apiVersions:
     - v1beta1
@@ -167,6 +160,14 @@ webhooks:
     - DELETE
     resources:
     - seeds
+  - apiGroups:
+    - operations.gardener.cloud
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    resources:
+    - bastions
   failurePolicy: Fail
   matchPolicy: Equivalent
   clientConfig:

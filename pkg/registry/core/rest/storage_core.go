@@ -21,10 +21,12 @@ import (
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
 	genericapiserver "k8s.io/apiserver/pkg/server"
+	kubeinformers "k8s.io/client-go/informers"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	backupbucketstore "github.com/gardener/gardener/pkg/registry/core/backupbucket/storage"
 	backupentrystore "github.com/gardener/gardener/pkg/registry/core/backupentry/storage"
 	cloudprofilestore "github.com/gardener/gardener/pkg/registry/core/cloudprofile/storage"
@@ -45,6 +47,8 @@ import (
 type StorageProvider struct {
 	AdminKubeconfigMaxExpiration time.Duration
 	CredentialsRotationInterval  time.Duration
+	KubeInformerFactory          kubeinformers.SharedInformerFactory
+	CoreInformerFactory          gardencoreinformers.SharedInformerFactory
 }
 
 // NewRESTStorage creates a new API group info object and registers the v1beta1 core storage.
@@ -105,10 +109,16 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 	shootStateStorage := shootstatestore.NewStorage(restOptionsGetter)
 	storage["shootstates"] = shootStateStorage.ShootState
 
-	shootStorage := shootstore.NewStorage(restOptionsGetter, shootstatestore.NewStorage(restOptionsGetter).ShootState.Store, p.AdminKubeconfigMaxExpiration, p.CredentialsRotationInterval)
+	shootStorage := shootstore.NewStorage(
+		restOptionsGetter,
+		shootstatestore.NewStorage(restOptionsGetter).ShootState.Store,
+		p.CoreInformerFactory.Core().InternalVersion().InternalSecrets().Lister(),
+		p.KubeInformerFactory.Core().V1().Secrets().Lister(),
+		p.AdminKubeconfigMaxExpiration,
+		p.CredentialsRotationInterval,
+	)
 	storage["shoots"] = shootStorage.Shoot
 	storage["shoots/status"] = shootStorage.Status
-
 	storage["shoots/binding"] = shootStorage.Binding
 
 	if shootStorage.AdminKubeconfig != nil {

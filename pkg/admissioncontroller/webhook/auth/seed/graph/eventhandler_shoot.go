@@ -83,6 +83,7 @@ func (g *graph) handleShootCreateOrUpdate(shoot *gardencorev1beta1.Shoot) {
 
 	g.deleteAllIncomingEdges(VertexTypeCloudProfile, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllIncomingEdges(VertexTypeExposureClass, VertexTypeShoot, shoot.Namespace, shoot.Name)
+	g.deleteAllIncomingEdges(VertexTypeInternalSecret, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllIncomingEdges(VertexTypeConfigMap, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllIncomingEdges(VertexTypeNamespace, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeShoot, shoot.Namespace, shoot.Name)
@@ -154,6 +155,13 @@ func (g *graph) handleShootCreateOrUpdate(shoot *gardencorev1beta1.Shoot) {
 	// gardenlet reconciliation and are bound to the lifetime of the shoot, so let's add them here.
 	for _, suffix := range gardenerutils.GetShootProjectSecretSuffixes() {
 		secretVertex := g.getOrCreateVertex(VertexTypeSecret, shoot.Namespace, gardenerutils.ComputeShootProjectSecretName(shoot.Name, suffix))
+		g.addEdge(secretVertex, shootVertex)
+	}
+
+	// Those internal secrets are not directly referenced in the shoot spec, however, they will be created/updated as part of the
+	// gardenlet reconciliation and are bound to the lifetime of the shoot, so let's add them here.
+	for _, suffix := range gardenerutils.GetShootProjectInternalSecretSuffixes() {
+		secretVertex := g.getOrCreateVertex(VertexTypeInternalSecret, shoot.Namespace, gardenerutils.ComputeShootProjectSecretName(shoot.Name, suffix))
 		g.addEdge(secretVertex, shootVertex)
 	}
 

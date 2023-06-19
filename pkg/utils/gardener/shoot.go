@@ -209,6 +209,8 @@ const (
 	ShootProjectSecretSuffixKubeconfig = "kubeconfig"
 	// ShootProjectSecretSuffixCACluster is a constant for a shoot project secret with suffix 'ca-cluster'.
 	ShootProjectSecretSuffixCACluster = "ca-cluster"
+	// ShootProjectSecretSuffixCAClient is a constant for a shoot project secret with suffix 'ca-client'.
+	ShootProjectSecretSuffixCAClient = "ca-client"
 	// ShootProjectSecretSuffixSSHKeypair is a constant for a shoot project secret with suffix 'ssh-keypair'.
 	ShootProjectSecretSuffixSSHKeypair = v1beta1constants.SecretNameSSHKeyPair
 	// ShootProjectSecretSuffixOldSSHKeypair is a constant for a shoot project secret with suffix 'ssh-keypair.old'.
@@ -228,6 +230,13 @@ func GetShootProjectSecretSuffixes() []string {
 	}
 }
 
+// GetShootProjectInternalSecretSuffixes returns the list of shoot-related project internal secret suffixes.
+func GetShootProjectInternalSecretSuffixes() []string {
+	return []string{
+		ShootProjectSecretSuffixCAClient,
+	}
+}
+
 func shootProjectSecretSuffix(suffix string) string {
 	return "." + suffix
 }
@@ -241,6 +250,18 @@ func ComputeShootProjectSecretName(shootName, suffix string) string {
 // an empty string and <false>. Otherwise, it returns the shoot name and <true>.
 func IsShootProjectSecret(secretName string) (string, bool) {
 	for _, v := range GetShootProjectSecretSuffixes() {
+		if suffix := shootProjectSecretSuffix(v); strings.HasSuffix(secretName, suffix) {
+			return strings.TrimSuffix(secretName, suffix), true
+		}
+	}
+
+	return "", false
+}
+
+// IsShootProjectInternalSecret checks if the given name matches the name of a shoot-related project internal secret.
+// If no, it returns an empty string and <false>. Otherwise, it returns the shoot name and <true>.
+func IsShootProjectInternalSecret(secretName string) (string, bool) {
+	for _, v := range GetShootProjectInternalSecretSuffixes() {
 		if suffix := shootProjectSecretSuffix(v); strings.HasSuffix(secretName, suffix) {
 			return strings.TrimSuffix(secretName, suffix), true
 		}

@@ -252,6 +252,8 @@ const (
 	GardenRoleKubeconfig = "kubeconfig"
 	// GardenRoleCACluster is the value of the GardenRole key indicating type 'ca-cluster'.
 	GardenRoleCACluster = "ca-cluster"
+	// GardenRoleCAClient is the value of the GardenRole key indicating type 'ca-client'.
+	GardenRoleCAClient = "ca-client"
 	// GardenRoleSSHKeyPair is the value of the GardenRole key indicating type 'ssh-keypair'.
 	GardenRoleSSHKeyPair = "ssh-keypair"
 	// GardenRoleDefaultDomain is the value of the GardenRole key indicating type 'default-domain'.

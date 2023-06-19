@@ -71,6 +71,8 @@ var (
 	controllerRegistrationResource    = gardencorev1beta1.Resource("controllerregistrations")
 	eventCoreResource                 = corev1.Resource("events")
 	eventResource                     = eventsv1.Resource("events")
+	exposureClassResource             = gardencorev1beta1.Resource("exposureclasses")
+	internalSecretResource            = gardencorev1beta1.Resource("internalsecrets")
 	leaseResource                     = coordinationv1.Resource("leases")
 	managedSeedResource               = seedmanagementv1alpha1.Resource("managedseeds")
 	namespaceResource                 = corev1.Resource("namespaces")
@@ -81,7 +83,6 @@ var (
 	serviceAccountResource            = corev1.Resource("serviceaccounts")
 	shootResource                     = gardencorev1beta1.Resource("shoots")
 	shootStateResource                = gardencorev1beta1.Resource("shootstates")
-	exposureClassResource             = gardencorev1beta1.Resource("exposureclasses")
 )
 
 // TODO: Revisit all `DecisionNoOpinion` later. Today we cannot deny the request for backwards compatibility
@@ -145,6 +146,14 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			)
 		case eventCoreResource, eventResource:
 			return a.authorizeEvent(requestLog, attrs)
+		case exposureClassResource:
+			return a.authorizeRead(requestLog, seedName, graph.VertexTypeExposureClass, attrs)
+		case internalSecretResource:
+			return a.authorize(requestLog, seedName, graph.VertexTypeInternalSecret, attrs,
+				[]string{"get", "update", "patch", "delete", "list", "watch"},
+				[]string{"create"},
+				nil,
+			)
 		case leaseResource:
 			return a.authorizeLease(requestLog, seedName, attrs)
 		case managedSeedResource:
@@ -181,8 +190,6 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				[]string{"create"},
 				nil,
 			)
-		case exposureClassResource:
-			return a.authorizeRead(requestLog, seedName, graph.VertexTypeExposureClass, attrs)
 		default:
 			a.logger.Info(
 				"Unhandled resource request",

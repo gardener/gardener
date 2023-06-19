@@ -182,47 +182,58 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 	gardenerAPIServerConfig := genericapiserver.NewRecommendedConfig(api.Codecs)
 	o.KubeInformerFactory = kubeinformers.NewSharedInformerFactory(kubeClient, kubeAPIServerConfig.Timeout)
 
+	apiConfig := &apiserver.Config{
+		GenericConfig:       gardenerAPIServerConfig,
+		ExtraConfig:         apiserver.ExtraConfig{},
+		KubeInformerFactory: o.KubeInformerFactory,
+	}
+
+	if err := o.ApplyTo(apiConfig); err != nil {
+		return nil, err
+	}
+
+	protobufLoopbackConfig := *gardenerAPIServerConfig.LoopbackClientConfig
+	if protobufLoopbackConfig.ContentType == "" {
+		protobufLoopbackConfig.ContentType = runtime.ContentTypeProtobuf
+	}
+
+	// core client
+	coreClient, err := gardencoreclientset.NewForConfig(&protobufLoopbackConfig)
+	if err != nil {
+		return nil, err
+	}
+	o.CoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(coreClient, protobufLoopbackConfig.Timeout)
+	apiConfig.CoreInformerFactory = o.CoreInformerFactory
+
+	// versioned core client
+	versionedCoreClient, err := gardencoreversionedclientset.NewForConfig(&protobufLoopbackConfig)
+	if err != nil {
+		return nil, err
+	}
+	o.ExternalCoreInformerFactory = gardencoreexternalinformers.NewSharedInformerFactory(versionedCoreClient, protobufLoopbackConfig.Timeout)
+
+	// seedmanagement client
+	seedManagementClient, err := seedmanagementclientset.NewForConfig(&protobufLoopbackConfig)
+	if err != nil {
+		return nil, err
+	}
+	o.SeedManagementInformerFactory = seedmanagementinformers.NewSharedInformerFactory(seedManagementClient, protobufLoopbackConfig.Timeout)
+
+	// settings client
+	settingsClient, err := settingsclientset.NewForConfig(&protobufLoopbackConfig)
+	if err != nil {
+		return nil, err
+	}
+	o.SettingsInformerFactory = settingsinformers.NewSharedInformerFactory(settingsClient, protobufLoopbackConfig.Timeout)
+
+	// dynamic client
+	dynamicClient, err := dynamic.NewForConfig(kubeAPIServerConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	// Initialize admission plugins
 	o.Recommended.ExtraAdmissionInitializers = func(c *genericapiserver.RecommendedConfig) ([]admission.PluginInitializer, error) {
-		protobufLoopbackConfig := *gardenerAPIServerConfig.LoopbackClientConfig
-		if protobufLoopbackConfig.ContentType == "" {
-			protobufLoopbackConfig.ContentType = runtime.ContentTypeProtobuf
-		}
-
-		// core client
-		coreClient, err := gardencoreclientset.NewForConfig(&protobufLoopbackConfig)
-		if err != nil {
-			return nil, err
-		}
-		o.CoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(coreClient, protobufLoopbackConfig.Timeout)
-
-		// versioned core client
-		versionedCoreClient, err := gardencoreversionedclientset.NewForConfig(&protobufLoopbackConfig)
-		if err != nil {
-			return nil, err
-		}
-		o.ExternalCoreInformerFactory = gardencoreexternalinformers.NewSharedInformerFactory(versionedCoreClient, protobufLoopbackConfig.Timeout)
-
-		// seedmanagement client
-		seedManagementClient, err := seedmanagementclientset.NewForConfig(gardenerAPIServerConfig.LoopbackClientConfig)
-		if err != nil {
-			return nil, err
-		}
-		o.SeedManagementInformerFactory = seedmanagementinformers.NewSharedInformerFactory(seedManagementClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
-
-		// settings client
-		settingsClient, err := settingsclientset.NewForConfig(&protobufLoopbackConfig)
-		if err != nil {
-			return nil, err
-		}
-		o.SettingsInformerFactory = settingsinformers.NewSharedInformerFactory(settingsClient, protobufLoopbackConfig.Timeout)
-
-		// dynamic client
-		dynamicClient, err := dynamic.NewForConfig(kubeAPIServerConfig)
-		if err != nil {
-			return nil, err
-		}
-
 		return []admission.PluginInitializer{
 			admissioninitializer.New(
 				o.CoreInformerFactory,
@@ -244,13 +255,10 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 		}, nil
 	}
 
-	apiConfig := &apiserver.Config{
-		GenericConfig: gardenerAPIServerConfig,
-		ExtraConfig:   apiserver.ExtraConfig{},
-	}
-
-	if err := o.ApplyTo(apiConfig); err != nil {
-		return nil, err
+	if initializers, err := o.Recommended.ExtraAdmissionInitializers(gardenerAPIServerConfig); err != nil {
+		return apiConfig, err
+	} else if err := o.Recommended.Admission.ApplyTo(&gardenerAPIServerConfig.Config, gardenerAPIServerConfig.SharedInformerFactory, gardenerAPIServerConfig.ClientConfig, features.DefaultFeatureGate, initializers...); err != nil {
+		return apiConfig, err
 	}
 
 	return apiConfig, nil
@@ -391,11 +399,6 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 		return err
 	}
 	if err := o.Recommended.CoreAPI.ApplyTo(gardenerAPIServerConfig); err != nil {
-		return err
-	}
-	if initializers, err := o.Recommended.ExtraAdmissionInitializers(gardenerAPIServerConfig); err != nil {
-		return err
-	} else if err := o.Recommended.Admission.ApplyTo(&gardenerAPIServerConfig.Config, gardenerAPIServerConfig.SharedInformerFactory, gardenerAPIServerConfig.ClientConfig, features.DefaultFeatureGate, initializers...); err != nil {
 		return err
 	}
 	if err := o.ExtraOptions.ApplyTo(config); err != nil {
