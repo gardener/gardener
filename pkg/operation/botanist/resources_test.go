@@ -110,8 +110,13 @@ var _ = Describe("Resources", func() {
 			Expect(managedResource.Spec.KeepObjects).To(PointTo(BeFalse()))
 			Expect(managedResource.Spec.SecretRefs).To(HaveLen(1))
 
-			managedResourceSecret := &corev1.Secret{}
-			Expect(seedClient.Get(ctx, kubernetesutils.Key(seedNamespace, "referenced-resources"), managedResourceSecret)).To(Succeed())
+			managedResourceSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      managedResource.Spec.SecretRefs[0].Name,
+					Namespace: managedResource.Namespace,
+				},
+			}
+			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Data).To(HaveKey("referenced-resources"))
 
 			var (

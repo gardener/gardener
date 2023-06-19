@@ -25,6 +25,7 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -317,9 +318,9 @@ var _ = Describe("operatingsystemconfig", func() {
 
 					// managed resource secret reconciliation for executor scripts for worker pools
 					// worker pool 1
+
 					worker1ExecutorScript, _ := ExecutorScriptFn([]byte(worker1OriginalContent), cloudConfigExecutionMaxDelaySeconds, hyperkubeImage.ToImage(&kubernetesVersion), kubernetesVersion, nil, worker1OriginalCommand, worker1OriginalUnits, worker1OriginalFiles)
-					kubernetesClientSeed.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-shoot-cloud-config-execution-"+worker1Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
-					kubernetesClientSeed.EXPECT().Update(ctx, &corev1.Secret{
+					mrSecretPool1 := &corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "managedresource-shoot-cloud-config-execution-" + worker1Name,
 							Namespace: namespace,
@@ -339,13 +340,16 @@ metadata:
     worker.gardener.cloud/pool: ` + worker1Name + `
   name: ` + worker1Key + `
   namespace: kube-system
-`)},
-					})
+`)}}
+
+					utilruntime.Must(kubernetesutils.MakeUnique(mrSecretPool1))
+					kubernetesClientSeed.EXPECT().Get(ctx, client.ObjectKeyFromObject(mrSecretPool1), gomock.AssignableToTypeOf(&corev1.Secret{})).MaxTimes(2)
+					kubernetesClientSeed.EXPECT().Update(ctx, mrSecretPool1)
+					kubernetesClientSeed.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).MaxTimes(3)
 
 					// worker pool 2
 					worker2ExecutorScript, _ := ExecutorScriptFn([]byte(worker2OriginalContent), cloudConfigExecutionMaxDelaySeconds, hyperkubeImage.ToImage(&worker2KubernetesVersion), worker2KubernetesVersion, &gardencorev1beta1.DataVolume{Name: worker2KubeletDataVolumeName}, worker2OriginalCommand, worker2OriginalUnits, worker2OriginalFiles)
-					kubernetesClientSeed.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-shoot-cloud-config-execution-"+worker2Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
-					kubernetesClientSeed.EXPECT().Update(ctx, &corev1.Secret{
+					mrSecretPool2 := &corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "managedresource-shoot-cloud-config-execution-" + worker2Name,
 							Namespace: namespace,
@@ -365,13 +369,15 @@ metadata:
     worker.gardener.cloud/pool: ` + worker2Name + `
   name: ` + worker2Key + `
   namespace: kube-system
-`)},
-					})
+`)}}
+
+					utilruntime.Must(kubernetesutils.MakeUnique(mrSecretPool2))
+					kubernetesClientSeed.EXPECT().Get(ctx, client.ObjectKeyFromObject(mrSecretPool2), gomock.AssignableToTypeOf(&corev1.Secret{})).MaxTimes(2)
+					kubernetesClientSeed.EXPECT().Update(ctx, mrSecretPool2)
 
 					// managed resource secret reconciliation for RBAC resources
 					downloaderRBACResourcesData, _ := DownloaderGenerateRBACResourcesDataFn([]string{worker1Key, worker2Key})
-					kubernetesClientSeed.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-shoot-cloud-config-rbac"), gomock.AssignableToTypeOf(&corev1.Secret{}))
-					kubernetesClientSeed.EXPECT().Update(ctx, &corev1.Secret{
+					mrRBACSecret := &corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "managedresource-shoot-cloud-config-rbac",
 							Namespace: namespace,
@@ -379,7 +385,11 @@ metadata:
 						},
 						Type: corev1.SecretTypeOpaque,
 						Data: downloaderRBACResourcesData,
-					}).Return(params.managedResourceSecretReconciliationError)
+					}
+
+					utilruntime.Must(kubernetesutils.MakeUnique(mrRBACSecret))
+					kubernetesClientSeed.EXPECT().Get(ctx, client.ObjectKeyFromObject(mrRBACSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).MaxTimes(2)
+					kubernetesClientSeed.EXPECT().Update(ctx, mrRBACSecret).Return(params.managedResourceSecretReconciliationError)
 
 					if params.managedResourceSecretReconciliationError == nil {
 						// managed resource reconciliation
@@ -391,11 +401,16 @@ metadata:
 									Name:      "shoot-cloud-config-execution",
 									Namespace: namespace,
 									Labels:    map[string]string{"origin": "gardener"},
+									Annotations: map[string]string{
+										"reference.resources.gardener.cloud/secret-f3205bea": "managedresource-shoot-cloud-config-execution-worker1-cca6d1e7",
+										"reference.resources.gardener.cloud/secret-1d4d1d6c": "managedresource-shoot-cloud-config-execution-worker2-4744286d",
+										"reference.resources.gardener.cloud/secret-db6befd8": "managedresource-shoot-cloud-config-rbac-94106240",
+									},
 								}))
 								Expect(obj.Spec.SecretRefs).To(ConsistOf(
-									corev1.LocalObjectReference{Name: "managedresource-shoot-cloud-config-execution-" + worker1Name},
-									corev1.LocalObjectReference{Name: "managedresource-shoot-cloud-config-execution-" + worker2Name},
-									corev1.LocalObjectReference{Name: "managedresource-shoot-cloud-config-rbac"},
+									corev1.LocalObjectReference{Name: "managedresource-shoot-cloud-config-execution-" + worker1Name + "-cca6d1e7"},
+									corev1.LocalObjectReference{Name: "managedresource-shoot-cloud-config-execution-" + worker2Name + "-4744286d"},
+									corev1.LocalObjectReference{Name: "managedresource-shoot-cloud-config-rbac-94106240"},
 								))
 								Expect(obj.Spec.InjectLabels).To(Equal(map[string]string{"shoot.gardener.cloud/no-cleanup": "true"}))
 								Expect(obj.Spec.KeepObjects).To(Equal(pointer.Bool(false)))
