@@ -16,9 +16,7 @@ package botanist
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -167,23 +165,20 @@ func (b *Botanist) DefaultEventLogger() (component.Deployer, error) {
 		eventlogger.Values{
 			Image:    imageEventLogger.String(),
 			Replicas: b.Shoot.GetReplicas(1),
-		})
+		},
+	)
 }
 
-func (b *Botanist) defaultVali() (component.Deployer, error) {
-	var ingressClass string
-
-	k8Version, err := semver.NewVersion(*b.Seed.GetInfo().Status.KubernetesVersion)
-	if err != nil {
-		return nil, fmt.Errorf("can't get seed k8s version: %w", err)
-	}
-
+// DefaultVali returns a deployer for Vali.
+func (b *Botanist) DefaultVali() (component.Deployer, error) {
 	hvpaEnabled := features.DefaultFeatureGate.Enabled(features.HVPA)
 	if b.ManagedSeed != nil {
 		hvpaEnabled = features.DefaultFeatureGate.Enabled(features.HVPAForShootedSeed)
 	}
 
+	var ingressClass string
 	if b.isShootNodeLoggingEnabled() {
+		var err error
 		ingressClass, err = gardenerutils.ComputeNginxIngressClassForSeed(b.Seed.GetInfo(), b.Seed.GetInfo().Status.KubernetesVersion)
 		if err != nil {
 			return nil, err
@@ -192,19 +187,20 @@ func (b *Botanist) defaultVali() (component.Deployer, error) {
 
 	return shared.NewVali(
 		b.SeedClientSet.Client(),
-		b.ImageVector,
-		b.Shoot.GetReplicas(1),
 		b.Shoot.SeedNamespace,
-		ingressClass,
-		v1beta1constants.PriorityClassNameShootControlPlane100,
-		component.ClusterTypeShoot,
-		b.ComputeValiHost(),
+		b.Seed.KubernetesVersion,
+		b.ImageVector,
 		b.SecretsManager,
-		nil,
-		k8Version,
+		component.ClusterTypeShoot,
+		b.Shoot.GetReplicas(1),
 		b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config),
 		b.isShootNodeLoggingEnabled(),
+		v1beta1constants.PriorityClassNameShootControlPlane100,
+		nil,
+		b.ComputeValiHost(),
+		ingressClass,
 		true,
 		hvpaEnabled,
-		nil)
+		nil,
+	)
 }

@@ -285,7 +285,7 @@ func defaultVali(
 	ctx context.Context,
 	c client.Client,
 	imageVector imagevector.ImageVector,
-	storage *resource.Quantity,
+	loggingConfig *config.Logging,
 	gardenNamespaceName string,
 	isLoggingEnabled bool,
 	hvpaEnabled bool,
@@ -293,8 +293,8 @@ func defaultVali(
 	component.Deployer,
 	error,
 ) {
-	maintenanceBegin := "220000-0000"
-	maintenanceEnd := "230000-0000"
+	maintenanceBegin, maintenanceEnd := "220000-0000", "230000-0000"
+
 	if hvpaEnabled {
 		shootInfo := &corev1.ConfigMap{}
 		if err := c.Get(ctx, kubernetesutils.Key(metav1.NamespaceSystem, v1beta1constants.ConfigMapNameShootInfo), shootInfo); err != nil {
@@ -306,34 +306,41 @@ func defaultVali(
 			if err != nil {
 				return nil, err
 			}
-			maintenanceBegin = shootMaintenanceBegin.Add(1, 0, 0).Formatted()
 
 			shootMaintenanceEnd, err := timewindow.ParseMaintenanceTime(shootInfo.Data["maintenanceEnd"])
 			if err != nil {
 				return nil, err
 			}
+
+			maintenanceBegin = shootMaintenanceBegin.Add(1, 0, 0).Formatted()
 			maintenanceEnd = shootMaintenanceEnd.Add(1, 0, 0).Formatted()
 		}
 	}
 
+	var storage *resource.Quantity
+	if loggingConfig != nil && loggingConfig.Vali != nil && loggingConfig.Vali.Garden != nil {
+		storage = loggingConfig.Vali.Garden.Storage
+	}
+
 	return shared.NewVali(
 		c,
-		imageVector,
-		1,
 		gardenNamespaceName,
-		"",
-		v1beta1constants.PriorityClassNameSeedSystem600,
+		nil,
+		imageVector,
+		nil,
 		component.ClusterTypeSeed,
-		"",
-		nil,
-		storage,
-		nil,
+		1,
 		isLoggingEnabled,
 		false,
+		v1beta1constants.PriorityClassNameSeedSystem600,
+		storage,
+		"",
+		"",
 		false,
 		hvpaEnabled,
 		&hvpav1alpha1.MaintenanceTimeWindow{
 			Begin: maintenanceBegin,
 			End:   maintenanceEnd,
-		})
+		},
+	)
 }

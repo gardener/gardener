@@ -49,8 +49,8 @@ const (
 	namespace             = "shoot--foo--bar"
 	managedResourceName   = "vali"
 	valiName              = "vali"
-	valiConfigMapName     = "vali-config-e3b0c442"
-	telegrafConfigMapName = "telegraf-config-e3b0c442"
+	valiConfigMapName     = "vali-config-7d883cf0"
+	telegrafConfigMapName = "telegraf-config-b4c38756"
 	maintenanceBegin      = "210000-0000"
 	maintenanceEnd        = "223000-0000"
 	valiImage             = "vali:0.0.1"
@@ -112,11 +112,11 @@ var _ = Describe("Vali", func() {
 				fakeSecretManager,
 				k8sVersion,
 				Values{
-					Replicas:         1,
-					AuthEnabled:      true,
-					Storage:          &storage,
-					RBACProxyEnabled: true,
-					HvpaEnabled:      true,
+					Replicas:             1,
+					AuthEnabled:          true,
+					Storage:              &storage,
+					KubeRBACProxyEnabled: true,
+					HVPAEnabled:          true,
 					MaintenanceTimeWindow: &hvpav1alpha1.MaintenanceTimeWindow{
 						Begin: maintenanceBegin,
 						End:   maintenanceEnd,
@@ -130,7 +130,7 @@ var _ = Describe("Vali", func() {
 					PriorityClassName:     priorityClassName,
 					ClusterType:           "shoot",
 					IngressClass:          ingressClass,
-					ValiHost:              valiHost,
+					IngressHost:           valiHost,
 				},
 			)
 
@@ -148,7 +148,7 @@ var _ = Describe("Vali", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            managedResourceName,
 					Namespace:       namespace,
-					ResourceVersion: "1",
+					ResourceVersion: "2",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					Class: pointer.String("seed"),
@@ -163,12 +163,12 @@ var _ = Describe("Vali", func() {
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Data).To(HaveLen(6))
 
-			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__telegraf-config-e3b0c442.yaml"])).To(Equal(test.Serialize(getTelegrafConfig())))
-			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__vali-config-e3b0c442.yaml"])).To(Equal(test.Serialize(getValiConfig())))
+			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+telegrafConfigMapName+".yaml"])).To(Equal(test.Serialize(getTelegrafConfigMap())))
+			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+valiConfigMapName+".yaml"])).To(Equal(test.Serialize(getValiConfigMap())))
 			Expect(string(managedResourceSecret.Data["hvpa__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getHVPA(true))))
-			Expect(string(managedResourceSecret.Data["ingress__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getKubeRBACProxyIngress())))
+			Expect(string(managedResourceSecret.Data["ingress__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getIngress())))
 			Expect(string(managedResourceSecret.Data["service__shoot--foo--bar__logging.yaml"])).To(Equal(test.Serialize(getService(true, "shoot"))))
-			Expect(string(managedResourceSecret.Data["statefulset__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getStatefulset(true))))
+			Expect(string(managedResourceSecret.Data["statefulset__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getStatefulSet(true))))
 		})
 
 		It("should successfully deploy all resources for seed", func() {
@@ -181,7 +181,7 @@ var _ = Describe("Vali", func() {
 					Replicas:    1,
 					AuthEnabled: true,
 					Storage:     &storage,
-					HvpaEnabled: true,
+					HVPAEnabled: true,
 					MaintenanceTimeWindow: &hvpav1alpha1.MaintenanceTimeWindow{
 						Begin: maintenanceBegin,
 						End:   maintenanceEnd,
@@ -209,7 +209,7 @@ var _ = Describe("Vali", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            managedResourceName,
 					Namespace:       namespace,
-					ResourceVersion: "1",
+					ResourceVersion: "2",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					Class: pointer.String("seed"),
@@ -224,10 +224,10 @@ var _ = Describe("Vali", func() {
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Data).To(HaveLen(4))
 
-			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__vali-config-e3b0c442.yaml"])).To(Equal(test.Serialize(getValiConfig())))
+			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+valiConfigMapName+".yaml"])).To(Equal(test.Serialize(getValiConfigMap())))
 			Expect(string(managedResourceSecret.Data["hvpa__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getHVPA(false))))
 			Expect(string(managedResourceSecret.Data["service__shoot--foo--bar__logging.yaml"])).To(Equal(test.Serialize(getService(false, "seed"))))
-			Expect(string(managedResourceSecret.Data["statefulset__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getStatefulset(false))))
+			Expect(string(managedResourceSecret.Data["statefulset__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getStatefulSet(false))))
 		})
 
 		It("should successfully deploy all resources for seed without HVPA", func() {
@@ -263,7 +263,7 @@ var _ = Describe("Vali", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            managedResourceName,
 					Namespace:       namespace,
-					ResourceVersion: "1",
+					ResourceVersion: "2",
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					Class: pointer.String("seed"),
@@ -278,9 +278,9 @@ var _ = Describe("Vali", func() {
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceSecret.Data).To(HaveLen(3))
 
-			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__vali-config-e3b0c442.yaml"])).To(Equal(test.Serialize(getValiConfig())))
+			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+valiConfigMapName+".yaml"])).To(Equal(test.Serialize(getValiConfigMap())))
 			Expect(string(managedResourceSecret.Data["service__shoot--foo--bar__logging.yaml"])).To(Equal(test.Serialize(getService(false, "seed"))))
-			Expect(string(managedResourceSecret.Data["statefulset__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getStatefulset(false))))
+			Expect(string(managedResourceSecret.Data["statefulset__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getStatefulSet(false))))
 		})
 	})
 })
@@ -344,15 +344,15 @@ func getService(isRBACProxyEnabled bool, clusterType string) *corev1.Service {
 	return svc
 }
 
-func getValiConfig() *corev1.ConfigMap {
+func getValiConfigMap() *corev1.ConfigMap {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "vali-config",
 			Namespace: namespace,
 			Labels:    getLabels(),
 		},
-		BinaryData: map[string][]byte{
-			"vali.yaml": []byte(`auth_enabled: true
+		Data: map[string]string{
+			"vali.yaml": `auth_enabled: true
 ingester:
   chunk_target_size: 1536000
   chunk_idle_period: 3m
@@ -391,8 +391,8 @@ chunk_store_config:
 table_manager:
   retention_deletes_enabled: true
   retention_period: 360h
-`),
-			"curator.yaml": []byte(`LogLevel: info
+`,
+			"curator.yaml": `LogLevel: info
 DiskPath: /data/vali/chunks
 TriggerInterval: 1h
 InodeConfig:
@@ -403,8 +403,8 @@ StorageConfig:
   MinFreePercentages: 10
   TargetFreePercentages: 15
   PageSizeForDeletionPercentages: 1
-`),
-			"vali-init.sh": []byte(`#!/bin/bash
+`,
+			"vali-init.sh": `#!/bin/bash
 set -o errexit
 
 function error() {
@@ -415,24 +415,23 @@ function error() {
 trap error ERR
 
 tune2fs -O large_dir $(mount | gawk '{if($3=="/data") {print $1}}')
-`),
+`,
 		},
 	}
 
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
-
 	return configMap
 }
 
-func getTelegrafConfig() *corev1.ConfigMap {
+func getTelegrafConfigMap() *corev1.ConfigMap {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "telegraf-config",
 			Namespace: namespace,
 			Labels:    getLabels(),
 		},
-		BinaryData: map[string][]byte{
-			"telegraf.conf": []byte(`[[outputs.prometheus_client]]
+		Data: map[string]string{
+			"telegraf.conf": `[[outputs.prometheus_client]]
 ## Address to listen on.
 listen = ":9273"
 metric_version = 2
@@ -449,14 +448,14 @@ table = "filter"
 ## NOTE: iptables rules without a comment will not be monitored.
 ## Read the plugin documentation for more information.
 chains = [ "INPUT" ]
-`),
-			"start.sh": []byte(`#/bin/bash
+`,
+			"start.sh": `#/bin/bash
 
 trap 'kill %1; wait' SIGTERM
 iptables -A INPUT -p tcp --dport 8080 -j ACCEPT -m comment --comment "valitail"
 /usr/bin/telegraf --config /etc/telegraf/telegraf.conf &
 wait
-`),
+`,
 		},
 	}
 
@@ -633,7 +632,7 @@ func getHVPA(isRBACProxyEnabled bool) *hvpav1alpha1.Hvpa {
 	return obj
 }
 
-func getKubeRBACProxyIngress() *networkingv1.Ingress {
+func getIngress() *networkingv1.Ingress {
 	pathType := networkingv1.PathTypePrefix
 	return &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
@@ -679,7 +678,7 @@ func getKubeRBACProxyIngress() *networkingv1.Ingress {
 	}
 }
 
-func getStatefulset(isRBACProxyEnabled bool) *appsv1.StatefulSet {
+func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 	fsGroupChangeOnRootMismatch := corev1.FSGroupChangeOnRootMismatch
 	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -736,14 +735,16 @@ func getStatefulset(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 							Command: []string{
 								"sh",
 								"-c",
-								`set -x
-								# TODO (istvanballok): remove in release v1.77
-								if [[ -d /data/loki ]]; then
-								  echo "Renaming loki folder to vali"
-								  time mv /data/loki /data/vali
-								else
-								  echo "No loki folder found"
-								fi`,
+								`
+set -x
+# TODO (istvanballok): remove in release v1.77
+if [[ -d /data/loki ]]; then
+  echo "Renaming loki folder to vali"
+  time mv /data/loki /data/vali
+else
+  echo "No loki folder found"
+fi
+`,
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -890,6 +891,17 @@ func getStatefulset(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 	}
 
 	if isRBACProxyEnabled {
+		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(sts.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      "kubeconfig",
+			MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
+			ReadOnly:  true,
+		})
+		sts.Spec.Template.Spec.Containers[1].VolumeMounts = append(sts.Spec.Template.Spec.Containers[1].VolumeMounts, corev1.VolumeMount{
+			Name:      "kubeconfig",
+			MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
+			ReadOnly:  true,
+		})
+
 		sts.Spec.Template.ObjectMeta.Labels["networking.gardener.cloud/to-dns"] = "allowed"
 		sts.Spec.Template.ObjectMeta.Labels["networking.resources.gardener.cloud/to-kube-apiserver-tcp-443"] = "allowed"
 
@@ -940,9 +952,11 @@ func getStatefulset(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 				Command: []string{
 					"/bin/bash",
 					"-c",
-					`            trap 'kill %1; wait' SIGTERM
-					bash /etc/telegraf/start.sh &
-					wait`,
+					`
+trap 'kill %1; wait' SIGTERM
+bash /etc/telegraf/start.sh &
+wait
+`,
 				},
 				Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
@@ -980,11 +994,26 @@ func getStatefulset(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 						SubPath:   "start.sh",
 						ReadOnly:  true,
 					},
+					{
+						Name:      "kubeconfig",
+						MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
+						ReadOnly:  true,
+					},
 				},
 			},
 		}...)
 
 		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, []corev1.Volume{
+			{
+				Name: "telegraf-config-volume",
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: telegrafConfigMapName,
+						},
+					},
+				},
+			},
 			{
 				Name: "kubeconfig",
 				VolumeSource: corev1.VolumeSource{
@@ -1014,21 +1043,11 @@ func getStatefulset(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 										},
 									},
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: "shoot-access-" + "kube-rbac-proxy",
+										Name: "shoot-access-kube-rbac-proxy",
 									},
 									Optional: pointer.Bool(false),
 								},
 							},
-						},
-					},
-				},
-			},
-			{
-				Name: "telegraf-config-volume",
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: telegrafConfigMapName,
 						},
 					},
 				},

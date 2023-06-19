@@ -624,7 +624,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureDeleted),
 		})
 		destroySeedLogging = g.Add(flow.Task{
-			Name:         "Deleting PVali in Seed",
+			Name:         "Deleting logging stack in Seed",
 			Fn:           flow.TaskFn(botanist.DestroySeedLogging).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureDeleted),
 		})

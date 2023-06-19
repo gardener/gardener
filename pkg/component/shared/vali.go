@@ -30,20 +30,17 @@ import (
 // NewVali returns new Vali deployer
 func NewVali(
 	c client.Client,
-	imageVector imagevector.ImageVector,
-	replicas int32,
 	namespace string,
-	ingressClass string,
-	priorityClassName string,
-	clusterType component.ClusterType,
-	valiHost string,
+	runtimeKubernetesVersion *semver.Version,
+	imageVector imagevector.ImageVector,
 	secretsManager secretsmanager.Interface,
+	clusterType component.ClusterType,
+	replicas int32,
+	isLoggingEnabled, isShootNodeLoggingEnabled bool,
+	priorityClassName string,
 	storage *resource.Quantity,
-	k8Version *semver.Version,
-	isLoggingEnabled bool,
-	isShootNodeLoggingEnabled bool,
-	authEnabled bool,
-	hvpaEnabled bool,
+	ingressHost, ingressClass string,
+	authEnabled, hvpaEnabled bool,
 	maintenanceTimeWindow *hvpav1alpha1.MaintenanceTimeWindow,
 ) (
 	component.Deployer,
@@ -79,28 +76,27 @@ func NewVali(
 		return nil, err
 	}
 
-	deployer := vali.New(c, namespace, secretsManager, k8Version, vali.Values{
-		Replicas:              replicas,
-		HvpaEnabled:           hvpaEnabled,
-		MaintenanceTimeWindow: maintenanceTimeWindow,
-		RBACProxyEnabled:      isShootNodeLoggingEnabled,
-		PriorityClassName:     priorityClassName,
-		Storage:               storage,
-		AuthEnabled:           authEnabled,
-		ClusterType:           clusterType,
-		IngressClass:          ingressClass,
-		ValiHost:              valiHost,
+	deployer := vali.New(c, namespace, secretsManager, runtimeKubernetesVersion, vali.Values{
 		ValiImage:             valiImage.String(),
 		CuratorImage:          curatorImage.String(),
 		RenameLokiToValiImage: alpineImage.String(),
 		InitLargeDirImage:     tune2fsImage.String(),
 		KubeRBACProxyImage:    kubeRBACProxyImage.String(),
 		TelegrafImage:         telegrafImage.String(),
+		Replicas:              replicas,
+		HVPAEnabled:           hvpaEnabled,
+		MaintenanceTimeWindow: maintenanceTimeWindow,
+		KubeRBACProxyEnabled:  isShootNodeLoggingEnabled,
+		PriorityClassName:     priorityClassName,
+		Storage:               storage,
+		AuthEnabled:           authEnabled,
+		ClusterType:           clusterType,
+		IngressClass:          ingressClass,
+		IngressHost:           ingressHost,
 	})
 
 	if !isLoggingEnabled {
 		return component.OpDestroy(deployer), nil
 	}
-
-	return deployer, err
+	return deployer, nil
 }

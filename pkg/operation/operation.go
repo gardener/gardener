@@ -470,13 +470,6 @@ func (o *Operation) ComputeAlertManagerHosts() []string {
 	}
 }
 
-// ComputeValiHosts computes the host for vali.
-func (o *Operation) ComputeValiHosts() []string {
-	return []string{
-		o.ComputeValiHost(),
-	}
-}
-
 // IsShootMonitoringEnabled returns true if shoot monitoring is enabled and shoot is not of purpose testing.
 func (o *Operation) IsShootMonitoringEnabled() bool {
 	return helper.IsMonitoringEnabled(o.Config) && o.Shoot.Purpose != gardencorev1beta1.ShootPurposeTesting

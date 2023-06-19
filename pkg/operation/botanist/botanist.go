@@ -223,7 +223,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
-	o.Shoot.Components.Logging.Vali, err = b.defaultVali()
+	o.Shoot.Components.Logging.Vali, err = b.DefaultVali()
 	if err != nil {
 		return nil, err
 	}
