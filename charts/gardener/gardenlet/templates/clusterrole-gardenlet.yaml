@@ -291,6 +291,7 @@ rules:
   - backupentries/status
   - containerruntimes/status
   - controlplanes/status
+  - dnsrecords/status
   - extensions/status
   - infrastructures/status
   - networks/status

@@ -937,6 +937,7 @@ build:
         - pkg/utils/flow
         - pkg/utils/gardener
         - pkg/utils/gardener/secretsrotation
+        - pkg/utils/gardener/shootstate
         - pkg/utils/gardener/tokenrequest
         - pkg/utils/images
         - pkg/utils/imagevector

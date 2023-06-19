@@ -104,16 +104,10 @@ func (k *kubeAPIServer) reconcileSecretServiceAccountKey(ctx context.Context) (*
 		options = append(options, secretsmanager.IgnoreOldSecrets())
 	}
 
-	secret, err := k.secretsManager.Generate(ctx, &secretsutils.RSASecretConfig{
+	return k.secretsManager.Generate(ctx, &secretsutils.RSASecretConfig{
 		Name: v1beta1constants.SecretNameServiceAccountKey,
 		Bits: 4096,
 	}, options...)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO(rfranzke): Remove this in a future release.
-	return secret, kubernetesutils.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "service-account-key", Namespace: k.namespace}})
 }
 
 func (k *kubeAPIServer) reconcileSecretStaticToken(ctx context.Context) (*corev1.Secret, error) {

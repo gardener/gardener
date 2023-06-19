@@ -32,6 +32,7 @@ import (
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
@@ -216,10 +217,19 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			}).SkipIf(o.Shoot.IsWorkerless).DoIf(features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment)),
 			Dependencies: flow.NewTaskIDs(deleteMachineControllerManager),
 		})
+		// TODO(rfranzke): Make the 'persistShootState' task dependent on 'waitUntilExtensionResourcesMigrated' after
+		//  v1.79 has been released.
+		persistShootState = g.Add(flow.Task{
+			Name: "Persisting ShootState in garden cluster",
+			Fn: func(ctx context.Context) error {
+				return shootstate.Deploy(ctx, botanist.GardenClient, botanist.SeedClientSet.Client(), botanist.Shoot.GetInfo())
+			},
+			Dependencies: flow.NewTaskIDs(waitUntilMachineControllerManagerDeleted),
+		})
 		migrateExtensionResources = g.Add(flow.Task{
 			Name:         "Migrating extension resources",
 			Fn:           botanist.MigrateExtensionResourcesInParallel,
-			Dependencies: flow.NewTaskIDs(waitUntilMachineControllerManagerDeleted),
+			Dependencies: flow.NewTaskIDs(persistShootState),
 		})
 		waitUntilExtensionResourcesMigrated = g.Add(flow.Task{
 			Name:         "Waiting until extension resources have been migrated",
@@ -258,7 +268,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		})
 		deleteStaleExtensionResources = g.Add(flow.Task{
 			Name:         "Deleting stale extensions",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.DeleteStaleResources),
+			Fn:           botanist.Shoot.Components.Extensions.Extension.DeleteStaleResources,
 			Dependencies: flow.NewTaskIDs(waitUntilExtensionResourcesMigrated),
 		})
 		waitUntilStaleExtensionResourcesDeleted = g.Add(flow.Task{

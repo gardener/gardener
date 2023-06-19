@@ -311,20 +311,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		}
 	}
 
-	// TODO(rfranzke): Remove in a future release.
-	if err := b.SaveGardenerResourceDataInShootState(ctx, func(gardenerResourceData *[]gardencorev1beta1.GardenerResourceData) error {
-		gardenerResourceDataList := v1beta1helper.GardenerResourceDataList(*gardenerResourceData)
-		gardenerResourceDataList.Delete("etcdEncryptionConfiguration")
-		gardenerResourceDataList.Delete("service-account-key")
-		*gardenerResourceData = gardenerResourceDataList
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	return kubernetesutils.DeleteObjects(ctx, b.SeedClientSet.Client(),
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "etcd-encryption-secret"}},
-	)
+	return nil
 }
 
 // DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.
