@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-
-LABEL="${1:-local-garden}"
-
-docker rm -f $(docker ps -f "label=$LABEL" -aq) 2&> /dev/null || true
-docker network rm $(docker network ls -qf "label=$LABEL") 2&> /dev/null || true
