@@ -35,10 +35,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 )
 
 const (
@@ -51,9 +49,15 @@ type Reconciler struct {
 	SourceClient       client.Client
 	TargetClient       client.Client
 	TargetCoreV1Client corev1clientset.CoreV1Interface
-	Config             config.TokenRequestorControllerConfig
+	ConcurrentSyncs    int
 	Clock              clock.Clock
 	JitterFunc         func(time.Duration, float64) time.Duration
+	Class              *string
+	APIAudiences       []string
+	// TargetNamespace is the namespace that requested ServiceAccounts should be created in.
+	// If TargetNamespace is empty, the controller uses the namespace specified in the
+	// serviceaccount.resources.gardener.cloud/namespace annotation.
+	TargetNamespace string
 }
 
 // Reconcile requests and populates tokens.
@@ -72,7 +76,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	if !isRelevantSecret(secret) {
+	if !r.isRelevantSecret(secret) {
 		return reconcile.Result{}, nil
 	}
 
@@ -113,7 +117,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 }
 
 func (r *Reconciler) reconcileServiceAccount(ctx context.Context, secret *corev1.Secret) (*corev1.ServiceAccount, error) {
-	serviceAccount := getServiceAccountFromAnnotations(secret.Annotations)
+	serviceAccount := r.getServiceAccountFromAnnotations(secret.Annotations)
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.TargetClient, serviceAccount, func() error {
 		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
@@ -176,7 +180,7 @@ func (r *Reconciler) depopulateToken(secret *corev1.Secret) func() error {
 func (r *Reconciler) createServiceAccountToken(ctx context.Context, sa *corev1.ServiceAccount, expirationSeconds int64) (*authenticationv1.TokenRequest, error) {
 	tokenRequest := &authenticationv1.TokenRequest{
 		Spec: authenticationv1.TokenRequestSpec{
-			Audiences:         []string{v1beta1constants.GardenerAudience},
+			Audiences:         r.APIAudiences,
 			ExpirationSeconds: &expirationSeconds,
 		},
 	}
@@ -252,11 +256,16 @@ func tokenExpirationSeconds(secret *corev1.Secret) (int64, error) {
 	return int64(expirationDuration / time.Second), nil
 }
 
-func getServiceAccountFromAnnotations(annotations map[string]string) *corev1.ServiceAccount {
+func (r *Reconciler) getServiceAccountFromAnnotations(annotations map[string]string) *corev1.ServiceAccount {
+	namespace := r.TargetNamespace
+	if namespace == "" {
+		namespace = annotations[resourcesv1alpha1.ServiceAccountNamespace]
+	}
+
 	return &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      annotations[resourcesv1alpha1.ServiceAccountName],
-			Namespace: annotations[resourcesv1alpha1.ServiceAccountNamespace],
+			Namespace: namespace,
 		},
 	}
 }

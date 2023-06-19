@@ -2119,6 +2119,39 @@ var _ = Describe("Seed", func() {
 				Expect(reason).To(BeEmpty())
 			})
 
+			DescribeTable("should allow without consulting the graph because object is in the seed's namespace",
+				func(verb string) {
+					attrs.Namespace = "seed-" + seedName
+					attrs.Verb = verb
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				},
+
+				Entry("get", "get"),
+				Entry("list", "list"),
+				Entry("watch", "watch"),
+				Entry("create", "create"),
+				Entry("update", "update"),
+				Entry("patch", "patch"),
+				Entry("delete", "delete"),
+				Entry("deletecollection", "deletecollection"),
+			)
+
+			It("should allow token subresource without consulting the graph because object is in the seed's namespace", func() {
+				attrs.Namespace = "seed-" + seedName
+				attrs.Verb = "create"
+				attrs.Subresource = "token"
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+
 			DescribeTable("should deny because verb is not allowed",
 				func(verb string) {
 					attrs.Verb = verb

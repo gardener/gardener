@@ -270,12 +270,14 @@ func (g *garden) Start(ctx context.Context) error {
 			return kubernetes.AggregatorCacheFunc(
 				kubernetes.NewRuntimeCache,
 				map[client.Object]cache.NewCacheFunc{
-					// Gardenlet should watch secrets only in the seed namespace of the seed it is responsible for. We don't use
-					// any selector mechanism here since we want to still fall back to reading secrets with the API reader
-					// (i.e., not from cache) in case the respective secret is not found in the cache.
-					&corev1.Secret{}: cache.MultiNamespacedCacheBuilder([]string{gardenerutils.ComputeGardenNamespace(g.kubeconfigBootstrapResult.SeedName)}),
-					// Gardenlet does not have the required RBAC permissions for listing/watching the following resources on cluster level.
-					// Hence, we need to watch them individually with the help of a SingleObject cache.
+					// Gardenlet should watch secrets only in the seed namespace of the seed it is responsible for. We
+					// don't use any selector mechanism here since we want to still fall back to reading secrets with
+					// the API reader (i.e., not from cache) in case the respective secret is not found in the cache.
+					&corev1.Secret{}:         cache.MultiNamespacedCacheBuilder([]string{gardenerutils.ComputeGardenNamespace(g.kubeconfigBootstrapResult.SeedName)}),
+					&corev1.ServiceAccount{}: cache.MultiNamespacedCacheBuilder([]string{gardenerutils.ComputeGardenNamespace(g.kubeconfigBootstrapResult.SeedName)}),
+					// Gardenlet does not have the required RBAC permissions for listing/watching the following
+					// resources on cluster level. Hence, we need to watch them individually with the help of a
+					// SingleObject cache.
 					&corev1.ConfigMap{}:                         kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.ConfigMap{}),
 					&corev1.Namespace{}:                         kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &corev1.Namespace{}),
 					&coordinationv1.Lease{}:                     kubernetes.SingleObjectCacheFunc(log, kubernetes.GardenScheme, &coordinationv1.Lease{}),

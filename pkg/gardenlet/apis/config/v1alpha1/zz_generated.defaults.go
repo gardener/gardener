@@ -95,6 +95,9 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 		if in.Controllers.ShootSecret != nil {
 			SetDefaults_ShootSecretControllerConfiguration(in.Controllers.ShootSecret)
 		}
+		if in.Controllers.TokenRequestor != nil {
+			SetDefaults_TokenRequestorControllerConfiguration(in.Controllers.TokenRequestor)
+		}
 	}
 	if in.LeaderElection != nil {
 		SetDefaults_LeaderElectionConfiguration(in.LeaderElection)

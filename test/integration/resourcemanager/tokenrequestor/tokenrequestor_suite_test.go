@@ -26,7 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	testclock "k8s.io/utils/clock/testing"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -34,10 +33,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controller/tokenrequestor"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/tokenrequestor"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -108,11 +106,9 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	fakeClock = testclock.NewFakeClock(time.Now())
 	Expect((&tokenrequestor.Reconciler{
-		Clock:      fakeClock,
-		JitterFunc: func(duration time.Duration, f float64) time.Duration { return time.Second },
-		Config: config.TokenRequestorControllerConfig{
-			ConcurrentSyncs: pointer.Int(5),
-		},
+		Clock:           fakeClock,
+		JitterFunc:      func(duration time.Duration, f float64) time.Duration { return time.Second },
+		ConcurrentSyncs: 5,
 	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 
 	By("Start manager")

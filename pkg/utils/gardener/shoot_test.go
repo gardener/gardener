@@ -453,7 +453,10 @@ var _ = Describe("Shoot", func() {
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shootAccessSecret.Secret), shootAccessSecret.Secret)).To(Succeed())
 					Expect(shootAccessSecret.Secret.Type).To(Equal(corev1.SecretTypeOpaque))
-					Expect(shootAccessSecret.Secret.Labels).To(HaveKeyWithValue("resources.gardener.cloud/purpose", "token-requestor"))
+					Expect(shootAccessSecret.Secret.Labels).To(And(
+						HaveKeyWithValue("resources.gardener.cloud/purpose", "token-requestor"),
+						HaveKeyWithValue("resources.gardener.cloud/class", "shoot"),
+					))
 					Expect(shootAccessSecret.Secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/name", serviceAccountName))
 					Expect(shootAccessSecret.Secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/namespace", "kube-system"))
 				}

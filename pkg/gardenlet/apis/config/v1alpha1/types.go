@@ -198,6 +198,9 @@ type GardenletControllerConfiguration struct {
 	// ShootSecretControllerConfiguration defines the configuration of the ShootSecret controller.
 	// +optional
 	ShootSecret *ShootSecretControllerConfiguration `json:"shootSecret,omitempty"`
+	// TokenRequestorControllerConfiguration defines the configuration of the TokenRequestor controller.
+	// +optional
+	TokenRequestor *TokenRequestorControllerConfiguration `json:"tokenRequestor,omitempty"`
 }
 
 // BackupBucketControllerConfiguration defines the configuration of the BackupBucket
@@ -423,6 +426,13 @@ type ManagedSeedControllerConfiguration struct {
 	// The applied jitterPeriod is taken from SyncJitterPeriod.
 	// +optional
 	JitterUpdates *bool `json:"jitterUpdates,omitempty"`
+}
+
+// TokenRequestorControllerConfiguration defines the configuration of the TokenRequestor controller.
+type TokenRequestorControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
 // ResourcesConfiguration defines the total capacity for seed resources and the amount reserved for use by Gardener.

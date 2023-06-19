@@ -285,6 +285,11 @@ func (a *authorizer) authorizeServiceAccount(log logr.Logger, seedName string, a
 		return auth.DecisionAllow, "", nil
 	}
 
+	// Allow all verbs for service accounts in gardenlets' seed-<name> namespaces.
+	if attrs.GetNamespace() == gardenerutils.ComputeGardenNamespace(seedName) {
+		return auth.DecisionAllow, "", nil
+	}
+
 	return a.authorize(log, seedName, graph.VertexTypeServiceAccount, attrs,
 		[]string{"get", "patch", "update"},
 		[]string{"create"},

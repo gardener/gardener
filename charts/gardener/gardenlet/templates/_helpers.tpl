@@ -249,6 +249,8 @@ config.yaml: |
 {{ toYaml .Values.config.controllers.networkPolicy.additionalNamespaceSelectors | indent 6 }}
       {{- end }}
     {{- end }}
+    tokenRequestor:
+      concurrentSyncs: {{ required ".Values.config.controllers.tokenRequestor.concurrentSyncs is required" .Values.config.controllers.tokenRequestor.concurrentSyncs }}
   resources:
     capacity:
       shoots: {{ required ".Values.config.resources.capacity.shoots is required" .Values.config.resources.capacity.shoots }}

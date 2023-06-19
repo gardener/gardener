@@ -427,8 +427,8 @@ When the `gardener-resource-manager` is deployed next to the Shoot's controlplan
 
 #### Reconciliation Loop
 
-This controller reconciles secrets in all namespaces in the source cluster with the label: `resources.gardener.cloud/purpose: token-requestor`.
-See [this yaml file](../../example/resource-manager/30-secret-tokenrequestor.yaml) for an example of the secret.
+This controller reconciles `Secret`s in all namespaces in the source cluster with the label: `resources.gardener.cloud/purpose=token-requestor`.
+See [this YAML file](../../example/resource-manager/30-secret-tokenrequestor.yaml) for an example of the secret.
 
 The controller ensures a `ServiceAccount` exists in the target cluster as specified in the annotations of the `Secret` in the source cluster:
 
@@ -489,6 +489,11 @@ used by Shoot control plane components running in the Seed to talk to the Shoot 
 Please see the graphic below:
 
 ![image](images/resource-manager-projected-token-controlplane-to-shoot-apiserver.jpg)
+
+> ℹ️ Generally, the controller can run with multiple instances in different components.
+> For example, `gardener-resource-manager` might run the `TokenRequestor` controller, but `gardenlet` might run it, too.
+> In order to differentiate which instance of the controller is responsible for a `Secret`, it can be labeled with `resources.gardener.cloud/class=<class>`.
+> The `<class>` must be configured in the respective controller, otherwise it will be responsible for all `Secret`s no matter whether they have the label or not.
 
 ### [Kubelet Server `CertificateSigningRequest` Approver](../../pkg/resourcemanager/controller/csrapprover)
 

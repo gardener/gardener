@@ -243,6 +243,7 @@ var _ = Describe("VPA", func() {
 				Namespace: namespace,
 				Labels: map[string]string{
 					"resources.gardener.cloud/purpose": "token-requestor",
+					"resources.gardener.cloud/class":   "shoot",
 				},
 				Annotations: map[string]string{
 					"serviceaccount.resources.gardener.cloud/name":      "vpa-updater",
@@ -561,6 +562,7 @@ var _ = Describe("VPA", func() {
 				Namespace: namespace,
 				Labels: map[string]string{
 					"resources.gardener.cloud/purpose": "token-requestor",
+					"resources.gardener.cloud/class":   "shoot",
 				},
 				Annotations: map[string]string{
 					"serviceaccount.resources.gardener.cloud/name":      "vpa-recommender",
@@ -801,6 +803,7 @@ var _ = Describe("VPA", func() {
 				Namespace: namespace,
 				Labels: map[string]string{
 					"resources.gardener.cloud/purpose": "token-requestor",
+					"resources.gardener.cloud/class":   "shoot",
 				},
 				Annotations: map[string]string{
 					"serviceaccount.resources.gardener.cloud/name":      "vpa-admission-controller",

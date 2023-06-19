@@ -23,5 +23,5 @@ import (
 
 func TestTokenRequestor(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ResourceManager Controller TokenRequestor Suite")
+	RunSpecs(t, "Controller TokenRequestor Suite")
 }

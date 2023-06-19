@@ -83,6 +83,13 @@ const (
 	// LabelPurposeTokenInvalidation is a constant for a label value indicating that this secret should be considered by
 	// the token-invalidator.
 	LabelPurposeTokenInvalidation = "token-invalidator"
+	// ResourceManagerClass is a constant for the key in a label describing the class of the respective object. This can
+	// be used to differentiate between multiple instances of the same controller (e.g., token-requestor).
+	ResourceManagerClass = "resources.gardener.cloud/class"
+	// ResourceManagerClassGarden is a constant for the 'garden' class.
+	ResourceManagerClassGarden = "garden"
+	// ResourceManagerClassShoot is a constant for the 'shoot' class.
+	ResourceManagerClassShoot = "shoot"
 
 	// ServiceAccountName is the key of an annotation of a secret whose value contains the service account name.
 	ServiceAccountName = "serviceaccount.resources.gardener.cloud/name"

@@ -19,7 +19,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	corev1clientset "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -55,7 +54,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 		Named(ControllerName).
 		For(&corev1.Secret{}, builder.WithPredicates(r.SecretPredicate())).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
+			MaxConcurrentReconciles: r.ConcurrentSyncs,
 		}).
 		Complete(r)
 }
@@ -63,21 +62,23 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 // SecretPredicate is the predicate for secrets.
 func (r *Reconciler) SecretPredicate() predicate.Predicate {
 	return predicate.Funcs{
-		CreateFunc:  func(e event.CreateEvent) bool { return isRelevantSecret(e.Object) },
-		UpdateFunc:  func(e event.UpdateEvent) bool { return isRelevantSecretUpdate(e.ObjectOld, e.ObjectNew) },
-		DeleteFunc:  func(e event.DeleteEvent) bool { return isRelevantSecret(e.Object) },
+		CreateFunc:  func(e event.CreateEvent) bool { return r.isRelevantSecret(e.Object) },
+		UpdateFunc:  func(e event.UpdateEvent) bool { return r.isRelevantSecretUpdate(e.ObjectOld, e.ObjectNew) },
+		DeleteFunc:  func(e event.DeleteEvent) bool { return r.isRelevantSecret(e.Object) },
 		GenericFunc: func(e event.GenericEvent) bool { return false },
 	}
 }
 
-func isRelevantSecret(obj client.Object) bool {
+func (r *Reconciler) isRelevantSecret(obj client.Object) bool {
 	secret, ok := obj.(*corev1.Secret)
 	if !ok {
 		return false
 	}
-	return secret.Labels != nil && secret.Labels[resourcesv1alpha1.ResourceManagerPurpose] == resourcesv1alpha1.LabelPurposeTokenRequest
+	return secret.Labels != nil &&
+		secret.Labels[resourcesv1alpha1.ResourceManagerPurpose] == resourcesv1alpha1.LabelPurposeTokenRequest &&
+		(r.Class == nil || secret.Labels[resourcesv1alpha1.ResourceManagerClass] == *r.Class)
 }
 
-func isRelevantSecretUpdate(oldObj, newObj client.Object) bool {
-	return isRelevantSecret(newObj) || (isRelevantSecret(oldObj) && !isRelevantSecret(newObj))
+func (r *Reconciler) isRelevantSecretUpdate(oldObj, newObj client.Object) bool {
+	return r.isRelevantSecret(newObj) || r.isRelevantSecret(oldObj)
 }

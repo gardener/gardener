@@ -181,6 +181,7 @@ build:
         - pkg/chartrenderer
         - pkg/client/kubernetes
         - pkg/client/kubernetes/cache
+        - pkg/controller/tokenrequestor
         - pkg/controllerutils
         - pkg/controllerutils/mapper
         - pkg/controllerutils/predicate
@@ -209,7 +210,6 @@ build:
         - pkg/resourcemanager/controller/node/helper
         - pkg/resourcemanager/controller/secret
         - pkg/resourcemanager/controller/tokeninvalidator
-        - pkg/resourcemanager/controller/tokenrequestor
         - pkg/resourcemanager/predicate
         - pkg/resourcemanager/webhook
         - pkg/resourcemanager/webhook/crddeletionprotection
