@@ -19,7 +19,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -111,7 +113,7 @@ type WorkerPool struct {
 	// Name is the name of the worker pool.
 	Name string
 	// KubernetesVersion is the Kubernetes version of the worker pool.
-	KubernetesVersion string
+	KubernetesVersion *semver.Version
 	// Image is the container image used for kube-proxy for this worker pool.
 	Image string
 }
@@ -122,7 +124,7 @@ func (k *kubeProxy) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := k.reconcileManagedResource(ctx, data, nil); err != nil {
+	if err := k.reconcileManagedResource(ctx, data, nil, nil); err != nil {
 		return err
 	}
 
@@ -131,20 +133,27 @@ func (k *kubeProxy) Deploy(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		dataForMajorMinorVersionOnly, err := k.computePoolResourcesDataForMajorMinorVersionOnly(pool)
+		if err != nil {
+			return err
+		}
 
-		return k.reconcileManagedResource(ctx, data, &pool)
+		if err := k.reconcileManagedResource(ctx, data, &pool, pointer.Bool(false)); err != nil {
+			return err
+		}
+		return k.reconcileManagedResource(ctx, dataForMajorMinorVersionOnly, &pool, pointer.Bool(true))
 	})
 }
 
-func (k *kubeProxy) reconcileManagedResource(ctx context.Context, data map[string][]byte, pool *WorkerPool) error {
+func (k *kubeProxy) reconcileManagedResource(ctx context.Context, data map[string][]byte, pool *WorkerPool, useMajorMinorVersionOnly *bool) error {
 	var (
-		mrName             = managedResourceName(pool)
+		mrName             = managedResourceName(pool, useMajorMinorVersionOnly)
 		secretName, secret = managedresources.NewSecret(k.client, k.namespace, mrName, data, true)
 		managedResource    = managedresources.NewForShoot(k.client, k.namespace, mrName, managedresources.LabelValueGardener, false).WithSecretRef(secretName)
 	)
 
-	secret = secret.WithLabels(getManagedResourceLabels(pool))
-	managedResource = managedResource.WithLabels(getManagedResourceLabels(pool))
+	secret = secret.WithLabels(getManagedResourceLabels(pool, useMajorMinorVersionOnly))
+	managedResource = managedResource.WithLabels(getManagedResourceLabels(pool, useMajorMinorVersionOnly))
 
 	if err := secret.Reconcile(ctx); err != nil {
 		return err
@@ -173,12 +182,15 @@ func (k *kubeProxy) DeleteStaleResources(ctx context.Context) error {
 var TimeoutWaitForManagedResource = 2 * time.Minute
 
 func (k *kubeProxy) Wait(ctx context.Context) error {
-	if err := managedresources.WaitUntilHealthy(ctx, k.client, k.namespace, managedResourceName(nil)); err != nil {
+	if err := managedresources.WaitUntilHealthy(ctx, k.client, k.namespace, managedResourceName(nil, nil)); err != nil {
 		return err
 	}
 
 	return k.forEachWorkerPool(ctx, true, func(ctx context.Context, pool WorkerPool) error {
-		return managedresources.WaitUntilHealthy(ctx, k.client, k.namespace, managedResourceName(&pool))
+		if err := managedresources.WaitUntilHealthy(ctx, k.client, k.namespace, managedResourceName(&pool, pointer.Bool(false))); err != nil {
+			return err
+		}
+		return managedresources.WaitUntilHealthy(ctx, k.client, k.namespace, managedResourceName(&pool, pointer.Bool(true)))
 	})
 }
 
@@ -251,7 +263,8 @@ func runParallelFunctions(ctx context.Context, withTimeout bool, fns []flow.Task
 
 func (k *kubeProxy) isExistingManagedResourceStillDesired(labels map[string]string) bool {
 	for _, pool := range k.values.WorkerPools {
-		if pool.Name == labels[labelKeyPoolName] && pool.KubernetesVersion == labels[labelKeyKubernetesVersion] {
+		if pool.Name == labels[labelKeyPoolName] &&
+			(pool.KubernetesVersion.String() == labels[labelKeyKubernetesVersion] || version(pool, pointer.Bool(true)) == labels[labelKeyKubernetesVersion]) {
 			return true
 		}
 	}
@@ -259,7 +272,7 @@ func (k *kubeProxy) isExistingManagedResourceStillDesired(labels map[string]stri
 	return false
 }
 
-func getManagedResourceLabels(pool *WorkerPool) map[string]string {
+func getManagedResourceLabels(pool *WorkerPool, useMajorMinorVersionOnly *bool) map[string]string {
 	labels := map[string]string{
 		labelKeyManagedResourceName:     labelValueManagedResourceName,
 		managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
@@ -268,21 +281,28 @@ func getManagedResourceLabels(pool *WorkerPool) map[string]string {
 	if pool != nil {
 		labels[v1beta1constants.LabelRole] = labelValueRole
 		labels[labelKeyPoolName] = pool.Name
-		labels[labelKeyKubernetesVersion] = pool.KubernetesVersion
+		labels[labelKeyKubernetesVersion] = version(*pool, useMajorMinorVersionOnly)
 	}
 
 	return labels
 }
 
-func managedResourceName(pool *WorkerPool) string {
+func managedResourceName(pool *WorkerPool, useMajorMinorVersionOnly *bool) string {
 	if pool == nil {
 		return "shoot-core-kube-proxy"
 	}
-	return fmt.Sprintf("shoot-core-%s", name(*pool))
+	return fmt.Sprintf("shoot-core-%s", name(*pool, useMajorMinorVersionOnly))
 }
 
-func name(pool WorkerPool) string {
-	return fmt.Sprintf("kube-proxy-%s-v%s", pool.Name, pool.KubernetesVersion)
+func name(pool WorkerPool, useMajorMinorVersionOnly *bool) string {
+	return fmt.Sprintf("kube-proxy-%s-v%s", pool.Name, version(pool, useMajorMinorVersionOnly))
+}
+
+func version(pool WorkerPool, useMajorMinorVersionOnly *bool) string {
+	if pointer.BoolDeref(useMajorMinorVersionOnly, false) {
+		return fmt.Sprintf("%d.%d", pool.KubernetesVersion.Major(), pool.KubernetesVersion.Minor())
+	}
+	return pool.KubernetesVersion.String()
 }
 
 func (k *kubeProxy) SetKubeconfig(kubeconfig []byte)   { k.values.Kubeconfig = kubeconfig }

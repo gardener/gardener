@@ -39,7 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/version"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -293,11 +293,6 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 }
 
 func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte, error) {
-	k8sVersionLess125, err := version.CheckVersionMeetsConstraint(pool.KubernetesVersion, "< 1.25")
-	if err != nil {
-		return nil, err
-	}
-
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
@@ -306,7 +301,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 
 		daemonSet = &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name(pool),
+				Name:      name(pool, pointer.Bool(false)),
 				Namespace: metav1.NamespaceSystem,
 				Labels: utils.MergeStringMaps(
 					getSystemComponentLabels(),
@@ -331,7 +326,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 					Spec: corev1.PodSpec{
 						NodeSelector: map[string]string{
 							v1beta1constants.LabelWorkerPool:              pool.Name,
-							v1beta1constants.LabelWorkerKubernetesVersion: pool.KubernetesVersion,
+							v1beta1constants.LabelWorkerKubernetesVersion: pool.KubernetesVersion.String(),
 						},
 						InitContainers: []corev1.Container{{
 							Name:            "cleanup",
@@ -349,7 +344,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 								},
 								{
 									Name:  "EXECUTE_WORKAROUND_FOR_K8S_ISSUE_109286",
-									Value: strconv.FormatBool(k8sVersionLess125),
+									Value: strconv.FormatBool(versionutils.ConstraintK8sLess125.Check(pool.KubernetesVersion)),
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
@@ -558,27 +553,39 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 				},
 			},
 		}
-
-		vpa *vpaautoscalingv1.VerticalPodAutoscaler
 	)
 
 	if k.values.VPAEnabled {
 		daemonSet.Spec.Template.Spec.Containers[0].Resources.Limits = corev1.ResourceList{
 			corev1.ResourceMemory: resource.MustParse("2048Mi"),
 		}
+	}
 
+	utilruntime.Must(references.InjectAnnotations(daemonSet))
+
+	return registry.AddAllAndSerialize(daemonSet)
+}
+
+func (k *kubeProxy) computePoolResourcesDataForMajorMinorVersionOnly(pool WorkerPool) (map[string][]byte, error) {
+	var (
+		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+
+		vpa *vpaautoscalingv1.VerticalPodAutoscaler
+	)
+
+	if k.values.VPAEnabled {
 		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
 		controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name(pool),
+				Name:      name(pool, pointer.Bool(true)),
 				Namespace: metav1.NamespaceSystem,
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 					Kind:       "DaemonSet",
-					Name:       daemonSet.Name,
+					Name:       name(pool, pointer.Bool(false)),
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 					UpdateMode: &vpaUpdateMode,
@@ -597,12 +604,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 		}
 	}
 
-	utilruntime.Must(references.InjectAnnotations(daemonSet))
-
-	return registry.AddAllAndSerialize(
-		daemonSet,
-		vpa,
-	)
+	return registry.AddAllAndSerialize(vpa)
 }
 
 func getLabels() map[string]string {
@@ -622,7 +624,7 @@ func getSystemComponentLabels() map[string]string {
 func getPoolLabels(pool WorkerPool) map[string]string {
 	return utils.MergeStringMaps(getLabels(), map[string]string{
 		"pool":    pool.Name,
-		"version": pool.KubernetesVersion,
+		"version": pool.KubernetesVersion.String(),
 	})
 }
 

@@ -16,15 +16,15 @@ package kubeproxy_test
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 
+	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -61,13 +61,13 @@ var _ = Describe("KubeProxy", func() {
 		managedResourceForPool = func(pool WorkerPool) *resourcesv1alpha1.ManagedResource {
 			return &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "shoot-core-kube-proxy-" + pool.Name + "-v" + pool.KubernetesVersion,
+					Name:      "shoot-core-kube-proxy-" + pool.Name + "-v" + pool.KubernetesVersion.String(),
 					Namespace: namespace,
 					Labels: map[string]string{
 						"component":          "kube-proxy",
 						"role":               "pool",
 						"pool-name":          pool.Name,
-						"kubernetes-version": pool.KubernetesVersion,
+						"kubernetes-version": pool.KubernetesVersion.String(),
 					},
 				},
 			}
@@ -81,7 +81,36 @@ var _ = Describe("KubeProxy", func() {
 						"component":          "kube-proxy",
 						"role":               "pool",
 						"pool-name":          pool.Name,
-						"kubernetes-version": pool.KubernetesVersion,
+						"kubernetes-version": pool.KubernetesVersion.String(),
+					},
+				},
+			}
+		}
+
+		managedResourceForPoolForMajorMinorVersionOnly = func(pool WorkerPool) *resourcesv1alpha1.ManagedResource {
+			return &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "shoot-core-kube-proxy-" + pool.Name + "-v" + fmt.Sprintf("%d.%d", pool.KubernetesVersion.Major(), pool.KubernetesVersion.Minor()),
+					Namespace: namespace,
+					Labels: map[string]string{
+						"component":          "kube-proxy",
+						"role":               "pool",
+						"pool-name":          pool.Name,
+						"kubernetes-version": fmt.Sprintf("%d.%d", pool.KubernetesVersion.Major(), pool.KubernetesVersion.Minor()),
+					},
+				},
+			}
+		}
+		managedResourceSecretForPoolForMajorMinorVersionOnly = func(pool WorkerPool) *corev1.Secret {
+			return &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "managedresource-" + managedResourceForPoolForMajorMinorVersionOnly(pool).Name,
+					Namespace: namespace,
+					Labels: map[string]string{
+						"component":          "kube-proxy",
+						"role":               "pool",
+						"pool-name":          pool.Name,
+						"kubernetes-version": fmt.Sprintf("%d.%d", pool.KubernetesVersion.Major(), pool.KubernetesVersion.Minor()),
 					},
 				},
 			}
@@ -100,8 +129,8 @@ var _ = Describe("KubeProxy", func() {
 			Kubeconfig:  kubeconfig,
 			VPAEnabled:  false,
 			WorkerPools: []WorkerPool{
-				{Name: "pool1", KubernetesVersion: "1.24.13", Image: "some-image:some-tag1"},
-				{Name: "pool2", KubernetesVersion: "1.25.4", Image: "some-image:some-tag2"},
+				{Name: "pool1", KubernetesVersion: semver.MustParse("1.24.13"), Image: "some-image:some-tag1"},
+				{Name: "pool2", KubernetesVersion: semver.MustParse("1.25.4"), Image: "some-image:some-tag2"},
 			},
 		}
 		component = New(c, namespace, values)
@@ -428,10 +457,9 @@ subjects:
 `
 
 			daemonSetNameFor = func(pool WorkerPool) string {
-				return "kube-proxy-" + pool.Name + "-v" + pool.KubernetesVersion
+				return "kube-proxy-" + pool.Name + "-v" + pool.KubernetesVersion.String()
 			}
 			daemonSetYAMLFor = func(pool WorkerPool, ipvsEnabled, vpaEnabled bool) string {
-
 				referenceAnnotations := func() string {
 					var annotations []string
 
@@ -454,9 +482,6 @@ subjects:
 					return strings.Join(annotations, "\n")
 				}
 
-				k8sVersionLess125, err := version.CheckVersionMeetsConstraint(pool.KubernetesVersion, "< 1.25")
-				Expect(err).NotTo(HaveOccurred())
-
 				out := `apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -475,7 +500,7 @@ spec:
       app: kubernetes
       pool: ` + pool.Name + `
       role: proxy
-      version: ` + pool.KubernetesVersion + `
+      version: ` + pool.KubernetesVersion.String() + `
   template:
     metadata:
       annotations:
@@ -488,7 +513,7 @@ spec:
         origin: gardener
         pool: ` + pool.Name + `
         role: proxy
-        version: ` + pool.KubernetesVersion + `
+        version: ` + pool.KubernetesVersion.String() + `
     spec:
       containers:
       - command:
@@ -562,7 +587,7 @@ spec:
 
 				out += `
         - name: EXECUTE_WORKAROUND_FOR_K8S_ISSUE_109286
-          value: "` + strconv.FormatBool(k8sVersionLess125) + `"
+          value: "` + strconv.FormatBool(version.ConstraintK8sLess125.Check(pool.KubernetesVersion)) + `"
         image: ` + pool.Image + `
         imagePullPolicy: IfNotPresent
         name: cleanup
@@ -583,7 +608,7 @@ spec:
         - mountPath: /var/lib/kube-proxy-config
           name: kube-proxy-config
       nodeSelector:
-        worker.gardener.cloud/kubernetes-version: ` + pool.KubernetesVersion + `
+        worker.gardener.cloud/kubernetes-version: ` + pool.KubernetesVersion.String() + `
         worker.gardener.cloud/pool: ` + pool.Name + `
       priorityClassName: system-node-critical
       securityContext:
@@ -637,7 +662,9 @@ status:
 				return out
 			}
 
-			vpaNameFor = daemonSetNameFor
+			vpaNameFor = func(pool WorkerPool) string {
+				return fmt.Sprintf("kube-proxy-%s-v%d.%d", pool.Name, pool.KubernetesVersion.Major(), pool.KubernetesVersion.Minor())
+			}
 			vpaYAMLFor = func(pool WorkerPool) string {
 				return `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -666,8 +693,8 @@ status: {}
 
 		Context("IPVS Enabled", func() {
 			JustBeforeEach(func() {
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceCentral), managedResourceCentral)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResourceCentral.Name)))
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecretCentral.Name)))
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceCentral), managedResourceCentral)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(BeNotFoundError())
 
 				for _, pool := range values.WorkerPools {
 					By(pool.Name)
@@ -675,8 +702,8 @@ status: {}
 					managedResource := managedResourceForPool(pool)
 					managedResourceSecret := managedResourceSecretForPool(pool)
 
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 				}
 
 				Expect(component.Deploy(ctx)).To(Succeed())
@@ -736,7 +763,7 @@ status: {}
 								"component":          "kube-proxy",
 								"role":               "pool",
 								"pool-name":          pool.Name,
-								"kubernetes-version": pool.KubernetesVersion,
+								"kubernetes-version": pool.KubernetesVersion.String(),
 							},
 						},
 						Spec: resourcesv1alpha1.ManagedResourceSpec{
@@ -837,7 +864,7 @@ status: {}
 							"component":          "kube-proxy",
 							"role":               "pool",
 							"pool-name":          pool.Name,
-							"kubernetes-version": pool.KubernetesVersion,
+							"kubernetes-version": pool.KubernetesVersion.String(),
 						},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
@@ -865,6 +892,7 @@ status: {}
 			for _, pool := range values.WorkerPools {
 				By(pool.Name)
 
+				// assertions for resources specific to the full Kubernetes version
 				managedResource := managedResourceForPool(pool)
 				managedResourceSecret := managedResourceSecretForPool(pool)
 
@@ -883,7 +911,7 @@ status: {}
 							"component":          "kube-proxy",
 							"role":               "pool",
 							"pool-name":          pool.Name,
-							"kubernetes-version": pool.KubernetesVersion,
+							"kubernetes-version": pool.KubernetesVersion.String(),
 						},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
@@ -897,9 +925,44 @@ status: {}
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(2))
+				Expect(managedResourceSecret.Data).To(HaveLen(1))
 				Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled)))
-				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__"+vpaNameFor(pool)+".yaml"])).To(Equal(vpaYAMLFor(pool)))
+
+				// assertions for resources specific to the major/minor parts only of the Kubernetes version
+				managedResourceForMajorMinorVersionOnly := managedResourceForPoolForMajorMinorVersionOnly(pool)
+				managedResourceSecretForMajorMinorVersionOnly := managedResourceSecretForPoolForMajorMinorVersionOnly(pool)
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceForMajorMinorVersionOnly), managedResourceForMajorMinorVersionOnly)).To(Succeed())
+				Expect(managedResourceForMajorMinorVersionOnly).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
+						Kind:       "ManagedResource",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResourceForMajorMinorVersionOnly.Name,
+						Namespace:       managedResourceForMajorMinorVersionOnly.Namespace,
+						ResourceVersion: "1",
+						Labels: map[string]string{
+							"origin":             "gardener",
+							"component":          "kube-proxy",
+							"role":               "pool",
+							"pool-name":          pool.Name,
+							"kubernetes-version": fmt.Sprintf("%d.%d", pool.KubernetesVersion.Major(), pool.KubernetesVersion.Minor()),
+						},
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+						SecretRefs: []corev1.LocalObjectReference{{
+							Name: managedResourceSecretForMajorMinorVersionOnly.Name,
+						}},
+						KeepObjects: pointer.Bool(false),
+					},
+				}))
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretForMajorMinorVersionOnly), managedResourceSecretForMajorMinorVersionOnly)).To(Succeed())
+				Expect(managedResourceSecretForMajorMinorVersionOnly.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecretForMajorMinorVersionOnly.Data).To(HaveLen(1))
+				Expect(string(managedResourceSecretForMajorMinorVersionOnly.Data["verticalpodautoscaler__kube-system__"+vpaNameFor(pool)+".yaml"])).To(Equal(vpaYAMLFor(pool)))
 			}
 		})
 	})
@@ -909,7 +972,7 @@ status: {}
 			Expect(c.Create(ctx, managedResourceCentral)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceSecretCentral)).To(Succeed())
 
-			undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: "bar"}
+			undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: semver.MustParse("1.1.1")}
 			undesiredManagedResource := managedResourceForPool(undesiredPool)
 			undesiredManagedResourceSecret := managedResourceSecretForPool(undesiredPool)
 
@@ -937,15 +1000,15 @@ status: {}
 				managedResource := managedResourceForPool(pool)
 				managedResourceSecret := managedResourceSecretForPool(pool)
 
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 			}
 
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(undesiredManagedResource), undesiredManagedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, undesiredManagedResource.Name)))
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(undesiredManagedResourceSecret), undesiredManagedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, undesiredManagedResourceSecret.Name)))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(undesiredManagedResource), undesiredManagedResource)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(undesiredManagedResourceSecret), undesiredManagedResourceSecret)).To(BeNotFoundError())
 
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceCentral), managedResourceCentral)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResourceCentral.Name)))
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecretCentral.Name)))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceCentral), managedResourceCentral)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(BeNotFoundError())
 		})
 	})
 
@@ -954,24 +1017,29 @@ status: {}
 			Expect(c.Create(ctx, managedResourceCentral)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceSecretCentral)).To(Succeed())
 
-			undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: "bar"}
+			undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: semver.MustParse("1.1.1")}
 			undesiredManagedResource := managedResourceForPool(undesiredPool)
 			undesiredManagedResourceSecret := managedResourceSecretForPool(undesiredPool)
+			undesiredManagedResourceForMajorMinorVersionOnly := managedResourceForPoolForMajorMinorVersionOnly(undesiredPool)
+			undesiredManagedResourceSecretForMajorMinorVersionOnly := managedResourceSecretForPoolForMajorMinorVersionOnly(undesiredPool)
 
 			Expect(c.Create(ctx, undesiredManagedResource)).To(Succeed())
 			Expect(c.Create(ctx, undesiredManagedResourceSecret)).To(Succeed())
+			Expect(c.Create(ctx, undesiredManagedResourceForMajorMinorVersionOnly)).To(Succeed())
+			Expect(c.Create(ctx, undesiredManagedResourceSecretForMajorMinorVersionOnly)).To(Succeed())
 
 			for _, pool := range values.WorkerPools {
 				By(pool.Name)
 
 				managedResource := managedResourceForPool(pool)
 				managedResourceSecret := managedResourceSecretForPool(pool)
+				managedResourceForMajorMinorVersionOnly := managedResourceForPoolForMajorMinorVersionOnly(pool)
+				managedResourceSecretForMajorMinorVersionOnly := managedResourceSecretForPoolForMajorMinorVersionOnly(pool)
 
 				Expect(c.Create(ctx, managedResource)).To(Succeed())
 				Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
-
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(c.Create(ctx, managedResourceForMajorMinorVersionOnly)).To(Succeed())
+				Expect(c.Create(ctx, managedResourceSecretForMajorMinorVersionOnly)).To(Succeed())
 			}
 
 			Expect(component.DeleteStaleResources(ctx)).To(Succeed())
@@ -981,13 +1049,19 @@ status: {}
 
 				managedResource := managedResourceForPool(pool)
 				managedResourceSecret := managedResourceSecretForPool(pool)
+				managedResourceForMajorMinorVersionOnly := managedResourceForPoolForMajorMinorVersionOnly(pool)
+				managedResourceSecretForMajorMinorVersionOnly := managedResourceSecretForPoolForMajorMinorVersionOnly(pool)
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceForMajorMinorVersionOnly), managedResourceForMajorMinorVersionOnly)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretForMajorMinorVersionOnly), managedResourceSecretForMajorMinorVersionOnly)).To(Succeed())
 			}
 
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(undesiredManagedResource), undesiredManagedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, undesiredManagedResource.Name)))
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(undesiredManagedResourceSecret), undesiredManagedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, undesiredManagedResourceSecret.Name)))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(undesiredManagedResource), undesiredManagedResource)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(undesiredManagedResourceSecret), undesiredManagedResourceSecret)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(undesiredManagedResourceForMajorMinorVersionOnly), undesiredManagedResourceForMajorMinorVersionOnly)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(undesiredManagedResourceSecretForMajorMinorVersionOnly), undesiredManagedResourceSecretForMajorMinorVersionOnly)).To(BeNotFoundError())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceCentral), managedResourceCentral)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(Succeed())
@@ -995,21 +1069,14 @@ status: {}
 	})
 
 	Context("waiting functions", func() {
-		var (
-			fakeOps   *retryfake.Ops
-			resetVars func()
-		)
+		var fakeOps *retryfake.Ops
 
 		BeforeEach(func() {
-			fakeOps = &retryfake.Ops{MaxAttempts: 1}
-			resetVars = test.WithVars(
+			fakeOps = &retryfake.Ops{MaxAttempts: 2}
+			DeferCleanup(test.WithVars(
 				&retry.Until, fakeOps.Until,
 				&retry.UntilTimeout, fakeOps.UntilTimeout,
-			)
-		})
-
-		AfterEach(func() {
-			resetVars()
+			))
 		})
 
 		Describe("#Wait", func() {
@@ -1018,27 +1085,13 @@ status: {}
 			})
 
 			It("should fail because the central ManagedResource doesn't become healthy", func() {
-				fakeOps.MaxAttempts = 2
-
 				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       managedResourceCentral.Name,
 						Namespace:  namespace,
 						Generation: 1,
 					},
-					Status: resourcesv1alpha1.ManagedResourceStatus{
-						ObservedGeneration: 1,
-						Conditions: []gardencorev1beta1.Condition{
-							{
-								Type:   resourcesv1alpha1.ResourcesApplied,
-								Status: gardencorev1beta1.ConditionFalse,
-							},
-							{
-								Type:   resourcesv1alpha1.ResourcesHealthy,
-								Status: gardencorev1beta1.ConditionFalse,
-							},
-						},
-					},
+					Status: unhealthyManagedResourceStatus,
 				})).To(Succeed())
 
 				for _, pool := range values.WorkerPools {
@@ -1050,19 +1103,7 @@ status: {}
 							Namespace:  namespace,
 							Generation: 1,
 						},
-						Status: resourcesv1alpha1.ManagedResourceStatus{
-							ObservedGeneration: 1,
-							Conditions: []gardencorev1beta1.Condition{
-								{
-									Type:   resourcesv1alpha1.ResourcesApplied,
-									Status: gardencorev1beta1.ConditionTrue,
-								},
-								{
-									Type:   resourcesv1alpha1.ResourcesHealthy,
-									Status: gardencorev1beta1.ConditionTrue,
-								},
-							},
-						},
+						Status: healthyManagedResourceStatus,
 					})).To(Succeed())
 				}
 
@@ -1070,27 +1111,13 @@ status: {}
 			})
 
 			It("should fail because a pool-specific ManagedResource doesn't become healthy", func() {
-				fakeOps.MaxAttempts = 2
-
 				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       managedResourceCentral.Name,
 						Namespace:  namespace,
 						Generation: 1,
 					},
-					Status: resourcesv1alpha1.ManagedResourceStatus{
-						ObservedGeneration: 1,
-						Conditions: []gardencorev1beta1.Condition{
-							{
-								Type:   resourcesv1alpha1.ResourcesApplied,
-								Status: gardencorev1beta1.ConditionTrue,
-							},
-							{
-								Type:   resourcesv1alpha1.ResourcesHealthy,
-								Status: gardencorev1beta1.ConditionTrue,
-							},
-						},
-					},
+					Status: healthyManagedResourceStatus,
 				})).To(Succeed())
 
 				for _, pool := range values.WorkerPools {
@@ -1102,19 +1129,42 @@ status: {}
 							Namespace:  namespace,
 							Generation: 1,
 						},
-						Status: resourcesv1alpha1.ManagedResourceStatus{
-							ObservedGeneration: 1,
-							Conditions: []gardencorev1beta1.Condition{
-								{
-									Type:   resourcesv1alpha1.ResourcesApplied,
-									Status: gardencorev1beta1.ConditionFalse,
-								},
-								{
-									Type:   resourcesv1alpha1.ResourcesHealthy,
-									Status: gardencorev1beta1.ConditionFalse,
-								},
-							},
+						Status: unhealthyManagedResourceStatus,
+					})).To(Succeed())
+				}
+
+				Expect(component.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
+			})
+
+			It("should fail because a pool-specific ManagedResource for major/minor version only doesn't become healthy", func() {
+				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       managedResourceCentral.Name,
+						Namespace:  namespace,
+						Generation: 1,
+					},
+					Status: healthyManagedResourceStatus,
+				})).To(Succeed())
+
+				for _, pool := range values.WorkerPools {
+					By(pool.Name)
+
+					Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:       managedResourceForPool(pool).Name,
+							Namespace:  namespace,
+							Generation: 1,
 						},
+						Status: healthyManagedResourceStatus,
+					})).To(Succeed())
+
+					Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:       managedResourceForPoolForMajorMinorVersionOnly(pool).Name,
+							Namespace:  namespace,
+							Generation: 1,
+						},
+						Status: unhealthyManagedResourceStatus,
 					})).To(Succeed())
 				}
 
@@ -1122,27 +1172,13 @@ status: {}
 			})
 
 			It("should successfully wait for the managed resource to become healthy", func() {
-				fakeOps.MaxAttempts = 2
-
 				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       managedResourceCentral.Name,
 						Namespace:  namespace,
 						Generation: 1,
 					},
-					Status: resourcesv1alpha1.ManagedResourceStatus{
-						ObservedGeneration: 1,
-						Conditions: []gardencorev1beta1.Condition{
-							{
-								Type:   resourcesv1alpha1.ResourcesApplied,
-								Status: gardencorev1beta1.ConditionTrue,
-							},
-							{
-								Type:   resourcesv1alpha1.ResourcesHealthy,
-								Status: gardencorev1beta1.ConditionTrue,
-							},
-						},
-					},
+					Status: healthyManagedResourceStatus,
 				})).To(Succeed())
 
 				for _, pool := range values.WorkerPools {
@@ -1154,19 +1190,16 @@ status: {}
 							Namespace:  namespace,
 							Generation: 1,
 						},
-						Status: resourcesv1alpha1.ManagedResourceStatus{
-							ObservedGeneration: 1,
-							Conditions: []gardencorev1beta1.Condition{
-								{
-									Type:   resourcesv1alpha1.ResourcesApplied,
-									Status: gardencorev1beta1.ConditionTrue,
-								},
-								{
-									Type:   resourcesv1alpha1.ResourcesHealthy,
-									Status: gardencorev1beta1.ConditionTrue,
-								},
-							},
+						Status: healthyManagedResourceStatus,
+					})).To(Succeed())
+
+					Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:       managedResourceForPoolForMajorMinorVersionOnly(pool).Name,
+							Namespace:  namespace,
+							Generation: 1,
 						},
+						Status: healthyManagedResourceStatus,
 					})).To(Succeed())
 				}
 
@@ -1174,49 +1207,23 @@ status: {}
 			})
 
 			It("should successfully wait for the managed resource to become healthy despite undesired managed resource unhealthy", func() {
-				fakeOps.MaxAttempts = 2
-
 				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       managedResourceCentral.Name,
 						Namespace:  namespace,
 						Generation: 1,
 					},
-					Status: resourcesv1alpha1.ManagedResourceStatus{
-						ObservedGeneration: 1,
-						Conditions: []gardencorev1beta1.Condition{
-							{
-								Type:   resourcesv1alpha1.ResourcesApplied,
-								Status: gardencorev1beta1.ConditionTrue,
-							},
-							{
-								Type:   resourcesv1alpha1.ResourcesHealthy,
-								Status: gardencorev1beta1.ConditionTrue,
-							},
-						},
-					},
+					Status: healthyManagedResourceStatus,
 				})).To(Succeed())
 
-				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: "bar"}
+				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: semver.MustParse("1.1.1")}
 				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       managedResourceForPool(undesiredPool).Name,
 						Namespace:  namespace,
 						Generation: 1,
 					},
-					Status: resourcesv1alpha1.ManagedResourceStatus{
-						ObservedGeneration: 1,
-						Conditions: []gardencorev1beta1.Condition{
-							{
-								Type:   resourcesv1alpha1.ResourcesApplied,
-								Status: gardencorev1beta1.ConditionFalse,
-							},
-							{
-								Type:   resourcesv1alpha1.ResourcesHealthy,
-								Status: gardencorev1beta1.ConditionFalse,
-							},
-						},
-					},
+					Status: unhealthyManagedResourceStatus,
 				})).To(Succeed())
 
 				for _, pool := range values.WorkerPools {
@@ -1228,19 +1235,70 @@ status: {}
 							Namespace:  namespace,
 							Generation: 1,
 						},
-						Status: resourcesv1alpha1.ManagedResourceStatus{
-							ObservedGeneration: 1,
-							Conditions: []gardencorev1beta1.Condition{
-								{
-									Type:   resourcesv1alpha1.ResourcesApplied,
-									Status: gardencorev1beta1.ConditionTrue,
-								},
-								{
-									Type:   resourcesv1alpha1.ResourcesHealthy,
-									Status: gardencorev1beta1.ConditionTrue,
-								},
-							},
+						Status: healthyManagedResourceStatus,
+					})).To(Succeed())
+
+					Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:       managedResourceForPoolForMajorMinorVersionOnly(pool).Name,
+							Namespace:  namespace,
+							Generation: 1,
 						},
+						Status: healthyManagedResourceStatus,
+					})).To(Succeed())
+				}
+
+				Expect(component.Wait(ctx)).To(Succeed())
+			})
+
+			It("should successfully wait for the managed resource to become healthy despite undesired managed resource for major/minor version only unhealthy", func() {
+				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       managedResourceCentral.Name,
+						Namespace:  namespace,
+						Generation: 1,
+					},
+					Status: healthyManagedResourceStatus,
+				})).To(Succeed())
+
+				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: semver.MustParse("1.1.1")}
+				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       managedResourceForPool(undesiredPool).Name,
+						Namespace:  namespace,
+						Generation: 1,
+					},
+					Status: healthyManagedResourceStatus,
+				})).To(Succeed())
+
+				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       managedResourceForPoolForMajorMinorVersionOnly(undesiredPool).Name,
+						Namespace:  namespace,
+						Generation: 1,
+					},
+					Status: unhealthyManagedResourceStatus,
+				})).To(Succeed())
+
+				for _, pool := range values.WorkerPools {
+					By(pool.Name)
+
+					Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:       managedResourceForPool(pool).Name,
+							Namespace:  namespace,
+							Generation: 1,
+						},
+						Status: healthyManagedResourceStatus,
+					})).To(Succeed())
+
+					Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:       managedResourceForPoolForMajorMinorVersionOnly(pool).Name,
+							Namespace:  namespace,
+							Generation: 1,
+						},
+						Status: healthyManagedResourceStatus,
 					})).To(Succeed())
 				}
 
@@ -1250,8 +1308,6 @@ status: {}
 
 		Describe("#WaitCleanup", func() {
 			It("should fail when the wait for the managed resource deletion times out because of central resource", func() {
-				fakeOps.MaxAttempts = 2
-
 				Expect(c.Create(ctx, managedResourceCentral)).To(Succeed())
 
 				for _, pool := range values.WorkerPools {
@@ -1263,8 +1319,6 @@ status: {}
 			})
 
 			It("should fail when the wait for the managed resource deletion times out because of pool-specific resource", func() {
-				fakeOps.MaxAttempts = 2
-
 				Expect(c.Create(ctx, managedResourceCentral)).To(Succeed())
 				Expect(c.Delete(ctx, managedResourceCentral)).To(Succeed())
 
@@ -1276,8 +1330,6 @@ status: {}
 			})
 
 			It("should successfully wait for the deletion", func() {
-				fakeOps.MaxAttempts = 2
-
 				for _, pool := range values.WorkerPools {
 					managedResource := managedResourceForPool(pool)
 					Expect(c.Create(ctx, managedResource)).To(Succeed())
@@ -1288,12 +1340,10 @@ status: {}
 			})
 
 			It("should successfully wait for the deletion despite undesired still existing managed resources", func() {
-				fakeOps.MaxAttempts = 2
-
 				Expect(c.Create(ctx, managedResourceCentral)).To(Succeed())
 				Expect(c.Delete(ctx, managedResourceCentral)).To(Succeed())
 
-				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: "bar"}
+				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: semver.MustParse("1.1.1")}
 				undesiredManagedResource := managedResourceForPool(undesiredPool)
 				Expect(c.Create(ctx, undesiredManagedResource)).To(Succeed())
 				Expect(c.Delete(ctx, undesiredManagedResource)).To(Succeed())
@@ -1311,8 +1361,6 @@ status: {}
 
 		Describe("#WaitCleanupStaleResources", func() {
 			It("should succeed when there is nothing to wait for", func() {
-				fakeOps.MaxAttempts = 2
-
 				Expect(c.Create(ctx, managedResourceCentral)).To(Succeed())
 
 				for _, pool := range values.WorkerPools {
@@ -1323,43 +1371,99 @@ status: {}
 			})
 
 			It("should fail when the wait for the managed resource deletion times out", func() {
-				fakeOps.MaxAttempts = 2
-
 				Expect(c.Create(ctx, managedResourceCentral)).To(Succeed())
 
-				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: "bar"}
+				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: semver.MustParse("1.1.1")}
 				Expect(c.Create(ctx, managedResourceForPool(undesiredPool))).To(Succeed())
 
 				Expect(component.WaitCleanupStaleResources(ctx)).To(MatchError(ContainSubstring("still exists")))
 			})
 
-			It("should successfully wait for the deletion", func() {
-				fakeOps.MaxAttempts = 2
-
+			It("should fail when the wait for the managed resource for major/minor version only deletion times out", func() {
 				Expect(c.Create(ctx, managedResourceCentral)).To(Succeed())
 
-				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: "bar"}
-				undesiredManagedResource := managedResourceForPool(undesiredPool)
-				Expect(c.Create(ctx, undesiredManagedResource)).To(Succeed())
-				Expect(c.Delete(ctx, undesiredManagedResource)).To(Succeed())
+				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: semver.MustParse("1.1.1")}
+				Expect(c.Create(ctx, managedResourceForPoolForMajorMinorVersionOnly(undesiredPool))).To(Succeed())
 
+				Expect(component.WaitCleanupStaleResources(ctx)).To(MatchError(ContainSubstring("still exists")))
+			})
+
+			It("should successfully wait for the deletion", func() {
+				Expect(c.Create(ctx, managedResourceCentral)).To(Succeed())
+
+				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: semver.MustParse("1.1.1")}
+				undesiredManagedResource := managedResourceForPool(undesiredPool)
+				undesiredManagedResourceForMajorMinorVersionOnly := managedResourceForPoolForMajorMinorVersionOnly(undesiredPool)
+
+				Expect(c.Create(ctx, undesiredManagedResource)).To(Succeed())
+				Expect(c.Create(ctx, undesiredManagedResourceForMajorMinorVersionOnly)).To(Succeed())
+				Expect(component.WaitCleanupStaleResources(ctx)).To(MatchError(ContainSubstring("still exists")))
+
+				Expect(c.Delete(ctx, undesiredManagedResource)).To(Succeed())
+				Expect(component.WaitCleanupStaleResources(ctx)).To(MatchError(ContainSubstring("still exists")))
+
+				Expect(c.Delete(ctx, undesiredManagedResourceForMajorMinorVersionOnly)).To(Succeed())
 				Expect(component.WaitCleanupStaleResources(ctx)).To(Succeed())
 			})
 
 			It("should successfully wait for the deletion despite desired existing managed resources", func() {
-				fakeOps.MaxAttempts = 2
-
 				for _, pool := range values.WorkerPools {
 					Expect(c.Create(ctx, managedResourceForPool(pool))).To(Succeed())
 				}
 
-				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: "bar"}
+				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: semver.MustParse("1.1.1")}
 				undesiredManagedResource := managedResourceForPool(undesiredPool)
-				Expect(c.Create(ctx, undesiredManagedResource)).To(Succeed())
-				Expect(c.Delete(ctx, undesiredManagedResource)).To(Succeed())
 
+				Expect(c.Create(ctx, undesiredManagedResource)).To(Succeed())
+				Expect(component.WaitCleanupStaleResources(ctx)).To(MatchError(ContainSubstring("still exists")))
+
+				Expect(c.Delete(ctx, undesiredManagedResource)).To(Succeed())
+				Expect(component.WaitCleanupStaleResources(ctx)).To(Succeed())
+			})
+
+			It("should successfully wait for the deletion despite desired existing managed resources for major/minor version only", func() {
+				for _, pool := range values.WorkerPools {
+					Expect(c.Create(ctx, managedResourceForPoolForMajorMinorVersionOnly(pool))).To(Succeed())
+				}
+
+				undesiredPool := WorkerPool{Name: "foo", KubernetesVersion: semver.MustParse("1.1.1")}
+				undesiredManagedResource := managedResourceForPool(undesiredPool)
+
+				Expect(c.Create(ctx, undesiredManagedResource)).To(Succeed())
+				Expect(component.WaitCleanupStaleResources(ctx)).To(MatchError(ContainSubstring("still exists")))
+
+				Expect(c.Delete(ctx, undesiredManagedResource)).To(Succeed())
 				Expect(component.WaitCleanupStaleResources(ctx)).To(Succeed())
 			})
 		})
 	})
 })
+
+var (
+	unhealthyManagedResourceStatus = resourcesv1alpha1.ManagedResourceStatus{
+		ObservedGeneration: 1,
+		Conditions: []gardencorev1beta1.Condition{
+			{
+				Type:   resourcesv1alpha1.ResourcesApplied,
+				Status: gardencorev1beta1.ConditionFalse,
+			},
+			{
+				Type:   resourcesv1alpha1.ResourcesHealthy,
+				Status: gardencorev1beta1.ConditionFalse,
+			},
+		},
+	}
+	healthyManagedResourceStatus = resourcesv1alpha1.ManagedResourceStatus{
+		ObservedGeneration: 1,
+		Conditions: []gardencorev1beta1.Condition{
+			{
+				Type:   resourcesv1alpha1.ResourcesApplied,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:   resourcesv1alpha1.ResourcesHealthy,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+		},
+	}
+)
