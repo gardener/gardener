@@ -214,8 +214,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		log.V(1).Info("Updating status conditions and constraints")
 		// Rebuild shoot conditions and constraints to ensure that only the conditions and constraints with the
 		// correct types will be updated, and any other conditions will remain intact
-		conditions = buildShootConditions(shoot.Status.Conditions, updatedConditions, conditionTypes)
-		constraints = buildShootConditions(shoot.Status.Constraints, updatedConstraints, constraintTypes)
+		conditions = v1beta1helper.BuildConditions(shoot.Status.Conditions, updatedConditions, conditionTypes)
+		constraints = v1beta1helper.BuildConditions(shoot.Status.Constraints, updatedConstraints, constraintTypes)
 
 		if err := r.patchStatus(ctx, shoot, conditions, constraints); err != nil {
 			log.Error(err, "Error when trying to update the shoot status")
@@ -257,14 +257,6 @@ func (r *Reconciler) patchStatusToUnknown(ctx context.Context, shoot *gardencore
 	}
 
 	return r.patchStatus(ctx, shoot, updatedConditions, updatedConstraints)
-}
-
-// buildShootConditions builds and returns the shoot conditions using the given shoot conditions as a base,
-// by first removing all conditions with the given types and then merging the given conditions (which must be of the same types).
-func buildShootConditions(shootConditions []gardencorev1beta1.Condition, conditions []gardencorev1beta1.Condition, conditionTypes []gardencorev1beta1.ConditionType) []gardencorev1beta1.Condition {
-	result := v1beta1helper.RemoveConditions(shootConditions, conditionTypes...)
-	result = v1beta1helper.MergeConditions(result, conditions...)
-	return result
 }
 
 func shootClientInitializer(ctx context.Context, o *operation.Operation) func() (kubernetes.Interface, bool, error) {

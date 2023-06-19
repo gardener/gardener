@@ -95,6 +95,14 @@ func UpdatedConditionUnknownErrorMessageWithClock(clock clock.Clock, condition g
 	return UpdatedConditionWithClock(clock, condition, gardencorev1beta1.ConditionUnknown, gardencorev1beta1.ConditionCheckError, message, codes...)
 }
 
+// BuildConditions builds and returns the conditions using the given conditions as a base,
+// by first removing all conditions with the given types and then merging the given conditions (which must be of the same types).
+func BuildConditions(baseConditions []gardencorev1beta1.Condition, newConditions []gardencorev1beta1.Condition, conditionTypes []gardencorev1beta1.ConditionType) []gardencorev1beta1.Condition {
+	result := RemoveConditions(baseConditions, conditionTypes...)
+	result = MergeConditions(result, newConditions...)
+	return result
+}
+
 // MergeConditions merges the given <oldConditions> with the <newConditions>. Existing conditions are superseded by
 // the <newConditions> (depending on the condition type).
 func MergeConditions(oldConditions []gardencorev1beta1.Condition, newConditions ...gardencorev1beta1.Condition) []gardencorev1beta1.Condition {

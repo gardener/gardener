@@ -100,7 +100,7 @@ var _ = Describe("Add", func() {
 		})
 
 		Describe("#Create", func() {
-			It("should return false", func() {
+			It("should return true", func() {
 				Expect(p.Create(event.CreateEvent{})).To(BeTrue())
 			})
 		})
