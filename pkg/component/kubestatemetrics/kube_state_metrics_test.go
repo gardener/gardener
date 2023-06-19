@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/kubestatemetrics"
 	componenttest "github.com/gardener/gardener/pkg/component/test"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -491,12 +493,11 @@ var _ = Describe("KubeStateMetrics", func() {
 
 			It("should successfully deploy all resources", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 
 				Expect(ksm.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-				Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+				expectedMr := &resourcesv1alpha1.ManagedResource{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
 						Kind:       "ManagedResource",
@@ -510,15 +511,20 @@ var _ = Describe("KubeStateMetrics", func() {
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						Class: pointer.String("seed"),
 						SecretRefs: []corev1.LocalObjectReference{{
-							Name: managedResourceSecret.Name,
+							Name: managedResource.Spec.SecretRefs[0].Name,
 						}},
 						KeepObjects: pointer.Bool(false),
 					},
-				}))
+				}
+				utilruntime.Must(references.InjectAnnotations(expectedMr))
+				Expect(managedResource).To(DeepEqual(expectedMr))
 
+				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecret.Data).To(HaveLen(6))
+				Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__kube-state-metrics.yaml"])).To(Equal(componenttest.Serialize(serviceAccount)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_monitoring_kube-state-metrics-seed.yaml"])).To(Equal(componenttest.Serialize(clusterRoleFor(component.ClusterTypeSeed))))
@@ -542,12 +548,11 @@ var _ = Describe("KubeStateMetrics", func() {
 
 			It("should successfully deploy all resources", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 
 				Expect(ksm.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-				Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+				expectedMr := &resourcesv1alpha1.ManagedResource{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
 						Kind:       "ManagedResource",
@@ -561,14 +566,19 @@ var _ = Describe("KubeStateMetrics", func() {
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 						SecretRefs: []corev1.LocalObjectReference{{
-							Name: managedResourceSecret.Name,
+							Name: managedResource.Spec.SecretRefs[0].Name,
 						}},
 						KeepObjects: pointer.Bool(false),
 					},
-				}))
+				}
+				utilruntime.Must(references.InjectAnnotations(expectedMr))
+				Expect(managedResource).To(DeepEqual(expectedMr))
 
+				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				Expect(managedResourceSecret.Data).To(HaveLen(2))
 
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_monitoring_kube-state-metrics.yaml"])).To(Equal(componenttest.Serialize(clusterRoleFor(component.ClusterTypeShoot))))
