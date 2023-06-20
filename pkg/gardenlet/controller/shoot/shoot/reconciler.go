@@ -196,9 +196,9 @@ func (r *Reconciler) deleteShoot(ctx context.Context, log logr.Logger, shoot *ga
 
 	log = log.WithValues("operation", "delete")
 
-	// If the .status.uid field is empty, then we assume that there has never been any operation running for this Shoot
-	// cluster. This implies that there can not be any resource which we have to delete.
-	// We accept the deletion.
+	// If the .status.uid field is empty, then we assume that there has never been any operation running for this shoot.
+	// Gardenlet can directly finalize the shoot deletion since not resources need to be cleaned up.
+	// This shortcut also allows users to delete shoot clusters that were wrongly configured in the first place, e.g. https://github.com/gardener/gardener/issues/1926.
 	if len(shoot.Status.UID) == 0 {
 		log.Info("The `.status.uid` is empty, assuming Shoot cluster did never exist, deletion accepted")
 		return r.finalizeShootDeletion(ctx, log, shoot)
@@ -353,7 +353,7 @@ func (r *Reconciler) initializeOperation(
 		return nil, err
 	}
 
-	return operation.
+	op, err := operation.
 		NewBuilder().
 		WithLogger(log).
 		WithConfig(&r.Config).
@@ -365,6 +365,22 @@ func (r *Reconciler) initializeOperation(
 		WithSeed(seedObj).
 		WithShoot(shootObj).
 		Build(ctx, r.GardenClient, r.SeedClientSet, r.ShootClientMap)
+	if err != nil {
+		return nil, err
+	}
+
+	// Only set UID once the operation was initialized successfully.
+	// This serves as a marker in the lifecycle of a shoot that all necessary information is available to begin with the
+	// cluster creation.
+	// Likewise, if something was set up wrongly by users, they can proceed with the immediate deletion and Gardenlet
+	// just removes the finalizer without creating the operation (which would anyway fail again).
+	// See https://github.com/gardener/gardener/issues/1926 as an example.
+	if len(shoot.Status.UID) == 0 {
+		patch := client.MergeFrom(shoot.DeepCopy())
+		shoot.Status.UID = shoot.UID
+		return op, r.GardenClient.Status().Patch(ctx, shoot, patch)
+	}
+	return op, nil
 }
 
 func (r *Reconciler) syncClusterResourceToSeed(ctx context.Context, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) error {
@@ -502,10 +518,6 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		operationTypeSwitched {
 
 		shoot.Status.RetryCycleStartTime = &now
-	}
-
-	if len(shoot.Status.UID) == 0 {
-		shoot.Status.UID = shoot.UID
 	}
 
 	if len(shoot.Status.TechnicalID) == 0 {
