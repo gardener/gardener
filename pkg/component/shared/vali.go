@@ -15,7 +15,6 @@
 package shared
 
 import (
-	"github.com/Masterminds/semver"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,7 +30,6 @@ import (
 func NewVali(
 	c client.Client,
 	namespace string,
-	runtimeKubernetesVersion *semver.Version,
 	imageVector imagevector.ImageVector,
 	secretsManager secretsmanager.Interface,
 	clusterType component.ClusterType,
@@ -76,7 +74,7 @@ func NewVali(
 		return nil, err
 	}
 
-	deployer := vali.New(c, namespace, secretsManager, runtimeKubernetesVersion, vali.Values{
+	deployer := vali.New(c, namespace, secretsManager, vali.Values{
 		ValiImage:             valiImage.String(),
 		CuratorImage:          curatorImage.String(),
 		RenameLokiToValiImage: alpineImage.String(),

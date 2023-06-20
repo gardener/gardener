@@ -22,7 +22,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/Masterminds/semver"
 	"github.com/Masterminds/sprig"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -51,7 +50,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -137,11 +135,10 @@ type Values struct {
 }
 
 type vali struct {
-	client                   client.Client
-	namespace                string
-	secretsManager           secretsmanager.Interface
-	runtimeKubernetesVersion *semver.Version
-	values                   Values
+	client         client.Client
+	namespace      string
+	secretsManager secretsmanager.Interface
+	values         Values
 }
 
 // New creates a new instance of Vali deployer.
@@ -149,15 +146,13 @@ func New(
 	client client.Client,
 	namespace string,
 	secretsManager secretsmanager.Interface,
-	runtimeKubernetesVersion *semver.Version,
 	values Values,
 ) component.Deployer {
 	return &vali{
-		client:                   client,
-		namespace:                namespace,
-		secretsManager:           secretsManager,
-		runtimeKubernetesVersion: runtimeKubernetesVersion,
-		values:                   values,
+		client:         client,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		values:         values,
 	}
 }
 
@@ -414,6 +409,7 @@ func (v *vali) getIngress(secretName string) *networkingv1.Ingress {
 			Labels: getLabels(),
 		},
 		Spec: networkingv1.IngressSpec{
+			IngressClassName: pointer.String(v.values.IngressClass),
 			TLS: []networkingv1.IngressTLS{{
 				SecretName: secretName,
 				Hosts:      []string{v.values.IngressHost},
@@ -436,13 +432,6 @@ func (v *vali) getIngress(secretName string) *networkingv1.Ingress {
 				},
 			}},
 		},
-	}
-
-	// TODO: Drop this after https://github.com/gardener/gardener/pull/8087 got merged.
-	if version.ConstraintK8sGreaterEqual122.Check(v.runtimeKubernetesVersion) {
-		ingress.Spec.IngressClassName = pointer.String(v.values.IngressClass)
-	} else {
-		ingress.Annotations["kubernetes.io/ingress.class"] = v.values.IngressClass
 	}
 
 	return ingress

@@ -325,7 +325,6 @@ func defaultVali(
 	return shared.NewVali(
 		c,
 		gardenNamespaceName,
-		nil,
 		imageVector,
 		nil,
 		component.ClusterTypeSeed,

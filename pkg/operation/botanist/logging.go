@@ -176,19 +176,9 @@ func (b *Botanist) DefaultVali() (component.Deployer, error) {
 		hvpaEnabled = features.DefaultFeatureGate.Enabled(features.HVPAForShootedSeed)
 	}
 
-	var ingressClass string
-	if b.isShootNodeLoggingEnabled() {
-		var err error
-		ingressClass, err = gardenerutils.ComputeNginxIngressClassForSeed(b.Seed.GetInfo(), b.Seed.GetInfo().Status.KubernetesVersion)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	return shared.NewVali(
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
-		b.Seed.KubernetesVersion,
 		b.ImageVector,
 		b.SecretsManager,
 		component.ClusterTypeShoot,
@@ -198,7 +188,7 @@ func (b *Botanist) DefaultVali() (component.Deployer, error) {
 		v1beta1constants.PriorityClassNameShootControlPlane100,
 		nil,
 		b.ComputeValiHost(),
-		ingressClass,
+		v1beta1constants.SeedNginxIngressClass,
 		true,
 		hvpaEnabled,
 		nil,

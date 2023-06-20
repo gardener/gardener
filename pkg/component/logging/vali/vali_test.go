@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Masterminds/semver"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -82,7 +81,6 @@ var _ = Describe("Vali", func() {
 			managedResourceSecret *corev1.Secret
 
 			fakeSecretManager secretsmanager.Interface
-			k8sVersion        *semver.Version
 			storage           = resource.MustParse("60Gi")
 		)
 
@@ -91,7 +89,6 @@ var _ = Describe("Vali", func() {
 			c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 			fakeSecretManager = fakesecretsmanager.New(c, namespace)
 
-			k8sVersion, err = semver.NewVersion("1.25.6")
 			Expect(err).ToNot(HaveOccurred())
 
 			By("Create secrets managed outside of this package for which secretsmanager.Get() will be called")
@@ -118,7 +115,6 @@ var _ = Describe("Vali", func() {
 				c,
 				namespace,
 				fakeSecretManager,
-				k8sVersion,
 				Values{
 					Replicas:             1,
 					AuthEnabled:          true,
@@ -184,7 +180,6 @@ var _ = Describe("Vali", func() {
 				c,
 				namespace,
 				fakeSecretManager,
-				nil,
 				Values{
 					Replicas:    1,
 					AuthEnabled: true,
@@ -243,7 +238,6 @@ var _ = Describe("Vali", func() {
 				c,
 				namespace,
 				fakeSecretManager,
-				nil,
 				Values{
 					Replicas:              1,
 					AuthEnabled:           true,
@@ -392,7 +386,7 @@ var _ = Describe("Vali", func() {
 		})
 
 		It("should patch garden/loki's PVC when new size is greater than the current one", func() {
-			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new200GiStorageQuantity})
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new200GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Annotate the Vali MamangedResource with Ignore annotation
@@ -423,7 +417,7 @@ var _ = Describe("Vali", func() {
 		})
 
 		It("should delete garden/vali's PVC when new size is less than the current one", func() {
-			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new80GiStorageQuantity})
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new80GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Annotate the Vali MamangedResource with Ignore annotation
@@ -454,7 +448,7 @@ var _ = Describe("Vali", func() {
 		})
 
 		It("shouldn't do anything when garden/vali's PVC is missing", func() {
-			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new80GiStorageQuantity})
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new80GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC).Return(errNotFound),
 				// Remove Ignore annotation form the managed resource
@@ -473,7 +467,7 @@ var _ = Describe("Vali", func() {
 		})
 
 		It("shouldn't do anything when garden/vali's PVC storage is the same as the new one", func() {
-			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new100GiStorageQuantity})
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new100GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Remove Ignore annotation form the managed resource
@@ -492,7 +486,7 @@ var _ = Describe("Vali", func() {
 		})
 
 		It("should proceed with the garden/vali's PVC resizing when Vali StatefulSet is missing", func() {
-			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new200GiStorageQuantity})
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new200GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Annotate the Vali MamangedResource with Ignore annotation
@@ -522,7 +516,7 @@ var _ = Describe("Vali", func() {
 		})
 
 		It("should not fail with patching garden/vali's PVC when the PVC itself was deleted during function execution", func() {
-			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new200GiStorageQuantity})
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new200GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Annotate the Vali MamangedResource with Ignore annotation
@@ -553,7 +547,7 @@ var _ = Describe("Vali", func() {
 		})
 
 		It("should not fail with deleting garden/vali's PVC when the PVC itself was deleted during function execution", func() {
-			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new80GiStorageQuantity})
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new80GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Annotate the Vali MamangedResource with Ignore annotation
@@ -584,7 +578,7 @@ var _ = Describe("Vali", func() {
 		})
 
 		It("should not neglect errors when getting garden/vali's PVC", func() {
-			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new80GiStorageQuantity})
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new80GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).Return(errForbidden),
 			)
@@ -592,7 +586,7 @@ var _ = Describe("Vali", func() {
 		})
 
 		It("should not neglect errors when patching garden/vali's StatefulSet", func() {
-			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new200GiStorageQuantity})
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new200GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Annotate the Vali MamangedResource with Ignore annotation
@@ -609,7 +603,7 @@ var _ = Describe("Vali", func() {
 		})
 
 		It("should not neglect errors when getting garden/vali's StatefulSet", func() {
-			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new200GiStorageQuantity})
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new200GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Annotate the Vali MamangedResource with Ignore annotation
@@ -627,7 +621,7 @@ var _ = Describe("Vali", func() {
 		})
 
 		It("should not neglect errors when patching garden/vali's PVC", func() {
-			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new200GiStorageQuantity})
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new200GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Annotate the Vali MamangedResource with Ignore annotation
@@ -647,7 +641,7 @@ var _ = Describe("Vali", func() {
 		})
 
 		It("should not neglect errors when deleting garden/vali's PVC", func() {
-			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new80GiStorageQuantity})
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new80GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Annotate the Vali MamangedResource with Ignore annotation
@@ -667,7 +661,7 @@ var _ = Describe("Vali", func() {
 		})
 
 		It("should not neglect errors when cannot get Vali ManagedResource", func() {
-			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new80GiStorageQuantity})
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new80GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Annotate the Vali MamangedResource with Ignore annotation
@@ -677,7 +671,7 @@ var _ = Describe("Vali", func() {
 		})
 
 		It("should not neglect errors when cannot patch Vali ManagedResource", func() {
-			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new80GiStorageQuantity})
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, Values{Storage: &new80GiStorageQuantity})
 			gomock.InOrder(
 				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
 				// Annotate the Vali MamangedResource with Ignore annotation

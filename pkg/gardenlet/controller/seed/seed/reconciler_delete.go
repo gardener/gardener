@@ -325,7 +325,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			resourceManager               = resourcemanager.New(seedClient, r.GardenNamespace, nil, resourcemanager.Values{RuntimeKubernetesVersion: kubernetesVersion})
 			fluentOperator                = fluentoperator.NewFluentOperator(seedClient, r.GardenNamespace, fluentoperator.Values{})
 			fluentOperatorCustomResources = fluentoperator.NewCustomResources(seedClient, r.GardenNamespace, fluentoperator.CustomResourcesValues{}, nil, nil, nil)
-			vali                          = vali.New(seedClient, r.GardenNamespace, nil, nil, vali.Values{})
+			vali                          = vali.New(seedClient, r.GardenNamespace, nil, vali.Values{})
 
 			destroyKubeStateMetrics = g.Add(flow.Task{
 				Name: "Destroy kube-state-metrics",
