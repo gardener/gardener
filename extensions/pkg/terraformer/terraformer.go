@@ -263,18 +263,24 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 			}
 		}
 
-		podLogger.Info("Cleaning up Terraformer pod")
-		// If the context error is non-nil (cancelled or deadline exceeded),
-		// create a new context for deleting the pod since attempting to use the original context will fail.
-		// The context might get cancelled for example by the owner check watchdog and the pod should be
-		// deleted to prevent the terraform script from running after the context was cancelled.
-		if ctx.Err() != nil {
+		switch {
+		case errors.Is(ctx.Err(), context.Canceled):
+			// If the context error is Canceled, the parent context has been canceled. Because the Terraform is fairly unstable
+			// and interruptions may cause it to not properly store the state (ref https://github.com/hashicorp/terraform/issues/33358),
+			// we will allow it to continue. The next reconciliation will adopt the running pod.
+			podLogger.Info("Skipping Terraformer pod deletion because context was cancelled")
+		case errors.Is(ctx.Err(), context.DeadlineExceeded):
+			// If the context error is deadline exceeded, create a new context for deleting the pod since attempting to use the
+			// original context will fail.
 			var cancel context.CancelFunc
 			ctx, cancel = context.WithTimeout(context.Background(), 1*time.Minute)
 			defer cancel()
-		}
-		if err := t.client.Delete(ctx, pod); client.IgnoreNotFound(err) != nil {
-			return err
+			fallthrough
+		default:
+			podLogger.Info("Cleaning up Terraformer pod")
+			if err := t.client.Delete(ctx, pod); client.IgnoreNotFound(err) != nil {
+				return err
+			}
 		}
 
 		if status != podStatusSucceeded {
