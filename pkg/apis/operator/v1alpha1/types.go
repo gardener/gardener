@@ -435,6 +435,10 @@ type CredentialsRotation struct {
 const (
 	// GardenReconciled is a constant for a condition type indicating that the garden has been reconciled.
 	GardenReconciled gardencorev1beta1.ConditionType = "Reconciled"
+	// GardenSystemComponentsHealthy is a constant for a condition type indicating the system components health.
+	GardenSystemComponentsHealthy gardencorev1beta1.ConditionType = "SystemComponentsHealthy"
+	// VirtualGardenComponentsHealthy is a constant for a condition type indicating the virtual garden components health.
+	VirtualGardenComponentsHealthy gardencorev1beta1.ConditionType = "VirtualGardenComponentsHealthy"
 )
 
 // AvailableOperationAnnotations is the set of available operation annotations for Garden resources.

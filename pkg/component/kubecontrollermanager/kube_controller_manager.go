@@ -58,12 +58,13 @@ import (
 const (
 	// LabelRole is a constant for the value of a label with key 'role'.
 	LabelRole = "controller-manager"
+	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
+	ManagedResourceName = "shoot-core-kube-controller-manager"
 
-	serviceName         = "kube-controller-manager"
-	containerName       = v1beta1constants.DeploymentNameKubeControllerManager
-	managedResourceName = "shoot-core-kube-controller-manager"
-	secretNameServer    = "kube-controller-manager-server"
-	portNameMetrics     = "metrics"
+	serviceName      = "kube-controller-manager"
+	containerName    = v1beta1constants.DeploymentNameKubeControllerManager
+	secretNameServer = "kube-controller-manager-server"
+	portNameMetrics  = "metrics"
 
 	volumeNameServer            = "server"
 	volumeNameServiceAccountKey = "service-account-key"
@@ -594,11 +595,11 @@ func (k *kubeControllerManager) newShootAccessSecret() *gardenerutils.AccessSecr
 }
 
 func (k *kubeControllerManager) emptyManagedResource() *resourcesv1alpha1.ManagedResource {
-	return &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: k.namespace}}
+	return &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: ManagedResourceName, Namespace: k.namespace}}
 }
 
 func (k *kubeControllerManager) emptyManagedResourceSecret() *corev1.Secret {
-	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedresources.SecretName(managedResourceName, true), Namespace: k.namespace}}
+	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedresources.SecretName(ManagedResourceName, true), Namespace: k.namespace}}
 }
 
 func getLabels() map[string]string {

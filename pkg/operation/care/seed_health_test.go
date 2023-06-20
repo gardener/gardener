@@ -16,6 +16,7 @@ package care_test
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -387,7 +388,7 @@ func progressingManagedResource(name string) *resourcesv1alpha1.ManagedResource 
 
 func managedResource(name string, conditions []gardencorev1beta1.Condition) *resourcesv1alpha1.ManagedResource {
 	namespace := v1beta1constants.GardenNamespace
-	if name == "istio" || name == "istio-system" {
+	if name == "istio" || name == "istio-system" || strings.HasSuffix(name, "-istio") {
 		namespace = v1beta1constants.IstioSystemNamespace
 	}
 

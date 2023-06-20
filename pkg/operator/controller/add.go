@@ -15,6 +15,7 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -28,6 +29,7 @@ import (
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controller/service"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
+	"github.com/gardener/gardener/pkg/operator/controller/care"
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
 	"github.com/gardener/gardener/pkg/operator/controller/networkpolicyregistrar"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -35,7 +37,7 @@ import (
 )
 
 // AddToManager adds all controllers to the given manager.
-func AddToManager(mgr manager.Manager, cfg *config.OperatorConfiguration) error {
+func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.OperatorConfiguration) error {
 	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(charts.Path, "images.yaml"))
 	if err != nil {
 		return fmt.Errorf("failed reading image vector override: %w", err)
@@ -61,6 +63,10 @@ func AddToManager(mgr manager.Manager, cfg *config.OperatorConfiguration) error 
 		ComponentImageVectors: componentImageVectors,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding Garden controller: %w", err)
+	}
+
+	if err := (&care.Reconciler{}).AddToManager(ctx, mgr); err != nil {
+		return fmt.Errorf("failed adding Garden-Care controller: %w", err)
 	}
 
 	if err := (&networkpolicyregistrar.Reconciler{
