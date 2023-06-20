@@ -170,6 +170,37 @@ var _ = Describe("Resource Manager", func() {
 				Type: corev1.SecretTypeOpaque,
 			}))
 		})
+
+		It("should not overwrite the GC label for immutable secrets", func() {
+			secretName, secret := NewSecret(fakeClient).
+				WithNamespacedName(namespace, name).
+				WithLabels(labels).
+				Unique()
+
+			secret.WithLabels(map[string]string{"one": "two"})
+			Expect(secret.Reconcile(ctx)).To(Succeed())
+
+			actualSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: namespace}}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(actualSecret), actualSecret)).To(Succeed())
+
+			Expect(actualSecret).To(Equal(&corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Secret",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      secretName,
+					Namespace: namespace,
+					Labels: map[string]string{
+						"one": "two",
+						"resources.gardener.cloud/garbage-collectable-reference": "true",
+					},
+					ResourceVersion: "1",
+				},
+				Type:      corev1.SecretTypeOpaque,
+				Immutable: pointer.Bool(true),
+			}))
+		})
 	})
 
 	Context("ManagedResources", func() {

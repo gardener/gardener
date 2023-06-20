@@ -17,6 +17,7 @@ package builder
 import (
 	"context"
 
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
@@ -50,16 +51,41 @@ func (s *Secret) WithNamespacedName(namespace, name string) *Secret {
 	return s
 }
 
-// WithLabels sets the labels.
+// WithLabels sets the labels. The label "resources.gardener.cloud/garbage-collectable-reference" is retained
+// if it already exists in the current labels.
 func (s *Secret) WithLabels(labels map[string]string) *Secret {
-	s.secret.Labels = labels
+	if s.secret.Labels == nil {
+		s.secret.Labels = cloneLabels(labels)
+		return s
+	}
+
+	_, ok := s.secret.Labels[references.LabelKeyGarbageCollectable]
+	if ok && s.secret.Immutable != nil && *s.secret.Immutable {
+		s.secret.Labels = make(map[string]string, len(labels)+1)
+		s.secret.Labels[references.LabelKeyGarbageCollectable] = references.LabelValueGarbageCollectable
+		for k, v := range labels {
+			s.secret.Labels[k] = v
+		}
+		return s
+	}
+
+	s.secret.Labels = cloneLabels(labels)
 	return s
+}
+
+func cloneLabels(labels map[string]string) map[string]string {
+	// TODO(dimityrmirchev): replace with maps.Clone once go 1.21 is released
+	l := make(map[string]string, len(labels))
+	for k, v := range labels {
+		l[k] = v
+	}
+	return l
 }
 
 // AddLabels adds the labels to the existing secret labels.
 func (s *Secret) AddLabels(labels map[string]string) *Secret {
 	if s.secret.Labels == nil {
-		s.secret.Labels = map[string]string{}
+		s.secret.Labels = make(map[string]string, len(labels))
 	}
 	for k, v := range labels {
 		s.secret.Labels[k] = v
