@@ -64,19 +64,23 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 		}).
 		Watches(
-			&source.Kind{Type: &gardencorev1beta1.Shoot{}},
-			&handler.EnqueueRequestForOwner{
-				OwnerType:    &seedmanagementv1alpha1.ManagedSeedSet{},
-				IsController: true,
-			},
+			&gardencorev1beta1.Shoot{},
+			handler.EnqueueRequestForOwner(
+				mgr.GetScheme(),
+				mgr.GetRESTMapper(),
+				&seedmanagementv1alpha1.ManagedSeedSet{},
+				handler.OnlyControllerOwner(),
+			),
 			builder.WithPredicates(r.ShootPredicate(ctx)),
 		).
 		Watches(
-			&source.Kind{Type: &seedmanagementv1alpha1.ManagedSeed{}},
-			&handler.EnqueueRequestForOwner{
-				OwnerType:    &seedmanagementv1alpha1.ManagedSeedSet{},
-				IsController: true,
-			},
+			&seedmanagementv1alpha1.ManagedSeed{},
+			handler.EnqueueRequestForOwner(
+				mgr.GetScheme(),
+				mgr.GetRESTMapper(),
+				&seedmanagementv1alpha1.ManagedSeedSet{},
+				handler.OnlyControllerOwner(),
+			),
 			builder.WithPredicates(r.ManagedSeedPredicate(ctx)),
 		).
 		Build(r)
