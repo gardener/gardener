@@ -51,7 +51,7 @@ var _ = Describe("Shoot Hibernation controller tests", func() {
 					},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: "1.20.1",
+					Version: "1.25.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
 					Type: pointer.String("foo-networking"),

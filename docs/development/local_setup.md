@@ -48,7 +48,7 @@ For other OS, please check [Go installation documentation](https://golang.org/do
 
 ## Installing kubectl
 
-Install `kubectl`. Please make sure that the version of `kubectl` is at least `v1.20.x`. On macOS run
+Install `kubectl`. Please make sure that the version of `kubectl` is at least `v1.22.x`. On macOS run
 
 ```bash
 brew install kubernetes-cli

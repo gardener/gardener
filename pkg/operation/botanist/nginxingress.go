@@ -46,7 +46,6 @@ func (b *Botanist) DefaultNginxIngress() (component.DeployWaiter, error) {
 	values := nginxingressshoot.Values{
 		NginxControllerImage: imageController.String(),
 		DefaultBackendImage:  imageDefaultBackend.String(),
-		KubernetesVersion:    b.Shoot.KubernetesVersion,
 		VPAEnabled:           b.Shoot.WantsVerticalPodAutoscaler,
 		PSPDisabled:          b.Shoot.PSPDisabled,
 	}

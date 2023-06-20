@@ -7185,7 +7185,7 @@ func schema_pkg_apis_core_v1beta1_ServiceAccountConfig(ref common.ReferenceCallb
 					},
 					"acceptedIssuers": {
 						SchemaProps: spec.SchemaProps{
-							Description: "AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted. These values are not used to generate new service account tokens. Only useful when service account tokens are also issued by another external system or a change of the current issuer that is used for generating tokens is being performed. This field is only available for Kubernetes v1.22 or later.",
+							Description: "AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted. These values are not used to generate new service account tokens. Only useful when service account tokens are also issued by another external system or a change of the current issuer that is used for generating tokens is being performed.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -8424,7 +8424,7 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 					},
 					"cri": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CRI contains configurations of CRI support of every machine in the worker pool. Defaults to a CRI with name `containerd` when the Kubernetes version of the `Shoot` is >= 1.22.",
+							Description: "CRI contains configurations of CRI support of every machine in the worker pool. Defaults to a CRI with name `containerd`.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI"),
 						},
 					},

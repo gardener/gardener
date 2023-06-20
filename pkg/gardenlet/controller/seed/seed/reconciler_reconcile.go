@@ -77,7 +77,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/metricsserver"
 	"github.com/gardener/gardener/pkg/component/monitoring"
-	"github.com/gardener/gardener/pkg/component/nginxingress"
 	"github.com/gardener/gardener/pkg/component/nginxingressshoot"
 	"github.com/gardener/gardener/pkg/component/nodeexporter"
 	"github.com/gardener/gardener/pkg/component/nodeproblemdetector"
@@ -216,7 +215,7 @@ func (r *Reconciler) reconcile(
 }
 
 func (r *Reconciler) checkMinimumK8SVersion(version string) (string, error) {
-	const minKubernetesVersion = "1.20"
+	const minKubernetesVersion = "1.22"
 
 	seedVersionOK, err := versionutils.CompareVersions(version, ">=", minKubernetesVersion)
 	if err != nil {
@@ -768,14 +767,9 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
-	ingressClass, err := gardenerutils.ComputeNginxIngressClassForSeed(seed.GetInfo(), seed.GetInfo().Status.KubernetesVersion)
-	if err != nil {
-		return err
-	}
-
 	values := kubernetes.Values(map[string]interface{}{
 		"global": map[string]interface{}{
-			"ingressClass": ingressClass,
+			"ingressClass": v1beta1constants.SeedNginxIngressClass,
 			"images":       imagevector.ImageMapToValues(seedImages),
 		},
 		"prometheus": map[string]interface{}{
@@ -842,18 +836,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
-	if !v1beta1helper.SeedUsesNginxIngressController(seed.GetInfo()) {
-		nginxIngress := nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{})
-
-		if err := component.OpDestroyAndWait(nginxIngress).Destroy(ctx); err != nil {
-			return err
-		}
-	}
-
-	if err := migrateIngressClassForShootIngresses(ctx, r.GardenClient, seedClient, seed, ingressClass, kubernetesVersion); err != nil {
-		return err
-	}
-
 	// setup for flow graph
 	var dnsRecord component.DeployMigrateWaiter
 
@@ -879,18 +861,13 @@ func (r *Reconciler) runReconcileSeedFlow(
 		nginxLBReady = g.Add(flow.Task{
 			Name: "Waiting until nginx ingress LoadBalancer is ready",
 			Fn: func(ctx context.Context) error {
-				dnsRecord, err = waitForNginxIngressServiceAndGetDNSComponent(ctx, log, seed, r.GardenClient, seedClient, r.ImageVector, kubernetesVersion, ingressClass, r.GardenNamespace)
+				dnsRecord, err = waitForNginxIngressServiceAndGetDNSComponent(ctx, log, seed, r.GardenClient, seedClient, r.ImageVector, kubernetesVersion, r.GardenNamespace)
 				return err
 			},
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying managed ingress DNS record",
-			Fn:           flow.TaskFn(func(ctx context.Context) error { return deployDNSResources(ctx, dnsRecord) }).DoIf(v1beta1helper.SeedWantsManagedIngress(seed.GetInfo())),
-			Dependencies: flow.NewTaskIDs(nginxLBReady),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Destroying managed ingress DNS record (if existing)",
-			Fn:           flow.TaskFn(func(ctx context.Context) error { return destroyDNSResources(ctx, dnsRecord) }).DoIf(!v1beta1helper.SeedWantsManagedIngress(seed.GetInfo())),
+			Fn:           flow.TaskFn(func(ctx context.Context) error { return deployDNSResources(ctx, dnsRecord) }),
 			Dependencies: flow.NewTaskIDs(nginxLBReady),
 		})
 		_ = g.Add(flow.Task{
@@ -1042,7 +1019,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if wildcardCert != nil {
 		kubeAPIServerIngress := kubeapiserverexposure.NewIngress(seedClient, r.GardenNamespace, kubeapiserverexposure.IngressValues{
 			Host:             seed.GetIngressFQDN(kubeAPIServerPrefix),
-			IngressClassName: &ingressClass,
+			IngressClassName: pointer.String(v1beta1constants.SeedNginxIngressClass),
 			ServiceName:      v1beta1constants.DeploymentNameKubeAPIServer,
 			TLSSecretName:    &wildcardCert.Name,
 		})
@@ -1295,7 +1272,6 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 	gardenClient, seedClient client.Client,
 	imageVector imagevector.ImageVector,
 	kubernetesVersion *semver.Version,
-	ingressClass string,
 	gardenNamespaceName string,
 ) (
 	component.DeployMigrateWaiter,
@@ -1307,32 +1283,30 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 	}
 
 	var ingressLoadBalancerAddress string
-	if v1beta1helper.SeedUsesNginxIngressController(seed.GetInfo()) {
-		providerConfig, err := getConfig(seed.GetInfo())
-		if err != nil {
-			return nil, err
-		}
+	providerConfig, err := getConfig(seed.GetInfo())
+	if err != nil {
+		return nil, err
+	}
 
-		nginxIngress, err := defaultNginxIngress(seedClient, imageVector, kubernetesVersion, ingressClass, providerConfig, seed.GetLoadBalancerServiceAnnotations(), gardenNamespaceName)
-		if err != nil {
-			return nil, err
-		}
+	nginxIngress, err := defaultNginxIngress(seedClient, imageVector, kubernetesVersion, v1beta1constants.SeedNginxIngressClass, providerConfig, seed.GetLoadBalancerServiceAnnotations(), gardenNamespaceName)
+	if err != nil {
+		return nil, err
+	}
 
-		if err = component.OpWait(nginxIngress).Deploy(ctx); err != nil {
-			return nil, err
-		}
+	if err = component.OpWait(nginxIngress).Deploy(ctx); err != nil {
+		return nil, err
+	}
 
-		ingressLoadBalancerAddress, err = WaitUntilLoadBalancerIsReady(
-			ctx,
-			log,
-			seedClient,
-			gardenNamespaceName,
-			"nginx-ingress-controller",
-			time.Minute,
-		)
-		if err != nil {
-			return nil, err
-		}
+	ingressLoadBalancerAddress, err = WaitUntilLoadBalancerIsReady(
+		ctx,
+		log,
+		seedClient,
+		gardenNamespaceName,
+		"nginx-ingress-controller",
+		time.Minute,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	return getManagedIngressDNSRecord(log, seedClient, gardenNamespaceName, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), ingressLoadBalancerAddress), nil

@@ -17,7 +17,6 @@ package vpa_test
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -975,54 +974,9 @@ var _ = Describe("VPA", func() {
 			} else {
 				obj.Labels["gardener.cloud/role"] = "controlplane"
 				obj.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
-				obj.Spec.Template.Spec.Containers[0].Env = append(obj.Spec.Template.Spec.Containers[0].Env,
-					corev1.EnvVar{
-						Name:  "KUBERNETES_SERVICE_HOST",
-						Value: "kube-apiserver",
-					},
-					corev1.EnvVar{
-						Name:  "KUBERNETES_SERVICE_PORT",
-						Value: strconv.Itoa(443),
-					},
-				)
-				obj.Spec.Template.Spec.Volumes = append(obj.Spec.Template.Spec.Volumes, corev1.Volume{
-					Name: "shoot-access",
-					VolumeSource: corev1.VolumeSource{
-						Projected: &corev1.ProjectedVolumeSource{
-							DefaultMode: pointer.Int32(420),
-							Sources: []corev1.VolumeProjection{
-								{
-									Secret: &corev1.SecretProjection{
-										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "ca",
-										},
-										Items: []corev1.KeyToPath{{
-											Key:  "bundle.crt",
-											Path: "ca.crt",
-										}},
-									},
-								},
-								{
-									Secret: &corev1.SecretProjection{
-										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "shoot-access-vpa-admission-controller",
-										},
-										Items: []corev1.KeyToPath{{
-											Key:  "token",
-											Path: "token",
-										}},
-										Optional: pointer.Bool(false),
-									},
-								},
-							},
-						},
-					},
-				})
-				obj.Spec.Template.Spec.Containers[0].VolumeMounts = append(obj.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-					Name:      "shoot-access",
-					MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
-					ReadOnly:  true,
-				})
+				obj.Spec.Template.Spec.Containers[0].Command = append(obj.Spec.Template.Spec.Containers[0].Command, "--kubeconfig="+pathGenericKubeconfig)
+
+				Expect(gardenerutils.InjectGenericKubeconfig(obj, genericTokenKubeconfigSecretName, shootAccessSecretAdmissionController.Name)).To(Succeed())
 			}
 
 			return obj

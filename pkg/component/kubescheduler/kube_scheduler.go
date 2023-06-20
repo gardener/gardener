@@ -26,7 +26,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -357,19 +356,10 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client, podDisruptionBudget, func() error {
-		switch pdb := podDisruptionBudget.(type) {
-		case *policyv1.PodDisruptionBudget:
-			pdb.Labels = getLabels()
-			pdb.Spec = policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &pdbMaxUnavailable,
-				Selector:       deployment.Spec.Selector,
-			}
-		case *policyv1beta1.PodDisruptionBudget:
-			pdb.Labels = getLabels()
-			pdb.Spec = policyv1beta1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &pdbMaxUnavailable,
-				Selector:       deployment.Spec.Selector,
-			}
+		podDisruptionBudget.Labels = getLabels()
+		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
+			MaxUnavailable: &pdbMaxUnavailable,
+			Selector:       deployment.Spec.Selector,
 		}
 		return nil
 	}); err != nil {
@@ -423,13 +413,8 @@ func (k *kubeScheduler) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "kube-scheduler-vpa", Namespace: k.namespace}}
 }
 
-func (k *kubeScheduler) emptyPodDisruptionBudget() client.Object {
-	objectMeta := metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeScheduler, Namespace: k.namespace}
-
-	if k.runtimeVersionGreaterEqual123 {
-		return &policyv1.PodDisruptionBudget{ObjectMeta: objectMeta}
-	}
-	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: objectMeta}
+func (k *kubeScheduler) emptyPodDisruptionBudget() *policyv1.PodDisruptionBudget {
+	return &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeScheduler, Namespace: k.namespace}}
 }
 
 func (k *kubeScheduler) emptyService() *corev1.Service {
@@ -504,10 +489,8 @@ func (k *kubeScheduler) computeComponentConfig() (string, error) {
 		apiVersion = "kubescheduler.config.k8s.io/v1"
 	} else if versionutils.ConstraintK8sGreaterEqual123.Check(k.version) {
 		apiVersion = "kubescheduler.config.k8s.io/v1beta3"
-	} else if versionutils.ConstraintK8sGreaterEqual122.Check(k.version) {
-		apiVersion = "kubescheduler.config.k8s.io/v1beta2"
 	} else {
-		apiVersion = "kubescheduler.config.k8s.io/v1beta1"
+		apiVersion = "kubescheduler.config.k8s.io/v1beta2"
 	}
 
 	profile := gardencorev1beta1.SchedulingProfileBalanced
@@ -543,7 +526,7 @@ func (k *kubeScheduler) computeCommand(port int32) []string {
 		fmt.Sprintf("--secure-port=%d", port),
 	)
 
-	if versionutils.ConstraintK8sLessEqual122.Check(k.version) {
+	if versionutils.ConstraintK8sEqual122.Check(k.version) {
 		command = append(command, "--port=0")
 	}
 

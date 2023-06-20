@@ -36,19 +36,19 @@ var _ = Describe("featuregates", func() {
 			}
 		},
 
-		Entry("AnyVolumeDataSource is supported in 1.18.14", "AnyVolumeDataSource", "1.18.14", true, true),                // AddedInVersion: 1.18
-		Entry("CSIStorageCapacity is not supported in 1.18.14", "CSIStorageCapacity", "1.18.14", false, true),             // AddedInVersion: 1.19
-		Entry("CustomResourceValidation is not supported in 1.18.14", "CustomResourceValidation", "1.18.14", false, true), // RemovedInVersion: 1.18
-		Entry("DefaultIngressClass is supported in 1.18.14", "DefaultIngressClass", "1.18.14", true, true),                // AddedInVersion: 1.18, RemovedInVersion: 1.20
-		Entry("DynamicAuditing is supported in 1.18.14", "DynamicAuditing", "1.18.14", true, true),                        // RemovedInVersion: 1.19
-		Entry("Foo is unknown in 1.18.14", "Foo", "1.18.14", false, false),                                                // Unknown
+		Entry("TopologyAwareHints is supported in 1.21.14", "TopologyAwareHints", "1.21.14", true, true),                    // AddedInVersion: 1.21
+		Entry("DynamicResourceAllocation is not supported in 1.22.14", "DynamicResourceAllocation", "1.22.14", false, true), // AddedInVersion: 1.26
+		Entry("TTLAfterFinished is not supported in 1.26.2", "TTLAfterFinished", "1.26.2", false, true),                     // RemovedInVersion: 1.25
+		Entry("DefaultPodTopologySpread is supported in 1.23.8", "DefaultPodTopologySpread", "1.23.8", true, true),          // AddedInVersion: 1.19, RemovedInVersion: 1.26
+		Entry("VolumeSubpath is supported in 1.24.7", "VolumeSubpath", "1.24.7", true, true),                                // RemovedInVersion: 1.25
+		Entry("Foo is unknown in 1.22.8", "Foo", "1.22.8", false, false),                                                    // Unknown
 
-		Entry("AnyVolumeDataSource is supported in 1.19.10", "AnyVolumeDataSource", "1.19.10", true, true),                // AddedInVersion: 1.18
-		Entry("CSIStorageCapacity is supported in 1.19.10", "CSIStorageCapacity", "1.19.10", true, true),                  // AddedInVersion: 1.19
-		Entry("CustomResourceValidation is not supported in 1.19.10", "CustomResourceValidation", "1.19.10", false, true), // RemovedInVersion: 1.18
-		Entry("DefaultIngressClass is supported in 1.19.10", "DefaultIngressClass", "1.19.10", true, true),                // AddedInVersion: 1.18, RemovedInVersion: 1.20
-		Entry("DynamicAuditing is not supported in 1.19.10", "DynamicAuditing", "1.19.10", false, true),                   // RemovedInVersion: 1.19
-		Entry("Foo is unknown in 1.19.10", "Foo", "1.19.10", false, false),                                                // Unknown
+		Entry("AnyVolumeDataSource is supported in 1.24.9", "AnyVolumeDataSource", "1.24.9", true, true),                              // AddedInVersion: 1.18
+		Entry("CSIStorageCapacity is supported in 1.22.10", "CSIStorageCapacity", "1.22.10", true, true),                              // AddedInVersion: 1.19
+		Entry("Sysctls is not supported in 1.25.4", "Sysctls", "1.25.4", false, true),                                                 // RemovedInVersion: 1.23
+		Entry("ControllerManagerLeaderMigration is supported in 1.26.1", "ControllerManagerLeaderMigration", "1.26.1", true, true),    // AddedInVersion: 1.21, RemovedInVersion: 1.27
+		Entry("BoundServiceAccountTokenVolume is not supported in 1.23.10", "BoundServiceAccountTokenVolume", "1.23.10", false, true), // RemovedInVersion: 1.23
+		Entry("Foo is unknown in 1.27.0", "Foo", "1.27.0", false, false),                                                              // Unknown
 
 		Entry("AllAlpha is supported in 1.17.0", "AllAlpha", "1.17.0", true, true),        // AddedInVersion: 1.17
 		Entry("AllAlpha is not supported in 1.16.15", "AllAlpha", "1.16.15", false, true), // AddedInVersion: 1.17
@@ -97,12 +97,12 @@ var _ = Describe("featuregates", func() {
 
 			Entry("empty list", nil, "1.18.14", BeEmpty()),
 			Entry("supported feature gate", map[string]bool{"AnyVolumeDataSource": true}, "1.18.14", BeEmpty()),
-			Entry("unsupported feature gate", map[string]bool{"CustomResourceValidation": true}, "1.18.14", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("unsupported feature gate", map[string]bool{"NodeLease": true}, "1.23.14", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal(field.NewPath("CustomResourceValidation").String()),
-				"Detail": Equal("not supported in Kubernetes version 1.18.14"),
+				"Field":  Equal(field.NewPath("NodeLease").String()),
+				"Detail": Equal("not supported in Kubernetes version 1.23.14"),
 			})))),
-			Entry("unknown feature gate", map[string]bool{"Foo": true}, "1.18.14", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("unknown feature gate", map[string]bool{"Foo": true}, "1.25.10", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":     Equal(field.ErrorTypeInvalid),
 				"Field":    Equal(field.NewPath("Foo").String()),
 				"BadValue": Equal("Foo"),

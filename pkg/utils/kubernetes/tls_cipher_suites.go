@@ -35,18 +35,9 @@ func TLSCipherSuites(k8sVersion *semver.Version) []string {
 		)
 	)
 
-	if version.ConstraintK8sLessEqual121.Check(k8sVersion) {
-		return append(commonSuites,
-			"TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305",
-			"TLS_RSA_WITH_AES_128_CBC_SHA",
-			"TLS_RSA_WITH_AES_256_CBC_SHA",
-			"TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
-		)
-	}
-
 	// For Kubernetes 1.22 Gardener only allows suites permissible for TLS 1.3
 	// see https://github.com/gardener/gardener/issues/4300#issuecomment-885498872
-	if version.ConstraintK8sLessEqual122.Check(k8sVersion) {
+	if version.ConstraintK8sEqual122.Check(k8sVersion) {
 		return tlsV13Suites
 	}
 

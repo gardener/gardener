@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	"k8s.io/utils/pointer"
@@ -31,10 +30,9 @@ var _ = Describe("Monitoring", func() {
 	Describe("#ScrapeConfig", func() {
 		It("should successfully test the scrape configuration", func() {
 			etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
-				Role:              testRole,
-				Class:             ClassNormal,
-				Replicas:          pointer.Int32(1),
-				KubernetesVersion: semver.MustParse("1.20.1"),
+				Role:     testRole,
+				Class:    ClassNormal,
+				Replicas: pointer.Int32(1),
 			})
 			test.ScrapeConfigs(etcd, expectedScrapeConfigEtcd, expectedScrapeConfigBackupRestore)
 		})
@@ -45,10 +43,9 @@ var _ = Describe("Monitoring", func() {
 			Context("w/o backup", func() {
 				It("should successfully test the alerting rules (normal) for single-node etcd", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
-						Role:              testRole,
-						Class:             ClassNormal,
-						Replicas:          pointer.Int32(1),
-						KubernetesVersion: semver.MustParse("1.20.1"),
+						Role:     testRole,
+						Class:    ClassNormal,
+						Replicas: pointer.Int32(1),
 					})
 					test.AlertingRulesWithPromtool(
 						etcd,
@@ -59,10 +56,9 @@ var _ = Describe("Monitoring", func() {
 
 				It("should successfully test the alerting rules (important) for single-node etcd", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
-						Role:              testRole,
-						Class:             ClassImportant,
-						Replicas:          pointer.Int32(1),
-						KubernetesVersion: semver.MustParse("1.20.1"),
+						Role:     testRole,
+						Class:    ClassImportant,
+						Replicas: pointer.Int32(1),
 					})
 					test.AlertingRulesWithPromtool(
 						etcd,
@@ -70,29 +66,14 @@ var _ = Describe("Monitoring", func() {
 						filepath.Join("testdata", "monitoring_alertingrules_important_singlenode_without_backup.yaml"),
 					)
 				})
-
-				It("should successfully test the alerting rules for k8s >= 1.21 (normal) for single-node etcd", func() {
-					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
-						Role:              testRole,
-						Class:             ClassNormal,
-						Replicas:          pointer.Int32(1),
-						KubernetesVersion: semver.MustParse("1.21.1"),
-					})
-					test.AlertingRulesWithPromtool(
-						etcd,
-						map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesNormalK8SGTE121},
-						filepath.Join("testdata", "monitoring_alertingrules_normal_singlenode_without_backup.yaml"),
-					)
-				})
 			})
 
 			Context("w/ backup", func() {
 				It("should successfully test the alerting rules (normal) for single-node etcd", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
-						Role:              testRole,
-						Class:             ClassNormal,
-						Replicas:          pointer.Int32(1),
-						KubernetesVersion: semver.MustParse("1.20.1"),
+						Role:     testRole,
+						Class:    ClassNormal,
+						Replicas: pointer.Int32(1),
 					})
 					etcd.SetBackupConfig(&BackupConfig{})
 					test.AlertingRulesWithPromtool(
@@ -104,10 +85,9 @@ var _ = Describe("Monitoring", func() {
 
 				It("should successfully test the alerting rules (important) for single-node etcd", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
-						Role:              testRole,
-						Class:             ClassImportant,
-						Replicas:          pointer.Int32(1),
-						KubernetesVersion: semver.MustParse("1.20.1"),
+						Role:     testRole,
+						Class:    ClassImportant,
+						Replicas: pointer.Int32(1),
 					})
 					etcd.SetBackupConfig(&BackupConfig{})
 					test.AlertingRulesWithPromtool(
@@ -122,10 +102,9 @@ var _ = Describe("Monitoring", func() {
 			Context("w/o backup", func() {
 				It("should successfully test the alerting rules (normal) for multinode etcd", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
-						Role:              testRole,
-						Class:             ClassNormal,
-						Replicas:          pointer.Int32(3),
-						KubernetesVersion: semver.MustParse("1.20.1"),
+						Role:     testRole,
+						Class:    ClassNormal,
+						Replicas: pointer.Int32(3),
 					})
 					test.AlertingRulesWithPromtool(
 						etcd,
@@ -136,10 +115,9 @@ var _ = Describe("Monitoring", func() {
 
 				It("should successfully test the alerting rules (important) for multinode etcd", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
-						Role:              testRole,
-						Class:             ClassImportant,
-						Replicas:          pointer.Int32(3),
-						KubernetesVersion: semver.MustParse("1.20.1"),
+						Role:     testRole,
+						Class:    ClassImportant,
+						Replicas: pointer.Int32(3),
 					})
 					test.AlertingRulesWithPromtool(
 						etcd,
@@ -152,10 +130,9 @@ var _ = Describe("Monitoring", func() {
 			Context("w/ backup", func() {
 				It("should successfully test the alerting rules (normal) for multinode etcd", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
-						Role:              testRole,
-						Class:             ClassNormal,
-						Replicas:          pointer.Int32(3),
-						KubernetesVersion: semver.MustParse("1.20.1"),
+						Role:     testRole,
+						Class:    ClassNormal,
+						Replicas: pointer.Int32(3),
 					})
 					etcd.SetBackupConfig(&BackupConfig{})
 					test.AlertingRulesWithPromtool(
@@ -167,10 +144,9 @@ var _ = Describe("Monitoring", func() {
 
 				It("should successfully test the alerting rules (important) for multinode etcd", func() {
 					etcd := New(logr.Discard(), nil, testNamespace, nil, Values{
-						Role:              testRole,
-						Class:             ClassImportant,
-						Replicas:          pointer.Int32(3),
-						KubernetesVersion: semver.MustParse("1.20.1"),
+						Role:     testRole,
+						Class:    ClassImportant,
+						Replicas: pointer.Int32(3),
 					})
 					etcd.SetBackupConfig(&BackupConfig{})
 					test.AlertingRulesWithPromtool(
@@ -411,13 +387,8 @@ metric_relabel_configs:
     annotations:
       description: Etcd3 ` + testRole + ` DB size has crossed its current practical limit of 8GB. Etcd quota must be increased to allow updates.
       summary: Etcd3 ` + testRole + ` DB size has crossed its current practical limit.
-`
 
-	alertingRulesEtcdObject = `  - record: shoot:etcd_object_counts:sum_by_resource
-    expr: max(etcd_object_counts) by (resource)
-`
-
-	alertingRulesApiserverObjects = `  - record: shoot:apiserver_storage_objects:sum_by_resource
+  - record: shoot:apiserver_storage_objects:sum_by_resource
     expr: max(apiserver_storage_objects) by (resource)
 `
 
@@ -471,13 +442,12 @@ metric_relabel_configs:
       summary: Etcd backup restore ` + testRole + ` process down or snapshotter failed with error
 `
 
-	expectedAlertingRulesNormalSingleNodeWithoutBackup    = alertingRulesNormalSingleNode + alertingRulesDefault + alertingRulesEtcdObject
-	expectedAlertingRulesImportantSingleNodeWithoutBackup = alertingRulesImportantSingleNode + alertingRulesDefault + alertingRulesEtcdObject
-	expectedAlertingRulesNormalMultiNodeWithoutBackup     = alertingRulesNormalMultiNode + alertingRulesDefault + alertingRulesEtcdObject
-	expectedAlertingRulesImportantMultiNodeWithoutBackup  = alertingRulesImportantMultiNode + alertingRulesDefault + alertingRulesEtcdObject
-	expectedAlertingRulesNormalK8SGTE121                  = alertingRulesNormalSingleNode + alertingRulesDefault + alertingRulesApiserverObjects
-	expectedAlertingRulesNormalSingleNodeWithBackup       = alertingRulesNormalSingleNode + alertingRulesDefault + alertingRulesEtcdObject + alertingRulesBackup
-	expectedAlertingRulesImportantSingleNodeWithBackup    = alertingRulesImportantSingleNode + alertingRulesDefault + alertingRulesEtcdObject + alertingRulesBackup
-	expectedAlertingRulesNormalMultiNodeWithBackup        = alertingRulesNormalMultiNode + alertingRulesDefault + alertingRulesEtcdObject + alertingRulesBackup
-	expectedAlertingRulesImportantMultiNodeWithBackup     = alertingRulesImportantMultiNode + alertingRulesDefault + alertingRulesEtcdObject + alertingRulesBackup
+	expectedAlertingRulesNormalSingleNodeWithoutBackup    = alertingRulesNormalSingleNode + alertingRulesDefault
+	expectedAlertingRulesImportantSingleNodeWithoutBackup = alertingRulesImportantSingleNode + alertingRulesDefault
+	expectedAlertingRulesNormalMultiNodeWithoutBackup     = alertingRulesNormalMultiNode + alertingRulesDefault
+	expectedAlertingRulesImportantMultiNodeWithoutBackup  = alertingRulesImportantMultiNode + alertingRulesDefault
+	expectedAlertingRulesNormalSingleNodeWithBackup       = alertingRulesNormalSingleNode + alertingRulesDefault + alertingRulesBackup
+	expectedAlertingRulesImportantSingleNodeWithBackup    = alertingRulesImportantSingleNode + alertingRulesDefault + alertingRulesBackup
+	expectedAlertingRulesNormalMultiNodeWithBackup        = alertingRulesNormalMultiNode + alertingRulesDefault + alertingRulesBackup
+	expectedAlertingRulesImportantMultiNodeWithBackup     = alertingRulesImportantMultiNode + alertingRulesDefault + alertingRulesBackup
 )

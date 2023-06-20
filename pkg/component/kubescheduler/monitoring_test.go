@@ -19,31 +19,20 @@ import (
 
 	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 
 	. "github.com/gardener/gardener/pkg/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/component/test"
 )
 
 var _ = Describe("Monitoring", func() {
-	DescribeTable("success tests for scrape config various kubernetes versions",
-		func(version, expectedScrapeConfig string) {
-			semverVersion, err := semver.NewVersion(version)
-			Expect(err).NotTo(HaveOccurred())
-			kubeScheduler := New(nil, "", nil, semverVersion, "", 0, nil, semver.MustParse("1.25.0"))
+	It("should successfully test the scrape config", func() {
+		kubeScheduler := New(nil, "", nil, semver.MustParse("1.26.0"), "", 0, nil, semver.MustParse("1.25.0"))
 
-			test.ScrapeConfigs(kubeScheduler, expectedScrapeConfig)
-		},
-
-		Entry("kubernetes 1.20", "1.20.1", expectedScrapeConfig),
-		Entry("kubernetes 1.21", "1.21.2", expectedScrapeConfig),
-		Entry("kubernetes 1.22", "1.22.3", expectedScrapeConfig),
-	)
+		test.ScrapeConfigs(kubeScheduler, expectedScrapeConfig)
+	})
 
 	It("should successfully test the alerting rules", func() {
-		semverVersion, err := semver.NewVersion("1.21.4")
-		Expect(err).NotTo(HaveOccurred())
-		kubeScheduler := New(nil, "", nil, semverVersion, "", 0, nil, semver.MustParse("1.25.0"))
+		kubeScheduler := New(nil, "", nil, semver.MustParse("1.26.4"), "", 0, nil, semver.MustParse("1.25.0"))
 
 		test.AlertingRulesWithPromtool(
 			kubeScheduler,

@@ -18,7 +18,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -295,12 +294,7 @@ status: {}
 			return out
 		}
 
-		pdbYAMLFor = func(k8sGreaterEqual121 bool) string {
-			apiVersion := "policy/v1beta1"
-			if k8sGreaterEqual121 {
-				apiVersion = "policy/v1"
-			}
-			out := `apiVersion: ` + apiVersion + `
+		pdbYAML = `apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   creationTimestamp: null
@@ -319,8 +313,6 @@ status:
   disruptionsAllowed: 0
   expectedPods: 0
 `
-			return out
-		}
 
 		managedResourceName       = "shoot-core-metrics-server"
 		managedResourceSecretName = "managedresource-shoot-core-metrics-server"
@@ -340,7 +332,6 @@ status:
 			Image:             image,
 			VPAEnabled:        false,
 			KubeAPIServerHost: nil,
-			KubernetesVersion: semver.MustParse("1.22.1"),
 		}
 
 		metricsServer = New(fakeClient, namespace, sm, values)
@@ -394,7 +385,7 @@ status:
 			Expect(string(managedResourceSecret.Data["clusterrole____system_metrics-server.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____system_metrics-server.yaml"])).To(Equal(clusterRoleBindingYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____metrics-server_system_auth-delegator.yaml"])).To(Equal(clusterRoleBindingAuthDelegatorYAML))
-			Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__metrics-server.yaml"])).To(Equal(pdbYAMLFor(true)))
+			Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__metrics-server.yaml"])).To(Equal(pdbYAML))
 			Expect(string(managedResourceSecret.Data["rolebinding__kube-system__metrics-server-auth-reader.yaml"])).To(Equal(roleBindingYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__metrics-server.yaml"])).To(Equal(serviceYAML))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__metrics-server.yaml"])).To(Equal(serviceAccountYAML))
@@ -454,7 +445,7 @@ status:
 			Expect(string(managedResourceSecret.Data["clusterrole____system_metrics-server.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____system_metrics-server.yaml"])).To(Equal(clusterRoleBindingYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____metrics-server_system_auth-delegator.yaml"])).To(Equal(clusterRoleBindingAuthDelegatorYAML))
-			Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__metrics-server.yaml"])).To(Equal(pdbYAMLFor(true)))
+			Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__metrics-server.yaml"])).To(Equal(pdbYAML))
 			Expect(string(managedResourceSecret.Data["rolebinding__kube-system__metrics-server-auth-reader.yaml"])).To(Equal(roleBindingYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__metrics-server.yaml"])).To(Equal(serviceYAML))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__metrics-server.yaml"])).To(Equal(serviceAccountYAML))

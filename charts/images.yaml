@@ -36,20 +36,6 @@ images:
   tag: "v1.1.0"
 - name: nginx-ingress-controller-seed
   sourceRepository: github.com/kubernetes/ingress-nginx
-  repository: registry.k8s.io/ingress-nginx/controller
-  tag: "v0.49.3"
-  targetVersion: "< 1.22"
-  labels:
-  - name: 'gardener.cloud/cve-categorisation'
-    value:
-      network_exposure: 'public'
-      authentication_enforced: true
-      user_interaction: 'end-user'
-      confidentiality_requirement: 'low'
-      integrity_requirement: 'low'
-      availability_requirement: 'low'
-- name: nginx-ingress-controller-seed
-  sourceRepository: github.com/kubernetes/ingress-nginx
   repository: registry.k8s.io/ingress-nginx/controller-chroot
   tag: "v1.4.0"
   targetVersion: "1.22.x"
@@ -160,16 +146,6 @@ images:
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
   tag: "v1.22.6"
   targetVersion: "1.22.x"
-- name: cluster-autoscaler
-  sourceRepository: github.com/gardener/autoscaler
-  repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
-  tag: "v1.21.6"
-  targetVersion: "1.21.x"
-- name: cluster-autoscaler
-  sourceRepository: github.com/gardener/autoscaler
-  repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
-  tag: "v1.20.4"
-  targetVersion: "< 1.21"
 - name: vpn-seed-server
   sourceRepository: github.com/gardener/vpn2
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed-server
@@ -363,8 +339,7 @@ images:
 - name: kubernetes-dashboard
   sourceRepository: github.com/kubernetes/dashboard
   repository: eu.gcr.io/gardener-project/3rd/kubernetesui/dashboard
-  tag: v2.2.0
-  targetVersion: "< 1.21"
+  tag: v2.5.1
   labels: &optionalAddonLabels
   - name: cloud.gardener.cnudie/dso/scanning-hints/binary_id/v1
     value:
@@ -372,18 +347,6 @@ images:
       comment: >
         not deployed as part of gardener infrastructure. Offered to users for development
         purposes only, accompanied w/ warning that no support be provided.
-- name: kubernetes-dashboard
-  sourceRepository: github.com/kubernetes/dashboard
-  repository: eu.gcr.io/gardener-project/3rd/kubernetesui/dashboard
-  tag: v2.4.0
-  targetVersion: ">= 1.21, < 1.22"
-  labels: *optionalAddonLabels
-- name: kubernetes-dashboard
-  sourceRepository: github.com/kubernetes/dashboard
-  repository: eu.gcr.io/gardener-project/3rd/kubernetesui/dashboard
-  tag: v2.5.1
-  targetVersion: ">= 1.22"
-  labels: *optionalAddonLabels
 - name: kubernetes-dashboard-metrics-scraper
   sourceRepository: github.com/kubernetes/dashboard
   repository: eu.gcr.io/gardener-project/3rd/kubernetesui/metrics-scraper
@@ -391,15 +354,8 @@ images:
   labels: *optionalAddonLabels
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
-  repository: registry.k8s.io/ingress-nginx/controller
-  tag: "v0.49.3"
-  targetVersion: "< 1.22"
-  labels: *optionalAddonLabels
-- name: nginx-ingress-controller
-  sourceRepository: github.com/kubernetes/ingress-nginx
   repository: registry.k8s.io/ingress-nginx/controller-chroot
   tag: "v1.3.0"
-  targetVersion: ">= 1.22"
   labels: *optionalAddonLabels
 
 # Miscellaenous
@@ -593,36 +549,7 @@ images:
 - name: vpa-admission-controller
   sourceRepository: github.com/kubernetes/autoscaler
   repository: registry.k8s.io/autoscaling/vpa-admission-controller
-  tag: "0.11.0"
-  targetVersion: "< 1.21"
-  labels:
-    - name: 'gardener.cloud/cve-categorisation'
-      value:
-        network_exposure: 'private'
-        authentication_enforced: false
-        user_interaction: 'gardener-operator'
-        confidentiality_requirement: 'low'
-        integrity_requirement: 'high'
-        availability_requirement: 'high'
-- name: vpa-admission-controller
-  sourceRepository: github.com/kubernetes/autoscaler
-  repository: registry.k8s.io/autoscaling/vpa-admission-controller
   tag: "0.13.0"
-  targetVersion: ">= 1.21"
-  labels:
-    - name: 'gardener.cloud/cve-categorisation'
-      value:
-        network_exposure: 'private'
-        authentication_enforced: false
-        user_interaction: 'gardener-operator'
-        confidentiality_requirement: 'low'
-        integrity_requirement: 'high'
-        availability_requirement: 'high'
-- name: vpa-recommender
-  sourceRepository: github.com/kubernetes/autoscaler
-  repository: registry.k8s.io/autoscaling/vpa-recommender
-  tag: "0.11.0"
-  targetVersion: "< 1.21"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:
@@ -636,21 +563,6 @@ images:
   sourceRepository: github.com/kubernetes/autoscaler
   repository: registry.k8s.io/autoscaling/vpa-recommender
   tag: "0.13.0"
-  targetVersion: ">= 1.21"
-  labels:
-    - name: 'gardener.cloud/cve-categorisation'
-      value:
-        network_exposure: 'private'
-        authentication_enforced: false
-        user_interaction: 'gardener-operator'
-        confidentiality_requirement: 'low'
-        integrity_requirement: 'high'
-        availability_requirement: 'high'
-- name: vpa-updater
-  sourceRepository: github.com/kubernetes/autoscaler
-  repository: registry.k8s.io/autoscaling/vpa-updater
-  tag: "0.11.0"
-  targetVersion: "< 1.21"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:
@@ -664,7 +576,6 @@ images:
   sourceRepository: github.com/kubernetes/autoscaler
   repository: registry.k8s.io/autoscaling/vpa-updater
   tag: "0.13.0"
-  targetVersion: ">= 1.21"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:

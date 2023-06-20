@@ -24,7 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -96,7 +96,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 		// for ClusterRole and ClusterRoleBinding
 		Expect(rbacv1.AddToScheme(s)).To(Succeed())
 		// for PDB
-		Expect(policyv1beta1.AddToScheme(s)).To(Succeed())
+		Expect(policyv1.AddToScheme(s)).To(Succeed())
 		// for vpa
 		Expect(vpaautoscalingv1.AddToScheme(s)).To(Succeed())
 

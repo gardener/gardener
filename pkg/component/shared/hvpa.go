@@ -43,7 +43,6 @@ func NewHVPA(
 
 	deployer = hvpa.New(c, gardenNamespaceName, hvpa.Values{
 		Image:             image.String(),
-		KubernetesVersion: runtimeVersion,
 		PriorityClassName: priorityClassName,
 	})
 

@@ -50,7 +50,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -291,18 +290,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			},
 		}
 
-		resourcesToAdd = []client.Object{
-			serviceAccount,
-			clusterRole,
-			clusterRoleBinding,
-			vpa,
-		}
-
-		podDisruptionBudget client.Object
 		maxUnavailable      = intstr.FromInt(1)
-	)
-
-	if version.ConstraintK8sGreaterEqual121.Check(b.kubernetesVersion) {
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      druidDeploymentName,
@@ -314,21 +302,15 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				Selector:       deployment.Spec.Selector,
 			},
 		}
-	} else {
-		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      druidDeploymentName,
-				Namespace: deployment.Namespace,
-				Labels:    labels(),
-			},
-			Spec: policyv1beta1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &maxUnavailable,
-				Selector:       deployment.Spec.Selector,
-			},
-		}
-	}
 
-	resourcesToAdd = append(resourcesToAdd, podDisruptionBudget)
+		resourcesToAdd = []client.Object{
+			serviceAccount,
+			clusterRole,
+			clusterRoleBinding,
+			podDisruptionBudget,
+			vpa,
+		}
+	)
 
 	if b.imageVectorOverwrite != nil {
 		configMapImageVectorOverwrite.Data = map[string]string{druidConfigMapImageVectorOverwriteDataKey: *b.imageVectorOverwrite}

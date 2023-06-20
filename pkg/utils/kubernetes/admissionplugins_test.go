@@ -24,7 +24,7 @@ import (
 
 var _ = Describe("kubernetes", func() {
 	Describe("#GetAdmissionPluginsForVersion", func() {
-		It("should return the correct list for 1.20 upto 1.23", func() {
+		It("should return the correct list for 1.22", func() {
 			expected := []string{
 				"Priority",
 				"NamespaceLifecycle",
@@ -40,7 +40,7 @@ var _ = Describe("kubernetes", func() {
 				"ValidatingAdmissionWebhook",
 			}
 
-			plugins := GetAdmissionPluginsForVersion("1.20.0")
+			plugins := GetAdmissionPluginsForVersion("1.22.0")
 
 			for _, plugin := range expected {
 				Expect(plugins).To(ContainElement(gardencorev1beta1.AdmissionPlugin{Name: plugin}))
@@ -95,8 +95,8 @@ var _ = Describe("kubernetes", func() {
 		It("should return copy of the default plugins", func() {
 			expected := []string{"Priority", "NamespaceLifecycle", "LimitRanger", "ServiceAccount", "NodeRestriction", "DefaultStorageClass", "DefaultTolerationSeconds", "ResourceQuota", "StorageObjectInUseProtection", "MutatingAdmissionWebhook", "ValidatingAdmissionWebhook"}
 
-			plugins := GetAdmissionPluginsForVersion("1.20.0")
-			plugins2 := GetAdmissionPluginsForVersion("1.20.0")
+			plugins := GetAdmissionPluginsForVersion("1.22.0")
+			plugins2 := GetAdmissionPluginsForVersion("1.22.0")
 			plugins[0].Name = "MissingPlugin"
 
 			for _, plugin := range expected {

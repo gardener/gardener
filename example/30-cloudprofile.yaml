@@ -16,10 +16,12 @@ spec:
 #     foo: bar
   kubernetes:
     versions:
+    - version: 1.27.1
+    - version: 1.26.3
+    - version: 1.25.8
     - version: 1.24.6
     - version: 1.23.12
     - version: 1.22.15
-    - version: 1.21.14
       expirationDate: 2022-11-30T01:02:03Z # optional
   machineImages:
   - name: suse-chost

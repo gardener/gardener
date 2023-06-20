@@ -24,7 +24,6 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/api/core"
 	"github.com/gardener/gardener/pkg/api/extensions"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 var logger = log.Log.WithName("predicate")
@@ -131,52 +130,6 @@ func GardenCoreProviderType(providerType string) predicate.Predicate {
 		}
 
 		return accessor.GetProviderType() == providerType
-	}
-
-	return predicate.Funcs{
-		CreateFunc: func(event event.CreateEvent) bool {
-			return f(event.Object)
-		},
-		UpdateFunc: func(event event.UpdateEvent) bool {
-			return f(event.ObjectNew)
-		},
-		GenericFunc: func(event event.GenericEvent) bool {
-			return f(event.Object)
-		},
-		DeleteFunc: func(event event.DeleteEvent) bool {
-			return f(event.Object)
-		},
-	}
-}
-
-// ClusterShootKubernetesVersionForCSIMigrationAtLeast is a predicate for the kubernetes version of the shoot in the cluster resource.
-func ClusterShootKubernetesVersionForCSIMigrationAtLeast(kubernetesVersion string) predicate.Predicate {
-	f := func(obj client.Object) bool {
-		if obj == nil {
-			return false
-		}
-
-		cluster, ok := obj.(*extensionsv1alpha1.Cluster)
-		if !ok {
-			return false
-		}
-
-		shoot, err := extensionscontroller.ShootFromCluster(cluster)
-		if err != nil {
-			return false
-		}
-
-		kubernetesVersionForCSIMigration := kubernetesVersion
-		if overwrite, ok := shoot.Annotations[extensionsv1alpha1.ShootAlphaCSIMigrationKubernetesVersion]; ok {
-			kubernetesVersionForCSIMigration = overwrite
-		}
-
-		constraint, err := version.CompareVersions(shoot.Spec.Kubernetes.Version, ">=", kubernetesVersionForCSIMigration)
-		if err != nil {
-			return false
-		}
-
-		return constraint
 	}
 
 	return predicate.Funcs{

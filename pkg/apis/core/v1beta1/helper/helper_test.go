@@ -882,22 +882,6 @@ var _ = Describe("helper", func() {
 		Entry("topology-aware routing disabled", &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: false}}, false),
 	)
 
-	DescribeTable("#SeedUsesNginxIngressController",
-		func(dns gardencorev1beta1.SeedDNS, ingress *gardencorev1beta1.Ingress, expected bool) {
-			seed := &gardencorev1beta1.Seed{
-				Spec: gardencorev1beta1.SeedSpec{
-					DNS:     dns,
-					Ingress: ingress,
-				},
-			}
-			Expect(SeedUsesNginxIngressController(seed)).To(Equal(expected))
-		},
-		Entry("no dns provider", gardencorev1beta1.SeedDNS{}, nil, false),
-		Entry("no ingress", gardencorev1beta1.SeedDNS{Provider: &gardencorev1beta1.SeedDNSProvider{}}, nil, false),
-		Entry("ingress controller kind is not nginx", gardencorev1beta1.SeedDNS{Provider: &gardencorev1beta1.SeedDNSProvider{}}, &gardencorev1beta1.Ingress{Controller: gardencorev1beta1.IngressController{Kind: "foo"}}, false),
-		Entry("ingress controller kind is nginx", gardencorev1beta1.SeedDNS{Provider: &gardencorev1beta1.SeedDNSProvider{}}, &gardencorev1beta1.Ingress{Controller: gardencorev1beta1.IngressController{Kind: "nginx"}}, true),
-	)
-
 	Describe("#FindMachineImageVersion", func() {
 		var machineImages []gardencorev1beta1.MachineImage
 
@@ -2657,17 +2641,6 @@ var _ = Describe("helper", func() {
 			Expect(GetFailureToleranceType(shoot)).To(PointTo(Equal(gardencorev1beta1.FailureToleranceTypeNode)))
 		})
 	})
-
-	DescribeTable("#SeedWantsManagedIngress",
-		func(seed *gardencorev1beta1.Seed, expected gomegatypes.GomegaMatcher) {
-			Expect(SeedWantsManagedIngress(seed)).To(expected)
-		},
-
-		Entry("dns provider nil", &gardencorev1beta1.Seed{}, BeFalse()),
-		Entry("ingress nil", &gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{DNS: gardencorev1beta1.SeedDNS{Provider: &gardencorev1beta1.SeedDNSProvider{}}}}, BeFalse()),
-		Entry("ingress controller kind not nginx", &gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{DNS: gardencorev1beta1.SeedDNS{Provider: &gardencorev1beta1.SeedDNSProvider{}}, Ingress: &gardencorev1beta1.Ingress{Controller: gardencorev1beta1.IngressController{Kind: "foo"}}}}, BeFalse()),
-		Entry("ingress controller kind nginx", &gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{DNS: gardencorev1beta1.SeedDNS{Provider: &gardencorev1beta1.SeedDNSProvider{}}, Ingress: &gardencorev1beta1.Ingress{Controller: gardencorev1beta1.IngressController{Kind: "nginx"}}}}, BeTrue()),
-	)
 
 	DescribeTable("#IsTopologyAwareRoutingForShootControlPlaneEnabled",
 		func(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, matcher gomegatypes.GomegaMatcher) {

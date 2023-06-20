@@ -22,7 +22,6 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
-	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	storagev1 "k8s.io/api/storage/v1"
@@ -41,7 +40,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -227,20 +225,11 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		)(ctx)
 	}
 
-	var (
-		ingressList client.ObjectList = &networkingv1.IngressList{}
-		cronJobList client.ObjectList = &batchv1beta1.CronJobList{}
-	)
-
-	if version.ConstraintK8sGreaterEqual121.Check(b.Shoot.KubernetesVersion) {
-		cronJobList = &batchv1.CronJobList{}
-	}
-
 	return flow.Parallel(
-		cleanResourceFn(ops, c, cronJobList, CronJobCleanOption, cleanOptions),
+		cleanResourceFn(ops, c, &batchv1.CronJobList{}, CronJobCleanOption, cleanOptions),
 		cleanResourceFn(ops, c, &appsv1.DaemonSetList{}, DaemonSetCleanOption, cleanOptions),
 		cleanResourceFn(ops, c, &appsv1.DeploymentList{}, DeploymentCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, ingressList, IngressCleanOption, cleanOptions),
+		cleanResourceFn(ops, c, &networkingv1.IngressList{}, IngressCleanOption, cleanOptions),
 		cleanResourceFn(ops, c, &batchv1.JobList{}, JobCleanOption, cleanOptions),
 		cleanResourceFn(ops, c, &corev1.PodList{}, PodCleanOption, cleanOptions),
 		cleanResourceFn(ops, c, &appsv1.ReplicaSetList{}, ReplicaSetCleanOption, cleanOptions),

@@ -653,8 +653,7 @@ spec:
                                   useful when service account tokens are also issued
                                   by another external system or a change of the current
                                   issuer that is used for generating tokens is being
-                                  performed. This field is only available for Kubernetes
-                                  v1.22 or later.
+                                  performed.
                                 items:
                                   type: string
                                 type: array

@@ -34,7 +34,6 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -83,7 +82,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 var (
@@ -1083,27 +1081,17 @@ func (r *resourceManager) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 }
 
 func (r *resourceManager) ensurePodDisruptionBudget(ctx context.Context) error {
-	obj := r.emptyPodDisruptionBudget()
+	pdb := r.emptyPodDisruptionBudget()
 
-	pdbSelector := &metav1.LabelSelector{
-		MatchLabels: r.getDeploymentTemplateLabels(),
-	}
 	maxUnavailable := intstr.FromInt(1)
 
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, obj, func() error {
-		switch pdb := obj.(type) {
-		case *policyv1.PodDisruptionBudget:
-			pdb.Labels = r.getLabels()
-			pdb.Spec = policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &maxUnavailable,
-				Selector:       pdbSelector,
-			}
-		case *policyv1beta1.PodDisruptionBudget:
-			pdb.Labels = r.getLabels()
-			pdb.Spec = policyv1beta1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &maxUnavailable,
-				Selector:       pdbSelector,
-			}
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, pdb, func() error {
+		pdb.Labels = r.getLabels()
+		pdb.Spec = policyv1.PodDisruptionBudgetSpec{
+			MaxUnavailable: &maxUnavailable,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: r.getDeploymentTemplateLabels(),
+			},
 		}
 		return nil
 	})
@@ -1111,19 +1099,12 @@ func (r *resourceManager) ensurePodDisruptionBudget(ctx context.Context) error {
 	return err
 }
 
-func (r *resourceManager) emptyPodDisruptionBudget() client.Object {
-	pdbObjectMeta := metav1.ObjectMeta{
-		Name:      r.values.NamePrefix + v1beta1constants.DeploymentNameGardenerResourceManager,
-		Namespace: r.namespace,
-	}
-
-	if version.ConstraintK8sGreaterEqual121.Check(r.values.RuntimeKubernetesVersion) {
-		return &policyv1.PodDisruptionBudget{
-			ObjectMeta: pdbObjectMeta,
-		}
-	}
-	return &policyv1beta1.PodDisruptionBudget{
-		ObjectMeta: pdbObjectMeta,
+func (r *resourceManager) emptyPodDisruptionBudget() *policyv1.PodDisruptionBudget {
+	return &policyv1.PodDisruptionBudget{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      r.values.NamePrefix + v1beta1constants.DeploymentNameGardenerResourceManager,
+			Namespace: r.namespace,
+		},
 	}
 }
 

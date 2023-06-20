@@ -128,19 +128,8 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 
 	for i, worker := range obj.Spec.Provider.Workers {
-		kubernetesVersion := obj.Spec.Kubernetes.Version
-		if worker.Kubernetes != nil && worker.Kubernetes.Version != nil {
-			kubernetesVersion = *worker.Kubernetes.Version
-		}
-
 		if worker.Machine.Architecture == nil {
 			obj.Spec.Provider.Workers[i].Machine.Architecture = pointer.String(v1beta1constants.ArchitectureAMD64)
-		}
-
-		if k8sVersionGreaterOrEqualThan122, _ := versionutils.CompareVersions(kubernetesVersion, ">=", "1.22"); !k8sVersionGreaterOrEqualThan122 {
-			// Error is ignored here because we cannot do anything meaningful with it.
-			// k8sVersionGreaterOrEqualThan122 will default to `false`.
-			continue
 		}
 
 		if worker.CRI == nil {
@@ -229,8 +218,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(true)
 		}
 
-		k8sGreaterEquals122, _ := versionutils.CheckVersionMeetsConstraint(obj.Spec.Kubernetes.Version, ">= 1.22")
-		if nodeSwapFeatureGateEnabled, ok := obj.Spec.Kubernetes.Kubelet.FeatureGates["NodeSwap"]; k8sGreaterEquals122 && ok && nodeSwapFeatureGateEnabled && !*obj.Spec.Kubernetes.Kubelet.FailSwapOn {
+		if nodeSwapFeatureGateEnabled, ok := obj.Spec.Kubernetes.Kubelet.FeatureGates["NodeSwap"]; ok && nodeSwapFeatureGateEnabled && !*obj.Spec.Kubernetes.Kubelet.FailSwapOn {
 			if obj.Spec.Kubernetes.Kubelet.MemorySwap == nil {
 				obj.Spec.Kubernetes.Kubelet.MemorySwap = &MemorySwapConfiguration{}
 			}

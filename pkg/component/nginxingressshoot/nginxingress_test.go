@@ -17,7 +17,6 @@ package nginxingressshoot
 import (
 	"context"
 
-	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -354,8 +353,7 @@ spec:
 status: {}
 `
 
-		deploymentControllerYAMLFor = func(k8sVersionGreaterEqual122 bool) string {
-			out := `apiVersion: apps/v1
+		deploymentControllerYAML = `apiVersion: apps/v1
 kind: Deployment
 metadata:
   creationTimestamp: null
@@ -398,15 +396,9 @@ spec:
         - --update-status=true
         - --annotations-prefix=nginx.ingress.kubernetes.io
         - --ingress-class=nginx
-        - --configmap=kube-system/` + configMapName
-
-			if k8sVersionGreaterEqual122 {
-				out += `
+        - --configmap=kube-system/` + configMapName + `
         - --controller-class=k8s.io/nginx
-        - --watch-ingress-without-class=true`
-			}
-
-			out += `
+        - --watch-ingress-without-class=true
         env:
         - name: POD_NAME
           valueFrom:
@@ -455,14 +447,8 @@ spec:
           allowPrivilegeEscalation: true
           capabilities:
             add:
-            - NET_BIND_SERVICE`
-
-			if k8sVersionGreaterEqual122 {
-				out += `
-            - SYS_CHROOT`
-			}
-
-			out += `
+            - NET_BIND_SERVICE
+            - SYS_CHROOT
             drop:
             - ALL
           runAsUser: 101
@@ -480,8 +466,6 @@ spec:
       terminationGracePeriodSeconds: 60
 status: {}
 `
-			return out
-		}
 
 		roleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -664,75 +648,58 @@ status: {}
 			Expect(string(managedResourceSecret.Data["rolebinding__kube-system__addons-nginx-ingress.yaml"])).To(Equal(roleBindingYAML))
 			Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-nginx-ingress-k8s-backend.yaml"])).To(Equal(deploymentBackendYAML))
 			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-to-from-nginx.yaml"])).To(Equal(networkPolicyYAML))
+			Expect(string(managedResourceSecret.Data["ingressclass____nginx.yaml"])).To(Equal(ingressClassYAML))
+			Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAML))
 		})
 
-		Context("Kubernetes version >= 1.22", func() {
+		Context("w/ VPA and PSP enabled", func() {
 			BeforeEach(func() {
-				values.KubernetesVersion = semver.MustParse("v1.22.12")
+				values.VPAEnabled = true
+				values.PSPDisabled = false
 			})
 
-			Context("w/ VPA and PSP enabled", func() {
-				BeforeEach(func() {
-					values.VPAEnabled = true
-					values.PSPDisabled = false
-				})
+			It("should successfully deploy all resources", func() {
+				Expect(managedResourceSecret.Data).To(HaveLen(14))
 
-				It("should successfully deploy all resources", func() {
-					Expect(managedResourceSecret.Data).To(HaveLen(14))
-
-					Expect(string(managedResourceSecret.Data["ingressclass____nginx.yaml"])).To(Equal(ingressClassYAML))
-					Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true)))
-					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(vpaYAML))
-					Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_addons-nginx-ingress.yaml"])).To(Equal(roleBindingPSPYAML))
-				})
-			})
-
-			Context("w/o VPA and PSP enabled", func() {
-				BeforeEach(func() {
-					values.VPAEnabled = false
-					values.PSPDisabled = true
-				})
-
-				It("should successfully deploy all resources", func() {
-					Expect(managedResourceSecret.Data).To(HaveLen(12))
-
-					Expect(string(managedResourceSecret.Data["ingressclass____nginx.yaml"])).To(Equal(ingressClassYAML))
-					Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true)))
-				})
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(vpaYAML))
+				Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_addons-nginx-ingress.yaml"])).To(Equal(roleBindingPSPYAML))
 			})
 		})
 
-		Context("Kubernetes version < 1.22", func() {
+		Context("w/ VPA and PSP disabled", func() {
 			BeforeEach(func() {
-				values.KubernetesVersion = semver.MustParse("1.20")
+				values.VPAEnabled = true
+				values.PSPDisabled = true
 			})
 
-			Context("w/ VPA and PSP enabled", func() {
-				BeforeEach(func() {
-					values.VPAEnabled = true
-					values.PSPDisabled = false
-				})
+			It("should successfully deploy all resources", func() {
+				Expect(managedResourceSecret.Data).To(HaveLen(13))
 
-				It("should successfully deploy all resources", func() {
-					Expect(managedResourceSecret.Data).To(HaveLen(13))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(vpaYAML))
+			})
+		})
 
-					Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(false)))
-					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(vpaYAML))
-					Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_addons-nginx-ingress.yaml"])).To(Equal(roleBindingPSPYAML))
-				})
+		Context("w/o VPA and PSP enabled", func() {
+			BeforeEach(func() {
+				values.VPAEnabled = false
+				values.PSPDisabled = false
 			})
 
-			Context("w/o VPA and PSP enabled", func() {
-				BeforeEach(func() {
-					values.VPAEnabled = false
-					values.PSPDisabled = true
-				})
+			It("should successfully deploy all resources", func() {
+				Expect(managedResourceSecret.Data).To(HaveLen(13))
 
-				It("should successfully deploy all resources", func() {
-					Expect(managedResourceSecret.Data).To(HaveLen(11))
+				Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_addons-nginx-ingress.yaml"])).To(Equal(roleBindingPSPYAML))
+			})
+		})
 
-					Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(false)))
-				})
+		Context("w/o VPA and PSP disabled", func() {
+			BeforeEach(func() {
+				values.VPAEnabled = false
+				values.PSPDisabled = true
+			})
+
+			It("should successfully deploy all resources", func() {
+				Expect(managedResourceSecret.Data).To(HaveLen(12))
 			})
 		})
 	})

@@ -21,7 +21,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -47,7 +46,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -103,8 +101,6 @@ type Values struct {
 	HighAvailabilityNumberOfShootClients int
 	// PSPDisabled marks whether the PodSecurityPolicy admission plugin is disabled.
 	PSPDisabled bool
-	// KubernetesVersion is the Kubernetes version of the Shoot.
-	KubernetesVersion *semver.Version
 }
 
 // New creates a new instance of DeployWaiter for vpnshoot
@@ -490,30 +486,17 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN *corev1.Secret, secretsVPNSh
 }
 
 func (v *vpnShoot) podDisruptionBudget() (client.Object, error) {
-	var (
-		pdbObjectMeta = metav1.ObjectMeta{
+	pdbMaxUnavailable := intstr.FromInt(1)
+
+	return &policyv1.PodDisruptionBudget{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      deploymentName,
 			Namespace: metav1.NamespaceSystem,
 			Labels:    getLabels(),
-		}
-		pdbMaxUnavailable = intstr.FromInt(1)
-		pdbSelector       = &metav1.LabelSelector{MatchLabels: getLabels()}
-	)
-
-	if version.ConstraintK8sGreaterEqual121.Check(v.values.KubernetesVersion) {
-		return &policyv1.PodDisruptionBudget{
-			ObjectMeta: pdbObjectMeta,
-			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &pdbMaxUnavailable,
-				Selector:       pdbSelector,
-			},
-		}, nil
-	}
-	return &policyv1beta1.PodDisruptionBudget{
-		ObjectMeta: pdbObjectMeta,
-		Spec: policyv1beta1.PodDisruptionBudgetSpec{
+		},
+		Spec: policyv1.PodDisruptionBudgetSpec{
 			MaxUnavailable: &pdbMaxUnavailable,
-			Selector:       pdbSelector,
+			Selector:       &metav1.LabelSelector{MatchLabels: getLabels()},
 		},
 	}, nil
 }

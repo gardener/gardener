@@ -21,12 +21,10 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -248,21 +246,12 @@ func (v *vpa) reconcileGeneralMutatingWebhookConfiguration(mutatingWebhookConfig
 	}}
 }
 
-func (v *vpa) reconcilePodDisruptionBudget(obj client.Object, deployment *appsv1.Deployment) {
+func (v *vpa) reconcilePodDisruptionBudget(pdb *policyv1.PodDisruptionBudget, deployment *appsv1.Deployment) {
 	maxUnavailable := intstr.FromInt(1)
 
-	switch pdb := obj.(type) {
-	case *policyv1.PodDisruptionBudget:
-		pdb.Labels = getRoleLabel()
-		pdb.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: &maxUnavailable,
-			Selector:       deployment.Spec.Selector,
-		}
-	case *policyv1beta1.PodDisruptionBudget:
-		pdb.Labels = getRoleLabel()
-		pdb.Spec = policyv1beta1.PodDisruptionBudgetSpec{
-			MaxUnavailable: &maxUnavailable,
-			Selector:       deployment.Spec.Selector,
-		}
+	pdb.Labels = getRoleLabel()
+	pdb.Spec = policyv1.PodDisruptionBudgetSpec{
+		MaxUnavailable: &maxUnavailable,
+		Selector:       deployment.Spec.Selector,
 	}
 }

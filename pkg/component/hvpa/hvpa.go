@@ -19,13 +19,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +40,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -82,8 +79,6 @@ type hvpa struct {
 type Values struct {
 	// Image is the container image.
 	Image string
-	// KubernetesVersion is the version of the runtime cluster.
-	KubernetesVersion *semver.Version
 	// PriorityClassName is the name of the priority class.
 	PriorityClassName string
 }
@@ -294,11 +289,8 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 				},
 			},
 		}
-		podDisruptionBudget client.Object
-		maxUnavailable      = intstr.FromInt(1)
-	)
 
-	if version.ConstraintK8sGreaterEqual121.Check(h.values.KubernetesVersion) {
+		maxUnavailable      = intstr.FromInt(1)
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      deploymentName,
@@ -310,19 +302,7 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 				Selector:       deployment.Spec.Selector,
 			},
 		}
-	} else {
-		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      deploymentName,
-				Namespace: deployment.Namespace,
-				Labels:    utils.MergeStringMaps(getLabels(), getDeploymentLabels()),
-			},
-			Spec: policyv1beta1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &maxUnavailable,
-				Selector:       deployment.Spec.Selector,
-			},
-		}
-	}
+	)
 
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, networkingv1.NetworkPolicyPort{
 		Port:     utils.IntStrPtrFromInt(portMetrics),

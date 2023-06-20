@@ -158,7 +158,6 @@ type Values struct {
 	StorageClassName            *string
 	DefragmentationSchedule     *string
 	CARotationPhase             gardencorev1beta1.CredentialsRotationPhase
-	KubernetesVersion           *semver.Version
 	RuntimeKubernetesVersion    *semver.Version
 	BackupConfig                *BackupConfig
 	HvpaConfig                  *HVPAConfig

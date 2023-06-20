@@ -17,7 +17,6 @@ package hvpa_test
 import (
 	"context"
 
-	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -56,7 +55,6 @@ var _ = Describe("HVPA", func() {
 		priorityClassName = "some-priority-class"
 		values            = Values{
 			Image:             image,
-			KubernetesVersion: semver.MustParse("1.25.0"),
 			PriorityClassName: priorityClassName,
 		}
 

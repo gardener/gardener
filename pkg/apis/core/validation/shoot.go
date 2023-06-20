@@ -417,9 +417,8 @@ func validateAddons(addons *core.Addons, kubernetes core.Kubernetes, purpose *co
 		return allErrs
 	}
 
-	versionGreaterOrEqual122, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.22")
-	if (helper.NginxIngressEnabled(addons) || helper.KubernetesDashboardEnabled(addons)) && versionGreaterOrEqual122 && (purpose != nil && *purpose != core.ShootPurposeEvaluation) {
-		allErrs = append(allErrs, field.Forbidden(fldPath, "for Kubernetes versions >= 1.22 addons can only be enabled on shoots with .spec.purpose=evaluation"))
+	if (helper.NginxIngressEnabled(addons) || helper.KubernetesDashboardEnabled(addons)) && (purpose != nil && *purpose != core.ShootPurposeEvaluation) {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "addons can only be enabled on shoots with .spec.purpose=evaluation"))
 	}
 
 	if helper.NginxIngressEnabled(addons) {
@@ -1142,11 +1141,6 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child("serviceAccountConfig", "maxTokenExpiration"), "must be at most 2160h (90d)"))
 			}
 		}
-
-		geqKubernetes122, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.22")
-		if kubeAPIServer.ServiceAccountConfig.AcceptedIssuers != nil && !geqKubernetes122 {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("serviceAccountConfig", "acceptedIssuers"), "this field is only available in Kubernetes v1.22+"))
-		}
 	}
 
 	if kubeAPIServer.EventTTL != nil {
@@ -1579,10 +1573,6 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, doc
 	}
 
 	if v := kubeletConfig.MemorySwap; v != nil {
-		if k8sVersionIsLessThan122, _ := versionutils.CompareVersions(version, "<", "1.22"); k8sVersionIsLessThan122 {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("memorySwap"), "configuring swap behaviour is not available for kubernetes versions < 1.22"))
-		}
-
 		if pointer.BoolDeref(kubeletConfig.FailSwapOn, false) {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("memorySwap"), "configuring swap behaviour is not available when the kubelet is configured with 'FailSwapOn=true'"))
 		}

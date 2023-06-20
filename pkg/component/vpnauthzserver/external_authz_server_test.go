@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -56,7 +55,6 @@ var _ = Describe("ExtAuthzServer", func() {
 
 		defaultDepWaiter component.DeployWaiter
 		namespace        = "shoot--foo--bar"
-		version          *semver.Version
 
 		image             = "some-image"
 		maxSurge          = intstr.FromInt(100)
@@ -68,13 +66,12 @@ var _ = Describe("ExtAuthzServer", func() {
 		serviceName    = "reversed-vpn-auth-server"
 		vpaName        = fmt.Sprintf("%s-vpa", "reversed-vpn-auth-server")
 
-		expectedDeployment                 *appsv1.Deployment
-		expectedDestinationRule            *istionetworkingv1beta1.DestinationRule
-		expectedService                    *corev1.Service
-		expectedVirtualService             *istionetworkingv1beta1.VirtualService
-		expectedVpa                        *vpaautoscalingv1.VerticalPodAutoscaler
-		expectedPodDisruptionBudgetV1beta1 *policyv1beta1.PodDisruptionBudget
-		expectedPodDisruptionBudgetV1      *policyv1.PodDisruptionBudget
+		expectedDeployment          *appsv1.Deployment
+		expectedDestinationRule     *istionetworkingv1beta1.DestinationRule
+		expectedService             *corev1.Service
+		expectedVirtualService      *istionetworkingv1beta1.VirtualService
+		expectedVpa                 *vpaautoscalingv1.VerticalPodAutoscaler
+		expectedPodDisruptionBudget *policyv1.PodDisruptionBudget
 	)
 
 	BeforeEach(func() {
@@ -278,27 +275,7 @@ var _ = Describe("ExtAuthzServer", func() {
 			},
 		}
 
-		expectedPodDisruptionBudgetV1beta1 = &policyv1beta1.PodDisruptionBudget{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:            deploymentName + "-pdb",
-				Namespace:       namespace,
-				ResourceVersion: "1",
-				Labels: map[string]string{
-					"app": deploymentName,
-				},
-			},
-			TypeMeta: metav1.TypeMeta{Kind: "PodDisruptionBudget", APIVersion: "policy/v1beta1"},
-			Spec: policyv1beta1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &maxUnavailablePDB,
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"app": deploymentName,
-					},
-				},
-			},
-		}
-
-		expectedPodDisruptionBudgetV1 = &policyv1.PodDisruptionBudget{
+		expectedPodDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            deploymentName + "-pdb",
 				Namespace:       namespace,
@@ -320,7 +297,7 @@ var _ = Describe("ExtAuthzServer", func() {
 	})
 
 	JustBeforeEach(func() {
-		defaultDepWaiter = New(c, namespace, image, version)
+		defaultDepWaiter = New(c, namespace, image)
 	})
 
 	Describe("#Deploy", func() {
@@ -348,27 +325,10 @@ var _ = Describe("ExtAuthzServer", func() {
 			Expect(actualVpa).To(DeepEqual(expectedVpa))
 		})
 
-		Context("Kubernetes version >= v1.21", func() {
-			BeforeEach(func() {
-				version = semver.MustParse("1.22.0")
-			})
-
-			It("should succesfully deploy all the components", func() {
-				actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
-				Expect(c.Get(ctx, kubernetesutils.Key(expectedPodDisruptionBudgetV1.Namespace, expectedPodDisruptionBudgetV1.Name), actualPodDisruptionBudget)).To(Succeed())
-				Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPodDisruptionBudgetV1))
-			})
-		})
-		Context("Kubernetes version < v1.21", func() {
-			BeforeEach(func() {
-				version = semver.MustParse("1.20.0")
-			})
-
-			It("should succesfully deploy all the components", func() {
-				actualPodDisruptionBudget := &policyv1beta1.PodDisruptionBudget{}
-				Expect(c.Get(ctx, kubernetesutils.Key(expectedPodDisruptionBudgetV1beta1.Namespace, expectedPodDisruptionBudgetV1beta1.Name), actualPodDisruptionBudget)).To(Succeed())
-				Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPodDisruptionBudgetV1beta1))
-			})
+		It("should succesfully deploy all the components", func() {
+			actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
+			Expect(c.Get(ctx, kubernetesutils.Key(expectedPodDisruptionBudget.Namespace, expectedPodDisruptionBudget.Name), actualPodDisruptionBudget)).To(Succeed())
+			Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPodDisruptionBudget))
 		})
 	})
 
@@ -390,28 +350,10 @@ var _ = Describe("ExtAuthzServer", func() {
 			Expect(c.Get(ctx, kubernetesutils.Key(expectedVpa.Namespace, expectedVpa.Name), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 		})
 
-		Context("Kubernetes version >= v1.21", func() {
-			BeforeEach(func() {
-				version = semver.MustParse("1.22.0")
-			})
-
-			It("should succesfully delete all the components", func() {
-				Expect(c.Get(ctx, kubernetesutils.Key(expectedPodDisruptionBudgetV1.Namespace, expectedPodDisruptionBudgetV1.Name), &policyv1.PodDisruptionBudget{})).To(Succeed())
-				Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
-				Expect(c.Get(ctx, kubernetesutils.Key(expectedPodDisruptionBudgetV1.Namespace, expectedPodDisruptionBudgetV1.Name), &policyv1.PodDisruptionBudget{})).To(BeNotFoundError())
-			})
-		})
-
-		Context("Kubernetes version < v1.21", func() {
-			BeforeEach(func() {
-				version = semver.MustParse("1.20.0")
-			})
-
-			It("should succesfully delete all the components", func() {
-				Expect(c.Get(ctx, kubernetesutils.Key(expectedPodDisruptionBudgetV1beta1.Namespace, expectedPodDisruptionBudgetV1beta1.Name), &policyv1beta1.PodDisruptionBudget{})).To(Succeed())
-				Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
-				Expect(c.Get(ctx, kubernetesutils.Key(expectedPodDisruptionBudgetV1beta1.Namespace, expectedPodDisruptionBudgetV1beta1.Name), &policyv1beta1.PodDisruptionBudget{})).To(BeNotFoundError())
-			})
+		It("should succesfully delete all the components", func() {
+			Expect(c.Get(ctx, kubernetesutils.Key(expectedPodDisruptionBudget.Namespace, expectedPodDisruptionBudget.Name), &policyv1.PodDisruptionBudget{})).To(Succeed())
+			Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
+			Expect(c.Get(ctx, kubernetesutils.Key(expectedPodDisruptionBudget.Namespace, expectedPodDisruptionBudget.Name), &policyv1.PodDisruptionBudget{})).To(BeNotFoundError())
 		})
 	})
 

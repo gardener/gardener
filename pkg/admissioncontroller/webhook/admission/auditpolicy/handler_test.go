@@ -555,7 +555,7 @@ rules:
 
 				It("should allow if the auditPolicy is changed to something valid", func() {
 					Expect(fakeClient.Create(ctx, shootv1beta1)).To(Succeed())
-					shootv1beta1.Spec.Kubernetes.Version = "1.20"
+					shootv1beta1.Spec.Kubernetes.Version = "1.22"
 					newCm := cm.DeepCopy()
 					newCm.Data["policy"] = anotherValidAuditPolicy
 

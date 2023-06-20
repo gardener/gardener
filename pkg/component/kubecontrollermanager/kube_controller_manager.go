@@ -30,7 +30,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -443,19 +442,10 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), podDisruptionBudget, func() error {
-		switch pdb := podDisruptionBudget.(type) {
-		case *policyv1.PodDisruptionBudget:
-			pdb.Labels = getLabels()
-			pdb.Spec = policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &pdbMaxUnavailable,
-				Selector:       deployment.Spec.Selector,
-			}
-		case *policyv1beta1.PodDisruptionBudget:
-			pdb.Labels = getLabels()
-			pdb.Spec = policyv1beta1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &pdbMaxUnavailable,
-				Selector:       deployment.Spec.Selector,
-			}
+		podDisruptionBudget.Labels = getLabels()
+		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
+			MaxUnavailable: &pdbMaxUnavailable,
+			Selector:       deployment.Spec.Selector,
 		}
 		return nil
 	}); err != nil {
@@ -595,13 +585,8 @@ func (k *kubeControllerManager) emptyDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: k.values.NamePrefix + v1beta1constants.DeploymentNameKubeControllerManager, Namespace: k.namespace}}
 }
 
-func (k *kubeControllerManager) emptyPodDisruptionBudget() client.Object {
-	objectMeta := metav1.ObjectMeta{Name: k.values.NamePrefix + v1beta1constants.DeploymentNameKubeControllerManager, Namespace: k.namespace}
-
-	if versionutils.ConstraintK8sGreaterEqual121.Check(k.values.RuntimeVersion) {
-		return &policyv1.PodDisruptionBudget{ObjectMeta: objectMeta}
-	}
-	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: objectMeta}
+func (k *kubeControllerManager) emptyPodDisruptionBudget() *policyv1.PodDisruptionBudget {
+	return &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: k.values.NamePrefix + v1beta1constants.DeploymentNameKubeControllerManager, Namespace: k.namespace}}
 }
 
 func (k *kubeControllerManager) newShootAccessSecret() *gardenerutils.ShootAccessSecret {

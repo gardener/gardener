@@ -608,10 +608,6 @@ subjects:
 				Expect(kubeScheduler.Deploy(ctx)).To(Succeed())
 			},
 
-			Entry("kubernetes 1.20 w/o config", "1.20.9", configEmpty, "testdata/component-config-1.20.yaml"),
-			Entry("kubernetes 1.20 w/ full config", "1.20.9", configFull, "testdata/component-config-1.20-bin-packing.yaml"),
-			Entry("kubernetes 1.21 w/o config", "1.21.3", configEmpty, "testdata/component-config-1.20.yaml"),
-			Entry("kubernetes 1.21 w/ full config", "1.21.3", configFull, "testdata/component-config-1.20-bin-packing.yaml"),
 			Entry("kubernetes 1.22 w/o config", "1.22.1", configEmpty, "testdata/component-config-1.22.yaml"),
 			Entry("kubernetes 1.22 w/ full config", "1.22.1", configFull, "testdata/component-config-1.22-bin-packing.yaml"),
 			Entry("kubernetes 1.23 w/o config", "1.23.1", configEmpty, "testdata/component-config-1.23.yaml"),

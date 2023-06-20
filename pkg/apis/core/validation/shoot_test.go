@@ -185,7 +185,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Domain: &domain,
 					},
 					Kubernetes: core.Kubernetes{
-						Version: "1.20.2",
+						Version: "1.24.2",
 						KubeAPIServer: &core.KubeAPIServerConfig{
 							OIDCConfig: &core.OIDCConfig{
 								CABundle:       pointer.String("-----BEGIN CERTIFICATE-----\nMIICRzCCAfGgAwIBAgIJALMb7ecMIk3MMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV\nBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNVBAcMBkxvbmRvbjEYMBYGA1UE\nCgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1JVCBEZXBhcnRtZW50MRswGQYD\nVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwIBcNMTcwNDI2MjMyNjUyWhgPMjExNzA0\nMDIyMzI2NTJaMH4xCzAJBgNVBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNV\nBAcMBkxvbmRvbjEYMBYGA1UECgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1J\nVCBEZXBhcnRtZW50MRswGQYDVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwXDANBgkq\nhkiG9w0BAQEFAANLADBIAkEAtBMa7NWpv3BVlKTCPGO/LEsguKqWHBtKzweMY2CV\ntAL1rQm913huhxF9w+ai76KQ3MHK5IVnLJjYYA5MzP2H5QIDAQABo1AwTjAdBgNV\nHQ4EFgQU22iy8aWkNSxv0nBxFxerfsvnZVMwHwYDVR0jBBgwFoAU22iy8aWkNSxv\n0nBxFxerfsvnZVMwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAANBAEOefGbV\nNcHxklaW06w6OBYJPwpIhCVozC1qdxGX1dg8VkEKzjOzjgqVD30m59OFmSlBmHsl\nnkVA6wyOSDYBf3o=\n-----END CERTIFICATE-----"),
@@ -519,6 +519,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shootCopy := shoot.DeepCopy()
 				shootCopy.Namespace = namespace
 				shootCopy.Spec.Purpose = &purpose
+				shootCopy.Spec.Addons = nil
 				errorList := ValidateShoot(shootCopy)
 				Expect(errorList).To(matcher)
 			},
@@ -539,10 +540,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 		)
 
 		DescribeTable("addons validation",
-			func(purpose core.ShootPurpose, version string, allowed bool) {
+			func(purpose core.ShootPurpose, allowed bool) {
 				shootCopy := shoot.DeepCopy()
 				shootCopy.Spec.Purpose = &purpose
-				shootCopy.Spec.Kubernetes.Version = version
+				shootCopy.Spec.Kubernetes.Version = "1.22.0"
 
 				errorList := ValidateShoot(shootCopy)
 
@@ -555,18 +556,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}))))
 				}
 			},
-			Entry("should allow addons on evaluation shoots with version >= 1.22", core.ShootPurposeEvaluation, "1.22.0", true),
-			Entry("should forbid addons on testing shoots with version >= 1.22", core.ShootPurposeTesting, "1.22.0", false),
-			Entry("should forbid addons on development shoots with version >= 1.22", core.ShootPurposeDevelopment, "1.22.0", false),
-			Entry("should forbid addons on production shoots with version >= 1.22", core.ShootPurposeProduction, "1.22.0", false),
-			Entry("should allow addons on evaluation shoots with a pre-release version >= 1.22", core.ShootPurposeEvaluation, "1.22.0-alpha.1", true),
-			Entry("should forbid addons on production shoots with a pre-release version >= 1.22", core.ShootPurposeProduction, "1.22.0-alpha.1", false),
-			Entry("should forbid addons on development shoots with a pre-release version >= 1.22", core.ShootPurposeDevelopment, "1.22.0-alpha.1", false),
-			Entry("should forbid addons on production shoots with a pre-release version >= 1.22", core.ShootPurposeProduction, "1.22.0-alpha.1", false),
-			Entry("should allow addons on evaluation shoots with version < 1.22", core.ShootPurposeEvaluation, "1.21.10", true),
-			Entry("should allow addons on testing shoots with version < 1.22", core.ShootPurposeTesting, "1.21.10", true),
-			Entry("should allow addons on development shoots with version < 1.22", core.ShootPurposeDevelopment, "1.21.10", true),
-			Entry("should allow addons on production shoots with version < 1.22", core.ShootPurposeProduction, "1.21.10", true),
+			Entry("should allow addons on evaluation shoots", core.ShootPurposeEvaluation, true),
+			Entry("should forbid addons on testing shoots", core.ShootPurposeTesting, false),
+			Entry("should forbid addons on development shoots", core.ShootPurposeDevelopment, false),
+			Entry("should forbid addons on production shoots", core.ShootPurposeProduction, false),
 		)
 
 		It("should forbid addon configuration if the shoot is workerless", func() {
@@ -1894,21 +1887,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration"),
 				}))))
 			})
-
-			It("should not allow to specify multiple issuers if kubernetes is lower than 1.22", func() {
-				shoot.Spec.Kubernetes.Version = "1.21.9"
-				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
-					Issuer:          pointer.String("issuer"),
-					AcceptedIssuers: []string{"issuer1"},
-				}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.acceptedIssuers"),
-				}))))
-			})
 		})
 
 		It("should not allow to specify a negative event ttl duration", func() {
@@ -2422,7 +2400,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Mode:             &mode,
 				}
 				shoot.Spec.Kubernetes.KubeProxy = &config
-				shoot.Spec.Kubernetes.Version = "1.20.1"
+				shoot.Spec.Kubernetes.Version = "1.25.1"
 				oldMode := core.ProxyMode("IPTables")
 				oldConfig := core.KubeProxyConfig{
 					KubernetesConfig: kubernetesConfig,
@@ -2469,7 +2447,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			ignoreTaintsUnique          = []string{"taint-1", "taint-2"}
 			ignoreTaintsDuplicate       = []string{"taint-1", "taint-1"}
 			ignoreTaintsInvalid         = []string{"taint 1", "taint-1"}
-			version                     = "1.20"
+			version                     = "1.24"
 		)
 
 		Context("ClusterAutoscaler validation", func() {
@@ -2612,11 +2590,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 		Context("FeatureGates validation", func() {
 			It("should forbid invalid feature gates", func() {
 				featureGates := map[string]bool{
-					"AnyVolumeDataSource":      true,
-					"CustomResourceValidation": true,
-					"Foo":                      true,
+					"AnyVolumeDataSource":    true,
+					"GenericEphemeralVolume": true,
+					"Foo":                    true,
 				}
-				shoot.Spec.Kubernetes.Version = "1.18.14"
+				shoot.Spec.Kubernetes.Version = "1.26.14"
 				shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates = featureGates
 				shoot.Spec.Kubernetes.KubeControllerManager.FeatureGates = featureGates
 				shoot.Spec.Kubernetes.KubeScheduler = &core.KubeSchedulerConfig{
@@ -2643,7 +2621,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubeAPIServer.featureGates.CustomResourceValidation"),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.featureGates.GenericEphemeralVolume"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
@@ -2651,7 +2629,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubeControllerManager.featureGates.CustomResourceValidation"),
+						"Field": Equal("spec.kubernetes.kubeControllerManager.featureGates.GenericEphemeralVolume"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
@@ -2659,7 +2637,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubeScheduler.featureGates.CustomResourceValidation"),
+						"Field": Equal("spec.kubernetes.kubeScheduler.featureGates.GenericEphemeralVolume"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
@@ -2667,7 +2645,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubeProxy.featureGates.CustomResourceValidation"),
+						"Field": Equal("spec.kubernetes.kubeProxy.featureGates.GenericEphemeralVolume"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
@@ -2675,7 +2653,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.kubernetes.kubelet.featureGates.CustomResourceValidation"),
+						"Field": Equal("spec.kubernetes.kubelet.featureGates.GenericEphemeralVolume"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
@@ -2740,8 +2718,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should forbid kubernetes version upgrades skipping a minor version", func() {
+				shoot.Spec.Kubernetes.Version = "1.25.2"
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.Version = "1.22.1"
+				newShoot.Spec.Kubernetes.Version = "1.27.1"
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -2898,7 +2877,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		Context("worker pool kubernetes version", func() {
 			It("should forbid worker pool kubernetes version higher than control plane", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.21.0")}
+				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.25.0")}
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
@@ -2907,38 +2886,38 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should work to set worker pool kubernetes version equal to control plane version", func() {
+			It("should allow to set worker pool kubernetes version equal to control plane version", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.20.2")}
+				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: &shoot.Spec.Kubernetes.Version}
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 			})
 
-			It("should work to set worker pool kubernetes version lower one minor than control plane version", func() {
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.20.2")}
+			It("should allow to set worker pool kubernetes version lower one minor than control plane version", func() {
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.23.2")}
 
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.Version = "1.21.0"
+				newShoot.Spec.Kubernetes.Version = "1.24.2"
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 			})
 
-			It("should work to set worker pool kubernetes version lower two minor than control plane version", func() {
-				shoot.Spec.Kubernetes.Version = "1.21.0"
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.20.2")}
+			It("should allow to set worker pool kubernetes version lower two minor than control plane version", func() {
+				shoot.Spec.Kubernetes.Version = "1.25.0"
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.24.2")}
 
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.Version = "1.22.0"
+				newShoot.Spec.Kubernetes.Version = "1.26.0"
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 			})
 
 			It("forbid to set worker pool kubernetes version lower three minor than control plane version", func() {
-				shoot.Spec.Kubernetes.Version = "1.22.0"
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.20.2")}
+				shoot.Spec.Kubernetes.Version = "1.25.0"
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.23.2")}
 
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.Version = "1.23.0"
+				newShoot.Spec.Kubernetes.Version = "1.26.0"
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
@@ -2947,9 +2926,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should work to set worker pool kubernetes version to nil with one minor difference", func() {
-				shoot.Spec.Kubernetes.Version = "1.21.0"
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.20.2")}
+			It("should allow to set worker pool kubernetes version to nil with one minor difference", func() {
+				shoot.Spec.Kubernetes.Version = "1.25.0"
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.24.2")}
 
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: nil}
@@ -2958,8 +2937,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("forbid to set worker pool kubernetes version to nil with two minor difference", func() {
-				shoot.Spec.Kubernetes.Version = "1.21.0"
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.19.2")}
+				shoot.Spec.Kubernetes.Version = "1.25.0"
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.23.2")}
 
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: nil}
@@ -5112,19 +5091,19 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Kubelet: &core.KubeletConfig{
 						KubernetesConfig: core.KubernetesConfig{
 							FeatureGates: map[string]bool{
-								"AnyVolumeDataSource":      true,
-								"CustomResourceValidation": true,
-								"Foo":                      true,
+								"AnyVolumeDataSource":  true,
+								"DynamicKubeletConfig": true,
+								"Foo":                  true,
 							},
 						},
 					},
 				},
 			}
-			errList := ValidateWorker(worker, core.Kubernetes{Version: "1.18.14"}, nil, false)
+			errList := ValidateWorker(worker, core.Kubernetes{Version: "1.27.3"}, nil, false)
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("kubernetes.kubelet.featureGates.CustomResourceValidation"),
+					"Field": Equal("kubernetes.kubelet.featureGates.DynamicKubeletConfig"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -5490,17 +5469,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Entry("should allow empty memory swap - NodeSwap set and FailSwap=false", true, nil, "1.22", BeEmpty()),
 			Entry("should allow LimitedSwap behavior", true, pointer.String("LimitedSwap"), "1.22", BeEmpty()),
 			Entry("should allow UnlimitedSwap behavior", true, pointer.String("UnlimitedSwap"), "1.22", BeEmpty()),
-			Entry("should forbid configuration of swap behaviour for k8s < 1.22", true, pointer.String("LimitedSwap"), "1.21", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal("memorySwap"),
-				"Detail": Equal("configuring swap behaviour is not available for kubernetes versions < 1.22"),
-			})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("featureGates.NodeSwap"),
-					"Detail": Equal("not supported in Kubernetes version 1.21"),
-				}))),
-			),
 			Entry("should forbid configuration of swap behaviour if either the feature gate NodeSwap is not set or FailSwap=true", false, pointer.String("LimitedSwap"), "1.22", ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),

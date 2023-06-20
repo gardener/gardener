@@ -234,7 +234,7 @@ var _ = BeforeSuite(func() {
 		},
 		Spec: gardencorev1beta1.CloudProfileSpec{
 			Kubernetes: gardencorev1beta1.KubernetesSettings{
-				Versions: []gardencorev1beta1.ExpirableVersion{{Version: "1.21.1"}},
+				Versions: []gardencorev1beta1.ExpirableVersion{{Version: "1.22.1"}},
 			},
 			MachineImages: []gardencorev1beta1.MachineImage{
 				{
@@ -242,7 +242,14 @@ var _ = BeforeSuite(func() {
 					Versions: []gardencorev1beta1.MachineImageVersion{
 						{
 							ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.1"},
-							CRI:              []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
+							CRI: []gardencorev1beta1.CRI{
+								{
+									Name: gardencorev1beta1.CRINameDocker,
+								},
+								{
+									Name: gardencorev1beta1.CRINameContainerD,
+								},
+							},
 						},
 					},
 				},

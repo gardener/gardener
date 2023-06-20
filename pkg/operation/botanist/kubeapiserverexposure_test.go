@@ -84,7 +84,6 @@ var _ = Describe("KubeAPIServerExposure", func() {
 		var (
 			ingress *networkingv1.Ingress
 			secret  *corev1.Secret
-			err     error
 		)
 
 		BeforeEach(func() {
@@ -122,23 +121,20 @@ var _ = Describe("KubeAPIServerExposure", func() {
 
 		It("should create the ingress if there is a wildcard certificate", func() {
 			botanist.ControlPlaneWildcardCert = secret
-			botanist.Shoot.Components.ControlPlane.KubeAPIServerIngress, err = botanist.DefaultKubeAPIServerIngress()
-			Expect(err).NotTo(HaveOccurred())
+			botanist.Shoot.Components.ControlPlane.KubeAPIServerIngress = botanist.DefaultKubeAPIServerIngress()
 			Expect(botanist.DeployKubeAPIServerIngress(ctx)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(ingress), ingress)).To(Succeed())
 		})
 
 		It("should not create the ingress if there is no wildcard certificate", func() {
-			botanist.Shoot.Components.ControlPlane.KubeAPIServerIngress, err = botanist.DefaultKubeAPIServerIngress()
-			Expect(err).NotTo(HaveOccurred())
+			botanist.Shoot.Components.ControlPlane.KubeAPIServerIngress = botanist.DefaultKubeAPIServerIngress()
 			Expect(botanist.DeployKubeAPIServerIngress(ctx)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(ingress), ingress)).To(BeNotFoundError())
 		})
 
 		It("should delete an existing ingress if there is no wildcard certificate", func() {
 			Expect(c.Create(ctx, ingress)).To(Succeed())
-			botanist.Shoot.Components.ControlPlane.KubeAPIServerIngress, err = botanist.DefaultKubeAPIServerIngress()
-			Expect(err).NotTo(HaveOccurred())
+			botanist.Shoot.Components.ControlPlane.KubeAPIServerIngress = botanist.DefaultKubeAPIServerIngress()
 			Expect(botanist.DeployKubeAPIServerIngress(ctx)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(ingress), ingress)).To(BeNotFoundError())
 		})

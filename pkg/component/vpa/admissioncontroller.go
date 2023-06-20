@@ -38,7 +38,6 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -68,7 +67,7 @@ func (v *vpa) admissionControllerResourceConfigs() component.ResourceConfigs {
 		clusterRoleBinding  = v.emptyClusterRoleBinding("admission-controller")
 		service             = v.emptyService(vpaconstants.AdmissionControllerServiceName)
 		deployment          = v.emptyDeployment(admissionController)
-		podDisruptionBudget = v.emptyPodDisruptionBudget(admissionController, version.ConstraintK8sGreaterEqual121.Check(v.values.RuntimeKubernetesVersion))
+		podDisruptionBudget = v.emptyPodDisruptionBudget(admissionController)
 		vpa                 = v.emptyVerticalPodAutoscaler(admissionController)
 	)
 
@@ -314,8 +313,9 @@ func (v *vpa) reconcileAdmissionControllerVPA(vpa *vpaautoscalingv1.VerticalPodA
 func (v *vpa) computeAdmissionControllerCommands() []string {
 	out := []string{"./admission-controller"}
 
-	// TODO: add --kubeconfig here (similar to updater, recommender) as soon as support for seeds and shoots < 1.21 is
-	//  dropped.
+	if v.values.ClusterType == component.ClusterTypeShoot {
+		out = append(out, "--kubeconfig="+gardenerutils.PathGenericKubeconfig)
+	}
 
 	return out
 }

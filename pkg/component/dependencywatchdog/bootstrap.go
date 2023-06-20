@@ -26,7 +26,6 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,7 +46,6 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 // Role is a string alias type.
@@ -112,10 +110,8 @@ type bootstrapper struct {
 
 func (b *bootstrapper) Deploy(ctx context.Context) error {
 	var (
-		err                 error
-		registry            = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-		podDisruptionBudget client.Object
-		maxUnavailable      = intstr.FromInt(1)
+		err      error
+		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 	)
 
 	configMap, err := b.getConfigMap()
@@ -129,31 +125,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	roleBinding := b.getRoleBinding(serviceAccount, role)
 	deployment := b.getDeployment(serviceAccount.Name, configMap.Name)
 	vpa := b.getVPA(deployment.Name)
-	if version.ConstraintK8sGreaterEqual121.Check(b.values.KubernetesVersion) {
-		podDisruptionBudget = &policyv1.PodDisruptionBudget{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      b.name(),
-				Namespace: deployment.Namespace,
-				Labels:    b.getLabels(),
-			},
-			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &maxUnavailable,
-				Selector:       deployment.Spec.Selector,
-			},
-		}
-	} else {
-		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      b.name(),
-				Namespace: deployment.Namespace,
-				Labels:    b.getLabels(),
-			},
-			Spec: policyv1beta1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &maxUnavailable,
-				Selector:       deployment.Spec.Selector,
-			},
-		}
-	}
+	podDisruptionBudget := b.getPDB(deployment)
 
 	resources, err := registry.AddAllAndSerialize(
 		serviceAccount,
@@ -512,6 +484,22 @@ func (b *bootstrapper) getDeployment(serviceAccountName string, configMapName st
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
 	return deployment
+}
+
+func (b *bootstrapper) getPDB(deployment *appsv1.Deployment) *policyv1.PodDisruptionBudget {
+	maxUnavailable := intstr.FromInt(1)
+
+	return &policyv1.PodDisruptionBudget{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      b.name(),
+			Namespace: deployment.Namespace,
+			Labels:    b.getLabels(),
+		},
+		Spec: policyv1.PodDisruptionBudgetSpec{
+			MaxUnavailable: &maxUnavailable,
+			Selector:       deployment.Spec.Selector,
+		},
+	}
 }
 
 func (b *bootstrapper) getVPA(deploymentName string) *vpaautoscalingv1.VerticalPodAutoscaler {

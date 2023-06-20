@@ -365,7 +365,7 @@ spec:
 
 While the `Pod` is now using an expiring and auto-rotated token, the static token is still generated and valid.
 
-As of Kubernetes v1.22, there is neither a way of preventing `kube-controller-manager` to generate such static tokens, nor a way to proactively remove or invalidate them:
+There is neither a way of preventing `kube-controller-manager` to generate such static tokens, nor a way to proactively remove or invalidate them:
 
 - https://github.com/kubernetes/kubernetes/issues/77599
 - https://github.com/kubernetes/kubernetes/issues/77600

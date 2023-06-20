@@ -180,23 +180,6 @@ var _ = Describe("Defaults", func() {
 				Expect(obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.MemorySwap.SwapBehavior).To(PointTo(Equal(LimitedSwap)))
 			})
 
-			It("should not default the swap behaviour for a worker pool because k8s < 1.22", func() {
-				falseVar := false
-				obj.Spec.Provider.Workers = []Worker{
-					{
-						Kubernetes: &WorkerKubernetes{
-							Kubelet: &KubeletConfig{},
-						},
-					},
-				}
-				obj.Spec.Provider.Workers[0].Kubernetes.Version = pointer.String("1.21.1")
-				obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FailSwapOn = &falseVar
-				obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
-				SetObjectDefaults_Shoot(obj)
-
-				Expect(obj.Spec.Provider.Workers[0].Kubernetes.Kubelet.MemorySwap).To(BeNil())
-			})
-
 			It("should not default the swap behaviour for a worker pool because failSwapOn=true (defaulted to true)", func() {
 				obj.Spec.Provider.Workers = []Worker{
 					{
@@ -271,16 +254,6 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap).To(Not(BeNil()))
 			Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap.SwapBehavior).To(PointTo(Equal(LimitedSwap)))
-		})
-
-		It("should not default the swap behaviour because k8s < 1.22", func() {
-			obj.Spec.Kubernetes.Version = "1.21.1"
-			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-			obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(false)
-			obj.Spec.Kubernetes.Kubelet.FeatureGates = map[string]bool{"NodeSwap": true}
-			SetObjectDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.Kubelet.MemorySwap).To(BeNil())
 		})
 
 		It("should not default the swap behaviour because failSwapOn=true", func() {
@@ -659,7 +632,7 @@ var _ = Describe("Defaults", func() {
 			Expect(*obj.Spec.Provider.Workers[1].Machine.Architecture).To(Equal("test"))
 		})
 
-		It("should default cri.name to containerd when control plane Kubernetes version >= 1.22", func() {
+		It("should default cri.name to containerd", func() {
 			obj.Spec.Kubernetes.Version = "1.22"
 			obj.Spec.Provider.Workers = []Worker{
 				{Name: "DefaultWorker"},
@@ -672,8 +645,8 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Provider.Workers[1].CRI.Name).To(BeEquivalentTo("some configured value"))
 		})
 
-		It("should default cri.name to containerd when worker Kubernetes version >= 1.22", func() {
-			obj.Spec.Kubernetes.Version = "1.20"
+		It("should default worker cri.name to containerd", func() {
+			obj.Spec.Kubernetes.Version = "1.22"
 			obj.Spec.Provider.Workers = []Worker{
 				{Name: "DefaultWorker",
 					Kubernetes: &WorkerKubernetes{Version: pointer.String("1.22")}},
@@ -683,31 +656,6 @@ var _ = Describe("Defaults", func() {
 			SetObjectDefaults_Shoot(obj)
 			Expect(obj.Spec.Provider.Workers[0].CRI).ToNot(BeNil())
 			Expect(obj.Spec.Provider.Workers[0].CRI.Name).To(Equal(CRINameContainerD))
-			Expect(obj.Spec.Provider.Workers[1].CRI.Name).To(BeEquivalentTo("some configured value"))
-		})
-
-		It("should not default cri.name to containerd when control plane Kubernetes version < 1.22", func() {
-			obj.Spec.Kubernetes.Version = "1.21"
-			obj.Spec.Provider.Workers = []Worker{
-				{Name: "DefaultWorker"},
-				{Name: "Worker with CRI configuration",
-					CRI: &CRI{Name: "some configured value"}},
-			}
-			SetObjectDefaults_Shoot(obj)
-			Expect(obj.Spec.Provider.Workers[0].CRI).To(BeNil())
-			Expect(obj.Spec.Provider.Workers[1].CRI.Name).To(BeEquivalentTo("some configured value"))
-		})
-
-		It("should not default cri.name to containerd when worker Kubernetes version < 1.22", func() {
-			obj.Spec.Kubernetes.Version = "1.22"
-			obj.Spec.Provider.Workers = []Worker{
-				{Name: "DefaultWorker",
-					Kubernetes: &WorkerKubernetes{Version: pointer.String("1.21")}},
-				{Name: "Worker with CRI configuration",
-					CRI: &CRI{Name: "some configured value"}},
-			}
-			SetObjectDefaults_Shoot(obj)
-			Expect(obj.Spec.Provider.Workers[0].CRI).To(BeNil())
 			Expect(obj.Spec.Provider.Workers[1].CRI.Name).To(BeEquivalentTo("some configured value"))
 		})
 

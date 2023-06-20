@@ -17,7 +17,6 @@ package vpa
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -25,7 +24,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -34,10 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
 	vpaconstants "github.com/gardener/gardener/pkg/component/vpa/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -238,13 +234,8 @@ func (v *vpa) emptyDeployment(name string) *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: v.namespace}}
 }
 
-func (v *vpa) emptyPodDisruptionBudget(name string, k8sVersionGreaterEqual121 bool) client.Object {
-	objectMeta := metav1.ObjectMeta{Name: name, Namespace: v.namespace}
-
-	if k8sVersionGreaterEqual121 {
-		return &policyv1.PodDisruptionBudget{ObjectMeta: objectMeta}
-	}
-	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: objectMeta}
+func (v *vpa) emptyPodDisruptionBudget(name string) *policyv1.PodDisruptionBudget {
+	return &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: v.namespace}}
 }
 
 func (v *vpa) emptyVerticalPodAutoscaler(name string) *vpaautoscalingv1.VerticalPodAutoscaler {
@@ -316,60 +307,7 @@ func (v *vpa) injectAPIServerConnectionSpec(deployment *appsv1.Deployment, name 
 	} else {
 		deployment.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
 
-		// TODO(shafeeqes): Adapt admission-controller to use kubeconfig too, https://github.com/kubernetes/autoscaler/issues/4844 is fixed in 0.12.0.
-		// But we can't use 0.12.0 for k8s version < 1.21: Ref https://github.com/gardener/gardener/pull/6739#pullrequestreview-1120429778
-		if name != admissionController {
-			utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, *v.genericTokenKubeconfigSecretName, gardenerutils.SecretNamePrefixShootAccess+deployment.Name))
-		} else {
-			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env,
-				corev1.EnvVar{
-					Name:  "KUBERNETES_SERVICE_HOST",
-					Value: v1beta1constants.DeploymentNameKubeAPIServer,
-				},
-				corev1.EnvVar{
-					Name:  "KUBERNETES_SERVICE_PORT",
-					Value: strconv.Itoa(kubeapiserverconstants.Port),
-				},
-			)
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-				Name: "shoot-access",
-				VolumeSource: corev1.VolumeSource{
-					Projected: &corev1.ProjectedVolumeSource{
-						DefaultMode: pointer.Int32(420),
-						Sources: []corev1.VolumeProjection{
-							{
-								Secret: &corev1.SecretProjection{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: v.caSecretName,
-									},
-									Items: []corev1.KeyToPath{{
-										Key:  secretsutils.DataKeyCertificateBundle,
-										Path: "ca.crt",
-									}},
-								},
-							},
-							{
-								Secret: &corev1.SecretProjection{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: gardenerutils.SecretNamePrefixShootAccess + name,
-									},
-									Items: []corev1.KeyToPath{{
-										Key:  resourcesv1alpha1.DataKeyToken,
-										Path: "token",
-									}},
-									Optional: pointer.Bool(false),
-								},
-							},
-						},
-					},
-				},
-			})
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-				Name:      "shoot-access",
-				MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
-				ReadOnly:  true,
-			})
-		}
+		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, *v.genericTokenKubeconfigSecretName, gardenerutils.SecretNamePrefixShootAccess+deployment.Name))
 	}
 }
 

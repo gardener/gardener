@@ -61,7 +61,7 @@ var _ = Describe("BlackboxExporter", func() {
 		values = Values{
 			Image:             image,
 			VPAEnabled:        false,
-			KubernetesVersion: semver.MustParse("1.20.5"),
+			KubernetesVersion: semver.MustParse("1.25.5"),
 		}
 		component = New(c, namespace, values)
 
@@ -124,12 +124,7 @@ metadata:
   namespace: kube-system
 `
 
-			pdbYAMLFor = func(k8sGreaterEqual121 bool) string {
-				apiVersion := "policy/v1beta1"
-				if k8sGreaterEqual121 {
-					apiVersion = "policy/v1"
-				}
-				out := `apiVersion: ` + apiVersion + `
+			pdbYAML = `apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   creationTimestamp: null
@@ -149,8 +144,6 @@ status:
   disruptionsAllowed: 0
   expectedPods: 0
 `
-				return out
-			}
 
 			deploymentYAML = `apiVersion: apps/v1
 kind: Deployment
@@ -312,50 +305,27 @@ status: {}
 			Expect(string(managedResourceSecret.Data["service__kube-system__blackbox-exporter.yaml"])).To(Equal(serviceYAML))
 		})
 
-		Context("kubernetes version >= 1.21.0", func() {
-			BeforeEach(func() {
-				values.KubernetesVersion = semver.MustParse("1.21.1")
-				component = New(c, namespace, values)
-			})
+		BeforeEach(func() {
+			values.KubernetesVersion = semver.MustParse("1.22.0")
+			component = New(c, namespace, values)
+		})
 
-			Context("w/o vpa enabled", func() {
-				It("should successfully deploy the resources", func() {
-					Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(true)))
-				})
-			})
-
-			Context("w/ vpa enabled", func() {
-				BeforeEach(func() {
-					vpaEnabled = true
-					values.VPAEnabled = true
-					component = New(c, namespace, values)
-				})
-
-				It("should successfully deploy the resources", func() {
-					Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(true)))
-					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__blackbox-exporter.yaml"])).To(Equal(vpaYAML))
-				})
+		Context("w/o vpa enabled", func() {
+			It("should successfully deploy the resources", func() {
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__blackbox-exporter.yaml"])).To(Equal(pdbYAML))
 			})
 		})
 
-		Context("kubernetes version < 1.21.0", func() {
-			Context("w/o vpa enabled", func() {
-				It("should successfully deploy the resources", func() {
-					Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(false)))
-				})
+		Context("w/ vpa enabled", func() {
+			BeforeEach(func() {
+				vpaEnabled = true
+				values.VPAEnabled = true
+				component = New(c, namespace, values)
 			})
 
-			Context("w/ vpa enabled", func() {
-				BeforeEach(func() {
-					vpaEnabled = true
-					values.VPAEnabled = true
-					component = New(c, namespace, values)
-				})
-
-				It("should successfully deploy the resources", func() {
-					Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__blackbox-exporter.yaml"])).To(Equal(pdbYAMLFor(false)))
-					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__blackbox-exporter.yaml"])).To(Equal(vpaYAML))
-				})
+			It("should successfully deploy the resources", func() {
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__blackbox-exporter.yaml"])).To(Equal(pdbYAML))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__blackbox-exporter.yaml"])).To(Equal(vpaYAML))
 			})
 		})
 	})

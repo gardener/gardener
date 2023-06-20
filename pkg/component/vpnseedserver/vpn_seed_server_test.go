@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Masterminds/semver"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -75,7 +74,6 @@ var _ = Describe("VpnSeedServer", func() {
 			HighAvailabilityEnabled:              false,
 			HighAvailabilityNumberOfSeedServers:  2,
 			HighAvailabilityNumberOfShootClients: 1,
-			SeedVersion:                          semver.MustParse("1.22.1"),
 		}
 
 		istioNamespace     = "istio-foo"

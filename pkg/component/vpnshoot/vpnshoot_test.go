@@ -20,7 +20,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -75,8 +74,7 @@ var _ = Describe("VPNShoot", func() {
 				OpenVPNPort: openVPNPort,
 				Header:      reversedVPNHeader,
 			},
-			PSPDisabled:       true,
-			KubernetesVersion: semver.MustParse("1.22.1"),
+			PSPDisabled: true,
 		}
 	)
 
@@ -821,7 +819,6 @@ status: {}
 				HighAvailabilityEnabled:              true,
 				HighAvailabilityNumberOfSeedServers:  2,
 				HighAvailabilityNumberOfShootClients: 2,
-				KubernetesVersion:                    values.KubernetesVersion,
 			})
 			Expect(c.Create(ctx, managedResource)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
