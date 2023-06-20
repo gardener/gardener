@@ -16,6 +16,7 @@ package shared
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/Masterminds/semver"
@@ -80,7 +81,7 @@ func init() {
 func NewKubeAPIServer(
 	ctx context.Context,
 	runtimeClientSet kubernetes.Interface,
-	auditConfigClient client.Client,
+	gardenClient client.Client,
 	runtimeNamespace string,
 	objectMeta metav1.ObjectMeta,
 	runtimeVersion *semver.Version,
@@ -140,7 +141,7 @@ func NewKubeAPIServer(
 			}
 		}
 
-		auditConfig, err = computeKubeAPIServerAuditConfig(ctx, auditConfigClient, objectMeta, apiServerConfig.AuditConfig, auditWebhookConfig)
+		auditConfig, err = computeKubeAPIServerAuditConfig(ctx, gardenClient, objectMeta, apiServerConfig.AuditConfig, auditWebhookConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -156,7 +157,7 @@ func NewKubeAPIServer(
 		watchCacheSizes = apiServerConfig.WatchCacheSizes
 	}
 
-	enabledAdmissionPluginConfigs, err := convertToAdmissionPluginConfigs(enabledAdmissionPlugins)
+	enabledAdmissionPluginConfigs, err := convertToAdmissionPluginConfigs(ctx, gardenClient, objectMeta.Namespace, enabledAdmissionPlugins)
 	if err != nil {
 		return nil, err
 	}
@@ -382,16 +383,47 @@ func ensureAdmissionPluginConfig(plugins []gardencorev1beta1.AdmissionPlugin) ([
 	return plugins, nil
 }
 
-func convertToAdmissionPluginConfigs(plugins []gardencorev1beta1.AdmissionPlugin) ([]kubeapiserver.AdmissionPluginConfig, error) {
-	var out []kubeapiserver.AdmissionPluginConfig
+func convertToAdmissionPluginConfigs(ctx context.Context, gardenClient client.Client, namespace string, plugins []gardencorev1beta1.AdmissionPlugin) ([]kubeapiserver.AdmissionPluginConfig, error) {
+	var (
+		kubeconfig []byte
+		err        error
+		out        []kubeapiserver.AdmissionPluginConfig
+	)
 
 	for _, plugin := range plugins {
-		out = append(out, kubeapiserver.AdmissionPluginConfig{
-			AdmissionPlugin: plugin,
-		})
+		if plugin.KubeconfigSecretName != nil {
+			key := client.ObjectKey{Namespace: namespace, Name: *plugin.KubeconfigSecretName}
+			kubeconfig, err = fetchKubeconfigFromSecret(ctx, gardenClient, key)
+			if err != nil {
+				return nil, fmt.Errorf("failed reading kubeconfig for webhook from referenced secret %s: %w", key, err)
+			}
+
+			out = append(out, kubeapiserver.AdmissionPluginConfig{
+				AdmissionPlugin: plugin,
+				Kubeconfig:      kubeconfig,
+			})
+		} else {
+			out = append(out, kubeapiserver.AdmissionPluginConfig{
+				AdmissionPlugin: plugin,
+			})
+		}
 	}
 
 	return out, nil
+}
+
+func fetchKubeconfigFromSecret(ctx context.Context, c client.Client, key client.ObjectKey) ([]byte, error) {
+	secret := &corev1.Secret{}
+	if err := c.Get(ctx, key, secret); err != nil {
+		return nil, err
+	}
+
+	kubeconfig, ok := secret.Data["kubeconfig"]
+	if !ok || len(kubeconfig) == 0 {
+		return nil, errors.New("the secret's field 'kubeconfig' is empty")
+	}
+
+	return kubeconfig, nil
 }
 
 func computeEnabledKubeAPIServerAdmissionPlugins(defaultPlugins, configuredPlugins []gardencorev1beta1.AdmissionPlugin, isWorkerless bool) []gardencorev1beta1.AdmissionPlugin {
