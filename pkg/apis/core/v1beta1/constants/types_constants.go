@@ -407,7 +407,7 @@ const (
 	// LabelMonitoring is a constant for a label for monitoring stack configurations
 	LabelMonitoring = "monitoring"
 	// LabelKeyCustomLoggingResource is the key of the label which is used from the operator to select the CustomResources which will be imported in the FluentBit configuration.
-	// TODO(Kristian-ZH): the label key has to be migrated to "fluentbit.gardener.cloud/type".
+	// TODO(nickytd): the label key has to be migrated to "fluentbit.gardener.cloud/type".
 	LabelKeyCustomLoggingResource = "fluentbit.gardener/type"
 	// LabelValueCustomLoggingResource is the value of the label which is used from the operator to select the CustomResources which will be imported in the FluentBit configuration.
 	LabelValueCustomLoggingResource = "seed"
