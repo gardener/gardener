@@ -33,6 +33,8 @@ var _ = Describe("Seed", func() {
 				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
 				if protobufNum == "3" {
 					Fail("protobuf 3 in SeedSettings is reserved for removed shootDNS field")
+				} else if protobufNum == "6" {
+					Fail("protobuf 6 in SeedSettings is reserved for removed ownerChecks field")
 				}
 			}
 		})
