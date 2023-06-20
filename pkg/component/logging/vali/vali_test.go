@@ -16,17 +16,21 @@ package vali_test
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Masterminds/semver"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
@@ -38,6 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/component/test"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -46,65 +51,68 @@ import (
 )
 
 const (
-	namespace             = "shoot--foo--bar"
-	managedResourceName   = "vali"
-	valiName              = "vali"
-	valiConfigMapName     = "vali-config-7d883cf0"
-	telegrafConfigMapName = "telegraf-config-b4c38756"
-	maintenanceBegin      = "210000-0000"
-	maintenanceEnd        = "223000-0000"
-	valiImage             = "vali:0.0.1"
-	curatorImage          = "curator:0.0.1"
-	alpineImage           = "alpine:0.0.1"
-	initLargeDirImage     = "tune2fs:0.0.1"
-	telegrafImage         = "telegraf-iptables:0.0.1"
-	kubeRBACProxyImage    = "kube-rbac-proxy:0.0.1"
-	priorityClassName     = "foo-bar"
-	ingressClass          = "nginx"
-	valiHost              = "vali.foo.bar"
+	namespace                 = "shoot--foo--bar"
+	managedResourceName       = "vali"
+	managedResourceSecretName = "managedresource-vali"
+	valiName                  = "vali"
+	valiConfigMapName         = "vali-config-7d883cf0"
+	telegrafConfigMapName     = "telegraf-config-b4c38756"
+	maintenanceBegin          = "210000-0000"
+	maintenanceEnd            = "223000-0000"
+	valiImage                 = "vali:0.0.1"
+	curatorImage              = "curator:0.0.1"
+	alpineImage               = "alpine:0.0.1"
+	initLargeDirImage         = "tune2fs:0.0.1"
+	telegrafImage             = "telegraf-iptables:0.0.1"
+	kubeRBACProxyImage        = "kube-rbac-proxy:0.0.1"
+	priorityClassName         = "foo-bar"
+	ingressClass              = "nginx"
+	valiHost                  = "vali.foo.bar"
 )
 
 var _ = Describe("Vali", func() {
 	var (
 		ctx = context.TODO()
-		c   client.Client
-
-		managedResource       *resourcesv1alpha1.ManagedResource
-		managedResourceSecret *corev1.Secret
-
-		fakeSecretManager secretsmanager.Interface
-		k8sVersion        *semver.Version
-		storage           = resource.MustParse("60Gi")
 	)
 
-	BeforeEach(func() {
-		var err error
-		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		fakeSecretManager = fakesecretsmanager.New(c, namespace)
-
-		k8sVersion, err = semver.NewVersion("1.25.6")
-		Expect(err).ToNot(HaveOccurred())
-
-		By("Create secrets managed outside of this package for which secretsmanager.Get() will be called")
-		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
-	})
-
-	JustBeforeEach(func() {
-		managedResource = &resourcesv1alpha1.ManagedResource{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      managedResourceName,
-				Namespace: namespace,
-			},
-		}
-		managedResourceSecret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "managedresource-" + managedResource.Name,
-				Namespace: namespace,
-			},
-		}
-	})
-
 	Describe("#Deploy", func() {
+		var (
+			c                     client.Client
+			managedResource       *resourcesv1alpha1.ManagedResource
+			managedResourceSecret *corev1.Secret
+
+			fakeSecretManager secretsmanager.Interface
+			k8sVersion        *semver.Version
+			storage           = resource.MustParse("60Gi")
+		)
+
+		BeforeEach(func() {
+			var err error
+			c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+			fakeSecretManager = fakesecretsmanager.New(c, namespace)
+
+			k8sVersion, err = semver.NewVersion("1.25.6")
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Create secrets managed outside of this package for which secretsmanager.Get() will be called")
+			Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
+		})
+
+		JustBeforeEach(func() {
+			managedResource = &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      managedResourceName,
+					Namespace: namespace,
+				},
+			}
+			managedResourceSecret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      managedResourceSecretName,
+					Namespace: namespace,
+				},
+			}
+		})
+
 		It("should successfully deploy all resources for shoot", func() {
 			valiDeployer := New(
 				c,
@@ -281,6 +289,402 @@ var _ = Describe("Vali", func() {
 			Expect(string(managedResourceSecret.Data["configmap__shoot--foo--bar__"+valiConfigMapName+".yaml"])).To(Equal(test.Serialize(getValiConfigMap())))
 			Expect(string(managedResourceSecret.Data["service__shoot--foo--bar__logging.yaml"])).To(Equal(test.Serialize(getService(false, "seed"))))
 			Expect(string(managedResourceSecret.Data["statefulset__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getStatefulSet(false))))
+		})
+	})
+
+	Describe("#ResizeOrDeleteValiDataVolumeIfStorageNotTheSame", func() {
+		const (
+			valiPVCName         = "vali-vali-0"
+			valiStatefulSetName = "vali"
+			gardenNamespace     = "garden"
+		)
+
+		var (
+			ctrl              *gomock.Controller
+			runtimeClient     *mockclient.MockClient
+			sw                *mockclient.MockSubResourceClient
+			ctx               = context.TODO()
+			valiPVCObjectMeta = metav1.ObjectMeta{
+				Name:      valiPVCName,
+				Namespace: gardenNamespace,
+			}
+			valiPVC = &corev1.PersistentVolumeClaim{
+				ObjectMeta: valiPVCObjectMeta,
+				Spec: corev1.PersistentVolumeClaimSpec{
+					Resources: corev1.ResourceRequirements{
+						Requests: map[corev1.ResourceName]resource.Quantity{
+							"storage": resource.MustParse("100Gi"),
+						},
+					},
+				},
+			}
+			patch       = client.MergeFrom(valiPVC.DeepCopy())
+			statefulset = &appsv1.StatefulSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      valiStatefulSetName,
+					Namespace: gardenNamespace,
+				},
+			}
+			scaledToZeroValiStatefulset = appsv1.StatefulSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       valiStatefulSetName,
+					Namespace:  gardenNamespace,
+					Generation: 2,
+				},
+				Spec: appsv1.StatefulSetSpec{
+					Replicas: pointer.Int32(0),
+				},
+				Status: appsv1.StatefulSetStatus{
+					ObservedGeneration: 2,
+					Replicas:           0,
+					AvailableReplicas:  0,
+				},
+			}
+			zeroReplicaRawPatch     = client.RawPatch(types.MergePatchType, []byte(`{"spec":{"replicas":0}}`))
+			errNotFound             = &apierrors.StatusError{ErrStatus: metav1.Status{Reason: metav1.StatusReasonNotFound}}
+			errForbidden            = &apierrors.StatusError{ErrStatus: metav1.Status{Reason: metav1.StatusReasonForbidden}}
+			new200GiStorageQuantity = resource.MustParse("200Gi")
+			new100GiStorageQuantity = resource.MustParse("100Gi")
+			new80GiStorageQuantity  = resource.MustParse("80Gi")
+			valiPVCKey              = kubernetesutils.Key("garden", "vali-vali-0")
+			valiStatefulSetKey      = kubernetesutils.Key("garden", "vali")
+			funcGetValiPVC          = func(_ context.Context, _ types.NamespacedName, pvc *corev1.PersistentVolumeClaim, _ ...client.GetOption) error {
+				*pvc = *valiPVC
+				return nil
+			}
+			funcGetScaledToZeroValiStatefulset = func(_ context.Context, _ types.NamespacedName, sts *appsv1.StatefulSet, _ ...client.GetOption) error {
+				*sts = scaledToZeroValiStatefulset
+				return nil
+			}
+			funcPatchTo200GiStorage = func(_ context.Context, pvc *corev1.PersistentVolumeClaim, _ client.Patch, _ ...interface{}) error {
+				if pvc.Spec.Resources.Requests.Storage().Cmp(resource.MustParse("200Gi")) != 0 {
+					return fmt.Errorf("expect 200Gi found %v", *pvc.Spec.Resources.Requests.Storage())
+				}
+				return nil
+			}
+			objectOfTypePVC       = gomock.AssignableToTypeOf(&corev1.PersistentVolumeClaim{})
+			objectOfTypeSTS       = gomock.AssignableToTypeOf(&appsv1.StatefulSet{})
+			objectOfTypeMR        = gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})
+			objectOfTypeSecret    = gomock.AssignableToTypeOf(&corev1.Secret{})
+			skipedManagedResource = &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      managedResourceName,
+					Namespace: gardenNamespace,
+					Annotations: map[string]string{
+						"resources.gardener.cloud/ignore": "true",
+					},
+				}}
+			managedResource = &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      managedResourceName,
+					Namespace: gardenNamespace,
+				}}
+		)
+
+		BeforeEach(func() {
+			ctrl = gomock.NewController(GinkgoT())
+			runtimeClient = mockclient.NewMockClient(ctrl)
+			sw = mockclient.NewMockSubResourceClient(ctrl)
+		})
+
+		AfterEach(func() {
+			ctrl.Finish()
+		})
+
+		It("should patch garden/loki's PVC when new size is greater than the current one", func() {
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new200GiStorageQuantity})
+			gomock.InOrder(
+				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
+				// Annotate the Vali MamangedResource with Ignore annotation
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
+					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(skipedManagedResource))
+					}),
+				//Scale Vali StatefulSet to zero
+				runtimeClient.EXPECT().SubResource("scale").Return(sw),
+				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
+				runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroValiStatefulset),
+				//Path Vali PVC
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypePVC, gomock.AssignableToTypeOf(patch)).DoAndReturn(funcPatchTo200GiStorage),
+				// Remove Ignore annotation form the managed resource
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
+					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(managedResource))
+					}),
+				// Create Managed resource
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceSecretName), objectOfTypeSecret),
+				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
+			)
+			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
+		})
+
+		It("should delete garden/vali's PVC when new size is less than the current one", func() {
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new80GiStorageQuantity})
+			gomock.InOrder(
+				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
+				// Annotate the Vali MamangedResource with Ignore annotation
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
+					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(skipedManagedResource))
+					}),
+				//Scale Vali StatefulSet to zero
+				runtimeClient.EXPECT().SubResource("scale").Return(sw),
+				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
+				runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroValiStatefulset),
+				//Delete the Vali PVC
+				runtimeClient.EXPECT().Delete(ctx, valiPVC),
+				// Remove Ignore annotation form the managed resource
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
+					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(managedResource))
+					}),
+				// Create Managed resource
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceSecretName), objectOfTypeSecret),
+				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
+			)
+			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
+		})
+
+		It("shouldn't do anything when garden/vali's PVC is missing", func() {
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new80GiStorageQuantity})
+			gomock.InOrder(
+				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC).Return(errNotFound),
+				// Remove Ignore annotation form the managed resource
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
+					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(managedResource))
+					}),
+				// Create Managed resource
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceSecretName), objectOfTypeSecret),
+				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
+			)
+			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
+		})
+
+		It("shouldn't do anything when garden/vali's PVC storage is the same as the new one", func() {
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new100GiStorageQuantity})
+			gomock.InOrder(
+				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
+				// Remove Ignore annotation form the managed resource
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
+					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(managedResource))
+					}),
+				// Create Managed resource
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceSecretName), objectOfTypeSecret),
+				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
+			)
+			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
+		})
+
+		It("should proceed with the garden/vali's PVC resizing when Vali StatefulSet is missing", func() {
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new200GiStorageQuantity})
+			gomock.InOrder(
+				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
+				// Annotate the Vali MamangedResource with Ignore annotation
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
+					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(skipedManagedResource))
+					}),
+				//Scale Vali StatefulSet to zero
+				runtimeClient.EXPECT().SubResource("scale").Return(sw),
+				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch).Return(errNotFound),
+				//Path Vali PVC
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypePVC, gomock.AssignableToTypeOf(patch)).DoAndReturn(funcPatchTo200GiStorage),
+				// Remove Ignore annotation form the managed resource
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
+					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(managedResource))
+					}),
+				// Create Managed resource
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceSecretName), objectOfTypeSecret),
+				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
+			)
+			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
+		})
+
+		It("should not fail with patching garden/vali's PVC when the PVC itself was deleted during function execution", func() {
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new200GiStorageQuantity})
+			gomock.InOrder(
+				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
+				// Annotate the Vali MamangedResource with Ignore annotation
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
+					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(skipedManagedResource))
+					}),
+				//Scale Vali StatefulSet to zero
+				runtimeClient.EXPECT().SubResource("scale").Return(sw),
+				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
+				runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroValiStatefulset),
+				//Path Vali PVC
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypePVC, gomock.AssignableToTypeOf(patch)).DoAndReturn(funcPatchTo200GiStorage).Return(errNotFound),
+				// Remove Ignore annotation form the managed resource
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
+					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(managedResource))
+					}),
+				// Create Managed resource
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceSecretName), objectOfTypeSecret),
+				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
+			)
+			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
+		})
+
+		It("should not fail with deleting garden/vali's PVC when the PVC itself was deleted during function execution", func() {
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new80GiStorageQuantity})
+			gomock.InOrder(
+				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
+				// Annotate the Vali MamangedResource with Ignore annotation
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
+					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(skipedManagedResource))
+					}),
+				//Scale Vali StatefulSet to zero
+				runtimeClient.EXPECT().SubResource("scale").Return(sw),
+				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
+				runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroValiStatefulset),
+				//Delete the Vali PVC
+				runtimeClient.EXPECT().Delete(ctx, valiPVC).Return(errNotFound),
+				// Remove Ignore annotation form the managed resource
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
+					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(managedResource))
+					}),
+				// Create Managed resource
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceSecretName), objectOfTypeSecret),
+				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Update(ctx, objectOfTypeMR),
+			)
+			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
+		})
+
+		It("should not neglect errors when getting garden/vali's PVC", func() {
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new80GiStorageQuantity})
+			gomock.InOrder(
+				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).Return(errForbidden),
+			)
+			Expect(valiDeployer.Deploy(ctx)).ToNot(Succeed())
+		})
+
+		It("should not neglect errors when patching garden/vali's StatefulSet", func() {
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new200GiStorageQuantity})
+			gomock.InOrder(
+				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
+				// Annotate the Vali MamangedResource with Ignore annotation
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
+					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(skipedManagedResource))
+					}),
+				//Scale Vali StatefulSet to zero
+				runtimeClient.EXPECT().SubResource("scale").Return(sw),
+				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch).Return(errForbidden),
+			)
+			Expect(valiDeployer.Deploy(ctx)).ToNot(Succeed())
+		})
+
+		It("should not neglect errors when getting garden/vali's StatefulSet", func() {
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new200GiStorageQuantity})
+			gomock.InOrder(
+				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
+				// Annotate the Vali MamangedResource with Ignore annotation
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
+					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(skipedManagedResource))
+					}),
+				//Scale Vali StatefulSet to zero
+				runtimeClient.EXPECT().SubResource("scale").Return(sw),
+				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
+				runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).Return(errForbidden),
+			)
+			Expect(valiDeployer.Deploy(ctx)).ToNot(Succeed())
+		})
+
+		It("should not neglect errors when patching garden/vali's PVC", func() {
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new200GiStorageQuantity})
+			gomock.InOrder(
+				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
+				// Annotate the Vali MamangedResource with Ignore annotation
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
+					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(skipedManagedResource))
+					}),
+				//Scale Vali StatefulSet to zero
+				runtimeClient.EXPECT().SubResource("scale").Return(sw),
+				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
+				runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroValiStatefulset),
+				//Path Vali PVC
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypePVC, gomock.AssignableToTypeOf(patch)).DoAndReturn(funcPatchTo200GiStorage).Return(errNotFound).Return(errForbidden),
+			)
+			Expect(valiDeployer.Deploy(ctx)).ToNot(Succeed())
+		})
+
+		It("should not neglect errors when deleting garden/vali's PVC", func() {
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new80GiStorageQuantity})
+			gomock.InOrder(
+				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
+				// Annotate the Vali MamangedResource with Ignore annotation
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).
+					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(skipedManagedResource))
+					}),
+				//Scale Vali StatefulSet to zero
+				runtimeClient.EXPECT().SubResource("scale").Return(sw),
+				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
+				runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroValiStatefulset),
+				//Delete the Vali PVC
+				runtimeClient.EXPECT().Delete(ctx, valiPVC).Return(errForbidden),
+			)
+			Expect(valiDeployer.Deploy(ctx)).ToNot(Succeed())
+		})
+
+		It("should not neglect errors when cannot get Vali ManagedResource", func() {
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new80GiStorageQuantity})
+			gomock.InOrder(
+				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
+				// Annotate the Vali MamangedResource with Ignore annotation
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR).Return(errForbidden),
+			)
+			Expect(valiDeployer.Deploy(ctx)).ToNot(Succeed())
+		})
+
+		It("should not neglect errors when cannot patch Vali ManagedResource", func() {
+			valiDeployer := New(runtimeClient, gardenNamespace, nil, nil, Values{Storage: &new80GiStorageQuantity})
+			gomock.InOrder(
+				runtimeClient.EXPECT().Get(ctx, valiPVCKey, objectOfTypePVC).DoAndReturn(funcGetValiPVC),
+				// Annotate the Vali MamangedResource with Ignore annotation
+				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
+				runtimeClient.EXPECT().Patch(ctx, objectOfTypeMR, gomock.Any()).Return(errForbidden),
+			)
+			Expect(valiDeployer.Deploy(ctx)).ToNot(Succeed())
 		})
 	})
 })
