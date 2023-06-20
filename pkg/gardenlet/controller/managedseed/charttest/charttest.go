@@ -392,7 +392,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			},
 			{
 				APIGroups: []string{"machine.sapcloud.io"},
-				Resources: []string{"machinedeployments"},
+				Resources: []string{"machinedeployments", "machines"},
 				Verbs:     []string{"list", "watch", "get"},
 			},
 		},

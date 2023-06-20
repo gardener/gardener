@@ -439,6 +439,7 @@ rules:
   - machine.sapcloud.io
   resources:
   - machinedeployments
+  - machines
   verbs:
   - list
   - watch
