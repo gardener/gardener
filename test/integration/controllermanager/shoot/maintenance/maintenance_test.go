@@ -35,7 +35,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 	var (
 		cloudProfile *gardencorev1beta1.CloudProfile
 		shoot        *gardencorev1beta1.Shoot
-		shoot_126    *gardencorev1beta1.Shoot
+		shoot126     *gardencorev1beta1.Shoot
 
 		// Test Machine Image
 		machineImageName                = "foo-image"
@@ -194,7 +194,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			},
 		}
 
-		shoot_126 = shoot.DeepCopy()
+		shoot126 = shoot.DeepCopy()
 		// set dummy kubernetes version to shoot
 		shoot.Spec.Kubernetes.Version = testKubernetesVersionLowPatchLowMinor.Version
 
@@ -388,18 +388,19 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 	Describe("Kubernetes version maintenance tests", func() {
 		BeforeEach(func() {
-			shoot_126.Spec.Kubernetes.Version = "1.26.0"
-			shoot_126.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.BoolPtr(true)
+			shoot126.Spec.Kubernetes.Version = "1.26.0"
+			shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.BoolPtr(true)
 
 			By("Create k8s v1.26 Shoot")
-			Expect(testClient.Create(ctx, shoot_126)).To(Succeed())
+			Expect(testClient.Create(ctx, shoot126)).To(Succeed())
 			log.Info("Created shoot with k8s v1.26 for test", "shoot", client.ObjectKeyFromObject(shoot))
 
 			DeferCleanup(func() {
 				By("Delete Shoot with k8s v1.26")
-				Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot_126))).To(Succeed())
+				Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot126))).To(Succeed())
 			})
 		})
+
 		Context("Shoot with worker", func() {
 			It("Kubernetes version should not be updated: auto update not enabled", func() {
 				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
@@ -453,23 +454,23 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 			It("Kubernetes version should be updated: force update patch version(>= v1.27) and set EnableStaticTokenKubeconfig value to false", func() {
 				By("Expire Shoot's kubernetes version in the CloudProfile")
-				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, shoot_126.Spec.CloudProfileName, "1.26.0", &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
+				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, shoot126.Spec.CloudProfileName, "1.26.0", &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
 
 				By("Wait until manager has observed the CloudProfile update")
-				waitKubernetesVersionToBeExpiredInCloudProfile(shoot_126.Spec.CloudProfileName, "1.26.0", &expirationDateInThePast)
+				waitKubernetesVersionToBeExpiredInCloudProfile(shoot126.Spec.CloudProfileName, "1.26.0", &expirationDateInThePast)
 
-				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot_126, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
+				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot126, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
 				Eventually(func(g Gomega) string {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot_126), shoot_126)).To(Succeed())
-					g.Expect(shoot_126.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(*shoot_126.Status.LastMaintenance).To(Equal(gardencorev1beta1.LastMaintenance{
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot126), shoot126)).To(Succeed())
+					g.Expect(shoot126.Status.LastMaintenance).NotTo(BeNil())
+					g.Expect(*shoot126.Status.LastMaintenance).To(Equal(gardencorev1beta1.LastMaintenance{
 						Description:   "For \"Control Plane\": Kubernetes version upgraded \"1.26.0\" to version \"1.27.0\". Reason: Kubernetes version expired - force update required",
 						TriggeredTime: metav1.Time{Time: fakeClock.Now()},
 						State:         gardencorev1beta1.LastOperationStateSucceeded,
 					}))
-					g.Expect(shoot_126.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(Equal(pointer.BoolPtr(false)))
-					return shoot_126.Spec.Kubernetes.Version
+					g.Expect(shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(Equal(pointer.BoolPtr(false)))
+					return shoot126.Spec.Kubernetes.Version
 				}).Should(Equal("1.27.0"))
 			})
 
@@ -709,23 +710,23 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 			It("Kubernetes version should be updated: force update patch version(>= v1.27) and set EnableStaticTokenKubeconfig value to false", func() {
 				By("Expire Shoot's kubernetes version in the CloudProfile")
-				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, shoot_126.Spec.CloudProfileName, "1.26.0", &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
+				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, shoot126.Spec.CloudProfileName, "1.26.0", &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
 
 				By("Wait until manager has observed the CloudProfile update")
-				waitKubernetesVersionToBeExpiredInCloudProfile(shoot_126.Spec.CloudProfileName, "1.26.0", &expirationDateInThePast)
+				waitKubernetesVersionToBeExpiredInCloudProfile(shoot126.Spec.CloudProfileName, "1.26.0", &expirationDateInThePast)
 
-				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot_126, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
+				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot126, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
 
 				Eventually(func(g Gomega) string {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot_126), shoot_126)).To(Succeed())
-					g.Expect(shoot_126.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(*shoot_126.Status.LastMaintenance).To(Equal(gardencorev1beta1.LastMaintenance{
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot126), shoot126)).To(Succeed())
+					g.Expect(shoot126.Status.LastMaintenance).NotTo(BeNil())
+					g.Expect(*shoot126.Status.LastMaintenance).To(Equal(gardencorev1beta1.LastMaintenance{
 						Description:   "For \"Control Plane\": Kubernetes version upgraded \"1.26.0\" to version \"1.27.0\". Reason: Kubernetes version expired - force update required",
 						TriggeredTime: metav1.Time{Time: fakeClock.Now()},
 						State:         gardencorev1beta1.LastOperationStateSucceeded,
 					}))
-					g.Expect(shoot_126.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(Equal(pointer.BoolPtr(false)))
-					return shoot_126.Spec.Kubernetes.Version
+					g.Expect(shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(Equal(pointer.BoolPtr(false)))
+					return shoot126.Spec.Kubernetes.Version
 				}).Should(Equal("1.27.0"))
 			})
 		})
