@@ -118,6 +118,12 @@ var _ = Describe("admissionplugins", func() {
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
 				"Detail": Equal("forbidden admission plugin was specified - do not use plugins from the following list: [SecurityContextDeny]"),
 			})))),
+			Entry("adding kubeconfig secret to admission plugin not supporting external kubeconfig", []core.AdmissionPlugin{{Name: "TaintNodesByCondition", KubeconfigSecretName: pointer.String("test-secret")}}, "1.18.4", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal(field.NewPath("admissionPlugins[0].kubeconfigSecretName").String()),
+				"Detail": Equal("admission plugin \"TaintNodesByCondition\" doesn't support specifying external kubeconfig"),
+			})))),
+			Entry("adding kubeconfig secret to admission plugin supporting external kubeconfig", []core.AdmissionPlugin{{Name: "ValidatingAdmissionWebhook", KubeconfigSecretName: pointer.String("test-secret")}}, "1.18.4", BeEmpty()),
 		)
 
 		Describe("validate PodSecurity admissionPlugin config", func() {
@@ -260,11 +266,10 @@ exemptions:
 					}))))
 				})
 
-				It("should not return an error when kubeconfig secret is provided with valid configuration", func() {
+				It("should not return an error with valid configuration", func() {
 					Expect(ValidateAdmissionPlugins([]core.AdmissionPlugin{
 						{
-							Name:                 "PodSecurity",
-							KubeconfigSecretName: pointer.String("foo"),
+							Name: "PodSecurity",
 						},
 					},
 						"v1.24.8",

@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	admissionapiv1 "k8s.io/pod-security-admission/admission/api/v1"
 	admissionapiv1alpha1 "k8s.io/pod-security-admission/admission/api/v1alpha1"
@@ -81,6 +82,8 @@ var (
 		"ValidatingAdmissionPolicy":            {AddedInVersion: "1.26"},
 		"ValidatingAdmissionWebhook":           {Required: true},
 	}
+
+	admissionPluginsSupportingExternalKubeconfig = sets.New("ValidatingAdmissionWebhook", "MutatingAdmissionWebhook", "ImagePolicyWebhook")
 
 	runtimeScheme *runtime.Scheme
 	codec         runtime.Codec
@@ -177,6 +180,9 @@ func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version s
 			}
 			if pointer.BoolDeref(plugin.Disabled, false) && admissionPluginsVersionRanges[plugin.Name].Required {
 				allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("admission plugin %q cannot be disabled", plugin.Name)))
+			}
+			if plugin.KubeconfigSecretName != nil && !admissionPluginsSupportingExternalKubeconfig.Has(plugin.Name) {
+				allErrs = append(allErrs, field.Forbidden(idxPath.Child("kubeconfigSecretName"), fmt.Sprintf("admission plugin %q doesn't support specifying external kubeconfig", plugin.Name)))
 			}
 			if err := validateAdmissionPluginConfig(plugin, version, idxPath); err != nil {
 				allErrs = append(allErrs, err)
