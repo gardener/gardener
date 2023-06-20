@@ -414,19 +414,19 @@ func (a *actuator) Delete(
 		return fmt.Errorf("failed to create secrets manager for ControlPlane: %w", err)
 	}
 
-	if err := a.delete(ctx, log, cp); err != nil {
+	if err := a.delete(ctx, log, cp, cluster); err != nil {
 		return err
 	}
 
 	return sm.Cleanup(ctx)
 }
 
-func (a *actuator) delete(ctx context.Context, log logr.Logger, cp *extensionsv1alpha1.ControlPlane) error {
+func (a *actuator) delete(ctx context.Context, log logr.Logger, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) error {
 	if cp.Spec.Purpose != nil && *cp.Spec.Purpose == extensionsv1alpha1.Exposure {
 		return a.deleteControlPlaneExposure(ctx, log, cp)
 	}
 
-	return a.deleteControlPlane(ctx, log, cp)
+	return a.deleteControlPlane(ctx, log, cp, cluster)
 }
 
 // deleteControlPlaneExposure reconciles the given controlplane and cluster, deleting the additional Seed
@@ -461,7 +461,22 @@ func (a *actuator) deleteControlPlane(
 	ctx context.Context,
 	log logr.Logger,
 	cp *extensionsv1alpha1.ControlPlane,
+	cluster *extensionscontroller.Cluster,
 ) error {
+	// Get config chart values
+	if a.configChart != nil {
+		values, err := a.vp.GetConfigChartValues(ctx, cp, cluster)
+		if err != nil {
+			return fmt.Errorf("failed to get configuration chart values before deletion of controlplane %s: %w", kubernetesutils.ObjectName(cp), err)
+		}
+
+		// Apply config chart
+		log.Info("Applying configuration chart before deletion")
+		if err := a.configChart.Apply(ctx, a.chartApplier, cp.Namespace, nil, "", "", values); err != nil {
+			return fmt.Errorf("could not apply configuration chart before deletion of controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
+		}
+	}
+
 	// Delete the managed resources
 	if err := managedresources.Delete(ctx, a.client, cp.Namespace, StorageClassesChartResourceName, false); err != nil {
 		return fmt.Errorf("could not delete managed resource containing storage classes chart for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
@@ -605,7 +620,7 @@ func (a *actuator) Migrate(
 		return fmt.Errorf("could not keep objects of managed resource containing storage classes chart for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 	}
 
-	return a.delete(ctx, log, cp)
+	return a.delete(ctx, log, cp, cluster)
 }
 
 func (a *actuator) newSecretsManagerForControlPlane(ctx context.Context, log logr.Logger, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster, secretConfigs []extensionssecretsmanager.SecretConfigWithOptions) (secretsmanager.Interface, error) {
