@@ -421,7 +421,7 @@ images:
 - name: vali
   sourceRepository: github.com/credativ/vali
   repository: ghcr.io/credativ/vali
-  tag: "v2.2.5"
+  tag: "v2.2.6"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -473,7 +473,7 @@ images:
 - name: valitail
   sourceRepository: github.com/credativ/vali
   repository: ghcr.io/credativ/valitail
-  tag: "v2.2.5"
+  tag: "v2.2.6"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
