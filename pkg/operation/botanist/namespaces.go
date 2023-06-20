@@ -112,6 +112,11 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 			}
 
 			for _, pvc := range pvcList.Items {
+				// Skip handling if PV has not been created yet.
+				if pvc.Spec.VolumeName == "" {
+					continue
+				}
+
 				pv := &corev1.PersistentVolume{}
 				if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: pvc.Spec.VolumeName}, pv); err != nil {
 					return fmt.Errorf("failed getting PV %s: %w", pvc.Spec.VolumeName, err)
