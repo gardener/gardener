@@ -38,14 +38,14 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			}
 			f.Shoot = shoot
 
-			ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
+			ctx, cancel := context.WithTimeout(parentCtx, 2*time.Minute)
 			defer cancel()
 
 			Expect(f.GardenClient.Client().Create(ctx, shoot)).To(Succeed())
 
-			By("Wait until Shoot is set to Failed")
+			By("Wait until last operation in Shoot is set to Failed")
 			Eventually(func(g Gomega) {
-				f.GetShoot(ctx, shoot)
+				g.Expect(f.GetShoot(ctx, shoot)).To(Succeed())
 				g.Expect(shoot.Status.LastOperation).ToNot(BeNil())
 				g.Expect(shoot.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateFailed))
 			}).WithTimeout(1 * time.Minute).Should(Succeed())

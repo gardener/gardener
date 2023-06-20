@@ -197,8 +197,8 @@ func (r *Reconciler) deleteShoot(ctx context.Context, log logr.Logger, shoot *ga
 	log = log.WithValues("operation", "delete")
 
 	// If the .status.uid field is empty, then we assume that there has never been any operation running for this shoot.
-	// Gardenlet can directly finalize the shoot deletion since not resources need to be cleaned up.
-	// This shortcut also allows users to delete shoot clusters that were wrongly configured in the first place, e.g. https://github.com/gardener/gardener/issues/1926.
+	// Gardenlet can directly finalize the shoot deletion since no resources need to be cleaned up.
+	// This shortcut also allows users to delete shoot clusters that were wrongly configured in the first place, e.g. see https://github.com/gardener/gardener/issues/1926.
 	if len(shoot.Status.UID) == 0 {
 		log.Info("The `.status.uid` is empty, assuming Shoot cluster did never exist, deletion accepted")
 		return r.finalizeShootDeletion(ctx, log, shoot)
