@@ -7,7 +7,7 @@ metadata:
     networking.resources.gardener.cloud/from-world-to-ports: '[{"protocol":"TCP","port":{{ .Values.webhookConfig.serverPort }}}]'
     networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports: '[{"port":{{ .Values.metricsPort }},"protocol":"TCP"}]'
     networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports: '[{"protocol":"TCP","port":{{ .Values.webhookConfig.serverPort }}}]'
-    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}},{"matchLabels":{"kubernetes.io/metadata.name":"shoot"}}]'
+    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}},{"matchLabels":{"gardener.cloud/role":"shoot"}}]'
     networking.resources.gardener.cloud/pod-label-selector-namespace-alias: extensions
 {{-  if .Values.ignoreResources }}
     resources.gardener.cloud/ignore: "true"
