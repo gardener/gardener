@@ -253,6 +253,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		secretBinding: secretBinding,
 		shoot:         shoot,
 		oldShoot:      oldShoot,
+		operation:     a.GetOperation(),
 	}
 
 	if err := validationContext.validateProjectMembership(a); err != nil {
@@ -302,6 +303,7 @@ type validationContext struct {
 	secretBinding *core.SecretBinding
 	shoot         *core.Shoot
 	oldShoot      *core.Shoot
+	operation     admission.Operation
 }
 
 func (c *validationContext) validateProjectMembership(a admission.Attributes) error {
@@ -655,20 +657,20 @@ func (c *validationContext) validateShootNetworks(workerless bool) field.ErrorLi
 				c.shoot.Spec.Networking.Services,
 				workerless,
 			)...)
+		}
 
-			// validate network disjointedness with seed networks if shoot is being (re)scheduled
-			if !apiequality.Semantic.DeepEqual(c.oldShoot.Spec.SeedName, c.shoot.Spec.SeedName) {
-				allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
-					path,
-					c.shoot.Spec.Networking.Nodes,
-					c.shoot.Spec.Networking.Pods,
-					c.shoot.Spec.Networking.Services,
-					c.seed.Spec.Networks.Nodes,
-					c.seed.Spec.Networks.Pods,
-					c.seed.Spec.Networks.Services,
-					workerless,
-				)...)
-			}
+		// validate network disjointedness with seed networks if shoot is being (re)scheduled
+		if c.operation != admission.Delete && !apiequality.Semantic.DeepEqual(c.oldShoot.Spec.SeedName, c.shoot.Spec.SeedName) {
+			allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
+				path,
+				c.shoot.Spec.Networking.Nodes,
+				c.shoot.Spec.Networking.Pods,
+				c.shoot.Spec.Networking.Services,
+				c.seed.Spec.Networks.Nodes,
+				c.seed.Spec.Networks.Pods,
+				c.seed.Spec.Networks.Services,
+				workerless,
+			)...)
 		}
 	}
 
