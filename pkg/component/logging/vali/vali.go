@@ -53,7 +53,7 @@ import (
 )
 
 const (
-	// ManagedResourceControlName is the name of the Vali managed resource for seeds.
+	// ManagedResourceControlName is the name of the Vali managed resource.
 	ManagedResourceControlName = "vali"
 
 	valiName                = "vali"
