@@ -452,7 +452,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				}).Should(Equal(testKubernetesVersionHighestPatchLowMinor.Version))
 			})
 
-			It("Kubernetes version should be updated: force update patch version(>= v1.27) and set EnableStaticTokenKubeconfig value to false", func() {
+			It("Kubernetes version should be updated: force update minor version(>= v1.27) and set EnableStaticTokenKubeconfig value to false", func() {
 				By("Expire Shoot's kubernetes version in the CloudProfile")
 				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, shoot126.Spec.CloudProfileName, "1.26.0", &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
 
@@ -465,7 +465,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot126), shoot126)).To(Succeed())
 					g.Expect(shoot126.Status.LastMaintenance).NotTo(BeNil())
 					g.Expect(*shoot126.Status.LastMaintenance).To(Equal(gardencorev1beta1.LastMaintenance{
-						Description:   "For \"Control Plane\": Kubernetes version upgraded \"1.26.0\" to version \"1.27.0\". Reason: Kubernetes version expired - force update required",
+						Description: "EnableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27 and higher" + ", " +
+							"For \"Control Plane\": Kubernetes version upgraded \"1.26.0\" to version \"1.27.0\". Reason: Kubernetes version expired - force update required",
 						TriggeredTime: metav1.Time{Time: fakeClock.Now()},
 						State:         gardencorev1beta1.LastOperationStateSucceeded,
 					}))
@@ -708,7 +709,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				}).Should(Equal(testKubernetesVersionHighestPatchConsecutiveMinor.Version))
 			})
 
-			It("Kubernetes version should be updated: force update patch version(>= v1.27) and set EnableStaticTokenKubeconfig value to false", func() {
+			It("Kubernetes version should be updated: force update minor version(>= v1.27) and set EnableStaticTokenKubeconfig value to false", func() {
 				By("Expire Shoot's kubernetes version in the CloudProfile")
 				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, shoot126.Spec.CloudProfileName, "1.26.0", &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
 
@@ -721,7 +722,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot126), shoot126)).To(Succeed())
 					g.Expect(shoot126.Status.LastMaintenance).NotTo(BeNil())
 					g.Expect(*shoot126.Status.LastMaintenance).To(Equal(gardencorev1beta1.LastMaintenance{
-						Description:   "For \"Control Plane\": Kubernetes version upgraded \"1.26.0\" to version \"1.27.0\". Reason: Kubernetes version expired - force update required",
+						Description: "EnableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27 and higher" + ", " +
+							"For \"Control Plane\": Kubernetes version upgraded \"1.26.0\" to version \"1.27.0\". Reason: Kubernetes version expired - force update required",
 						TriggeredTime: metav1.Time{Time: fakeClock.Now()},
 						State:         gardencorev1beta1.LastOperationStateSucceeded,
 					}))
