@@ -227,15 +227,14 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 		initialDelaySecondsReadinessProbe = 40
 
-		// We don't call kubernetesutils.MakeUnique() if the cluster is shoot here because the provider-aws extension
-		// needs to mutate it and the name is hard-coded. See https://github.com/gardener/gardener/pull/7386 for more details.
+		// We don't call kubernetesutils.MakeUnique() here if the cluster is shoot, because extensions might need
+		// to mutate it and the name is hard-coded. See https://github.com/gardener/gardener/pull/7386 for more details.
 		utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 	}
 
 	if n.values.ClusterType == component.ClusterTypeShoot {
 		serviceAccount.Labels = utils.MergeStringMaps[string](serviceAccount.Labels, map[string]string{
-			labelKeyRelease:                   labelValueAddons,
-			"addonmanager.kubernetes.io/mode": "Reconcile",
+			labelKeyRelease: labelValueAddons,
 		})
 		serviceAnnotations = map[string]string{"service.beta.kubernetes.io/aws-load-balancer-proxy-protocol": "*"}
 		nodeSelector = map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"}

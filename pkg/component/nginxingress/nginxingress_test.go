@@ -672,7 +672,6 @@ kind: ServiceAccount
 metadata:
   creationTimestamp: null
   labels:
-    addonmanager.kubernetes.io/mode: Reconcile
     app: nginx-ingress
     release: addons
   name: addons-nginx-ingress
@@ -1170,7 +1169,7 @@ status: {}
 			values = Values{
 				ClusterType:              component.ClusterTypeShoot,
 				TargetNamespace:          metav1.NamespaceSystem,
-				IngressClass:             v1beta1constants.NginxIngressClass,
+				IngressClass:             v1beta1constants.ShootNginxIngressClass,
 				PriorityClassName:        v1beta1constants.PriorityClassNameShootSystem600,
 				ImageController:          imageController,
 				ImageDefaultBackend:      imageDefaultBackend,
