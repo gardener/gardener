@@ -175,7 +175,7 @@ func ValidateProjectMember(member core.ProjectMember, fldPath *field.Path) field
 
 	allErrs = append(allErrs, ValidateSubject(member.Subject, fldPath)...)
 
-	foundRoles := map[string]struct{}{}
+	foundRoles := make(map[string]struct{}, len(member.Roles))
 	for i, role := range member.Roles {
 		rolesPath := fldPath.Child("roles").Index(i)
 

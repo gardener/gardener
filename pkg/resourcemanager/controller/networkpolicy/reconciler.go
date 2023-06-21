@@ -267,7 +267,7 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, service *core
 }
 
 func (r *Reconciler) deleteStalePolicies(networkPolicyList *metav1.PartialObjectMetadataList, desiredObjectMetaKeys []string) []flow.TaskFn {
-	objectMetaKeysForDesiredPolicies := make(map[string]struct{})
+	objectMetaKeysForDesiredPolicies := make(map[string]struct{}, len(desiredObjectMetaKeys))
 	for _, objectMetaKey := range desiredObjectMetaKeys {
 		objectMetaKeysForDesiredPolicies[objectMetaKey] = struct{}{}
 	}

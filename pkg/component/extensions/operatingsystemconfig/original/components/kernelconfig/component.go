@@ -40,7 +40,7 @@ func (component) Name() string {
 }
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-	var newData = map[string]string{}
+	var newData = make(map[string]string, len(data))
 
 	for key, value := range data {
 		newData[key] = value

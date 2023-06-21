@@ -77,7 +77,7 @@ func convertToUserInfoExtra(extra map[string]authorizationv1.ExtraValue) map[str
 	if extra == nil {
 		return nil
 	}
-	ret := map[string][]string{}
+	ret := make(map[string][]string, len(extra))
 	for k, v := range extra {
 		ret[k] = v
 	}

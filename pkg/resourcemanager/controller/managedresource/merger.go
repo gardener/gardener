@@ -415,7 +415,7 @@ func mergeServiceAccount(scheme *runtime.Scheme, oldObj, newObj runtime.Object) 
 // It takes an optional map of old desired values and removes any keys/values from the resulting map
 // that were once desired (part of `old`) but are not desired anymore.
 func mergeMapsBasedOnOldMap(desired, current, old map[string]string) map[string]string {
-	out := map[string]string{}
+	out := make(map[string]string, len(current))
 	// use current as base
 	for k, v := range current {
 		out[k] = v

@@ -254,7 +254,7 @@ func (t *ShootMigrationTest) GetPersistedSecrets(ctx context.Context, seedClient
 		return nil, err
 	}
 
-	secretsMap := map[string]corev1.Secret{}
+	secretsMap := make(map[string]corev1.Secret, len(secretList.Items))
 	for _, secret := range secretList.Items {
 		secretsMap[secret.Name] = secret
 	}

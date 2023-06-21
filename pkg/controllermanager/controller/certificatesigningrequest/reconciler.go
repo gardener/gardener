@@ -55,7 +55,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 		isInFinalState bool
 		finalState     string
-		extra          = make(map[string]authorizationv1.ExtraValue)
 	)
 
 	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
@@ -77,6 +76,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 	}
 
+	extra := make(map[string]authorizationv1.ExtraValue, len(csr.Spec.Extra))
 	for k, v := range csr.Spec.Extra {
 		extra[k] = authorizationv1.ExtraValue(v)
 	}

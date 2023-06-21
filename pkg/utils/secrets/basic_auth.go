@@ -80,7 +80,7 @@ func (s *BasicAuthSecretConfig) Generate() (DataInterface, error) {
 
 // SecretData computes the data map which can be used in a Kubernetes secret.
 func (b *BasicAuth) SecretData() map[string][]byte {
-	data := map[string][]byte{}
+	data := make(map[string][]byte, 3)
 
 	data[DataKeyUserName] = []byte(b.Username)
 	data[DataKeyPassword] = []byte(b.Password)

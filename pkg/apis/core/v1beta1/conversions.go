@@ -120,7 +120,7 @@ func Convert_v1beta1_InternalSecret_To_core_InternalSecret(in *InternalSecret, o
 	// StringData overwrites Data
 	if len(in.StringData) > 0 {
 		if out.Data == nil {
-			out.Data = map[string][]byte{}
+			out.Data = make(map[string][]byte, len(in.StringData))
 		}
 		for k, v := range in.StringData {
 			out.Data[k] = []byte(v)

@@ -22,7 +22,7 @@ import (
 
 // MergeSecretMaps merges the 2 given secret maps.
 func MergeSecretMaps(a, b map[string]*corev1.Secret) map[string]*corev1.Secret {
-	x := make(map[string]*corev1.Secret)
+	x := make(map[string]*corev1.Secret, len(a))
 	for _, m := range []map[string]*corev1.Secret{a, b} {
 		for k, v := range m {
 			x[k] = v
