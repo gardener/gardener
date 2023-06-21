@@ -132,9 +132,7 @@ var _ = BeforeSuite(func() {
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
 		Cache: cache.Options{
-			DefaultSelector: cache.ObjectSelector{
-				Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
-			},
+			DefaultLabelSelector: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())

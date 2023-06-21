@@ -119,9 +119,7 @@ var _ = BeforeSuite(func() {
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
 		Cache: cache.Options{
-			DefaultSelector: cache.ObjectSelector{
-				Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
-			},
+			DefaultLabelSelector: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
