@@ -71,6 +71,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // Name is a const for the name of this component.
@@ -350,6 +351,12 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
+	// TODO(rfranzke): Remove this code after v1.74 has been released.
+	log.Info("Removing legacy ShootState controller finalizer from persistable secrets in seed cluster")
+	if err := removeLegacyShootStateControllerFinalizerFromSecrets(ctx, g.mgr.GetClient()); err != nil {
+		return err
+	}
+
 	log.Info("Setting up shoot client map")
 	shootClientMap, err := clientmapbuilder.
 		NewShootClientMapBuilder().
@@ -468,6 +475,32 @@ func (g *garden) updateProcessingShootStatusToAborted(ctx context.Context, garde
 				return fmt.Errorf("failed to set status to 'Aborted' for shoot %q: %w", client.ObjectKeyFromObject(&shoot), err)
 			}
 
+			return nil
+		})
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
+}
+
+func removeLegacyShootStateControllerFinalizerFromSecrets(ctx context.Context, seedClient client.Client) error {
+	secretList := &metav1.PartialObjectMetadataList{}
+	secretList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("SecretList"))
+	if err := seedClient.List(ctx, secretList, client.MatchingLabels{
+		secretsmanager.LabelKeyManagedBy: secretsmanager.LabelValueSecretsManager,
+		secretsmanager.LabelKeyPersist:   secretsmanager.LabelValueTrue,
+	}); err != nil {
+		return fmt.Errorf("failed listing all secrets that must be persisted: %w", err)
+	}
+
+	var taskFns []flow.TaskFn
+
+	for _, s := range secretList.Items {
+		secret := s
+
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			if err := controllerutils.RemoveFinalizers(ctx, seedClient, &secret, "gardenlet.gardener.cloud/secret-controller"); err != nil {
+				return fmt.Errorf("failed to remove legacy ShootState controller finalizer from secret %q: %w", client.ObjectKeyFromObject(&secret), err)
+			}
 			return nil
 		})
 	}
