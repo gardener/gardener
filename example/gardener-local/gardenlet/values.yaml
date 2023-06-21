@@ -32,6 +32,8 @@ config:
   controllers:
     shoot:
       reconcileInMaintenanceOnly: true
+    shootState:
+      concurrentSyncs: 0 # we don't need the shootstate controller locally, and enabling it would even distort the results of CPM e2e tests
   featureGates:
     HVPA: true
     HVPAForShootedSeed: true
