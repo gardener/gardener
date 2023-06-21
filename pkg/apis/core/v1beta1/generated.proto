@@ -3017,17 +3017,21 @@ message Worker {
   // Machine contains information about the machine type and image.
   optional Machine machine = 7;
 
-  // Maximum is the maximum number of VMs to create.
+  // Maximum is the maximum number of machines to create.
+  // This value is divided by the number of configured zones for a fair distribution.
   optional int32 maximum = 8;
 
-  // Minimum is the minimum number of VMs to create.
+  // Minimum is the minimum number of machines to create.
+  // This value is divided by the number of configured zones for a fair distribution.
   optional int32 minimum = 9;
 
-  // MaxSurge is maximum number of VMs that are created during an update.
+  // MaxSurge is maximum number of machines that are created during an update.
+  // This value is divided by the number of configured zones for a fair distribution.
   // +optional
   optional k8s.io.apimachinery.pkg.util.intstr.IntOrString maxSurge = 10;
 
-  // MaxUnavailable is the maximum number of VMs that can be unavailable during an update.
+  // MaxUnavailable is the maximum number of machines that can be unavailable during an update.
+  // This value is divided by the number of configured zones for a fair distribution.
   // +optional
   optional k8s.io.apimachinery.pkg.util.intstr.IntOrString maxUnavailable = 11;
 
@@ -3064,7 +3068,7 @@ message Worker {
   // +optional
   optional MachineControllerManagerSettings machineControllerManager = 19;
 
-  // Sysctls is a map of kernel settings to apply on all VMs in this worker pool.
+  // Sysctls is a map of kernel settings to apply on all machines in this worker pool.
   // +optional
   map<string, string> sysctls = 20;
 }

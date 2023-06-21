@@ -12113,7 +12113,8 @@ int32
 </em>
 </td>
 <td>
-<p>Maximum is the maximum number of VMs to create.</p>
+<p>Maximum is the maximum number of machines to create.
+This value is divided by the number of configured zones for a fair distribution.</p>
 </td>
 </tr>
 <tr>
@@ -12124,7 +12125,8 @@ int32
 </em>
 </td>
 <td>
-<p>Minimum is the minimum number of VMs to create.</p>
+<p>Minimum is the minimum number of machines to create.
+This value is divided by the number of configured zones for a fair distribution.</p>
 </td>
 </tr>
 <tr>
@@ -12138,7 +12140,8 @@ k8s.io/apimachinery/pkg/util/intstr.IntOrString
 </td>
 <td>
 <em>(Optional)</em>
-<p>MaxSurge is maximum number of VMs that are created during an update.</p>
+<p>MaxSurge is maximum number of machines that are created during an update.
+This value is divided by the number of configured zones for a fair distribution.</p>
 </td>
 </tr>
 <tr>
@@ -12152,7 +12155,8 @@ k8s.io/apimachinery/pkg/util/intstr.IntOrString
 </td>
 <td>
 <em>(Optional)</em>
-<p>MaxUnavailable is the maximum number of VMs that can be unavailable during an update.</p>
+<p>MaxUnavailable is the maximum number of machines that can be unavailable during an update.
+This value is divided by the number of configured zones for a fair distribution.</p>
 </td>
 </tr>
 <tr>
@@ -12273,7 +12277,7 @@ map[string]string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Sysctls is a map of kernel settings to apply on all VMs in this worker pool.</p>
+<p>Sysctls is a map of kernel settings to apply on all machines in this worker pool.</p>
 </td>
 </tr>
 </tbody>

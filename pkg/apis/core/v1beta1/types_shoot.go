@@ -1348,14 +1348,18 @@ type Worker struct {
 	Name string `json:"name" protobuf:"bytes,6,opt,name=name"`
 	// Machine contains information about the machine type and image.
 	Machine Machine `json:"machine" protobuf:"bytes,7,opt,name=machine"`
-	// Maximum is the maximum number of VMs to create.
+	// Maximum is the maximum number of machines to create.
+	// This value is divided by the number of configured zones for a fair distribution.
 	Maximum int32 `json:"maximum" protobuf:"varint,8,opt,name=maximum"`
-	// Minimum is the minimum number of VMs to create.
+	// Minimum is the minimum number of machines to create.
+	// This value is divided by the number of configured zones for a fair distribution.
 	Minimum int32 `json:"minimum" protobuf:"varint,9,opt,name=minimum"`
-	// MaxSurge is maximum number of VMs that are created during an update.
+	// MaxSurge is maximum number of machines that are created during an update.
+	// This value is divided by the number of configured zones for a fair distribution.
 	// +optional
 	MaxSurge *intstr.IntOrString `json:"maxSurge,omitempty" protobuf:"bytes,10,opt,name=maxSurge"`
-	// MaxUnavailable is the maximum number of VMs that can be unavailable during an update.
+	// MaxUnavailable is the maximum number of machines that can be unavailable during an update.
+	// This value is divided by the number of configured zones for a fair distribution.
 	// +optional
 	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty" protobuf:"bytes,11,opt,name=maxUnavailable"`
 	// ProviderConfig is the provider-specific configuration for this worker pool.
@@ -1383,7 +1387,7 @@ type Worker struct {
 	// MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
 	// +optional
 	MachineControllerManagerSettings *MachineControllerManagerSettings `json:"machineControllerManager,omitempty" protobuf:"bytes,19,opt,name=machineControllerManager"`
-	// Sysctls is a map of kernel settings to apply on all VMs in this worker pool.
+	// Sysctls is a map of kernel settings to apply on all machines in this worker pool.
 	// +optional
 	Sysctls map[string]string `json:"sysctls,omitempty" protobuf:"bytes,20,rep,name=sysctls"`
 }
