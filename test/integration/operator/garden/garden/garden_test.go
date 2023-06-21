@@ -121,14 +121,14 @@ var _ = Describe("Garden controller tests", func() {
 		mgr, err := manager.New(restConfig, manager.Options{
 			Scheme:             operatorclient.RuntimeScheme,
 			MetricsBindAddress: "0",
-			NewCache: cache.BuilderWithOptions(cache.Options{
+			Cache: cache.Options{
 				Mapper: mapper,
 				ByObject: map[client.Object]cache.ByObject{
 					&operatorv1alpha1.Garden{}: {
 						Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 					},
 				},
-			}),
+			},
 			ClientDisableCacheFor: []client.Object{
 				&corev1.Secret{}, // applied because of operations on managed resources and their secrets
 			},

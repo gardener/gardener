@@ -103,13 +103,13 @@ var _ = BeforeSuite(func() {
 	mgr, err := manager.New(restConfig, manager.Options{
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
-		NewCache: cache.BuilderWithOptions(cache.Options{
+		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
 				&corev1.Node{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
 			},
-		}),
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()

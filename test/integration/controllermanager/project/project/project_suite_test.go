@@ -99,13 +99,13 @@ var _ = BeforeSuite(func() {
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
-		NewCache: cache.BuilderWithOptions(cache.Options{
+		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
 				&gardencorev1beta1.Project{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
 			},
-		}),
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()

@@ -123,13 +123,13 @@ func run(ctx context.Context, log logr.Logger, cfg *config.SchedulerConfiguratio
 		HealthProbeBindAddress: net.JoinHostPort(cfg.Server.HealthProbes.BindAddress, strconv.Itoa(cfg.Server.HealthProbes.Port)),
 		MetricsBindAddress:     net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
 
-		NewCache: cache.BuilderWithOptions(cache.Options{
+		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
 				&corev1.ConfigMap{}: {
 					Label: labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.SchedulingPurpose, selection.Equals, v1beta1constants.SchedulingPurposeRegionConfig)),
 				},
 			},
-		}),
+		},
 		LeaderElection:                cfg.LeaderElection.LeaderElect,
 		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,
 		LeaderElectionID:              cfg.LeaderElection.ResourceName,

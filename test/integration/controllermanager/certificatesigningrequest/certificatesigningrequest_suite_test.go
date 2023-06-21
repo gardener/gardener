@@ -107,13 +107,13 @@ var _ = BeforeSuite(func() {
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
-		NewCache: cache.BuilderWithOptions(cache.Options{
+		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
 				&certificatesv1.CertificateSigningRequest{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
 			},
-		}),
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 

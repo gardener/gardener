@@ -93,7 +93,7 @@ var _ = Describe("Seed controller tests", func() {
 		mgr, err := manager.New(restConfig, manager.Options{
 			Scheme:             testScheme,
 			MetricsBindAddress: "0",
-			NewCache: cache.BuilderWithOptions(cache.Options{
+			Cache: cache.Options{
 				Mapper: mapper,
 				ByObject: map[client.Object]cache.ByObject{
 					&gardencorev1beta1.Seed{}: {
@@ -103,7 +103,7 @@ var _ = Describe("Seed controller tests", func() {
 						Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 					},
 				},
-			}),
+			},
 		})
 		Expect(err).NotTo(HaveOccurred())
 		mgrClient = mgr.GetClient()

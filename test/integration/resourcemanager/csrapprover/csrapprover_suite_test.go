@@ -131,11 +131,11 @@ var _ = BeforeSuite(func() {
 		Scheme:             resourcemanagerclient.CombinedScheme,
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
-		NewCache: cache.BuilderWithOptions(cache.Options{
+		Cache: cache.Options{
 			DefaultSelector: cache.ObjectSelector{
 				Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 			},
-		}),
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
