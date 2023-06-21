@@ -1554,6 +1554,24 @@ var _ = Describe("validator", func() {
 					Expect(err).To(BeForbiddenError())
 				})
 
+				It("delete should pass because validation of network disjointedness should not be executed", func() {
+					// set shoot pod cidr to overlap with vpn pod cidr
+					shoot.Spec.Networking.Pods = pointer.String(v1beta1constants.DefaultVPNRange)
+					deletionTimestamp := metav1.NewTime(time.Now())
+					shoot.DeletionTimestamp = &deletionTimestamp
+					oldShoot = &core.Shoot{}
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(nil, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).ToNot(HaveOccurred())
+				})
+
 				It("should reject because shoot pods network is missing", func() {
 					shoot.Spec.Networking.Pods = nil
 
