@@ -283,7 +283,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, waitUntilKubeAPIServerIsReady, deployInternalDomainDNSRecord, waitUntilControlPlaneExposureReady, deployGardenerAccess),
 		})
 
-		// Redeploy the worker extensions, and kube-controller-manager to make sure all components that depend on the
+		// Redeploy kube-controller-manager to make sure all components that depend on the
 		// cloud provider secret are restarted in case it has changed.
 		deployKubeControllerManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes controller manager",
