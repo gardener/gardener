@@ -57,7 +57,7 @@ Prefer regions with at least 2, better 3+ zones and list the zones in the `zones
 - Primary/Secondary-based software components need just 2 zones to tolerate the outage of 1 zone.
 - Then there are software components that can scale out horizontally. They are probably fine with 2 zones, but you also need to think about the load-shift and that the remaining zone must then pick up the work of the unhealthy zone. With 2 zones, the remaining zone must cope with an increase of 100% load. With 3 zones, the remaining zones must only cope with an increase of 50% load (per zone).
 
-In general, the question is also whether you have the fail-over capacity already up and running or not. If not, i.e. you depend on re-scheduling to a healthy zone or auto-scaling, be aware that during a zone outage, you will see a resource crunch in the healthy zones. If you have no automation, i.e. only human operators (a.k.a. "red button approach"), you probably will not get the machines you need and even with automation, it may be tricky. But holding the capacity available at all times is costly. In the end, that's a decision only you can make. If you made that decision, please adapt the `minimum` and `maximum` settings for your worker pools accordingly.
+In general, the question is also whether you have the fail-over capacity already up and running or not. If not, i.e. you depend on re-scheduling to a healthy zone or auto-scaling, be aware that during a zone outage, you will see a resource crunch in the healthy zones. If you have no automation, i.e. only human operators (a.k.a. "red button approach"), you probably will not get the machines you need and even with automation, it may be tricky. But holding the capacity available at all times is costly. In the end, that's a decision only you can make. If you made that decision, please adapt the `minimum`, `maximum`, `maxSurge` and `maxUnavailable` settings for your worker pools accordingly (visit [this section](#on-specproviderworkersminimum-maximum-maxsurge-maxunavailable-zones-and-machinecontrollermanager) for more information).
 
 Also, consider fall-back worker pools (with different/alternative machine types) and [cluster autoscaler expanders](https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/FAQ.md#what-are-expanders) using a [priority-based strategy](https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/expander/priority/readme.md).
 
@@ -397,6 +397,26 @@ If a node fails to come up, the node group (worker pool in that zone) will go in
 #### On `spec.provider.workers.minimum`, `maximum`, `maxSurge`, `maxUnavailable`, `zones`, and `machineControllerManager`
 
 Each worker pool in Gardener may be configured differently. Among many other settings like machine type, root disk, Kubernetes version, `kubelet` settings, and many more you can also specify the lower and upper bound for the number of machines (`minimum` and `maximum`), how many machines may be added additionally during a rolling update (`maxSurge`) and how many machines may be in termination/recreation during a rolling update (`maxUnavailable`), and of course across how many zones the nodes shall be spread (`zones`).
+
+Gardener divides `minimum`, `maximum`, `maxSurge`, `maxUnavailable` values by the number of zones specified for this worker pool. This fact must be considered when you plan the sizing of your worker pools.
+
+_Example:_
+
+```
+  provider:
+    workers:
+    - name: ...
+      minimum: 6
+      maximum: 60
+      maxSurge: 3
+      maxUnavailable: 0
+      zones: ["a", "b", "c"]
+```
+
+- The resulting `MachineDeployment`s **per zone** will get `minimum: 2`, `maximum: 20`, `maxSurge: 1`, `maxUnavailable: 0`.
+- If another zone is added all values will be divided by `4`, resulting in:
+  - Less workers per zone.
+  - :warning: One `MachineDeployment` with `maxSurge: 0`, i.e. there will be a replacement of nodes without rolling updates.
 
 Interesting is also the configuration for Gardener's machine-controller-manager or MCM for short that provisions, monitors, terminates, replaces, or updates machines that back your nodes:
 
