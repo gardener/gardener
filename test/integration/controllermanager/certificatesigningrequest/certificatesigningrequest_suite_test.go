@@ -108,7 +108,7 @@ var _ = BeforeSuite(func() {
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
 		NewCache: cache.BuilderWithOptions(cache.Options{
-			SelectorsByObject: map[client.Object]cache.ObjectSelector{
+			ByObject: map[client.Object]cache.ByObject{
 				&certificatesv1.CertificateSigningRequest{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},

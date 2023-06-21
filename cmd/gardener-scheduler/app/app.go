@@ -124,7 +124,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.SchedulerConfiguratio
 		MetricsBindAddress:     net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
 
 		NewCache: cache.BuilderWithOptions(cache.Options{
-			SelectorsByObject: map[client.Object]cache.ObjectSelector{
+			ByObject: map[client.Object]cache.ByObject{
 				&corev1.ConfigMap{}: {
 					Label: labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.SchedulingPurpose, selection.Equals, v1beta1constants.SchedulingPurposeRegionConfig)),
 				},

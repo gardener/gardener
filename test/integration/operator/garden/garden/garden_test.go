@@ -123,7 +123,7 @@ var _ = Describe("Garden controller tests", func() {
 			MetricsBindAddress: "0",
 			NewCache: cache.BuilderWithOptions(cache.Options{
 				Mapper: mapper,
-				SelectorsByObject: map[client.Object]cache.ObjectSelector{
+				ByObject: map[client.Object]cache.ByObject{
 					&operatorv1alpha1.Garden{}: {
 						Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 					},

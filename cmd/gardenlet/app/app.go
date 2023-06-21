@@ -259,7 +259,7 @@ func (g *garden) Start(ctx context.Context) error {
 
 		opts.NewCache = func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
 			// gardenlet should watch only objects which are related to the seed it is responsible for.
-			opts.SelectorsByObject = map[client.Object]cache.ObjectSelector{
+			opts.ByObject = map[client.Object]cache.ByObject{
 				&gardencorev1beta1.ControllerInstallation{}: {
 					Field: fields.SelectorFromSet(fields.Set{gardencore.SeedRefName: g.config.SeedConfig.SeedTemplate.Name}),
 				},

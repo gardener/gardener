@@ -100,7 +100,7 @@ var _ = BeforeSuite(func() {
 		Scheme:             kubernetes.GardenScheme,
 		MetricsBindAddress: "0",
 		NewCache: cache.BuilderWithOptions(cache.Options{
-			SelectorsByObject: map[client.Object]cache.ObjectSelector{
+			ByObject: map[client.Object]cache.ByObject{
 				&gardencorev1beta1.Project{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},

@@ -203,7 +203,7 @@ func (s *singleObject) createAndStartCache(log logr.Logger, key client.ObjectKey
 	opts := s.opts()
 	opts.Namespace = key.Namespace
 	opts.DefaultSelector = cache.ObjectSelector{Field: fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: key.Name})}
-	opts.SelectorsByObject = nil
+	opts.ByObject = nil
 
 	log.V(1).Info("Creating new cache")
 	cache, err := s.newCache(s.restConfig, opts)

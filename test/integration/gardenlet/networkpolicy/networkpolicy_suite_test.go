@@ -147,7 +147,7 @@ var _ = BeforeSuite(func() {
 		Scheme:             testScheme,
 		MetricsBindAddress: "0",
 		NewCache: cache.BuilderWithOptions(cache.Options{
-			SelectorsByObject: map[client.Object]cache.ObjectSelector{
+			ByObject: map[client.Object]cache.ByObject{
 				&corev1.Namespace{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},

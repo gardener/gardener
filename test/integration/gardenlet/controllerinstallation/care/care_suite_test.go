@@ -126,7 +126,7 @@ var _ = BeforeSuite(func() {
 		MetricsBindAddress: "0",
 		Namespace:          gardenNamespace.Name,
 		NewCache: cache.BuilderWithOptions(cache.Options{
-			SelectorsByObject: map[client.Object]cache.ObjectSelector{
+			ByObject: map[client.Object]cache.ByObject{
 				&gardencorev1beta1.ControllerInstallation{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
