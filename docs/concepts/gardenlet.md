@@ -440,6 +440,12 @@ A pod is considered stale when:
 - it was terminated with reason starting with `OutOf` (e.g., `OutOfCpu`).
 - it is stuck in termination (i.e., if its `deletionTimestamp` is more than `5m` ago).
 
+#### "State" Reconciler
+
+This reconciler periodically (default: every `6h`) performs backups of the state of `Shoot` clusters and persists them into `ShootState` resources into the same namespace as the `Shoot`s in the garden cluster.
+It is only started in case the `gardenlet` is responsible for an unmanaged `Seed`, i.e. a `Seed` which is not backed by a `seedmanagement.gardener.cloud/v1alpha1.ManagedSeed` object.
+Please refer to [GEP-22: Improved Usage of the `ShootState` API](../proposals/22-improved-usage-of-shootstate-api.md) for all information.
+
 ### [`ShootState` Controller](../../pkg/gardenlet/controller/shootstate)
 
 The `ShootState` controller in the `gardenlet` reconciles resources containing information that has to be synced to the `ShootState`.

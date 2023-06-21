@@ -790,6 +790,10 @@ func ComputeExpectedGardenletConfiguration(
 					},
 				},
 			},
+			ShootState: &gardenletv1alpha1.ShootStateControllerConfiguration{
+				ConcurrentSyncs: &five,
+				SyncPeriod:      &metav1.Duration{Duration: 6 * time.Hour},
+			},
 			ShootSecret: &gardenletv1alpha1.ShootSecretControllerConfiguration{
 				ConcurrentSyncs: &five,
 			},

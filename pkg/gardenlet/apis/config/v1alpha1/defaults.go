@@ -165,6 +165,9 @@ func SetDefaults_GardenletControllerConfiguration(obj *GardenletControllerConfig
 	if obj.SeedCare == nil {
 		obj.SeedCare = &SeedCareControllerConfiguration{}
 	}
+	if obj.ShootState == nil {
+		obj.ShootState = &ShootStateControllerConfiguration{}
+	}
 	if obj.ShootSecret == nil {
 		obj.ShootSecret = &ShootSecretControllerConfiguration{}
 	}
@@ -364,6 +367,16 @@ func SetDefaults_StaleExtensionHealthChecks(obj *StaleExtensionHealthChecks) {
 	if obj.Threshold == nil {
 		v := metav1.Duration{Duration: 5 * time.Minute}
 		obj.Threshold = &v
+	}
+}
+
+// SetDefaults_ShootStateControllerConfiguration sets defaults for the shoot secret controller.
+func SetDefaults_ShootStateControllerConfiguration(obj *ShootStateControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		obj.ConcurrentSyncs = pointer.Int(5)
+	}
+	if obj.SyncPeriod == nil {
+		obj.SyncPeriod = &metav1.Duration{Duration: 6 * time.Hour}
 	}
 }
 

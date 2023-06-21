@@ -18,17 +18,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	apiextensions "github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -38,7 +41,7 @@ import (
 
 // Deploy deploys the ShootState resource with the effective state for the given shoot into the garden
 // cluster.
-func Deploy(ctx context.Context, gardenClient, seedClient client.Client, shoot *gardencorev1beta1.Shoot) error {
+func Deploy(ctx context.Context, clock clock.Clock, gardenClient, seedClient client.Client, shoot *gardencorev1beta1.Shoot) error {
 	shootState := &gardencorev1beta1.ShootState{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      shoot.Name,
@@ -52,6 +55,7 @@ func Deploy(ctx context.Context, gardenClient, seedClient client.Client, shoot *
 	}
 
 	_, err = controllerutils.GetAndCreateOrStrategicMergePatch(ctx, gardenClient, shootState, func() error {
+		metav1.SetMetaDataAnnotation(&shootState.ObjectMeta, v1beta1constants.GardenerTimestamp, clock.Now().UTC().Format(time.RFC3339))
 		shootState.Spec = *spec
 		return nil
 	})

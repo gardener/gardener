@@ -151,11 +151,13 @@ type GardenletControllerConfiguration struct {
 	Shoot *ShootControllerConfiguration
 	// ShootCare defines the configuration of the ShootCare controller.
 	ShootCare *ShootCareControllerConfiguration
+	// ShootState defines the configuration of the ShootState controller.
+	ShootState *ShootStateControllerConfiguration
 	// ShootStateSync defines the configuration of the ShootState controller.
 	ShootStateSync *ShootStateSyncControllerConfiguration
 	// NetworkPolicy defines the configuration of the NetworkPolicy controller.
 	NetworkPolicy *NetworkPolicyControllerConfiguration
-	// ManagedSeedControllerConfiguration defines the configuration of the ManagedSeed controller.
+	// ManagedSeed defines the configuration of the ManagedSeed controller.
 	ManagedSeed *ManagedSeedControllerConfiguration
 	// ShootSecretControllerConfiguration defines the configuration of the ShootSecret controller.
 	ShootSecret *ShootSecretControllerConfiguration
@@ -289,6 +291,15 @@ type SeedCareControllerConfiguration struct {
 	SyncPeriod *metav1.Duration
 	// ConditionThresholds defines the condition threshold per condition type.
 	ConditionThresholds []ConditionThreshold
+}
+
+// ShootStateControllerConfiguration defines the configuration of the ShootState controller.
+type ShootStateControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	ConcurrentSyncs *int
+	// SyncPeriod is the duration how often the existing resources are reconciled (how
+	// often the health check of Seed clusters is performed
+	SyncPeriod *metav1.Duration
 }
 
 // ShootSecretControllerConfiguration defines the configuration of the ShootSecret controller.
