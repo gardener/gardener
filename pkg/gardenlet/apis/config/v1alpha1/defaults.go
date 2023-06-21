@@ -168,12 +168,6 @@ func SetDefaults_GardenletControllerConfiguration(obj *GardenletControllerConfig
 	if obj.ShootState == nil {
 		obj.ShootState = &ShootStateControllerConfiguration{}
 	}
-	if obj.ShootSecret == nil {
-		obj.ShootSecret = &ShootSecretControllerConfiguration{}
-	}
-	if obj.ShootStateSync == nil {
-		obj.ShootStateSync = &ShootStateSyncControllerConfiguration{}
-	}
 	if obj.NetworkPolicy == nil {
 		obj.NetworkPolicy = &NetworkPolicyControllerConfiguration{}
 	}
@@ -377,23 +371,6 @@ func SetDefaults_ShootStateControllerConfiguration(obj *ShootStateControllerConf
 	}
 	if obj.SyncPeriod == nil {
 		obj.SyncPeriod = &metav1.Duration{Duration: 6 * time.Hour}
-	}
-}
-
-// SetDefaults_ShootSecretControllerConfiguration sets defaults for the shoot secret controller.
-func SetDefaults_ShootSecretControllerConfiguration(obj *ShootSecretControllerConfiguration) {
-	if obj.ConcurrentSyncs == nil {
-		obj.ConcurrentSyncs = pointer.Int(5)
-	}
-}
-
-// SetDefaults_ShootStateSyncControllerConfiguration sets defaults for the shoot state controller.
-func SetDefaults_ShootStateSyncControllerConfiguration(obj *ShootStateSyncControllerConfiguration) {
-	if obj.ConcurrentSyncs == nil {
-		// The controller actually starts one controller per extension resource per Seed.
-		// For one seed that is already 1 * 10 extension resources = 10 workers.
-		v := 1
-		obj.ConcurrentSyncs = &v
 	}
 }
 

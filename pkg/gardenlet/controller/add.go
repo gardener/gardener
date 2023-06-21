@@ -43,7 +43,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/shootstate"
 	"github.com/gardener/gardener/pkg/healthz"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -140,10 +139,6 @@ func AddToManager(
 
 	if err := shoot.AddToManager(ctx, mgr, gardenCluster, seedCluster, seedClientSet, shootClientMap, *cfg, identity, gardenClusterIdentity, imageVector); err != nil {
 		return fmt.Errorf("failed adding Shoot controller: %w", err)
-	}
-
-	if err := shootstate.AddToManager(mgr, gardenCluster, seedCluster, *cfg); err != nil {
-		return fmt.Errorf("failed adding ShootState controller: %w", err)
 	}
 
 	if err := (&tokenrequestor.Reconciler{

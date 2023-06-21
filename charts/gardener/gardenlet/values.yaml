@@ -116,10 +116,6 @@ config:
     shootState:
       concurrentSyncs: 5
       syncPeriod: 6h
-    shootSecret:
-      concurrentSyncs: 5
-    shootStateSync:
-      concurrentSyncs: 5
     managedSeed:
       concurrentSyncs: 5
       syncPeriod: 1h

@@ -71,10 +71,6 @@ controllers:
   shootState:
     concurrentSyncs: 5
     syncPeriod: 6h
-  shootSecret:
-    concurrentSyncs: 5
-  shootStateSync:
-    concurrentSyncs: 1
   seed:
     syncPeriod: 1h
   # leaseResyncSeconds: 2
