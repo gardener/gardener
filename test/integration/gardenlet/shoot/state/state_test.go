@@ -54,29 +54,11 @@ var _ = Describe("Shoot State controller tests", func() {
 				Labels:       map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SecretBindingName: pointer.String("some-binding"),
-				CloudProfileName:  "cloudprofile1",
-				SeedName:          &seedName,
-				Region:            "europe-central-1",
-				Provider: gardencorev1beta1.Provider{
-					Type: "foo-provider",
-					Workers: []gardencorev1beta1.Worker{{
-						Name:    "cpu-worker",
-						Minimum: 3,
-						Maximum: 3,
-						Machine: gardencorev1beta1.Machine{
-							Type: "large",
-						},
-					}},
-				},
-				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: "1.25.1",
-				},
-				Networking: &gardencorev1beta1.Networking{
-					Type:     pointer.String("foo-networking"),
-					Services: pointer.String("10.0.0.0/16"),
-					Pods:     pointer.String("10.1.0.0/16"),
-				},
+				Region:           "local",
+				CloudProfileName: "local",
+				Kubernetes:       gardencorev1beta1.Kubernetes{Version: "1.27.1"},
+				Provider:         gardencorev1beta1.Provider{Type: "local"},
+				SeedName:         &seedName,
 			},
 		}
 		lastOperation = &gardencorev1beta1.LastOperation{

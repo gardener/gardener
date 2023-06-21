@@ -88,10 +88,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed parsing timestamp %q on ShootState object: %w", v, err)
 		}
+		lastBackup = lastBackup.UTC()
 	}
 
-	if nextBackupDue := lastBackup.UTC().Add(r.Config.SyncPeriod.Duration); nextBackupDue.Before(r.Clock.Now().UTC()) {
-		log.Info("Performing periodic ShootState backup", "lastBackup", lastBackup.Round(time.Minute), "nextBackupDue", nextBackupDue.Round(time.Minute), "now", r.Clock.Now().UTC().Round(time.Minute))
+	if nextBackupDue := lastBackup.Add(r.Config.SyncPeriod.Duration); nextBackupDue.Before(r.Clock.Now().UTC()) {
+		log.Info("Performing periodic ShootState backup", "lastBackup", lastBackup.Round(time.Minute), "nextBackupDue", nextBackupDue.Round(time.Minute))
 		if err := shootstate.Deploy(ctx, r.Clock, r.GardenClient, r.SeedClient, shoot); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed performing periodic ShootState backup: %w", err)
 		}
@@ -107,7 +108,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 func (r *Reconciler) requeueAfter(lastBackup time.Time) (time.Duration, time.Time) {
 	var (
-		nextRegularBackup = lastBackup.UTC().Add(r.Config.SyncPeriod.Duration)
+		nextRegularBackup = lastBackup.Add(r.Config.SyncPeriod.Duration)
 		randomDuration    = controllerutils.RandomDuration(JitterDuration)
 
 		nextBackup              = nextRegularBackup.Add(-JitterDuration / 2).Add(randomDuration)

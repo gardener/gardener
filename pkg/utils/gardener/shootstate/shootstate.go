@@ -55,7 +55,7 @@ func Deploy(ctx context.Context, clock clock.Clock, gardenClient, seedClient cli
 	}
 
 	_, err = controllerutils.GetAndCreateOrStrategicMergePatch(ctx, gardenClient, shootState, func() error {
-		metav1.SetMetaDataAnnotation(&shootState.ObjectMeta, v1beta1constants.GardenerTimestamp, clock.Now().Format(time.RFC3339))
+		metav1.SetMetaDataAnnotation(&shootState.ObjectMeta, v1beta1constants.GardenerTimestamp, clock.Now().UTC().Format(time.RFC3339))
 		shootState.Spec = *spec
 		return nil
 	})
