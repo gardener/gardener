@@ -201,7 +201,7 @@ func (s *singleObject) createAndStartCache(log logr.Logger, key client.ObjectKey
 	}
 
 	opts := s.opts()
-	opts.Namespace = key.Namespace
+	opts.Namespaces = []string{key.Namespace}
 	opts.DefaultFieldSelector = fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: key.Name})
 	opts.ByObject = nil
 
