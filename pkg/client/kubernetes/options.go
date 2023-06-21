@@ -34,7 +34,7 @@ type Config struct {
 	newRuntimeCache   cache.NewCacheFunc
 	clientOptions     client.Options
 	restConfig        *rest.Config
-	cacheResync       *time.Duration
+	cacheSyncPeriod   *time.Duration
 	disableCache      bool
 	uncachedObjects   []client.Object
 	allowedUserFields []string
@@ -108,10 +108,10 @@ func WithClientOptions(opt client.Options) ConfigFunc {
 	}
 }
 
-// WithCacheResyncPeriod returns a ConfigFunc that set the client's cache's resync period to the given duration.
-func WithCacheResyncPeriod(resync time.Duration) ConfigFunc {
+// WithCacheSyncPeriod returns a ConfigFunc that set the client's cache's sync period to the given duration.
+func WithCacheSyncPeriod(sync time.Duration) ConfigFunc {
 	return func(config *Config) error {
-		config.cacheResync = &resync
+		config.cacheSyncPeriod = &sync
 		return nil
 	}
 }

@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	defaultCacheResyncPeriod = 6 * time.Hour
+	defaultCacheSyncPeriod = 6 * time.Hour
 )
 
 // NewRuntimeCache creates a new cache.Cache with the given config and options. It can be used
@@ -47,8 +47,8 @@ func NewRuntimeCache(config *rest.Config, options cache.Options) (cache.Cache, e
 }
 
 func setCacheOptionsDefaults(options *cache.Options) error {
-	if options.Resync == nil {
-		options.Resync = pointer.Duration(defaultCacheResyncPeriod)
+	if options.SyncPeriod == nil {
+		options.SyncPeriod = pointer.Duration(defaultCacheSyncPeriod)
 	}
 
 	return nil

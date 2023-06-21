@@ -277,9 +277,9 @@ func newClientSet(conf *Config) (Interface, error) {
 
 	if runtimeCache == nil {
 		runtimeCache, err = conf.newRuntimeCache(conf.restConfig, cache.Options{
-			Scheme: conf.clientOptions.Scheme,
-			Mapper: conf.clientOptions.Mapper,
-			Resync: conf.cacheResync,
+			Scheme:     conf.clientOptions.Scheme,
+			Mapper:     conf.clientOptions.Mapper,
+			SyncPeriod: conf.cacheSyncPeriod,
 		})
 		if err != nil {
 			return nil, err
