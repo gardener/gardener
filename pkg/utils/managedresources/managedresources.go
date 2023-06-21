@@ -207,6 +207,7 @@ func Delete(ctx context.Context, c client.Client, namespace string, name string,
 		if err := client.IgnoreNotFound(c.Delete(ctx, secret)); err != nil {
 			return fmt.Errorf("could not delete secret '%s' of managed resource: %w", client.ObjectKeyFromObject(secret).String(), err)
 		}
+		return nil
 	} else if err != nil {
 		return fmt.Errorf("could not get managed resource '%s': %w", mrKey.String(), err)
 	}
