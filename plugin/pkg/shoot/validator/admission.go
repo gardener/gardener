@@ -655,20 +655,20 @@ func (c *validationContext) validateShootNetworks(workerless bool) field.ErrorLi
 				c.shoot.Spec.Networking.Services,
 				workerless,
 			)...)
-		}
 
-		// validate network disjointedness with seed networks if shoot is being (re)scheduled
-		if !apiequality.Semantic.DeepEqual(c.oldShoot.Spec.SeedName, c.shoot.Spec.SeedName) {
-			allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
-				path,
-				c.shoot.Spec.Networking.Nodes,
-				c.shoot.Spec.Networking.Pods,
-				c.shoot.Spec.Networking.Services,
-				c.seed.Spec.Networks.Nodes,
-				c.seed.Spec.Networks.Pods,
-				c.seed.Spec.Networks.Services,
-				workerless,
-			)...)
+			// validate network disjointedness with seed networks if shoot is being (re)scheduled
+			if !apiequality.Semantic.DeepEqual(c.oldShoot.Spec.SeedName, c.shoot.Spec.SeedName) {
+				allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
+					path,
+					c.shoot.Spec.Networking.Nodes,
+					c.shoot.Spec.Networking.Pods,
+					c.shoot.Spec.Networking.Services,
+					c.seed.Spec.Networks.Nodes,
+					c.seed.Spec.Networks.Pods,
+					c.seed.Spec.Networks.Services,
+					workerless,
+				)...)
+			}
 		}
 	}
 
