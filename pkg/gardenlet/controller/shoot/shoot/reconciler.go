@@ -67,15 +67,16 @@ const taskID = "initializeOperation"
 
 // Reconciler implements the main shoot reconciliation logic, i.e., creation, hibernation, migration and deletion.
 type Reconciler struct {
-	GardenClient          client.Client
-	SeedClientSet         kubernetes.Interface
-	ShootClientMap        clientmap.ClientMap
-	Config                config.GardenletConfiguration
-	Recorder              record.EventRecorder
-	ImageVector           imagevector.ImageVector
-	Identity              *gardencorev1beta1.Gardener
-	GardenClusterIdentity string
-	Clock                 clock.Clock
+	GardenClient                client.Client
+	SeedClientSet               kubernetes.Interface
+	ShootClientMap              clientmap.ClientMap
+	Config                      config.GardenletConfiguration
+	Recorder                    record.EventRecorder
+	ImageVector                 imagevector.ImageVector
+	Identity                    *gardencorev1beta1.Gardener
+	GardenClusterIdentity       string
+	Clock                       clock.Clock
+	ShootStateControllerEnabled bool
 }
 
 // Reconcile implements the main shoot reconciliation logic, i.e., creation, hibernation, migration and deletion.

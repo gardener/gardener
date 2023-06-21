@@ -51,7 +51,7 @@ func (b *Botanist) DefaultCoreBackupEntry() corebackupentry.Interface {
 // DeployBackupEntry deploys the BackupEntry resource in the Garden cluster and triggers the restore operation in case
 // the Shoot is in the restore phase of the control plane migration.
 func (b *Botanist) DeployBackupEntry(ctx context.Context) error {
-	if b.isRestorePhase() {
+	if b.IsRestorePhase() {
 		return b.Shoot.Components.BackupEntry.Restore(ctx, b.Shoot.GetShootState())
 	}
 	return b.Shoot.Components.BackupEntry.Deploy(ctx)
@@ -95,7 +95,7 @@ func (b *Botanist) DeploySourceBackupEntry(ctx context.Context) error {
 // DestroySourceBackupEntry destroys the source BackupEntry. It returns nil if the
 // Seed backup is not enabled or the Shoot is not in restore phase.
 func (b *Botanist) DestroySourceBackupEntry(ctx context.Context) error {
-	if b.Seed.GetInfo().Spec.Backup == nil || !b.isRestorePhase() {
+	if b.Seed.GetInfo().Spec.Backup == nil || !b.IsRestorePhase() {
 		return nil
 	}
 

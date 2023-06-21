@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
+	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
@@ -810,6 +811,14 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 	if err := botanist.SecretsManager.Cleanup(ctx); err != nil {
 		err = fmt.Errorf("failed to clean no longer required secrets: %w", err)
 		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
+	}
+
+	if !r.ShootStateControllerEnabled && botanist.IsRestorePhase() {
+		o.Logger.Info("Deleting Shoot State after successful restoration")
+		if err := shootstate.Delete(ctx, botanist.GardenClient, botanist.Shoot.GetInfo()); err != nil {
+			err = fmt.Errorf("failed to delete shoot state: %w", err)
+			return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
+		}
 	}
 
 	// ensure that shoot client is invalidated after it has been hibernated

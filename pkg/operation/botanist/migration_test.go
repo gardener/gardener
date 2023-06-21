@@ -27,7 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockbackupentry "github.com/gardener/gardener/pkg/component/backupentry/mock"
 	mocketcd "github.com/gardener/gardener/pkg/component/etcd/mock"
 	mockcontainerruntime "github.com/gardener/gardener/pkg/component/extensions/containerruntime/mock"
@@ -185,26 +185,26 @@ var _ = Describe("migration", func() {
 		)
 
 		BeforeEach(func() {
-			botanist.Shoot.SetInfo(&v1beta1.Shoot{
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "bar",
 					Namespace: "foo",
 				},
-				Status: v1beta1.ShootStatus{
-					LastOperation: &v1beta1.LastOperation{
-						Type: v1beta1.LastOperationTypeRestore,
+				Status: gardencorev1beta1.ShootStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						Type: gardencorev1beta1.LastOperationTypeRestore,
 					},
 				},
 			})
 			botanist.Seed = &seed.Seed{}
-			botanist.Seed.SetInfo(&v1beta1.Seed{
+			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "seed",
 					Namespace: "garden",
 					UID:       "new-seed",
 				},
-				Spec: v1beta1.SeedSpec{
-					Backup: &v1beta1.SeedBackup{
+				Spec: gardencorev1beta1.SeedSpec{
+					Backup: &gardencorev1beta1.SeedBackup{
 						Provider: "gcp",
 					},
 				},
@@ -221,7 +221,7 @@ var _ = Describe("migration", func() {
 		})
 
 		It("should return false if lastOperation is not restore", func() {
-			botanist.Shoot.GetInfo().Status.LastOperation.Type = v1beta1.LastOperationTypeReconcile
+			botanist.Shoot.GetInfo().Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeReconcile
 			copyRequired, err := botanist.IsCopyOfBackupsRequired(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(copyRequired).To(BeFalse())
@@ -279,8 +279,8 @@ var _ = Describe("migration", func() {
 			})
 
 			It("should return true if backupentry.Spec.BucketName has not been switched to the new seed", func() {
-				backupEntry.EXPECT().Get(ctx).Return(&v1beta1.BackupEntry{
-					Spec: v1beta1.BackupEntrySpec{
+				backupEntry.EXPECT().Get(ctx).Return(&gardencorev1beta1.BackupEntry{
+					Spec: gardencorev1beta1.BackupEntrySpec{
 						BucketName: "old-seed",
 					},
 				}, nil)
@@ -293,8 +293,8 @@ var _ = Describe("migration", func() {
 		Context("Last operation is restore, etcd-main resource exists and backupentry.Spec.BucketName is switched to the new seed", func() {
 			BeforeEach(func() {
 				etcdMain.EXPECT().Get(ctx).Return(nil, apierrors.NewNotFound(schema.GroupResource{}, "etcd-main"))
-				backupEntry.EXPECT().Get(ctx).Return(&v1beta1.BackupEntry{
-					Spec: v1beta1.BackupEntrySpec{
+				backupEntry.EXPECT().Get(ctx).Return(&gardencorev1beta1.BackupEntry{
+					Spec: gardencorev1beta1.BackupEntrySpec{
 						BucketName: string(botanist.Seed.GetInfo().UID),
 					},
 				}, nil)
@@ -316,8 +316,8 @@ var _ = Describe("migration", func() {
 			})
 
 			It("should return an error if source backupentry and destination backupentry point to the same bucket", func() {
-				sourceBackupEntry.EXPECT().Get(ctx).Return(&v1beta1.BackupEntry{
-					Spec: v1beta1.BackupEntrySpec{
+				sourceBackupEntry.EXPECT().Get(ctx).Return(&gardencorev1beta1.BackupEntry{
+					Spec: gardencorev1beta1.BackupEntrySpec{
 						BucketName: string(botanist.Seed.GetInfo().UID),
 					},
 				}, nil)
@@ -327,8 +327,8 @@ var _ = Describe("migration", func() {
 			})
 
 			It("should return true if source backupentry and destination backupentry point to different buckets", func() {
-				sourceBackupEntry.EXPECT().Get(ctx).Return(&v1beta1.BackupEntry{
-					Spec: v1beta1.BackupEntrySpec{
+				sourceBackupEntry.EXPECT().Get(ctx).Return(&gardencorev1beta1.BackupEntry{
+					Spec: gardencorev1beta1.BackupEntrySpec{
 						BucketName: "old-seed",
 					},
 				}, nil)
@@ -336,6 +336,18 @@ var _ = Describe("migration", func() {
 				Expect(err).To(Succeed())
 				Expect(copyRequired).To(BeTrue())
 			})
+		})
+	})
+
+	Describe("#IsRestorePhase", func() {
+		It("should return true", func() {
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{LastOperation: &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeRestore}}})
+			Expect(botanist.IsRestorePhase()).To(BeTrue())
+		})
+
+		It("should return false", func() {
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{LastOperation: &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeCreate}}})
+			Expect(botanist.IsRestorePhase()).To(BeFalse())
 		})
 	})
 })

@@ -31,7 +31,7 @@ func (b *Botanist) DefaultExternalDNSRecord() extensionsdnsrecord.Interface {
 		SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
 		Namespace:         b.Shoot.SeedNamespace,
 		TTL:               b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
-		AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordExternal) || b.isRestorePhase(),
+		AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordExternal) || b.IsRestorePhase(),
 	}
 
 	if b.NeedsExternalDNS() {
@@ -63,7 +63,7 @@ func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 		ReconcileOnlyOnChangeOrError: b.Shoot.GetInfo().DeletionTimestamp != nil,
 		AnnotateOperation: b.Shoot.GetInfo().DeletionTimestamp != nil ||
 			controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordInternal) ||
-			b.isRestorePhase(),
+			b.IsRestorePhase(),
 	}
 
 	if b.NeedsInternalDNS() {
@@ -150,7 +150,7 @@ func (b *Botanist) MigrateInternalDNSRecord(ctx context.Context) error {
 }
 
 func (b *Botanist) deployOrRestoreDNSRecord(ctx context.Context, dnsRecord component.DeployMigrateWaiter) error {
-	if b.isRestorePhase() {
+	if b.IsRestorePhase() {
 		return dnsRecord.Restore(ctx, b.Shoot.GetShootState())
 	}
 	return dnsRecord.Deploy(ctx)

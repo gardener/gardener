@@ -38,7 +38,7 @@ func (b *Botanist) DefaultContainerRuntime() containerruntime.Interface {
 // DeployContainerRuntime deploys the ContainerRuntime custom resources and triggers the restore operation in case
 // the Shoot is in the restore phase of the control plane migration
 func (b *Botanist) DeployContainerRuntime(ctx context.Context) error {
-	if b.isRestorePhase() {
+	if b.IsRestorePhase() {
 		return b.Shoot.Components.Extensions.ContainerRuntime.Restore(ctx, b.Shoot.GetShootState())
 	}
 	return b.Shoot.Components.Extensions.ContainerRuntime.Deploy(ctx)
