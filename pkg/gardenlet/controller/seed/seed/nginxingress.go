@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
@@ -36,7 +37,6 @@ func defaultNginxIngress(
 	c client.Client,
 	imageVector imagevector.ImageVector,
 	kubernetesVersion *semver.Version,
-	ingressClass string,
 	config map[string]string,
 	loadBalancerAnnotations map[string]string,
 	gardenNamespaceName string,
@@ -54,11 +54,16 @@ func defaultNginxIngress(
 	}
 
 	values := nginxingress.Values{
+		ClusterType:             component.ClusterTypeSeed,
+		TargetNamespace:         gardenNamespaceName,
+		IngressClass:            v1beta1constants.SeedNginxIngressClass,
 		ImageController:         imageController.String(),
 		ImageDefaultBackend:     imageDefaultBackend.String(),
-		IngressClass:            ingressClass,
+		PriorityClassName:       v1beta1constants.PriorityClassNameSeedSystem600,
 		ConfigData:              config,
 		LoadBalancerAnnotations: loadBalancerAnnotations,
+		PSPDisabled:             true,
+		VPAEnabled:              true,
 	}
 
 	return nginxingress.New(c, gardenNamespaceName, values), nil

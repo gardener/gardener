@@ -17,14 +17,14 @@ package botanist
 import (
 	"context"
 
-	"k8s.io/utils/pointer"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/component"
 	extensionsdnsrecord "github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
-	"github.com/gardener/gardener/pkg/component/nginxingressshoot"
+	"github.com/gardener/gardener/pkg/component/nginxingress"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -43,15 +43,15 @@ func (b *Botanist) DefaultNginxIngress() (component.DeployWaiter, error) {
 		return nil, err
 	}
 
-	values := nginxingressshoot.Values{
-		NginxControllerImage: imageController.String(),
-		DefaultBackendImage:  imageDefaultBackend.String(),
-		VPAEnabled:           b.Shoot.WantsVerticalPodAutoscaler,
-		PSPDisabled:          b.Shoot.PSPDisabled,
-	}
-
-	if b.ShootUsesDNS() {
-		values.KubeAPIServerHost = pointer.String(b.outOfClusterAPIServerFQDN())
+	values := nginxingress.Values{
+		ClusterType:         component.ClusterTypeShoot,
+		TargetNamespace:     metav1.NamespaceSystem,
+		IngressClass:        v1beta1constants.IngressKindNginx,
+		PriorityClassName:   v1beta1constants.PriorityClassNameShootSystem600,
+		ImageController:     imageController.String(),
+		ImageDefaultBackend: imageDefaultBackend.String(),
+		VPAEnabled:          b.Shoot.WantsVerticalPodAutoscaler,
+		PSPDisabled:         b.Shoot.PSPDisabled,
 	}
 
 	if nginxIngressSpec := b.Shoot.GetInfo().Spec.Addons.NginxIngress; nginxIngressSpec != nil {
@@ -65,7 +65,7 @@ func (b *Botanist) DefaultNginxIngress() (component.DeployWaiter, error) {
 		}
 	}
 
-	return nginxingressshoot.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, values), nil
+	return nginxingress.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, values), nil
 }
 
 // DeployNginxIngressAddon deploys the NginxIngress Addon component.

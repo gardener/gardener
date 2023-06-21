@@ -355,7 +355,20 @@ images:
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: registry.k8s.io/ingress-nginx/controller-chroot
-  tag: "v1.3.0"
+  tag: "v1.4.0"
+  targetVersion: "1.22.x"
+  labels: *optionalAddonLabels
+- name: nginx-ingress-controller
+  sourceRepository: github.com/kubernetes/ingress-nginx
+  repository: registry.k8s.io/ingress-nginx/controller-chroot
+  tag: "v1.6.4"
+  targetVersion: "1.23.x"
+  labels: *optionalAddonLabels
+- name: nginx-ingress-controller
+  sourceRepository: github.com/kubernetes/ingress-nginx
+  repository: registry.k8s.io/ingress-nginx/controller-chroot
+  tag: "v1.8.0"
+  targetVersion: ">= 1.24"
   labels: *optionalAddonLabels
 
 # Miscellaenous

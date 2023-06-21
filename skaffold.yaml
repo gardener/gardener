@@ -837,7 +837,6 @@ build:
         - pkg/operation
         - pkg/operation/botanist
         - pkg/component/apiserverproxy
-        - pkg/component/nginxingressshoot
         - pkg/component
         - pkg/component/backupentry
         - pkg/component/blackboxexporter

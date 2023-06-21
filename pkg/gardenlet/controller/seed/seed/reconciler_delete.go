@@ -198,7 +198,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 		machineControllerManager = machinecontrollermanager.NewBootstrapper(seedClient, r.GardenNamespace)
 		kubeAPIServerIngress     = kubeapiserverexposure.NewIngress(seedClient, r.GardenNamespace, kubeapiserverexposure.IngressValues{})
 		kubeAPIServerService     = kubeapiserverexposure.NewInternalNameService(seedClient, r.GardenNamespace)
-		nginxIngress             = nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{})
+		nginxIngress             = nginxingress.New(seedClient, r.GardenNamespace, nginxingress.Values{ClusterType: component.ClusterTypeSeed})
 		dwdWeeder                = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleWeeder})
 		dwdProber                = dependencywatchdog.NewBootstrapper(seedClient, r.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProber})
 		systemResources          = seedsystem.New(seedClient, r.GardenNamespace, seedsystem.Values{})

@@ -41,41 +41,26 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("Nginx Ingress", func() {
+var _ = Describe("NginxIngress", func() {
 	var (
 		ctx                 = context.TODO()
 		namespace           = "some-namespace"
 		imageController     = "some-image:some-tag"
 		imageDefaultBackend = "some-image2:some-tag2"
-		managedResourceName = "nginx-ingress"
 
 		c            client.Client
 		nginxIngress component.DeployWaiter
+		values       Values
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
+		managedResourceName   string
 
-		configMapData = map[string]string{
-			"foo":  "bar",
-			"dot":  "3",
-			"dash": "false",
-		}
-
-		loadBalancerAnnotations = map[string]string{
-			"some": "value",
-		}
-
-		values = Values{
-			ImageController:         imageController,
-			ImageDefaultBackend:     imageDefaultBackend,
-			ConfigData:              configMapData,
-			LoadBalancerAnnotations: loadBalancerAnnotations,
-		}
-
-		configMapName = "nginx-ingress-controller-" + utils.ComputeConfigMapChecksum(configMapData)[:8]
+		configMapData, loadBalancerAnnotations map[string]string
+		configMapName                          string
 	)
 
-	BeforeEach(func() {
+	JustBeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
@@ -92,9 +77,39 @@ var _ = Describe("Nginx Ingress", func() {
 		}
 	})
 
-	Describe("#Deploy", func() {
-		var (
-			configMapYAML = `apiVersion: v1
+	Context("Cluster type Seed", func() {
+		BeforeEach(func() {
+			managedResourceName = "nginx-ingress"
+
+			configMapData = map[string]string{
+				"foo":  "bar",
+				"dot":  "3",
+				"dash": "false",
+			}
+
+			loadBalancerAnnotations = map[string]string{
+				"some": "value",
+			}
+			configMapName = "nginx-ingress-controller-" + utils.ComputeConfigMapChecksum(configMapData)[:8]
+
+			values = Values{
+				ClusterType:             component.ClusterTypeSeed,
+				TargetNamespace:         namespace,
+				IngressClass:            v1beta1constants.SeedNginxIngressClass,
+				PriorityClassName:       v1beta1constants.PriorityClassNameSeedSystem600,
+				ImageController:         imageController,
+				ImageDefaultBackend:     imageDefaultBackend,
+				ConfigData:              configMapData,
+				LoadBalancerAnnotations: loadBalancerAnnotations,
+				PSPDisabled:             true,
+				VPAEnabled:              true,
+			}
+		})
+
+		Describe("#Deploy", func() {
+			var (
+				configMapYAMLFor = func(configMapName string) string {
+					out := `apiVersion: v1
 data:
   dash: "false"
   dot: "3"
@@ -110,7 +125,10 @@ metadata:
   name: ` + configMapName + `
   namespace: ` + namespace + `
 `
-			clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+					return out
+				}
+
+				clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
@@ -145,7 +163,6 @@ rules:
   - update
   - watch
 - apiGroups:
-  - extensions
   - networking.k8s.io
   resources:
   - ingresses
@@ -161,7 +178,6 @@ rules:
   - create
   - patch
 - apiGroups:
-  - extensions
   - networking.k8s.io
   resources:
   - ingresses/status
@@ -191,7 +207,7 @@ rules:
   - list
   - watch
 `
-			clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+				clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   creationTimestamp: null
@@ -207,7 +223,7 @@ subjects:
   name: nginx-ingress
   namespace: ` + namespace + `
 `
-			roleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+				roleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   creationTimestamp: null
@@ -257,7 +273,7 @@ rules:
   - list
   - watch
 `
-			roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+				roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   creationTimestamp: null
@@ -274,7 +290,7 @@ subjects:
   name: nginx-ingress
   namespace: ` + namespace + `
 `
-			serviceControllerYAML = `apiVersion: v1
+				serviceControllerYAML = `apiVersion: v1
 kind: Service
 metadata:
   annotations:
@@ -299,17 +315,17 @@ spec:
   selector:
     app: nginx-ingress
     component: controller
-    release: addons
   type: LoadBalancer
 status:
   loadBalancer: {}
 `
-			serviceBackendYAML = `apiVersion: v1
+				serviceBackendYAML = `apiVersion: v1
 kind: Service
 metadata:
   creationTimestamp: null
   labels:
     app: nginx-ingress
+    component: nginx-ingress-k8s-backend
   name: nginx-ingress-k8s-backend
   namespace: ` + namespace + `
 spec:
@@ -319,12 +335,11 @@ spec:
   selector:
     app: nginx-ingress
     component: nginx-ingress-k8s-backend
-    release: addons
   type: ClusterIP
 status:
   loadBalancer: {}
 `
-			serviceAccountYAML = `apiVersion: v1
+				serviceAccountYAML = `apiVersion: v1
 automountServiceAccountToken: false
 kind: ServiceAccount
 metadata:
@@ -334,7 +349,7 @@ metadata:
   name: nginx-ingress
   namespace: ` + namespace + `
 `
-			ingressClassYAML = `apiVersion: networking.k8s.io/v1
+				ingressClassYAML = `apiVersion: networking.k8s.io/v1
 kind: IngressClass
 metadata:
   creationTimestamp: null
@@ -345,7 +360,7 @@ metadata:
 spec:
   controller: k8s.io/` + v1beta1constants.SeedNginxIngressClass + `
 `
-			podDisruptionBudgetYAML = `apiVersion: policy/v1
+				podDisruptionBudgetYAML = `apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   creationTimestamp: null
@@ -360,14 +375,13 @@ spec:
     matchLabels:
       app: nginx-ingress
       component: controller
-      release: addons
 status:
   currentHealthy: 0
   desiredHealthy: 0
   disruptionsAllowed: 0
   expectedPods: 0
 `
-			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
+				vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   creationTimestamp: null
@@ -387,12 +401,13 @@ spec:
     updateMode: Auto
 status: {}
 `
-			deploymentBackendYAML = `apiVersion: apps/v1
+				deploymentBackendYAML = `apiVersion: apps/v1
 kind: Deployment
 metadata:
   creationTimestamp: null
   labels:
     app: nginx-ingress
+    component: nginx-ingress-k8s-backend
   name: nginx-ingress-k8s-backend
   namespace: ` + namespace + `
 spec:
@@ -439,8 +454,8 @@ spec:
       terminationGracePeriodSeconds: 60
 status: {}
 `
-			deploymentControllerYAMLFor = func(k8sVersionGreaterEqual122 bool) string {
-				out := `apiVersion: apps/v1
+				deploymentControllerYAMLFor = func(configMapName string) string {
+					out := `apiVersion: apps/v1
 kind: Deployment
 metadata:
   annotations:
@@ -485,9 +500,7 @@ spec:
         - --annotations-prefix=nginx.ingress.kubernetes.io
         - --configmap=` + namespace + `/` + configMapName + `
         - --ingress-class=` + v1beta1constants.SeedNginxIngressClass + `
-        - --controller-class=k8s.io/` + v1beta1constants.SeedNginxIngressClass
-
-				out += `
+        - --controller-class=k8s.io/` + v1beta1constants.SeedNginxIngressClass + `
         env:
         - name: POD_NAME
           valueFrom:
@@ -538,9 +551,7 @@ spec:
           capabilities:
             add:
             - NET_BIND_SERVICE
-            - SYS_CHROOT`
-
-				out += `
+            - SYS_CHROOT` + `
             drop:
             - ALL
           runAsUser: 101
@@ -551,76 +562,737 @@ spec:
       terminationGracePeriodSeconds: 60
 status: {}
 `
-				return out
-			}
-		)
+					return out
+				}
+			)
 
-		JustBeforeEach(func() {
-			values.IngressClass = "nginx-ingress-gardener"
-			nginxIngress = New(c, namespace, values)
+			It("should successfully deploy all resources", func() {
+				nginxIngress = New(c, namespace, values)
 
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 
-			Expect(nginxIngress.Deploy(ctx)).To(Succeed())
+				Expect(nginxIngress.Deploy(ctx)).To(Succeed())
 
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-			Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-					Kind:       "ManagedResource",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            managedResource.Name,
-					Namespace:       managedResource.Namespace,
-					Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
-					ResourceVersion: "1",
-				},
-				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: pointer.String("seed"),
-					SecretRefs: []corev1.LocalObjectReference{{
-						Name: managedResourceSecret.Name,
-					}},
-					KeepObjects: pointer.Bool(false),
-				},
-			}))
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
+						Kind:       "ManagedResource",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResource.Name,
+						Namespace:       managedResource.Namespace,
+						Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
+						ResourceVersion: "1",
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						Class: pointer.String("seed"),
+						SecretRefs: []corev1.LocalObjectReference{{
+							Name: managedResourceSecret.Name,
+						}},
+						KeepObjects: pointer.Bool(false),
+					},
+				}))
 
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
-			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Data).To(HaveLen(13))
 
-			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_seed_nginx-ingress.yaml"])).To(Equal(clusterRoleYAML))
-			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_seed_nginx-ingress.yaml"])).To(Equal(clusterRoleBindingYAML))
-			Expect(string(managedResourceSecret.Data["role__"+namespace+"__gardener.cloud_seed_nginx-ingress_role.yaml"])).To(Equal(roleYAML))
-			Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__gardener.cloud_seed_nginx-ingress_role-binding.yaml"])).To(Equal(roleBindingYAML))
-			Expect(string(managedResourceSecret.Data["service__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(serviceControllerYAML))
-			Expect(string(managedResourceSecret.Data["service__"+namespace+"__nginx-ingress-k8s-backend.yaml"])).To(Equal(serviceBackendYAML))
-			Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__nginx-ingress.yaml"])).To(Equal(serviceAccountYAML))
-			Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(vpaYAML))
-			Expect(string(managedResourceSecret.Data["configmap__"+namespace+"__"+configMapName+".yaml"])).To(Equal(configMapYAML))
-			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-k8s-backend.yaml"])).To(Equal(deploymentBackendYAML))
-			Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(podDisruptionBudgetYAML))
+				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_seed_nginx-ingress.yaml"])).To(Equal(clusterRoleYAML))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_seed_nginx-ingress.yaml"])).To(Equal(clusterRoleBindingYAML))
+				Expect(string(managedResourceSecret.Data["role__"+namespace+"__gardener.cloud_seed_nginx-ingress_role.yaml"])).To(Equal(roleYAML))
+				Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__gardener.cloud_seed_nginx-ingress_role-binding.yaml"])).To(Equal(roleBindingYAML))
+				Expect(string(managedResourceSecret.Data["service__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(serviceControllerYAML))
+				Expect(string(managedResourceSecret.Data["service__"+namespace+"__nginx-ingress-k8s-backend.yaml"])).To(Equal(serviceBackendYAML))
+				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__nginx-ingress.yaml"])).To(Equal(serviceAccountYAML))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(vpaYAML))
+				Expect(string(managedResourceSecret.Data["configmap__"+namespace+"__"+configMapName+".yaml"])).To(Equal(configMapYAMLFor(configMapName)))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-k8s-backend.yaml"])).To(Equal(deploymentBackendYAML))
+				Expect(string(managedResourceSecret.Data["poddisruptionbudget__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(podDisruptionBudgetYAML))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(configMapName)))
+				Expect(string(managedResourceSecret.Data["ingressclass____"+v1beta1constants.SeedNginxIngressClass+".yaml"])).To(Equal(ingressClassYAML))
+			})
 		})
 
-		It("should successfully deploy all resources", func() {
-			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(true)))
-			Expect(string(managedResourceSecret.Data["ingressclass____"+v1beta1constants.SeedNginxIngressClass+".yaml"])).To(Equal(ingressClassYAML))
+		Describe("#Destroy", func() {
+			It("should successfully destroy all resources", func() {
+				nginxIngress = New(c, namespace, values)
+
+				Expect(c.Create(ctx, managedResource)).To(Succeed())
+				Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+
+				Expect(nginxIngress.Destroy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
+			})
 		})
 	})
 
-	Describe("#Destroy", func() {
-		It("should successfully destroy all resources", func() {
-			nginxIngress = New(c, namespace, Values{})
+	Context("Cluster type Shoot", func() {
+		var (
+			configMapYAML = `apiVersion: v1
+data:
+  dash: "false"
+  dot: "3"
+  foo: bar
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    component: controller
+    release: addons
+  name: addons-nginx-ingress-controller
+  namespace: kube-system
+`
 
-			Expect(c.Create(ctx, managedResource)).To(Succeed())
-			Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
+			ingressClassYAML = `apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    component: controller
+    gardener.cloud/role: optional-addon
+    origin: gardener
+    release: addons
+  name: nginx
+spec:
+  controller: k8s.io/nginx
+`
 
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+			serviceAccountYAML = `apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    release: addons
+  name: addons-nginx-ingress
+  namespace: kube-system
+`
 
-			Expect(nginxIngress.Destroy(ctx)).To(Succeed())
+			networkPolicyYAML = `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows all egress and ingress traffic for the nginx-ingress
+      controller.
+  creationTimestamp: null
+  labels:
+    origin: gardener
+  name: gardener.cloud--allow-to-from-nginx
+  namespace: kube-system
+spec:
+  egress:
+  - {}
+  ingress:
+  - {}
+  podSelector:
+    matchLabels:
+      app: nginx-ingress
+      component: controller
+      release: addons
+  policyTypes:
+  - Ingress
+  - Egress
+status: {}
+`
 
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
+			serviceBackendYAML = `apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    component: nginx-ingress-k8s-backend
+    release: addons
+  name: addons-nginx-ingress-nginx-ingress-k8s-backend
+  namespace: kube-system
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+  selector:
+    app: nginx-ingress
+    component: nginx-ingress-k8s-backend
+    release: addons
+  type: ClusterIP
+status:
+  loadBalancer: {}
+`
+
+			clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    release: addons
+  name: addons-nginx-ingress
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  - nodes
+  - pods
+  - secrets
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - services
+  - configmaps
+  verbs:
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses/status
+  verbs:
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingressclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - get
+  - list
+  - watch
+`
+
+			clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    release: addons
+  name: addons-nginx-ingress
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: addons-nginx-ingress
+subjects:
+- kind: ServiceAccount
+  name: addons-nginx-ingress
+  namespace: kube-system
+`
+
+			serviceControllerYAML = `apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-proxy-protocol: '*'
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    component: controller
+    release: addons
+  name: addons-nginx-ingress-controller
+  namespace: kube-system
+spec:
+  loadBalancerSourceRanges:
+  - 10.0.0.0/8
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 80
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 443
+  selector:
+    app: nginx-ingress
+    component: controller
+    release: addons
+  type: LoadBalancer
+status:
+  loadBalancer: {}
+`
+
+			deploymentBackendYAML = `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    component: nginx-ingress-k8s-backend
+    gardener.cloud/role: optional-addon
+    origin: gardener
+    release: addons
+  name: addons-nginx-ingress-nginx-ingress-k8s-backend
+  namespace: kube-system
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: nginx-ingress
+      component: nginx-ingress-k8s-backend
+      release: addons
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: nginx-ingress
+        component: nginx-ingress-k8s-backend
+        gardener.cloud/role: optional-addon
+        origin: gardener
+        release: addons
+    spec:
+      containers:
+      - image: ` + imageDefaultBackend + `
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /healthy
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+        name: nginx-ingress-nginx-ingress-k8s-backend
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        resources:
+          limits:
+            memory: 100Mi
+          requests:
+            cpu: 20m
+            memory: 20Mi
+      nodeSelector:
+        worker.gardener.cloud/system-components: "true"
+      priorityClassName: gardener-shoot-system-600
+      securityContext:
+        fsGroup: 65534
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
+        supplementalGroups:
+        - 1
+      terminationGracePeriodSeconds: 60
+status: {}
+`
+
+			deploymentControllerYAMLFor = func(configMapData map[string]string) string {
+				out := `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    component: controller
+    gardener.cloud/role: optional-addon
+    origin: gardener
+    release: addons
+  name: addons-nginx-ingress-controller
+  namespace: kube-system
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: nginx-ingress
+      component: controller
+      release: addons
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        checksum/config: ` + utils.ComputeChecksum(configMapData) + `
+      creationTimestamp: null
+      labels:
+        app: nginx-ingress
+        component: controller
+        gardener.cloud/role: optional-addon
+        origin: gardener
+        release: addons
+    spec:
+      containers:
+      - args:
+        - /nginx-ingress-controller
+        - --default-backend-service=kube-system/addons-nginx-ingress-nginx-ingress-k8s-backend
+        - --enable-ssl-passthrough=true
+        - --publish-service=kube-system/addons-nginx-ingress-controller
+        - --election-id=ingress-controller-leader
+        - --update-status=true
+        - --annotations-prefix=nginx.ingress.kubernetes.io
+        - --configmap=kube-system/addons-nginx-ingress-controller
+        - --ingress-class=nginx
+        - --controller-class=k8s.io/nginx
+        - --watch-ingress-without-class=true
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        image: ` + imageController + `
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: nginx-ingress-controller
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        - containerPort: 443
+          name: https
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            memory: 4Gi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        securityContext:
+          allowPrivilegeEscalation: true
+          capabilities:
+            add:
+            - NET_BIND_SERVICE
+            - SYS_CHROOT
+            drop:
+            - ALL
+          runAsUser: 101
+          seccompProfile:
+            type: Unconfined
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        worker.gardener.cloud/system-components: "true"
+      priorityClassName: gardener-shoot-system-600
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      serviceAccountName: addons-nginx-ingress
+      terminationGracePeriodSeconds: 60
+status: {}
+`
+				return out
+			}
+
+			roleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    release: addons
+  name: addons-nginx-ingress
+  namespace: kube-system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - namespaces
+  - pods
+  - secrets
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - create
+  - get
+  - update
+- apiGroups:
+  - coordination.k8s.io
+  resourceNames:
+  - ingress-controller-leader
+  resources:
+  - leases
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - get
+  - list
+  - watch
+`
+
+			roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
+  creationTimestamp: null
+  labels:
+    app: nginx-ingress
+    release: addons
+  name: addons-nginx-ingress
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: addons-nginx-ingress
+subjects:
+- kind: ServiceAccount
+  name: addons-nginx-ingress
+  namespace: kube-system
+`
+
+			roleBindingPSPYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
+  creationTimestamp: null
+  name: gardener.cloud:psp:addons-nginx-ingress
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gardener.cloud:psp:privileged
+subjects:
+- kind: ServiceAccount
+  name: addons-nginx-ingress
+  namespace: kube-system
+`
+
+			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  creationTimestamp: null
+  name: addons-nginx-ingress-controller
+  namespace: kube-system
+spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: '*'
+      minAllowed:
+        memory: 100Mi
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: addons-nginx-ingress-controller
+  updatePolicy:
+    updateMode: Auto
+status: {}
+`
+		)
+
+		BeforeEach(func() {
+			managedResourceName = "shoot-addon-nginx-ingress"
+
+			configMapData = map[string]string{
+				"foo":  "bar",
+				"dot":  "3",
+				"dash": "false",
+			}
+
+			values = Values{
+				ClusterType:              component.ClusterTypeShoot,
+				TargetNamespace:          metav1.NamespaceSystem,
+				IngressClass:             v1beta1constants.ShootNginxIngressClass,
+				PriorityClassName:        v1beta1constants.PriorityClassNameShootSystem600,
+				ImageController:          imageController,
+				ImageDefaultBackend:      imageDefaultBackend,
+				LoadBalancerSourceRanges: []string{"10.0.0.0/8"},
+				ConfigData:               configMapData,
+				PSPDisabled:              true,
+			}
+		})
+
+		Describe("#Deploy", func() {
+			JustBeforeEach(func() {
+				nginxIngress = New(c, namespace, values)
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
+
+				Expect(nginxIngress.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
+						Kind:       "ManagedResource",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResource.Name,
+						Namespace:       managedResource.Namespace,
+						ResourceVersion: "1",
+						Labels:          map[string]string{"origin": "gardener"},
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+						SecretRefs: []corev1.LocalObjectReference{{
+							Name: managedResourceSecret.Name,
+						}},
+						KeepObjects: pointer.Bool(false),
+					},
+				}))
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+
+				Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__addons-nginx-ingress.yaml"])).To(Equal(serviceAccountYAML))
+				Expect(string(managedResourceSecret.Data["clusterrole____addons-nginx-ingress.yaml"])).To(Equal(clusterRoleYAML))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____addons-nginx-ingress.yaml"])).To(Equal(clusterRoleBindingYAML))
+				Expect(string(managedResourceSecret.Data["service__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(serviceControllerYAML))
+				Expect(string(managedResourceSecret.Data["service__kube-system__addons-nginx-ingress-nginx-ingress-k8s-backend.yaml"])).To(Equal(serviceBackendYAML))
+				Expect(string(managedResourceSecret.Data["configmap__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(configMapYAML))
+				Expect(string(managedResourceSecret.Data["role__kube-system__addons-nginx-ingress.yaml"])).To(Equal(roleYAML))
+				Expect(string(managedResourceSecret.Data["rolebinding__kube-system__addons-nginx-ingress.yaml"])).To(Equal(roleBindingYAML))
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-nginx-ingress-k8s-backend.yaml"])).To(Equal(deploymentBackendYAML))
+				Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-to-from-nginx.yaml"])).To(Equal(networkPolicyYAML))
+				Expect(string(managedResourceSecret.Data["ingressclass____nginx.yaml"])).To(Equal(ingressClassYAML))
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(deploymentControllerYAMLFor(configMapData)))
+			})
+
+			Context("w/ VPA and PSP enabled", func() {
+				BeforeEach(func() {
+					values.VPAEnabled = true
+					values.PSPDisabled = false
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(14))
+
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(vpaYAML))
+					Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_addons-nginx-ingress.yaml"])).To(Equal(roleBindingPSPYAML))
+				})
+			})
+
+			Context("w/ VPA and PSP disabled", func() {
+				BeforeEach(func() {
+					values.VPAEnabled = true
+					values.PSPDisabled = true
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(13))
+
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__addons-nginx-ingress-controller.yaml"])).To(Equal(vpaYAML))
+				})
+			})
+
+			Context("w/o VPA and PSP enabled", func() {
+				BeforeEach(func() {
+					values.VPAEnabled = false
+					values.PSPDisabled = false
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(13))
+
+					Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_addons-nginx-ingress.yaml"])).To(Equal(roleBindingPSPYAML))
+				})
+			})
+
+			Context("w/o VPA and PSP disabled", func() {
+				BeforeEach(func() {
+					values.VPAEnabled = false
+					values.PSPDisabled = true
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceSecret.Data).To(HaveLen(12))
+				})
+			})
+		})
+
+		Describe("#Destroy", func() {
+			It("should successfully destroy all resources", func() {
+				nginxIngress = New(c, namespace, Values{ClusterType: component.ClusterTypeShoot})
+
+				Expect(c.Create(ctx, managedResource)).To(Succeed())
+				Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+
+				Expect(nginxIngress.Destroy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
+			})
 		})
 	})
 
@@ -631,13 +1303,18 @@ status: {}
 		)
 
 		BeforeEach(func() {
-			nginxIngress = New(c, namespace, Values{})
+			managedResourceName = "nginx-ingress"
+			namespace = "some-namespace"
 
 			fakeOps = &retryfake.Ops{MaxAttempts: 1}
 			resetVars = test.WithVars(
 				&retry.Until, fakeOps.Until,
 				&retry.UntilTimeout, fakeOps.UntilTimeout,
 			)
+		})
+
+		JustBeforeEach(func() {
+			nginxIngress = New(c, namespace, Values{ClusterType: component.ClusterTypeSeed})
 		})
 
 		AfterEach(func() {
@@ -672,6 +1349,7 @@ status: {}
 						},
 					},
 				})).To(Succeed())
+
 				Expect(nginxIngress.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
 			})
 
@@ -698,6 +1376,7 @@ status: {}
 						},
 					},
 				})).To(Succeed())
+
 				Expect(nginxIngress.Wait(ctx)).To(Succeed())
 			})
 		})
