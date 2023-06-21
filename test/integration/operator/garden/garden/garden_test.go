@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/utils/pointer"
@@ -115,7 +116,9 @@ var _ = Describe("Garden controller tests", func() {
 		})
 
 		By("Setup manager")
-		mapper, err := apiutil.NewDynamicRESTMapper(restConfig)
+		httpClient, err := rest.HTTPClientFor(restConfig)
+		Expect(err).NotTo(HaveOccurred())
+		mapper, err := apiutil.NewDynamicRESTMapper(restConfig, httpClient)
 		Expect(err).NotTo(HaveOccurred())
 
 		mgr, err := manager.New(restConfig, manager.Options{

@@ -127,7 +127,9 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("Setup manager")
-	mapper, err := apiutil.NewDynamicRESTMapper(restConfig)
+	httpClient, err := rest.HTTPClientFor(restConfig)
+	Expect(err).NotTo(HaveOccurred())
+	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, httpClient)
 	Expect(err).NotTo(HaveOccurred())
 
 	mgr, err := manager.New(restConfig, manager.Options{

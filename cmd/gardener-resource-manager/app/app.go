@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	goruntime "runtime"
 	"strconv"
@@ -26,7 +27,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	eventsv1beta1 "k8s.io/api/events/v1beta1"
@@ -205,11 +205,10 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 
 			// use dynamic rest mapper for target cluster, which will automatically rediscover resources on NoMatchErrors
 			// but is rate-limited to not issue to many discovery calls (rate-limit shared across all reconciliations)
-			opts.MapperProvider = func(config *rest.Config) (meta.RESTMapper, error) {
+			opts.MapperProvider = func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
 				return apiutil.NewDynamicRESTMapper(
 					config,
-					apiutil.WithLazyDiscovery,
-					apiutil.WithLimiter(rate.NewLimiter(rate.Every(1*time.Minute), 1)), // rediscover at maximum every minute
+					httpClient,
 				)
 			}
 

@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"golang.org/x/time/rate"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
@@ -56,11 +55,15 @@ func setCacheOptionsDefaults(options *cache.Options) error {
 
 func setClientOptionsDefaults(config *rest.Config, options *client.Options) error {
 	if options.Mapper == nil {
+		httpClient, err := rest.HTTPClientFor(config)
+		if err != nil {
+			return fmt.Errorf("failed to get HTTP client for config: %w", err)
+		}
+
 		// default the client's REST mapper to a dynamic REST mapper (automatically rediscovers resources on NoMatchErrors)
 		mapper, err := apiutil.NewDynamicRESTMapper(
 			config,
-			apiutil.WithLazyDiscovery,
-			apiutil.WithLimiter(rate.NewLimiter(rate.Every(5*time.Second), 1)),
+			httpClient,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to create new DynamicRESTMapper: %w", err)
