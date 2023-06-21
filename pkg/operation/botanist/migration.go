@@ -112,8 +112,5 @@ func (b *Botanist) IsCopyOfBackupsRequired(ctx context.Context) (bool, error) {
 }
 
 func (b *Botanist) isRestorePhase() bool {
-	return b.Shoot != nil &&
-		b.Shoot.GetInfo() != nil &&
-		b.Shoot.GetInfo().Status.LastOperation != nil &&
-		b.Shoot.GetInfo().Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeRestore
+	return v1beta1helper.ShootHasOperationType(b.Shoot.GetInfo().Status.LastOperation, gardencorev1beta1.LastOperationTypeRestore)
 }
