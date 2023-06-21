@@ -78,7 +78,7 @@ var _ = Describe("ShootState", func() {
 			Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot)).To(Succeed())
 			Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 			Expect(shootState.Spec).To(Equal(gardencorev1beta1.ShootStateSpec{}))
-			Expect(shootState.Annotations).To(HaveKeyWithValue("gardener.cloud/timestamp", fakeClock.Now().Format(time.RFC3339)))
+			Expect(shootState.Annotations).To(HaveKeyWithValue("gardener.cloud/timestamp", fakeClock.Now().UTC().Format(time.RFC3339)))
 		})
 
 		It("should compute the expected spec for both gardener and extensions data", func() {
