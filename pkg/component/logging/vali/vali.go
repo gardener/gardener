@@ -870,6 +870,13 @@ func getLabels() map[string]string {
 func (v *vali) resizeOrDeleteValiDataVolumeIfStorageNotTheSame(ctx context.Context) error {
 	managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: ManagedResourceControlName, Namespace: v.namespace}}
 	removeIgnoreAnnotationFromManagedResource := func() error {
+		// In order to not create the managed resource here first check if exists.
+		if err := v.client.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return err
+			}
+			return nil
+		}
 		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, managedResource, func() error {
 			delete(managedResource.Annotations, resourcesv1alpha1.Ignore)
 			return nil
