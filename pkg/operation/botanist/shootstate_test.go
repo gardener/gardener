@@ -72,7 +72,7 @@ var _ = Describe("botanist", func() {
 		It("should create ShootState and add it to the Botanist object", func() {
 			Expect(botanist.EnsureShootStateExists(ctx)).To(Succeed())
 
-			Expect(botanist.GetShootState()).To(Equal(shootState))
+			Expect(botanist.Shoot.GetShootState()).To(Equal(shootState))
 		})
 
 		It("should succeed and update Botanist object if ShootState already exists", func() {
@@ -82,18 +82,7 @@ var _ = Describe("botanist", func() {
 
 			Expect(botanist.EnsureShootStateExists(ctx)).To(Succeed())
 
-			Expect(botanist.GetShootState()).To(Equal(shootState))
-		})
-	})
-
-	Describe("#{Get,Set}ShootState", func() {
-		It("should not panic if ShootState was not stored", func() {
-			Expect(botanist.GetShootState()).To(BeNil())
-		})
-
-		It("should return the correct ShootState", func() {
-			botanist.SetShootState(shootState)
-			Expect(botanist.GetShootState()).To(Equal(shootState))
+			Expect(botanist.Shoot.GetShootState()).To(Equal(shootState))
 		})
 	})
 })

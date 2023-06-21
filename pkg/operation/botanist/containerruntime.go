@@ -39,7 +39,7 @@ func (b *Botanist) DefaultContainerRuntime() containerruntime.Interface {
 // the Shoot is in the restore phase of the control plane migration
 func (b *Botanist) DeployContainerRuntime(ctx context.Context) error {
 	if b.isRestorePhase() {
-		return b.Shoot.Components.Extensions.ContainerRuntime.Restore(ctx, b.GetShootState())
+		return b.Shoot.Components.Extensions.ContainerRuntime.Restore(ctx, b.Shoot.GetShootState())
 	}
 	return b.Shoot.Components.Extensions.ContainerRuntime.Deploy(ctx)
 }

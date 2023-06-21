@@ -43,23 +43,6 @@ func (b *Botanist) EnsureShootStateExists(ctx context.Context) error {
 		return err
 	}
 
-	b.SetShootState(shootState)
-	return nil
-}
-
-// GetShootState returns the shootstate resource of this Shoot in a concurrency safe way.
-// This method should be used only for reading the data of the returned shootstate resource. The returned shootstate
-// resource MUST NOT BE MODIFIED (except in test code) since this might interfere with other concurrent reads and writes.
-// To properly update the shootstate resource of this Shoot use SaveGardenerResourceDataInShootState.
-func (b *Botanist) GetShootState() *gardencorev1beta1.ShootState {
-	return b.Shoot.GetShootState()
-}
-
-// SetShootState sets the shootstate resource of this Shoot in a concurrency safe way.
-// This method is not protected by a mutex and does not update the shootstate resource in the cluster and so
-// should be used only in exceptional situations, or as a convenience in test code. The shootstate passed as a parameter
-// MUST NOT BE MODIFIED after the call to SetShootState (except in test code) since this might interfere with other concurrent reads and writes.
-// To properly update the shootstate resource of this Shoot use SaveGardenerResourceDataInShootState.
-func (b *Botanist) SetShootState(shootState *gardencorev1beta1.ShootState) {
 	b.Shoot.SetShootState(shootState)
+	return nil
 }

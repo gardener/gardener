@@ -111,7 +111,7 @@ func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 func (b *Botanist) restoreSecretsFromShootStateForSecretsManagerAdoption(ctx context.Context) error {
 	var fns []flow.TaskFn
 
-	for _, v := range b.GetShootState().Spec.Gardener {
+	for _, v := range b.Shoot.GetShootState().Spec.Gardener {
 		entry := v
 
 		if entry.Labels[secretsmanager.LabelKeyManagedBy] != secretsmanager.LabelValueSecretsManager ||

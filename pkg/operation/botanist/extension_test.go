@@ -69,7 +69,7 @@ var _ = Describe("Extensions", func() {
 				SeedNamespace: namespace,
 			},
 		}}
-		botanist.SetShootState(shootState)
+		botanist.Shoot.SetShootState(shootState)
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 	})
 

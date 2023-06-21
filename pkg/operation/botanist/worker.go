@@ -75,7 +75,7 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 	b.Shoot.Components.Extensions.Worker.SetWorkerNameToOperatingSystemConfigsMap(b.Shoot.Components.Extensions.OperatingSystemConfig.WorkerNameToOperatingSystemConfigsMap())
 
 	if b.isRestorePhase() {
-		return b.Shoot.Components.Extensions.Worker.Restore(ctx, b.GetShootState())
+		return b.Shoot.Components.Extensions.Worker.Restore(ctx, b.Shoot.GetShootState())
 	}
 
 	return b.Shoot.Components.Extensions.Worker.Deploy(ctx)

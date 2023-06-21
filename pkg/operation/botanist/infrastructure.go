@@ -58,7 +58,7 @@ func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 	}
 
 	if b.isRestorePhase() {
-		return b.Shoot.Components.Extensions.Infrastructure.Restore(ctx, b.GetShootState())
+		return b.Shoot.Components.Extensions.Infrastructure.Restore(ctx, b.Shoot.GetShootState())
 	}
 
 	return b.Shoot.Components.Extensions.Infrastructure.Deploy(ctx)

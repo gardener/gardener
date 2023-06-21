@@ -44,7 +44,7 @@ func (b *Botanist) DefaultNetwork() component.DeployMigrateWaiter {
 // the Shoot is in the restore phase of the control plane migration
 func (b *Botanist) DeployNetwork(ctx context.Context) error {
 	if b.isRestorePhase() {
-		return b.Shoot.Components.Extensions.Network.Restore(ctx, b.GetShootState())
+		return b.Shoot.Components.Extensions.Network.Restore(ctx, b.Shoot.GetShootState())
 	}
 
 	return b.Shoot.Components.Extensions.Network.Deploy(ctx)

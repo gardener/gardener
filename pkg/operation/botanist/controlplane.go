@@ -193,7 +193,7 @@ func (b *Botanist) DeployControlPlaneExposure(ctx context.Context) error {
 
 func (b *Botanist) deployOrRestoreControlPlane(ctx context.Context, controlPlane extensionscontrolplane.Interface) error {
 	if b.isRestorePhase() {
-		return controlPlane.Restore(ctx, b.GetShootState())
+		return controlPlane.Restore(ctx, b.Shoot.GetShootState())
 	}
 	return controlPlane.Deploy(ctx)
 }
@@ -201,7 +201,7 @@ func (b *Botanist) deployOrRestoreControlPlane(ctx context.Context, controlPlane
 // RestoreControlPlane restores the ControlPlane custom resource (purpose normal)
 func (b *Botanist) RestoreControlPlane(ctx context.Context) error {
 	b.Shoot.Components.Extensions.ControlPlane.SetInfrastructureProviderStatus(b.Shoot.Components.Extensions.Infrastructure.ProviderStatus())
-	return b.Shoot.Components.Extensions.ControlPlane.Restore(ctx, b.GetShootState())
+	return b.Shoot.Components.Extensions.ControlPlane.Restore(ctx, b.Shoot.GetShootState())
 }
 
 // RestartControlPlanePods restarts (deletes) pods of the shoot control plane.

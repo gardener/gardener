@@ -78,7 +78,7 @@ var _ = Describe("Infrastructure", func() {
 				},
 			},
 		}
-		botanist.SetShootState(shootState)
+		botanist.Shoot.SetShootState(shootState)
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 			Spec: gardencorev1beta1.ShootSpec{
 				Provider: gardencorev1beta1.Provider{
