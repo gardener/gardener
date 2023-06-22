@@ -163,7 +163,7 @@ func InjectAnnotations(obj runtime.Object, additional ...string) error {
 }
 
 func computeAnnotationsFromLocalObjRefs(refs []corev1.LocalObjectReference, kind string, additional ...string) map[string]string {
-	out := make(map[string]string)
+	out := make(map[string]string, len(refs)+len(additional))
 	for _, ref := range refs {
 		out[AnnotationKey(KindSecret, ref.Name)] = ref.Name
 	}
