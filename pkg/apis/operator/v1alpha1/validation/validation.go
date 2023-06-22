@@ -101,6 +101,11 @@ func validateRuntimeCluster(runtimeCluster operatorv1alpha1.RuntimeCluster, fldP
 func validateVirtualCluster(virtualCluster operatorv1alpha1.VirtualCluster, runtimeCluster operatorv1alpha1.RuntimeCluster, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	// TODO(timuthy): Turn this into a native CRD validation as soon as the `dns.domain` field was dropped (planned after v1.74)
+	if len(virtualCluster.DNS.Domains) == 0 && virtualCluster.DNS.Domain == nil {
+		allErrs = append(allErrs, field.Required(fldPath.Child("dns").Child("domains"), "at least one domain is required"))
+	}
+
 	if domain := virtualCluster.DNS.Domain; domain != nil {
 		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(*domain, fldPath.Child("dns", "domain"))...)
 	}
