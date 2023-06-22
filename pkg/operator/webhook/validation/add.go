@@ -31,7 +31,7 @@ const (
 // AddToManager adds Handler to the given manager.
 func (h *Handler) AddToManager(mgr manager.Manager) error {
 	webhook := admission.
-		WithCustomValidator(&operatorv1alpha1.Garden{}, h).
+		WithCustomValidator(mgr.GetScheme(), &operatorv1alpha1.Garden{}, h).
 		WithRecoverPanic(true)
 
 	mgr.GetWebhookServer().Register(WebhookPath, webhook)

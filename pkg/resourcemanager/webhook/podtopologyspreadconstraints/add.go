@@ -30,7 +30,7 @@ const (
 // AddToManager adds Handler to the given manager.
 func (h *Handler) AddToManager(mgr manager.Manager) error {
 	webhook := admission.
-		WithCustomDefaulter(&corev1.Pod{}, h).
+		WithCustomDefaulter(mgr.GetScheme(), &corev1.Pod{}, h).
 		WithRecoverPanic(true)
 
 	mgr.GetWebhookServer().Register(WebhookPath, webhook)

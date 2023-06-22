@@ -30,7 +30,7 @@ const (
 // AddToManager adds Handler to the given manager.
 func (h *Handler) AddToManager(mgr manager.Manager) error {
 	webhook := admission.
-		WithCustomDefaulter(&discoveryv1.EndpointSlice{}, h).
+		WithCustomDefaulter(mgr.GetScheme(), &discoveryv1.EndpointSlice{}, h).
 		WithRecoverPanic(true)
 
 	mgr.GetWebhookServer().Register(WebhookPath, webhook)
