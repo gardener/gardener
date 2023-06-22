@@ -8467,7 +8467,7 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 					},
 					"maximum": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Maximum is the maximum number of VMs to create.",
+							Description: "Maximum is the maximum number of machines to create. This value is divided by the number of configured zones for a fair distribution.",
 							Default:     0,
 							Type:        []string{"integer"},
 							Format:      "int32",
@@ -8475,7 +8475,7 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 					},
 					"minimum": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Minimum is the minimum number of VMs to create.",
+							Description: "Minimum is the minimum number of machines to create. This value is divided by the number of configured zones for a fair distribution.",
 							Default:     0,
 							Type:        []string{"integer"},
 							Format:      "int32",
@@ -8483,13 +8483,13 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 					},
 					"maxSurge": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MaxSurge is maximum number of VMs that are created during an update.",
+							Description: "MaxSurge is maximum number of machines that are created during an update. This value is divided by the number of configured zones for a fair distribution.",
 							Ref:         ref("k8s.io/apimachinery/pkg/util/intstr.IntOrString"),
 						},
 					},
 					"maxUnavailable": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MaxUnavailable is the maximum number of VMs that can be unavailable during an update.",
+							Description: "MaxUnavailable is the maximum number of machines that can be unavailable during an update. This value is divided by the number of configured zones for a fair distribution.",
 							Ref:         ref("k8s.io/apimachinery/pkg/util/intstr.IntOrString"),
 						},
 					},
@@ -8569,7 +8569,7 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 					},
 					"sysctls": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Sysctls is a map of kernel settings to apply on all VMs in this worker pool.",
+							Description: "Sysctls is a map of kernel settings to apply on all machines in this worker pool.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,
