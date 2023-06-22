@@ -274,12 +274,14 @@ func (r *Reconciler) reconcile(
 		})
 	)
 
+	gardenCopy := garden.DeepCopy()
 	if err := g.Compile().Run(ctx, flow.Opts{
 		Log:              log,
-		ProgressReporter: r.reportProgress(log, garden),
+		ProgressReporter: r.reportProgress(log, gardenCopy),
 	}); err != nil {
 		return reconcile.Result{}, flow.Errors(err)
 	}
+	*garden = *gardenCopy
 
 	return reconcile.Result{}, secretsManager.Cleanup(ctx)
 }
