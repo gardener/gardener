@@ -15,6 +15,8 @@
 package health_test
 
 import (
+	"context"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -31,6 +33,7 @@ import (
 var _ = Describe("Add", func() {
 	Describe("#EnqueueCreateAndUpdate", func() {
 		var (
+			ctx   = context.TODO()
 			hdlr  handler.EventHandler
 			queue workqueue.RateLimitingInterface
 			obj   *corev1.Secret
@@ -43,7 +46,7 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should enqueue the object for Create events", func() {
-			hdlr.Create(event.CreateEvent{Object: obj}, queue)
+			hdlr.Create(ctx, event.CreateEvent{Object: obj}, queue)
 
 			Expect(queue.Len()).To(Equal(1))
 			item, v := queue.Get()
@@ -52,7 +55,7 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should enqueue the object for Update events", func() {
-			hdlr.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+			hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
 
 			Expect(queue.Len()).To(Equal(1))
 			item, v := queue.Get()
@@ -61,13 +64,13 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should not enqueue the object for Delete events", func() {
-			hdlr.Delete(event.DeleteEvent{Object: obj}, queue)
+			hdlr.Delete(ctx, event.DeleteEvent{Object: obj}, queue)
 
 			Expect(queue.Len()).To(Equal(0))
 		})
 
 		It("should not enqueue the object for Generic events", func() {
-			hdlr.Generic(event.GenericEvent{Object: obj}, queue)
+			hdlr.Generic(ctx, event.GenericEvent{Object: obj}, queue)
 
 			Expect(queue.Len()).To(Equal(0))
 		})

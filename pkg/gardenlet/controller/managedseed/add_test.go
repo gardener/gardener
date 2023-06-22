@@ -320,14 +320,14 @@ var _ = Describe("Add", func() {
 
 			now := metav1.Now()
 			obj.SetDeletionTimestamp(&now)
-			hdlr.Create(event.CreateEvent{Object: obj}, queue)
+			hdlr.Create(ctx, event.CreateEvent{Object: obj}, queue)
 		})
 
 		It("should enqueue the object without delay for Create events when generation is set to 1", func() {
 			queue.EXPECT().Add(req)
 
 			obj.Generation = 1
-			hdlr.Create(event.CreateEvent{Object: obj}, queue)
+			hdlr.Create(ctx, event.CreateEvent{Object: obj}, queue)
 		})
 
 		It("should enqueue the object without delay for Create events when generation changed and jitterudpates is set to false", func() {
@@ -337,7 +337,7 @@ var _ = Describe("Add", func() {
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 1
 			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
-			hdlr.Create(event.CreateEvent{Object: obj}, queue)
+			hdlr.Create(ctx, event.CreateEvent{Object: obj}, queue)
 		})
 
 		It("should enqueue the object with random delay for Create events when generation changed and  jitterUpdates is set to true", func() {
@@ -347,7 +347,7 @@ var _ = Describe("Add", func() {
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 1
 			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
-			hdlr.Create(event.CreateEvent{Object: obj}, queue)
+			hdlr.Create(ctx, event.CreateEvent{Object: obj}, queue)
 		})
 
 		It("should enqueue the object with random delay for Create events when there is no change in generation", func() {
@@ -357,13 +357,13 @@ var _ = Describe("Add", func() {
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 2
 			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
-			hdlr.Create(event.CreateEvent{Object: obj}, queue)
+			hdlr.Create(ctx, event.CreateEvent{Object: obj}, queue)
 		})
 
 		It("should not enqueue the object for Update events when generation and observedGeneration are equal", func() {
 			obj.Generation = 1
 			obj.Status.ObservedGeneration = 1
-			hdlr.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+			hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
 		})
 
 		It("should enqueue the object for Update events when deletion timestamp is set", func() {
@@ -373,7 +373,7 @@ var _ = Describe("Add", func() {
 			obj.Status.ObservedGeneration = 1
 			now := metav1.Now()
 			obj.SetDeletionTimestamp(&now)
-			hdlr.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+			hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
 		})
 
 		It("should enqueue the object for Update events when generation is 1", func() {
@@ -381,7 +381,7 @@ var _ = Describe("Add", func() {
 
 			obj.Generation = 1
 			obj.Status.ObservedGeneration = 0
-			hdlr.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+			hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
 		})
 
 		It("should enqueue the object for Update events when jitterUpdates is set to false", func() {
@@ -391,7 +391,7 @@ var _ = Describe("Add", func() {
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 1
 			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
-			hdlr.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+			hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
 		})
 
 		It("should enqueue the object with random delay for Update events when jitterUpdates is set to true", func() {
@@ -401,17 +401,17 @@ var _ = Describe("Add", func() {
 			obj.Generation = 2
 			obj.Status.ObservedGeneration = 1
 			hdlr = (&Reconciler{Config: cfg}).EnqueueWithJitterDelay()
-			hdlr.Update(event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
+			hdlr.Update(ctx, event.UpdateEvent{ObjectNew: obj, ObjectOld: obj}, queue)
 		})
 
 		It("should enqueue the object for Delete events", func() {
 			queue.EXPECT().Add(req)
 
-			hdlr.Delete(event.DeleteEvent{Object: obj}, queue)
+			hdlr.Delete(ctx, event.DeleteEvent{Object: obj}, queue)
 		})
 
 		It("should not enqueue the object for Generic events", func() {
-			hdlr.Generic(event.GenericEvent{Object: obj}, queue)
+			hdlr.Generic(ctx, event.GenericEvent{Object: obj}, queue)
 		})
 	})
 })

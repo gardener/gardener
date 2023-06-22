@@ -73,7 +73,7 @@ var _ = Describe("EnqueueMapped", func() {
 		Describe("#Create", func() {
 			It("should work map and enqueue", func() {
 				handler = EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper, 0, logger)
-				handler.Create(event.CreateEvent{Object: secret1}, queue)
+				handler.Create(ctx, event.CreateEvent{Object: secret1}, queue)
 				expectItems(queue, secret1)
 			})
 		})
@@ -81,7 +81,7 @@ var _ = Describe("EnqueueMapped", func() {
 		Describe("#Delete", func() {
 			It("should work map and enqueue", func() {
 				handler = EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper, 0, logger)
-				handler.Delete(event.DeleteEvent{Object: secret1}, queue)
+				handler.Delete(ctx, event.DeleteEvent{Object: secret1}, queue)
 				expectItems(queue, secret1)
 			})
 		})
@@ -89,7 +89,7 @@ var _ = Describe("EnqueueMapped", func() {
 		Describe("#Generic", func() {
 			It("should work map and enqueue", func() {
 				handler = EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper, 0, logger)
-				handler.Generic(event.GenericEvent{Object: secret1}, queue)
+				handler.Generic(ctx, event.GenericEvent{Object: secret1}, queue)
 				expectItems(queue, secret1)
 			})
 		})
@@ -101,7 +101,7 @@ var _ = Describe("EnqueueMapped", func() {
 
 			Describe("#Update", func() {
 				It("should work map and enqueue", func() {
-					handler.Update(event.UpdateEvent{ObjectOld: secret1, ObjectNew: secret2}, queue)
+					handler.Update(ctx, event.UpdateEvent{ObjectOld: secret1, ObjectNew: secret2}, queue)
 					expectItems(queue, secret1, secret2)
 				})
 			})
@@ -114,7 +114,7 @@ var _ = Describe("EnqueueMapped", func() {
 
 			Describe("#Update", func() {
 				It("should work map and enqueue", func() {
-					handler.Update(event.UpdateEvent{ObjectOld: secret1, ObjectNew: secret2}, queue)
+					handler.Update(ctx, event.UpdateEvent{ObjectOld: secret1, ObjectNew: secret2}, queue)
 					expectItems(queue, secret2)
 				})
 			})
@@ -127,7 +127,7 @@ var _ = Describe("EnqueueMapped", func() {
 
 			Describe("#Update", func() {
 				It("should work map and enqueue", func() {
-					handler.Update(event.UpdateEvent{ObjectOld: secret1, ObjectNew: secret2}, queue)
+					handler.Update(ctx, event.UpdateEvent{ObjectOld: secret1, ObjectNew: secret2}, queue)
 					expectItems(queue, secret1)
 				})
 			})

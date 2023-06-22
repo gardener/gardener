@@ -15,6 +15,8 @@
 package care
 
 import (
+	"context"
+
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
@@ -72,7 +74,7 @@ var RandomDurationWithMetaDuration = utils.RandomDurationWithMetaDuration
 // EventHandler returns a handler for Shoot events.
 func (r *Reconciler) EventHandler() handler.EventHandler {
 	return &handler.Funcs{
-		CreateFunc: func(e event.CreateEvent, q workqueue.RateLimitingInterface) {
+		CreateFunc: func(_ context.Context, e event.CreateEvent, q workqueue.RateLimitingInterface) {
 			shoot, ok := e.Object.(*gardencorev1beta1.Shoot)
 			if !ok {
 				return
@@ -93,7 +95,7 @@ func (r *Reconciler) EventHandler() handler.EventHandler {
 			// don't add random duration for enqueueing new Shoots which have never been health checked yet
 			q.Add(req)
 		},
-		UpdateFunc: func(e event.UpdateEvent, q workqueue.RateLimitingInterface) {
+		UpdateFunc: func(_ context.Context, e event.UpdateEvent, q workqueue.RateLimitingInterface) {
 			q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
 				Name:      e.ObjectNew.GetName(),
 				Namespace: e.ObjectNew.GetNamespace(),
