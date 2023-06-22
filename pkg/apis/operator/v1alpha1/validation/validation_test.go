@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/pointer"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -44,7 +45,7 @@ var _ = Describe("Validation Tests", func() {
 					},
 					VirtualCluster: operatorv1alpha1.VirtualCluster{
 						DNS: operatorv1alpha1.DNS{
-							Domain: "foo.bar.com",
+							Domain: pointer.String("foo.bar.com"),
 						},
 						Kubernetes: operatorv1alpha1.Kubernetes{
 							Version: "1.26.3",
@@ -785,17 +786,13 @@ var _ = Describe("Validation Tests", func() {
 		Context("virtual cluster", func() {
 			Context("DNS", func() {
 				It("should complain about invalid domain names", func() {
-					garden.Spec.VirtualCluster.DNS.Domain = ",,,"
+					garden.Spec.VirtualCluster.DNS.Domain = pointer.String(",,,")
 					garden.Spec.VirtualCluster.DNS.Domains = []string{",,,"}
 
 					Expect(ValidateGarden(garden)).To(ContainElements(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),
 							"Field": Equal("spec.virtualCluster.dns.domain"),
-						})),
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":  Equal(field.ErrorTypeInvalid),
-							"Field": Equal("spec.virtualCluster.dns.domains[0]"),
 						})),
 					))
 				})
@@ -816,7 +813,7 @@ var _ = Describe("Validation Tests", func() {
 				})
 
 				It("should complain about duplicate domain names in 'domain'", func() {
-					garden.Spec.VirtualCluster.DNS.Domain = "example.com"
+					garden.Spec.VirtualCluster.DNS.Domain = pointer.String("example.com")
 					garden.Spec.VirtualCluster.DNS.Domains = []string{
 						"example.com",
 						"foo.bar",

@@ -154,7 +154,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.virtualGardenGardenerAccess = r.newGardenerAccess(secretsManager, garden.Spec.VirtualCluster.DNS.Domain)
+	c.virtualGardenGardenerAccess = r.newGardenerAccess(secretsManager, *garden.Spec.VirtualCluster.DNS.Domain)
 
 	// observability components
 	c.kubeStateMetrics, err = r.newKubeStateMetrics()
@@ -650,7 +650,7 @@ func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValue
 		r.GardenNamespace,
 		func() *kubeapiserverexposure.SNIValues {
 			return &kubeapiserverexposure.SNIValues{
-				Hosts: []string{gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domain)},
+				Hosts: []string{gardenerutils.GetAPIServerDomain(*garden.Spec.VirtualCluster.DNS.Domain)},
 				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
 					Namespace: ingressGatewayValues[0].Namespace,
 					Labels:    ingressGatewayValues[0].Labels,

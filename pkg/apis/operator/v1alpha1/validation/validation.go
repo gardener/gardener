@@ -23,6 +23,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/pointer"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
@@ -100,7 +101,9 @@ func validateRuntimeCluster(runtimeCluster operatorv1alpha1.RuntimeCluster, fldP
 func validateVirtualCluster(virtualCluster operatorv1alpha1.VirtualCluster, runtimeCluster operatorv1alpha1.RuntimeCluster, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(virtualCluster.DNS.Domain, fldPath.Child("dns", "domain"))...)
+	if domain := virtualCluster.DNS.Domain; domain != nil {
+		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(*domain, fldPath.Child("dns", "domain"))...)
+	}
 
 	domains := sets.New[string]()
 	for i, domain := range virtualCluster.DNS.Domains {
@@ -108,7 +111,7 @@ func validateVirtualCluster(virtualCluster operatorv1alpha1.VirtualCluster, runt
 		if domains.Has(domain) {
 			allErrs = append(allErrs, field.Duplicate(fldPath.Child("dns", "domains").Index(i), domain))
 		}
-		if domain == virtualCluster.DNS.Domain {
+		if domain == pointer.StringDeref(virtualCluster.DNS.Domain, "") {
 			allErrs = append(allErrs, field.Duplicate(fldPath.Child("dns", "domain"), domain))
 		}
 		domains.Insert(domain)
