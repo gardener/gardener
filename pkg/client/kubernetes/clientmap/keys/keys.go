@@ -15,13 +15,21 @@
 package keys
 
 import (
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
 )
 
+// ForGarden returns a key for retrieving a ClientSet for the given Shoot cluster.
+func ForGarden(garden *operatorv1alpha1.Garden) clientmap.ClientSetKey {
+	return internal.GardenClientSetKey{
+		Name: garden.Name,
+	}
+}
+
 // ForShoot returns a key for retrieving a ClientSet for the given Shoot cluster.
-func ForShoot(shoot *v1beta1.Shoot) clientmap.ClientSetKey {
+func ForShoot(shoot *gardencorev1beta1.Shoot) clientmap.ClientSetKey {
 	return internal.ShootClientSetKey{
 		Namespace: shoot.Namespace,
 		Name:      shoot.Name,
