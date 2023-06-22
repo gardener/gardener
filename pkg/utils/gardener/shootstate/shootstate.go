@@ -32,6 +32,7 @@ import (
 	apiextensions "github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -41,7 +42,7 @@ import (
 
 // Deploy deploys the ShootState resource with the effective state for the given shoot into the garden
 // cluster.
-func Deploy(ctx context.Context, clock clock.Clock, gardenClient, seedClient client.Client, shoot *gardencorev1beta1.Shoot) error {
+func Deploy(ctx context.Context, clock clock.Clock, gardenClient, seedClient client.Client, shoot *gardencorev1beta1.Shoot, overwriteSpec bool) error {
 	shootState := &gardencorev1beta1.ShootState{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      shoot.Name,
@@ -56,7 +57,30 @@ func Deploy(ctx context.Context, clock clock.Clock, gardenClient, seedClient cli
 
 	_, err = controllerutils.GetAndCreateOrStrategicMergePatch(ctx, gardenClient, shootState, func() error {
 		metav1.SetMetaDataAnnotation(&shootState.ObjectMeta, v1beta1constants.GardenerTimestamp, clock.Now().UTC().Format(time.RFC3339))
-		shootState.Spec = *spec
+
+		if overwriteSpec {
+			shootState.Spec = *spec
+			return nil
+		}
+
+		gardenerData := v1beta1helper.GardenerResourceDataList(shootState.Spec.Gardener)
+		for _, data := range spec.Gardener {
+			gardenerData.Upsert(data.DeepCopy())
+		}
+		shootState.Spec.Gardener = gardenerData
+
+		extensionsData := v1beta1helper.ExtensionResourceStateList(shootState.Spec.Extensions)
+		for _, data := range spec.Extensions {
+			extensionsData.Upsert(data.DeepCopy())
+		}
+		shootState.Spec.Extensions = extensionsData
+
+		resourcesData := v1beta1helper.ResourceDataList(shootState.Spec.Resources)
+		for _, data := range spec.Resources {
+			resourcesData.Upsert(data.DeepCopy())
+		}
+		shootState.Spec.Resources = resourcesData
+
 		return nil
 	})
 	return err

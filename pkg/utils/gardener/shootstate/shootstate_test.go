@@ -75,122 +75,151 @@ var _ = Describe("ShootState", func() {
 
 	Describe("#Deploy", func() {
 		It("should deploy a ShootState with an empty spec when there is nothing to persist", func() {
-			Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot)).To(Succeed())
+			Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, true)).To(Succeed())
 			Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 			Expect(shootState.Spec).To(Equal(gardencorev1beta1.ShootStateSpec{}))
 			Expect(shootState.Annotations).To(HaveKeyWithValue("gardener.cloud/timestamp", fakeClock.Now().UTC().Format(time.RFC3339)))
 		})
 
-		It("should compute the expected spec for both gardener and extensions data", func() {
-			By("Creating Gardener data")
-			Expect(fakeSeedClient.Create(ctx, newSecret("secret1", seedNamespace, true))).To(Succeed())
-			Expect(fakeSeedClient.Create(ctx, newSecret("secret2", seedNamespace, false))).To(Succeed())
-			Expect(fakeSeedClient.Create(ctx, newSecret("secret3", seedNamespace, true))).To(Succeed())
+		Context("with data to backup", func() {
+			var (
+				existingGardenerData   = []gardencorev1beta1.GardenerResourceData{{Name: "some-data"}}
+				existingExtensionsData = []gardencorev1beta1.ExtensionResourceState{{Name: pointer.String("some-data")}}
+				existingResourcesData  = []gardencorev1beta1.ResourceData{{Data: runtime.RawExtension{Raw: []byte("{}")}}}
+				expectedSpec           gardencorev1beta1.ShootStateSpec
+			)
 
-			By("Creating extensions data")
-			purposeNormal := extensionsv1alpha1.Normal
-			purposeExposure := extensionsv1alpha1.Exposure
-			createExtensionObject(ctx, fakeSeedClient, "backupentry", seedNamespace, &extensionsv1alpha1.BackupEntry{})
-			createExtensionObject(ctx, fakeSeedClient, "containerruntime", seedNamespace, &extensionsv1alpha1.ContainerRuntime{})
-			createExtensionObject(ctx, fakeSeedClient, "controlplane", seedNamespace, &extensionsv1alpha1.ControlPlane{Spec: extensionsv1alpha1.ControlPlaneSpec{Purpose: &purposeNormal}})
-			createExtensionObject(ctx, fakeSeedClient, "controlplane-exposure", seedNamespace, &extensionsv1alpha1.ControlPlane{Spec: extensionsv1alpha1.ControlPlaneSpec{Purpose: &purposeExposure}})
-			createExtensionObject(ctx, fakeSeedClient, "dnsrecord", seedNamespace, &extensionsv1alpha1.DNSRecord{})
-			createExtensionObject(ctx, fakeSeedClient, "extension", seedNamespace, &extensionsv1alpha1.Extension{}, gardencorev1beta1.NamedResourceReference{Name: "resource-ref1", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "ConfigMap", APIVersion: "v1", Name: "extension-configmap"}})
-			Expect(fakeSeedClient.Create(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "extension-configmap", Namespace: seedNamespace}, Data: map[string]string{"some-data": "for-extension"}})).To(Succeed())
-			createExtensionObject(ctx, fakeSeedClient, "infrastructure", seedNamespace, &extensionsv1alpha1.Infrastructure{})
-			createExtensionObject(ctx, fakeSeedClient, "network", seedNamespace, &extensionsv1alpha1.Network{})
-			createExtensionObject(ctx, fakeSeedClient, "osc", seedNamespace, &extensionsv1alpha1.OperatingSystemConfig{})
-			createExtensionObject(ctx, fakeSeedClient, "worker", seedNamespace, &extensionsv1alpha1.Worker{})
+			BeforeEach(func() {
+				By("Create ShootState with some data")
+				shootState.Spec.Gardener = append(shootState.Spec.Gardener, existingGardenerData...)
+				shootState.Spec.Extensions = append(shootState.Spec.Extensions, existingExtensionsData...)
+				shootState.Spec.Resources = append(shootState.Spec.Resources, existingResourcesData...)
+				Expect(fakeGardenClient.Create(ctx, shootState)).To(Succeed())
 
-			Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot)).To(Succeed())
-			Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
-			Expect(shootState.Spec).To(Equal(gardencorev1beta1.ShootStateSpec{
-				Gardener: []gardencorev1beta1.GardenerResourceData{
-					{
-						Name:   "secret1",
-						Type:   "secret",
-						Data:   runtime.RawExtension{Raw: []byte(`{"secret1":"c29tZS1kYXRh"}`)},
-						Labels: map[string]string{"managed-by": "secrets-manager", "persist": "true"},
+				By("Creating Gardener data")
+				Expect(fakeSeedClient.Create(ctx, newSecret("secret1", seedNamespace, true))).To(Succeed())
+				Expect(fakeSeedClient.Create(ctx, newSecret("secret2", seedNamespace, false))).To(Succeed())
+				Expect(fakeSeedClient.Create(ctx, newSecret("secret3", seedNamespace, true))).To(Succeed())
+
+				By("Creating extensions data")
+				purposeNormal := extensionsv1alpha1.Normal
+				purposeExposure := extensionsv1alpha1.Exposure
+				createExtensionObject(ctx, fakeSeedClient, "backupentry", seedNamespace, &extensionsv1alpha1.BackupEntry{})
+				createExtensionObject(ctx, fakeSeedClient, "containerruntime", seedNamespace, &extensionsv1alpha1.ContainerRuntime{})
+				createExtensionObject(ctx, fakeSeedClient, "controlplane", seedNamespace, &extensionsv1alpha1.ControlPlane{Spec: extensionsv1alpha1.ControlPlaneSpec{Purpose: &purposeNormal}})
+				createExtensionObject(ctx, fakeSeedClient, "controlplane-exposure", seedNamespace, &extensionsv1alpha1.ControlPlane{Spec: extensionsv1alpha1.ControlPlaneSpec{Purpose: &purposeExposure}})
+				createExtensionObject(ctx, fakeSeedClient, "dnsrecord", seedNamespace, &extensionsv1alpha1.DNSRecord{})
+				createExtensionObject(ctx, fakeSeedClient, "extension", seedNamespace, &extensionsv1alpha1.Extension{}, gardencorev1beta1.NamedResourceReference{Name: "resource-ref1", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "ConfigMap", APIVersion: "v1", Name: "extension-configmap"}})
+				Expect(fakeSeedClient.Create(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "extension-configmap", Namespace: seedNamespace}, Data: map[string]string{"some-data": "for-extension"}})).To(Succeed())
+				createExtensionObject(ctx, fakeSeedClient, "infrastructure", seedNamespace, &extensionsv1alpha1.Infrastructure{})
+				createExtensionObject(ctx, fakeSeedClient, "network", seedNamespace, &extensionsv1alpha1.Network{})
+				createExtensionObject(ctx, fakeSeedClient, "osc", seedNamespace, &extensionsv1alpha1.OperatingSystemConfig{})
+				createExtensionObject(ctx, fakeSeedClient, "worker", seedNamespace, &extensionsv1alpha1.Worker{})
+
+				expectedSpec = gardencorev1beta1.ShootStateSpec{
+					Gardener: []gardencorev1beta1.GardenerResourceData{
+						{
+							Name:   "secret1",
+							Type:   "secret",
+							Data:   runtime.RawExtension{Raw: []byte(`{"secret1":"c29tZS1kYXRh"}`)},
+							Labels: map[string]string{"managed-by": "secrets-manager", "persist": "true"},
+						},
+						{
+							Name:   "secret3",
+							Type:   "secret",
+							Data:   runtime.RawExtension{Raw: []byte(`{"secret3":"c29tZS1kYXRh"}`)},
+							Labels: map[string]string{"managed-by": "secrets-manager", "persist": "true"},
+						},
 					},
-					{
-						Name:   "secret3",
-						Type:   "secret",
-						Data:   runtime.RawExtension{Raw: []byte(`{"secret3":"c29tZS1kYXRh"}`)},
-						Labels: map[string]string{"managed-by": "secrets-manager", "persist": "true"},
+					Extensions: []gardencorev1beta1.ExtensionResourceState{
+						{
+							Kind:  "BackupEntry",
+							Name:  pointer.String("backupentry"),
+							State: &runtime.RawExtension{Raw: []byte(`{"name":"backupentry"}`)},
+						},
+						{
+							Kind:  "ContainerRuntime",
+							Name:  pointer.String("containerruntime"),
+							State: &runtime.RawExtension{Raw: []byte(`{"name":"containerruntime"}`)},
+						},
+						{
+							Kind:    "ControlPlane",
+							Name:    pointer.String("controlplane"),
+							Purpose: pointer.String("normal"),
+							State:   &runtime.RawExtension{Raw: []byte(`{"name":"controlplane"}`)},
+						},
+						{
+							Kind:    "ControlPlane",
+							Name:    pointer.String("controlplane-exposure"),
+							Purpose: pointer.String("exposure"),
+							State:   &runtime.RawExtension{Raw: []byte(`{"name":"controlplane-exposure"}`)},
+						},
+						{
+							Kind:  "DNSRecord",
+							Name:  pointer.String("dnsrecord"),
+							State: &runtime.RawExtension{Raw: []byte(`{"name":"dnsrecord"}`)},
+						},
+						{
+							Kind:  "Extension",
+							Name:  pointer.String("extension"),
+							State: &runtime.RawExtension{Raw: []byte(`{"name":"extension"}`)},
+							Resources: []gardencorev1beta1.NamedResourceReference{{
+								Name: "resource-ref1",
+								ResourceRef: autoscalingv1.CrossVersionObjectReference{
+									APIVersion: "v1",
+									Kind:       "ConfigMap",
+									Name:       "extension-configmap",
+								},
+							}},
+						},
+						{
+							Kind:  "Infrastructure",
+							Name:  pointer.String("infrastructure"),
+							State: &runtime.RawExtension{Raw: []byte(`{"name":"infrastructure"}`)},
+						},
+						{
+							Kind:  "Network",
+							Name:  pointer.String("network"),
+							State: &runtime.RawExtension{Raw: []byte(`{"name":"network"}`)},
+						},
+						{
+							Kind:    "OperatingSystemConfig",
+							Name:    pointer.String("osc"),
+							Purpose: pointer.String(""),
+							State:   &runtime.RawExtension{Raw: []byte(`{"name":"osc"}`)},
+						},
+						{
+							Kind:  "Worker",
+							Name:  pointer.String("worker"),
+							State: &runtime.RawExtension{Raw: []byte(`{"name":"worker"}`)},
+						},
 					},
-				},
-				Extensions: []gardencorev1beta1.ExtensionResourceState{
-					{
-						Kind:  "BackupEntry",
-						Name:  pointer.String("backupentry"),
-						State: &runtime.RawExtension{Raw: []byte(`{"name":"backupentry"}`)},
-					},
-					{
-						Kind:  "ContainerRuntime",
-						Name:  pointer.String("containerruntime"),
-						State: &runtime.RawExtension{Raw: []byte(`{"name":"containerruntime"}`)},
-					},
-					{
-						Kind:    "ControlPlane",
-						Name:    pointer.String("controlplane"),
-						Purpose: pointer.String("normal"),
-						State:   &runtime.RawExtension{Raw: []byte(`{"name":"controlplane"}`)},
-					},
-					{
-						Kind:    "ControlPlane",
-						Name:    pointer.String("controlplane-exposure"),
-						Purpose: pointer.String("exposure"),
-						State:   &runtime.RawExtension{Raw: []byte(`{"name":"controlplane-exposure"}`)},
-					},
-					{
-						Kind:  "DNSRecord",
-						Name:  pointer.String("dnsrecord"),
-						State: &runtime.RawExtension{Raw: []byte(`{"name":"dnsrecord"}`)},
-					},
-					{
-						Kind:  "Extension",
-						Name:  pointer.String("extension"),
-						State: &runtime.RawExtension{Raw: []byte(`{"name":"extension"}`)},
-						Resources: []gardencorev1beta1.NamedResourceReference{{
-							Name: "resource-ref1",
-							ResourceRef: autoscalingv1.CrossVersionObjectReference{
-								APIVersion: "v1",
-								Kind:       "ConfigMap",
-								Name:       "extension-configmap",
-							},
-						}},
-					},
-					{
-						Kind:  "Infrastructure",
-						Name:  pointer.String("infrastructure"),
-						State: &runtime.RawExtension{Raw: []byte(`{"name":"infrastructure"}`)},
-					},
-					{
-						Kind:  "Network",
-						Name:  pointer.String("network"),
-						State: &runtime.RawExtension{Raw: []byte(`{"name":"network"}`)},
-					},
-					{
-						Kind:    "OperatingSystemConfig",
-						Name:    pointer.String("osc"),
-						Purpose: pointer.String(""),
-						State:   &runtime.RawExtension{Raw: []byte(`{"name":"osc"}`)},
-					},
-					{
-						Kind:  "Worker",
-						Name:  pointer.String("worker"),
-						State: &runtime.RawExtension{Raw: []byte(`{"name":"worker"}`)},
-					},
-				},
-				Resources: []gardencorev1beta1.ResourceData{{
-					CrossVersionObjectReference: autoscalingv1.CrossVersionObjectReference{
-						APIVersion: "v1",
-						Kind:       "ConfigMap",
-						Name:       "extension-configmap",
-					},
-					Data: runtime.RawExtension{Raw: []byte(`{"apiVersion":"v1","data":{"some-data":"for-extension"},"kind":"ConfigMap","metadata":{"name":"extension-configmap","namespace":"shoot--my-project--my-shoot"}}`)},
-				}},
-			}))
+					Resources: []gardencorev1beta1.ResourceData{{
+						CrossVersionObjectReference: autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "extension-configmap",
+						},
+						Data: runtime.RawExtension{Raw: []byte(`{"apiVersion":"v1","data":{"some-data":"for-extension"},"kind":"ConfigMap","metadata":{"name":"extension-configmap","namespace":"shoot--my-project--my-shoot"}}`)},
+					}},
+				}
+			})
+
+			It("should compute the expected spec for both gardener and extensions data and overwrite the spec", func() {
+				Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, true)).To(Succeed())
+				Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+				Expect(shootState.Spec).To(Equal(expectedSpec))
+			})
+
+			It("should compute the expected spec for both gardener and extensions data and keep existing data in the spec", func() {
+				Expect(Deploy(ctx, fakeClock, fakeGardenClient, fakeSeedClient, shoot, false)).To(Succeed())
+				Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+
+				expectedSpec.Gardener = append(existingGardenerData, expectedSpec.Gardener...)
+				expectedSpec.Extensions = append(existingExtensionsData, expectedSpec.Extensions...)
+				expectedSpec.Resources = append(existingResourcesData, expectedSpec.Resources...)
+				Expect(shootState.Spec).To(Equal(expectedSpec))
+			})
 		})
 	})
 

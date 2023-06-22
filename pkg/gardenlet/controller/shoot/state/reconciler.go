@@ -93,7 +93,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	if nextBackupDue := lastBackup.Add(r.Config.SyncPeriod.Duration); nextBackupDue.Before(r.Clock.Now().UTC()) {
 		log.Info("Performing periodic ShootState backup", "lastBackup", lastBackup.Round(time.Minute), "nextBackupDue", nextBackupDue.Round(time.Minute))
-		if err := shootstate.Deploy(ctx, r.Clock, r.GardenClient, r.SeedClient, shoot); err != nil {
+		if err := shootstate.Deploy(ctx, r.Clock, r.GardenClient, r.SeedClient, shoot, true); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed performing periodic ShootState backup: %w", err)
 		}
 		lastBackup = r.Clock.Now()
