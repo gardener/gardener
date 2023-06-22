@@ -652,10 +652,10 @@ func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValue
 
 	var domains []string
 	if domain := garden.Spec.VirtualCluster.DNS.Domain; domain != nil {
-		domains = append(domains, gardenerutils.GetAPIServerDomain(*domain))
+		domains = append(domains, *domain)
 	}
 	for _, domain := range garden.Spec.VirtualCluster.DNS.Domains {
-		domains = append(domains, gardenerutils.GetAPIServerDomain(domain))
+		domains = append(domains, domain)
 	}
 
 	return kubeapiserverexposure.NewSNI(
@@ -665,7 +665,7 @@ func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValue
 		r.GardenNamespace,
 		func() *kubeapiserverexposure.SNIValues {
 			return &kubeapiserverexposure.SNIValues{
-				Hosts: domains,
+				Hosts: getAPIServerDomains(domains),
 				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
 					Namespace: ingressGatewayValues[0].Namespace,
 					Labels:    ingressGatewayValues[0].Labels,
@@ -685,4 +685,13 @@ func (r *Reconciler) newGardenerAccess(secretsManager secretsmanager.Interface, 
 			ServerOutOfCluster: gardenerutils.GetAPIServerDomain(domain),
 		},
 	)
+}
+
+func getAPIServerDomains(domains []string) []string {
+	apiServerDomains := make([]string, 0, len(domains)*2)
+	for _, domain := range domains {
+		apiServerDomains = append(apiServerDomains, gardenerutils.GetAPIServerDomain(domain))
+		apiServerDomains = append(apiServerDomains, "gardener."+domain)
+	}
+	return apiServerDomains
 }
