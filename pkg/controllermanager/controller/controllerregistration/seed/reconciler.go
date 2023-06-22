@@ -48,6 +48,9 @@ const (
 	ControllerDeploymentHash = "deployment-hash"
 	// RegistrationSpecHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
 	RegistrationSpecHash = "registration-spec-hash"
+	// PodSecurityStandardEnforce is a constant for an annotation on `ControllerInstallation`s. When set the `extension` namespace
+	// is created with "pod-security.kubernetes.io/enforce" label set to PodSecurityStandardEnforce's value.
+	PodSecurityStandardEnforce = "security.gardener.cloud/pod-security-standard-enforce"
 )
 
 // Reconciler determines which ControllerRegistrations are required for a given Seed by checking all objects in the
@@ -488,6 +491,11 @@ func deployNeededInstallation(
 			deploymentSpecHash := utils.HashForMap(deploymentMap)[:16]
 			metav1.SetMetaDataLabel(&controllerInstallation.ObjectMeta, ControllerDeploymentHash, deploymentSpecHash)
 		}
+
+		if podSecurityStandardEnforce, ok := controllerRegistration.Annotations[PodSecurityStandardEnforce]; ok {
+			metav1.SetMetaDataAnnotation(&controllerInstallation.ObjectMeta, PodSecurityStandardEnforce, podSecurityStandardEnforce)
+		}
+
 		controllerInstallation.Spec = installationSpec
 		return nil
 	}

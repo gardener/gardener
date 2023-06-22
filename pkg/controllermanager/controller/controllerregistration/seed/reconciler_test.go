@@ -862,6 +862,43 @@ var _ = Describe("Reconciler", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 			})
+
+			It("should deploy controller installation with correct security.gardener.cloud/pod-security-standard-enforce annotation", func() {
+				registration1 := controllerRegistration1.DeepCopy()
+				registration1.DeletionTimestamp = &now
+				registration2 := controllerRegistration2.DeepCopy()
+				registration2.Annotations = map[string]string{
+					PodSecurityStandardEnforce: "baseline",
+				}
+				var (
+					wantedControllerRegistrations  = sets.New(registration1.Name, registration2.Name)
+					registrationNameToInstallation = map[string]*gardencorev1beta1.ControllerInstallation{
+						registration1.Name: controllerInstallation1,
+						registration2.Name: controllerInstallation2,
+					}
+					registrations = map[string]controllerRegistration{
+						registration1.Name: {obj: registration1, deployAlways: false},
+						registration2.Name: {obj: registration2, deployAlways: false},
+					}
+				)
+
+				installation2 := controllerInstallation2.DeepCopy()
+				installation2.Labels = map[string]string{
+					ControllerDeploymentHash: "d37bba62f222c81b",
+					RegistrationSpecHash:     "61ca93a1782c5fa3",
+					SeedSpecHash:             "8e09957b7d0d3c19",
+				}
+				installation2.Annotations = map[string]string{
+					PodSecurityStandardEnforce: "baseline",
+				}
+
+				k8sClient.EXPECT().Get(ctx, kubernetesutils.Key(controllerInstallation2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
+				k8sClient.EXPECT().Patch(ctx, installation2, gomock.Any())
+
+				err := deployNeededInstallations(ctx, nopLogger, k8sClient, seed, wantedControllerRegistrations, registrations, registrationNameToInstallation)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
 		})
 
 		Describe("#deleteUnneededInstallations", func() {

@@ -13,6 +13,8 @@ apiVersion: core.gardener.cloud/v1beta1
 kind: ControllerRegistration
 metadata:
   name: provider-local
+  annotations:
+    security.gardener.cloud/pod-security-standard-enforce: privileged
 spec:
   deployment:
     deploymentRefs:
