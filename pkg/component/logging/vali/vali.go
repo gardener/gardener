@@ -42,7 +42,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -868,7 +867,7 @@ func getLabels() map[string]string {
 // Caution: If the passed storage capacity is less than the current one the existing PVC and its PV will be deleted.
 func (v *vali) resizeOrDeleteValiDataVolumeIfStorageNotTheSame(ctx context.Context) error {
 	managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: ManagedResourceControlName, Namespace: v.namespace}}
-	removeIgnoreAnnotationFromManagedResource := func() error {
+	addOrRemoveIgnoreAnnotationFromManagedResource := func(addIgnoreAnnotation bool) error {
 		// In order to not create the managed resource here first check if exists.
 		if err := v.client.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource); err != nil {
 			if !apierrors.IsNotFound(err) {
@@ -876,11 +875,14 @@ func (v *vali) resizeOrDeleteValiDataVolumeIfStorageNotTheSame(ctx context.Conte
 			}
 			return nil
 		}
-		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, managedResource, func() error {
+		patch := client.MergeFrom(managedResource.DeepCopy())
+
+		if addIgnoreAnnotation {
+			metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, resourcesv1alpha1.Ignore, "true")
+		} else {
 			delete(managedResource.Annotations, resourcesv1alpha1.Ignore)
-			return nil
-		})
-		return err
+		}
+		return v.client.Patch(ctx, managedResource, patch)
 	}
 
 	pvc := &corev1.PersistentVolumeClaim{}
@@ -888,20 +890,17 @@ func (v *vali) resizeOrDeleteValiDataVolumeIfStorageNotTheSame(ctx context.Conte
 		if !apierrors.IsNotFound(err) {
 			return err
 		}
-		return removeIgnoreAnnotationFromManagedResource()
+		return addOrRemoveIgnoreAnnotationFromManagedResource(false)
 	}
 
 	// Check if we need resizing
 	storageCmpResult := v.values.Storage.Cmp(*pvc.Spec.Resources.Requests.Storage())
 	if storageCmpResult == 0 {
-		return removeIgnoreAnnotationFromManagedResource()
+		return addOrRemoveIgnoreAnnotationFromManagedResource(false)
 	}
 
 	// Annotate managed resource to skip reconciliation.
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, managedResource, func() error {
-		metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, resourcesv1alpha1.Ignore, "true")
-		return nil
-	}); err != nil {
+	if err := addOrRemoveIgnoreAnnotationFromManagedResource(true); err != nil {
 		return err
 	}
 
@@ -923,5 +922,5 @@ func (v *vali) resizeOrDeleteValiDataVolumeIfStorageNotTheSame(ctx context.Conte
 		}
 	}
 
-	return removeIgnoreAnnotationFromManagedResource()
+	return addOrRemoveIgnoreAnnotationFromManagedResource(false)
 }
