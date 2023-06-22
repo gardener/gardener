@@ -79,7 +79,9 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 		return fmt.Errorf("failed adding Garden controller: %w", err)
 	}
 
-	if err := (&care.Reconciler{}).AddToManager(ctx, mgr); err != nil {
+	if err := (&care.Reconciler{
+		GardenClientMap: gardenClientMap,
+	}).AddToManager(ctx, mgr); err != nil {
 		return fmt.Errorf("failed adding Garden-Care controller: %w", err)
 	}
 

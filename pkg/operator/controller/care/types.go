@@ -23,15 +23,16 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/care"
 )
 
 // NewHealthCheckFunc is a function used to create a new instance for performing health checks.
-type NewHealthCheckFunc func(*operatorv1alpha1.Garden, client.Client, clock.Clock, string) HealthCheck
+type NewHealthCheckFunc func(*operatorv1alpha1.Garden, client.Client, kubernetes.Interface, clock.Clock, string) HealthCheck
 
 // defaultNewHealthCheck is the default function to create a new instance for performing health checks.
-var defaultNewHealthCheck NewHealthCheckFunc = func(garden *operatorv1alpha1.Garden, client client.Client, clock clock.Clock, gardenNamespace string) HealthCheck {
-	return care.NewHealthForGarden(garden, client, clock, gardenNamespace)
+var defaultNewHealthCheck NewHealthCheckFunc = func(garden *operatorv1alpha1.Garden, runtimeClient client.Client, gardenClientSet kubernetes.Interface, clock clock.Clock, gardenNamespace string) HealthCheck {
+	return care.NewHealthForGarden(garden, runtimeClient, gardenClientSet, clock, gardenNamespace)
 }
 
 // HealthCheck is an interface used to perform health checks.

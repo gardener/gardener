@@ -23,12 +23,14 @@ import (
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/gardeneraccess"
 	"github.com/gardener/gardener/pkg/component/gardensystem"
@@ -40,7 +42,10 @@ import (
 	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/features"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
+
+const virtualGardenPrefix = "virtual-garden-"
 
 var (
 	requiredGardenRuntimeManagedResources = sets.New(
@@ -54,6 +59,17 @@ var (
 		gardeneraccess.ManagedResourceName,
 		kubecontrollermanager.ManagedResourceName,
 	)
+
+	requiredVirtualGardenControlPlaneDeployments = sets.New(
+		virtualGardenPrefix+v1beta1constants.DeploymentNameGardenerResourceManager,
+		virtualGardenPrefix+v1beta1constants.DeploymentNameKubeAPIServer,
+		virtualGardenPrefix+v1beta1constants.DeploymentNameKubeControllerManager,
+	)
+
+	requiredVirtualGardenControlPlaneEtcds = sets.New(
+		virtualGardenPrefix+v1beta1constants.ETCDMain,
+		virtualGardenPrefix+v1beta1constants.ETCDEvents,
+	)
 )
 
 // GardenHealth contains information needed to execute health checks for garden.
@@ -61,13 +77,15 @@ type GardenHealth struct {
 	garden          *operatorv1alpha1.Garden
 	gardenNamespace string
 	runtimeClient   client.Client
+	gardenClientSet kubernetes.Interface
 	clock           clock.Clock
 }
 
 // NewHealthForGarden creates a new Health instance with the given parameters.
-func NewHealthForGarden(garden *operatorv1alpha1.Garden, runtimeClient client.Client, clock clock.Clock, gardenNamespace string) *GardenHealth {
+func NewHealthForGarden(garden *operatorv1alpha1.Garden, runtimeClient client.Client, gardenClientSet kubernetes.Interface, clock clock.Clock, gardenNamespace string) *GardenHealth {
 	return &GardenHealth{
 		runtimeClient:   runtimeClient,
+		gardenClientSet: gardenClientSet,
 		garden:          garden,
 		clock:           clock,
 		gardenNamespace: gardenNamespace,
@@ -82,11 +100,17 @@ func (h *GardenHealth) CheckGarden(
 ) []gardencorev1beta1.Condition {
 
 	var (
+		apiserverAvailability            gardencorev1beta1.Condition
+		controlPlaneHealthy              gardencorev1beta1.Condition
 		systemComponentsCondition        gardencorev1beta1.Condition
 		virtualGardenComponentsCondition gardencorev1beta1.Condition
 	)
 	for _, cond := range conditions {
 		switch cond.Type {
+		case operatorv1alpha1.VirtualGardenAPIServerAvailable:
+			apiserverAvailability = cond
+		case operatorv1alpha1.VirtualGardenControlPlaneHealthy:
+			controlPlaneHealthy = cond
 		case operatorv1alpha1.GardenSystemComponentsHealthy:
 			systemComponentsCondition = cond
 		case operatorv1alpha1.VirtualGardenComponentsHealthy:
@@ -95,13 +119,44 @@ func (h *GardenHealth) CheckGarden(
 	}
 
 	checker := NewHealthChecker(h.runtimeClient, h.clock, thresholdMappings, nil, nil, nil, nil, nil)
-	newSystemComponentsCondition, err := h.checkGardenSystemComponents(ctx, checker, systemComponentsCondition)
+	newSystemComponentsCondition, err1 := h.checkGardenSystemComponents(ctx, checker, systemComponentsCondition)
 	newVirtualGardenComponentsCondition, err2 := h.checkVirtualGardenComponents(ctx, checker, virtualGardenComponentsCondition)
+	newControlPlaneHealthy, err3 := h.checkControlPlane(ctx, checker, controlPlaneHealthy)
+	apiserverAvailability = h.checkAPIServerAvailability(ctx, checker, apiserverAvailability)
 
 	return []gardencorev1beta1.Condition{
-		NewConditionOrError(h.clock, systemComponentsCondition, newSystemComponentsCondition, err),
+		NewConditionOrError(h.clock, systemComponentsCondition, newSystemComponentsCondition, err1),
 		NewConditionOrError(h.clock, virtualGardenComponentsCondition, newVirtualGardenComponentsCondition, err2),
+		NewConditionOrError(h.clock, controlPlaneHealthy, newControlPlaneHealthy, err3),
+		apiserverAvailability,
 	}
+}
+
+// checkAPIServerAvailability checks if the API server of a virtual garden is reachable and measure the response time.
+func (h *GardenHealth) checkAPIServerAvailability(ctx context.Context, checker *HealthChecker, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
+	if h.gardenClientSet == nil {
+		return checker.FailedCondition(condition, "VirtualGardenAPIServerDown", "Could not reach virtual garden API server during client initialization.")
+	}
+	log := logf.FromContext(ctx)
+	return health.CheckAPIServerAvailability(ctx, h.clock, log, condition, h.gardenClientSet.RESTClient(), func(conditionType, message string) gardencorev1beta1.Condition {
+		return checker.FailedCondition(condition, conditionType, message)
+	})
+}
+
+// checkControlPlane checks whether the core components of the virtual garden controlplane (ETCD, KAPI, KCM..) are healthy.
+func (h *GardenHealth) checkControlPlane(ctx context.Context, checker *HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
+	if exitCondition, err := checker.CheckControlPlane(
+		ctx,
+		h.gardenNamespace,
+		requiredVirtualGardenControlPlaneDeployments,
+		requiredVirtualGardenControlPlaneEtcds,
+		condition,
+	); err != nil || exitCondition != nil {
+		return exitCondition, err
+	}
+
+	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "VirtualGardenControlPlaneRunning", "All control plane components are healthy.")
+	return &c, nil
 }
 
 func (h *GardenHealth) checkGardenSystemComponents(

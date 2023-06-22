@@ -16,10 +16,12 @@ package care
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
+	componentbaseconfig "k8s.io/component-base/config"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,6 +38,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
@@ -53,6 +56,24 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	}
 	if r.GardenNamespace == "" {
 		r.GardenNamespace = v1beta1constants.GardenNamespace
+	}
+	if r.GardenClientMap == nil {
+		var err error
+		r.GardenClientMap, err = clientmapbuilder.
+			NewGardenClientMapBuilder().
+			WithRuntimeClient(mgr.GetClient()).
+			WithClientConnectionConfig(&componentbaseconfig.ClientConnectionConfiguration{
+				QPS:   100.0,
+				Burst: 130.0,
+			}).
+			WithGardenNamespace(r.GardenNamespace).
+			Build(mgr.GetLogger())
+		if err != nil {
+			return fmt.Errorf("failed to build garden ClientMap: %w", err)
+		}
+		if err := mgr.Add(r.GardenClientMap); err != nil {
+			return err
+		}
 	}
 
 	c, err := builder.

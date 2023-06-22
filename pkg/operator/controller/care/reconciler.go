@@ -28,6 +28,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
@@ -43,6 +45,7 @@ var (
 type Reconciler struct {
 	RuntimeClient   client.Client
 	Clock           clock.Clock
+	GardenClientMap clientmap.ClientMap
 	GardenNamespace string
 }
 
@@ -71,6 +74,8 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 
 	// Initialize conditions based on the current status.
 	conditionTypes := []gardencorev1beta1.ConditionType{
+		operatorv1alpha1.VirtualGardenAPIServerAvailable,
+		operatorv1alpha1.VirtualGardenControlPlaneHealthy,
 		operatorv1alpha1.GardenSystemComponentsHealthy,
 		operatorv1alpha1.VirtualGardenComponentsHealthy,
 	}
@@ -79,7 +84,12 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		conditions = append(conditions, v1beta1helper.GetOrInitConditionWithClock(r.Clock, garden.Status.Conditions, cond))
 	}
 
-	updatedConditions := NewHealthCheck(garden, r.RuntimeClient, r.Clock, r.GardenNamespace).CheckGarden(ctx, conditions, r.conditionThresholdsToProgressingMapping())
+	gardenClientSet, err := r.GardenClientMap.GetClient(reconcileCtx, keys.ForGarden(garden))
+	if err != nil {
+		log.V(1).Info("Could not get garden client", "error", err)
+	}
+
+	updatedConditions := NewHealthCheck(garden, r.RuntimeClient, gardenClientSet, r.Clock, r.GardenNamespace).CheckGarden(ctx, conditions, r.conditionThresholdsToProgressingMapping())
 
 	// Update Garden status conditions if necessary
 	if v1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) {
@@ -101,7 +111,9 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 
 func (r *Reconciler) conditionThresholdsToProgressingMapping() map[gardencorev1beta1.ConditionType]time.Duration {
 	return map[gardencorev1beta1.ConditionType]time.Duration{
-		operatorv1alpha1.GardenSystemComponentsHealthy:  careConditionThreshold,
-		operatorv1alpha1.VirtualGardenComponentsHealthy: careConditionThreshold,
+		operatorv1alpha1.VirtualGardenAPIServerAvailable:  careConditionThreshold,
+		operatorv1alpha1.VirtualGardenControlPlaneHealthy: careConditionThreshold,
+		operatorv1alpha1.GardenSystemComponentsHealthy:    careConditionThreshold,
+		operatorv1alpha1.VirtualGardenComponentsHealthy:   careConditionThreshold,
 	}
 }
