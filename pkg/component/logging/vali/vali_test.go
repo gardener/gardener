@@ -379,6 +379,7 @@ var _ = Describe("Vali", func() {
 			ctrl = gomock.NewController(GinkgoT())
 			runtimeClient = mockclient.NewMockClient(ctrl)
 			sw = mockclient.NewMockSubResourceClient(ctrl)
+			runtimeClient.EXPECT().SubResource("scale").Return(sw).AnyTimes()
 		})
 
 		AfterEach(func() {
@@ -396,7 +397,6 @@ var _ = Describe("Vali", func() {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
 					}),
 				//Scale Vali StatefulSet to zero
-				runtimeClient.EXPECT().SubResource("scale").Return(sw),
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
 				runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroValiStatefulset),
 				//Path Vali PVC
@@ -428,7 +428,6 @@ var _ = Describe("Vali", func() {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
 					}),
 				//Scale Vali StatefulSet to zero
-				runtimeClient.EXPECT().SubResource("scale").Return(sw),
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
 				runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroValiStatefulset),
 				//Delete the Vali PVC
@@ -500,7 +499,6 @@ var _ = Describe("Vali", func() {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
 					}),
 				//Scale Vali StatefulSet to zero
-				runtimeClient.EXPECT().SubResource("scale").Return(sw),
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch).Return(errNotFound),
 				//Path Vali PVC
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypePVC, gomock.AssignableToTypeOf(patch)).DoAndReturn(funcPatchTo200GiStorage),
@@ -531,7 +529,6 @@ var _ = Describe("Vali", func() {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
 					}),
 				//Scale Vali StatefulSet to zero
-				runtimeClient.EXPECT().SubResource("scale").Return(sw),
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
 				runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroValiStatefulset),
 				//Path Vali PVC
@@ -563,7 +560,6 @@ var _ = Describe("Vali", func() {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
 					}),
 				//Scale Vali StatefulSet to zero
-				runtimeClient.EXPECT().SubResource("scale").Return(sw),
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
 				runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroValiStatefulset),
 				//Delete the Vali PVC
@@ -603,7 +599,6 @@ var _ = Describe("Vali", func() {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
 					}),
 				//Scale Vali StatefulSet to zero
-				runtimeClient.EXPECT().SubResource("scale").Return(sw),
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch).Return(errForbidden),
 			)
 			Expect(valiDeployer.Deploy(ctx)).ToNot(Succeed())
@@ -620,7 +615,6 @@ var _ = Describe("Vali", func() {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
 					}),
 				//Scale Vali StatefulSet to zero
-				runtimeClient.EXPECT().SubResource("scale").Return(sw),
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
 				runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).Return(errForbidden),
 			)
@@ -638,7 +632,6 @@ var _ = Describe("Vali", func() {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
 					}),
 				//Scale Vali StatefulSet to zero
-				runtimeClient.EXPECT().SubResource("scale").Return(sw),
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
 				runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroValiStatefulset),
 				//Path Vali PVC
@@ -658,7 +651,6 @@ var _ = Describe("Vali", func() {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
 					}),
 				//Scale Vali StatefulSet to zero
-				runtimeClient.EXPECT().SubResource("scale").Return(sw),
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
 				runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroValiStatefulset),
 				//Delete the Vali PVC
