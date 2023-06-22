@@ -42,8 +42,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
@@ -137,48 +137,6 @@ var _ = Describe("Garden controller tests", func() {
 		imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(chartsPath, "images.yaml"))
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect((&gardencontroller.Reconciler{
-			Config: config.OperatorConfiguration{
-				Controllers: config.ControllerConfiguration{
-					Garden: config.GardenControllerConfig{
-						ConcurrentSyncs: pointer.Int(5),
-						SyncPeriod:      &metav1.Duration{Duration: time.Minute},
-						ETCDConfig: &gardenletconfig.ETCDConfig{
-							ETCDController:      &gardenletconfig.ETCDController{Workers: pointer.Int64(5)},
-							CustodianController: &gardenletconfig.CustodianController{Workers: pointer.Int64(5)},
-							BackupCompactionController: &gardenletconfig.BackupCompactionController{
-								EnableBackupCompaction: pointer.Bool(false),
-								Workers:                pointer.Int64(5),
-								EventsThreshold:        pointer.Int64(100),
-							},
-						},
-					},
-				},
-			},
-			ImageVector:     imageVector,
-			Identity:        &gardencorev1beta1.Gardener{Name: "test-gardener"},
-			GardenNamespace: testNamespace.Name,
-		}).AddToManager(mgr)).To(Succeed())
-
-		By("Start manager")
-		mgrContext, mgrCancel := context.WithCancel(ctx)
-
-		go func() {
-			defer GinkgoRecover()
-			Expect(mgr.Start(mgrContext)).To(Succeed())
-		}()
-
-		DeferCleanup(func() {
-			By("Stop manager")
-			mgrCancel()
-		})
-
-		DeferCleanup(test.WithVar(&gardencontroller.NewClientFromSecretObject, func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
-			Expect(secret.Name).To(Equal("gardener-internal"))
-			Expect(secret.Namespace).To(Equal(testNamespace.Name))
-			return kubernetesfake.NewClientSetBuilder().WithClient(testClient).Build(), nil
-		}))
-
 		garden = &operatorv1alpha1.Garden{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   "garden-" + testRunID,
@@ -227,6 +185,45 @@ var _ = Describe("Garden controller tests", func() {
 				},
 			},
 		}
+
+		gardenClientMap := fakeclientmap.NewClientMapBuilder().WithRuntimeClientForKey(keys.ForGarden(garden), mgr.GetClient()).Build()
+
+		Expect((&gardencontroller.Reconciler{
+			Config: config.OperatorConfiguration{
+				Controllers: config.ControllerConfiguration{
+					Garden: config.GardenControllerConfig{
+						ConcurrentSyncs: pointer.Int(5),
+						SyncPeriod:      &metav1.Duration{Duration: time.Minute},
+						ETCDConfig: &gardenletconfig.ETCDConfig{
+							ETCDController:      &gardenletconfig.ETCDController{Workers: pointer.Int64(5)},
+							CustodianController: &gardenletconfig.CustodianController{Workers: pointer.Int64(5)},
+							BackupCompactionController: &gardenletconfig.BackupCompactionController{
+								EnableBackupCompaction: pointer.Bool(false),
+								Workers:                pointer.Int64(5),
+								EventsThreshold:        pointer.Int64(100),
+							},
+						},
+					},
+				},
+			},
+			ImageVector:     imageVector,
+			Identity:        &gardencorev1beta1.Gardener{Name: "test-gardener"},
+			GardenClientMap: gardenClientMap,
+			GardenNamespace: testNamespace.Name,
+		}).AddToManager(mgr)).To(Succeed())
+
+		By("Start manager")
+		mgrContext, mgrCancel := context.WithCancel(ctx)
+
+		go func() {
+			defer GinkgoRecover()
+			Expect(mgr.Start(mgrContext)).To(Succeed())
+		}()
+
+		DeferCleanup(func() {
+			By("Stop manager")
+			mgrCancel()
+		})
 
 		By("Create Garden")
 		Expect(testClient.Create(ctx, garden)).To(Succeed())

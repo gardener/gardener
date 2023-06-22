@@ -37,6 +37,7 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
@@ -59,6 +60,7 @@ type Reconciler struct {
 	Identity              *gardencorev1beta1.Gardener
 	ImageVector           imagevector.ImageVector
 	ComponentImageVectors imagevector.ComponentImageVectors
+	GardenClientMap       clientmap.ClientMap
 	GardenNamespace       string
 }
 
