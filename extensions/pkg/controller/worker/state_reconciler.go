@@ -36,6 +36,9 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
+// TODO(rfranzke): Drop this stateReconciler after a few releases as soon as the shoot migrate flow persists the Shoot
+//  state only after all extension resources have been migrated.
+
 type stateReconciler struct {
 	client client.Client
 }
