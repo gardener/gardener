@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/api/core/shoot"
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
@@ -132,11 +133,18 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 				v1beta1constants.OperationRotateETCDEncryptionKeyStart,
 				v1beta1constants.OperationRotateETCDEncryptionKeyComplete,
 				v1beta1constants.ShootOperationRotateKubeconfigCredentials,
-				v1beta1constants.ShootOperationRotateSSHKeypair,
 				v1beta1constants.ShootOperationRotateObservabilityCredentials:
 				// We don't want to remove the annotation so that the gardenlet can pick it up and perform
 				// the rotation. It has to remove the annotation after it is done.
 				mustIncrease, mustRemoveOperationAnnotation = true, false
+
+			case v1beta1constants.ShootOperationRotateSSHKeypair:
+				if !helper.ShootEnablesSSHAccess(newShoot) {
+					// If SSH is not enabled for the Shoot, don't increase generation, just remove the annotation
+					mustIncrease, mustRemoveOperationAnnotation = false, true
+				} else {
+					mustIncrease, mustRemoveOperationAnnotation = true, false
+				}
 			}
 		}
 

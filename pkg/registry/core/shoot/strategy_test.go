@@ -328,6 +328,15 @@ var _ = Describe("Strategy", func() {
 			DescribeTable("operation annotations",
 				func(operationAnnotation string, mutateOldShoot func(*core.Shoot), shouldIncreaseGeneration, shouldKeepAnnotation bool) {
 					oldShoot := &core.Shoot{
+						Spec: core.ShootSpec{
+							Provider: core.Provider{
+								Workers: []core.Worker{
+									{
+										Name: "worker",
+									},
+								},
+							},
+						},
 						Status: core.ShootStatus{
 							LastOperation: &core.LastOperation{},
 						},
@@ -399,11 +408,17 @@ var _ = Describe("Strategy", func() {
 					true,
 					true,
 				),
-				Entry("rotate-ssh-keypair",
+				Entry("rotate-ssh-keypair (ssh enabled)",
 					v1beta1constants.ShootOperationRotateSSHKeypair,
 					nil,
 					true,
 					true,
+				),
+				Entry("rotate-ssh-keypair (ssh is not enabled)",
+					v1beta1constants.ShootOperationRotateSSHKeypair,
+					func(s *core.Shoot) { s.Spec.Provider.Workers = nil },
+					false,
+					false,
 				),
 				Entry("rotate-observability-credentials",
 					v1beta1constants.ShootOperationRotateObservabilityCredentials,

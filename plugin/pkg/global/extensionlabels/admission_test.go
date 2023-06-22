@@ -172,21 +172,31 @@ var _ = Describe("ExtensionLabels tests", func() {
 			extensionType2   = "extension-type-2" // globally enabled + disabled for shoot
 			extensionType3   = "extension-type-3" // enabled for shoot
 			extensionType4   = "extension-type-4" // not enabled
+			extensionType5   = "extension-type-5" // globally enabled +  workerlessSupported
 		)
 
 		BeforeEach(func() {
 			controllerRegistrations := []*core.ControllerRegistration{{
 				ObjectMeta: metav1.ObjectMeta{Name: "registration1"},
 				Spec: core.ControllerRegistrationSpec{
-					Resources: []core.ControllerResource{{
-						Kind:            extensionsv1alpha1.ExtensionResource,
-						Type:            extensionType1,
-						GloballyEnabled: pointer.Bool(true),
-					}, {
-						Kind:            extensionsv1alpha1.ExtensionResource,
-						Type:            extensionType2,
-						GloballyEnabled: pointer.Bool(true),
-					}},
+					Resources: []core.ControllerResource{
+						{
+							Kind:            extensionsv1alpha1.ExtensionResource,
+							Type:            extensionType1,
+							GloballyEnabled: pointer.Bool(true),
+						},
+						{
+							Kind:            extensionsv1alpha1.ExtensionResource,
+							Type:            extensionType2,
+							GloballyEnabled: pointer.Bool(true),
+						},
+						{
+							Kind:                extensionsv1alpha1.ExtensionResource,
+							Type:                extensionType5,
+							GloballyEnabled:     pointer.Bool(true),
+							WorkerlessSupported: pointer.Bool(true),
+						},
+					},
 					Deployment: nil,
 				},
 			}, {
@@ -279,57 +289,11 @@ var _ = Describe("ExtensionLabels tests", func() {
 			expectedLabels["networking.extensions.gardener.cloud/"+networkingType] = "true"
 			expectedLabels["operatingsystemconfig.extensions.gardener.cloud/"+machineImage1] = "true"
 			expectedLabels["provider.extensions.gardener.cloud/"+providerType] = "true"
-			for _, extensionType := range []string{extensionType1, extensionType3} {
+			for _, extensionType := range []string{extensionType1, extensionType3, extensionType5} {
 				expectedLabels["extensions.extensions.gardener.cloud/"+extensionType] = "true"
 			}
 			for _, crType := range []string{crType1, crType2} {
 				expectedLabels["containerruntime.extensions.gardener.cloud/"+crType] = "true"
-			}
-			for _, dnsProviderType := range []string{dnsProviderType1, dnsProviderType2} {
-				expectedLabels["dnsrecord.extensions.gardener.cloud/"+dnsProviderType] = "true"
-			}
-
-			Expect(shoot.ObjectMeta.Labels).To(Equal(expectedLabels))
-		})
-
-		It("should add all the correct labels on creation (workerless Shoot)", func() {
-			shoot = &core.Shoot{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-shoot",
-					Namespace: "test-namespace",
-				},
-				Spec: core.ShootSpec{
-					DNS: &core.DNS{
-						Providers: []core.DNSProvider{
-							{Type: &dnsProviderType1},
-							{Type: &dnsProviderType2},
-						},
-					},
-					Provider: core.Provider{
-						Type: providerType,
-					},
-					Extensions: []core.Extension{
-						{
-							Type:     extensionType2,
-							Disabled: pointer.Bool(true),
-						},
-						{
-							Type: extensionType3,
-						},
-					},
-				},
-			}
-
-			attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("Shoot").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-			err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-			Expect(err).NotTo(HaveOccurred())
-
-			expectedLabels := make(map[string]string)
-
-			expectedLabels["provider.extensions.gardener.cloud/"+providerType] = "true"
-			for _, extensionType := range []string{extensionType1, extensionType3} {
-				expectedLabels["extensions.extensions.gardener.cloud/"+extensionType] = "true"
 			}
 			for _, dnsProviderType := range []string{dnsProviderType1, dnsProviderType2} {
 				expectedLabels["dnsrecord.extensions.gardener.cloud/"+dnsProviderType] = "true"
@@ -387,11 +351,83 @@ var _ = Describe("ExtensionLabels tests", func() {
 			for _, dnsProviderType := range []string{dnsProviderType1, dnsProviderType2} {
 				expectedLabels["dnsrecord.extensions.gardener.cloud/"+dnsProviderType] = "true"
 			}
-			for _, extensionType := range []string{extensionType1, extensionType2, extensionType4} {
+			for _, extensionType := range []string{extensionType1, extensionType2, extensionType4, extensionType5} {
 				expectedLabels["extensions.extensions.gardener.cloud/"+extensionType] = "true"
 			}
 
 			Expect(newShoot.ObjectMeta.Labels).To(Equal(expectedLabels))
+		})
+
+		Context("Workerless Shoot", func() {
+			BeforeEach(func() {
+				shoot = &core.Shoot{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-shoot",
+						Namespace: "test-namespace",
+					},
+					Spec: core.ShootSpec{
+						DNS: &core.DNS{
+							Providers: []core.DNSProvider{
+								{Type: &dnsProviderType1},
+							},
+						},
+						Provider: core.Provider{
+							Type: providerType,
+						},
+						Extensions: []core.Extension{
+							{
+								Type:     extensionType2,
+								Disabled: pointer.Bool(true),
+							},
+							{
+								Type: extensionType3,
+							},
+						},
+					},
+				}
+			})
+
+			It("should add all the correct labels on creation", func() {
+				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("Shoot").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+
+				expectedLabels := make(map[string]string)
+
+				expectedLabels["provider.extensions.gardener.cloud/"+providerType] = "true"
+				for _, extensionType := range []string{extensionType3, extensionType5} {
+					expectedLabels["extensions.extensions.gardener.cloud/"+extensionType] = "true"
+				}
+				for _, dnsProviderType := range []string{dnsProviderType1} {
+					expectedLabels["dnsrecord.extensions.gardener.cloud/"+dnsProviderType] = "true"
+				}
+
+				Expect(shoot.ObjectMeta.Labels).To(Equal(expectedLabels))
+			})
+
+			It("should add all the correct labels on update", func() {
+				newShoot := shoot.DeepCopy()
+				newShoot.Spec.DNS.Providers = append(newShoot.Spec.DNS.Providers, core.DNSProvider{Type: &dnsProviderType2})
+				newShoot.Spec.Extensions = append(newShoot.Spec.Extensions, core.Extension{Type: extensionType4})
+
+				attrs := admission.NewAttributesRecord(newShoot, shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("Shoot").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+
+				expectedLabels := make(map[string]string)
+
+				expectedLabels["provider.extensions.gardener.cloud/"+providerType] = "true"
+				for _, extensionType := range []string{extensionType3, extensionType4, extensionType5} {
+					expectedLabels["extensions.extensions.gardener.cloud/"+extensionType] = "true"
+				}
+				for _, dnsProviderType := range []string{dnsProviderType1, dnsProviderType2} {
+					expectedLabels["dnsrecord.extensions.gardener.cloud/"+dnsProviderType] = "true"
+				}
+
+				Expect(newShoot.ObjectMeta.Labels).To(Equal(expectedLabels))
+			})
 		})
 	})
 
