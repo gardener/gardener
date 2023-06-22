@@ -784,13 +784,50 @@ var _ = Describe("Validation Tests", func() {
 
 		Context("virtual cluster", func() {
 			Context("DNS", func() {
-				It("should complain about an invalid service CIDR", func() {
+				It("should complain about invalid domain names", func() {
 					garden.Spec.VirtualCluster.DNS.Domain = ",,,"
+					garden.Spec.VirtualCluster.DNS.Domains = []string{",,,"}
 
-					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.virtualCluster.dns.domain"),
-					}))))
+					Expect(ValidateGarden(garden)).To(ContainElements(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.virtualCluster.dns.domain"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.virtualCluster.dns.domains[0]"),
+						})),
+					))
+				})
+
+				It("should complain about duplicate domain names in 'domains'", func() {
+					garden.Spec.VirtualCluster.DNS.Domains = []string{
+						"example.com",
+						"foo.bar",
+						"example.com",
+					}
+
+					Expect(ValidateGarden(garden)).To(ContainElements(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal("spec.virtualCluster.dns.domains[2]"),
+						})),
+					))
+				})
+
+				It("should complain about duplicate domain names in 'domain'", func() {
+					garden.Spec.VirtualCluster.DNS.Domain = "example.com"
+					garden.Spec.VirtualCluster.DNS.Domains = []string{
+						"example.com",
+						"foo.bar",
+					}
+
+					Expect(ValidateGarden(garden)).To(ContainElements(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal("spec.virtualCluster.dns.domain"),
+						})),
+					))
 				})
 			})
 
