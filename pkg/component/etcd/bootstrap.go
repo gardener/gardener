@@ -27,6 +27,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -47,6 +48,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -60,8 +62,11 @@ const (
 	druidServiceAccountName                      = Druid
 	druidVPAName                                 = Druid + "-vpa"
 	druidConfigMapImageVectorOverwriteNamePrefix = Druid + "-imagevector-overwrite"
+	druidServiceName                             = Druid
 	druidDeploymentName                          = Druid
 	managedResourceControlName                   = Druid
+
+	metricsPort = 8080
 
 	druidConfigMapImageVectorOverwriteDataKey          = "images_overwrite.yaml"
 	druidDeploymentVolumeMountPathImageVectorOverwrite = "/charts_overwrite"
@@ -241,6 +246,28 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			},
 		}
 
+		service = &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      druidServiceName,
+				Namespace: b.namespace,
+				Labels: utils.MergeStringMaps(map[string]string{
+					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
+				}, labels()),
+			},
+			Spec: corev1.ServiceSpec{
+				Type:     corev1.ServiceTypeClusterIP,
+				Selector: labels(),
+				Ports: []corev1.ServicePort{
+					{
+						Name:       "metrics",
+						Protocol:   corev1.ProtocolTCP,
+						Port:       metricsPort,
+						TargetPort: intstr.FromInt(int(metricsPort)),
+					},
+				},
+			},
+		}
+
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      druidDeploymentName,
@@ -281,7 +308,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 									},
 								},
 								Ports: []corev1.ContainerPort{{
-									ContainerPort: 9569,
+									ContainerPort: metricsPort,
 								}},
 							},
 						},
@@ -311,6 +338,15 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			vpa,
 		}
 	)
+
+	portMetrics := networkingv1.NetworkPolicyPort{
+		Port:     utils.IntStrPtrFromInt(metricsPort),
+		Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+	}
+
+	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, portMetrics))
+
+	resourcesToAdd = append(resourcesToAdd, service)
 
 	if b.imageVectorOverwrite != nil {
 		configMapImageVectorOverwrite.Data = map[string]string{druidConfigMapImageVectorOverwriteDataKey: *b.imageVectorOverwrite}
