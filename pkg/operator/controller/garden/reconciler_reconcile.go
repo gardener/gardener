@@ -350,16 +350,6 @@ func (r *Reconciler) deployKubeAPIServerFunc(ctx context.Context, garden *operat
 			sniConfig       = kubeapiserver.SNIConfig{Enabled: false}
 		)
 
-		var domainNames []string
-		if domain := garden.Spec.VirtualCluster.DNS.Domain; domain != nil {
-			domainNames = append(domainNames, gardenerutils.GetAPIServerDomain(*domain))
-			domainNames = append(domainNames, "gardener."+*domain)
-		}
-
-		for _, domain := range garden.Spec.VirtualCluster.DNS.Domains {
-			domainNames = append(domainNames, gardenerutils.GetAPIServerDomain(domain))
-		}
-
 		if apiServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; apiServer != nil {
 			apiServerConfig = apiServer.KubeAPIServerConfig
 
@@ -371,11 +361,13 @@ func (r *Reconciler) deployKubeAPIServerFunc(ctx context.Context, garden *operat
 			}
 		}
 
-		var primaryDomain string
-		if domains := garden.Spec.VirtualCluster.DNS.Domains; len(domains) > 0 {
-			primaryDomain = domains[0]
-		} else {
-			primaryDomain = *garden.Spec.VirtualCluster.DNS.Domain
+		var domainNames []string
+		if domain := garden.Spec.VirtualCluster.DNS.Domain; domain != nil {
+			domainNames = append(domainNames, *domain)
+		}
+
+		for _, domain := range garden.Spec.VirtualCluster.DNS.Domains {
+			domainNames = append(domainNames, domain)
 		}
 
 		return shared.DeployKubeAPIServer(
@@ -385,11 +377,11 @@ func (r *Reconciler) deployKubeAPIServerFunc(ctx context.Context, garden *operat
 			kubeAPIServer,
 			apiServerConfig,
 			kubeapiserver.ServerCertificateConfig{
-				ExtraDNSNames: domainNames,
+				ExtraDNSNames: getAPIServerDomains(domainNames),
 			},
 			sniConfig,
-			gardenerutils.GetAPIServerDomain(primaryDomain),
-			gardenerutils.GetAPIServerDomain(primaryDomain),
+			gardenerutils.GetAPIServerDomain(domainNames[0]),
+			gardenerutils.GetAPIServerDomain(domainNames[0]),
 			helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials),
 			helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials),
 			false,
