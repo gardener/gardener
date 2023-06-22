@@ -37,7 +37,8 @@ spec:
   # controlPlane:
   #   highAvailability: {}
     dns:
-      domain: virtual-garden.local.gardener.cloud
+      domains:
+      - virtual-garden.local.gardener.cloud
     etcd:
       main:
         backup:
