@@ -96,7 +96,7 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 					HighAvailability: &operatorv1alpha1.HighAvailability{},
 				},
 				DNS: operatorv1alpha1.DNS{
-					Domain: "virtual-garden.local.gardener.cloud",
+					Domains: []string{"virtual-garden.local.gardener.cloud"},
 				},
 				ETCD: &operatorv1alpha1.ETCD{
 					Main: &operatorv1alpha1.ETCDMain{

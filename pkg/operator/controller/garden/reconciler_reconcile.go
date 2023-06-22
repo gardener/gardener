@@ -341,16 +341,19 @@ func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, 
 func (r *Reconciler) deployKubeAPIServerFunc(ctx context.Context, garden *operatorv1alpha1.Garden, kubeAPIServer kubeapiserver.Interface) flow.TaskFn {
 	return func(context.Context) error {
 		var (
-			address                 = gardenerutils.GetAPIServerDomain(*garden.Spec.VirtualCluster.DNS.Domain)
-			serverCertificateConfig = kubeapiserver.ServerCertificateConfig{
-				ExtraDNSNames: []string{
-					address,
-					"gardener." + *garden.Spec.VirtualCluster.DNS.Domain,
-				},
-			}
 			apiServerConfig *gardencorev1beta1.KubeAPIServerConfig
 			sniConfig       = kubeapiserver.SNIConfig{Enabled: false}
 		)
+
+		var domainNames []string
+		if domain := garden.Spec.VirtualCluster.DNS.Domain; domain != nil {
+			domainNames = append(domainNames, gardenerutils.GetAPIServerDomain(*domain))
+			domainNames = append(domainNames, "gardener."+*domain)
+		}
+
+		for _, domain := range garden.Spec.VirtualCluster.DNS.Domains {
+			domainNames = append(domainNames, gardenerutils.GetAPIServerDomain(domain))
+		}
 
 		if apiServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; apiServer != nil {
 			apiServerConfig = apiServer.KubeAPIServerConfig
@@ -363,16 +366,25 @@ func (r *Reconciler) deployKubeAPIServerFunc(ctx context.Context, garden *operat
 			}
 		}
 
+		var primaryDomain string
+		if domains := garden.Spec.VirtualCluster.DNS.Domains; len(domains) > 0 {
+			primaryDomain = domains[0]
+		} else {
+			primaryDomain = *garden.Spec.VirtualCluster.DNS.Domain
+		}
+
 		return shared.DeployKubeAPIServer(
 			ctx,
 			r.RuntimeClientSet.Client(),
 			r.GardenNamespace,
 			kubeAPIServer,
 			apiServerConfig,
-			serverCertificateConfig,
+			kubeapiserver.ServerCertificateConfig{
+				ExtraDNSNames: domainNames,
+			},
 			sniConfig,
-			address,
-			address,
+			gardenerutils.GetAPIServerDomain(primaryDomain),
+			gardenerutils.GetAPIServerDomain(primaryDomain),
 			helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials),
 			helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials),
 			false,
