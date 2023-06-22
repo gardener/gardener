@@ -32,6 +32,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -48,9 +49,6 @@ const (
 	ControllerDeploymentHash = "deployment-hash"
 	// RegistrationSpecHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
 	RegistrationSpecHash = "registration-spec-hash"
-	// PodSecurityStandardEnforce is a constant for an annotation on `ControllerInstallation`s. When set the `extension` namespace
-	// is created with "pod-security.kubernetes.io/enforce" label set to PodSecurityStandardEnforce's value.
-	PodSecurityStandardEnforce = "security.gardener.cloud/pod-security-standard-enforce"
 )
 
 // Reconciler determines which ControllerRegistrations are required for a given Seed by checking all objects in the
@@ -492,8 +490,8 @@ func deployNeededInstallation(
 			metav1.SetMetaDataLabel(&controllerInstallation.ObjectMeta, ControllerDeploymentHash, deploymentSpecHash)
 		}
 
-		if podSecurityStandardEnforce, ok := controllerRegistration.Annotations[PodSecurityStandardEnforce]; ok {
-			metav1.SetMetaDataAnnotation(&controllerInstallation.ObjectMeta, PodSecurityStandardEnforce, podSecurityStandardEnforce)
+		if podSecurityEnforce, ok := controllerRegistration.Annotations[v1beta1constants.AnnotationPodSecurityEnforce]; ok {
+			metav1.SetMetaDataAnnotation(&controllerInstallation.ObjectMeta, v1beta1constants.AnnotationPodSecurityEnforce, podSecurityEnforce)
 		}
 
 		controllerInstallation.Spec = installationSpec

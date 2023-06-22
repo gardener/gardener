@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -863,12 +864,12 @@ var _ = Describe("Reconciler", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should deploy controller installation with correct security.gardener.cloud/pod-security-standard-enforce annotation", func() {
+			It("should deploy controller installation with correct security.gardener.cloud/pod-security-enforce annotation", func() {
 				registration1 := controllerRegistration1.DeepCopy()
 				registration1.DeletionTimestamp = &now
 				registration2 := controllerRegistration2.DeepCopy()
 				registration2.Annotations = map[string]string{
-					PodSecurityStandardEnforce: "baseline",
+					v1beta1constants.AnnotationPodSecurityEnforce: "baseline",
 				}
 				var (
 					wantedControllerRegistrations  = sets.New(registration1.Name, registration2.Name)
@@ -889,7 +890,7 @@ var _ = Describe("Reconciler", func() {
 					SeedSpecHash:             "8e09957b7d0d3c19",
 				}
 				installation2.Annotations = map[string]string{
-					PodSecurityStandardEnforce: "baseline",
+					v1beta1constants.AnnotationPodSecurityEnforce: "baseline",
 				}
 
 				k8sClient.EXPECT().Get(ctx, kubernetesutils.Key(controllerInstallation2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))

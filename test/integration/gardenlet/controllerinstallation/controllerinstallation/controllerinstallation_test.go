@@ -65,7 +65,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "installation-",
 				Labels:       map[string]string{testID: testRunID},
-				Annotations:  map[string]string{"security.gardener.cloud/pod-security-standard-enforce": "privileged"},
+				Annotations:  map[string]string{"security.gardener.cloud/pod-security-enforce": "privileged"},
 			},
 		}
 	})
