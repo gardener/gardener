@@ -154,7 +154,14 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.virtualGardenGardenerAccess = r.newGardenerAccess(secretsManager, *garden.Spec.VirtualCluster.DNS.Domain)
+
+	var accessDomain string
+	if domains := garden.Spec.VirtualCluster.DNS.Domains; len(domains) > 0 {
+		accessDomain = domains[0]
+	} else {
+		accessDomain = *garden.Spec.VirtualCluster.DNS.Domain
+	}
+	c.virtualGardenGardenerAccess = r.newGardenerAccess(secretsManager, accessDomain)
 
 	// observability components
 	c.kubeStateMetrics, err = r.newKubeStateMetrics()
@@ -643,6 +650,14 @@ func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValue
 		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
 	}
 
+	var domains []string
+	if domain := garden.Spec.VirtualCluster.DNS.Domain; domain != nil {
+		domains = append(domains, gardenerutils.GetAPIServerDomain(*domain))
+	}
+	for _, domain := range garden.Spec.VirtualCluster.DNS.Domains {
+		domains = append(domains, gardenerutils.GetAPIServerDomain(domain))
+	}
+
 	return kubeapiserverexposure.NewSNI(
 		r.RuntimeClientSet.Client(),
 		r.RuntimeClientSet.Applier(),
@@ -650,7 +665,7 @@ func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValue
 		r.GardenNamespace,
 		func() *kubeapiserverexposure.SNIValues {
 			return &kubeapiserverexposure.SNIValues{
-				Hosts: []string{gardenerutils.GetAPIServerDomain(*garden.Spec.VirtualCluster.DNS.Domain)},
+				Hosts: domains,
 				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
 					Namespace: ingressGatewayValues[0].Namespace,
 					Labels:    ingressGatewayValues[0].Labels,
