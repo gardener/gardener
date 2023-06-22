@@ -189,18 +189,12 @@ type GardenletControllerConfiguration struct {
 	// ShootState defines the configuration of the ShootState controller.
 	// +optional
 	ShootState *ShootStateControllerConfiguration `json:"shootState,omitempty"`
-	// ShootStateSync defines the configuration of the ShootState controller
-	// +optional
-	ShootStateSync *ShootStateSyncControllerConfiguration `json:"shootStateSync,omitempty"`
 	// NetworkPolicy defines the configuration of the NetworkPolicy controller
 	// +optional
 	NetworkPolicy *NetworkPolicyControllerConfiguration `json:"networkPolicy,omitempty"`
 	// ManagedSeed defines the configuration of the ManagedSeed controller.
 	// +optional
 	ManagedSeed *ManagedSeedControllerConfiguration `json:"managedSeed,omitempty"`
-	// ShootSecretControllerConfiguration defines the configuration of the ShootSecret controller.
-	// +optional
-	ShootSecret *ShootSecretControllerConfiguration `json:"shootSecret,omitempty"`
 	// TokenRequestorControllerConfiguration defines the configuration of the TokenRequestor controller.
 	// +optional
 	TokenRequestor *TokenRequestorControllerConfiguration `json:"tokenRequestor,omitempty"`
@@ -372,13 +366,6 @@ type ShootStateControllerConfiguration struct {
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
 }
 
-// ShootSecretControllerConfiguration defines the configuration of the ShootSecret controller.
-type ShootSecretControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on events.
-	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
-}
-
 // StaleExtensionHealthChecks defines the configuration of the check for stale extension health checks.
 type StaleExtensionHealthChecks struct {
 	// Enabled specifies whether the check for stale extensions health checks is enabled.
@@ -397,14 +384,6 @@ type ConditionThreshold struct {
 	Type string `json:"type"`
 	// Duration is the duration how long the condition can stay in the progressing state.
 	Duration metav1.Duration `json:"duration"`
-}
-
-// ShootStateSyncControllerConfiguration defines the configuration of the ShootState Sync controller.
-type ShootStateSyncControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on
-	// events.
-	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
 // NetworkPolicyControllerConfiguration defines the configuration of the NetworkPolicy

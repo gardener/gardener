@@ -43,8 +43,8 @@ func (b *Botanist) DefaultNetwork() component.DeployMigrateWaiter {
 // DeployNetwork deploys the Network custom resource and triggers the restore operation in case
 // the Shoot is in the restore phase of the control plane migration
 func (b *Botanist) DeployNetwork(ctx context.Context) error {
-	if b.isRestorePhase() {
-		return b.Shoot.Components.Extensions.Network.Restore(ctx, b.GetShootState())
+	if b.IsRestorePhase() {
+		return b.Shoot.Components.Extensions.Network.Restore(ctx, b.Shoot.GetShootState())
 	}
 
 	return b.Shoot.Components.Extensions.Network.Deploy(ctx)

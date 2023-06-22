@@ -54,8 +54,8 @@ func (b *Botanist) DefaultExtension(ctx context.Context) (extension.Interface, e
 // DeployExtensionsAfterKubeAPIServer deploys the Extension custom resources and triggers the restore operation in case
 // the Shoot is in the restore phase of the control plane migration.
 func (b *Botanist) DeployExtensionsAfterKubeAPIServer(ctx context.Context) error {
-	if b.isRestorePhase() {
-		return b.Shoot.Components.Extensions.Extension.RestoreAfterKubeAPIServer(ctx, b.GetShootState())
+	if b.IsRestorePhase() {
+		return b.Shoot.Components.Extensions.Extension.RestoreAfterKubeAPIServer(ctx, b.Shoot.GetShootState())
 	}
 	return b.Shoot.Components.Extensions.Extension.DeployAfterKubeAPIServer(ctx)
 }
@@ -63,8 +63,8 @@ func (b *Botanist) DeployExtensionsAfterKubeAPIServer(ctx context.Context) error
 // DeployExtensionsBeforeKubeAPIServer deploys the Extension custom resources and triggers the restore operation in case
 // the Shoot is in the restore phase of the control plane migration.
 func (b *Botanist) DeployExtensionsBeforeKubeAPIServer(ctx context.Context) error {
-	if b.isRestorePhase() {
-		return b.Shoot.Components.Extensions.Extension.RestoreBeforeKubeAPIServer(ctx, b.GetShootState())
+	if b.IsRestorePhase() {
+		return b.Shoot.Components.Extensions.Extension.RestoreBeforeKubeAPIServer(ctx, b.Shoot.GetShootState())
 	}
 	return b.Shoot.Components.Extensions.Extension.DeployBeforeKubeAPIServer(ctx)
 }

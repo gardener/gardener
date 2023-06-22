@@ -105,7 +105,7 @@ var _ = Describe("Secrets", func() {
 				},
 			},
 		})
-		botanist.SetShootState(&gardencorev1beta1.ShootState{})
+		botanist.Shoot.SetShootState(&gardencorev1beta1.ShootState{})
 	})
 
 	Describe("#InitializeSecretsManagement", func() {
@@ -225,7 +225,7 @@ var _ = Describe("Secrets", func() {
 			})
 
 			It("should restore all secrets from the shootstate", func() {
-				botanist.SetShootState(&gardencorev1beta1.ShootState{
+				botanist.Shoot.SetShootState(&gardencorev1beta1.ShootState{
 					Spec: gardencorev1beta1.ShootStateSpec{
 						Gardener: []gardencorev1beta1.GardenerResourceData{
 							{

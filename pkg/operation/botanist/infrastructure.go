@@ -38,7 +38,7 @@ func (b *Botanist) DefaultInfrastructure() infrastructure.Interface {
 			Type:              b.Shoot.GetInfo().Spec.Provider.Type,
 			ProviderConfig:    b.Shoot.GetInfo().Spec.Provider.InfrastructureConfig,
 			Region:            b.Shoot.GetInfo().Spec.Region,
-			AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployInfrastructure) || b.isRestorePhase(),
+			AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployInfrastructure) || b.IsRestorePhase(),
 		},
 		infrastructure.DefaultInterval,
 		infrastructure.DefaultSevereThreshold,
@@ -57,8 +57,8 @@ func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 		b.Shoot.Components.Extensions.Infrastructure.SetSSHPublicKey(sshKeypairSecret.Data[secrets.DataKeySSHAuthorizedKeys])
 	}
 
-	if b.isRestorePhase() {
-		return b.Shoot.Components.Extensions.Infrastructure.Restore(ctx, b.GetShootState())
+	if b.IsRestorePhase() {
+		return b.Shoot.Components.Extensions.Infrastructure.Restore(ctx, b.Shoot.GetShootState())
 	}
 
 	return b.Shoot.Components.Extensions.Infrastructure.Deploy(ctx)

@@ -116,8 +116,8 @@ func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 		b.Shoot.Components.Extensions.OperatingSystemConfig.SetSSHPublicKeys(publicKeys)
 	}
 
-	if b.isRestorePhase() {
-		return b.Shoot.Components.Extensions.OperatingSystemConfig.Restore(ctx, b.GetShootState())
+	if b.IsRestorePhase() {
+		return b.Shoot.Components.Extensions.OperatingSystemConfig.Restore(ctx, b.Shoot.GetShootState())
 	}
 
 	return b.Shoot.Components.Extensions.OperatingSystemConfig.Deploy(ctx)

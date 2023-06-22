@@ -226,12 +226,6 @@ config.yaml: |
       concurrentSyncs: {{ required ".Values.config.controllers.shootState.concurrentSyncs is required" .Values.config.controllers.shootState.concurrentSyncs }}
       syncPeriod: {{ required ".Values.config.controllers.shootState.syncPeriod is required" .Values.config.controllers.shootState.syncPeriod }}
     {{- end }}
-    {{- if .Values.config.controllers.shootSecret }}
-    shootSecret:
-      concurrentSyncs: {{ required ".Values.config.controllers.shootSecret.concurrentSyncs is required" .Values.config.controllers.shootSecret.concurrentSyncs }}
-    {{- end }}
-    shootStateSync:
-      concurrentSyncs: {{ required ".Values.config.controllers.shootStateSync.concurrentSyncs is required" .Values.config.controllers.shootStateSync.concurrentSyncs }}
     {{- if .Values.config.controllers.managedSeed }}
     managedSeed:
       concurrentSyncs: {{ required ".Values.config.controllers.managedSeed.concurrentSyncs is required" .Values.config.controllers.managedSeed.concurrentSyncs }}

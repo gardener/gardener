@@ -164,7 +164,7 @@ var _ = Describe("KubeAPIServer", func() {
 				TechnicalID: seedNamespace,
 			},
 		})
-		botanist.SetShootState(&gardencorev1beta1.ShootState{})
+		botanist.Shoot.SetShootState(&gardencorev1beta1.ShootState{})
 
 		botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
 			Spec: gardencorev1beta1.SeedSpec{

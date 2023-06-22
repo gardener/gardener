@@ -101,7 +101,7 @@ var _ = Describe("controlplane", func() {
 			var shootState = &gardencorev1beta1.ShootState{}
 
 			BeforeEach(func() {
-				botanist.SetShootState(shootState)
+				botanist.Shoot.SetShootState(shootState)
 				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 					Status: gardencorev1beta1.ShootStatus{
 						LastOperation: &gardencorev1beta1.LastOperation{
@@ -140,7 +140,7 @@ var _ = Describe("controlplane", func() {
 			var shootState = &gardencorev1beta1.ShootState{}
 
 			BeforeEach(func() {
-				botanist.SetShootState(shootState)
+				botanist.Shoot.SetShootState(shootState)
 				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 					Status: gardencorev1beta1.ShootStatus{
 						LastOperation: &gardencorev1beta1.LastOperation{

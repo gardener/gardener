@@ -153,14 +153,10 @@ type GardenletControllerConfiguration struct {
 	ShootCare *ShootCareControllerConfiguration
 	// ShootState defines the configuration of the ShootState controller.
 	ShootState *ShootStateControllerConfiguration
-	// ShootStateSync defines the configuration of the ShootState controller.
-	ShootStateSync *ShootStateSyncControllerConfiguration
 	// NetworkPolicy defines the configuration of the NetworkPolicy controller.
 	NetworkPolicy *NetworkPolicyControllerConfiguration
 	// ManagedSeed defines the configuration of the ManagedSeed controller.
 	ManagedSeed *ManagedSeedControllerConfiguration
-	// ShootSecretControllerConfiguration defines the configuration of the ShootSecret controller.
-	ShootSecret *ShootSecretControllerConfiguration
 	// TokenRequestorControllerConfiguration defines the configuration of the TokenRequestor controller.
 	TokenRequestor *TokenRequestorControllerConfiguration
 }
@@ -302,12 +298,6 @@ type ShootStateControllerConfiguration struct {
 	SyncPeriod *metav1.Duration
 }
 
-// ShootSecretControllerConfiguration defines the configuration of the ShootSecret controller.
-type ShootSecretControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on events.
-	ConcurrentSyncs *int
-}
-
 // StaleExtensionHealthChecks defines the configuration of the check for stale extension health checks.
 type StaleExtensionHealthChecks struct {
 	// Enabled specifies whether the check for stale extensions health checks is enabled.
@@ -325,13 +315,6 @@ type ConditionThreshold struct {
 	Type string
 	// Duration is the duration how long the condition can stay in the progressing state.
 	Duration metav1.Duration
-}
-
-// ShootStateSyncControllerConfiguration defines the configuration of the ShootState Sync controller.
-type ShootStateSyncControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on
-	// events.
-	ConcurrentSyncs *int
 }
 
 // NetworkPolicyControllerConfiguration defines the configuration of the NetworkPolicy

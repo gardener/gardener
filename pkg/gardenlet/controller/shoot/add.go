@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -48,13 +49,24 @@ func AddToManager(
 	gardenClusterIdentity string,
 	imageVector imagevector.ImageVector,
 ) error {
+	var responsibleForUnmanagedSeed bool
+	if err := gardenCluster.GetAPIReader().Get(ctx, client.ObjectKey{Name: cfg.SeedConfig.Name, Namespace: v1beta1constants.GardenNamespace}, &seedmanagementv1alpha1.ManagedSeed{}); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed checking whether gardenlet is responsible for a managed seed: %w", err)
+		}
+		// ManagedSeed was not found, hence gardenlet is responsible for an unmanaged seed.
+		responsibleForUnmanagedSeed = true
+	}
+	shootStateControllerEnabled := responsibleForUnmanagedSeed && pointer.IntDeref(cfg.Controllers.ShootState.ConcurrentSyncs, 0) > 0
+
 	if err := (&shoot.Reconciler{
-		SeedClientSet:         seedClientSet,
-		ShootClientMap:        shootClientMap,
-		Config:                cfg,
-		ImageVector:           imageVector,
-		Identity:              identity,
-		GardenClusterIdentity: gardenClusterIdentity,
+		SeedClientSet:               seedClientSet,
+		ShootClientMap:              shootClientMap,
+		Config:                      cfg,
+		ImageVector:                 imageVector,
+		Identity:                    identity,
+		GardenClusterIdentity:       gardenClusterIdentity,
+		ShootStateControllerEnabled: shootStateControllerEnabled,
 	}).AddToManager(mgr, gardenCluster); err != nil {
 		return fmt.Errorf("failed adding main reconciler: %w", err)
 	}
@@ -71,13 +83,9 @@ func AddToManager(
 		return fmt.Errorf("failed adding care reconciler: %w", err)
 	}
 
-	if err := gardenCluster.GetAPIReader().Get(ctx, client.ObjectKey{Name: cfg.SeedConfig.Name, Namespace: v1beta1constants.GardenNamespace}, &seedmanagementv1alpha1.ManagedSeed{}); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return fmt.Errorf("failed checking whether gardenlet is responsible for a managed seed: %w", err)
-		}
-
-		// ManagedSeed was not found, hence gardenlet is responsible for an unmanaged seed. In this case, we want to add
-		// the state reconciler which performs periodic backups of shoot states (see GEP-22).
+	// If gardenlet is responsible for an unmanaged seed we want to add the state reconciler which performs periodic
+	// backups of shoot states (see GEP-22).
+	if shootStateControllerEnabled {
 		mgr.GetLogger().Info("Adding shoot state reconciler since gardenlet is responsible for an unmanaged seed")
 
 		if err := (&state.Reconciler{

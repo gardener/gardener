@@ -22,6 +22,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -255,6 +256,16 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		if seconds <= 1800 {
 			shoot.CloudConfigExecutionMaxDelaySeconds = seconds
 		}
+	}
+
+	if lastOperation := shootObject.Status.LastOperation; lastOperation != nil &&
+		lastOperation.Type == gardencorev1beta1.LastOperationTypeRestore &&
+		lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
+		shootState := &gardencorev1beta1.ShootState{ObjectMeta: metav1.ObjectMeta{Name: shootObject.Name, Namespace: shootObject.Namespace}}
+		if err := c.Get(ctx, client.ObjectKeyFromObject(shootState), shootState); err != nil {
+			return nil, err
+		}
+		shoot.SetShootState(shootState)
 	}
 
 	return shoot, nil

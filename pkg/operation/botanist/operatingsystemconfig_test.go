@@ -101,7 +101,7 @@ var _ = Describe("operatingsystemconfig", func() {
 				Seed: &seedpkg.Seed{},
 			},
 		}
-		botanist.SetShootState(shootState)
+		botanist.Shoot.SetShootState(shootState)
 		botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
 			Spec: gardencorev1beta1.SeedSpec{
 				Ingress: &gardencorev1beta1.Ingress{

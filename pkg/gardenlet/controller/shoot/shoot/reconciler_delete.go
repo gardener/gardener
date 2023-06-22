@@ -154,10 +154,6 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 
 		g = flow.NewGraph("Shoot cluster deletion")
 
-		ensureShootStateExists = g.Add(flow.Task{
-			Name: "Ensuring that ShootState exists",
-			Fn:   flow.TaskFn(botanist.EnsureShootStateExists).RetryUntilTimeout(defaultInterval, defaultTimeout),
-		})
 		deployNamespace = g.Add(flow.Task{
 			Name: "Deploying Shoot namespace in Seed",
 			Fn:   flow.TaskFn(botanist.DeploySeedNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace),
@@ -200,12 +196,12 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		initializeSecretsManagement = g.Add(flow.Task{
 			Name:         "Initializing secrets management",
 			Fn:           flow.TaskFn(botanist.InitializeSecretsManagement).DoIf(nonTerminatingNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists),
+			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		deployReferencedResources = g.Add(flow.Task{
 			Name:         "Deploying referenced resources",
 			Fn:           flow.TaskFn(botanist.DeployReferencedResources).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace),
-			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists),
+			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		deployInternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Deploying internal domain DNS record",

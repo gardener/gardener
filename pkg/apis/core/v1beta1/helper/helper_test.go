@@ -2678,6 +2678,15 @@ var _ = Describe("helper", func() {
 			BeTrue(),
 		),
 	)
+
+	DescribeTable("#ShootHasOperationType",
+		func(lastOperation *gardencorev1beta1.LastOperation, lastOperationType gardencorev1beta1.LastOperationType, matcher gomegatypes.GomegaMatcher) {
+			Expect(ShootHasOperationType(lastOperation, lastOperationType)).To(matcher)
+		},
+		Entry("last operation nil", nil, gardencorev1beta1.LastOperationTypeCreate, BeFalse()),
+		Entry("last operation type does not match", &gardencorev1beta1.LastOperation{}, gardencorev1beta1.LastOperationTypeCreate, BeFalse()),
+		Entry("last operation type matches", &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeCreate}, gardencorev1beta1.LastOperationTypeCreate, BeTrue()),
+	)
 })
 
 func timePointer(t time.Time) *metav1.Time {

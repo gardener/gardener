@@ -424,7 +424,7 @@ var _ = Describe("dnsrecord", func() {
 			var shootState = &gardencorev1beta1.ShootState{}
 
 			JustBeforeEach(func() {
-				b.SetShootState(shootState)
+				b.Shoot.SetShootState(shootState)
 				b.Shoot.GetInfo().Status = gardencorev1beta1.ShootStatus{
 					LastOperation: &gardencorev1beta1.LastOperation{
 						Type: gardencorev1beta1.LastOperationTypeRestore,
@@ -484,7 +484,7 @@ var _ = Describe("dnsrecord", func() {
 			var shootState = &gardencorev1beta1.ShootState{}
 
 			JustBeforeEach(func() {
-				b.SetShootState(shootState)
+				b.Shoot.SetShootState(shootState)
 				b.Shoot.GetInfo().Status = gardencorev1beta1.ShootStatus{
 					LastOperation: &gardencorev1beta1.LastOperation{
 						Type: gardencorev1beta1.LastOperationTypeRestore,

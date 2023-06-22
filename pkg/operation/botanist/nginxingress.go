@@ -103,7 +103,7 @@ func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
 		SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
 		Namespace:         b.Shoot.SeedNamespace,
 		TTL:               b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
-		AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordIngress) || b.isRestorePhase(),
+		AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordIngress) || b.IsRestorePhase(),
 	}
 
 	// Set component values even if the nginx-ingress addons is not enabled.
