@@ -20,6 +20,9 @@ patches:
     name: provider-local
   patch: |
     - op: add
+      path: /metadata/annotations/security.gardener.cloud~1pod-security-enforce
+      value: privileged
+    - op: add
       path: /spec/resources/-
       value:
         kind: Extension
