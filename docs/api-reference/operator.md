@@ -457,7 +457,22 @@ string
 </em>
 </td>
 <td>
-<p>Domain is the external domain of the virtual garden cluster. This field is immutable.</p>
+<em>(Optional)</em>
+<p>Deprecated: This field is deprecated and will be removed soon. Please use <code>Domains</code> instead.
+TODO(timuthy): Drop this after v1.74 has been released.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>domains</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Domains are the external domains of the virtual garden cluster.
+The first given domain in this list is immutable.</p>
 </td>
 </tr>
 </tbody>
