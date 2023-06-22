@@ -24,6 +24,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 )
 
@@ -62,9 +63,31 @@ func (s Strategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object)
 	syncDependencyWatchdogSettings(newSeed)
 	newSeed.Status = oldSeed.Status
 
-	if !apiequality.Semantic.DeepEqual(oldSeed.Spec, newSeed.Spec) {
+	if mustIncreaseGeneration(oldSeed, newSeed) {
 		newSeed.Generation = oldSeed.Generation + 1
 	}
+}
+
+func mustIncreaseGeneration(oldSeed, newSeed *core.Seed) bool {
+	// The spec changed
+	if !apiequality.Semantic.DeepEqual(oldSeed.Spec, newSeed.Spec) {
+		return true
+	}
+
+	// The deletion timestamp was set
+	if oldSeed.DeletionTimestamp == nil && newSeed.DeletionTimestamp != nil {
+		return true
+	}
+
+	// bump the generation in case certain operations were triggered
+	if oldSeed.Annotations[v1beta1constants.GardenerOperation] != newSeed.Annotations[v1beta1constants.GardenerOperation] {
+		switch newSeed.Annotations[v1beta1constants.GardenerOperation] {
+		case v1beta1constants.SeedOperationRenewGardenAccessSecrets:
+			return true
+		}
+	}
+
+	return false
 }
 
 func syncDependencyWatchdogSettings(seed *core.Seed) {
@@ -85,7 +108,7 @@ func syncDependencyWatchdogSettings(seed *core.Seed) {
 	}
 	seed.Spec.Settings.DependencyWatchdog.Endpoint = &core.SeedSettingDependencyWatchdogEndpoint{Enabled: seed.Spec.Settings.DependencyWatchdog.Weeder.Enabled}
 
-	//keeping the field `prober` and `probe` in sync
+	// keeping the field `prober` and `probe` in sync
 	// Case 1: If prober is specified, probe isn't -> set probe=prober
 	// Case 2: If prober isn't specified, probe is -> make prober=probe
 	// Case 3: If both are specified, give preference to prober field -> set probe=prober
