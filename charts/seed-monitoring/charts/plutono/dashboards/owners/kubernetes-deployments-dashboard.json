@@ -341,7 +341,7 @@
       },
       "targets": [
         {
-          "expr": "max(kube_deployment_spec_replicas{instance=\"kube-state-metrics\",deployment=\"$deployment_name\"}) without (instance, pod)",
+          "expr": "max(kube_deployment_spec_replicas{deployment=\"$deployment_name\"}) without (instance, pod)",
           "interval": "",
           "intervalFactor": 2,
           "legendFormat": "",
@@ -431,7 +431,7 @@
       },
       "targets": [
         {
-          "expr": "min(kube_deployment_status_replicas_available{instance=\"kube-state-metrics\",deployment=\"$deployment_name\"}) without (instance, pod)",
+          "expr": "min(kube_deployment_status_replicas_available{deployment=\"$deployment_name\"}) without (instance, pod)",
           "interval": "",
           "intervalFactor": 2,
           "legendFormat": "",
@@ -521,7 +521,7 @@
       "tableColumn": "{deployment=\"aws-lb-readvertiser\", job=\"kube-state-metrics\", namespace=\"kube-system\", type=\"seed\"}",
       "targets": [
         {
-          "expr": "max(kube_deployment_status_observed_generation{instance=\"kube-state-metrics\",deployment=\"$deployment_name\"}) without (instance, pod)",
+          "expr": "max(kube_deployment_status_observed_generation{deployment=\"$deployment_name\"}) without (instance, pod)",
           "interval": "",
           "intervalFactor": 2,
           "legendFormat": "",
@@ -611,7 +611,7 @@
       "tableColumn": "{deployment=\"aws-lb-readvertiser\", job=\"kube-state-metrics-seed\", namespace=\"kube-system\", type=\"seed\"}",
       "targets": [
         {
-          "expr": "max(kube_deployment_metadata_generation{instance=\"kube-state-metrics\",deployment=\"$deployment_name\"}) without (instance, pod)",
+          "expr": "max(kube_deployment_metadata_generation{deployment=\"$deployment_name\"}) without (instance, pod)",
           "interval": "",
           "intervalFactor": 2,
           "legendFormat": "",

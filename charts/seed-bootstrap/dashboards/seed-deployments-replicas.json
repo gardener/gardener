@@ -59,7 +59,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max(kube_deployment_spec_replicas{instance=\"kube-state-metrics\",deployment=\"$deployment_name\"}) without (instance, pod)",
+          "expr": "max(kube_deployment_spec_replicas{deployment=\"$deployment_name\"}) without (instance, pod)",
           "interval": "",
           "legendFormat": "{{namespace}}",
           "refId": "A"
@@ -118,7 +118,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "min(kube_deployment_status_replicas_available{instance=\"kube-state-metrics\",deployment=\"$deployment_name\"}) without (instance, pod)",
+          "expr": "min(kube_deployment_status_replicas_available{deployment=\"$deployment_name\"}) without (instance, pod)",
           "interval": "",
           "legendFormat": "{{namespace}}",
           "refId": "A"
@@ -173,7 +173,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max(kube_deployment_status_observed_generation{instance=\"kube-state-metrics\",deployment=\"$deployment_name\"}) without (instance, pod)",
+          "expr": "max(kube_deployment_status_observed_generation{deployment=\"$deployment_name\"}) without (instance, pod)",
           "interval": "",
           "legendFormat": "{{namespace}}",
           "refId": "A"
@@ -228,7 +228,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max(kube_deployment_metadata_generation{instance=\"kube-state-metrics\",deployment=\"$deployment_name\"}) without (instance, pod)",
+          "expr": "max(kube_deployment_metadata_generation{deployment=\"$deployment_name\"}) without (instance, pod)",
           "interval": "",
           "legendFormat": "{{namespace}}",
           "refId": "A"
