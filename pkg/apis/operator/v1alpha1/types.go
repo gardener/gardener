@@ -170,6 +170,9 @@ type DNS struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Domain string `json:"domain"`
+	// Domains are the external domains of the virtual garden cluster.
+	// +optional
+	Domains []string `json:"domains,omitempty"`
 }
 
 // ETCD contains configuration for the etcds of the virtual garden cluster.
