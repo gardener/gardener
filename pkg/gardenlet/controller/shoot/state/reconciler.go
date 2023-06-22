@@ -43,8 +43,9 @@ type Reconciler struct {
 }
 
 var (
-	// RequeueWhenShootIsNotYetCreated is the duration for the requeueing when a shoot is not yet successfully created.
-	RequeueWhenShootIsNotYetCreated = 10 * time.Minute
+	// RequeueWhenShootIsNotReadyForBackup is the duration for the requeueing when a shoot is not yet ready for a backup
+	// of its state.
+	RequeueWhenShootIsNotReadyForBackup = 10 * time.Minute
 	// JitterDuration is the duration for jittering when scheduling the next periodic backup.
 	JitterDuration = 30 * time.Minute
 )
@@ -72,8 +73,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if !shootCreatedSuccessfully(shoot.Status) {
-		log.Info("Requeuing because shoot was not yet successfully created", "requeueAfter", RequeueWhenShootIsNotYetCreated)
-		return reconcile.Result{RequeueAfter: RequeueWhenShootIsNotYetCreated}, nil
+		log.Info("Requeuing because shoot was not yet successfully created", "requeueAfter", RequeueWhenShootIsNotReadyForBackup)
+		return reconcile.Result{RequeueAfter: RequeueWhenShootIsNotReadyForBackup}, nil
+	}
+
+	if shootInMigration(shoot.Status) {
+		log.Info("Requeuing because shoot is currently in migration", "requeueAfter", RequeueWhenShootIsNotReadyForBackup)
+		return reconcile.Result{RequeueAfter: RequeueWhenShootIsNotReadyForBackup}, nil
 	}
 
 	shootState := &gardencorev1beta1.ShootState{}
@@ -121,5 +127,11 @@ func (r *Reconciler) requeueAfter(lastBackup time.Time) (time.Duration, time.Tim
 func shootCreatedSuccessfully(status gardencorev1beta1.ShootStatus) bool {
 	return status.LastOperation != nil &&
 		((status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate && status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded) ||
-			status.LastOperation.Type == gardencorev1beta1.LastOperationTypeReconcile)
+			status.LastOperation.Type != gardencorev1beta1.LastOperationTypeCreate)
+}
+
+func shootInMigration(status gardencorev1beta1.ShootStatus) bool {
+	return status.LastOperation != nil &&
+		((status.LastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate) ||
+			(status.LastOperation.Type == gardencorev1beta1.LastOperationTypeRestore && status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded))
 }

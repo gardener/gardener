@@ -43,7 +43,7 @@ var _ = Describe("Shoot State controller tests", func() {
 
 	BeforeEach(func() {
 		DeferCleanup(test.WithVars(
-			&state.RequeueWhenShootIsNotYetCreated, 100*time.Millisecond,
+			&state.RequeueWhenShootIsNotReadyForBackup, 100*time.Millisecond,
 			&state.JitterDuration, time.Duration(0),
 		))
 
@@ -192,6 +192,41 @@ var _ = Describe("Shoot State controller tests", func() {
 
 			By("Mark shoot as 'creation succeeded'")
 			patch := client.MergeFrom(shoot.DeepCopy())
+			shoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStateSucceeded
+			Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
+
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), &gardencorev1beta1.ShootState{})
+			}).Should(Succeed())
+		})
+	})
+
+	Context("when shoot is in migration", func() {
+		BeforeEach(func() {
+			lastOperation = &gardencorev1beta1.LastOperation{
+				Type:  gardencorev1beta1.LastOperationTypeMigrate,
+				State: gardencorev1beta1.LastOperationStateProcessing,
+			}
+		})
+
+		It("should requeue until migration finished and eventually create the ShootState", func() {
+			By("Ensure no ShootState gets created")
+			Consistently(func() error {
+				return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), &gardencorev1beta1.ShootState{})
+			}).Should(BeNotFoundError())
+
+			By("Mark shoot as 'restore procession'")
+			patch := client.MergeFrom(shoot.DeepCopy())
+			shoot.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeRestore
+			Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
+
+			By("Ensure no ShootState gets created")
+			Consistently(func() error {
+				return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), &gardencorev1beta1.ShootState{})
+			}).Should(BeNotFoundError())
+
+			By("Mark shoot as 'restore succeeded'")
+			patch = client.MergeFrom(shoot.DeepCopy())
 			shoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStateSucceeded
 			Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 
