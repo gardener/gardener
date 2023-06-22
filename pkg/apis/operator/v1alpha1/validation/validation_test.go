@@ -785,7 +785,19 @@ var _ = Describe("Validation Tests", func() {
 
 		Context("virtual cluster", func() {
 			Context("DNS", func() {
-				It("should complain about invalid domain names", func() {
+				It("should complain about that no domain is configured", func() {
+					garden.Spec.VirtualCluster.DNS.Domain = nil
+					garden.Spec.VirtualCluster.DNS.Domains = nil
+
+					Expect(ValidateGarden(garden)).To(ContainElements(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeRequired),
+							"Field": Equal("spec.virtualCluster.dns.domains"),
+						})),
+					))
+				})
+
+				It("should complain about invalid domain name in 'domain'", func() {
 					garden.Spec.VirtualCluster.DNS.Domain = pointer.String(",,,")
 					garden.Spec.VirtualCluster.DNS.Domains = []string{",,,"}
 
