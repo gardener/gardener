@@ -39,7 +39,6 @@ func NewVali(
 	priorityClassName string,
 	storage *resource.Quantity,
 	ingressHost string,
-	ingressClass string,
 	authEnabled bool,
 	hvpaEnabled bool,
 	maintenanceTimeWindow *hvpav1alpha1.MaintenanceTimeWindow,
@@ -92,7 +91,6 @@ func NewVali(
 		Storage:               storage,
 		AuthEnabled:           authEnabled,
 		ClusterType:           clusterType,
-		IngressClass:          ingressClass,
 		IngressHost:           ingressHost,
 	})
 

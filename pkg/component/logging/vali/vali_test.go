@@ -65,7 +65,6 @@ const (
 	telegrafImage             = "telegraf-iptables:0.0.1"
 	kubeRBACProxyImage        = "kube-rbac-proxy:0.0.1"
 	priorityClassName         = "foo-bar"
-	ingressClass              = "nginx"
 	valiHost                  = "vali.foo.bar"
 )
 
@@ -133,7 +132,6 @@ var _ = Describe("Vali", func() {
 					KubeRBACProxyImage:    kubeRBACProxyImage,
 					PriorityClassName:     priorityClassName,
 					ClusterType:           "shoot",
-					IngressClass:          ingressClass,
 					IngressHost:           valiHost,
 				},
 			)
@@ -1051,7 +1049,7 @@ func getIngress() *networkingv1.Ingress {
 			Labels: getLabels(),
 		},
 		Spec: networkingv1.IngressSpec{
-			IngressClassName: pointer.String(ingressClass),
+			IngressClassName: pointer.String("nginx-ingress-gardener"),
 			TLS: []networkingv1.IngressTLS{
 				{
 					SecretName: "vali-tls",

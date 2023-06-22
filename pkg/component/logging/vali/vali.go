@@ -131,7 +131,6 @@ type Values struct {
 	HVPAEnabled           bool
 	Storage               *resource.Quantity
 	MaintenanceTimeWindow *hvpav1alpha1.MaintenanceTimeWindow
-	IngressClass          string // TODO: Remove this field and use the only ingress class left after https://github.com/gardener/gardener/pull/8087 got merged.
 }
 
 type vali struct {
@@ -409,7 +408,7 @@ func (v *vali) getIngress(secretName string) *networkingv1.Ingress {
 			Labels: getLabels(),
 		},
 		Spec: networkingv1.IngressSpec{
-			IngressClassName: pointer.String(v.values.IngressClass),
+			IngressClassName: pointer.String(v1beta1constants.SeedNginxIngressClass),
 			TLS: []networkingv1.IngressTLS{{
 				SecretName: secretName,
 				Hosts:      []string{v.values.IngressHost},

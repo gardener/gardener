@@ -188,7 +188,6 @@ func (b *Botanist) DefaultVali() (component.Deployer, error) {
 		v1beta1constants.PriorityClassNameShootControlPlane100,
 		nil,
 		b.ComputeValiHost(),
-		v1beta1constants.SeedNginxIngressClass,
 		true,
 		hvpaEnabled,
 		nil,
