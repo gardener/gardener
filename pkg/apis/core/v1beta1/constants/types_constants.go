@@ -383,6 +383,9 @@ const (
 	// OperationRotateETCDEncryptionKeyComplete is a constant for an annotation on a Shoot indicating that the
 	// rotation of the ETCD encryption key shall be completed.
 	OperationRotateETCDEncryptionKeyComplete = "rotate-etcd-encryption-key-complete"
+	// SeedOperationRenewGardenAccessSecrets is a constant for an annotation on a Seed indicating that the
+	// all garden access secrets on the seed shall be renewed.
+	SeedOperationRenewGardenAccessSecrets = "renew-garden-access-secrets"
 
 	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
 	// instance in the garden namespace on the seeds.
