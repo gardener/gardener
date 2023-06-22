@@ -376,7 +376,7 @@ func (h *Health) checkControlPlane(
 	condition gardencorev1beta1.Condition,
 	extensionConditions []ExtensionCondition,
 ) (*gardencorev1beta1.Condition, error) {
-	if exitCondition, err := checker.CheckControlPlane(ctx, h.shoot.GetInfo(), h.shoot.SeedNamespace, condition); err != nil || exitCondition != nil {
+	if exitCondition, err := checker.CheckShootControlPlane(ctx, h.shoot.GetInfo(), h.shoot.SeedNamespace, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 

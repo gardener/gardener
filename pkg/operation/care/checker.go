@@ -43,13 +43,13 @@ import (
 )
 
 var (
-	requiredControlPlaneDeployments = sets.New(
+	requiredShootControlPlaneDeployments = sets.New(
 		v1beta1constants.DeploymentNameGardenerResourceManager,
 		v1beta1constants.DeploymentNameKubeAPIServer,
 		v1beta1constants.DeploymentNameKubeControllerManager,
 	)
 
-	requiredControlPlaneEtcds = sets.New(
+	requiredShootControlPlaneEtcds = sets.New(
 		v1beta1constants.ETCDMain,
 		v1beta1constants.ETCDEvents,
 	)
@@ -465,7 +465,7 @@ func shootControlPlaneNotRunningMessage(lastOperation *gardencorev1beta1.LastOpe
 
 // This is a hack to quickly do a cloud provider specific check for the required control plane deployments.
 func computeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (sets.Set[string], error) {
-	requiredControlPlaneDeployments := sets.New(requiredControlPlaneDeployments.UnsortedList()...)
+	requiredControlPlaneDeployments := sets.New(requiredShootControlPlaneDeployments.UnsortedList()...)
 
 	if !v1beta1helper.IsWorkerless(shoot) {
 		requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameKubeScheduler)
@@ -520,18 +520,14 @@ func computeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.Set[stri
 // CheckControlPlane checks whether the control plane components in the given listers are complete and healthy.
 func (b *HealthChecker) CheckControlPlane(
 	ctx context.Context,
-	shoot *gardencorev1beta1.Shoot,
 	namespace string,
+	requiredControlPlaneDeployments sets.Set[string],
+	requiredControlPlaneEtcds sets.Set[string],
 	condition gardencorev1beta1.Condition,
 ) (
 	*gardencorev1beta1.Condition,
 	error,
 ) {
-	requiredControlPlaneDeployments, err := computeRequiredControlPlaneDeployments(shoot)
-	if err != nil {
-		return nil, err
-	}
-
 	deploymentList := &appsv1.DeploymentList{}
 	if err := b.reader.List(ctx, deploymentList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: controlPlaneSelector}); err != nil {
 		return nil, err
@@ -557,6 +553,24 @@ func (b *HealthChecker) CheckControlPlane(
 	}
 
 	return nil, nil
+}
+
+// CheckShootControlPlane checks whether the shoot control plane components in the given listers are complete and healthy.
+func (b *HealthChecker) CheckShootControlPlane(
+	ctx context.Context,
+	shoot *gardencorev1beta1.Shoot,
+	namespace string,
+	condition gardencorev1beta1.Condition,
+) (
+	*gardencorev1beta1.Condition,
+	error,
+) {
+	requiredControlPlaneDeployments, err := computeRequiredControlPlaneDeployments(shoot)
+	if err != nil {
+		return nil, err
+	}
+
+	return b.CheckControlPlane(ctx, namespace, requiredControlPlaneDeployments, requiredShootControlPlaneEtcds, condition)
 }
 
 // FailedCondition returns a progressing or false condition depending on the progressing threshold.
