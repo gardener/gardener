@@ -37,7 +37,6 @@ import (
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -216,7 +215,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 			opts.SyncPeriod = &cfg.TargetClientConnection.CacheResyncPeriod.Duration
 
 			if *cfg.TargetClientConnection.DisableCachedClient {
-				opts.NewClient = func(_ cache.Cache, config *rest.Config, opts client.Options, _ ...client.Object) (client.Client, error) {
+				opts.NewClient = func(config *rest.Config, opts client.Options) (client.Client, error) {
 					return client.New(config, opts)
 				}
 			}
