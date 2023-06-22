@@ -41,6 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // Reconciler reconciles Shoots and maintains them by updating versions or triggering operations.
@@ -132,9 +133,22 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		log.Error(err, "Failed to maintain Shoot kubernetes version")
 	}
 
+	oldShootKubernetesVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
+	if err != nil {
+		return err
+	}
+
 	shootKubernetesVersion, err := semver.NewVersion(maintainedShoot.Spec.Kubernetes.Version)
 	if err != nil {
 		return err
+	}
+
+	// Reset the `EnableStaticTokenKubeconfig` value to false, when shoot cluster is updated to  k8s version >= 1.27.
+	if versionutils.ConstraintK8sLess127.Check(oldShootKubernetesVersion) && pointer.BoolDeref(maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) && versionutils.ConstraintK8sGreaterEqual127.Check(shootKubernetesVersion) {
+		maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(false)
+
+		reason := "EnableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27 and higher"
+		operations = append(operations, reason)
 	}
 
 	// Now it's time to update worker pool kubernetes version if specified
