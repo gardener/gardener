@@ -341,11 +341,11 @@ func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, 
 func (r *Reconciler) deployKubeAPIServerFunc(ctx context.Context, garden *operatorv1alpha1.Garden, kubeAPIServer kubeapiserver.Interface) flow.TaskFn {
 	return func(context.Context) error {
 		var (
-			address                 = gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domain)
+			address                 = gardenerutils.GetAPIServerDomain(*garden.Spec.VirtualCluster.DNS.Domain)
 			serverCertificateConfig = kubeapiserver.ServerCertificateConfig{
 				ExtraDNSNames: []string{
 					address,
-					"gardener." + garden.Spec.VirtualCluster.DNS.Domain,
+					"gardener." + *garden.Spec.VirtualCluster.DNS.Domain,
 				},
 			}
 			apiServerConfig *gardencorev1beta1.KubeAPIServerConfig
