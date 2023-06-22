@@ -50,11 +50,12 @@ import (
 
 	"github.com/gardener/gardener/cmd/gardenlet/app/bootstrappers"
 	"github.com/gardener/gardener/pkg/api/indexer"
-	"github.com/gardener/gardener/pkg/apis/core"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -70,6 +71,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -261,7 +263,7 @@ func (g *garden) Start(ctx context.Context) error {
 			// gardenlet should watch only objects which are related to the seed it is responsible for.
 			opts.SelectorsByObject = map[client.Object]cache.ObjectSelector{
 				&gardencorev1beta1.ControllerInstallation{}: {
-					Field: fields.SelectorFromSet(fields.Set{core.SeedRefName: g.config.SeedConfig.SeedTemplate.Name}),
+					Field: fields.SelectorFromSet(fields.Set{gardencore.SeedRefName: g.config.SeedConfig.SeedTemplate.Name}),
 				},
 				&operationsv1alpha1.Bastion{}: {
 					Field: fields.SelectorFromSet(fields.Set{operations.BastionSeedName: g.config.SeedConfig.SeedTemplate.Name}),
@@ -352,9 +354,14 @@ func (g *garden) Start(ctx context.Context) error {
 	}
 
 	// TODO(rfranzke): Remove this code after v1.74 has been released.
-	log.Info("Removing legacy ShootState controller finalizer from persistable secrets in seed cluster")
-	if err := removeLegacyShootStateControllerFinalizerFromSecrets(ctx, g.mgr.GetClient()); err != nil {
-		return err
+	{
+		log.Info("Removing legacy ShootState controller finalizer from persistable secrets in seed cluster")
+		if err := removeLegacyShootStateControllerFinalizerFromSecrets(ctx, g.mgr.GetClient()); err != nil {
+			return err
+		}
+		if err := g.cleanupStaleShootStates(ctx, gardenCluster.GetClient()); err != nil {
+			return err
+		}
 	}
 
 	log.Info("Setting up shoot client map")
@@ -502,6 +509,41 @@ func removeLegacyShootStateControllerFinalizerFromSecrets(ctx context.Context, s
 				return fmt.Errorf("failed to remove legacy ShootState controller finalizer from secret %q: %w", client.ObjectKeyFromObject(&secret), err)
 			}
 			return nil
+		})
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
+}
+
+func (g *garden) cleanupStaleShootStates(ctx context.Context, gardenClient client.Client) error {
+	if err := gardenClient.Get(ctx, client.ObjectKey{Name: g.config.SeedConfig.Name, Namespace: v1beta1constants.GardenNamespace}, &seedmanagementv1alpha1.ManagedSeed{}); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed checking whether gardenlet is responsible for a managed seed: %w", err)
+		}
+		return nil
+	}
+
+	g.mgr.GetLogger().Info("Removing stale ShootState resources from garden cluster since I'm responsible for a managed seed (GEP-22)")
+
+	shootList := &gardencorev1beta1.ShootList{}
+	if err := gardenClient.List(ctx, shootList, client.MatchingFields{gardencore.ShootSeedName: g.config.SeedConfig.Name}); err != nil {
+		return err
+	}
+
+	var taskFns []flow.TaskFn
+
+	for _, s := range shootList.Items {
+		shoot := s
+
+		// If status.seedName is different than seed name gardenlet is responsible for, then a migration takes place.
+		// In this case, we don't want to delete the shoot state. It will be deleted eventually after successful
+		// restoration.
+		if shoot.Status.SeedName != nil && *shoot.Status.SeedName != g.config.SeedConfig.Name {
+			continue
+		}
+
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			return shootstate.Delete(ctx, gardenClient, &shoot)
 		})
 	}
 
