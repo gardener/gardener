@@ -643,9 +643,6 @@ func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValue
 		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
 	}
 
-	// Explicitly render server domain at initialization time as garden object may be changed by kubernetes clients later on
-	serverDomain := gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domain)
-
 	return kubeapiserverexposure.NewSNI(
 		r.RuntimeClientSet.Client(),
 		r.RuntimeClientSet.Applier(),
@@ -653,7 +650,7 @@ func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValue
 		r.GardenNamespace,
 		func() *kubeapiserverexposure.SNIValues {
 			return &kubeapiserverexposure.SNIValues{
-				Hosts: []string{serverDomain},
+				Hosts: []string{gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domain)},
 				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
 					Namespace: ingressGatewayValues[0].Namespace,
 					Labels:    ingressGatewayValues[0].Labels,
