@@ -159,6 +159,8 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 						fmt.Sprintf("--updater-interval=%s", durationDeref(v.values.Updater.Interval, gardencorev1beta1.DefaultUpdaterInterval).Duration),
 						"--stderrthreshold=info",
 						"--v=2",
+						"--kube-api-qps=100",
+						"--kube-api-burst=120",
 					},
 					LivenessProbe: newDefaultLivenessProbe(),
 					Ports: []corev1.ContainerPort{
