@@ -37,33 +37,33 @@ type Handler struct {
 }
 
 // ValidateCreate returns nil (not implemented by this handler).
-func (h *Handler) ValidateCreate(ctx context.Context, obj runtime.Object) error {
-	return nil
+func (h *Handler) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }
 
 // ValidateUpdate validate an admission plugins secret.
-func (h *Handler) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) error {
+func (h *Handler) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) (admission.Warnings, error) {
 	var shoots []string
 
 	secret, ok := newObj.(*corev1.Secret)
 	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected *corev1.Secret but got %T", newObj))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected *corev1.Secret but got %T", newObj))
 	}
 
 	req, err := admission.RequestFromContext(ctx)
 	if err != nil {
-		return apierrors.NewInternalError(err)
+		return nil, apierrors.NewInternalError(err)
 	}
 
 	if kubeConfig, ok := secret.Data[kubernetes.KubeConfig]; ok && len(kubeConfig) > 0 {
 		h.Logger.Info("Secret has data `kubeconfig` no need to check further", "name", secret.Name)
-		return nil
+		return nil, nil
 	}
 
 	// lookup if secret is referenced by any shoot in the same namespace
 	shootList := &gardencorev1beta1.ShootList{}
 	if err := h.Client.List(ctx, shootList, client.InNamespace(req.Namespace)); err != nil {
-		return apierrors.NewInternalError(fmt.Errorf("unable to list shoot in namespace: %v", req.Namespace))
+		return nil, apierrors.NewInternalError(fmt.Errorf("unable to list shoot in namespace: %v", req.Namespace))
 	}
 
 	for _, shoot := range shootList.Items {
@@ -77,13 +77,13 @@ func (h *Handler) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) 
 	}
 
 	if len(shoots) > 0 {
-		return apierrors.NewForbidden(corev1.Resource("Secret"), req.Name, fmt.Errorf("data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [%v]", strings.Join(shoots, ", ")))
+		return nil, apierrors.NewForbidden(corev1.Resource("Secret"), req.Name, fmt.Errorf("data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [%v]", strings.Join(shoots, ", ")))
 	}
 
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete returns nil (not implemented by this handler).
-func (h *Handler) ValidateDelete(_ context.Context, _ runtime.Object) error {
-	return nil
+func (h *Handler) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }

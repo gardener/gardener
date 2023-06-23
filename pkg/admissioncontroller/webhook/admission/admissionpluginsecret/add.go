@@ -32,7 +32,7 @@ const (
 // AddToManager adds Handler to the given manager.
 func (h *Handler) AddToManager(ctx context.Context, mgr manager.Manager) error {
 	webhook := admission.
-		WithCustomValidator(&corev1.Secret{}, h).
+		WithCustomValidator(mgr.GetScheme(), &corev1.Secret{}, h).
 		WithRecoverPanic(true)
 
 	mgr.GetWebhookServer().Register(WebhookPath, webhook)
