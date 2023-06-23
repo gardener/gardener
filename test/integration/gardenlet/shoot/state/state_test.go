@@ -215,7 +215,7 @@ var _ = Describe("Shoot State controller tests", func() {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(shoot), &gardencorev1beta1.ShootState{})
 			}).Should(BeNotFoundError())
 
-			By("Mark shoot as 'restore procession'")
+			By("Mark shoot as 'restore processing'")
 			patch := client.MergeFrom(shoot.DeepCopy())
 			shoot.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeRestore
 			Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
