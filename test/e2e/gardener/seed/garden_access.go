@@ -24,6 +24,7 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
@@ -33,12 +34,18 @@ import (
 var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 	Describe("Garden Cluster Access For Seed Components", func() {
 		var (
+			seed             *gardencorev1beta1.Seed
 			seedNamespace    string
 			gardenAccessName string
 		)
 
 		BeforeEach(func() {
-			seedNamespace = gardenerutils.ComputeGardenNamespace("local")
+			// find the first seed (seed name differs between test scenarios, e.g., non-ha/ha)
+			seedList := &gardencorev1beta1.SeedList{}
+			Expect(testClient.List(ctx, seedList, client.Limit(1))).To(Succeed())
+			seed = seedList.Items[0].DeepCopy()
+
+			seedNamespace = gardenerutils.ComputeGardenNamespace(seed.Name)
 
 			gardenAccessName = "test-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 		})
@@ -86,6 +93,58 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 
 			Eventually(func(g Gomega) {
 				g.Expect(gardenAccessClient.Get(ctx, client.ObjectKey{Name: gardenAccessName, Namespace: seedNamespace}, &corev1.ServiceAccount{})).To(Succeed())
+			}).Should(Succeed())
+		})
+
+		It("should renew all garden access secrets when triggered by annotation", func() {
+			By("Create garden access secret")
+			accessSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      gardenAccessName,
+					Namespace: v1beta1constants.GardenNamespace,
+					Labels: map[string]string{
+						resourcesv1alpha1.ResourceManagerPurpose: resourcesv1alpha1.LabelPurposeTokenRequest,
+						resourcesv1alpha1.ResourceManagerClass:   resourcesv1alpha1.ResourceManagerClassGarden,
+					},
+					Annotations: map[string]string{
+						resourcesv1alpha1.ServiceAccountName: gardenAccessName,
+					},
+				},
+			}
+			Expect(testClient.Create(ctx, accessSecret)).To(Succeed())
+			log.Info("Created garden access secret for test", "secret", client.ObjectKeyFromObject(accessSecret))
+
+			DeferCleanup(func() {
+				By("Delete garden access secret")
+				Expect(testClient.Delete(ctx, accessSecret)).To(Succeed())
+			})
+
+			By("Wait for token to be populated in garden access secret")
+			var accessSecretBefore *corev1.Secret
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(accessSecret), accessSecret)).To(Succeed())
+				g.Expect(accessSecret.Data).To(HaveKeyWithValue(resourcesv1alpha1.DataKeyToken, Not(BeEmpty())))
+				accessSecretBefore = accessSecret.DeepCopy()
+			}).Should(Succeed())
+
+			By("Trigger renewal of garden access secrets")
+			patch := client.MergeFrom(seed.DeepCopy())
+			metav1.SetMetaDataAnnotation(&seed.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.SeedOperationRenewGardenAccessSecrets)
+			Eventually(func() error {
+				return testClient.Patch(ctx, seed, patch)
+			}).Should(Succeed())
+
+			By("Wait for operation annotation to be removed from Seed")
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
+				g.Expect(seed.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
+			}).Should(Succeed())
+
+			By("Wait for token to be renewed in garden access secret")
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(accessSecret), accessSecret)).To(Succeed())
+				g.Expect(accessSecret.Data).To(HaveKeyWithValue(resourcesv1alpha1.DataKeyToken, Not(Equal(accessSecretBefore.Data[resourcesv1alpha1.DataKeyToken]))))
+				g.Expect(accessSecret.Annotations).To(HaveKeyWithValue(resourcesv1alpha1.ServiceAccountTokenRenewTimestamp, Not(Equal(accessSecretBefore.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]))))
 			}).Should(Succeed())
 		})
 	})
