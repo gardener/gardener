@@ -79,10 +79,16 @@ type gardenerAPIServer struct {
 func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 	var (
 		runtimeRegistry = managedresources.NewRegistry(operatorclient.RuntimeScheme, operatorclient.RuntimeCodec, operatorclient.RuntimeSerializer)
+
+		secretETCDEncryptionConfiguration = g.emptySecret(v1beta1constants.SecretNamePrefixGardenerETCDEncryptionConfiguration)
 	)
 
 	secretServer, err := g.reconcileSecretServer(ctx)
 	if err != nil {
+		return err
+	}
+
+	if err := g.reconcileSecretETCDEncryptionConfiguration(ctx, secretETCDEncryptionConfiguration); err != nil {
 		return err
 	}
 
@@ -182,6 +188,10 @@ func (g *gardenerAPIServer) waitUntilRuntimeManagedResourceHealthyAndNotProgress
 
 		return retry.Ok()
 	})
+}
+
+func (g *gardenerAPIServer) emptySecret(name string) *corev1.Secret {
+	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: g.namespace}}
 }
 
 func (g *gardenerAPIServer) GetValues() Values {

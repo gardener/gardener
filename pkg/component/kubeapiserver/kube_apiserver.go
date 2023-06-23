@@ -35,7 +35,6 @@ import (
 	webhookadmissionv1alpha1 "k8s.io/apiserver/pkg/admission/plugin/webhook/config/apis/webhookadmission/v1alpha1"
 	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
-	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -61,7 +60,6 @@ var (
 func init() {
 	scheme = runtime.NewScheme()
 	utilruntime.Must(apiserverv1alpha1.AddToScheme(scheme))
-	utilruntime.Must(apiserverconfigv1.AddToScheme(scheme))
 	utilruntime.Must(auditv1.AddToScheme(scheme))
 	utilruntime.Must(webhookadmissionv1.AddToScheme(scheme))
 	utilruntime.Must(webhookadmissionv1alpha1.AddToScheme(scheme))
@@ -74,7 +72,6 @@ func init() {
 		})
 		versions = schema.GroupVersions([]schema.GroupVersion{
 			apiserverv1alpha1.SchemeGroupVersion,
-			apiserverconfigv1.SchemeGroupVersion,
 			auditv1.SchemeGroupVersion,
 			webhookadmissionv1.SchemeGroupVersion,
 			webhookadmissionv1alpha1.SchemeGroupVersion,

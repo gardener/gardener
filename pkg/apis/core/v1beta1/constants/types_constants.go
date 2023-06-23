@@ -72,6 +72,12 @@ const (
 	// SecretNamePrefixETCDEncryptionConfiguration is a constant for the name prefix of a Kubernetes secret object that
 	// contains the configuration for encryption data in ETCD.
 	SecretNamePrefixETCDEncryptionConfiguration = "kube-apiserver-etcd-encryption-configuration"
+	// SecretNameGardenerETCDEncryptionKey is a constant for the name of a Kubernetes secret object that contains the
+	// key for encryption data in ETCD for gardener-apiserver.
+	SecretNameGardenerETCDEncryptionKey = "gardener-apiserver-etcd-encryption-key"
+	// SecretNamePrefixGardenerETCDEncryptionConfiguration is a constant for the name prefix of a Kubernetes secret
+	// object that contains the configuration for encryption data in ETCD for gardener-apiserver.
+	SecretNamePrefixGardenerETCDEncryptionConfiguration = "gardener-apiserver-etcd-encryption-configuration"
 
 	// SecretNameGardener is a constant for the name of a Kubernetes secret object that contains the client
 	// certificate and a kubeconfig for a shoot cluster. It is used by Gardener and can be used by extension

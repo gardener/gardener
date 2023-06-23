@@ -108,7 +108,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 		configMapNameAdmissionConfigs   = "kube-apiserver-admission-config-e38ff146"
 		secretNameAdmissionKubeconfigs  = "kube-apiserver-admission-kubeconfigs-e3b0c442"
-		secretNameETCDEncryptionConfig  = "kube-apiserver-etcd-encryption-configuration-235f7353"
+		secretNameETCDEncryptionConfig  = "kube-apiserver-etcd-encryption-configuration-97e14df3"
 		configMapNameAuditPolicy        = "audit-policy-config-f5b578b4"
 		configMapNameEgressPolicy       = "kube-apiserver-egress-selector-config-53d92abc"
 		configMapNameTerminationHandler = "kube-apiserver-watchdog-f4f4b3d5"
@@ -1748,7 +1748,7 @@ rules:
 						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
 						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
-						"reference.resources.gardener.cloud/secret-b1b53288":    secretNameETCDEncryptionConfig,
+						"reference.resources.gardener.cloud/secret-a61a895c":    secretNameETCDEncryptionConfig,
 						"reference.resources.gardener.cloud/configmap-130aa219": configMapNameAdmissionConfigs,
 						"reference.resources.gardener.cloud/secret-5613e39f":    secretNameAdmissionKubeconfigs,
 						"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,
@@ -1947,7 +1947,7 @@ rules:
 						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
 						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
-						"reference.resources.gardener.cloud/secret-b1b53288":    secretNameETCDEncryptionConfig,
+						"reference.resources.gardener.cloud/secret-a61a895c":    secretNameETCDEncryptionConfig,
 						"reference.resources.gardener.cloud/configmap-130aa219": configMapNameAdmissionConfigs,
 						"reference.resources.gardener.cloud/secret-5613e39f":    secretNameAdmissionKubeconfigs,
 						"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,

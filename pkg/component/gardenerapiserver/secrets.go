@@ -21,10 +21,23 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/component/apiserver"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
+
+func (g *gardenerAPIServer) reconcileSecretETCDEncryptionConfiguration(ctx context.Context, secret *corev1.Secret) error {
+	return apiserver.ReconcileSecretETCDEncryptionConfiguration(
+		ctx,
+		g.client,
+		g.secretsManager,
+		g.values.ETCDEncryption,
+		secret,
+		v1beta1constants.SecretNameGardenerETCDEncryptionKey,
+		v1beta1constants.SecretNamePrefixGardenerETCDEncryptionConfiguration,
+	)
+}
 
 func (g *gardenerAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.Secret, error) {
 	return g.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{

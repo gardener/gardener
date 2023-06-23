@@ -28,7 +28,9 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component/apiserver"
 	. "github.com/gardener/gardener/pkg/component/gardenerapiserver"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -60,7 +62,13 @@ var _ = Describe("GardenerAPIServer", func() {
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(fakeClient, namespace)
-		deployer = New(fakeClient, namespace, fakeSecretManager, Values{})
+		deployer = New(fakeClient, namespace, fakeSecretManager, Values{
+			Values: apiserver.Values{
+				ETCDEncryption: apiserver.ETCDEncryptionConfig{
+					Resources: []string{"shootstates.core.gardener.cloud"},
+				},
+			},
+		})
 
 		fakeOps = &retryfake.Ops{MaxAttempts: 2}
 		DeferCleanup(test.WithVars(
@@ -95,7 +103,7 @@ var _ = Describe("GardenerAPIServer", func() {
 	})
 
 	Describe("#Deploy", func() {
-		Context("resources generation", func() {
+		Context("deployment", func() {
 			BeforeEach(func() {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntime), managedResourceRuntime)).To(BeNotFoundError())
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceVirtual), managedResourceVirtual)).To(BeNotFoundError())
@@ -119,62 +127,221 @@ var _ = Describe("GardenerAPIServer", func() {
 					},
 					Status: healthyManagedResourceStatus,
 				})).To(Succeed())
-
-				Expect(deployer.Deploy(ctx)).To(Succeed())
-
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntime), managedResourceRuntime)).To(Succeed())
-				Expect(managedResourceRuntime).To(Equal(&resourcesv1alpha1.ManagedResource{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-						Kind:       "ManagedResource",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            managedResourceRuntime.Name,
-						Namespace:       managedResourceRuntime.Namespace,
-						ResourceVersion: "2",
-						Generation:      1,
-						Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
-					},
-					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						Class:       pointer.String("seed"),
-						SecretRefs:  []corev1.LocalObjectReference{{Name: managedResourceSecretRuntime.Name}},
-						KeepObjects: pointer.Bool(false),
-					},
-					Status: healthyManagedResourceStatus,
-				}))
-
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretRuntime), managedResourceSecretRuntime)).To(Succeed())
-
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceVirtual), managedResourceVirtual)).To(Succeed())
-				Expect(managedResourceVirtual).To(Equal(&resourcesv1alpha1.ManagedResource{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-						Kind:       "ManagedResource",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            managedResourceVirtual.Name,
-						Namespace:       managedResourceVirtual.Namespace,
-						ResourceVersion: "2",
-						Generation:      1,
-						Labels:          map[string]string{"origin": "gardener"},
-					},
-					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceSecretVirtual.Name}},
-						KeepObjects:  pointer.Bool(false),
-					},
-					Status: healthyManagedResourceStatus,
-				}))
-
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
 			})
 
-			It("should successfully deploy all resources", func() {
-				Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretRuntime.Data).To(HaveLen(0))
+			Context("secrets", func() {
+				It("should successfully deploy the ETCD encryption configuration secret resource", func() {
+					etcdEncryptionConfiguration := `apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+resources:
+- providers:
+  - aescbc:
+      keys:
+      - name: key-62135596800
+        secret: ________________________________
+  - identity: {}
+  resources:
+  - shootstates.core.gardener.cloud
+`
 
-				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretVirtual.Data).To(HaveLen(0))
+					By("Verify encryption config secret")
+					expectedSecretETCDEncryptionConfiguration := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver-etcd-encryption-configuration", Namespace: namespace},
+						Data:       map[string][]byte{"encryption-configuration.yaml": []byte(etcdEncryptionConfiguration)},
+					}
+					Expect(kubernetesutils.MakeUnique(expectedSecretETCDEncryptionConfiguration)).To(Succeed())
+
+					actualSecretETCDEncryptionConfiguration := &corev1.Secret{}
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(BeNotFoundError())
+
+					Expect(deployer.Deploy(ctx)).To(Succeed())
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(Succeed())
+					Expect(actualSecretETCDEncryptionConfiguration).To(Equal(&corev1.Secret{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "Secret",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      expectedSecretETCDEncryptionConfiguration.Name,
+							Namespace: expectedSecretETCDEncryptionConfiguration.Namespace,
+							Labels: map[string]string{
+								"resources.gardener.cloud/garbage-collectable-reference": "true",
+								"role": "gardener-apiserver-etcd-encryption-configuration",
+							},
+							ResourceVersion: "1",
+						},
+						Immutable: pointer.Bool(true),
+						Data:      expectedSecretETCDEncryptionConfiguration.Data,
+					}))
+
+					By("Deploy again and ensure that labels are still present")
+					Expect(deployer.Deploy(ctx)).To(Succeed())
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(Succeed())
+					Expect(actualSecretETCDEncryptionConfiguration.Labels).To(Equal(map[string]string{
+						"resources.gardener.cloud/garbage-collectable-reference": "true",
+						"role": "gardener-apiserver-etcd-encryption-configuration",
+					}))
+
+					By("Verify encryption key secret")
+					secretList := &corev1.SecretList{}
+					Expect(fakeClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+						"name":       "gardener-apiserver-etcd-encryption-key",
+						"managed-by": "secrets-manager",
+					})).To(Succeed())
+					Expect(secretList.Items).To(HaveLen(1))
+					Expect(secretList.Items[0].Labels).To(HaveKeyWithValue("persist", "true"))
+				})
+
+				DescribeTable("successfully deploy the ETCD encryption configuration secret resource w/ old key",
+					func(encryptWithCurrentKey bool) {
+						deployer = New(fakeClient, namespace, fakeSecretManager, Values{
+							Values: apiserver.Values{
+								ETCDEncryption: apiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: encryptWithCurrentKey, Resources: []string{"shootstates.core.gardener.cloud"}},
+							},
+						})
+
+						oldKeyName, oldKeySecret := "key-old", "old-secret"
+						Expect(fakeClient.Create(ctx, &corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "gardener-apiserver-etcd-encryption-key-old",
+								Namespace: namespace,
+							},
+							Data: map[string][]byte{
+								"key":    []byte(oldKeyName),
+								"secret": []byte(oldKeySecret),
+							},
+						})).To(Succeed())
+
+						etcdEncryptionConfiguration := `apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+resources:
+- providers:
+  - aescbc:
+      keys:`
+
+						if encryptWithCurrentKey {
+							etcdEncryptionConfiguration += `
+      - name: key-62135596800
+        secret: ________________________________
+      - name: ` + oldKeyName + `
+        secret: ` + oldKeySecret
+						} else {
+							etcdEncryptionConfiguration += `
+      - name: ` + oldKeyName + `
+        secret: ` + oldKeySecret + `
+      - name: key-62135596800
+        secret: ________________________________`
+						}
+
+						etcdEncryptionConfiguration += `
+  - identity: {}
+  resources:
+  - shootstates.core.gardener.cloud
+`
+
+						expectedSecretETCDEncryptionConfiguration := &corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver-etcd-encryption-configuration", Namespace: namespace},
+							Data:       map[string][]byte{"encryption-configuration.yaml": []byte(etcdEncryptionConfiguration)},
+						}
+						Expect(kubernetesutils.MakeUnique(expectedSecretETCDEncryptionConfiguration)).To(Succeed())
+
+						actualSecretETCDEncryptionConfiguration := &corev1.Secret{}
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(BeNotFoundError())
+
+						Expect(deployer.Deploy(ctx)).To(Succeed())
+
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(Succeed())
+						Expect(actualSecretETCDEncryptionConfiguration).To(DeepEqual(&corev1.Secret{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: corev1.SchemeGroupVersion.String(),
+								Kind:       "Secret",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      expectedSecretETCDEncryptionConfiguration.Name,
+								Namespace: expectedSecretETCDEncryptionConfiguration.Namespace,
+								Labels: map[string]string{
+									"resources.gardener.cloud/garbage-collectable-reference": "true",
+									"role": "gardener-apiserver-etcd-encryption-configuration",
+								},
+								ResourceVersion: "1",
+							},
+							Immutable: pointer.Bool(true),
+							Data:      expectedSecretETCDEncryptionConfiguration.Data,
+						}))
+
+						secretList := &corev1.SecretList{}
+						Expect(fakeClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+							"name":       "gardener-apiserver-etcd-encryption-key",
+							"managed-by": "secrets-manager",
+						})).To(Succeed())
+						Expect(secretList.Items).To(HaveLen(1))
+						Expect(secretList.Items[0].Labels).To(HaveKeyWithValue("persist", "true"))
+					},
+
+					Entry("encrypting with current", true),
+					Entry("encrypting with old", false),
+				)
+			})
+
+			Context("resources generation", func() {
+				BeforeEach(func() {
+					Expect(deployer.Deploy(ctx)).To(Succeed())
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntime), managedResourceRuntime)).To(Succeed())
+					Expect(managedResourceRuntime).To(Equal(&resourcesv1alpha1.ManagedResource{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "ManagedResource",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            managedResourceRuntime.Name,
+							Namespace:       managedResourceRuntime.Namespace,
+							ResourceVersion: "2",
+							Generation:      1,
+							Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
+						},
+						Spec: resourcesv1alpha1.ManagedResourceSpec{
+							Class:       pointer.String("seed"),
+							SecretRefs:  []corev1.LocalObjectReference{{Name: managedResourceSecretRuntime.Name}},
+							KeepObjects: pointer.Bool(false),
+						},
+						Status: healthyManagedResourceStatus,
+					}))
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretRuntime), managedResourceSecretRuntime)).To(Succeed())
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceVirtual), managedResourceVirtual)).To(Succeed())
+					Expect(managedResourceVirtual).To(Equal(&resourcesv1alpha1.ManagedResource{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "ManagedResource",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            managedResourceVirtual.Name,
+							Namespace:       managedResourceVirtual.Namespace,
+							ResourceVersion: "2",
+							Generation:      1,
+							Labels:          map[string]string{"origin": "gardener"},
+						},
+						Spec: resourcesv1alpha1.ManagedResourceSpec{
+							InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+							SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceSecretVirtual.Name}},
+							KeepObjects:  pointer.Bool(false),
+						},
+						Status: healthyManagedResourceStatus,
+					}))
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
+					Expect(managedResourceSecretRuntime.Data).To(HaveLen(0))
+
+					Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
+					Expect(managedResourceSecretVirtual.Data).To(HaveLen(0))
+				})
 			})
 		})
 

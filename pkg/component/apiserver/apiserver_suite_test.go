@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gardenerapiserver_test
+package apiserver_test
 
 import (
 	"testing"
@@ -26,9 +26,9 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
-func TestGardenerAPIServer(t *testing.T) {
+func TestAPIServer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Component GardenerAPIServer Suite")
+	RunSpecs(t, "Component APIServer Suite")
 }
 
 var _ = BeforeSuite(func() {

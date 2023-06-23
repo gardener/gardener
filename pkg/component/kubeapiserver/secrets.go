@@ -21,12 +21,8 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
-	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/utils/pointer"
@@ -34,8 +30,8 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/vpnseedserver"
-	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -167,87 +163,15 @@ func (k *kubeAPIServer) reconcileSecretUserKubeconfig(ctx context.Context, secre
 }
 
 func (k *kubeAPIServer) reconcileSecretETCDEncryptionConfiguration(ctx context.Context, secret *corev1.Secret) error {
-	options := []secretsmanager.GenerateOption{
-		secretsmanager.Persist(),
-		secretsmanager.Rotate(secretsmanager.KeepOld),
-	}
-
-	if k.values.ETCDEncryption.RotationPhase == gardencorev1beta1.RotationCompleting {
-		options = append(options, secretsmanager.IgnoreOldSecrets())
-	}
-
-	keySecret, err := k.secretsManager.Generate(ctx, &secretsutils.ETCDEncryptionKeySecretConfig{
-		Name:         v1beta1constants.SecretNameETCDEncryptionKey,
-		SecretLength: 32,
-	}, options...)
-	if err != nil {
-		return err
-	}
-
-	keySecretOld, _ := k.secretsManager.Get(v1beta1constants.SecretNameETCDEncryptionKey, secretsmanager.Old)
-
-	encryptionConfiguration := &apiserverconfigv1.EncryptionConfiguration{
-		Resources: []apiserverconfigv1.ResourceConfiguration{{
-			Resources: sets.List(sets.New(k.values.ETCDEncryption.Resources...).Insert("secrets")),
-			Providers: []apiserverconfigv1.ProviderConfiguration{
-				{
-					AESCBC: &apiserverconfigv1.AESConfiguration{
-						Keys: k.etcdEncryptionAESKeys(keySecret, keySecretOld),
-					},
-				},
-				{
-					Identity: &apiserverconfigv1.IdentityConfiguration{},
-				},
-			},
-		}},
-	}
-
-	data, err := runtime.Encode(codec, encryptionConfiguration)
-	if err != nil {
-		return err
-	}
-
-	secret.Labels = map[string]string{v1beta1constants.LabelRole: v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration}
-	secret.Data = map[string][]byte{secretETCDEncryptionConfigurationDataKey: data}
-	utilruntime.Must(kubernetesutils.MakeUnique(secret))
-	desiredLabels := utils.MergeStringMaps(secret.Labels) // copy
-
-	if err := k.client.Client().Create(ctx, secret); err == nil || !apierrors.IsAlreadyExists(err) {
-		return err
-	}
-
-	// reconcile labels of existing secret
-	if err := k.client.Client().Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
-		return err
-	}
-	patch := client.MergeFrom(secret.DeepCopy())
-	secret.Labels = desiredLabels
-	return k.client.Client().Patch(ctx, secret, patch)
-}
-
-func (k *kubeAPIServer) etcdEncryptionAESKeys(keySecretCurrent, keySecretOld *corev1.Secret) []apiserverconfigv1.Key {
-	if keySecretOld == nil {
-		return []apiserverconfigv1.Key{
-			aesKeyFromSecretData(keySecretCurrent.Data),
-		}
-	}
-
-	keyForEncryption, keyForDecryption := keySecretCurrent, keySecretOld
-	if !k.values.ETCDEncryption.EncryptWithCurrentKey {
-		keyForEncryption, keyForDecryption = keySecretOld, keySecretCurrent
-	}
-
-	return []apiserverconfigv1.Key{
-		aesKeyFromSecretData(keyForEncryption.Data),
-		aesKeyFromSecretData(keyForDecryption.Data),
-	}
-}
-
-func aesKeyFromSecretData(data map[string][]byte) apiserverconfigv1.Key {
-	return apiserverconfigv1.Key{
-		Name:   string(data[secretsutils.DataKeyEncryptionKeyName]),
-		Secret: string(data[secretsutils.DataKeyEncryptionSecret]),
-	}
+	return apiserver.ReconcileSecretETCDEncryptionConfiguration(
+		ctx,
+		k.client.Client(),
+		k.secretsManager,
+		k.values.ETCDEncryption,
+		secret,
+		v1beta1constants.SecretNameETCDEncryptionKey,
+		v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration,
+	)
 }
 
 func (k *kubeAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.Secret, error) {
