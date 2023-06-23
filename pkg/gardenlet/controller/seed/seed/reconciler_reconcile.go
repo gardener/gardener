@@ -90,6 +90,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -793,7 +794,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying managed ingress DNS record",
-			Fn:           flow.TaskFn(func(ctx context.Context) error { return deployDNSResources(ctx, dnsRecord) }),
+			Fn:           func(ctx context.Context) error { return deployDNSResources(ctx, dnsRecord) },
 			Dependencies: flow.NewTaskIDs(nginxLBReady),
 		})
 		_ = g.Add(flow.Task{
@@ -815,6 +816,23 @@ func (r *Reconciler) runReconcileSeedFlow(
 		_ = g.Add(flow.Task{
 			Name: "Deploying VPN authorization server",
 			Fn:   vpnAuthzServer.Deploy,
+		})
+		_ = g.Add(flow.Task{
+			Name: "Renewing garden access secrets",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				// renew access secrets in all namespaces with the resources.gardener.cloud/class=garden label
+				if err := tokenrequest.RenewAccessSecrets(ctx, seedClient,
+					client.MatchingLabels{resourcesv1alpha1.ResourceManagerClass: resourcesv1alpha1.ResourceManagerClassGarden},
+				); err != nil {
+					return err
+				}
+
+				// remove operation annotation from seed after successful operation
+				return seed.UpdateInfo(ctx, r.GardenClient, false, func(seedObj *gardencorev1beta1.Seed) error {
+					delete(seedObj.Annotations, v1beta1constants.GardenerOperation)
+					return nil
+				})
+			}).DoIf(seed.GetInfo().Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.SeedOperationRenewGardenAccessSecrets),
 		})
 	)
 
