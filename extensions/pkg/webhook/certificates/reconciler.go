@@ -31,8 +31,9 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"github.com/gardener/gardener/extensions/pkg/webhook"
+	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -85,7 +86,7 @@ type reconciler struct {
 // AddToManager generates webhook CA and server cert if it doesn't exist on the cluster yet. Then it adds reconciler to
 // the given manager in order to periodically regenerate the webhook secrets.
 func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager) error {
-	r.serverPort = mgr.GetWebhookServer().Port
+	r.serverPort = mgr.GetWebhookServer().(*webhook.DefaultServer).Options.Port
 	r.client = mgr.GetClient()
 
 	present, err := isWebhookServerSecretPresent(ctx, mgr.GetAPIReader(), r.ServerSecretName, r.Namespace, r.Identity)
@@ -179,7 +180,7 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 	if r.ShootWebhookConfig != nil {
 		// update shoot webhook config object (in memory) with the freshly created CA bundle which is also used by the
 		// ControlPlane actuator
-		if err := webhook.InjectCABundleIntoWebhookConfig(r.ShootWebhookConfig, caBundleSecret.Data[secretsutils.DataKeyCertificateBundle]); err != nil {
+		if err := extensionswebhook.InjectCABundleIntoWebhookConfig(r.ShootWebhookConfig, caBundleSecret.Data[secretsutils.DataKeyCertificateBundle]); err != nil {
 			return reconcile.Result{}, err
 		}
 		r.AtomicShootWebhookConfig.Store(r.ShootWebhookConfig.DeepCopy())
@@ -206,7 +207,7 @@ func (r *reconciler) reconcileSourceWebhookConfig(ctx context.Context, sourceWeb
 	}
 
 	patch := client.MergeFromWithOptions(config.DeepCopyObject().(client.Object), client.MergeFromWithOptimisticLock{})
-	if err := webhook.InjectCABundleIntoWebhookConfig(config, caBundleSecret.Data[secretsutils.DataKeyCertificateBundle]); err != nil {
+	if err := extensionswebhook.InjectCABundleIntoWebhookConfig(config, caBundleSecret.Data[secretsutils.DataKeyCertificateBundle]); err != nil {
 		return err
 	}
 	return r.client.Patch(ctx, config, patch)
