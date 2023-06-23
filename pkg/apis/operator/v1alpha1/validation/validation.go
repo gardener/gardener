@@ -78,6 +78,22 @@ func ValidateGardenUpdate(oldGarden, newGarden *operatorv1alpha1.Garden) field.E
 func validateVirtualClusterUpdate(oldVirtualCluster, newVirtualCluster operatorv1alpha1.VirtualCluster, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	// Check if old Domain field was properly transferred to Domains field.
+	if oldVirtualCluster.DNS.Domain != nil && len(newVirtualCluster.DNS.Domains) > 0 && *oldVirtualCluster.DNS.Domain != newVirtualCluster.DNS.Domains[0] {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "domains").Index(0), newVirtualCluster.DNS.Domains[0], "first entry must be previously used domain from .spec.virtualCluster.dns.domain"))
+	}
+
+	// Disallow changing from 'domains' to 'domain'.
+	if len(oldVirtualCluster.DNS.Domains) > 0 && oldVirtualCluster.DNS.Domain == nil && newVirtualCluster.DNS.Domain != nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("dns", "domain"), "switching from .spec.virtualCluster.dns.domains to .spec.virtualCluster.dns.domain is not allowed"))
+	}
+
+	// First domain is immutable. Changing this would incompatibly change the service account issuer in the cluster, ref https://github.com/gardener/gardener/blob/17ff592e734131ef746560641bdcdec3bcfce0f1/pkg/component/kubeapiserver/deployment.go#L585C8-L585C8
+	// Note: We can consider supporting this scenario in the future but would need to re-issue all service account tokens during the reconcile run.
+	if len(oldVirtualCluster.DNS.Domains) > 0 && len(newVirtualCluster.DNS.Domains) > 0 {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVirtualCluster.DNS.Domains[0], newVirtualCluster.DNS.Domains[0], fldPath.Child("dns", "domains").Index(0))...)
+	}
+
 	if oldVirtualCluster.ControlPlane != nil && oldVirtualCluster.ControlPlane.HighAvailability != nil &&
 		(newVirtualCluster.ControlPlane == nil || newVirtualCluster.ControlPlane.HighAvailability == nil) {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVirtualCluster.ControlPlane, newVirtualCluster.ControlPlane, fldPath.Child("controlPlane", "highAvailability"))...)

@@ -171,6 +171,7 @@ type DNS struct {
 	// +optional
 	Domain *string `json:"domain,omitempty"`
 	// Domains are the external domains of the virtual garden cluster.
+	// The first given domain in this list is immutable.
 	// +optional
 	Domains []string `json:"domains,omitempty"`
 }
