@@ -111,6 +111,11 @@ func (a *genericActuator) Restore(ctx context.Context, log logr.Logger, worker *
 		return err
 	}
 	return a.Reconcile(ctx, log, worker, cluster)
+	// TODO(rfranzke): Uncomment these lines after the stateReconciler has been dropped (probably after v1.79 has been
+	//  released).
+	// patch := client.MergeFromWithOptions(worker.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	// worker.Status.State = nil
+	// return a.client.Status().Patch(ctx, worker, patch)
 }
 
 func addStateToMachineDeployment(worker *extensionsv1alpha1.Worker, wantedMachineDeployments extensionsworkercontroller.MachineDeployments) error {

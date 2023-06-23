@@ -22,6 +22,7 @@ import (
 	"sort"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,8 +34,10 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 )
+
+// TODO(rfranzke): Drop this stateReconciler after a few releases as soon as the shoot migrate flow persists the Shoot
+//  state only after all extension resources have been migrated.
 
 type stateReconciler struct {
 	client client.Client
@@ -75,43 +78,48 @@ func (r *stateReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 		return reconcile.Result{}, nil
 	}
 
-	state, err := r.computeState(ctx, worker.Namespace)
+	return reconcile.Result{}, PersistState(ctx, log, r.client, worker)
+}
+
+// PersistState persists the worker state into the .status.state field.
+func PersistState(ctx context.Context, log logr.Logger, c client.Client, worker *extensionsv1alpha1.Worker) error {
+	state, err := computeState(ctx, c, worker.Namespace)
 	if err != nil {
-		return reconcile.Result{}, err
+		return err
 	}
 
 	rawState, err := json.Marshal(state)
 	if err != nil {
-		return reconcile.Result{}, err
+		return err
 	}
 
 	// If the state did not change, do not even try to send an empty PATCH request.
 	if worker.Status.State != nil && bytes.Equal(rawState, worker.Status.State.Raw) {
-		return reconcile.Result{}, nil
+		return nil
 	}
 
 	patch := client.MergeFromWithOptions(worker.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	worker.Status.State = &runtime.RawExtension{Raw: rawState}
-	if err := r.client.Status().Patch(ctx, worker, patch); err != nil {
-		return reconcilerutils.ReconcileErr(fmt.Errorf("error updating Worker state: %w", err))
+	if err := c.Status().Patch(ctx, worker, patch); err != nil {
+		return fmt.Errorf("error updating Worker state: %w", err)
 	}
 
 	log.Info("Successfully updated Worker state")
-	return reconcile.Result{}, nil
+	return nil
 }
 
-func (r *stateReconciler) computeState(ctx context.Context, namespace string) (*State, error) {
+func computeState(ctx context.Context, c client.Client, namespace string) (*State, error) {
 	existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
-	if err := r.client.List(ctx, existingMachineDeployments, client.InNamespace(namespace)); err != nil {
+	if err := c.List(ctx, existingMachineDeployments, client.InNamespace(namespace)); err != nil {
 		return nil, err
 	}
 
-	machineSets, err := r.getExistingMachineSetsMap(ctx, namespace)
+	machineSets, err := getExistingMachineSetsMap(ctx, c, namespace)
 	if err != nil {
 		return nil, err
 	}
 
-	machines, err := r.getExistingMachinesMap(ctx, namespace)
+	machines, err := getExistingMachinesMap(ctx, c, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -147,9 +155,9 @@ func (r *stateReconciler) computeState(ctx context.Context, namespace string) (*
 }
 
 // getExistingMachineSetsMap returns a map of existing MachineSets as values and their owners as keys
-func (r *stateReconciler) getExistingMachineSetsMap(ctx context.Context, namespace string) (map[string][]machinev1alpha1.MachineSet, error) {
+func getExistingMachineSetsMap(ctx context.Context, c client.Client, namespace string) (map[string][]machinev1alpha1.MachineSet, error) {
 	existingMachineSets := &machinev1alpha1.MachineSetList{}
-	if err := r.client.List(ctx, existingMachineSets, client.InNamespace(namespace)); err != nil {
+	if err := c.List(ctx, existingMachineSets, client.InNamespace(namespace)); err != nil {
 		return nil, err
 	}
 
@@ -163,9 +171,9 @@ func (r *stateReconciler) getExistingMachineSetsMap(ctx context.Context, namespa
 // no matter of being machineSet or MachineDeployment. If a Machine has a ownerReference the key(owner)
 // will be the MachineSet if not the key will be the name of the MachineDeployment which is stored as
 // a label. We assume that there is no MachineDeployment and MachineSet with the same names.
-func (r *stateReconciler) getExistingMachinesMap(ctx context.Context, namespace string) (map[string][]machinev1alpha1.Machine, error) {
+func getExistingMachinesMap(ctx context.Context, c client.Client, namespace string) (map[string][]machinev1alpha1.Machine, error) {
 	existingMachines := &machinev1alpha1.MachineList{}
-	if err := r.client.List(ctx, existingMachines, client.InNamespace(namespace)); err != nil {
+	if err := c.List(ctx, existingMachines, client.InNamespace(namespace)); err != nil {
 		return nil, err
 	}
 
