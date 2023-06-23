@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
+// NewNginxIngress returns a deployer for nginx-ingress-controller.
 func NewNginxIngress(
 	c client.Client,
 	imageVector imagevector.ImageVector,
@@ -49,7 +50,6 @@ func NewNginxIngress(
 	values := nginxingress.Values{
 		ImageController:         imageController.String(),
 		ImageDefaultBackend:     imageDefaultBackend.String(),
-		KubernetesVersion:       kubernetesVersion,
 		IngressClass:            ingressClass,
 		ConfigData:              config,
 		LoadBalancerAnnotations: loadBalancerAnnotations,

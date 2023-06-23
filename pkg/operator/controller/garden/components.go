@@ -704,7 +704,7 @@ func (r *Reconciler) newNginxIngressController() (component.DeployWaiter, error)
 		r.RuntimeClientSet.Client(),
 		r.ImageVector,
 		r.RuntimeVersion,
-		v1beta1constants.NginxIngressClass,
+		v1beta1constants.SeedNginxIngressClass,
 		map[string]string{
 			"enable-vts-status":            "false",
 			"server-name-hash-bucket-size": "256",
@@ -714,5 +714,5 @@ func (r *Reconciler) newNginxIngressController() (component.DeployWaiter, error)
 		},
 		nil,
 		r.GardenNamespace,
-		"system-cluster-critical")
+		v1beta1constants.PriorityClassNameGardenSystem300)
 }

@@ -124,31 +124,6 @@ func validateRuntimeCluster(runtimeCluster operatorv1alpha1.RuntimeCluster, fldP
 		}
 	}
 
-	allErrs = append(allErrs, validateIngress(runtimeCluster.Ingress, fldPath)...)
-
-	return allErrs
-}
-
-func validateIngress(ingress *operatorv1alpha1.Ingress, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if ingress == nil {
-		return append(allErrs, field.Required(fldPath.Child("ingress"), "cannot be empty"))
-	}
-
-	if len(ingress.Domain) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("ingress", "domain"), "cannot be empty"))
-	} else {
-		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(ingress.Domain, fldPath.Child("ingress", "domain"))...)
-	}
-	if !availableIngressKinds.Has(ingress.Controller.Kind) {
-		allErrs = append(allErrs, field.NotSupported(
-			fldPath.Child("ingress", "controller", "kind"),
-			ingress.Controller.Kind,
-			availableIngressKinds.UnsortedList()),
-		)
-	}
-
 	return allErrs
 }
 

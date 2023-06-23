@@ -15,7 +15,7 @@ metadata:
 spec:
   runtimeCluster:
     ingress:
-      domain: ingress.dev.my-seed.example.com
+      domain: ingress.dev.garden.example.com
       controller:
         kind: nginx
       # providerConfig:
