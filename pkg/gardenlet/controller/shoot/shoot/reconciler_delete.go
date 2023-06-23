@@ -623,10 +623,16 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:           flow.TaskFn(botanist.DeletePlutono).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureDeleted),
 		})
+		destroySeedLogging = g.Add(flow.Task{
+			Name:         "Deleting logging stack in Seed",
+			Fn:           flow.TaskFn(botanist.DestroySeedLogging).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureDeleted),
+		})
 
 		syncPoint = flow.NewTaskIDs(
 			deleteSeedMonitoring,
 			deletePlutono,
+			destroySeedLogging,
 			waitUntilKubeAPIServerDeleted,
 			waitUntilControlPlaneDeleted,
 			waitUntilControlPlaneExposureDeleted,

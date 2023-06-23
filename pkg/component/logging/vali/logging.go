@@ -27,12 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 )
 
-var (
-	valiName    = "vali"
-	curatorName = "curator"
-)
-
-// CentralLoggingConfiguration returns a fluent-bit parser and filter for the HVPA logs.
+// CentralLoggingConfiguration returns a fluent-bit parser and filter for the vali logs.
 func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
 	return component.CentralLoggingConfig{Filters: generateClusterFilters(), Parsers: generateClusterParsers()}, nil
 }

@@ -1,6 +1,0 @@
-dependencies:
-- name: vali
-  repository: http://localhost:10191
-  version: 0.1.0
-  # needed for the logging stack
-  condition: vali.enabled

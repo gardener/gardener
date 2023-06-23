@@ -44,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
+	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/nginxingress"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
@@ -324,6 +325,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			resourceManager               = resourcemanager.New(seedClient, r.GardenNamespace, nil, resourcemanager.Values{RuntimeKubernetesVersion: kubernetesVersion})
 			fluentOperator                = fluentoperator.NewFluentOperator(seedClient, r.GardenNamespace, fluentoperator.Values{})
 			fluentOperatorCustomResources = fluentoperator.NewCustomResources(seedClient, r.GardenNamespace, fluentoperator.CustomResourcesValues{}, nil, nil, nil)
+			vali                          = vali.New(seedClient, r.GardenNamespace, nil, vali.Values{})
 
 			destroyKubeStateMetrics = g.Add(flow.Task{
 				Name: "Destroy kube-state-metrics",
@@ -354,6 +356,11 @@ func (r *Reconciler) runDeleteSeedFlow(
 				Fn:           component.OpDestroyAndWait(fluentOperator).Destroy,
 				Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources),
 			})
+			destroyVali = g.Add(flow.Task{
+				Name:         "Destroy Vali",
+				Fn:           component.OpDestroyAndWait(vali).Destroy,
+				Dependencies: flow.NewTaskIDs(destroyFluentOperatorResources),
+			})
 			destroyEtcdCRD = g.Add(flow.Task{
 				Name:         "Destroy ETCD-related custom resource definitions",
 				Fn:           component.OpDestroyAndWait(etcdCRD).Destroy,
@@ -368,6 +375,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyVPA,
 			destroyFluentOperatorResources,
 			destroyFluentOperator,
+			destroyVali,
 			destroyEtcdCRD,
 		)
 

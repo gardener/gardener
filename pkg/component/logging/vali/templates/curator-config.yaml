@@ -1,0 +1,11 @@
+LogLevel: info
+DiskPath: /data/vali/chunks
+TriggerInterval: 1h
+InodeConfig:
+  MinFreePercentages: 10
+  TargetFreePercentages: 15
+  PageSizeForDeletionPercentages: 1
+StorageConfig:
+  MinFreePercentages: 10
+  TargetFreePercentages: 15
+  PageSizeForDeletionPercentages: 1

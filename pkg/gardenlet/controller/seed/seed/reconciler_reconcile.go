@@ -26,11 +26,8 @@ import (
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
 	"github.com/go-logr/logr"
 	istiov1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
@@ -99,7 +96,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/timewindow"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -284,10 +280,9 @@ func (r *Reconciler) runReconcileSeedFlow(
 		issuerGK = schema.GroupKind{Group: "certmanager.k8s.io", Kind: "ClusterIssuer"}
 
 		vpaEnabled     = seed.GetInfo().Spec.Settings == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler.Enabled
-		loggingEnabled = gardenlethelper.IsLoggingEnabled(&r.Config)
 		hvpaEnabled    = features.DefaultFeatureGate.Enabled(features.HVPA)
+		loggingEnabled = gardenlethelper.IsLoggingEnabled(&r.Config)
 
-		loggingConfig   = r.Config.Logging
 		gardenNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: r.GardenNamespace,
@@ -515,75 +510,12 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 	// Logging feature gate
 	var (
-		valiValues = map[string]interface{}{}
-
 		inputs  []*fluentbitv1alpha2.ClusterInput
 		filters []*fluentbitv1alpha2.ClusterFilter
 		parsers []*fluentbitv1alpha2.ClusterParser
 	)
-	valiValues["enabled"] = loggingEnabled
 
 	if loggingEnabled {
-		// check if vali is disabled in gardenlet config
-		if !gardenlethelper.IsValiEnabled(&r.Config) {
-			valiValues["enabled"] = false
-			if err := common.DeleteVali(ctx, seedClient, gardenNamespace.Name); err != nil {
-				return err
-			}
-		} else {
-			valiValues["authEnabled"] = false
-			valiValues["storage"] = loggingConfig.Vali.Garden.Storage
-			if err := ResizeOrDeleteValiDataVolumeIfStorageNotTheSame(ctx, log, seedClient, *loggingConfig.Vali.Garden.Storage); err != nil {
-				return err
-			}
-
-			if hvpaEnabled {
-				shootInfo := &corev1.ConfigMap{}
-				maintenanceBegin := "220000-0000"
-				maintenanceEnd := "230000-0000"
-				if err := seedClient.Get(ctx, kubernetesutils.Key(metav1.NamespaceSystem, v1beta1constants.ConfigMapNameShootInfo), shootInfo); err != nil {
-					if !apierrors.IsNotFound(err) {
-						return err
-					}
-				} else {
-					shootMaintenanceBegin, err := timewindow.ParseMaintenanceTime(shootInfo.Data["maintenanceBegin"])
-					if err != nil {
-						return err
-					}
-					maintenanceBegin = shootMaintenanceBegin.Add(1, 0, 0).Formatted()
-
-					shootMaintenanceEnd, err := timewindow.ParseMaintenanceTime(shootInfo.Data["maintenanceEnd"])
-					if err != nil {
-						return err
-					}
-					maintenanceEnd = shootMaintenanceEnd.Add(1, 0, 0).Formatted()
-				}
-
-				valiValues["hvpa"] = map[string]interface{}{
-					"enabled": true,
-					"maintenanceTimeWindow": map[string]interface{}{
-						"begin": maintenanceBegin,
-						"end":   maintenanceEnd,
-					},
-				}
-
-				currentResources, err := kubernetesutils.GetContainerResourcesInStatefulSet(ctx, seedClient, kubernetesutils.Key(r.GardenNamespace, v1beta1constants.StatefulSetNameVali))
-				if err != nil {
-					return err
-				}
-				if len(currentResources) != 0 && currentResources[v1beta1constants.StatefulSetNameVali] != nil {
-					valiValues["resources"] = map[string]interface{}{
-						// Copy requests only, effectively removing limits
-						v1beta1constants.StatefulSetNameVali: &corev1.ResourceRequirements{
-							Requests: currentResources[v1beta1constants.StatefulSetNameVali].Requests,
-						},
-					}
-				}
-			}
-
-			valiValues["priorityClassName"] = v1beta1constants.PriorityClassNameSeedSystem600
-		}
-
 		componentsFunctions := []component.CentralLoggingConfiguration{
 			// journald components
 			kubelet.CentralLoggingConfiguration,
@@ -644,10 +576,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			if len(loggingConfig.Parsers) > 0 {
 				parsers = append(parsers, loggingConfig.Parsers...)
 			}
-		}
-	} else {
-		if err := common.DeleteVali(ctx, seedClient, v1beta1constants.GardenNamespace); err != nil {
-			return err
 		}
 	}
 
@@ -789,7 +717,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			"hostName":   plutonoHost,
 			"secretName": plutonoIngressTLSSecretName,
 		},
-		"vali":         valiValues,
 		"alertmanager": alertManagerConfig,
 		"hvpa": map[string]interface{}{
 			"enabled": hvpaEnabled,
@@ -969,6 +896,19 @@ func (r *Reconciler) runReconcileSeedFlow(
 			return err
 		}
 
+		vali, err := defaultVali(
+			ctx,
+			seedClient,
+			r.ImageVector,
+			r.Config.Logging,
+			r.GardenNamespace,
+			loggingEnabled && gardenlethelper.IsValiEnabled(&r.Config),
+			hvpaEnabled,
+		)
+		if err != nil {
+			return err
+		}
+
 		kubeStateMetrics, err := sharedcomponent.NewKubeStateMetrics(
 			seedClient,
 			r.GardenNamespace,
@@ -1005,6 +945,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 				Name:         "Deploying Fluent Operator",
 				Fn:           component.OpWait(fluentOperator).Deploy,
 				Dependencies: flow.NewTaskIDs(reconcileFluentOperatorResources),
+			})
+			_ = g.Add(flow.Task{
+				Name: "Deploying Vali",
+				Fn:   vali.Deploy,
 			})
 		)
 	}
@@ -1081,49 +1025,6 @@ func deployBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Clie
 		return nil
 	})
 	return err
-}
-
-// ResizeOrDeleteValiDataVolumeIfStorageNotTheSame updates the garden Vali PVC if passed storage value is not the same as the current one.
-// Caution: If the passed storage capacity is less than the current one the existing PVC and its PV will be deleted.
-func ResizeOrDeleteValiDataVolumeIfStorageNotTheSame(ctx context.Context, log logr.Logger, k8sClient client.Client, newStorageQuantity resource.Quantity) error {
-	// Check if we need resizing
-	pvc := &corev1.PersistentVolumeClaim{}
-	if err := k8sClient.Get(ctx, kubernetesutils.Key(v1beta1constants.GardenNamespace, "vali-vali-0"), pvc); err != nil {
-		return client.IgnoreNotFound(err)
-	}
-
-	log = log.WithValues("persistentVolumeClaim", client.ObjectKeyFromObject(pvc))
-
-	storageCmpResult := newStorageQuantity.Cmp(*pvc.Spec.Resources.Requests.Storage())
-	if storageCmpResult == 0 {
-		return nil
-	}
-
-	statefulSetKey := client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: v1beta1constants.StatefulSetNameVali}
-	log.Info("Scaling StatefulSet to zero in order to detach PVC", "statefulSet", statefulSetKey)
-	if err := kubernetes.ScaleStatefulSetAndWaitUntilScaled(ctx, k8sClient, statefulSetKey, 0); client.IgnoreNotFound(err) != nil {
-		return err
-	}
-
-	switch {
-	case storageCmpResult > 0:
-		patch := client.MergeFrom(pvc.DeepCopy())
-		pvc.Spec.Resources.Requests = corev1.ResourceList{
-			corev1.ResourceStorage: newStorageQuantity,
-		}
-		log.Info("Patching storage of PVC", "storage", newStorageQuantity.String())
-		if err := k8sClient.Patch(ctx, pvc, patch); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	case storageCmpResult < 0:
-		log.Info("Deleting PVC because size needs to be reduced")
-		if err := client.IgnoreNotFound(k8sClient.Delete(ctx, pvc)); err != nil {
-			return err
-		}
-	}
-
-	valiSts := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.StatefulSetNameVali, Namespace: v1beta1constants.GardenNamespace}}
-	return client.IgnoreNotFound(k8sClient.Delete(ctx, valiSts))
 }
 
 func cleanupOrphanExposureClassHandlerResources(
