@@ -38,6 +38,7 @@ import (
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubeapiserver/mock"
 	"github.com/gardener/gardener/pkg/features"
@@ -182,7 +183,7 @@ var _ = Describe("KubeAPIServer", func() {
 	Describe("#DefaultKubeAPIServer", func() {
 		Describe("AutoscalingConfig", func() {
 			DescribeTable("should have the expected autoscaling config",
-				func(prepTest func(), featureGates map[featuregate.Feature]bool, expectedConfig kubeapiserver.AutoscalingConfig) {
+				func(prepTest func(), featureGates map[featuregate.Feature]bool, expectedConfig apiserver.AutoscalingConfig) {
 					if prepTest != nil {
 						prepTest()
 					}
@@ -199,7 +200,7 @@ var _ = Describe("KubeAPIServer", func() {
 				Entry("default behaviour, HVPA is disabled",
 					nil,
 					map[featuregate.Feature]bool{features.HVPA: false},
-					kubeapiserver.AutoscalingConfig{
+					apiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
 						HVPAEnabled:               false,
 						MinReplicas:               1,
@@ -211,7 +212,7 @@ var _ = Describe("KubeAPIServer", func() {
 				Entry("default behaviour, HVPA is enabled",
 					nil,
 					map[featuregate.Feature]bool{features.HVPA: true},
-					kubeapiserver.AutoscalingConfig{
+					apiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(40, ""),
 						HVPAEnabled:               true,
 						MinReplicas:               1,
@@ -226,7 +227,7 @@ var _ = Describe("KubeAPIServer", func() {
 						features.HVPA:                           true,
 						features.DisableScalingClassesForShoots: true,
 					},
-					kubeapiserver.AutoscalingConfig{
+					apiserver.AutoscalingConfig{
 						APIServerResources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("500m"),
@@ -246,7 +247,7 @@ var _ = Describe("KubeAPIServer", func() {
 						features.HVPA:                           false,
 						features.DisableScalingClassesForShoots: true,
 					},
-					kubeapiserver.AutoscalingConfig{
+					apiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
 						HVPAEnabled:               false,
 						MinReplicas:               1,
@@ -260,7 +261,7 @@ var _ = Describe("KubeAPIServer", func() {
 						botanist.Shoot.Purpose = gardencorev1beta1.ShootPurposeProduction
 					},
 					nil,
-					kubeapiserver.AutoscalingConfig{
+					apiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
 						HVPAEnabled:               false,
 						MinReplicas:               2,
@@ -274,7 +275,7 @@ var _ = Describe("KubeAPIServer", func() {
 						botanist.Shoot.GetInfo().Annotations = map[string]string{"alpha.control-plane.scaling.shoot.gardener.cloud/scale-down-disabled": "true"}
 					},
 					nil,
-					kubeapiserver.AutoscalingConfig{
+					apiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
 						HVPAEnabled:               false,
 						MinReplicas:               4,
@@ -288,7 +289,7 @@ var _ = Describe("KubeAPIServer", func() {
 						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 					},
 					map[featuregate.Feature]bool{features.HVPAForShootedSeed: false},
-					kubeapiserver.AutoscalingConfig{
+					apiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
 						HVPAEnabled:               false,
 						MinReplicas:               1,
@@ -302,7 +303,7 @@ var _ = Describe("KubeAPIServer", func() {
 						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 					},
 					map[featuregate.Feature]bool{features.HVPAForShootedSeed: true},
-					kubeapiserver.AutoscalingConfig{
+					apiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(40, ""),
 						HVPAEnabled:               true,
 						MinReplicas:               1,
@@ -323,7 +324,7 @@ var _ = Describe("KubeAPIServer", func() {
 						}
 					},
 					map[featuregate.Feature]bool{features.HVPAForShootedSeed: true},
-					kubeapiserver.AutoscalingConfig{
+					apiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(40, ""),
 						HVPAEnabled:               true,
 						MinReplicas:               16,
@@ -347,7 +348,7 @@ var _ = Describe("KubeAPIServer", func() {
 						features.HVPAForShootedSeed:             true,
 						features.DisableScalingClassesForShoots: true,
 					},
-					kubeapiserver.AutoscalingConfig{
+					apiserver.AutoscalingConfig{
 						APIServerResources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("500m"),
@@ -373,7 +374,7 @@ var _ = Describe("KubeAPIServer", func() {
 						}
 					},
 					map[featuregate.Feature]bool{features.HVPAForShootedSeed: false},
-					kubeapiserver.AutoscalingConfig{
+					apiserver.AutoscalingConfig{
 						APIServerResources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("1750m"),
@@ -403,7 +404,7 @@ var _ = Describe("KubeAPIServer", func() {
 						features.HVPAForShootedSeed:             false,
 						features.DisableScalingClassesForShoots: true,
 					},
-					kubeapiserver.AutoscalingConfig{
+					apiserver.AutoscalingConfig{
 						APIServerResources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("1750m"),
@@ -427,7 +428,7 @@ var _ = Describe("KubeAPIServer", func() {
 						}
 					},
 					nil,
-					kubeapiserver.AutoscalingConfig{
+					apiserver.AutoscalingConfig{
 						APIServerResources:        resourcesRequirementsForKubeAPIServer(4, ""),
 						HVPAEnabled:               false,
 						MinReplicas:               3,

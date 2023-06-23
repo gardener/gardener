@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
+	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/vpnseedserver"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -85,7 +86,7 @@ func admissionPluginsConfigFilename(name string) string {
 	return strings.ToLower(name) + ".yaml"
 }
 
-func computeRelevantAdmissionPluginRawConfig(plugin AdmissionPluginConfig) ([]byte, error) {
+func computeRelevantAdmissionPluginRawConfig(plugin apiserver.AdmissionPluginConfig) ([]byte, error) {
 	var (
 		nothingToMutate    = (plugin.Config == nil || plugin.Config.Raw == nil) && len(plugin.Kubeconfig) == 0
 		mustDefaultConfig  = (plugin.Config == nil || plugin.Config.Raw == nil) && len(plugin.Kubeconfig) > 0

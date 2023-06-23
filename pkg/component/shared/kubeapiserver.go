@@ -39,6 +39,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -90,13 +91,13 @@ func NewKubeAPIServer(
 	secretsManager secretsmanager.Interface,
 	namePrefix string,
 	apiServerConfig *gardencorev1beta1.KubeAPIServerConfig,
-	autoscalingConfig kubeapiserver.AutoscalingConfig,
+	autoscalingConfig apiserver.AutoscalingConfig,
 	serviceNetworkCIDR string,
 	vpnConfig kubeapiserver.VPNConfig,
 	priorityClassName string,
 	isWorkerless bool,
 	staticTokenKubeconfigEnabled *bool,
-	auditWebhookConfig *kubeapiserver.AuditWebhook,
+	auditWebhookConfig *apiserver.AuditWebhook,
 	authenticationWebhookConfig *kubeapiserver.AuthenticationWebhook,
 	authorizationWebhookConfig *kubeapiserver.AuthorizationWebhook,
 	resourcesToStoreInETCDEvents []schema.GroupResource,
@@ -113,7 +114,7 @@ func NewKubeAPIServer(
 		enabledAdmissionPlugins             = kubernetesutils.GetAdmissionPluginsForVersion(targetVersion.String())
 		disabledAdmissionPlugins            []gardencorev1beta1.AdmissionPlugin
 		apiAudiences                        = []string{"kubernetes", "gardener"}
-		auditConfig                         *kubeapiserver.AuditConfig
+		auditConfig                         *apiserver.AuditConfig
 		defaultNotReadyTolerationSeconds    *int64
 		defaultUnreachableTolerationSeconds *int64
 		eventTTL                            *metav1.Duration
@@ -167,33 +168,35 @@ func NewKubeAPIServer(
 		runtimeNamespace,
 		secretsManager,
 		kubeapiserver.Values{
-			EnabledAdmissionPlugins:             enabledAdmissionPluginConfigs,
-			DisabledAdmissionPlugins:            disabledAdmissionPlugins,
+			Values: apiserver.Values{
+				EnabledAdmissionPlugins:  enabledAdmissionPluginConfigs,
+				DisabledAdmissionPlugins: disabledAdmissionPlugins,
+				Audit:                    auditConfig,
+				Autoscaling:              autoscalingConfig,
+				FeatureGates:             featureGates,
+				Logging:                  logging,
+				Requests:                 requests,
+				RuntimeVersion:           runtimeVersion,
+				WatchCacheSizes:          watchCacheSizes,
+			},
 			AnonymousAuthenticationEnabled:      v1beta1helper.AnonymousAuthenticationEnabled(apiServerConfig),
 			APIAudiences:                        apiAudiences,
-			Audit:                               auditConfig,
 			AuthenticationWebhook:               authenticationWebhookConfig,
 			AuthorizationWebhook:                authorizationWebhookConfig,
-			Autoscaling:                         autoscalingConfig,
 			DefaultNotReadyTolerationSeconds:    defaultNotReadyTolerationSeconds,
 			DefaultUnreachableTolerationSeconds: defaultUnreachableTolerationSeconds,
 			EventTTL:                            eventTTL,
-			FeatureGates:                        featureGates,
 			Images:                              images,
 			IsWorkerless:                        isWorkerless,
-			Logging:                             logging,
 			NamePrefix:                          namePrefix,
 			OIDC:                                oidcConfig,
 			PriorityClassName:                   priorityClassName,
-			Requests:                            requests,
 			ResourcesToStoreInETCDEvents:        resourcesToStoreInETCDEvents,
 			RuntimeConfig:                       runtimeConfig,
-			RuntimeVersion:                      runtimeVersion,
 			ServiceNetworkCIDR:                  serviceNetworkCIDR,
 			StaticTokenKubeconfigEnabled:        staticTokenKubeconfigEnabled,
 			Version:                             targetVersion,
 			VPN:                                 vpnConfig,
-			WatchCacheSizes:                     watchCacheSizes,
 		},
 	), nil
 }
@@ -383,14 +386,14 @@ func ensureAdmissionPluginConfig(plugins []gardencorev1beta1.AdmissionPlugin) ([
 	return plugins, nil
 }
 
-func convertToAdmissionPluginConfigs(ctx context.Context, gardenClient client.Client, namespace string, plugins []gardencorev1beta1.AdmissionPlugin) ([]kubeapiserver.AdmissionPluginConfig, error) {
+func convertToAdmissionPluginConfigs(ctx context.Context, gardenClient client.Client, namespace string, plugins []gardencorev1beta1.AdmissionPlugin) ([]apiserver.AdmissionPluginConfig, error) {
 	var (
 		err error
-		out []kubeapiserver.AdmissionPluginConfig
+		out []apiserver.AdmissionPluginConfig
 	)
 
 	for _, plugin := range plugins {
-		config := kubeapiserver.AdmissionPluginConfig{AdmissionPlugin: plugin}
+		config := apiserver.AdmissionPluginConfig{AdmissionPlugin: plugin}
 		if plugin.KubeconfigSecretName != nil {
 			key := client.ObjectKey{Namespace: namespace, Name: *plugin.KubeconfigSecretName}
 			config.Kubeconfig, err = gardenerutils.FetchKubeconfigFromSecret(ctx, gardenClient, key)
@@ -446,7 +449,7 @@ func computeDisabledKubeAPIServerAdmissionPlugins(configuredPlugins []gardencore
 	return disabledAdmissionPlugins
 }
 
-func computeKubeAPIServerReplicas(autoscalingConfig kubeapiserver.AutoscalingConfig, deployment *appsv1.Deployment, wantScaleDown bool) *int32 {
+func computeKubeAPIServerReplicas(autoscalingConfig apiserver.AutoscalingConfig, deployment *appsv1.Deployment, wantScaleDown bool) *int32 {
 	switch {
 	case autoscalingConfig.Replicas != nil:
 		// If the replicas were already set then don't change them.
@@ -473,9 +476,9 @@ func computeKubeAPIServerAuditConfig(
 	cl client.Client,
 	objectMeta metav1.ObjectMeta,
 	config *gardencorev1beta1.AuditConfig,
-	webhookConfig *kubeapiserver.AuditWebhook,
+	webhookConfig *apiserver.AuditWebhook,
 ) (
-	*kubeapiserver.AuditConfig,
+	*apiserver.AuditConfig,
 	error,
 ) {
 	if config == nil || config.AuditPolicy == nil || config.AuditPolicy.ConfigMapRef == nil {
@@ -483,7 +486,7 @@ func computeKubeAPIServerAuditConfig(
 	}
 
 	var (
-		out = &kubeapiserver.AuditConfig{
+		out = &apiserver.AuditConfig{
 			Webhook: webhookConfig,
 		}
 		key = kubernetesutils.Key(objectMeta.Namespace, config.AuditPolicy.ConfigMapRef.Name)
@@ -516,10 +519,10 @@ func computeKubeAPIServerETCDEncryptionConfig(
 	etcdEncryptionKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
 	resources []string,
 ) (
-	kubeapiserver.ETCDEncryptionConfig,
+	apiserver.ETCDEncryptionConfig,
 	error,
 ) {
-	config := kubeapiserver.ETCDEncryptionConfig{
+	config := apiserver.ETCDEncryptionConfig{
 		RotationPhase:         etcdEncryptionKeyRotationPhase,
 		EncryptWithCurrentKey: true,
 		Resources:             resources,
@@ -530,7 +533,7 @@ func computeKubeAPIServerETCDEncryptionConfig(
 		deployment.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
 		if err := runtimeClient.Get(ctx, kubernetesutils.Key(runtimeNamespace, deploymentName), deployment); err != nil {
 			if !apierrors.IsNotFound(err) {
-				return kubeapiserver.ETCDEncryptionConfig{}, err
+				return apiserver.ETCDEncryptionConfig{}, err
 			}
 		}
 

@@ -43,6 +43,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -96,19 +97,10 @@ const (
 
 // Interface contains functions for a kube-apiserver deployer.
 type Interface interface {
-	component.DeployWaiter
+	apiserver.Interface
 	component.MonitoringComponent
-	// GetAutoscalingReplicas gets the Replicas field in the AutoscalingConfig of the Values of the deployer.
-	GetAutoscalingReplicas() *int32
 	// GetValues returns the current configuration values of the deployer.
 	GetValues() Values
-	// SetAutoscalingAPIServerResources sets the APIServerResources field in the AutoscalingConfig of the Values of the
-	// deployer.
-	SetAutoscalingAPIServerResources(corev1.ResourceRequirements)
-	// SetAutoscalingReplicas sets the Replicas field in the AutoscalingConfig of the Values of the deployer.
-	SetAutoscalingReplicas(*int32)
-	// SetETCDEncryptionConfig sets the ETCDEncryptionConfig field in the Values of the deployer.
-	SetETCDEncryptionConfig(ETCDEncryptionConfig)
 	// SetExternalHostname sets the ExternalHostname field in the Values of the deployer.
 	SetExternalHostname(string)
 	// SetExternalServer sets the ExternalServer field in the Values of the deployer.
@@ -123,60 +115,43 @@ type Interface interface {
 
 // Values contains configuration values for the kube-apiserver resources.
 type Values struct {
-	// EnabledAdmissionPlugins is the list of admission plugins that should be enabled with configuration for the kube-apiserver.
-	EnabledAdmissionPlugins []AdmissionPluginConfig
-	// DisabledAdmissionPlugins is the list of admission plugins that should be disabled for the kube-apiserver.
-	DisabledAdmissionPlugins []gardencorev1beta1.AdmissionPlugin
+	apiserver.Values
 	// AnonymousAuthenticationEnabled states whether anonymous authentication is enabled.
 	AnonymousAuthenticationEnabled bool
 	// APIAudiences are identifiers of the API. The service account token authenticator will validate that tokens used
 	// against the API are bound to at least one of these audiences.
 	APIAudiences []string
-	// Audit contains information for configuring audit settings for the kube-apiserver.
-	Audit *AuditConfig
 	// AuthenticationWebhook contains configuration for the authentication webhook.
 	AuthenticationWebhook *AuthenticationWebhook
 	// AuthorizationWebhook contains configuration for the authorization webhook.
 	AuthorizationWebhook *AuthorizationWebhook
-	// Autoscaling contains information for configuring autoscaling settings for the kube-apiserver.
-	Autoscaling AutoscalingConfig
 	// DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute
 	// that is added by default to every pod that does not already have such a toleration (flag `--default-not-ready-toleration-seconds`).
 	DefaultNotReadyTolerationSeconds *int64
 	// DefaultUnreachableTolerationSeconds indicates the tolerationSeconds of the toleration for unreachable:NoExecute
 	// that is added by default to every pod that does not already have such a toleration (flag `--default-unreachable-toleration-seconds`).
 	DefaultUnreachableTolerationSeconds *int64
-	// ETCDEncryption contains configuration for the encryption of resources in etcd.
-	ETCDEncryption ETCDEncryptionConfig
 	// EventTTL is the amount of time to retain events.
 	EventTTL *metav1.Duration
 	// ExternalHostname is the external hostname which should be exposed by the kube-apiserver.
 	ExternalHostname string
 	// ExternalServer is the external server which should be used when generating the user kubeconfig.
 	ExternalServer string
-	// FeatureGates is the set of feature gates.
-	FeatureGates map[string]bool
 	// Images is a set of container images used for the containers of the kube-apiserver pods.
 	Images Images
 	// IsWorkerless specifies whether the cluster managed by this API server has worker nodes.
 	IsWorkerless bool
-	// Logging contains configuration settings for the log and access logging verbosity
-	Logging *gardencorev1beta1.KubeAPIServerLogging
 	// NamePrefix is the prefix for the resource names.
 	NamePrefix string
 	// OIDC contains information for configuring OIDC settings for the kube-apiserver.
 	OIDC *gardencorev1beta1.OIDCConfig
 	// PriorityClassName is the name of the priority class.
 	PriorityClassName string
-	// Requests contains configuration for the kube-apiserver requests.
-	Requests *gardencorev1beta1.KubeAPIServerRequests
 	// ResourcesToStoreInETCDEvents is a list of resources which should be stored in the etcd-events instead of the
 	// etcd-main. The `events` resource in the `core` group is always stored in etcd-events.
 	ResourcesToStoreInETCDEvents []schema.GroupResource
 	// RuntimeConfig is the set of runtime configurations.
 	RuntimeConfig map[string]bool
-	// RuntimeVersion is the Kubernetes version of the runtime cluster.
-	RuntimeVersion *semver.Version
 	// ServerCertificate contains configuration for the server certificate.
 	ServerCertificate ServerCertificateConfig
 	// ServiceAccount contains information for configuring ServiceAccount settings for the kube-apiserver.
@@ -191,34 +166,6 @@ type Values struct {
 	Version *semver.Version
 	// VPN contains information for configuring the VPN settings for the kube-apiserver.
 	VPN VPNConfig
-	// WatchCacheSizes are the configured sizes for the watch caches.
-	WatchCacheSizes *gardencorev1beta1.WatchCacheSizes
-}
-
-// AdmissionPluginConfig contains information about a specific admission plugin and its corresponding configuration.
-type AdmissionPluginConfig struct {
-	gardencorev1beta1.AdmissionPlugin
-	// Kubeconfig is an optional kubeconfig for the configuration of this admission plugins. The configs for some
-	// admission plugins like `ImagePolicyWebhook` or `ValidatingAdmissionWebhook` can take a reference to a kubeconfig.
-	Kubeconfig []byte
-}
-
-// AuditConfig contains information for configuring audit settings for the kube-apiserver.
-type AuditConfig struct {
-	// Policy is the audit policy document in YAML format.
-	Policy *string
-	// Webhook contains configuration for the audit webhook.
-	Webhook *AuditWebhook
-}
-
-// AuditWebhook contains configuration for the audit webhook.
-type AuditWebhook struct {
-	// Kubeconfig contains the kubeconfig formatted file that defines the audit webhook configuration.
-	Kubeconfig []byte
-	// BatchMaxSize is the maximum size of a batch.
-	BatchMaxSize *int32
-	// Version is the API group and version used for serializing audit events written to webhook.
-	Version *string
 }
 
 // AuthenticationWebhook contains configuration for the authentication webhook.
@@ -244,38 +191,6 @@ type AuthorizationWebhook struct {
 	// Version is the API version of the authorization.k8s.io SubjectAccessReview to send to and expect from the
 	// webhook.
 	Version *string
-}
-
-// AutoscalingConfig contains information for configuring autoscaling settings for the kube-apiserver.
-type AutoscalingConfig struct {
-	// APIServerResources are the resource requirements for the kube-apiserver container.
-	APIServerResources corev1.ResourceRequirements
-	// HVPAEnabled states whether an HVPA object shall be deployed. If false, HPA and VPA will be used.
-	HVPAEnabled bool
-	// Replicas is the number of pod replicas for the kube-apiserver.
-	Replicas *int32
-	// MinReplicas are the minimum Replicas for horizontal autoscaling.
-	MinReplicas int32
-	// MaxReplicas are the maximum Replicas for horizontal autoscaling.
-	MaxReplicas int32
-	// UseMemoryMetricForHvpaHPA states whether the memory metric shall be used when the HPA is configured in an HVPA
-	// resource.
-	UseMemoryMetricForHvpaHPA bool
-	// ScaleDownDisabledForHvpa states whether scale-down shall be disabled when HPA or VPA are configured in an HVPA
-	// resource.
-	ScaleDownDisabledForHvpa bool
-}
-
-// ETCDEncryptionConfig contains configuration for the encryption of resources in etcd.
-type ETCDEncryptionConfig struct {
-	// RotationPhase specifies the credentials rotation phase of the encryption key.
-	RotationPhase gardencorev1beta1.CredentialsRotationPhase
-	// EncryptWithCurrentKey specifies whether the current encryption key should be used for encryption. If this is
-	// false and if there are two keys then the old key will be used for encryption while the current/new key will only
-	// be used for decryption.
-	EncryptWithCurrentKey bool
-	// Resources are the resources which should be encrypted.
-	Resources []string
 }
 
 // Images is a set of container images used for the containers of the kube-apiserver pods.
@@ -661,7 +576,7 @@ func (k *kubeAPIServer) SetAutoscalingReplicas(replicas *int32) {
 	k.values.Autoscaling.Replicas = replicas
 }
 
-func (k *kubeAPIServer) SetETCDEncryptionConfig(config ETCDEncryptionConfig) {
+func (k *kubeAPIServer) SetETCDEncryptionConfig(config apiserver.ETCDEncryptionConfig) {
 	k.values.ETCDEncryption = config
 }
 

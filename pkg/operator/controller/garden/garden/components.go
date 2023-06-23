@@ -39,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/gardeneraccess"
 	"github.com/gardener/gardener/pkg/component/gardensystem"
@@ -408,7 +409,7 @@ func (r *Reconciler) newKubeAPIServer(
 	var (
 		err                          error
 		apiServerConfig              *gardencorev1beta1.KubeAPIServerConfig
-		auditWebhookConfig           *kubeapiserver.AuditWebhook
+		auditWebhookConfig           *apiserver.AuditWebhook
 		authenticationWebhookConfig  *kubeapiserver.AuthenticationWebhook
 		authorizationWebhookConfig   *kubeapiserver.AuthorizationWebhook
 		resourcesToStoreInETCDEvents []schema.GroupResource
@@ -454,7 +455,7 @@ func (r *Reconciler) newKubeAPIServer(
 		secretsManager,
 		namePrefix,
 		apiServerConfig,
-		kubeapiserver.AutoscalingConfig{
+		apiserver.AutoscalingConfig{
 			APIServerResources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("600m"),
@@ -479,7 +480,7 @@ func (r *Reconciler) newKubeAPIServer(
 	)
 }
 
-func (r *Reconciler) computeKubeAPIServerAuditWebhookConfig(ctx context.Context, config *operatorv1alpha1.AuditWebhook) (*kubeapiserver.AuditWebhook, error) {
+func (r *Reconciler) computeKubeAPIServerAuditWebhookConfig(ctx context.Context, config *operatorv1alpha1.AuditWebhook) (*apiserver.AuditWebhook, error) {
 	if config == nil {
 		return nil, nil
 	}
@@ -490,7 +491,7 @@ func (r *Reconciler) computeKubeAPIServerAuditWebhookConfig(ctx context.Context,
 		return nil, fmt.Errorf("failed reading kubeconfig for audit webhook from referenced secret %s: %w", key, err)
 	}
 
-	return &kubeapiserver.AuditWebhook{
+	return &apiserver.AuditWebhook{
 		Kubeconfig:   kubeconfig,
 		BatchMaxSize: config.BatchMaxSize,
 		Version:      config.Version,
