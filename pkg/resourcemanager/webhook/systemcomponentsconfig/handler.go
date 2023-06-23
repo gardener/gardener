@@ -102,9 +102,8 @@ func (h *Handler) handleTolerations(ctx context.Context, log logr.Logger, pod *c
 	// Add required tolerations for existing system component nodes.
 	for _, node := range nodeList.Items {
 		for _, taint := range node.Spec.Taints {
-			// Kubernetes reserved taints must not be added which would circumvent taint based evictions, see https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/#taint-based-evictions.
-			if kubernetesReservedTaint(taint) {
-				log.Info("Kubernetes reserved taint is skipped for toleration calculation", "node", client.ObjectKeyFromObject(&node), "taint", taint.Key)
+			if shouldIgnoreTaint(taint) {
+				log.V(1).Info("Taint is ignored for toleration calculation", "node", client.ObjectKeyFromObject(&node), "taint", taint.Key)
 				continue
 			}
 			toleration := kubernetesutils.TolerationForTaint(taint)
@@ -115,6 +114,18 @@ func (h *Handler) handleTolerations(ctx context.Context, log logr.Logger, pod *c
 	pod.Spec.Tolerations = tolerations.UnsortedList()
 
 	return nil
+}
+
+const (
+	// ToBeDeletedByClusterAutoscaler is a taint used to make a Node unschedulable.
+	// It denotes that the cluster-autoscaler will scale down the corresponding Node.
+	ToBeDeletedByClusterAutoscaler = "ToBeDeletedByClusterAutoscaler"
+)
+
+func shouldIgnoreTaint(taint corev1.Taint) bool {
+	// 1. Kubernetes reserved taints must be ignored to do NOT break taint based evictions, see https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/#taint-based-evictions.
+	// 2. cluster-autoscaler's ToBeDeletedByClusterAutoscaler taint must be ignored to do NOT break cluster-autoscaler's drain mechanism when scaling down an underutilized Node.
+	return kubernetesReservedTaint(taint) || taint.Key == ToBeDeletedByClusterAutoscaler
 }
 
 func kubernetesReservedTaint(taint corev1.Taint) bool {
