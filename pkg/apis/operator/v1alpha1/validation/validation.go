@@ -69,13 +69,21 @@ func ValidateGarden(garden *operatorv1alpha1.Garden) field.ErrorList {
 func ValidateGardenUpdate(oldGarden, newGarden *operatorv1alpha1.Garden) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if oldGarden.Spec.VirtualCluster.ControlPlane != nil && oldGarden.Spec.VirtualCluster.ControlPlane.HighAvailability != nil &&
-		(newGarden.Spec.VirtualCluster.ControlPlane == nil || newGarden.Spec.VirtualCluster.ControlPlane.HighAvailability == nil) {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldGarden.Spec.VirtualCluster.ControlPlane, newGarden.Spec.VirtualCluster.ControlPlane, field.NewPath("spec", "virtualCluster", "controlPlane", "highAvailability"))...)
+	allErrs = append(allErrs, validateVirtualClusterUpdate(oldGarden.Spec.VirtualCluster, newGarden.Spec.VirtualCluster, field.NewPath("spec", "virtualCluster"))...)
+	allErrs = append(allErrs, ValidateGarden(newGarden)...)
+
+	return allErrs
+}
+
+func validateVirtualClusterUpdate(oldVirtualCluster, newVirtualCluster operatorv1alpha1.VirtualCluster, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if oldVirtualCluster.ControlPlane != nil && oldVirtualCluster.ControlPlane.HighAvailability != nil &&
+		(newVirtualCluster.ControlPlane == nil || newVirtualCluster.ControlPlane.HighAvailability == nil) {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVirtualCluster.ControlPlane, newVirtualCluster.ControlPlane, fldPath.Child("controlPlane", "highAvailability"))...)
 	}
 
-	allErrs = append(allErrs, gardencorevalidation.ValidateKubernetesVersionUpdate(newGarden.Spec.VirtualCluster.Kubernetes.Version, newGarden.Spec.VirtualCluster.Kubernetes.Version, field.NewPath("spec", "virtualCluster", "kubernetes", "version"))...)
-	allErrs = append(allErrs, ValidateGarden(newGarden)...)
+	allErrs = append(allErrs, gardencorevalidation.ValidateKubernetesVersionUpdate(newVirtualCluster.Kubernetes.Version, newVirtualCluster.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
 
 	return allErrs
 }
