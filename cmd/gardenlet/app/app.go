@@ -53,6 +53,7 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -537,8 +538,14 @@ func (g *garden) cleanupStaleShootStates(ctx context.Context, gardenClient clien
 
 		// If status.seedName is different than seed name gardenlet is responsible for, then a migration takes place.
 		// In this case, we don't want to delete the shoot state. It will be deleted eventually after successful
-		// restoration.
+		// restoration by the shoot controller itself.
 		if shoot.Status.SeedName != nil && *shoot.Status.SeedName != g.config.SeedConfig.Name {
+			continue
+		}
+
+		// We don't want to delete the shoot state when the last operation type is 'Restore' (it might not be completed
+		// yet). It will be deleted eventually after successful restoration by the shoot controller itself.
+		if v1beta1helper.ShootHasOperationType(shoot.Status.LastOperation, gardencorev1beta1.LastOperationTypeRestore) {
 			continue
 		}
 
