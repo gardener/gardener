@@ -166,6 +166,8 @@ func (r *Reconciler) reconcile(
 
 		if podSecurityEnforce, ok := controllerInstallation.Annotations[v1beta1constants.AnnotationPodSecurityEnforce]; ok {
 			metav1.SetMetaDataLabel(&namespace.ObjectMeta, podsecurityadmissionapi.EnforceLevelLabel, podSecurityEnforce)
+		} else {
+			delete(namespace.Labels, podsecurityadmissionapi.EnforceLevelLabel)
 		}
 
 		return nil

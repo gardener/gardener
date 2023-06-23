@@ -492,6 +492,8 @@ func deployNeededInstallation(
 
 		if podSecurityEnforce, ok := controllerRegistration.Annotations[v1beta1constants.AnnotationPodSecurityEnforce]; ok {
 			metav1.SetMetaDataAnnotation(&controllerInstallation.ObjectMeta, v1beta1constants.AnnotationPodSecurityEnforce, podSecurityEnforce)
+		} else {
+			delete(controllerInstallation.Annotations, v1beta1constants.AnnotationPodSecurityEnforce)
 		}
 
 		controllerInstallation.Spec = installationSpec
