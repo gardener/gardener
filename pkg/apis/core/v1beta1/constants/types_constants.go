@@ -47,6 +47,9 @@ const (
 	// SecretNameCASeed is a constant for the name of a Kubernetes secret object that contains the CA
 	// certificate generated for a seed cluster.
 	SecretNameCASeed = "ca-seed"
+	// SecretNameCAGardener is a constant for the name of a Kubernetes secret object that contains the CA
+	// certificate of the Gardener control plane.
+	SecretNameCAGardener = "ca-gardener"
 
 	// SecretNameCloudProvider is a constant for the name of a Kubernetes secret object that contains the provider
 	// specific credentials that shall be used to create/delete the shoot.

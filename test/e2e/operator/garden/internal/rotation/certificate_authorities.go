@@ -50,6 +50,7 @@ var allCAs = []string{
 	caETCD,
 	caETCDPeer,
 	caFrontProxy,
+	caGardener,
 }
 
 const (
@@ -58,6 +59,7 @@ const (
 	caETCD       = "ca-etcd"
 	caETCDPeer   = "ca-etcd-peer"
 	caFrontProxy = "ca-front-proxy"
+	caGardener   = "ca-gardener"
 )
 
 // Before is called before the rotation is started.

@@ -34,6 +34,9 @@ import (
 )
 
 const (
+	// DeploymentName is the name of the deployment.
+	DeploymentName = "gardener-apiserver"
+
 	managedResourceNameRuntime = "gardener-apiserver-runtime"
 	managedResourceNameVirtual = "gardener-apiserver-virtual"
 )
@@ -77,6 +80,11 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 	var (
 		runtimeRegistry = managedresources.NewRegistry(operatorclient.RuntimeScheme, operatorclient.RuntimeCodec, operatorclient.RuntimeSerializer)
 	)
+
+	secretServer, err := g.reconcileSecretServer(ctx)
+	if err != nil {
+		return err
+	}
 
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize()
 	if err != nil {
