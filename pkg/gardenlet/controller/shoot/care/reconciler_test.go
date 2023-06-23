@@ -619,5 +619,10 @@ func consistOfConstraintsInUnknownStatus(message string) types.GomegaMatcher {
 			"Status":  Equal(gardencorev1beta1.ConditionUnknown),
 			"Message": Equal(message),
 		}),
+		MatchFields(IgnoreExtras, Fields{
+			"Type":    Equal(gardencorev1beta1.ShootCRDsWithConversionWebhooksPresent),
+			"Status":  Equal(gardencorev1beta1.ConditionUnknown),
+			"Message": Equal(message),
+		}),
 	)
 }
