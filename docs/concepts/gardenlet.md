@@ -446,8 +446,6 @@ The mechanism works the same way as for shoot control plane components running i
 However, `gardenlet`'s instance of the `TokenRequestor` controller is restricted to `Secret`s labeled with `resources.gardener.cloud/class=garden`.
 Furthermore, it doesn't respect the `serviceaccount.resources.gardener.cloud/namespace` annotation. Instead, it always uses the seed's namespace in the garden cluster for managing `ServiceAccounts` and their tokens.
 
-> ⚠️ This feature is under development. The managed `ServiceAccounts` in the garden cluster don't have any API permissions as of now. They will be handled by the `SeedAuthorizer` in the future and equipped with permissions similar to the gardenlets' credentials.
-
 ## Managed Seeds
 
 Gardener users can use shoot clusters as seed clusters, so-called "managed seeds" (aka "shooted seeds"),

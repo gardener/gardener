@@ -170,9 +170,10 @@
   * [Extension Admission](extensions/admission.md)
   * [Heartbeat controller](extensions/heartbeat.md)
 * [Provider Local](extensions/provider-local.md)
+* [Access to the Garden Cluster](extensions/garden-api-access.md)
+* [Control plane migration](extensions/migration.md)
 * [Extending project roles](extensions/project-roles.md)
 * [Referenced resources](extensions/referenced-resources.md)
-* [Control plane migration](extensions/migration.md)
 
 ## Deployment
 
