@@ -15,6 +15,9 @@
 package validation_test
 
 import (
+	"fmt"
+
+	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -888,6 +891,13 @@ var _ = Describe("Validation Tests", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "garden",
 				},
+				Spec: operatorv1alpha1.GardenSpec{
+					VirtualCluster: operatorv1alpha1.VirtualCluster{
+						Kubernetes: operatorv1alpha1.Kubernetes{
+							Version: "1.27.0",
+						},
+					},
+				},
 			}
 			newGarden = oldGarden.DeepCopy()
 		})
@@ -900,6 +910,20 @@ var _ = Describe("Validation Tests", func() {
 					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.virtualCluster.controlPlane.highAvailability"),
+					}))))
+				})
+			})
+
+			Context("kubernetes", func() {
+				It("should not not allow version downgrade", func() {
+					version := semver.MustParse(newGarden.Spec.VirtualCluster.Kubernetes.Version)
+					previousMinor := semver.MustParse(fmt.Sprintf("%d.%d.%d", version.Major(), version.Minor()-1, version.Patch()))
+
+					newGarden.Spec.VirtualCluster.Kubernetes.Version = previousMinor.String()
+
+					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.virtualCluster.kubernetes.version"),
 					}))))
 				})
 			})

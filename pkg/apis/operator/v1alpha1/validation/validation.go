@@ -83,7 +83,7 @@ func validateVirtualClusterUpdate(oldVirtualCluster, newVirtualCluster operatorv
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVirtualCluster.ControlPlane, newVirtualCluster.ControlPlane, fldPath.Child("controlPlane", "highAvailability"))...)
 	}
 
-	allErrs = append(allErrs, gardencorevalidation.ValidateKubernetesVersionUpdate(newVirtualCluster.Kubernetes.Version, newVirtualCluster.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
+	allErrs = append(allErrs, gardencorevalidation.ValidateKubernetesVersionUpdate(newVirtualCluster.Kubernetes.Version, oldVirtualCluster.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
 
 	return allErrs
 }
