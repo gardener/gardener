@@ -416,17 +416,6 @@ If at least one check fails and there is threshold configuration for the conditi
 The condition thresholds can be used to prevent reporting issues too early just because there is a rollout or a short disruption.
 Only if the unhealthiness persists for at least the configured threshold duration, then the issues will be reported (by setting the status to `False`).
 
-### [`TokenRequestor` Controller](../../pkg/controller/tokenrequestor)
-
-The `gardenlet` uses an instance of the `TokenRequestor` controller which initially was developed in the context of the `gardener-resource-manager`, please read [this document](resource-manager.md#tokenrequestor-controller) for further information.
-
-`gardenlet` uses it for requesting tokens for components running in the seed cluster that need to communicate with the garden cluster.
-The mechanism works the same way as for shoot control plane components running in the seed which need to communicate with the shoot cluster.
-However, `gardenlet`'s instance of the `TokenRequestor` controller is restricted to `Secret`s labeled with `resources.gardener.cloud/class=garden`.
-Furthermore, it doesn't respect the `serviceaccount.resources.gardener.cloud/namespace` annotation. Instead, it always uses the seed's namespace in the garden cluster for managing `ServiceAccounts` and their tokens.
-
-> ⚠️ This feature is under development. The managed `ServiceAccounts` in the garden cluster don't have any API permissions as of now. They will be handled by the `SeedAuthorizer` in the future and equipped with permissions similar to the gardenlets' credentials.
-
 ##### Constraints And Automatic Webhook Remediation
 
 Please see [Shoot Status](../usage/shoot_status.md#constraints) for more details.
@@ -447,6 +436,17 @@ It is only started in case the `gardenlet` is responsible for an unmanaged `Seed
 Alternatively, it can be disabled by setting the `concurrentSyncs=0` for the controller in the `gardenlet`'s component configuration.
 
 Please refer to [GEP-22: Improved Usage of the `ShootState` API](../proposals/22-improved-usage-of-shootstate-api.md) for all information.
+
+### [`TokenRequestor` Controller](../../pkg/controller/tokenrequestor)
+
+The `gardenlet` uses an instance of the `TokenRequestor` controller which initially was developed in the context of the `gardener-resource-manager`, please read [this document](resource-manager.md#tokenrequestor-controller) for further information.
+
+`gardenlet` uses it for requesting tokens for components running in the seed cluster that need to communicate with the garden cluster.
+The mechanism works the same way as for shoot control plane components running in the seed which need to communicate with the shoot cluster.
+However, `gardenlet`'s instance of the `TokenRequestor` controller is restricted to `Secret`s labeled with `resources.gardener.cloud/class=garden`.
+Furthermore, it doesn't respect the `serviceaccount.resources.gardener.cloud/namespace` annotation. Instead, it always uses the seed's namespace in the garden cluster for managing `ServiceAccounts` and their tokens.
+
+> ⚠️ This feature is under development. The managed `ServiceAccounts` in the garden cluster don't have any API permissions as of now. They will be handled by the `SeedAuthorizer` in the future and equipped with permissions similar to the gardenlets' credentials.
 
 ## Managed Seeds
 
