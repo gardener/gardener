@@ -191,7 +191,7 @@ var _ = Describe("Garden controller tests", func() {
 						Services: "10.2.0.0/16",
 					},
 					Ingress: &operatorv1alpha1.Ingress{
-						Domain: "ingress.dev.my-garden.example.com",
+						Domain: "ingress.dev.garden.example.com",
 						Controller: operatorv1alpha1.IngressController{
 							Kind: "nginx",
 						},

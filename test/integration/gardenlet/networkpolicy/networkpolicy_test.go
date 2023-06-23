@@ -626,6 +626,12 @@ var _ = Describe("NetworkPolicy controller tests", func() {
 							Pods:     "10.1.0.0/16",
 							Services: "10.2.0.0/16",
 						},
+						Ingress: &operatorv1alpha1.Ingress{
+							Domain: "ingress.dev.seed.example.com",
+							Controller: operatorv1alpha1.IngressController{
+								Kind: "nginx",
+							},
+						},
 					},
 					VirtualCluster: operatorv1alpha1.VirtualCluster{
 						DNS: operatorv1alpha1.DNS{

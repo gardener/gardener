@@ -16,6 +16,7 @@ package shared
 
 import (
 	"github.com/Masterminds/semver"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/component"
@@ -27,13 +28,19 @@ import (
 // NewNginxIngress returns a deployer for nginx-ingress-controller.
 func NewNginxIngress(
 	c client.Client,
+	namespaceName string,
+	targetNamespace string,
 	imageVector imagevector.ImageVector,
 	kubernetesVersion *semver.Version,
-	ingressClass string,
 	config map[string]string,
 	loadBalancerAnnotations map[string]string,
-	gardenNamespaceName string,
+	loadBalancerSourceRanges []string,
 	priorityClassName string,
+	pspDisabled bool,
+	vpaEnabled bool,
+	clusterType component.ClusterType,
+	externalTrafficPolicy corev1.ServiceExternalTrafficPolicyType,
+	ingressClass string,
 ) (
 	component.DeployWaiter,
 	error,
@@ -54,7 +61,11 @@ func NewNginxIngress(
 		ConfigData:              config,
 		LoadBalancerAnnotations: loadBalancerAnnotations,
 		PriorityClassName:       priorityClassName,
+		PSPDisabled:             pspDisabled,
+		VPAEnabled:              vpaEnabled,
+		TargetNamespace:         targetNamespace,
+		ClusterType:             clusterType,
 	}
 
-	return nginxingress.New(c, gardenNamespaceName, values), nil
+	return nginxingress.New(c, namespaceName, values), nil
 }

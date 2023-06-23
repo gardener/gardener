@@ -702,9 +702,10 @@ func getAPIServerDomains(domains []string) []string {
 func (r *Reconciler) newNginxIngressController() (component.DeployWaiter, error) {
 	return sharedcomponent.NewNginxIngress(
 		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		r.GardenNamespace,
 		r.ImageVector,
 		r.RuntimeVersion,
-		v1beta1constants.SeedNginxIngressClass,
 		map[string]string{
 			"enable-vts-status":            "false",
 			"server-name-hash-bucket-size": "256",
@@ -713,6 +714,12 @@ func (r *Reconciler) newNginxIngressController() (component.DeployWaiter, error)
 			"allow-snippet-annotations":    "false",
 		},
 		nil,
-		r.GardenNamespace,
-		v1beta1constants.PriorityClassNameGardenSystem300)
+		nil,
+		v1beta1constants.PriorityClassNameGardenSystem300,
+		true,
+		true,
+		component.ClusterTypeSeed,
+		"",
+		v1beta1constants.SeedNginxIngressClass,
+	)
 }

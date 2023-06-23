@@ -1270,7 +1270,6 @@ Ingress
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>Ingress configures Ingress specific settings for the Garden cluster. This field is immutable.</p>
 </td>
 </tr>

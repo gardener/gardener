@@ -1197,24 +1197,36 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 	}
 
 	var ingressLoadBalancerAddress string
-	// If the seed is a Garden cluster then the gardener-operator is responsible for nginx-ingress reconciliation and we only need the LoadBalancer address
-	// If the seed isn't a Garden cluster and nginx-ingress controller configuration is set then the ingress must be reconciled
-	if seedIsGarden || v1beta1helper.SeedUsesNginxIngressController(seed.GetInfo()) {
-		if !seedIsGarden {
-			providerConfig, err := getConfig(seed.GetInfo())
-			if err != nil {
-				return nil, err
-			}
-
-			nginxIngress, err := sharedcomponent.NewNginxIngress(seedClient, imageVector, kubernetesVersion, v1beta1constants.SeedNginxIngressClass, providerConfig, seed.GetLoadBalancerServiceAnnotations(), gardenNamespaceName, v1beta1constants.PriorityClassNameSeedSystem600)
-			if err != nil {
-				return nil, err
-			}
-
-			if err = component.OpWait(nginxIngress).Deploy(ctx); err != nil {
-				return nil, err
-			}
+	if !seedIsGarden {
+		providerConfig, err := getConfig(seed.GetInfo())
+		if err != nil {
+			return nil, err
 		}
+
+		nginxIngress, err := sharedcomponent.NewNginxIngress(
+			seedClient,
+			gardenNamespaceName,
+			gardenNamespaceName,
+			imageVector,
+			kubernetesVersion,
+			providerConfig,
+			seed.GetLoadBalancerServiceAnnotations(),
+			nil,
+			v1beta1constants.PriorityClassNameSeedSystem600,
+			true,
+			true,
+			component.ClusterTypeSeed,
+			"",
+			v1beta1constants.SeedNginxIngressClass,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if err = component.OpWait(nginxIngress).Deploy(ctx); err != nil {
+			return nil, err
+		}
+	}
 
 	ingressLoadBalancerAddress, err = WaitUntilLoadBalancerIsReady(
 		ctx,
@@ -1227,7 +1239,6 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 	if err != nil {
 		return nil, err
 	}
-
 	return getManagedIngressDNSRecord(log, seedClient, gardenNamespaceName, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), ingressLoadBalancerAddress), nil
 }
 
