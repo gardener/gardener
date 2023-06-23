@@ -511,6 +511,8 @@ const (
 	LabelRole = "role"
 	// LabelKubernetes is a constant for a label for Kubernetes workload.
 	LabelKubernetes = "kubernetes"
+	// LabelGardener is a constant for a label for Gardener workload.
+	LabelGardener = "gardener"
 	// LabelAPIServer is a constant for a label for the kube-apiserver.
 	LabelAPIServer = "apiserver"
 	// LabelControllerManager is a constant for a label for the kube-controller-manager.
