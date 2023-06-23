@@ -19,6 +19,9 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,6 +34,14 @@ import (
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
+
+var tokenRequestorRequirement *labels.Requirement
+
+func init() {
+	var err error
+	tokenRequestorRequirement, err = labels.NewRequirement(resourcesv1alpha1.ResourceManagerPurpose, selection.Equals, []string{resourcesv1alpha1.LabelPurposeTokenRequest})
+	utilruntime.Must(err)
+}
 
 // GenerateGenericTokenKubeconfig generates a generic token kubeconfig in the given namespace for the given kube-apiserver address
 func GenerateGenericTokenKubeconfig(ctx context.Context, secretsManager secretsmanager.Interface, namespace, kubeAPIServerAddress string) (*corev1.Secret, error) {
@@ -55,13 +66,21 @@ func GenerateGenericTokenKubeconfig(ctx context.Context, secretsManager secretsm
 }
 
 // RenewAccessSecrets drops the serviceaccount.resources.gardener.cloud/token-renew-timestamp annotation from all
-// access secrets. This will make the TokenRequestor controller part of gardener-resource-manager issuing new
-// tokens immediately.
-func RenewAccessSecrets(ctx context.Context, c client.Client, namespace string) error {
+// access secrets selected by the given list options.
+// This will make the token-requestor controller in gardener-resource-manager/gardenlet issue new tokens immediately.
+func RenewAccessSecrets(ctx context.Context, c client.Client, opts ...client.ListOption) error {
+	listOptions := &client.ListOptions{}
+	listOptions.ApplyOptions(opts)
+
+	// Add resources.gardener.cloud/purpose=token-requestor selector requirement.
+	// We cannot use MatchingLabels directly, as it would overwrite other label selectors given in opts.
+	if listOptions.LabelSelector == nil {
+		listOptions.LabelSelector = labels.NewSelector()
+	}
+	listOptions.LabelSelector = listOptions.LabelSelector.Add(*tokenRequestorRequirement)
+
 	secretList := &corev1.SecretList{}
-	if err := c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
-		resourcesv1alpha1.ResourceManagerPurpose: resourcesv1alpha1.LabelPurposeTokenRequest,
-	}); err != nil {
+	if err := c.List(ctx, secretList, listOptions); err != nil {
 		return err
 	}
 

@@ -61,46 +61,90 @@ var _ = Describe("Secrets", func() {
 	})
 
 	Describe("#RenewAccessSecrets", func() {
-		It("should remove the renew-timestamp annotation from all access secrets", func() {
+		It("should remove the renew-timestamp annotation from all relevant access secrets", func() {
 			var (
-				secret1 = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        "secret1",
-						Namespace:   namespace,
-						Annotations: map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": "foo"},
+				relevantSecrets = []*corev1.Secret{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "secret1",
+							Namespace:   namespace,
+							Annotations: map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": "foo"},
+							Labels: map[string]string{
+								"resources.gardener.cloud/purpose": "token-requestor",
+								"resources.gardener.cloud/class":   "shoot",
+							},
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "secret2",
+							Namespace:   namespace,
+							Annotations: map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": "foo"},
+							Labels: map[string]string{
+								"resources.gardener.cloud/purpose": "token-requestor",
+								"resources.gardener.cloud/class":   "shoot",
+							},
+						},
 					},
 				}
-				secret2 = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        "secret2",
-						Namespace:   namespace,
-						Annotations: map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": "foo"},
-						Labels:      map[string]string{"resources.gardener.cloud/purpose": "token-requestor"},
+				irrelevantSecrets = []*corev1.Secret{
+					{
+						// doesn't have the token-requestor label
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "secret3",
+							Namespace:   namespace,
+							Annotations: map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": "foo"},
+							Labels:      map[string]string{"resources.gardener.cloud/class": "shoot"},
+						},
 					},
-				}
-				secret3 = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        "secret3",
-						Namespace:   namespace,
-						Annotations: map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": "foo"},
-						Labels:      map[string]string{"resources.gardener.cloud/purpose": "token-requestor"},
+					{
+						// in another namespace
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "secret4",
+							Namespace:   namespace + "-other",
+							Annotations: map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": "foo"},
+							Labels: map[string]string{
+								"resources.gardener.cloud/purpose": "token-requestor",
+								"resources.gardener.cloud/class":   "shoot",
+							},
+						},
+					},
+					{
+						// different class
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "secret5",
+							Namespace:   namespace,
+							Annotations: map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": "foo"},
+							Labels: map[string]string{
+								"resources.gardener.cloud/purpose": "token-requestor",
+								"resources.gardener.cloud/class":   "garden",
+							},
+						},
 					},
 				}
 			)
 
-			Expect(c.Create(ctx, secret1)).To(Succeed())
-			Expect(c.Create(ctx, secret2)).To(Succeed())
-			Expect(c.Create(ctx, secret3)).To(Succeed())
+			for _, secret := range append(relevantSecrets, irrelevantSecrets...) {
+				Expect(c.Create(ctx, secret)).To(Succeed(), "should be able to create secret %s", client.ObjectKeyFromObject(secret))
+			}
 
-			Expect(RenewAccessSecrets(ctx, c, namespace)).To(Succeed())
+			Expect(RenewAccessSecrets(ctx, c, client.InNamespace(namespace), client.MatchingLabels{"resources.gardener.cloud/class": "shoot"})).To(Succeed())
 
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
+			for _, secret := range relevantSecrets {
+				key := client.ObjectKeyFromObject(secret)
+				Expect(c.Get(ctx, key, secret)).To(Succeed(), "should be able to get secret %s", key)
+				Expect(secret.Annotations).NotTo(HaveKey("serviceaccount.resources.gardener.cloud/token-renew-timestamp"),
+					"should have removed renew timestamp from relevant secret %s", key,
+				)
+			}
 
-			Expect(secret1.Annotations).To(HaveKey("serviceaccount.resources.gardener.cloud/token-renew-timestamp"))
-			Expect(secret2.Annotations).NotTo(HaveKey("serviceaccount.resources.gardener.cloud/token-renew-timestamp"))
-			Expect(secret3.Annotations).NotTo(HaveKey("serviceaccount.resources.gardener.cloud/token-renew-timestamp"))
+			for _, secret := range irrelevantSecrets {
+				key := client.ObjectKeyFromObject(secret)
+				Expect(c.Get(ctx, key, secret)).To(Succeed(), "should be able to get secret %s", key)
+				Expect(secret.Annotations).To(HaveKey("serviceaccount.resources.gardener.cloud/token-renew-timestamp"),
+					"should not have removed renew timestamp from irrelevant secret %s", key,
+				)
+			}
 		})
 	})
 
