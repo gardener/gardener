@@ -1,4 +1,3 @@
-environment: skaffold # skaffold|local
 image: kindest/node:v1.27.1
 
 gardener:

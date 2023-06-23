@@ -9,7 +9,7 @@
 {{- if .Values.gardener.seed.deployed -}}
 {{- range $i, $listenAddress := (required ".Values.gardener.seed.istio.listenAddresses is required" .Values.gardener.seed.istio.listenAddresses) }}
 - containerPort: {{ add 30443 $i }}
-{{- if or (eq $.Values.environment "local") $.Values.gardener.controlPlane.deployed }}
+{{- if $.Values.gardener.controlPlane.deployed }}
   hostPort: 443
 {{- else }}
   # TODO (plkokanov): when using skaffold to deploy, 127.0.0.2 is not used as listenAddress (unlike the local
