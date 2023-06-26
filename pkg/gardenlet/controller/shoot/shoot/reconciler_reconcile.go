@@ -21,6 +21,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -314,7 +315,12 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		_ = g.Add(flow.Task{
 			Name: "Renewing shoot access secrets after creation of new ServiceAccount signing key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return tokenrequest.RenewAccessSecrets(ctx, o.SeedClientSet.Client(), o.Shoot.SeedNamespace)
+				return tokenrequest.RenewAccessSecrets(ctx, o.SeedClientSet.Client(),
+					client.InNamespace(o.Shoot.SeedNamespace),
+					// TODO(rfranzke): Uncomment the next line after v1.85 has been released
+					//  (together with restricting the garden's/shoot's tokenrequestor to the shoot class).
+					// client.MatchingLabels{resourcesv1alpha1.ResourceManagerClass: resourcesv1alpha1.ResourceManagerClassShoot},
+				)
 			}).
 				RetryUntilTimeout(defaultInterval, defaultTimeout).
 				DoIf(v1beta1helper.GetShootServiceAccountKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing),

@@ -37,6 +37,9 @@ var (
 		string(corev1.ServiceExternalTrafficPolicyTypeCluster),
 		string(corev1.ServiceExternalTrafficPolicyTypeLocal),
 	)
+	availableSeedOperations = sets.New(
+		v1beta1constants.SeedOperationRenewGardenAccessSecrets,
+	)
 )
 
 // ValidateSeed validates a Seed object.
@@ -44,6 +47,7 @@ func ValidateSeed(seed *core.Seed) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&seed.ObjectMeta, false, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, validateSeedOperation(seed.Annotations[v1beta1constants.GardenerOperation], field.NewPath("metadata", "annotations").Key(v1beta1constants.GardenerOperation))...)
 	allErrs = append(allErrs, ValidateSeedSpec(&seed.Spec, field.NewPath("spec"), false)...)
 
 	return allErrs
@@ -320,6 +324,20 @@ func ValidateSeedStatusUpdate(newSeed, oldSeed *core.Seed) field.ErrorList {
 
 	if oldStatus.ClusterIdentity != nil && !apiequality.Semantic.DeepEqual(oldStatus.ClusterIdentity, newStatus.ClusterIdentity) {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newStatus.ClusterIdentity, oldStatus.ClusterIdentity, fldPath.Child("clusterIdentity"))...)
+	}
+
+	return allErrs
+}
+
+func validateSeedOperation(operation string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if operation == "" {
+		return allErrs
+	}
+
+	if operation != "" && !availableSeedOperations.Has(operation) {
+		allErrs = append(allErrs, field.NotSupported(fldPath, operation, sets.List(availableSeedOperations)))
 	}
 
 	return allErrs
