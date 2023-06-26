@@ -26,7 +26,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
@@ -39,13 +38,11 @@ import (
 
 func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Operation) *v1beta1helper.WrappedLastErrors {
 	var (
-		botanist                      *botanistpkg.Botanist
-		err                           error
-		tasksWithErrors               []string
-		controlPlaneRestorationNeeded bool
-		infrastructure                *extensionsv1alpha1.Infrastructure
-		kubeAPIServerDeploymentFound  = true
-		etcdSnapshotRequired          bool
+		botanist                     *botanistpkg.Botanist
+		err                          error
+		tasksWithErrors              []string
+		kubeAPIServerDeploymentFound = true
+		etcdSnapshotRequired         bool
 	)
 
 	for _, lastError := range o.Shoot.GetInfo().Status.LastErrors {
@@ -99,24 +96,6 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			etcdSnapshotRequired = backupEntry.Spec.SeedName != nil && *backupEntry.Spec.SeedName == *botanist.Shoot.GetInfo().Status.SeedName && botanist.SeedNamespaceObject.UID != ""
 			return nil
 		}),
-		errorsutils.ToExecute("Retrieve the infrastructure resource", func() error {
-			if o.Shoot.IsWorkerless {
-				return nil
-			}
-			obj, err := botanist.Shoot.Components.Extensions.Infrastructure.Get(ctx)
-			if err != nil {
-				if apierrors.IsNotFound(err) {
-					return nil
-				}
-				return err
-			}
-			infrastructure = obj
-			return nil
-		}),
-		errorsutils.ToExecute("Check whether control plane restoration is needed", func() error {
-			controlPlaneRestorationNeeded, err = needsControlPlaneDeployment(ctx, o, kubeAPIServerDeploymentFound, infrastructure)
-			return err
-		}),
 	)
 
 	if err != nil {
@@ -151,25 +130,10 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			Fn:           flow.TaskFn(botanist.WaitUntilEtcdsReady).DoIf(cleanupShootResources || etcdSnapshotRequired),
 			Dependencies: flow.NewTaskIDs(deployETCD, scaleUpETCD),
 		})
-		// Restore the control plane in case it was already migrated to make sure all components that depend on the cloud provider secret are restarted
-		// in case it has changed. Also, it's needed for other control plane components like the kube-apiserver or kube-
-		// controller-manager to be updateable due to provider config injection.
-		restoreControlPlane = g.Add(flow.Task{
-			Name:         "Restoring Shoot control plane",
-			Fn:           flow.TaskFn(botanist.RestoreControlPlane).DoIf(cleanupShootResources && controlPlaneRestorationNeeded).SkipIf(o.Shoot.IsWorkerless),
-			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
-		})
-		waitUntilControlPlaneReady = g.Add(flow.Task{
-			Name: "Waiting until Shoot control plane has been restored",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.Shoot.Components.Extensions.ControlPlane.Wait(ctx)
-			}).DoIf(cleanupShootResources && controlPlaneRestorationNeeded).SkipIf(o.Shoot.IsWorkerless),
-			Dependencies: flow.NewTaskIDs(restoreControlPlane),
-		})
 		wakeUpKubeAPIServer = g.Add(flow.Task{
 			Name:         "Scaling Kubernetes API Server up and waiting until ready",
 			Fn:           flow.TaskFn(botanist.WakeUpKubeAPIServer).DoIf(wakeupRequired),
-			Dependencies: flow.NewTaskIDs(deployETCD, scaleUpETCD, waitUntilControlPlaneReady),
+			Dependencies: flow.NewTaskIDs(deployETCD, scaleUpETCD, initializeSecretsManagement),
 		})
 		// Deploy gardener-resource-manager to re-run the bootstrap logic if needed (e.g. when the token is expired because of hibernation).
 		// This fixes https://github.com/gardener/gardener/issues/7606

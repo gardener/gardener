@@ -845,47 +845,6 @@ func lastErrorsOperationInitializationFailure(lastErrors []gardencorev1beta1.Las
 	return lastErrors
 }
 
-func needsControlPlaneDeployment(ctx context.Context, o *operation.Operation, kubeAPIServerDeploymentFound bool, infrastructure *extensionsv1alpha1.Infrastructure) (bool, error) {
-	var (
-		namespace = o.Shoot.SeedNamespace
-		name      = o.Shoot.GetInfo().Name
-	)
-
-	// If the `ControlPlane` resource and the kube-apiserver deployment do no longer exist then we don't want to re-deploy it.
-	// The reason for the second condition is that some providers inject a cloud-provider-config into the kube-apiserver deployment
-	// which is needed for it to run.
-	exists, markedForDeletion, err := extensionResourceStillExists(ctx, o.SeedClientSet.APIReader(), &extensionsv1alpha1.ControlPlane{}, namespace, name)
-	if err != nil {
-		return false, err
-	}
-
-	switch {
-	// treat `ControlPlane` in deletion as if it is already gone. If it is marked for deletion, we also shouldn't wait
-	// for it to be reconciled, as it can potentially block the whole deletion flow (deletion depends on other control
-	// plane components like kcm and grm) which are scaled up later in the flow
-	case !exists && !kubeAPIServerDeploymentFound || markedForDeletion:
-		return false, nil
-	// The infrastructure resource has not been found, no need to redeploy the control plane
-	case infrastructure == nil:
-		return false, nil
-	// The infrastructure resource has been found with a non-nil provider status, so redeploy the control plane
-	case infrastructure.Status.ProviderStatus != nil:
-		return true, nil
-	default:
-		return false, nil
-	}
-}
-
-func extensionResourceStillExists(ctx context.Context, reader client.Reader, obj client.Object, namespace, name string) (bool, bool, error) {
-	if err := reader.Get(ctx, kubernetesutils.Key(namespace, name), obj); err != nil {
-		if apierrors.IsNotFound(err) {
-			return false, false, nil
-		}
-		return false, false, err
-	}
-	return true, obj.GetDeletionTimestamp() != nil, nil
-}
-
 func checkIfSeedNamespaceExists(ctx context.Context, o *operation.Operation, botanist *botanistpkg.Botanist) error {
 	botanist.SeedNamespaceObject = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}
 	if err := botanist.SeedClientSet.APIReader().Get(ctx, client.ObjectKeyFromObject(botanist.SeedNamespaceObject), botanist.SeedNamespaceObject); err != nil {
