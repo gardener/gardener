@@ -1637,9 +1637,9 @@ const (
 	// ShootCACertificateValiditiesAcceptable is a constant for a condition type indicating that the validities of all
 	// CA certificates is long enough.
 	ShootCACertificateValiditiesAcceptable ConditionType = "CACertificateValiditiesAcceptable"
-	// ShootCRDsWithConversionWebhooksPresent is a constant for a condition type indicating that the Shoot cluster has
+	// ShootCRDsWithProblematicConversionWebhooks is a constant for a condition type indicating that the Shoot cluster has
 	// CRDs with conversion webhooks and multiple stored versions which can break the reconciliation flow of the cluster.
-	ShootCRDsWithConversionWebhooksPresent ConditionType = "CRDsWithConversionWebhooksPresent"
+	ShootCRDsWithProblematicConversionWebhooks ConditionType = "CRDsWithProblematicConversionWebhooks"
 )
 
 // ShootPurpose is a type alias for string.

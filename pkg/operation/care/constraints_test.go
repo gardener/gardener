@@ -497,7 +497,7 @@ var _ = Describe("Constraints", func() {
 				constraints = []gardencorev1beta1.Condition{
 					{Type: gardencorev1beta1.ShootHibernationPossible},
 					{Type: gardencorev1beta1.ShootMaintenancePreconditionsSatisfied},
-					{Type: gardencorev1beta1.ShootCRDsWithConversionWebhooksPresent},
+					{Type: gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks},
 				}
 			)
 
@@ -517,13 +517,13 @@ var _ = Describe("Constraints", func() {
 				))
 			})
 
-			It("should not keep the `CRDsWithConversionWebhooksPresent` condition when it's true", func() {
+			It("should not keep the `CRDsWithProblematicConversionWebhooks` condition when it's true", func() {
 				Expect(constraint.Check(ctx, constraints)).NotTo(ContainCondition(
-					OfType(gardencorev1beta1.ShootCRDsWithConversionWebhooksPresent),
+					OfType(gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks),
 				))
 			})
 
-			It("should keep the `CRDsWithConversionWebhooksPresent` condition when it's false", func() {
+			It("should keep the `CRDsWithProblematicConversionWebhooks` condition when it's false", func() {
 				crd1 := &apiextensionsv1.CustomResourceDefinition{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "sample1.example.com",
@@ -554,9 +554,9 @@ var _ = Describe("Constraints", func() {
 				Expect(shootClient.Create(ctx, crd2)).To(Succeed())
 
 				Expect(constraint.Check(ctx, constraints)).To(ContainCondition(
-					OfType(gardencorev1beta1.ShootCRDsWithConversionWebhooksPresent),
+					OfType(gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks),
 					WithStatus(gardencorev1beta1.ConditionProgressing),
-					WithReason("CRDsWithConversionWebhooksPresent"),
+					WithReason("CRDsWithProblematicConversionWebhooks"),
 					WithMessage(fmt.Sprintf("Some CRDs in your cluster have multiple stored versions present and have a conversion webhook configured: %s.", crd1.Name)),
 				))
 			})

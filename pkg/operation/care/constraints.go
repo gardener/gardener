@@ -120,7 +120,7 @@ func (c *Constraint) constraintsChecks(
 		hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint gardencorev1beta1.Condition
 		// optional constraints (not always present in .status.constraints)
 		caCertificateValiditiesAcceptableConstraint = gardencorev1beta1.Condition{Type: gardencorev1beta1.ShootCACertificateValiditiesAcceptable}
-		crdsWithConversionWebhooksPresent           = gardencorev1beta1.Condition{Type: gardencorev1beta1.ShootCRDsWithConversionWebhooksPresent}
+		crdsWithProblematicConversionWebhooks       = gardencorev1beta1.Condition{Type: gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks}
 	)
 
 	for _, cons := range constraints {
@@ -131,8 +131,8 @@ func (c *Constraint) constraintsChecks(
 			maintenancePreconditionsSatisfiedConstraint = cons
 		case gardencorev1beta1.ShootCACertificateValiditiesAcceptable:
 			caCertificateValiditiesAcceptableConstraint = cons
-		case gardencorev1beta1.ShootCRDsWithConversionWebhooksPresent:
-			crdsWithConversionWebhooksPresent = cons
+		case gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks:
+			crdsWithProblematicConversionWebhooks = cons
 		}
 	}
 
@@ -176,16 +176,16 @@ func (c *Constraint) constraintsChecks(
 		maintenancePreconditionsSatisfiedConstraint = v1beta1helper.UpdatedConditionWithClock(c.clock, maintenancePreconditionsSatisfiedConstraint, status, reason, message, errorCodes...)
 	}
 
-	status, reason, message, err = c.checkIfCRDsWithConversionWebhooksPresent(ctx)
+	status, reason, message, err = c.checkIfCRDsWithProblematicConversionWebhooksPresent(ctx)
 	if err != nil {
-		crdsWithConversionWebhooksPresent = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, crdsWithConversionWebhooksPresent, err)
+		crdsWithProblematicConversionWebhooks = v1beta1helper.UpdatedConditionUnknownErrorWithClock(c.clock, crdsWithProblematicConversionWebhooks, err)
 	} else {
-		crdsWithConversionWebhooksPresent = v1beta1helper.UpdatedConditionWithClock(c.clock, crdsWithConversionWebhooksPresent, status, reason, message)
+		crdsWithProblematicConversionWebhooks = v1beta1helper.UpdatedConditionWithClock(c.clock, crdsWithProblematicConversionWebhooks, status, reason, message)
 	}
 
 	return filterOptionalConstraints(
 		[]gardencorev1beta1.Condition{hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint},
-		[]gardencorev1beta1.Condition{caCertificateValiditiesAcceptableConstraint, crdsWithConversionWebhooksPresent},
+		[]gardencorev1beta1.Condition{caCertificateValiditiesAcceptableConstraint, crdsWithProblematicConversionWebhooks},
 	)
 }
 
@@ -264,12 +264,12 @@ func (c *Constraint) CheckIfCACertificateValiditiesAcceptable(ctx context.Contex
 		nil
 }
 
-// checkIfCRDsWithConversionWebhooksPresent checks whether there are CRDs with multiple stored versions and
+// checkIfCRDsWithProblematicConversionWebhooksPresent checks whether there are CRDs with multiple stored versions and
 // conversion webhooks are present in the cluster.
-func (c *Constraint) checkIfCRDsWithConversionWebhooksPresent(ctx context.Context) (gardencorev1beta1.ConditionStatus, string, string, error) {
+func (c *Constraint) checkIfCRDsWithProblematicConversionWebhooksPresent(ctx context.Context) (gardencorev1beta1.ConditionStatus, string, string, error) {
 	var (
-		crdList                   = &apiextensionsv1.CustomResourceDefinitionList{}
-		crdsWithConversionWebhook = sets.New[string]()
+		crdList                               = &apiextensionsv1.CustomResourceDefinitionList{}
+		crdsWithProblematicConversionWebhooks = sets.New[string]()
 	)
 
 	if err := c.shootClient.List(ctx, crdList); err != nil {
@@ -278,20 +278,20 @@ func (c *Constraint) checkIfCRDsWithConversionWebhooksPresent(ctx context.Contex
 
 	for _, crd := range crdList.Items {
 		if len(crd.Status.StoredVersions) > 1 && crd.Spec.Conversion != nil && crd.Spec.Conversion.Strategy == apiextensionsv1.WebhookConverter {
-			crdsWithConversionWebhook.Insert(crd.Name)
+			crdsWithProblematicConversionWebhooks.Insert(crd.Name)
 		}
 	}
 
-	if crdsWithConversionWebhook.Len() > 0 {
+	if crdsWithProblematicConversionWebhooks.Len() > 0 {
 		return gardencorev1beta1.ConditionFalse,
-			"CRDsWithConversionWebhooksPresent",
+			"CRDsWithProblematicConversionWebhooks",
 			fmt.Sprintf("Some CRDs in your cluster have multiple stored versions present and have a conversion webhook configured: %s. Please see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_status.md#constraints for more details.",
-				strings.Join(sets.List(crdsWithConversionWebhook), ", ")),
+				strings.Join(sets.List(crdsWithProblematicConversionWebhooks), ", ")),
 			nil
 	}
 
 	return gardencorev1beta1.ConditionTrue,
-		"NoCRDsWithConversionWebhooksPresent",
+		"NoCRDsWithProblematicConversionWebhooks",
 		"No CRDs have multiple stored versions present and a conversion webhook configured",
 		nil
 }
