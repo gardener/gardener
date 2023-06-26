@@ -374,7 +374,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	if err := k.reconcileConfigMapAdmission(ctx, configMapAdmissionConfigs); err != nil {
 		return err
 	}
-	if err := k.reconcileSecretAdmissionKubeconfigs(ctx, secretAdmissionKubeconfigs); err != nil {
+	if err := apiserver.ReconcileSecretAdmissionKubeconfigs(ctx, k.client.Client(), secretAdmissionKubeconfigs, k.values.Values); err != nil {
 		return err
 	}
 

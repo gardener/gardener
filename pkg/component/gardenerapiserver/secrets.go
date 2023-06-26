@@ -30,6 +30,7 @@ import (
 
 const (
 	secretAuditWebhookKubeconfigNamePrefix = "gardener-apiserver-audit-webhook-kubeconfig"
+	secretAdmissionKubeconfigsNamePrefix   = "gardener-apiserver-admission-kubeconfigs"
 )
 
 func (g *gardenerAPIServer) newVirtualGardenAccessSecret() *gardenerutils.AccessSecret {

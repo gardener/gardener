@@ -130,8 +130,9 @@ var _ = Describe("GardenerAPIServer", func() {
 			})
 
 			Context("secrets", func() {
-				It("should successfully deploy the ETCD encryption configuration secret resource", func() {
-					etcdEncryptionConfiguration := `apiVersion: apiserver.config.k8s.io/v1
+				Context("etcd encryption config secrets", func() {
+					It("should successfully deploy the ETCD encryption configuration secret resource", func() {
+						etcdEncryptionConfiguration := `apiVersion: apiserver.config.k8s.io/v1
 kind: EncryptionConfiguration
 resources:
 - providers:
@@ -144,102 +145,7 @@ resources:
   - shootstates.core.gardener.cloud
 `
 
-					By("Verify encryption config secret")
-					expectedSecretETCDEncryptionConfiguration := &corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver-etcd-encryption-configuration", Namespace: namespace},
-						Data:       map[string][]byte{"encryption-configuration.yaml": []byte(etcdEncryptionConfiguration)},
-					}
-					Expect(kubernetesutils.MakeUnique(expectedSecretETCDEncryptionConfiguration)).To(Succeed())
-
-					actualSecretETCDEncryptionConfiguration := &corev1.Secret{}
-					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(BeNotFoundError())
-
-					Expect(deployer.Deploy(ctx)).To(Succeed())
-
-					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(Succeed())
-					Expect(actualSecretETCDEncryptionConfiguration).To(Equal(&corev1.Secret{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "Secret",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      expectedSecretETCDEncryptionConfiguration.Name,
-							Namespace: expectedSecretETCDEncryptionConfiguration.Namespace,
-							Labels: map[string]string{
-								"resources.gardener.cloud/garbage-collectable-reference": "true",
-								"role": "gardener-apiserver-etcd-encryption-configuration",
-							},
-							ResourceVersion: "1",
-						},
-						Immutable: pointer.Bool(true),
-						Data:      expectedSecretETCDEncryptionConfiguration.Data,
-					}))
-
-					By("Deploy again and ensure that labels are still present")
-					Expect(deployer.Deploy(ctx)).To(Succeed())
-					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(Succeed())
-					Expect(actualSecretETCDEncryptionConfiguration.Labels).To(Equal(map[string]string{
-						"resources.gardener.cloud/garbage-collectable-reference": "true",
-						"role": "gardener-apiserver-etcd-encryption-configuration",
-					}))
-
-					By("Verify encryption key secret")
-					secretList := &corev1.SecretList{}
-					Expect(fakeClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
-						"name":       "gardener-apiserver-etcd-encryption-key",
-						"managed-by": "secrets-manager",
-					})).To(Succeed())
-					Expect(secretList.Items).To(HaveLen(1))
-					Expect(secretList.Items[0].Labels).To(HaveKeyWithValue("persist", "true"))
-				})
-
-				DescribeTable("successfully deploy the ETCD encryption configuration secret resource w/ old key",
-					func(encryptWithCurrentKey bool) {
-						deployer = New(fakeClient, namespace, fakeSecretManager, Values{
-							Values: apiserver.Values{
-								ETCDEncryption: apiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: encryptWithCurrentKey, Resources: []string{"shootstates.core.gardener.cloud"}},
-							},
-						})
-
-						oldKeyName, oldKeySecret := "key-old", "old-secret"
-						Expect(fakeClient.Create(ctx, &corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "gardener-apiserver-etcd-encryption-key-old",
-								Namespace: namespace,
-							},
-							Data: map[string][]byte{
-								"key":    []byte(oldKeyName),
-								"secret": []byte(oldKeySecret),
-							},
-						})).To(Succeed())
-
-						etcdEncryptionConfiguration := `apiVersion: apiserver.config.k8s.io/v1
-kind: EncryptionConfiguration
-resources:
-- providers:
-  - aescbc:
-      keys:`
-
-						if encryptWithCurrentKey {
-							etcdEncryptionConfiguration += `
-      - name: key-62135596800
-        secret: ________________________________
-      - name: ` + oldKeyName + `
-        secret: ` + oldKeySecret
-						} else {
-							etcdEncryptionConfiguration += `
-      - name: ` + oldKeyName + `
-        secret: ` + oldKeySecret + `
-      - name: key-62135596800
-        secret: ________________________________`
-						}
-
-						etcdEncryptionConfiguration += `
-  - identity: {}
-  resources:
-  - shootstates.core.gardener.cloud
-`
-
+						By("Verify encryption config secret")
 						expectedSecretETCDEncryptionConfiguration := &corev1.Secret{
 							ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver-etcd-encryption-configuration", Namespace: namespace},
 							Data:       map[string][]byte{"encryption-configuration.yaml": []byte(etcdEncryptionConfiguration)},
@@ -252,7 +158,7 @@ resources:
 						Expect(deployer.Deploy(ctx)).To(Succeed())
 
 						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(Succeed())
-						Expect(actualSecretETCDEncryptionConfiguration).To(DeepEqual(&corev1.Secret{
+						Expect(actualSecretETCDEncryptionConfiguration).To(Equal(&corev1.Secret{
 							TypeMeta: metav1.TypeMeta{
 								APIVersion: corev1.SchemeGroupVersion.String(),
 								Kind:       "Secret",
@@ -270,6 +176,15 @@ resources:
 							Data:      expectedSecretETCDEncryptionConfiguration.Data,
 						}))
 
+						By("Deploy again and ensure that labels are still present")
+						Expect(deployer.Deploy(ctx)).To(Succeed())
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(Succeed())
+						Expect(actualSecretETCDEncryptionConfiguration.Labels).To(Equal(map[string]string{
+							"resources.gardener.cloud/garbage-collectable-reference": "true",
+							"role": "gardener-apiserver-etcd-encryption-configuration",
+						}))
+
+						By("Verify encryption key secret")
 						secretList := &corev1.SecretList{}
 						Expect(fakeClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
 							"name":       "gardener-apiserver-etcd-encryption-key",
@@ -277,11 +192,98 @@ resources:
 						})).To(Succeed())
 						Expect(secretList.Items).To(HaveLen(1))
 						Expect(secretList.Items[0].Labels).To(HaveKeyWithValue("persist", "true"))
-					},
+					})
 
-					Entry("encrypting with current", true),
-					Entry("encrypting with old", false),
-				)
+					DescribeTable("successfully deploy the ETCD encryption configuration secret resource w/ old key",
+						func(encryptWithCurrentKey bool) {
+							deployer = New(fakeClient, namespace, fakeSecretManager, Values{
+								Values: apiserver.Values{
+									ETCDEncryption: apiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: encryptWithCurrentKey, Resources: []string{"shootstates.core.gardener.cloud"}},
+								},
+							})
+
+							oldKeyName, oldKeySecret := "key-old", "old-secret"
+							Expect(fakeClient.Create(ctx, &corev1.Secret{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "gardener-apiserver-etcd-encryption-key-old",
+									Namespace: namespace,
+								},
+								Data: map[string][]byte{
+									"key":    []byte(oldKeyName),
+									"secret": []byte(oldKeySecret),
+								},
+							})).To(Succeed())
+
+							etcdEncryptionConfiguration := `apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+resources:
+- providers:
+  - aescbc:
+      keys:`
+
+							if encryptWithCurrentKey {
+								etcdEncryptionConfiguration += `
+      - name: key-62135596800
+        secret: ________________________________
+      - name: ` + oldKeyName + `
+        secret: ` + oldKeySecret
+							} else {
+								etcdEncryptionConfiguration += `
+      - name: ` + oldKeyName + `
+        secret: ` + oldKeySecret + `
+      - name: key-62135596800
+        secret: ________________________________`
+							}
+
+							etcdEncryptionConfiguration += `
+  - identity: {}
+  resources:
+  - shootstates.core.gardener.cloud
+`
+
+							expectedSecretETCDEncryptionConfiguration := &corev1.Secret{
+								ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver-etcd-encryption-configuration", Namespace: namespace},
+								Data:       map[string][]byte{"encryption-configuration.yaml": []byte(etcdEncryptionConfiguration)},
+							}
+							Expect(kubernetesutils.MakeUnique(expectedSecretETCDEncryptionConfiguration)).To(Succeed())
+
+							actualSecretETCDEncryptionConfiguration := &corev1.Secret{}
+							Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(BeNotFoundError())
+
+							Expect(deployer.Deploy(ctx)).To(Succeed())
+
+							Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(Succeed())
+							Expect(actualSecretETCDEncryptionConfiguration).To(DeepEqual(&corev1.Secret{
+								TypeMeta: metav1.TypeMeta{
+									APIVersion: corev1.SchemeGroupVersion.String(),
+									Kind:       "Secret",
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      expectedSecretETCDEncryptionConfiguration.Name,
+									Namespace: expectedSecretETCDEncryptionConfiguration.Namespace,
+									Labels: map[string]string{
+										"resources.gardener.cloud/garbage-collectable-reference": "true",
+										"role": "gardener-apiserver-etcd-encryption-configuration",
+									},
+									ResourceVersion: "1",
+								},
+								Immutable: pointer.Bool(true),
+								Data:      expectedSecretETCDEncryptionConfiguration.Data,
+							}))
+
+							secretList := &corev1.SecretList{}
+							Expect(fakeClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+								"name":       "gardener-apiserver-etcd-encryption-key",
+								"managed-by": "secrets-manager",
+							})).To(Succeed())
+							Expect(secretList.Items).To(HaveLen(1))
+							Expect(secretList.Items[0].Labels).To(HaveKeyWithValue("persist", "true"))
+						},
+
+						Entry("encrypting with current", true),
+						Entry("encrypting with old", false),
+					)
+				})
 
 				It("should successfully deploy the access secret for the virtual garden", func() {
 					accessSecret := &corev1.Secret{
@@ -350,6 +352,73 @@ resources:
 						Immutable: pointer.Bool(true),
 						Data:      expectedSecret.Data,
 					}))
+				})
+
+				Context("admission kubeconfigs", func() {
+					It("should successfully deploy the secret resource w/o admission plugin kubeconfigs", func() {
+						secretAdmissionKubeconfigs := &corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver-admission-kubeconfigs", Namespace: namespace},
+							Data:       map[string][]byte{},
+						}
+						Expect(kubernetesutils.MakeUnique(secretAdmissionKubeconfigs)).To(Succeed())
+
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretAdmissionKubeconfigs), secretAdmissionKubeconfigs)).To(BeNotFoundError())
+						Expect(deployer.Deploy(ctx)).To(Succeed())
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretAdmissionKubeconfigs), secretAdmissionKubeconfigs)).To(Succeed())
+						Expect(secretAdmissionKubeconfigs).To(DeepEqual(&corev1.Secret{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: corev1.SchemeGroupVersion.String(),
+								Kind:       "Secret",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:            secretAdmissionKubeconfigs.Name,
+								Namespace:       secretAdmissionKubeconfigs.Namespace,
+								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+								ResourceVersion: "1",
+							},
+							Immutable: pointer.Bool(true),
+							Data:      secretAdmissionKubeconfigs.Data,
+						}))
+					})
+
+					It("should successfully deploy the configmap resource w/ admission plugins", func() {
+						admissionPlugins := []apiserver.AdmissionPluginConfig{
+							{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Foo"}},
+							{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Baz"}, Kubeconfig: []byte("foo")},
+						}
+
+						deployer = New(fakeClient, namespace, fakeSecretManager, Values{
+							Values: apiserver.Values{
+								EnabledAdmissionPlugins: admissionPlugins,
+							},
+						})
+
+						secretAdmissionKubeconfigs := &corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver-admission-kubeconfigs", Namespace: namespace},
+							Data: map[string][]byte{
+								"baz-kubeconfig.yaml": []byte("foo"),
+							},
+						}
+						Expect(kubernetesutils.MakeUnique(secretAdmissionKubeconfigs)).To(Succeed())
+
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretAdmissionKubeconfigs), secretAdmissionKubeconfigs)).To(BeNotFoundError())
+						Expect(deployer.Deploy(ctx)).To(Succeed())
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secretAdmissionKubeconfigs), secretAdmissionKubeconfigs)).To(Succeed())
+						Expect(secretAdmissionKubeconfigs).To(DeepEqual(&corev1.Secret{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: corev1.SchemeGroupVersion.String(),
+								Kind:       "Secret",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:            secretAdmissionKubeconfigs.Name,
+								Namespace:       secretAdmissionKubeconfigs.Namespace,
+								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+								ResourceVersion: "1",
+							},
+							Immutable: pointer.Bool(true),
+							Data:      secretAdmissionKubeconfigs.Data,
+						}))
+					})
 				})
 			})
 

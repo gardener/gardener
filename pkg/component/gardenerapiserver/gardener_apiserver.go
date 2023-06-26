@@ -81,6 +81,7 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 	var (
 		runtimeRegistry = managedresources.NewRegistry(operatorclient.RuntimeScheme, operatorclient.RuntimeCodec, operatorclient.RuntimeSerializer)
 
+		secretAdmissionKubeconfigs        = g.emptySecret(secretAdmissionKubeconfigsNamePrefix)
 		secretETCDEncryptionConfiguration = g.emptySecret(v1beta1constants.SecretNamePrefixGardenerETCDEncryptionConfiguration)
 		secretAuditWebhookKubeconfig      = g.emptySecret(secretAuditWebhookKubeconfigNamePrefix)
 		virtualGardenAccessSecret         = g.newVirtualGardenAccessSecret()
@@ -96,6 +97,10 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	if err := g.reconcileSecretETCDEncryptionConfiguration(ctx, secretETCDEncryptionConfiguration); err != nil {
+		return err
+	}
+
+	if err := apiserver.ReconcileSecretAdmissionKubeconfigs(ctx, g.client, secretAdmissionKubeconfigs, g.values.Values); err != nil {
 		return err
 	}
 
