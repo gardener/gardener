@@ -26,7 +26,6 @@ import (
 	webhookadmissionv1 "k8s.io/apiserver/pkg/admission/plugin/webhook/config/apis/webhookadmission/v1"
 	webhookadmissionv1alpha1 "k8s.io/apiserver/pkg/admission/plugin/webhook/config/apis/webhookadmission/v1alpha1"
 	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
-	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -41,7 +40,6 @@ const (
 	configMapAdmissionDataKey    = "admission-configuration.yaml"
 
 	configMapAuditPolicyNamePrefix = "audit-policy-config"
-	configMapAuditPolicyDataKey    = "audit-policy.yaml"
 
 	configMapEgressSelectorNamePrefix = "kube-apiserver-egress-selector-config"
 	configMapEgressSelectorDataKey    = "egress-selector-configuration.yaml"
@@ -167,28 +165,6 @@ kind: WebhookAdmissionConfiguration`, webhookadmissionv1.SchemeGroupVersion.Stri
 	}
 
 	return nil, nil
-}
-
-func (k *kubeAPIServer) reconcileConfigMapAuditPolicy(ctx context.Context, configMap *corev1.ConfigMap) error {
-	defaultPolicy := &auditv1.Policy{
-		Rules: []auditv1.PolicyRule{
-			{Level: auditv1.LevelNone},
-		},
-	}
-
-	data, err := runtime.Encode(codec, defaultPolicy)
-	if err != nil {
-		return err
-	}
-	policy := string(data)
-
-	if k.values.Audit != nil && k.values.Audit.Policy != nil {
-		policy = *k.values.Audit.Policy
-	}
-
-	configMap.Data = map[string]string{configMapAuditPolicyDataKey: policy}
-	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
-	return client.IgnoreAlreadyExists(k.client.Client().Create(ctx, configMap))
 }
 
 func (k *kubeAPIServer) reconcileConfigMapEgressSelector(ctx context.Context, configMap *corev1.ConfigMap) error {

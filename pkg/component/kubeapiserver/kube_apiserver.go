@@ -329,10 +329,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := apiserver.ReconcileSecretAuditWebhookKubeconfig(ctx, k.client.Client(), secretAuditWebhookKubeconfig, k.values.Audit); err != nil {
-		return err
-	}
-
 	if err := k.reconcileSecretAuthenticationWebhookKubeconfig(ctx, secretAuthenticationWebhookKubeconfig); err != nil {
 		return err
 	}
@@ -378,7 +374,10 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := k.reconcileConfigMapAuditPolicy(ctx, configMapAuditPolicy); err != nil {
+	if err := apiserver.ReconcileConfigMapAuditPolicy(ctx, k.client.Client(), configMapAuditPolicy, k.values.Audit); err != nil {
+		return err
+	}
+	if err := apiserver.ReconcileSecretAuditWebhookKubeconfig(ctx, k.client.Client(), secretAuditWebhookKubeconfig, k.values.Audit); err != nil {
 		return err
 	}
 

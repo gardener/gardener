@@ -81,6 +81,7 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 	var (
 		runtimeRegistry = managedresources.NewRegistry(operatorclient.RuntimeScheme, operatorclient.RuntimeCodec, operatorclient.RuntimeSerializer)
 
+		configMapAuditPolicy              = g.emptyConfigMap(configMapAuditPolicyNamePrefix)
 		secretAdmissionKubeconfigs        = g.emptySecret(secretAdmissionKubeconfigsNamePrefix)
 		secretETCDEncryptionConfiguration = g.emptySecret(v1beta1constants.SecretNamePrefixGardenerETCDEncryptionConfiguration)
 		secretAuditWebhookKubeconfig      = g.emptySecret(secretAuditWebhookKubeconfigNamePrefix)
@@ -104,6 +105,9 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if err := apiserver.ReconcileConfigMapAuditPolicy(ctx, g.client, configMapAuditPolicy, g.values.Audit); err != nil {
+		return err
+	}
 	if err := apiserver.ReconcileSecretAuditWebhookKubeconfig(ctx, g.client, secretAuditWebhookKubeconfig, g.values.Audit); err != nil {
 		return err
 	}
@@ -208,6 +212,10 @@ func (g *gardenerAPIServer) waitUntilRuntimeManagedResourceHealthyAndNotProgress
 
 		return retry.Ok()
 	})
+}
+
+func (g *gardenerAPIServer) emptyConfigMap(name string) *corev1.ConfigMap {
+	return &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: g.namespace}}
 }
 
 func (g *gardenerAPIServer) emptySecret(name string) *corev1.Secret {

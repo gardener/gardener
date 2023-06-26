@@ -18,15 +18,42 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
+var auditCodec runtime.Codec
+
+func init() {
+	auditScheme := runtime.NewScheme()
+	utilruntime.Must(auditv1.AddToScheme(auditScheme))
+
+	var (
+		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, auditScheme, auditScheme, json.SerializerOptions{
+			Yaml:   true,
+			Pretty: false,
+			Strict: false,
+		})
+		versions = schema.GroupVersions([]schema.GroupVersion{
+			auditv1.SchemeGroupVersion,
+		})
+	)
+
+	auditCodec = serializer.NewCodecFactory(auditScheme).CodecForVersions(ser, ser, versions, versions)
+}
+
 const (
 	// SecretWebhookKubeconfigDataKey is a constant for a key in the data of the secret containing a kubeconfig.
 	SecretWebhookKubeconfigDataKey = "kubeconfig.yaml"
+	// ConfigMapAuditPolicyDataKey is a constant for a key in the data of the ConfigMap containing an audit policy.
+	ConfigMapAuditPolicyDataKey = "audit-policy.yaml"
 )
 
 // ReconcileSecretAuditWebhookKubeconfig reconciles the secret containing the kubeconfig for audit webhooks.
@@ -45,4 +72,27 @@ func ReconcileSecretWebhookKubeconfig(ctx context.Context, c client.Client, secr
 	secret.Data = map[string][]byte{SecretWebhookKubeconfigDataKey: kubeconfig}
 	utilruntime.Must(kubernetesutils.MakeUnique(secret))
 	return client.IgnoreAlreadyExists(c.Create(ctx, secret))
+}
+
+// ReconcileConfigMapAuditPolicy reconciles the ConfigMap containing the audit policy.
+func ReconcileConfigMapAuditPolicy(ctx context.Context, c client.Client, configMap *corev1.ConfigMap, auditConfig *AuditConfig) error {
+	defaultPolicy := &auditv1.Policy{
+		Rules: []auditv1.PolicyRule{
+			{Level: auditv1.LevelNone},
+		},
+	}
+
+	data, err := runtime.Encode(auditCodec, defaultPolicy)
+	if err != nil {
+		return err
+	}
+
+	policy := string(data)
+	if auditConfig != nil && auditConfig.Policy != nil {
+		policy = *auditConfig.Policy
+	}
+
+	configMap.Data = map[string]string{ConfigMapAuditPolicyDataKey: policy}
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
+	return client.IgnoreAlreadyExists(c.Create(ctx, configMap))
 }

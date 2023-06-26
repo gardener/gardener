@@ -422,6 +422,77 @@ resources:
 				})
 			})
 
+			Context("configmaps", func() {
+				It("should successfully deploy the configmap resource w/ default policy", func() {
+					configMapAuditPolicy := &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver-audit-policy-config", Namespace: namespace},
+						Data: map[string]string{"audit-policy.yaml": `apiVersion: audit.k8s.io/v1
+kind: Policy
+metadata:
+  creationTimestamp: null
+rules:
+- level: None
+`},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapAuditPolicy)).To(Succeed())
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(BeNotFoundError())
+					Expect(deployer.Deploy(ctx)).To(Succeed())
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(Succeed())
+					Expect(configMapAuditPolicy).To(DeepEqual(&corev1.ConfigMap{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "ConfigMap",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapAuditPolicy.Name,
+							Namespace:       configMapAuditPolicy.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: pointer.Bool(true),
+						Data:      configMapAuditPolicy.Data,
+					}))
+				})
+
+				It("should successfully deploy the configmap resource w/o default policy", func() {
+					var (
+						policy      = "some-audit-policy"
+						auditConfig = &apiserver.AuditConfig{Policy: &policy}
+					)
+
+					deployer = New(fakeClient, namespace, fakeSecretManager, Values{
+						Values: apiserver.Values{
+							Audit: auditConfig,
+						},
+					})
+
+					configMapAuditPolicy := &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver-audit-policy-config", Namespace: namespace},
+						Data:       map[string]string{"audit-policy.yaml": policy},
+					}
+					Expect(kubernetesutils.MakeUnique(configMapAuditPolicy)).To(Succeed())
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(BeNotFoundError())
+					Expect(deployer.Deploy(ctx)).To(Succeed())
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(Succeed())
+					Expect(configMapAuditPolicy).To(DeepEqual(&corev1.ConfigMap{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "ConfigMap",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapAuditPolicy.Name,
+							Namespace:       configMapAuditPolicy.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: pointer.Bool(true),
+						Data:      configMapAuditPolicy.Data,
+					}))
+				})
+			})
+
 			Context("resources generation", func() {
 				BeforeEach(func() {
 					Expect(deployer.Deploy(ctx)).To(Succeed())
