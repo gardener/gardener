@@ -282,6 +282,35 @@ resources:
 					Entry("encrypting with current", true),
 					Entry("encrypting with old", false),
 				)
+
+				It("should successfully deploy the access secret for the virtual garden", func() {
+					accessSecret := &corev1.Secret{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "v1",
+							Kind:       "Secret",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "shoot-access-gardener-apiserver",
+							Namespace: namespace,
+							Labels: map[string]string{
+								"resources.gardener.cloud/purpose": "token-requestor",
+								"resources.gardener.cloud/class":   "shoot",
+							},
+							Annotations: map[string]string{
+								"serviceaccount.resources.gardener.cloud/name":      "gardener-apiserver",
+								"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
+							},
+						},
+						Type: corev1.SecretTypeOpaque,
+					}
+
+					Expect(deployer.Deploy(ctx)).To(Succeed())
+
+					actualShootAccessSecret := &corev1.Secret{}
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(accessSecret), actualShootAccessSecret)).To(Succeed())
+					accessSecret.ResourceVersion = "1"
+					Expect(actualShootAccessSecret).To(Equal(accessSecret))
+				})
 			})
 
 			Context("resources generation", func() {

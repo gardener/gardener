@@ -27,6 +27,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -81,10 +82,15 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		runtimeRegistry = managedresources.NewRegistry(operatorclient.RuntimeScheme, operatorclient.RuntimeCodec, operatorclient.RuntimeSerializer)
 
 		secretETCDEncryptionConfiguration = g.emptySecret(v1beta1constants.SecretNamePrefixGardenerETCDEncryptionConfiguration)
+		virtualGardenAccessSecret         = g.newVirtualGardenAccessSecret()
 	)
 
 	secretServer, err := g.reconcileSecretServer(ctx)
 	if err != nil {
+		return err
+	}
+
+	if err := virtualGardenAccessSecret.Reconcile(ctx, g.client); err != nil {
 		return err
 	}
 
@@ -142,7 +148,11 @@ func (g *gardenerAPIServer) Destroy(ctx context.Context) error {
 	if err := managedresources.DeleteForSeed(ctx, g.client, g.namespace, managedResourceNameRuntime); err != nil {
 		return err
 	}
-	return managedresources.WaitUntilDeleted(timeoutCtx, g.client, g.namespace, managedResourceNameRuntime)
+	if err := managedresources.WaitUntilDeleted(timeoutCtx, g.client, g.namespace, managedResourceNameRuntime); err != nil {
+		return err
+	}
+
+	return kubernetesutils.DeleteObjects(ctx, g.client, g.newVirtualGardenAccessSecret().Secret)
 }
 
 func (g *gardenerAPIServer) Wait(ctx context.Context) error {
