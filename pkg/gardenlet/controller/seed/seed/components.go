@@ -108,6 +108,7 @@ func defaultIstio(
 		if err := shared.AddIstioIngressGateway(
 			istioDeployer,
 			*handler.SNI.Ingress.Namespace,
+			// handler.LoadBalancerService.Annotations must put last to override non-exposure class related keys.
 			utils.MergeStringMaps(seed.GetLoadBalancerServiceAnnotations(), handler.LoadBalancerService.Annotations),
 			shared.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), nil),
 			seed.GetLoadBalancerServiceExternalTrafficPolicy(),
@@ -123,7 +124,8 @@ func defaultIstio(
 				if err := shared.AddIstioIngressGateway(
 					istioDeployer,
 					shared.GetIstioNamespaceForZone(*handler.SNI.Ingress.Namespace, zone),
-					utils.MergeStringMaps(handler.LoadBalancerService.Annotations, seed.GetZonalLoadBalancerServiceAnnotations(zone)),
+					// handler.LoadBalancerService.Annotations must put last to override non-exposure class related keys.
+					utils.MergeStringMaps(seed.GetZonalLoadBalancerServiceAnnotations(zone), handler.LoadBalancerService.Annotations),
 					shared.GetIstioZoneLabels(gardenerutils.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name), &zone),
 					seed.GetZonalLoadBalancerServiceExternalTrafficPolicy(zone),
 					nil,
