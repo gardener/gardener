@@ -238,12 +238,39 @@ webhooks:
       gardener.cloud/role: project
   clientConfig:
     {{- if .Values.global.deployment.virtualGarden.enabled }}
-    url: https://gardener-admission-controller.garden/webhooks/audit-policies
+    url: https://gardener-admission-controller.garden/webhooks/validate-admission-plugin-secret
     {{- else }}
     service:
       namespace: garden
       name: gardener-admission-controller
       path: /webhooks/audit-policies
+    {{- end }}
+    caBundle: {{ required ".Values.global.admission.config.server.webhooks.tls.caBundle is required" (b64enc .Values.global.admission.config.server.webhooks.tls.caBundle) }}
+  sideEffects: None
+- name: admission-plugin-secret.gardener.cloud
+  admissionReviewVersions: ["v1", "v1beta1"]
+  timeoutSeconds: 10
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - UPDATE
+    resources:
+    - secrets
+  failurePolicy: Fail
+  namespaceSelector:
+    matchLabels:
+      gardener.cloud/role: project
+  clientConfig:
+    {{- if .Values.global.deployment.virtualGarden.enabled }}
+    url: https://gardener-admission-controller.garden/webhooks/audit-policies
+    {{- else }}
+    service:
+      namespace: garden
+      name: gardener-admission-controller
+      path: /webhooks/validate-admission-plugin-secret
     {{- end }}
     caBundle: {{ required ".Values.global.admission.config.server.webhooks.tls.caBundle is required" (b64enc .Values.global.admission.config.server.webhooks.tls.caBundle) }}
   sideEffects: None
