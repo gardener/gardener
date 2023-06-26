@@ -35,6 +35,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
+	kubeinformers "k8s.io/client-go/informers"
+	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/utils/pointer"
 	"k8s.io/utils/strings/slices"
 
@@ -44,6 +46,7 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
@@ -68,6 +71,7 @@ func Register(plugins *admission.Plugins) {
 type ValidateShoot struct {
 	*admission.Handler
 	authorizer          authorizer.Authorizer
+	secretLister        kubecorev1listers.SecretLister
 	cloudProfileLister  gardencorelisters.CloudProfileLister
 	seedLister          gardencorelisters.SeedLister
 	shootLister         gardencorelisters.ShootLister
@@ -78,6 +82,7 @@ type ValidateShoot struct {
 
 var (
 	_ = admissioninitializer.WantsInternalCoreInformerFactory(&ValidateShoot{})
+	_ = admissioninitializer.WantsKubeInformerFactory(&ValidateShoot{})
 	_ = admissioninitializer.WantsAuthorizer(&ValidateShoot{})
 
 	readyFuncs = []admission.ReadyFunc{}
@@ -128,10 +133,21 @@ func (v *ValidateShoot) SetInternalCoreInformerFactory(f gardencoreinformers.Sha
 	)
 }
 
+// SetKubeInformerFactory gets Lister from SharedInformerFactory.
+func (v *ValidateShoot) SetKubeInformerFactory(f kubeinformers.SharedInformerFactory) {
+	secretInformer := f.Core().V1().Secrets()
+	v.secretLister = secretInformer.Lister()
+
+	readyFuncs = append(readyFuncs, secretInformer.Informer().HasSynced)
+}
+
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (v *ValidateShoot) ValidateInitialization() error {
 	if v.authorizer == nil {
 		return errors.New("missing authorizer")
+	}
+	if v.secretLister == nil {
+		return errors.New("missing secret lister")
 	}
 	if v.cloudProfileLister == nil {
 		return errors.New("missing cloudProfile lister")
@@ -278,6 +294,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	allErrs = append(allErrs, validationContext.validateKubernetes(a)...)
 	allErrs = append(allErrs, validationContext.validateRegion()...)
 	allErrs = append(allErrs, validationContext.validateProvider(a)...)
+	allErrs = append(allErrs, validationContext.validateAdmissionPlugins(a, v.secretLister)...)
 
 	// Skip the validation if the operation is admission.Delete or the spec hasn't changed.
 	if a.GetOperation() != admission.Delete && !reflect.DeepEqual(validationContext.shoot.Spec, validationContext.oldShoot.Spec) {
@@ -621,6 +638,56 @@ func (c *validationContext) addMetadataAnnotations(a admission.Attributes) {
 
 		metav1.SetMetaDataAnnotation(&c.shoot.ObjectMeta, v1beta1constants.FailedShootNeedsRetryOperation, "true")
 	}
+}
+
+func (c *validationContext) validateAdmissionPlugins(a admission.Attributes, secretLister kubecorev1listers.SecretLister) field.ErrorList {
+	var (
+		allErrs           field.ErrorList
+		referencedSecrets = sets.New[string]()
+		path              = field.NewPath("spec", "kubernetes", "kubeAPIServer", "admissionPlugins")
+	)
+
+	if a.GetOperation() == admission.Delete {
+		return nil
+	}
+
+	for _, referencedResource := range c.shoot.Spec.Resources {
+		if referencedResource.ResourceRef.APIVersion == "v1" && referencedResource.ResourceRef.Kind == "Secret" {
+			referencedSecrets.Insert(referencedResource.ResourceRef.Name)
+		}
+	}
+
+	if c.shoot.Spec.Kubernetes.KubeAPIServer != nil {
+		for i, admissionPlugin := range c.shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
+			if admissionPlugin.KubeconfigSecretName != nil {
+				if !referencedSecrets.Has(*admissionPlugin.KubeconfigSecretName) {
+					allErrs = append(allErrs, field.Invalid(path.Index(i).Child("kubeconfigSecretName"), *admissionPlugin.KubeconfigSecretName, "secret should be referenced in shoot .spec.resources"))
+					continue
+				}
+				if err := c.validateReferencedSecret(secretLister, *admissionPlugin.KubeconfigSecretName, c.shoot.Namespace, path.Index(i).Child("kubeconfigSecretName")); err != nil {
+					allErrs = append(allErrs, err)
+				}
+			}
+		}
+	}
+
+	return allErrs
+}
+
+func (c *validationContext) validateReferencedSecret(secretLister kubecorev1listers.SecretLister, secretName, namespace string, fldPath *field.Path) *field.Error {
+	if secret, err := secretLister.Secrets(namespace).Get(secretName); err != nil {
+		if apierrors.IsNotFound(err) {
+			return field.Invalid(fldPath, secretName, fmt.Sprintf("referenced kubeconfig secret does not exist: namespace: %s, name: %s", namespace, secretName))
+		} else {
+			return field.InternalError(fldPath, fmt.Errorf("unable to get the referenced secret: namespace: %s, name: %s", namespace, secretName))
+		}
+	} else {
+		if _, ok := secret.Data[kubernetes.KubeConfig]; !ok {
+			return field.Invalid(fldPath, secretName, fmt.Sprintf("referenced kubeconfig secret doesn't contain kubeconfig: namespace: %s, name: %s", namespace, secretName))
+		}
+	}
+
+	return nil
 }
 
 func (c *validationContext) validateShootNetworks(a admission.Attributes, workerless bool) field.ErrorList {
