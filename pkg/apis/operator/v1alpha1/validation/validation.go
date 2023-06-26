@@ -80,7 +80,7 @@ func validateVirtualClusterUpdate(oldVirtualCluster, newVirtualCluster operatorv
 
 	// Check if old Domain field was properly transferred to Domains field.
 	if oldVirtualCluster.DNS.Domain != nil && len(newVirtualCluster.DNS.Domains) > 0 && *oldVirtualCluster.DNS.Domain != newVirtualCluster.DNS.Domains[0] {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "domains").Index(0), newVirtualCluster.DNS.Domains[0], "first entry must be previously used domain from .spec.virtualCluster.dns.domain"))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "domains").Index(0), newVirtualCluster.DNS.Domains[0], "first entry must be the same as previously used in .spec.virtualCluster.dns.domain"))
 	}
 
 	// Disallow changing from 'domains' to 'domain'.
