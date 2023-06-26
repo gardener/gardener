@@ -89,7 +89,8 @@ type Ingress struct {
 
 // IngressController enables a Gardener managed Ingress Controller listening on the ingressDomain
 type IngressController struct {
-	// Kind defines which kind of IngressController to use, for example `nginx`
+	// Kind defines which kind of IngressController to use. At the moment only `nginx` is supported
+	// +kubebuilder:validation:Enum="nginx"
 	Kind string `json:"kind"`
 	// ProviderConfig specifies infrastructure specific configuration for the ingressController
 	// +optional

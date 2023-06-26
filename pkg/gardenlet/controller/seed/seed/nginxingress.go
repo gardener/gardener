@@ -28,8 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-const annotationSeedIngressClass = "seed.gardener.cloud/ingress-class"
-
 func getManagedIngressDNSRecord(
 	log logr.Logger,
 	seedClient client.Client,

@@ -36,12 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/validation/kubernetesversion"
 )
 
-var (
-	gardenCoreScheme      *runtime.Scheme
-	availableIngressKinds = sets.New(
-		v1beta1constants.IngressKindNginx,
-	)
-)
+var gardenCoreScheme *runtime.Scheme
 
 func init() {
 	gardenCoreScheme = runtime.NewScheme()

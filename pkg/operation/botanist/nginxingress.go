@@ -64,7 +64,7 @@ func (b *Botanist) DefaultNginxIngress() (component.DeployWaiter, error) {
 		b.Shoot.WantsVerticalPodAutoscaler,
 		component.ClusterTypeShoot,
 		externalTrafficPolicy,
-		v1beta1constants.IngressKindNginx,
+		v1beta1constants.ShootNginxIngressClass,
 	)
 }
 

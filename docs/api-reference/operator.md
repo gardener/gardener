@@ -921,7 +921,7 @@ string
 </em>
 </td>
 <td>
-<p>Kind defines which kind of IngressController to use, for example <code>nginx</code></p>
+<p>Kind defines which kind of IngressController to use. At the moment only <code>nginx</code> is supported</p>
 </td>
 </tr>
 <tr>

@@ -60,7 +60,9 @@ spec:
                         properties:
                           kind:
                             description: Kind defines which kind of IngressController
-                              to use, for example `nginx`
+                              to use. At the moment only `nginx` is supported
+                            enum:
+                            - nginx
                             type: string
                           providerConfig:
                             description: ProviderConfig specifies infrastructure specific
