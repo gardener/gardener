@@ -31,6 +31,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/constants"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
@@ -1322,7 +1323,7 @@ func (k *kubeAPIServer) handleAuditSettings(deployment *appsv1.Deployment, confi
 	}
 
 	if len(k.values.Audit.Webhook.Kubeconfig) > 0 {
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--audit-webhook-config-file=%s/%s", volumeMountPathAuditWebhookKubeconfig, secretWebhookKubeconfigDataKey))
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--audit-webhook-config-file=%s/%s", volumeMountPathAuditWebhookKubeconfig, apiserver.SecretWebhookKubeconfigDataKey))
 		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 			Name:      volumeNameAuditWebhookKubeconfig,
 			MountPath: volumeMountPathAuditWebhookKubeconfig,
@@ -1353,7 +1354,7 @@ func (k *kubeAPIServer) handleAuthenticationSettings(deployment *appsv1.Deployme
 	}
 
 	if len(k.values.AuthenticationWebhook.Kubeconfig) > 0 {
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--authentication-token-webhook-config-file=%s/%s", volumeMountPathAuthenticationWebhookKubeconfig, secretWebhookKubeconfigDataKey))
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--authentication-token-webhook-config-file=%s/%s", volumeMountPathAuthenticationWebhookKubeconfig, apiserver.SecretWebhookKubeconfigDataKey))
 		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 			Name:      volumeNameAuthenticationWebhookKubeconfig,
 			MountPath: volumeMountPathAuthenticationWebhookKubeconfig,
@@ -1389,7 +1390,7 @@ func (k *kubeAPIServer) handleAuthorizationSettings(deployment *appsv1.Deploymen
 		authModes = append(authModes, "Webhook")
 
 		if len(k.values.AuthorizationWebhook.Kubeconfig) > 0 {
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--authorization-webhook-config-file=%s/%s", volumeMountPathAuthorizationWebhookKubeconfig, secretWebhookKubeconfigDataKey))
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--authorization-webhook-config-file=%s/%s", volumeMountPathAuthorizationWebhookKubeconfig, apiserver.SecretWebhookKubeconfigDataKey))
 			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 				Name:      volumeNameAuthorizationWebhookKubeconfig,
 				MountPath: volumeMountPathAuthorizationWebhookKubeconfig,

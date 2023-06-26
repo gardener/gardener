@@ -329,7 +329,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := k.reconcileSecretAuditWebhookKubeconfig(ctx, secretAuditWebhookKubeconfig); err != nil {
+	if err := apiserver.ReconcileSecretAuditWebhookKubeconfig(ctx, k.client.Client(), secretAuditWebhookKubeconfig, k.values.Audit); err != nil {
 		return err
 	}
 

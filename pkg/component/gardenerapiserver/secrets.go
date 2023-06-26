@@ -28,6 +28,10 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
+const (
+	secretAuditWebhookKubeconfigNamePrefix = "gardener-apiserver-audit-webhook-kubeconfig"
+)
+
 func (g *gardenerAPIServer) newVirtualGardenAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(DeploymentName, g.namespace)
 }

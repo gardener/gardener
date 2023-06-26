@@ -311,6 +311,46 @@ resources:
 					accessSecret.ResourceVersion = "1"
 					Expect(actualShootAccessSecret).To(Equal(accessSecret))
 				})
+
+				It("should successfully deploy the audit webhook kubeconfig secret resource", func() {
+					var (
+						kubeconfig  = []byte("some-kubeconfig")
+						auditConfig = &apiserver.AuditConfig{Webhook: &apiserver.AuditWebhook{Kubeconfig: kubeconfig}}
+					)
+
+					deployer = New(fakeClient, namespace, fakeSecretManager, Values{
+						Values: apiserver.Values{
+							Audit: auditConfig,
+						},
+					})
+
+					expectedSecret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver-audit-webhook-kubeconfig", Namespace: namespace},
+						Data:       map[string][]byte{"kubeconfig.yaml": kubeconfig},
+					}
+					Expect(kubernetesutils.MakeUnique(expectedSecret)).To(Succeed())
+
+					actualSecret := &corev1.Secret{}
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(BeNotFoundError())
+
+					Expect(deployer.Deploy(ctx)).To(Succeed())
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(Succeed())
+					Expect(actualSecret).To(DeepEqual(&corev1.Secret{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "Secret",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            expectedSecret.Name,
+							Namespace:       expectedSecret.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: pointer.Bool(true),
+						Data:      expectedSecret.Data,
+					}))
+				})
 			})
 
 			Context("resources generation", func() {
