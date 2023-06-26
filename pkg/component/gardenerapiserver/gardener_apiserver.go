@@ -116,7 +116,9 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	runtimeResources, err := runtimeRegistry.AddAllAndSerialize()
+	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
+		g.podDisruptionBudget(),
+	)
 	if err != nil {
 		return err
 	}
