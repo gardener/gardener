@@ -26,15 +26,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	webhookadmissionv1 "k8s.io/apiserver/pkg/admission/plugin/webhook/config/apis/webhookadmission/v1"
-	webhookadmissionv1alpha1 "k8s.io/apiserver/pkg/admission/plugin/webhook/config/apis/webhookadmission/v1alpha1"
-	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
-	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -51,35 +43,6 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/version"
 )
-
-var (
-	scheme *runtime.Scheme
-	codec  runtime.Codec
-)
-
-func init() {
-	scheme = runtime.NewScheme()
-	utilruntime.Must(apiserverv1alpha1.AddToScheme(scheme))
-	utilruntime.Must(auditv1.AddToScheme(scheme))
-	utilruntime.Must(webhookadmissionv1.AddToScheme(scheme))
-	utilruntime.Must(webhookadmissionv1alpha1.AddToScheme(scheme))
-
-	var (
-		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{
-			Yaml:   true,
-			Pretty: false,
-			Strict: false,
-		})
-		versions = schema.GroupVersions([]schema.GroupVersion{
-			apiserverv1alpha1.SchemeGroupVersion,
-			auditv1.SchemeGroupVersion,
-			webhookadmissionv1.SchemeGroupVersion,
-			webhookadmissionv1alpha1.SchemeGroupVersion,
-		})
-	)
-
-	codec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
-}
 
 const (
 	// SecretNameUserKubeconfig is the name for the user kubeconfig.
@@ -367,7 +330,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := k.reconcileConfigMapAdmission(ctx, configMapAdmissionConfigs); err != nil {
+	if err := apiserver.ReconcileConfigMapAdmission(ctx, k.client.Client(), configMapAdmissionConfigs, k.values.Values); err != nil {
 		return err
 	}
 	if err := apiserver.ReconcileSecretAdmissionKubeconfigs(ctx, k.client.Client(), secretAdmissionKubeconfigs, k.values.Values); err != nil {

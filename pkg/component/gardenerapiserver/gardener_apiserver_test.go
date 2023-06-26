@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -423,73 +424,324 @@ resources:
 			})
 
 			Context("configmaps", func() {
-				It("should successfully deploy the configmap resource w/ default policy", func() {
-					configMapAuditPolicy := &corev1.ConfigMap{
-						ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver-audit-policy-config", Namespace: namespace},
-						Data: map[string]string{"audit-policy.yaml": `apiVersion: audit.k8s.io/v1
+				Context("audit", func() {
+					It("should successfully deploy the configmap resource w/ default policy", func() {
+						configMapAuditPolicy := &corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver-audit-policy-config", Namespace: namespace},
+							Data: map[string]string{"audit-policy.yaml": `apiVersion: audit.k8s.io/v1
 kind: Policy
 metadata:
   creationTimestamp: null
 rules:
 - level: None
 `},
-					}
-					Expect(kubernetesutils.MakeUnique(configMapAuditPolicy)).To(Succeed())
+						}
+						Expect(kubernetesutils.MakeUnique(configMapAuditPolicy)).To(Succeed())
 
-					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(BeNotFoundError())
-					Expect(deployer.Deploy(ctx)).To(Succeed())
-					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(Succeed())
-					Expect(configMapAuditPolicy).To(DeepEqual(&corev1.ConfigMap{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "ConfigMap",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            configMapAuditPolicy.Name,
-							Namespace:       configMapAuditPolicy.Namespace,
-							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
-							ResourceVersion: "1",
-						},
-						Immutable: pointer.Bool(true),
-						Data:      configMapAuditPolicy.Data,
-					}))
-				})
-
-				It("should successfully deploy the configmap resource w/o default policy", func() {
-					var (
-						policy      = "some-audit-policy"
-						auditConfig = &apiserver.AuditConfig{Policy: &policy}
-					)
-
-					deployer = New(fakeClient, namespace, fakeSecretManager, Values{
-						Values: apiserver.Values{
-							Audit: auditConfig,
-						},
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(BeNotFoundError())
+						Expect(deployer.Deploy(ctx)).To(Succeed())
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(Succeed())
+						Expect(configMapAuditPolicy).To(DeepEqual(&corev1.ConfigMap{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: corev1.SchemeGroupVersion.String(),
+								Kind:       "ConfigMap",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:            configMapAuditPolicy.Name,
+								Namespace:       configMapAuditPolicy.Namespace,
+								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+								ResourceVersion: "1",
+							},
+							Immutable: pointer.Bool(true),
+							Data:      configMapAuditPolicy.Data,
+						}))
 					})
 
-					configMapAuditPolicy := &corev1.ConfigMap{
-						ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver-audit-policy-config", Namespace: namespace},
-						Data:       map[string]string{"audit-policy.yaml": policy},
-					}
-					Expect(kubernetesutils.MakeUnique(configMapAuditPolicy)).To(Succeed())
+					It("should successfully deploy the configmap resource w/o default policy", func() {
+						var (
+							policy      = "some-audit-policy"
+							auditConfig = &apiserver.AuditConfig{Policy: &policy}
+						)
 
-					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(BeNotFoundError())
-					Expect(deployer.Deploy(ctx)).To(Succeed())
-					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(Succeed())
-					Expect(configMapAuditPolicy).To(DeepEqual(&corev1.ConfigMap{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "ConfigMap",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            configMapAuditPolicy.Name,
-							Namespace:       configMapAuditPolicy.Namespace,
-							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
-							ResourceVersion: "1",
-						},
-						Immutable: pointer.Bool(true),
-						Data:      configMapAuditPolicy.Data,
-					}))
+						deployer = New(fakeClient, namespace, fakeSecretManager, Values{
+							Values: apiserver.Values{
+								Audit: auditConfig,
+							},
+						})
+
+						configMapAuditPolicy := &corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver-audit-policy-config", Namespace: namespace},
+							Data:       map[string]string{"audit-policy.yaml": policy},
+						}
+						Expect(kubernetesutils.MakeUnique(configMapAuditPolicy)).To(Succeed())
+
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(BeNotFoundError())
+						Expect(deployer.Deploy(ctx)).To(Succeed())
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(Succeed())
+						Expect(configMapAuditPolicy).To(DeepEqual(&corev1.ConfigMap{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: corev1.SchemeGroupVersion.String(),
+								Kind:       "ConfigMap",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:            configMapAuditPolicy.Name,
+								Namespace:       configMapAuditPolicy.Namespace,
+								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+								ResourceVersion: "1",
+							},
+							Immutable: pointer.Bool(true),
+							Data:      configMapAuditPolicy.Data,
+						}))
+					})
+				})
+
+				Context("admission", func() {
+					It("should successfully deploy the configmap resource w/o admission plugins", func() {
+						configMapAdmission := &corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver-admission-config", Namespace: namespace},
+							Data: map[string]string{"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
+kind: AdmissionConfiguration
+plugins: null
+`},
+						}
+						Expect(kubernetesutils.MakeUnique(configMapAdmission)).To(Succeed())
+
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(BeNotFoundError())
+						Expect(deployer.Deploy(ctx)).To(Succeed())
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
+						Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: corev1.SchemeGroupVersion.String(),
+								Kind:       "ConfigMap",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:            configMapAdmission.Name,
+								Namespace:       configMapAdmission.Namespace,
+								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+								ResourceVersion: "1",
+							},
+							Immutable: pointer.Bool(true),
+							Data:      configMapAdmission.Data,
+						}))
+					})
+
+					It("should successfully deploy the configmap resource w/ admission plugins", func() {
+						admissionPlugins := []apiserver.AdmissionPluginConfig{
+							{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Foo"}},
+							{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("some-config-for-baz")}}},
+							{
+								AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+									Name: "MutatingAdmissionWebhook",
+									Config: &runtime.RawExtension{Raw: []byte(`apiVersion: apiserver.config.k8s.io/v1
+kind: WebhookAdmissionConfiguration
+kubeConfigFile: /etc/kubernetes/foobar.yaml
+`)},
+								},
+								Kubeconfig: []byte("foo"),
+							},
+							{
+								AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+									Name: "ValidatingAdmissionWebhook",
+									Config: &runtime.RawExtension{Raw: []byte(`apiVersion: apiserver.config.k8s.io/v1alpha1
+kind: WebhookAdmission
+kubeConfigFile: /etc/kubernetes/foobar.yaml
+`)},
+								},
+								Kubeconfig: []byte("foo"),
+							},
+						}
+
+						deployer = New(fakeClient, namespace, fakeSecretManager, Values{
+							Values: apiserver.Values{
+								EnabledAdmissionPlugins: admissionPlugins,
+							},
+						})
+
+						configMapAdmission := &corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver-admission-config", Namespace: namespace},
+							Data: map[string]string{
+								"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
+kind: AdmissionConfiguration
+plugins:
+- configuration: null
+  name: Baz
+  path: /etc/kubernetes/admission/baz.yaml
+- configuration: null
+  name: MutatingAdmissionWebhook
+  path: /etc/kubernetes/admission/mutatingadmissionwebhook.yaml
+- configuration: null
+  name: ValidatingAdmissionWebhook
+  path: /etc/kubernetes/admission/validatingadmissionwebhook.yaml
+`,
+								"baz.yaml": "some-config-for-baz",
+								"mutatingadmissionwebhook.yaml": `apiVersion: apiserver.config.k8s.io/v1
+kind: WebhookAdmissionConfiguration
+kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/mutatingadmissionwebhook-kubeconfig.yaml
+`,
+								"validatingadmissionwebhook.yaml": `apiVersion: apiserver.config.k8s.io/v1alpha1
+kind: WebhookAdmission
+kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook-kubeconfig.yaml
+`,
+							},
+						}
+						Expect(kubernetesutils.MakeUnique(configMapAdmission)).To(Succeed())
+
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(BeNotFoundError())
+						Expect(deployer.Deploy(ctx)).To(Succeed())
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
+						Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: corev1.SchemeGroupVersion.String(),
+								Kind:       "ConfigMap",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:            configMapAdmission.Name,
+								Namespace:       configMapAdmission.Namespace,
+								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+								ResourceVersion: "1",
+							},
+							Immutable: pointer.Bool(true),
+							Data:      configMapAdmission.Data,
+						}))
+					})
+
+					It("should successfully deploy the configmap resource w/ admission plugins w/ config but w/o kubeconfigs", func() {
+						admissionPlugins := []apiserver.AdmissionPluginConfig{
+							{
+								AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+									Name: "MutatingAdmissionWebhook",
+									Config: &runtime.RawExtension{Raw: []byte(`apiVersion: apiserver.config.k8s.io/v1
+kind: WebhookAdmissionConfiguration
+kubeConfigFile: /etc/kubernetes/foobar.yaml
+`)},
+								},
+							},
+							{
+								AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+									Name: "ValidatingAdmissionWebhook",
+									Config: &runtime.RawExtension{Raw: []byte(`apiVersion: apiserver.config.k8s.io/v1alpha1
+kind: WebhookAdmission
+kubeConfigFile: /etc/kubernetes/foobar.yaml
+`)},
+								},
+							},
+						}
+
+						deployer = New(fakeClient, namespace, fakeSecretManager, Values{
+							Values: apiserver.Values{
+								EnabledAdmissionPlugins: admissionPlugins,
+							},
+						})
+
+						configMapAdmission := &corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver-admission-config", Namespace: namespace},
+							Data: map[string]string{
+								"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
+kind: AdmissionConfiguration
+plugins:
+- configuration: null
+  name: MutatingAdmissionWebhook
+  path: /etc/kubernetes/admission/mutatingadmissionwebhook.yaml
+- configuration: null
+  name: ValidatingAdmissionWebhook
+  path: /etc/kubernetes/admission/validatingadmissionwebhook.yaml
+`,
+								"mutatingadmissionwebhook.yaml": `apiVersion: apiserver.config.k8s.io/v1
+kind: WebhookAdmissionConfiguration
+kubeConfigFile: ""
+`,
+								"validatingadmissionwebhook.yaml": `apiVersion: apiserver.config.k8s.io/v1alpha1
+kind: WebhookAdmission
+kubeConfigFile: ""
+`,
+							},
+						}
+						Expect(kubernetesutils.MakeUnique(configMapAdmission)).To(Succeed())
+
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(BeNotFoundError())
+						Expect(deployer.Deploy(ctx)).To(Succeed())
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
+						Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: corev1.SchemeGroupVersion.String(),
+								Kind:       "ConfigMap",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:            configMapAdmission.Name,
+								Namespace:       configMapAdmission.Namespace,
+								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+								ResourceVersion: "1",
+							},
+							Immutable: pointer.Bool(true),
+							Data:      configMapAdmission.Data,
+						}))
+					})
+
+					It("should successfully deploy the configmap resource w/ admission plugins w/o configs but w/ kubeconfig", func() {
+						admissionPlugins := []apiserver.AdmissionPluginConfig{
+							{
+								AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+									Name: "MutatingAdmissionWebhook",
+								},
+								Kubeconfig: []byte("foo"),
+							},
+							{
+								AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{
+									Name: "ValidatingAdmissionWebhook",
+								},
+								Kubeconfig: []byte("foo"),
+							},
+						}
+
+						deployer = New(fakeClient, namespace, fakeSecretManager, Values{
+							Values: apiserver.Values{
+								EnabledAdmissionPlugins: admissionPlugins,
+							},
+						})
+
+						configMapAdmission := &corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{Name: "gardener-apiserver-admission-config", Namespace: namespace},
+							Data: map[string]string{
+								"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
+kind: AdmissionConfiguration
+plugins:
+- configuration: null
+  name: MutatingAdmissionWebhook
+  path: /etc/kubernetes/admission/mutatingadmissionwebhook.yaml
+- configuration: null
+  name: ValidatingAdmissionWebhook
+  path: /etc/kubernetes/admission/validatingadmissionwebhook.yaml
+`,
+								"mutatingadmissionwebhook.yaml": `apiVersion: apiserver.config.k8s.io/v1
+kind: WebhookAdmissionConfiguration
+kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/mutatingadmissionwebhook-kubeconfig.yaml
+`,
+								"validatingadmissionwebhook.yaml": `apiVersion: apiserver.config.k8s.io/v1
+kind: WebhookAdmissionConfiguration
+kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook-kubeconfig.yaml
+`,
+							},
+						}
+						Expect(kubernetesutils.MakeUnique(configMapAdmission)).To(Succeed())
+
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(BeNotFoundError())
+						Expect(deployer.Deploy(ctx)).To(Succeed())
+						Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
+						Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: corev1.SchemeGroupVersion.String(),
+								Kind:       "ConfigMap",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:            configMapAdmission.Name,
+								Namespace:       configMapAdmission.Namespace,
+								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+								ResourceVersion: "1",
+							},
+							Immutable: pointer.Bool(true),
+							Data:      configMapAdmission.Data,
+						}))
+					})
 				})
 			})
 

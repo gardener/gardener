@@ -94,8 +94,6 @@ const (
 	volumeNameUsrShareCaCerts                 = "usr-share-cacerts"
 	volumeNameWatchdog                        = "watchdog"
 
-	volumeMountPathAdmissionConfiguration          = "/etc/kubernetes/admission"
-	volumeMountPathAdmissionKubeconfigSecrets      = "/etc/kubernetes/admission-kubeconfigs"
 	volumeMountPathAuditPolicy                     = "/etc/kubernetes/audit"
 	volumeMountPathAuditWebhookKubeconfig          = "/etc/kubernetes/webhook/audit"
 	volumeMountPathAuthenticationWebhookKubeconfig = "/etc/kubernetes/webhook/authentication"
@@ -297,11 +295,11 @@ func (k *kubeAPIServer) reconcileDeployment(
 						VolumeMounts: []corev1.VolumeMount{
 							{
 								Name:      volumeNameAdmissionConfiguration,
-								MountPath: volumeMountPathAdmissionConfiguration,
+								MountPath: apiserver.VolumeMountPathAdmissionConfiguration,
 							},
 							{
 								Name:      volumeNameAdmissionKubeconfigSecrets,
-								MountPath: volumeMountPathAdmissionKubeconfigSecrets,
+								MountPath: apiserver.VolumeMountPathAdmissionKubeconfigSecrets,
 							},
 							{
 								Name:      volumeNameCA,
@@ -504,7 +502,7 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 		out = append(out, "--disable-admission-plugins="+strings.Join(k.disabledAdmissionPluginNames(), ","))
 	}
 
-	out = append(out, fmt.Sprintf("--admission-control-config-file=%s/%s", volumeMountPathAdmissionConfiguration, configMapAdmissionDataKey))
+	out = append(out, fmt.Sprintf("--admission-control-config-file=%s/%s", apiserver.VolumeMountPathAdmissionConfiguration, apiserver.ConfigMapAdmissionDataKey))
 	out = append(out, "--anonymous-auth="+strconv.FormatBool(k.values.AnonymousAuthenticationEnabled))
 
 	if len(k.values.APIAudiences) > 0 {
