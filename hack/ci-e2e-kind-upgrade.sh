@@ -125,16 +125,18 @@ function upgrade_to_next_release() {
 
 function set_gardener_upgrade_version_env_variables() {
   if [[ -z "$GARDENER_PREVIOUS_RELEASE" ]]; then
-    previous_minor_version=$(echo "$VERSION" | awk -F. '{printf("%s.%d.*\n", $1, $2-1)}')
+    previous_minor_version=$(echo "$VERSION" | awk -F. '{printf("%s.%d", $1, $2-1)}')
     # List all the tags that match the previous minor version pattern
-    tag_list=$(git tag -l "$previous_minor_version")
+    tag_list=$(git tag -l "${previous_minor_version}.*")
 
     if [ -z "$tag_list" ]; then
-      echo "No tags found for the previous minor version ($VERSION) to upgrade Gardener." >&2
-      exit 1
+      # Use release branch of previous version as backup
+      export GARDENER_PREVIOUS_RELEASE="release-${previous_minor_version}"
+      echo "No tags found for the previous minor version ($VERSION) to upgrade Gardener. Using branch $GARDENER_PREVIOUS_RELEASE instead." >&2
+    else
+      # Find the most recent tag for the previous minor version
+      export GARDENER_PREVIOUS_RELEASE=$(echo "$tag_list" | tail -n 1)
     fi
-    # Find the most recent tag for the previous minor version
-    export GARDENER_PREVIOUS_RELEASE=$(echo "$tag_list" | tail -n 1)
   fi
 
   if [[ -z "$GARDENER_NEXT_RELEASE" ]]; then
