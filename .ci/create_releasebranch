@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+git fetch upstream master
+git checkout master
+VERSION=$(cat VERSION)
+MAJOR_MINOR=$(echo "${VERSION}" | cut -d '.' -f -2)
+NEXT_MINOR=$(echo "${MAJOR_MINOR}" | awk -F. -v OFS=. '{$NF += 1 ; print}')
+NEXT_DEV_VERSION=${NEXT_MINOR}.0-dev
+git checkout -b release-"${MAJOR_MINOR}"
+git push upstream release-"${MAJOR_MINOR}"
+git checkout master
+echo -n "${NEXT_DEV_VERSION}" >VERSION
+git add VERSION
+git commit -m "Prepare next Dev Cycle ${NEXT_DEV_VERSION}"
+git push upstream master
