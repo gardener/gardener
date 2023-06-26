@@ -360,10 +360,7 @@ func (r *Reconciler) deployKubeAPIServerFunc(ctx context.Context, garden *operat
 		if domain := garden.Spec.VirtualCluster.DNS.Domain; domain != nil {
 			domainNames = append(domainNames, *domain)
 		}
-
-		for _, domain := range garden.Spec.VirtualCluster.DNS.Domains {
-			domainNames = append(domainNames, domain)
-		}
+		domainNames = append(domainNames, garden.Spec.VirtualCluster.DNS.Domains...)
 
 		return shared.DeployKubeAPIServer(
 			ctx,

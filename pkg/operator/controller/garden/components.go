@@ -654,9 +654,7 @@ func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValue
 	if domain := garden.Spec.VirtualCluster.DNS.Domain; domain != nil {
 		domains = append(domains, *domain)
 	}
-	for _, domain := range garden.Spec.VirtualCluster.DNS.Domains {
-		domains = append(domains, domain)
-	}
+	domains = append(domains, garden.Spec.VirtualCluster.DNS.Domains...)
 
 	return kubeapiserverexposure.NewSNI(
 		r.RuntimeClientSet.Client(),
