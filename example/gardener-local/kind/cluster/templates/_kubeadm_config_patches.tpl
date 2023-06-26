@@ -13,13 +13,13 @@
       authorization-mode: RBAC,Node
 {{- else }}
       authorization-mode: RBAC,Node,Webhook
-      authorization-webhook-config-file: /etc/gardener/controlplane/auth-webhook-kubeconfig-{{ .Values.environment }}-{{ .Values.networking.ipFamily }}.yaml
+      authorization-webhook-config-file: /etc/gardener/controlplane/auth-webhook-kubeconfig-{{ .Values.networking.ipFamily }}.yaml
       authorization-webhook-cache-authorized-ttl: "0"
       authorization-webhook-cache-unauthorized-ttl: "0"
     extraVolumes:
     - name: gardener
-      hostPath: /etc/gardener/controlplane/auth-webhook-kubeconfig-{{ .Values.environment }}-{{ .Values.networking.ipFamily }}.yaml
-      mountPath: /etc/gardener/controlplane/auth-webhook-kubeconfig-{{ .Values.environment }}-{{ .Values.networking.ipFamily }}.yaml
+      hostPath: /etc/gardener/controlplane/auth-webhook-kubeconfig-{{ .Values.networking.ipFamily }}.yaml
+      mountPath: /etc/gardener/controlplane/auth-webhook-kubeconfig-{{ .Values.networking.ipFamily }}.yaml
       readOnly: true
       pathType: File
 {{- end }}

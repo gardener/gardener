@@ -21,7 +21,6 @@ set -o pipefail
 CLUSTER_NAME=""
 PATH_CLUSTER_VALUES=""
 PATH_KUBECONFIG=""
-ENVIRONMENT="skaffold"
 DEPLOY_REGISTRY=true
 MULTI_ZONAL=false
 CHART=$(dirname "$0")/../example/gardener-local/kind/cluster
@@ -45,9 +44,6 @@ parse_flags() {
       ;;
     --path-kubeconfig)
       shift; PATH_KUBECONFIG="$1"
-      ;;
-    --environment)
-      shift; ENVIRONMENT="$1"
       ;;
     --skip-registry)
       DEPLOY_REGISTRY=false
@@ -126,10 +122,7 @@ setup_containerd_registry_mirrors() {
   REGISTRY_HOSTNAME="garden.local.gardener.cloud"
 
   for NODE in $(kind get nodes --name="$CLUSTER_NAME"); do
-    if [[ "$ENVIRONMENT" == "skaffold" ]]; then
-      setup_containerd_registry_mirror $NODE "localhost:5001" "http://localhost:5001" "http://${REGISTRY_HOSTNAME}:5001"
-    fi
-
+    setup_containerd_registry_mirror $NODE "localhost:5001" "http://localhost:5001" "http://${REGISTRY_HOSTNAME}:5001"
     setup_containerd_registry_mirror $NODE "gcr.io" "https://gcr.io" "http://${REGISTRY_HOSTNAME}:5003"
     setup_containerd_registry_mirror $NODE "eu.gcr.io" "https://eu.gcr.io" "http://${REGISTRY_HOSTNAME}:5004"
     setup_containerd_registry_mirror $NODE "ghcr.io" "https://ghcr.io" "http://${REGISTRY_HOSTNAME}:5005"
@@ -179,7 +172,7 @@ fi
 kind create cluster \
   --name "$CLUSTER_NAME" \
   --image "kindest/node:v1.27.1" \
-  --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "environment=$ENVIRONMENT" --set "gardener.repositoryRoot"=$(dirname "$0")/..)
+  --config <(helm template $CHART --values "$PATH_CLUSTER_VALUES" $ADDITIONAL_ARGS --set "gardener.repositoryRoot"=$(dirname "$0")/..)
 
 # adjust Kind's CRI default OCI runtime spec for new containers to include the cgroup namespace
 # this is required for nesting kubelets on cgroupsv2, as the kindest-node entrypoint script assumes an existing cgroupns when the host kernel uses cgroupsv2
