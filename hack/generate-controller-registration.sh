@@ -128,7 +128,6 @@ else
     image: $default_image
 EOM
 fi
-      
 cat <<EOM >> "$DEST"
 ---
 apiVersion: core.gardener.cloud/v1beta1
