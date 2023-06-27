@@ -223,9 +223,8 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:           flow.TaskFn(botanist.WaitUntilEtcdsReady).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(scaleETCD),
 		})
-		// Redeploy the control plane to make sure all components that depend on the cloud provider secret are restarted
-		// in case it has changed. Also, it's needed for other control plane components like the kube-apiserver or kube-
-		// controller-manager to be updateable due to provider config injection.
+		// Redeploy the control plane to make sure all components that depend on the cloud provider secret
+		// are restarted in case it has changed.
 		deployControlPlane = g.Add(flow.Task{
 			Name:         "Deploying Shoot control plane",
 			Fn:           flow.TaskFn(botanist.DeployControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources && controlPlaneDeploymentNeeded).SkipIf(o.Shoot.IsWorkerless),
@@ -302,7 +301,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, waitUntilKubeAPIServerIsReady, deployInternalDomainDNSRecord, waitUntilControlPlaneExposureReady, deployGardenerAccess),
 		})
 
-		// Redeploy the worker extensions, and kube-controller-manager to make sure all components that depend on the
+		// Redeploy kube-controller-manager to make sure all components that depend on the
 		// cloud provider secret are restarted in case it has changed.
 		deployKubeControllerManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes controller manager",
