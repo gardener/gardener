@@ -32,6 +32,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -488,6 +489,13 @@ func deployNeededInstallation(
 			deploymentSpecHash := utils.HashForMap(deploymentMap)[:16]
 			metav1.SetMetaDataLabel(&controllerInstallation.ObjectMeta, ControllerDeploymentHash, deploymentSpecHash)
 		}
+
+		if podSecurityEnforce, ok := controllerRegistration.Annotations[v1beta1constants.AnnotationPodSecurityEnforce]; ok {
+			metav1.SetMetaDataAnnotation(&controllerInstallation.ObjectMeta, v1beta1constants.AnnotationPodSecurityEnforce, podSecurityEnforce)
+		} else {
+			delete(controllerInstallation.Annotations, v1beta1constants.AnnotationPodSecurityEnforce)
+		}
+
 		controllerInstallation.Spec = installationSpec
 		return nil
 	}

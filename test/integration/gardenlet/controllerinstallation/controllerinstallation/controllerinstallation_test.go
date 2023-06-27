@@ -65,6 +65,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "installation-",
 				Labels:       map[string]string{testID: testRunID},
+				Annotations:  map[string]string{"security.gardener.cloud/pod-security-enforce": "privileged"},
 			},
 		}
 	})
@@ -161,6 +162,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				g.Expect(namespace.Labels).To(And(
 					HaveKeyWithValue("gardener.cloud/role", "extension"),
 					HaveKeyWithValue("controllerregistration.core.gardener.cloud/name", controllerRegistration.Name),
+					HaveKeyWithValue("pod-security.kubernetes.io/enforce", "privileged"),
 					HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
 				))
 				g.Expect(namespace.Annotations).To(And(

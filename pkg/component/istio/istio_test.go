@@ -2093,6 +2093,7 @@ spec:
 			Expect(actualNS.Labels).To(And(
 				HaveKeyWithValue("istio-operator-managed", "Reconcile"),
 				HaveKeyWithValue("istio-injection", "disabled"),
+				HaveKeyWithValue("pod-security.kubernetes.io/enforce", "baseline"),
 				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
 				HaveKeyWithValue("gardener.cloud/role", "istio-system"),
 			))
@@ -2109,6 +2110,7 @@ spec:
 			Expect(actualNS.Labels).To(And(
 				HaveKeyWithValue("istio-operator-managed", "Reconcile"),
 				HaveKeyWithValue("istio-injection", "disabled"),
+				HaveKeyWithValue("pod-security.kubernetes.io/enforce", "baseline"),
 				HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
 				HaveKeyWithValue("gardener.cloud/role", "istio-ingress"),
 			))

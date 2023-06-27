@@ -20,8 +20,13 @@ set -o pipefail
 function usage {
     cat <<EOM
 Usage:
-generate-controller-registration <name> <chart-dir> <version> <dest> <kind-and-type> [kinds-and-types ...]
+generate-controller-registration [options] <name> <chart-dir> <version> <dest> <kind-and-type> [kinds-and-types ...]
 
+    -h, --help        Display this help and exit.
+    --optional        Sets 'globallyEnabled: false' for controller resources of the controller registration.
+    -e, --pod-security-enforce[=pod-security-standard]
+                      Sets 'security.gardener.cloud/pod-security-enforce' annotation in the
+                      controller registration. Defaults to 'baseline'.
     <name>            Name of the controller registration to generate.
     <chart-dir>       Location of the chart directory.
     <version>         Version to use for the Helm chart and the tag in the ControllerDeployment.
@@ -35,10 +40,32 @@ EOM
     exit 0
 }
 
-if [ "$1" == "--optional" ]; then
+POD_SECURITY_ENFORCE="baseline"
+while :; do
+  case $1 in
+    -h|--help)
+      usage
+      ;;
+    --optional)
+      MODE=$'\n    globallyEnabled: false'
+      ;;
+    -e|--pod-security-enforce)
+      POD_SECURITY_ENFORCE=$2
+      shift
+      ;;
+    --pod-security-enforce=*)
+      POD_SECURITY_ENFORCE=${1#*=}
+      ;;
+    --)
+      shift
+      break
+      ;;
+    *)
+      break
+  esac
   shift
-  MODE=$'\n    globallyEnabled: false'
-fi
+done
+
 NAME="$1"
 CHART_DIR="$2"
 VERSION="$3"
@@ -101,13 +128,14 @@ else
     image: $default_image
 EOM
 fi
-
 cat <<EOM >> "$DEST"
 ---
 apiVersion: core.gardener.cloud/v1beta1
 kind: ControllerRegistration
 metadata:
   name: $NAME
+  annotations:
+    security.gardener.cloud/pod-security-enforce: $POD_SECURITY_ENFORCE
 spec:
   deployment:
     deploymentRefs:

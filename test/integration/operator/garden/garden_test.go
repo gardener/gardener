@@ -295,6 +295,7 @@ var _ = Describe("Garden controller tests", func() {
 		By("Verify that garden namespace was labeled and annotated appropriately")
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(testNamespace), testNamespace)).To(Succeed())
+			g.Expect(testNamespace.Labels).To(HaveKeyWithValue("pod-security.kubernetes.io/enforce", "privileged"))
 			g.Expect(testNamespace.Labels).To(HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"))
 			g.Expect(testNamespace.Annotations).To(HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b,c"))
 		}).Should(Succeed())

@@ -67,3 +67,11 @@ For example, the shoot's etcd has its own CA, the kube-aggregator has its own CA
 With [GEP-18](../proposals/18-shoot-CA-rotation.md) (Shoot cluster CA rotation), extensions are required to do the same and generate dedicated CAs for their components (e.g. for signing a server certificate for cloud-controller-manager). They must not depend on the CA secrets managed by gardenlet.
 
 Please see [CA Rotation in Extensions](./ca-rotation.md) for the exact requirements that extensions need to fulfill in order to support the CA rotation feature.
+
+## How to enforce a Pod Security Standard for extension namespaces?
+
+The `pod-security.kubernetes.io/enforce` namespace label enforces the [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/).
+
+You can set the `pod-security.kubernetes.io/enforce` label for extension namespace by adding the `security.gardener.cloud/pod-security-enforce` annotation to your `ControllerRegistration`. The value of the annotation would be the value set for the `pod-security.kubernetes.io/enforce` label. It is advised to set the annotation with the most restrictive pod security standard that your extension pods comply with.
+
+If you are using the `./hack/generate-controller-registration.sh` script to generate your `ControllerRegistration` you can use the -e, --pod-security-enforce option to set the `security.gardener.cloud/pod-security-enforce` annotation. If the option is not set, it defaults to `baseline`.

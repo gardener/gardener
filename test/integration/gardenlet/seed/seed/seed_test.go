@@ -484,6 +484,7 @@ var _ = Describe("Seed controller tests", func() {
 							g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(testNamespace), testNamespace)).To(Succeed())
 							g.Expect(testNamespace.Labels).To(And(
 								HaveKeyWithValue("role", "garden"),
+								HaveKeyWithValue("pod-security.kubernetes.io/enforce", "privileged"),
 								HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
 							))
 							g.Expect(testNamespace.Annotations).To(And(
