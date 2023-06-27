@@ -20,11 +20,14 @@ import (
 	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -55,6 +58,7 @@ var _ = Describe("GardenerAPIServer", func() {
 
 		fakeClient        client.Client
 		fakeSecretManager secretsmanager.Interface
+		values            Values
 		deployer          Interface
 
 		fakeOps *retryfake.Ops
@@ -66,12 +70,13 @@ var _ = Describe("GardenerAPIServer", func() {
 
 		podDisruptionBudget *policyv1.PodDisruptionBudget
 		serviceRuntime      *corev1.Service
+		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
 	)
 
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(fakeClient, namespace)
-		deployer = New(fakeClient, namespace, fakeSecretManager, Values{
+		values = Values{
 			Values: apiserver.Values{
 				ETCDEncryption: apiserver.ETCDEncryptionConfig{
 					Resources: []string{"shootstates.core.gardener.cloud"},
@@ -79,7 +84,8 @@ var _ = Describe("GardenerAPIServer", func() {
 				RuntimeVersion: semver.MustParse("1.27.1"),
 			},
 			TopologyAwareRoutingEnabled: true,
-		})
+		}
+		deployer = New(fakeClient, namespace, fakeSecretManager, values)
 
 		fakeOps = &retryfake.Ops{MaxAttempts: 2}
 		DeferCleanup(test.WithVars(
@@ -154,6 +160,37 @@ var _ = Describe("GardenerAPIServer", func() {
 					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(8443),
 				}},
+			},
+		}
+		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
+		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-apiserver-vpa",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+				},
+			},
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+					Name:       "gardener-apiserver",
+				},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+					UpdateMode: &vpaUpdateMode,
+				},
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName: "*",
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceMemory: resource.MustParse("256Mi"),
+							},
+						},
+					},
+				},
 			},
 		}
 	})
@@ -801,7 +838,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 			})
 
 			Context("resources generation", func() {
-				BeforeEach(func() {
+				JustBeforeEach(func() {
 					Expect(deployer.Deploy(ctx)).To(Succeed())
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntime), managedResourceRuntime)).To(Succeed())
@@ -851,14 +888,34 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
 				})
 
-				It("should successfully deploy all resources", func() {
-					Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-					Expect(managedResourceSecretRuntime.Data).To(HaveLen(2))
-					Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudget)))
-					Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(serviceRuntime)))
+				Context("when HVPA is disabled", func() {
+					It("should successfully deploy all resources when HVPA is disabled", func() {
+						Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
+						Expect(managedResourceSecretRuntime.Data).To(HaveLen(3))
+						Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudget)))
+						Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(serviceRuntime)))
+						Expect(string(managedResourceSecretRuntime.Data["verticalpodautoscaler__some-namespace__gardener-apiserver-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
 
-					Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
-					Expect(managedResourceSecretVirtual.Data).To(HaveLen(0))
+						Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
+						Expect(managedResourceSecretVirtual.Data).To(HaveLen(0))
+					})
+				})
+
+				Context("when HVPA is enabled", func() {
+					BeforeEach(func() {
+						values.Values.Autoscaling.HVPAEnabled = true
+						deployer = New(fakeClient, namespace, fakeSecretManager, values)
+					})
+
+					It("should successfully deploy all resources when HVPA is enabled", func() {
+						Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
+						Expect(managedResourceSecretRuntime.Data).To(HaveLen(2))
+						Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudget)))
+						Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(serviceRuntime)))
+
+						Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
+						Expect(managedResourceSecretVirtual.Data).To(HaveLen(0))
+					})
 				})
 			})
 		})
