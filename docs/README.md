@@ -17,6 +17,7 @@
   * [Gardener Admission Controller](concepts/admission-controller.md)
   * [Gardener Resource Manager](concepts/resource-manager.md)
   * [Gardener Operator](concepts/operator.md)
+  * [Gardener Node Agent](concepts/node-agent.md)
   * [Gardenlet](concepts/gardenlet.md)
 * [Backup Restore](concepts/backup-restore.md)
 * [etcd](concepts/etcd.md)

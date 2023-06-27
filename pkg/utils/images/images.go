@@ -51,6 +51,8 @@ const (
 	ImageNameFluentBitPluginInstaller = "fluent-bit-plugin-installer"
 	// ImageNameFluentOperator is a constant for an image in the image vector with name 'fluent-operator'.
 	ImageNameFluentOperator = "fluent-operator"
+	// ImageNameGardenerNodeAgent is a constant for an image in the image vector with name 'gardener-node-agent'.
+	ImageNameGardenerNodeAgent = "gardener-node-agent"
 	// ImageNameGardenerResourceManager is a constant for an image in the image vector with name 'gardener-resource-manager'.
 	ImageNameGardenerResourceManager = "gardener-resource-manager"
 	// ImageNameGardenlet is a constant for an image in the image vector with name 'gardenlet'.
