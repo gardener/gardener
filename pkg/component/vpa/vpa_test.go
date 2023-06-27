@@ -330,6 +330,8 @@ var _ = Describe("VPA", func() {
 									fmt.Sprintf("--updater-interval=%s", flagUpdaterIntervalValue),
 									"--stderrthreshold=info",
 									"--v=2",
+									"--kube-api-qps=100",
+									"--kube-api-burst=120",
 								},
 								LivenessProbe: livenessProbeVpa,
 								Ports: []corev1.ContainerPort{
