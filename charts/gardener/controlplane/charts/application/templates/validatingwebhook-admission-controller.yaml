@@ -238,7 +238,7 @@ webhooks:
       gardener.cloud/role: project
   clientConfig:
     {{- if .Values.global.deployment.virtualGarden.enabled }}
-    url: https://gardener-admission-controller.garden/webhooks/validate-admission-plugin-secret
+    url: https://gardener-admission-controller.garden/webhooks/audit-policies
     {{- else }}
     service:
       namespace: garden
@@ -265,7 +265,7 @@ webhooks:
       gardener.cloud/role: project
   clientConfig:
     {{- if .Values.global.deployment.virtualGarden.enabled }}
-    url: https://gardener-admission-controller.garden/webhooks/audit-policies
+    url: https://gardener-admission-controller.garden/webhooks/validate-admission-plugin-secret
     {{- else }}
     service:
       namespace: garden

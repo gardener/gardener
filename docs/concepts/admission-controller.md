@@ -10,7 +10,7 @@ This section describes the admission webhook handlers that are currently served.
 
 ### Admission Plugin Secret Validator
 
-In `Shoot`, `AdmissionPlugin` can reference to other files. This validation handler validates, the admission plugins secret associated by these admission plugins and ensures that the specified secrets in the same namespace as the Shoot object and if they contain the required data `kubeconfig`.
+In `Shoot`, `AdmissionPlugin` can have reference to other files. This validation handler validates the referred admission plugin secret and ensures that the secret always contains the required data `kubeconfig`.
 
 ### Kubeconfig Secret Validator
 

@@ -182,7 +182,7 @@ func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version s
 				allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("admission plugin %q cannot be disabled", plugin.Name)))
 			}
 			if plugin.KubeconfigSecretName != nil && !admissionPluginsSupportingExternalKubeconfig.Has(plugin.Name) {
-				allErrs = append(allErrs, field.Forbidden(idxPath.Child("kubeconfigSecretName"), fmt.Sprintf("admission plugin %q doesn't support specifying external kubeconfig", plugin.Name)))
+				allErrs = append(allErrs, field.Forbidden(idxPath.Child("kubeconfigSecretName"), fmt.Sprintf("admission plugin %q does not allow specifying external kubeconfig", plugin.Name)))
 			}
 			if err := validateAdmissionPluginConfig(plugin, version, idxPath); err != nil {
 				allErrs = append(allErrs, err)

@@ -420,7 +420,7 @@ func fetchKubeconfigFromSecret(ctx context.Context, c client.Client, key client.
 
 	kubeconfig, ok := secret.Data["kubeconfig"]
 	if !ok || len(kubeconfig) == 0 {
-		return nil, errors.New("the secret's field 'kubeconfig' is empty")
+		return nil, errors.New("the secret's field 'kubeconfig' is either not present or empty")
 	}
 
 	return kubeconfig, nil

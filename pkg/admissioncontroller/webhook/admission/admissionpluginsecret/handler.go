@@ -64,8 +64,7 @@ func (h *Handler) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) 
 		if shoot.Spec.Kubernetes.KubeAPIServer != nil {
 			for _, plugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
 				if plugin.KubeconfigSecretName != nil && *plugin.KubeconfigSecretName == req.Name {
-					_, ok := secret.Data[kubernetes.KubeConfig]
-					if !ok {
+					if _, ok := secret.Data[kubernetes.KubeConfig]; !ok {
 						shoots = append(shoots, shoot.Name)
 					}
 				}

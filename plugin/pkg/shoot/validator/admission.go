@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -651,22 +652,24 @@ func (c *validationContext) validateAdmissionPlugins(a admission.Attributes, sec
 		return nil
 	}
 
+	if c.shoot.Spec.Kubernetes.KubeAPIServer == nil {
+		return nil
+	}
+
 	for _, referencedResource := range c.shoot.Spec.Resources {
 		if referencedResource.ResourceRef.APIVersion == "v1" && referencedResource.ResourceRef.Kind == "Secret" {
 			referencedSecrets.Insert(referencedResource.ResourceRef.Name)
 		}
 	}
 
-	if c.shoot.Spec.Kubernetes.KubeAPIServer != nil {
-		for i, admissionPlugin := range c.shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
-			if admissionPlugin.KubeconfigSecretName != nil {
-				if !referencedSecrets.Has(*admissionPlugin.KubeconfigSecretName) {
-					allErrs = append(allErrs, field.Invalid(path.Index(i).Child("kubeconfigSecretName"), *admissionPlugin.KubeconfigSecretName, "secret should be referenced in shoot .spec.resources"))
-					continue
-				}
-				if err := c.validateReferencedSecret(secretLister, *admissionPlugin.KubeconfigSecretName, c.shoot.Namespace, path.Index(i).Child("kubeconfigSecretName")); err != nil {
-					allErrs = append(allErrs, err)
-				}
+	for i, admissionPlugin := range c.shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
+		if admissionPlugin.KubeconfigSecretName != nil {
+			if !referencedSecrets.Has(*admissionPlugin.KubeconfigSecretName) {
+				allErrs = append(allErrs, field.Invalid(path.Index(i).Child("kubeconfigSecretName"), *admissionPlugin.KubeconfigSecretName, "secret should be referenced in shoot .spec.resources"))
+				continue
+			}
+			if err := c.validateReferencedSecret(secretLister, *admissionPlugin.KubeconfigSecretName, c.shoot.Namespace, path.Index(i).Child("kubeconfigSecretName")); err != nil {
+				allErrs = append(allErrs, err)
 			}
 		}
 	}
@@ -675,16 +678,17 @@ func (c *validationContext) validateAdmissionPlugins(a admission.Attributes, sec
 }
 
 func (c *validationContext) validateReferencedSecret(secretLister kubecorev1listers.SecretLister, secretName, namespace string, fldPath *field.Path) *field.Error {
-	if secret, err := secretLister.Secrets(namespace).Get(secretName); err != nil {
-		if apierrors.IsNotFound(err) {
-			return field.Invalid(fldPath, secretName, fmt.Sprintf("referenced kubeconfig secret does not exist: namespace: %s, name: %s", namespace, secretName))
-		} else {
-			return field.InternalError(fldPath, fmt.Errorf("unable to get the referenced secret: namespace: %s, name: %s", namespace, secretName))
-		}
-	} else {
-		if _, ok := secret.Data[kubernetes.KubeConfig]; !ok {
-			return field.Invalid(fldPath, secretName, fmt.Sprintf("referenced kubeconfig secret doesn't contain kubeconfig: namespace: %s, name: %s", namespace, secretName))
-		}
+	var (
+		secret *corev1.Secret
+		err    error
+	)
+
+	if secret, err = secretLister.Secrets(namespace).Get(secretName); err != nil {
+		return field.InternalError(fldPath, fmt.Errorf("unable to get the referenced secret: namespace: %s, name: %s, error: %w", namespace, secretName, err))
+	}
+
+	if _, ok := secret.Data[kubernetes.KubeConfig]; !ok {
+		return field.Invalid(fldPath, secretName, fmt.Sprintf("referenced kubeconfig secret doesn't contain kubeconfig: namespace: %s, name: %s", namespace, secretName))
 	}
 
 	return nil
