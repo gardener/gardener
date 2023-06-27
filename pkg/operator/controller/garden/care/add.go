@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	componentbaseconfig "k8s.io/component-base/config"
@@ -137,13 +138,14 @@ func gardenReconciledSuccessfully(oldSeed, newSeed *operatorv1alpha1.Garden) boo
 
 // MapManagedResourceToGarden is a mapper.MapFunc for mapping a ManagedResource to the owning Garden.
 func (r *Reconciler) MapManagedResourceToGarden(ctx context.Context, log logr.Logger, _ client.Reader, _ client.Object) []reconcile.Request {
-	gardenList := &operatorv1alpha1.GardenList{}
-	if err := r.RuntimeClient.List(ctx, gardenList); err != nil {
+	gardenList := &metav1.PartialObjectMetadataList{}
+	gardenList.SetGroupVersionKind(operatorv1alpha1.SchemeGroupVersion.WithKind("GardenList"))
+	if err := r.RuntimeClient.List(ctx, gardenList, client.Limit(1)); err != nil {
 		log.Error(err, "Could not list gardens")
-		return []reconcile.Request{}
+		return nil
 	}
 	if len(gardenList.Items) == 0 {
-		return []reconcile.Request{}
+		return nil
 	}
 	// Garden is a singleton
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: gardenList.Items[0].Name}}}

@@ -55,7 +55,7 @@ import (
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
-	gardencontroller "github.com/gardener/gardener/pkg/operator/controller/garden"
+	gardencontroller "github.com/gardener/gardener/pkg/operator/controller/garden/garden"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -133,7 +133,7 @@ var _ = Describe("Garden controller tests", func() {
 		Expect((&operationannotation.Reconciler{ForObject: func() client.Object { return &druidv1alpha1.Etcd{} }}).AddToManager(mgr)).To(Succeed())
 
 		By("Register controller")
-		chartsPath := filepath.Join("..", "..", "..", "..", charts.Path)
+		chartsPath := filepath.Join("..", "..", "..", "..", "..", charts.Path)
 		imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(chartsPath, "images.yaml"))
 		Expect(err).NotTo(HaveOccurred())
 

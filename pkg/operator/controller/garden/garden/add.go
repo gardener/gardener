@@ -83,7 +83,6 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		if err := mgr.Add(r.GardenClientMap); err != nil {
 			return err
 		}
-
 	}
 
 	return builder.

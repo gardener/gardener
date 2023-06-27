@@ -35,7 +35,7 @@ import (
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
-	. "github.com/gardener/gardener/pkg/operator/controller/care"
+	. "github.com/gardener/gardener/pkg/operator/controller/garden/care"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 )

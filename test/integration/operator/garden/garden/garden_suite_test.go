@@ -35,7 +35,7 @@ import (
 
 func TestGarden(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Integration Operator Garden Suite")
+	RunSpecs(t, "Test Integration Operator Garden Garden Suite")
 }
 
 const testID = "garden-controller-test"
@@ -60,7 +60,7 @@ var _ = BeforeSuite(func() {
 	testEnv = &envtest.Environment{
 		CRDInstallOptions: envtest.CRDInstallOptions{
 			Paths: []string{
-				filepath.Join("..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml"),
+				filepath.Join("..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml"),
 			},
 		},
 		ErrorIfCRDPathMissing: true,
