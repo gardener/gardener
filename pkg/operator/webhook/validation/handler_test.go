@@ -54,7 +54,9 @@ var _ = Describe("Handler", func() {
 				},
 				VirtualCluster: operatorv1alpha1.VirtualCluster{
 					DNS: operatorv1alpha1.DNS{
-						Domain: "virtual-garden.local.gardener.cloud",
+						Domains: []string{
+							"virtual-garden.local.gardener.cloud",
+						},
 					},
 					Kubernetes: operatorv1alpha1.Kubernetes{
 						Version: "1.26.3",

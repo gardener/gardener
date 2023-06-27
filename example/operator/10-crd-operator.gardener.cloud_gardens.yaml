@@ -170,15 +170,16 @@ spec:
                     description: DNS holds information about DNS settings.
                     properties:
                       domain:
-                        description: Domain is the external domain of the virtual
-                          garden cluster. This field is immutable.
-                        minLength: 1
+                        description: 'Deprecated: This field is deprecated and will
+                          be removed soon. Please use `Domains` instead. TODO(timuthy):
+                          Drop this after v1.74 has been released.'
                         type: string
-                        x-kubernetes-validations:
-                        - message: Value is immutable
-                          rule: self == oldSelf
-                    required:
-                    - domain
+                      domains:
+                        description: Domains are the external domains of the virtual
+                          garden cluster. The first given domain in this list is immutable.
+                        items:
+                          type: string
+                        type: array
                     type: object
                   etcd:
                     description: ETCD contains configuration for the etcds of the

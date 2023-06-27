@@ -23,6 +23,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/pointer"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
@@ -68,13 +69,37 @@ func ValidateGarden(garden *operatorv1alpha1.Garden) field.ErrorList {
 func ValidateGardenUpdate(oldGarden, newGarden *operatorv1alpha1.Garden) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if oldGarden.Spec.VirtualCluster.ControlPlane != nil && oldGarden.Spec.VirtualCluster.ControlPlane.HighAvailability != nil &&
-		(newGarden.Spec.VirtualCluster.ControlPlane == nil || newGarden.Spec.VirtualCluster.ControlPlane.HighAvailability == nil) {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldGarden.Spec.VirtualCluster.ControlPlane, newGarden.Spec.VirtualCluster.ControlPlane, field.NewPath("spec", "virtualCluster", "controlPlane", "highAvailability"))...)
+	allErrs = append(allErrs, validateVirtualClusterUpdate(oldGarden.Spec.VirtualCluster, newGarden.Spec.VirtualCluster, field.NewPath("spec", "virtualCluster"))...)
+	allErrs = append(allErrs, ValidateGarden(newGarden)...)
+
+	return allErrs
+}
+
+func validateVirtualClusterUpdate(oldVirtualCluster, newVirtualCluster operatorv1alpha1.VirtualCluster, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// Check if old Domain field was properly transferred to Domains field.
+	if oldVirtualCluster.DNS.Domain != nil && len(newVirtualCluster.DNS.Domains) > 0 && *oldVirtualCluster.DNS.Domain != newVirtualCluster.DNS.Domains[0] {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "domains").Index(0), newVirtualCluster.DNS.Domains[0], "first entry must be the same as previously used in .spec.virtualCluster.dns.domain"))
 	}
 
-	allErrs = append(allErrs, gardencorevalidation.ValidateKubernetesVersionUpdate(newGarden.Spec.VirtualCluster.Kubernetes.Version, newGarden.Spec.VirtualCluster.Kubernetes.Version, field.NewPath("spec", "virtualCluster", "kubernetes", "version"))...)
-	allErrs = append(allErrs, ValidateGarden(newGarden)...)
+	// Disallow changing from 'domains' to 'domain'.
+	if len(oldVirtualCluster.DNS.Domains) > 0 && oldVirtualCluster.DNS.Domain == nil && newVirtualCluster.DNS.Domain != nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("dns", "domain"), "switching from .spec.virtualCluster.dns.domains to .spec.virtualCluster.dns.domain is not allowed"))
+	}
+
+	// First domain is immutable. Changing this would incompatibly change the service account issuer in the cluster, ref https://github.com/gardener/gardener/blob/17ff592e734131ef746560641bdcdec3bcfce0f1/pkg/component/kubeapiserver/deployment.go#L585C8-L585C8
+	// Note: We can consider supporting this scenario in the future but would need to re-issue all service account tokens during the reconcile run.
+	if len(oldVirtualCluster.DNS.Domains) > 0 && len(newVirtualCluster.DNS.Domains) > 0 {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVirtualCluster.DNS.Domains[0], newVirtualCluster.DNS.Domains[0], fldPath.Child("dns", "domains").Index(0))...)
+	}
+
+	if oldVirtualCluster.ControlPlane != nil && oldVirtualCluster.ControlPlane.HighAvailability != nil &&
+		(newVirtualCluster.ControlPlane == nil || newVirtualCluster.ControlPlane.HighAvailability == nil) {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVirtualCluster.ControlPlane, newVirtualCluster.ControlPlane, fldPath.Child("controlPlane", "highAvailability"))...)
+	}
+
+	allErrs = append(allErrs, gardencorevalidation.ValidateKubernetesVersionUpdate(newVirtualCluster.Kubernetes.Version, oldVirtualCluster.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
 
 	return allErrs
 }
@@ -100,7 +125,26 @@ func validateRuntimeCluster(runtimeCluster operatorv1alpha1.RuntimeCluster, fldP
 func validateVirtualCluster(virtualCluster operatorv1alpha1.VirtualCluster, runtimeCluster operatorv1alpha1.RuntimeCluster, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(virtualCluster.DNS.Domain, fldPath.Child("dns", "domain"))...)
+	// TODO(timuthy): Turn this into a native CRD validation as soon as the `dns.domain` field was dropped (planned after v1.74)
+	if len(virtualCluster.DNS.Domains) == 0 && virtualCluster.DNS.Domain == nil {
+		allErrs = append(allErrs, field.Required(fldPath.Child("dns").Child("domains"), "at least one domain is required"))
+	}
+
+	if domain := virtualCluster.DNS.Domain; domain != nil {
+		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(*domain, fldPath.Child("dns", "domain"))...)
+	}
+
+	domains := sets.New[string]()
+	for i, domain := range virtualCluster.DNS.Domains {
+		allErrs = append(allErrs, gardencorevalidation.ValidateDNS1123Subdomain(domain, fldPath.Child("dns", "domains").Index(i))...)
+		if domains.Has(domain) {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Child("dns", "domains").Index(i), domain))
+		}
+		if domain == pointer.StringDeref(virtualCluster.DNS.Domain, "") {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Child("dns", "domain"), domain))
+		}
+		domains.Insert(domain)
+	}
 
 	if err := kubernetesversion.CheckIfSupported(virtualCluster.Kubernetes.Version); err != nil {
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("kubernetes", "version"), virtualCluster.Kubernetes.Version, kubernetesversion.SupportedVersions))
