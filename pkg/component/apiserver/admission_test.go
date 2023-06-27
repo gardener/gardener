@@ -19,6 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -365,6 +366,77 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					"imagepolicywebhook.yaml": `imagePolicy:
   kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/imagepolicywebhook-kubeconfig.yaml
 `,
+				},
+			}))
+		})
+	})
+
+	Describe("#InjectAdmissionSettings", func() {
+		It("should inject the correct settings", func() {
+			deployment := &appsv1.Deployment{}
+			deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, corev1.Container{})
+
+			configMapAdmissionConfigs := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "admission-configs"}}
+			secretAdmissionKubeconfigs := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "admission-kubeconfigs"}}
+
+			InjectAdmissionSettings(deployment, configMapAdmissionConfigs, secretAdmissionKubeconfigs, Values{
+				EnabledAdmissionPlugins: []AdmissionPluginConfig{
+					{
+						AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Foo"},
+						Kubeconfig:      []byte("foo"),
+					},
+					{
+						AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Bar"},
+					},
+				},
+				DisabledAdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{
+					{Name: "Baz"},
+				},
+			})
+
+			Expect(deployment).To(Equal(&appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{{
+								Args: []string{
+									"--enable-admission-plugins=Foo,Bar",
+									"--disable-admission-plugins=Baz",
+									"--admission-control-config-file=/etc/kubernetes/admission/admission-configuration.yaml",
+								},
+								VolumeMounts: []corev1.VolumeMount{
+									{
+										Name:      "admission-config",
+										MountPath: "/etc/kubernetes/admission",
+									},
+									{
+										Name:      "admission-kubeconfigs",
+										MountPath: "/etc/kubernetes/admission-kubeconfigs",
+									},
+								},
+							}},
+							Volumes: []corev1.Volume{
+								{
+									Name: "admission-config",
+									VolumeSource: corev1.VolumeSource{
+										ConfigMap: &corev1.ConfigMapVolumeSource{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: configMapAdmissionConfigs.Name,
+											},
+										},
+									},
+								},
+								{
+									Name: "admission-kubeconfigs",
+									VolumeSource: corev1.VolumeSource{
+										Secret: &corev1.SecretVolumeSource{
+											SecretName: secretAdmissionKubeconfigs.Name,
+										},
+									},
+								},
+							},
+						},
+					},
 				},
 			}))
 		})

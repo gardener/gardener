@@ -2237,7 +2237,7 @@ rules:
 					TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 				}))
 
-				Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElement(ContainSubstring("--egress-selector-config-file=")))
+				Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElement(ContainSubstring("--egress-selector-config-file=")))
 				Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")})))
 				Expect(deployment.Spec.Template.Spec.Volumes).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")})))
 
@@ -2436,20 +2436,20 @@ rules:
 					kapi = New(kubernetesInterface, namespace, sm, values)
 					deployAndRead()
 
-					issuerIdx := indexOfElement(deployment.Spec.Template.Spec.Containers[0].Command, "--service-account-issuer="+serviceAccountIssuer)
-					issuerIdx1 := indexOfElement(deployment.Spec.Template.Spec.Containers[0].Command, "--service-account-issuer="+acceptedIssuers[0])
-					issuerIdx2 := indexOfElement(deployment.Spec.Template.Spec.Containers[0].Command, "--service-account-issuer="+acceptedIssuers[1])
+					issuerIdx := indexOfElement(deployment.Spec.Template.Spec.Containers[0].Args, "--service-account-issuer="+serviceAccountIssuer)
+					issuerIdx1 := indexOfElement(deployment.Spec.Template.Spec.Containers[0].Args, "--service-account-issuer="+acceptedIssuers[0])
+					issuerIdx2 := indexOfElement(deployment.Spec.Template.Spec.Containers[0].Args, "--service-account-issuer="+acceptedIssuers[1])
 					tlscipherSuites := kubernetesutils.TLSCipherSuites(version)
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Name).To(Equal("kube-apiserver"))
 					Expect(deployment.Spec.Template.Spec.Containers[0].Image).To(Equal(images.KubeAPIServer))
 					Expect(deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy).To(Equal(corev1.PullIfNotPresent))
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ConsistOf(
-						"/usr/local/bin/kube-apiserver",
+					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ConsistOf("/usr/local/bin/kube-apiserver"))
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ConsistOf(
 						"--enable-admission-plugins="+admissionPlugin1+","+admissionPlugin2,
 						"--admission-control-config-file=/etc/kubernetes/admission/admission-configuration.yaml",
 						"--anonymous-auth=false",
-						"--audit-log-path=/var/lib/audit.log",
+						"--audit-log-path=/tmp/audit/audit.log",
 						"--audit-policy-file=/etc/kubernetes/audit/audit-policy.yaml",
 						"--audit-log-maxsize=100",
 						"--audit-log-maxbackup=5",
@@ -2538,7 +2538,7 @@ rules:
 							MountPath: "/srv/kubernetes/etcd/client",
 						},
 						corev1.VolumeMount{
-							Name:      "kube-apiserver-server",
+							Name:      "server",
 							MountPath: "/srv/kubernetes/apiserver",
 						},
 						corev1.VolumeMount{
@@ -2693,7 +2693,7 @@ rules:
 							},
 						},
 						corev1.Volume{
-							Name: "kube-apiserver-server",
+							Name: "server",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName: secretNameServer,
@@ -2748,7 +2748,7 @@ rules:
 					kapi = New(kubernetesInterface, namespace, sm, values)
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
 						"--allow-privileged=true",
 						"--kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP",
 						"--kubelet-certificate-authority=/srv/kubernetes/ca-kubelet/bundle.crt",
@@ -2790,7 +2790,7 @@ rules:
 					kapi = New(kubernetesInterface, namespace, sm, values)
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
 						"--egress-selector-config-file=/etc/kubernetes/egress/egress-selector-configuration.yaml",
 					))
 					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
@@ -2940,7 +2940,7 @@ rules:
 					})
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(ContainSubstring(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(ContainSubstring(
 						"--anonymous-auth=true",
 					)))
 				})
@@ -2958,7 +2958,7 @@ rules:
 					})
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
 						"--advertise-address=" + advertiseAddress,
 					))
 				})
@@ -2974,7 +2974,7 @@ rules:
 					})
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElement(ContainSubstring("--advertise-address=")))
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElement(ContainSubstring("--advertise-address=")))
 				})
 
 				It("should configure the correct etcd overrides for etcd-events", func() {
@@ -2996,7 +2996,7 @@ rules:
 					})
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
 						"--etcd-servers-overrides=networking.k8s.io/networkpolicies#https://etcd-events-client:2379,/events#https://etcd-events-client:2379,apps/daemonsets#https://etcd-events-client:2379",
 					))
 				})
@@ -3018,7 +3018,7 @@ rules:
 					})
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
 						"--api-audiences=" + apiAudience1 + "," + apiAudience2,
 					))
 				})
@@ -3026,7 +3026,7 @@ rules:
 				It("should not configure the api audiences if not provided", func() {
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElement(ContainSubstring("--api-audiences=")))
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElement(ContainSubstring("--api-audiences=")))
 				})
 
 				It("should configure the feature gates if provided", func() {
@@ -3042,7 +3042,7 @@ rules:
 					})
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
 						"--feature-gates=Bar=false,Foo=true",
 					))
 				})
@@ -3050,7 +3050,7 @@ rules:
 				It("should not configure the feature gates if not provided", func() {
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElement(ContainSubstring("--feature-gates=")))
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElement(ContainSubstring("--feature-gates=")))
 				})
 
 				It("should configure the request settings if provided", func() {
@@ -3069,7 +3069,7 @@ rules:
 					})
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
 						"--max-requests-inflight=123",
 						"--max-mutating-requests-inflight=456",
 					))
@@ -3078,7 +3078,7 @@ rules:
 				It("should not configure the request settings if not provided", func() {
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElements(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElements(
 						ContainSubstring("--max-requests-inflight="),
 						ContainSubstring("--max-mutating-requests-inflight="),
 					))
@@ -3098,7 +3098,7 @@ rules:
 					})
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
 						"--runtime-config=bar=false,foo=true",
 					))
 				})
@@ -3114,7 +3114,7 @@ rules:
 					})
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElement(ContainSubstring("--runtime-config=")))
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElement(ContainSubstring("--runtime-config=")))
 				})
 
 				It("should disable apis in case of workerless shoot with k8s version < 1.25", func() {
@@ -3131,7 +3131,7 @@ rules:
 					})
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
 						"--runtime-config=apps/v1=false,autoscaling/v2=false,bar=false,batch/v1=false,policy/v1/poddisruptionbudgets=false,policy/v1beta1/podsecuritypolicies=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
 					))
 				})
@@ -3151,7 +3151,7 @@ rules:
 					})
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
 						"--runtime-config=apps/v1=false,autoscaling/v2=false,bar=false,batch/v1=false,policy/v1/poddisruptionbudgets=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
 					))
 				})
@@ -3175,7 +3175,7 @@ rules:
 					})
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
 						"--default-watch-cache-size=123",
 						"--watch-cache-sizes=foo#456,bar.baz#789",
 					))
@@ -3184,7 +3184,7 @@ rules:
 				It("should not configure the watch cache settings if not provided", func() {
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElements(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElements(
 						ContainSubstring("--default-watch-cache-size="),
 						ContainSubstring("--watch-cache-sizes="),
 					))
@@ -3203,7 +3203,7 @@ rules:
 
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
 						"--default-not-ready-toleration-seconds=120",
 						"--default-unreachable-toleration-seconds=130",
 					))
@@ -3224,7 +3224,7 @@ rules:
 					})
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
 						"--vmodule=httplog=3",
 						"--v=3",
 					))
@@ -3239,7 +3239,7 @@ rules:
 					})
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElements(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElements(
 						ContainSubstring("--vmodule=httplog"),
 						ContainSubstring("--v="),
 					))
@@ -3331,7 +3331,7 @@ rules:
 					})
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
 						"--egress-selector-config-file=/etc/kubernetes/egress/egress-selector-configuration.yaml",
 					))
 
@@ -3441,7 +3441,7 @@ rules:
 					})
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
 						"--shutdown-send-retry-after=true",
 					))
 				})
@@ -3454,7 +3454,7 @@ rules:
 					kapi = New(kubernetesInterface, namespace, sm, values)
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
 						"--tls-sni-cert-key=/srv/kubernetes/tls-sni/0/tls.crt,/srv/kubernetes/tls-sni/0/tls.key",
 						"--tls-sni-cert-key=/srv/kubernetes/tls-sni/1/tls.crt,/srv/kubernetes/tls-sni/1/tls.key:foo1.com,*.foo2.com",
 					))
@@ -3501,7 +3501,7 @@ rules:
 					kapi = New(kubernetesInterface, namespace, sm, values)
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
 						"--audit-webhook-config-file=/etc/kubernetes/webhook/audit/kubeconfig.yaml",
 						"--audit-webhook-batch-max-size=30",
 						"--audit-webhook-version=audit.k8s.io/v1beta1",
@@ -3534,7 +3534,7 @@ rules:
 					kapi = New(kubernetesInterface, namespace, sm, values)
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
 						"--authentication-token-webhook-config-file=/etc/kubernetes/webhook/authentication/kubeconfig.yaml",
 						"--authentication-token-webhook-cache-ttl=30s",
 						"--authentication-token-webhook-version=v1beta1",
@@ -3568,7 +3568,7 @@ rules:
 					kapi = New(kubernetesInterface, namespace, sm, values)
 					deployAndRead()
 
-					Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
 						"--authorization-webhook-config-file=/etc/kubernetes/webhook/authorization/kubeconfig.yaml",
 						"--authorization-webhook-cache-authorized-ttl=13s",
 						"--authorization-webhook-cache-unauthorized-ttl=37s",

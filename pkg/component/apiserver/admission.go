@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strings"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -59,15 +60,12 @@ func init() {
 }
 
 const (
-	// ConfigMapAdmissionDataKey is a constant for a key in the data of the ConfigMap containing the configuration of
-	// admission plugins.
-	ConfigMapAdmissionDataKey = "admission-configuration.yaml"
-	// VolumeMountPathAdmissionConfiguration is a constant for the volume mount path of the admission configuration
-	// files.
-	VolumeMountPathAdmissionConfiguration = "/etc/kubernetes/admission"
-	// VolumeMountPathAdmissionKubeconfigSecrets is a constant for the volume mount path of the admission kubeconfig
-	// files.
-	VolumeMountPathAdmissionKubeconfigSecrets = "/etc/kubernetes/admission-kubeconfigs"
+	configMapAdmissionDataKey = "admission-configuration.yaml"
+
+	volumeNameAdmissionConfiguration          = "admission-config"
+	volumeNameAdmissionKubeconfigSecrets      = "admission-kubeconfigs"
+	volumeMountPathAdmissionConfiguration     = "/etc/kubernetes/admission"
+	volumeMountPathAdmissionKubeconfigSecrets = "/etc/kubernetes/admission-kubeconfigs"
 )
 
 // ReconcileSecretAdmissionKubeconfigs reconciles the secret containing the kubeconfig for admission plugins.
@@ -98,7 +96,7 @@ func ReconcileConfigMapAdmission(ctx context.Context, c client.Client, configMap
 		if rawConfig != nil {
 			admissionConfig.Plugins = append(admissionConfig.Plugins, apiserverv1alpha1.AdmissionPluginConfiguration{
 				Name: plugin.Name,
-				Path: VolumeMountPathAdmissionConfiguration + "/" + admissionPluginsConfigFilename(plugin.Name),
+				Path: volumeMountPathAdmissionConfiguration + "/" + admissionPluginsConfigFilename(plugin.Name),
 			})
 
 			configMap.Data[admissionPluginsConfigFilename(plugin.Name)] = string(rawConfig)
@@ -110,7 +108,7 @@ func ReconcileConfigMapAdmission(ctx context.Context, c client.Client, configMap
 		return err
 	}
 
-	configMap.Data[ConfigMapAdmissionDataKey] = string(data)
+	configMap.Data[configMapAdmissionDataKey] = string(data)
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
 	return client.IgnoreAlreadyExists(c.Create(ctx, configMap))
@@ -120,7 +118,7 @@ func computeRelevantAdmissionPluginRawConfig(plugin AdmissionPluginConfig) ([]by
 	var (
 		nothingToMutate    = (plugin.Config == nil || plugin.Config.Raw == nil) && len(plugin.Kubeconfig) == 0
 		mustDefaultConfig  = (plugin.Config == nil || plugin.Config.Raw == nil) && len(plugin.Kubeconfig) > 0
-		kubeconfigFilePath = VolumeMountPathAdmissionKubeconfigSecrets + "/" + admissionPluginsKubeconfigFilename(plugin.Name)
+		kubeconfigFilePath = volumeMountPathAdmissionKubeconfigSecrets + "/" + admissionPluginsKubeconfigFilename(plugin.Name)
 	)
 
 	if len(plugin.Kubeconfig) == 0 {
@@ -205,4 +203,67 @@ func admissionPluginsConfigFilename(name string) string {
 
 func admissionPluginsKubeconfigFilename(name string) string {
 	return strings.ToLower(name) + "-kubeconfig.yaml"
+}
+
+// InjectAdmissionSettings injects the admission settings into the deployment.
+func InjectAdmissionSettings(deployment *appsv1.Deployment, configMapAdmissionConfigs *corev1.ConfigMap, secretAdmissionKubeconfigs *corev1.Secret, values Values) {
+	if len(values.EnabledAdmissionPlugins) > 0 {
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--enable-admission-plugins="+strings.Join(admissionPluginNames(values), ","))
+	}
+	if len(values.DisabledAdmissionPlugins) > 0 {
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--disable-admission-plugins="+strings.Join(disabledAdmissionPluginNames(values), ","))
+	}
+	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--admission-control-config-file=%s/%s", volumeMountPathAdmissionConfiguration, configMapAdmissionDataKey))
+
+	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
+		corev1.VolumeMount{
+			Name:      volumeNameAdmissionConfiguration,
+			MountPath: volumeMountPathAdmissionConfiguration,
+		},
+		corev1.VolumeMount{
+			Name:      volumeNameAdmissionKubeconfigSecrets,
+			MountPath: volumeMountPathAdmissionKubeconfigSecrets,
+		},
+	)
+
+	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes,
+		corev1.Volume{
+			Name: volumeNameAdmissionConfiguration,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: configMapAdmissionConfigs.Name,
+					},
+				},
+			},
+		},
+		corev1.Volume{
+			Name: volumeNameAdmissionKubeconfigSecrets,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: secretAdmissionKubeconfigs.Name,
+				},
+			},
+		},
+	)
+}
+
+func admissionPluginNames(values Values) []string {
+	var out []string
+
+	for _, plugin := range values.EnabledAdmissionPlugins {
+		out = append(out, plugin.Name)
+	}
+
+	return out
+}
+
+func disabledAdmissionPluginNames(values Values) []string {
+	var out []string
+
+	for _, plugin := range values.DisabledAdmissionPlugins {
+		out = append(out, plugin.Name)
+	}
+
+	return out
 }

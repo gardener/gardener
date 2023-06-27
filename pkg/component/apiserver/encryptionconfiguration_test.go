@@ -19,6 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -198,5 +199,43 @@ resources:
 			Entry("encrypting with current", true),
 			Entry("encrypting with old", false),
 		)
+	})
+
+	Describe("#InjectEncryptionSettings", func() {
+		It("should inject the correct settings", func() {
+			deployment := &appsv1.Deployment{}
+			deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, corev1.Container{})
+
+			secretETCDEncryptionConfiguration := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-enc-config"}}
+
+			InjectEncryptionSettings(deployment, secretETCDEncryptionConfiguration)
+
+			Expect(deployment).To(Equal(&appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{{
+								Args: []string{
+									"--encryption-provider-config=/etc/kubernetes/etcd-encryption-secret/encryption-configuration.yaml",
+								},
+								VolumeMounts: []corev1.VolumeMount{{
+									Name:      "etcd-encryption-secret",
+									MountPath: "/etc/kubernetes/etcd-encryption-secret",
+									ReadOnly:  true,
+								}},
+							}},
+							Volumes: []corev1.Volume{{
+								Name: "etcd-encryption-secret",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: secretETCDEncryptionConfiguration.Name,
+									},
+								},
+							}},
+						},
+					},
+				},
+			}))
+		})
 	})
 })

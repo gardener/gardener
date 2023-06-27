@@ -16,7 +16,9 @@ package apiserver
 
 import (
 	"context"
+	"fmt"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -55,7 +57,12 @@ func init() {
 	encryptionCodec = serializer.NewCodecFactory(encryptionScheme).CodecForVersions(ser, ser, versions, versions)
 }
 
-const secretETCDEncryptionConfigurationDataKey = "encryption-configuration.yaml"
+const (
+	secretETCDEncryptionConfigurationDataKey = "encryption-configuration.yaml"
+
+	volumeNameEtcdEncryptionConfig      = "etcd-encryption-secret"
+	volumeMountPathEtcdEncryptionConfig = "/etc/kubernetes/etcd-encryption-secret"
+)
 
 // ReconcileSecretETCDEncryptionConfiguration reconciles the ETCD encryption secret configuration.
 func ReconcileSecretETCDEncryptionConfiguration(
@@ -148,4 +155,22 @@ func aesKeyFromSecretData(data map[string][]byte) apiserverconfigv1.Key {
 		Name:   string(data[secretsutils.DataKeyEncryptionKeyName]),
 		Secret: string(data[secretsutils.DataKeyEncryptionSecret]),
 	}
+}
+
+// InjectEncryptionSettings injects the encryption settings into the deployment.
+func InjectEncryptionSettings(deployment *appsv1.Deployment, secretETCDEncryptionConfiguration *corev1.Secret) {
+	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--encryption-provider-config=%s/%s", volumeMountPathEtcdEncryptionConfig, secretETCDEncryptionConfigurationDataKey))
+	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+		Name:      volumeNameEtcdEncryptionConfig,
+		MountPath: volumeMountPathEtcdEncryptionConfig,
+		ReadOnly:  true,
+	})
+	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+		Name: volumeNameEtcdEncryptionConfig,
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: secretETCDEncryptionConfiguration.Name,
+			},
+		},
+	})
 }

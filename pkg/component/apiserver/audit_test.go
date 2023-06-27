@@ -19,6 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -184,6 +185,110 @@ rules:
 				},
 				Immutable: pointer.Bool(true),
 				Data:      configMap.Data,
+			}))
+		})
+	})
+
+	Describe("#InjectAuditSettings", func() {
+		It("should inject the correct settings w/o webhook", func() {
+			deployment := &appsv1.Deployment{}
+			deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, corev1.Container{})
+
+			configMapAuditPolicy := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "audit-policy"}}
+
+			InjectAuditSettings(deployment, configMapAuditPolicy, nil, nil)
+
+			Expect(deployment).To(Equal(&appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{{
+								Args: []string{
+									"--audit-policy-file=/etc/kubernetes/audit/audit-policy.yaml",
+									"--audit-log-path=/tmp/audit/audit.log",
+									"--audit-log-maxsize=100",
+									"--audit-log-maxbackup=5",
+								},
+								VolumeMounts: []corev1.VolumeMount{{
+									Name:      "audit-policy-config",
+									MountPath: "/etc/kubernetes/audit",
+								}},
+							}},
+							Volumes: []corev1.Volume{{
+								Name: "audit-policy-config",
+								VolumeSource: corev1.VolumeSource{
+									ConfigMap: &corev1.ConfigMapVolumeSource{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: configMapAuditPolicy.Name,
+										},
+									},
+								},
+							}},
+						},
+					},
+				},
+			}))
+		})
+
+		It("should inject the correct settings w/ webhook", func() {
+			deployment := &appsv1.Deployment{}
+			deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, corev1.Container{})
+
+			configMapAuditPolicy := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "audit-policy"}}
+			secretWebhookKubeconfig := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "audit-webhook"}}
+
+			InjectAuditSettings(deployment, configMapAuditPolicy, secretWebhookKubeconfig, &AuditConfig{Webhook: &AuditWebhook{
+				Kubeconfig:   []byte("foo"),
+				BatchMaxSize: pointer.Int32(2),
+				Version:      pointer.String("bar"),
+			}})
+
+			Expect(deployment).To(Equal(&appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{{
+								Args: []string{
+									"--audit-policy-file=/etc/kubernetes/audit/audit-policy.yaml",
+									"--audit-webhook-config-file=/etc/kubernetes/webhook/audit/kubeconfig.yaml",
+									"--audit-webhook-batch-max-size=2",
+									"--audit-webhook-version=bar",
+								},
+								VolumeMounts: []corev1.VolumeMount{
+									{
+										Name:      "audit-policy-config",
+										MountPath: "/etc/kubernetes/audit",
+									},
+									{
+										Name:      "audit-webhook-kubeconfig",
+										MountPath: "/etc/kubernetes/webhook/audit",
+										ReadOnly:  true,
+									},
+								},
+							}},
+							Volumes: []corev1.Volume{
+								{
+									Name: "audit-policy-config",
+									VolumeSource: corev1.VolumeSource{
+										ConfigMap: &corev1.ConfigMapVolumeSource{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: configMapAuditPolicy.Name,
+											},
+										},
+									},
+								},
+								{
+									Name: "audit-webhook-kubeconfig",
+									VolumeSource: corev1.VolumeSource{
+										Secret: &corev1.SecretVolumeSource{
+											SecretName: secretWebhookKubeconfig.Name,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
 			}))
 		})
 	})

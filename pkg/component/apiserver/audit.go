@@ -16,7 +16,9 @@ package apiserver
 
 import (
 	"context"
+	"fmt"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -52,8 +54,13 @@ func init() {
 const (
 	// SecretWebhookKubeconfigDataKey is a constant for a key in the data of the secret containing a kubeconfig.
 	SecretWebhookKubeconfigDataKey = "kubeconfig.yaml"
-	// ConfigMapAuditPolicyDataKey is a constant for a key in the data of the ConfigMap containing an audit policy.
-	ConfigMapAuditPolicyDataKey = "audit-policy.yaml"
+
+	configMapAuditPolicyDataKey = "audit-policy.yaml"
+
+	volumeNameAuditPolicy                 = "audit-policy-config"
+	volumeNameAuditWebhookKubeconfig      = "audit-webhook-kubeconfig"
+	volumeMountPathAuditPolicy            = "/etc/kubernetes/audit"
+	volumeMountPathAuditWebhookKubeconfig = "/etc/kubernetes/webhook/audit"
 )
 
 // ReconcileSecretAuditWebhookKubeconfig reconciles the secret containing the kubeconfig for audit webhooks.
@@ -92,7 +99,61 @@ func ReconcileConfigMapAuditPolicy(ctx context.Context, c client.Client, configM
 		policy = *auditConfig.Policy
 	}
 
-	configMap.Data = map[string]string{ConfigMapAuditPolicyDataKey: policy}
+	configMap.Data = map[string]string{configMapAuditPolicyDataKey: policy}
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 	return client.IgnoreAlreadyExists(c.Create(ctx, configMap))
+}
+
+// InjectAuditSettings injects the audit settings into the deployment.
+func InjectAuditSettings(deployment *appsv1.Deployment, configMapAuditPolicy *corev1.ConfigMap, secretWebhookKubeconfig *corev1.Secret, auditConfig *AuditConfig) {
+	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--audit-policy-file=%s/%s", volumeMountPathAuditPolicy, configMapAuditPolicyDataKey))
+
+	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+		Name:      volumeNameAuditPolicy,
+		MountPath: volumeMountPathAuditPolicy,
+	})
+	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+		Name: volumeNameAuditPolicy,
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: configMapAuditPolicy.Name,
+				},
+			},
+		},
+	})
+
+	if auditConfig == nil || auditConfig.Webhook == nil {
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args,
+			"--audit-log-path=/tmp/audit/audit.log",
+			"--audit-log-maxsize=100",
+			"--audit-log-maxbackup=5",
+		)
+		return
+	}
+
+	if len(auditConfig.Webhook.Kubeconfig) > 0 {
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--audit-webhook-config-file=%s/%s", volumeMountPathAuditWebhookKubeconfig, SecretWebhookKubeconfigDataKey))
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      volumeNameAuditWebhookKubeconfig,
+			MountPath: volumeMountPathAuditWebhookKubeconfig,
+			ReadOnly:  true,
+		})
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: volumeNameAuditWebhookKubeconfig,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: secretWebhookKubeconfig.Name,
+				},
+			},
+		})
+	}
+
+	if v := auditConfig.Webhook.BatchMaxSize; v != nil {
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--audit-webhook-batch-max-size=%d", *v))
+	}
+
+	if v := auditConfig.Webhook.Version; v != nil {
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--audit-webhook-version=%s", *v))
+	}
 }

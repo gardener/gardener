@@ -26,6 +26,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/apiserver"
+	"github.com/gardener/gardener/pkg/component/etcd"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -56,8 +57,14 @@ type Interface interface {
 // Values contains configuration values for the gardener-apiserver resources.
 type Values struct {
 	apiserver.Values
+	// ClusterIdentity is the identity of the garden cluster.
+	ClusterIdentity string
 	// Image is the container images used for the gardener-apiserver pods.
 	Image string
+	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
+	LogLevel string
+	// LogFormat is the output format for the logs. Must be one of [text,json].
+	LogFormat string
 	// TopologyAwareRoutingEnabled specifies where the topology-aware feature is enabled.
 	TopologyAwareRoutingEnabled bool
 }
@@ -88,7 +95,7 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		secretAdmissionKubeconfigs        = g.emptySecret(secretAdmissionKubeconfigsNamePrefix)
 		secretETCDEncryptionConfiguration = g.emptySecret(v1beta1constants.SecretNamePrefixGardenerETCDEncryptionConfiguration)
 		secretAuditWebhookKubeconfig      = g.emptySecret(secretAuditWebhookKubeconfigNamePrefix)
-		virtualGardenAccessSecret         = g.newVirtualGardenAccessSecret()
+		secretVirtualGardenAccess         = g.newVirtualGardenAccessSecret()
 	)
 
 	secretServer, err := g.reconcileSecretServer(ctx)
@@ -96,7 +103,7 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := virtualGardenAccessSecret.Reconcile(ctx, g.client); err != nil {
+	if err := secretVirtualGardenAccess.Reconcile(ctx, g.client); err != nil {
 		return err
 	}
 
@@ -118,11 +125,27 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	secretCAETCD, found := g.secretsManager.Get(v1beta1constants.SecretNameCAETCD)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
+	}
+
+	secretETCDClient, found := g.secretsManager.Get(etcd.SecretNameClient)
+	if !found {
+		return fmt.Errorf("secret %q not found", etcd.SecretNameClient)
+	}
+
+	secretGenericTokenKubeconfig, found := g.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
+	}
+
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
 		g.podDisruptionBudget(),
 		g.service(),
 		g.verticalPodAutoscaler(),
 		g.hvpa(),
+		g.deployment(secretCAETCD, secretETCDClient, secretGenericTokenKubeconfig, secretServer, secretAdmissionKubeconfigs, secretETCDEncryptionConfiguration, secretAuditWebhookKubeconfig, secretVirtualGardenAccess, configMapAuditPolicy, configMapAdmissionConfigs),
 	)
 	if err != nil {
 		return err

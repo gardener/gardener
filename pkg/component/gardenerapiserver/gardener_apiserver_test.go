@@ -21,6 +21,7 @@ import (
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -29,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,6 +43,7 @@ import (
 	. "github.com/gardener/gardener/pkg/component/gardenerapiserver"
 	componenttest "github.com/gardener/gardener/pkg/component/test"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -54,9 +57,18 @@ var _ = Describe("GardenerAPIServer", func() {
 	var (
 		ctx = context.TODO()
 
-		managedResourceNameRuntime = "gardener-apiserver-runtime"
-		managedResourceNameVirtual = "gardener-apiserver-virtual"
-		namespace                  = "some-namespace"
+		managedResourceNameRuntime       = "gardener-apiserver-runtime"
+		managedResourceNameVirtual       = "gardener-apiserver-virtual"
+		namespace                        = "some-namespace"
+		image                            = "gapi-image"
+		clusterIdentity                  = "cluster-id"
+		logLevel                         = "log-level"
+		logFormat                        = "log-format"
+		replicas                   int32 = 1337
+		resources                        = corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("20Mi")},
+			Limits:   corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("90Mi")},
+		}
 
 		fakeClient        client.Client
 		fakeSecretManager secretsmanager.Interface
@@ -74,6 +86,7 @@ var _ = Describe("GardenerAPIServer", func() {
 		serviceRuntime      *corev1.Service
 		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
 		hvpa                *hvpav1alpha1.Hvpa
+		deployment          *appsv1.Deployment
 	)
 
 	BeforeEach(func() {
@@ -81,11 +94,19 @@ var _ = Describe("GardenerAPIServer", func() {
 		fakeSecretManager = fakesecretsmanager.New(fakeClient, namespace)
 		values = Values{
 			Values: apiserver.Values{
+				Autoscaling: apiserver.AutoscalingConfig{
+					Replicas:           &replicas,
+					APIServerResources: resources,
+				},
 				ETCDEncryption: apiserver.ETCDEncryptionConfig{
 					Resources: []string{"shootstates.core.gardener.cloud"},
 				},
 				RuntimeVersion: semver.MustParse("1.27.1"),
 			},
+			ClusterIdentity:             clusterIdentity,
+			Image:                       image,
+			LogFormat:                   logFormat,
+			LogLevel:                    logLevel,
 			TopologyAwareRoutingEnabled: true,
 		}
 		deployer = New(fakeClient, namespace, fakeSecretManager, values)
@@ -324,9 +345,244 @@ var _ = Describe("GardenerAPIServer", func() {
 				},
 			},
 		}
+		deployment = &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-apiserver",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+					"high-availability-config.resources.gardener.cloud/type": "server",
+				},
+				Annotations: map[string]string{
+					"reference.resources.gardener.cloud/configmap-0e4e3fd5": "gardener-apiserver-audit-policy-config-f5b578b4",
+					"reference.resources.gardener.cloud/configmap-a6e4dc6f": "gardener-apiserver-admission-config-e38ff146",
+					"reference.resources.gardener.cloud/secret-9dca243c":    "shoot-access-gardener-apiserver",
+					"reference.resources.gardener.cloud/secret-47fc132b":    "gardener-apiserver-admission-kubeconfigs-e3b0c442",
+					"reference.resources.gardener.cloud/secret-389fbba5":    "etcd-client",
+					"reference.resources.gardener.cloud/secret-867d23cd":    "generic-token-kubeconfig",
+					"reference.resources.gardener.cloud/secret-02452d55":    "gardener-apiserver-etcd-encryption-configuration-944a649a",
+					"reference.resources.gardener.cloud/secret-3696832b":    "gardener-apiserver",
+					"reference.resources.gardener.cloud/secret-e01f5645":    "ca-etcd",
+				},
+			},
+			Spec: appsv1.DeploymentSpec{
+				MinReadySeconds:      30,
+				RevisionHistoryLimit: pointer.Int32(2),
+				Replicas:             &replicas,
+				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+				}},
+				Strategy: appsv1.DeploymentStrategy{
+					Type: appsv1.RollingUpdateDeploymentStrategyType,
+					RollingUpdate: &appsv1.RollingUpdateDeployment{
+						MaxSurge:       gardenerutils.IntStrPtrFromInt(1),
+						MaxUnavailable: gardenerutils.IntStrPtrFromInt(0),
+					},
+				},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							"app":                              "gardener",
+							"role":                             "apiserver",
+							"networking.gardener.cloud/to-dns": "allowed",
+							"networking.gardener.cloud/to-private-networks":                                   "allowed",
+							"networking.gardener.cloud/to-public-networks":                                    "allowed",
+							"networking.resources.gardener.cloud/to-all-webhook-targets":                      "allowed",
+							"networking.resources.gardener.cloud/to-virtual-garden-etcd-main-client-tcp-2379": "allowed",
+							"networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443":    "allowed",
+						},
+						Annotations: map[string]string{
+							"reference.resources.gardener.cloud/configmap-0e4e3fd5": "gardener-apiserver-audit-policy-config-f5b578b4",
+							"reference.resources.gardener.cloud/configmap-a6e4dc6f": "gardener-apiserver-admission-config-e38ff146",
+							"reference.resources.gardener.cloud/secret-9dca243c":    "shoot-access-gardener-apiserver",
+							"reference.resources.gardener.cloud/secret-47fc132b":    "gardener-apiserver-admission-kubeconfigs-e3b0c442",
+							"reference.resources.gardener.cloud/secret-389fbba5":    "etcd-client",
+							"reference.resources.gardener.cloud/secret-867d23cd":    "generic-token-kubeconfig",
+							"reference.resources.gardener.cloud/secret-02452d55":    "gardener-apiserver-etcd-encryption-configuration-944a649a",
+							"reference.resources.gardener.cloud/secret-3696832b":    "gardener-apiserver",
+							"reference.resources.gardener.cloud/secret-e01f5645":    "ca-etcd",
+						},
+					},
+					Spec: corev1.PodSpec{
+						AutomountServiceAccountToken: pointer.Bool(false),
+						PriorityClassName:            "gardener-garden-system-500",
+						Containers: []corev1.Container{{
+							Name:            "gardener-apiserver",
+							Image:           image,
+							ImagePullPolicy: "IfNotPresent",
+							Args: []string{
+								"--authorization-always-allow-paths=/healthz",
+								"--cluster-identity=" + clusterIdentity,
+								"--authentication-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+								"--authorization-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+								"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+								"--log-level=" + logLevel,
+								"--log-format=" + logFormat,
+								"--secure-port=8443",
+								"--http2-max-streams-per-connection=1000",
+								"--etcd-cafile=/srv/kubernetes/etcd/ca/bundle.crt",
+								"--etcd-certfile=/srv/kubernetes/etcd/client/tls.crt",
+								"--etcd-keyfile=/srv/kubernetes/etcd/client/tls.key",
+								"--etcd-servers=https://virtual-garden-etcd-main-client:2379",
+								"--livez-grace-period=1m",
+								"--profiling=false",
+								"--shutdown-delay-duration=15s",
+								"--tls-cert-file=/srv/kubernetes/apiserver/tls.crt",
+								"--tls-private-key-file=/srv/kubernetes/apiserver/tls.key",
+								"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_CHACHA20_POLY1305_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305",
+								"--audit-policy-file=/etc/kubernetes/audit/audit-policy.yaml",
+								"--audit-log-path=/tmp/audit/audit.log",
+								"--audit-log-maxsize=100",
+								"--audit-log-maxbackup=5",
+								"--admission-control-config-file=/etc/kubernetes/admission/admission-configuration.yaml",
+								"--encryption-provider-config=/etc/kubernetes/etcd-encryption-secret/encryption-configuration.yaml",
+							},
+							Ports: []corev1.ContainerPort{{
+								Name:          "https",
+								ContainerPort: 8443,
+								Protocol:      corev1.ProtocolTCP,
+							}},
+							Resources: resources,
+							LivenessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/livez",
+										Scheme: "HTTPS",
+										Port:   intstr.FromInt(8443),
+									},
+								},
+								SuccessThreshold:    1,
+								FailureThreshold:    3,
+								InitialDelaySeconds: 15,
+								PeriodSeconds:       10,
+								TimeoutSeconds:      15,
+							},
+							ReadinessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/readyz",
+										Scheme: "HTTPS",
+										Port:   intstr.FromInt(8443),
+									},
+								},
+								SuccessThreshold:    1,
+								FailureThreshold:    3,
+								InitialDelaySeconds: 15,
+								PeriodSeconds:       10,
+								TimeoutSeconds:      15,
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "ca-etcd",
+									MountPath: "/srv/kubernetes/etcd/ca",
+								},
+								{
+									Name:      "etcd-client",
+									MountPath: "/srv/kubernetes/etcd/client",
+								},
+								{
+									Name:      "server",
+									MountPath: "/srv/kubernetes/apiserver",
+								},
+								{
+									Name:      "audit-policy-config",
+									MountPath: "/etc/kubernetes/audit",
+								},
+								{
+									Name:      "admission-config",
+									MountPath: "/etc/kubernetes/admission",
+								},
+								{
+									Name:      "admission-kubeconfigs",
+									MountPath: "/etc/kubernetes/admission-kubeconfigs",
+								},
+								{
+									Name:      "etcd-encryption-secret",
+									MountPath: "/etc/kubernetes/etcd-encryption-secret",
+									ReadOnly:  true,
+								},
+							},
+						}},
+						Volumes: []corev1.Volume{
+							{
+								Name: "ca-etcd",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: "ca-etcd",
+									},
+								},
+							},
+							{
+								Name: "etcd-client",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: "etcd-client",
+									},
+								},
+							},
+							{
+								Name: "server",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: "gardener-apiserver",
+									},
+								},
+							},
+							{
+								Name: "audit-policy-config",
+								VolumeSource: corev1.VolumeSource{
+									ConfigMap: &corev1.ConfigMapVolumeSource{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: "gardener-apiserver-audit-policy-config-f5b578b4",
+										},
+									},
+								},
+							},
+							{
+								Name: "admission-config",
+								VolumeSource: corev1.VolumeSource{
+									ConfigMap: &corev1.ConfigMapVolumeSource{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: "gardener-apiserver-admission-config-e38ff146",
+										},
+									},
+								},
+							},
+							{
+								Name: "admission-kubeconfigs",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: "gardener-apiserver-admission-kubeconfigs-e3b0c442",
+									},
+								},
+							},
+							{
+								Name: "etcd-encryption-secret",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: "gardener-apiserver-etcd-encryption-configuration-944a649a",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		utilruntime.Must(gardener.InjectGenericKubeconfig(deployment, "generic-token-kubeconfig", "shoot-access-gardener-apiserver"))
 	})
 
 	Describe("#Deploy", func() {
+		BeforeEach(func() {
+			By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
+			Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-gardener", Namespace: namespace}})).To(Succeed())
+			Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: namespace}})).To(Succeed())
+			Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client", Namespace: namespace}})).To(Succeed())
+			Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
+		})
+
 		Context("deployment", func() {
 			BeforeEach(func() {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntime), managedResourceRuntime)).To(BeNotFoundError())
@@ -1022,10 +1278,11 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 				Context("when HVPA is disabled", func() {
 					It("should successfully deploy all resources when HVPA is disabled", func() {
 						Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-						Expect(managedResourceSecretRuntime.Data).To(HaveLen(3))
+						Expect(managedResourceSecretRuntime.Data).To(HaveLen(4))
 						Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudget)))
 						Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(serviceRuntime)))
 						Expect(string(managedResourceSecretRuntime.Data["verticalpodautoscaler__some-namespace__gardener-apiserver-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
+						Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(deployment)))
 
 						Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
 						Expect(managedResourceSecretVirtual.Data).To(HaveLen(0))
@@ -1040,10 +1297,11 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 
 					It("should successfully deploy all resources when HVPA is enabled", func() {
 						Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-						Expect(managedResourceSecretRuntime.Data).To(HaveLen(3))
+						Expect(managedResourceSecretRuntime.Data).To(HaveLen(4))
 						Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudget)))
 						Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(serviceRuntime)))
 						Expect(string(managedResourceSecretRuntime.Data["hvpa__some-namespace__gardener-apiserver-hvpa.yaml"])).To(Equal(componenttest.Serialize(hvpa)))
+						Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(deployment)))
 
 						Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
 						Expect(managedResourceSecretVirtual.Data).To(HaveLen(0))
