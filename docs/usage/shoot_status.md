@@ -109,7 +109,7 @@ However, if it's visible, then a [credentials rotation operation](shoot_credenti
 
 This constraint indicates that there is at least one `CustomResourceDefinition` in the cluster which has multiple stored versions and a conversion webhook configured. This could break the reconciliation flow of a `Shoot` cluster in some cases. See https://github.com/gardener/gardener/issues/7471 for more details.
 It will not be added to the `.status.constraints` if there is no such CRD.
-However, if it's visible, then you should consider upgrading the existing objects to the current stored version. See [Upgrade existing objects to a new stored version ](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#upgrade-existing-objects-to-a-new-stored-version) for detailed steps.
+However, if it's visible, then you should consider upgrading the existing objects to the current stored version. See [Upgrade existing objects to a new stored version](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#upgrade-existing-objects-to-a-new-stored-version) for detailed steps.
 
 ### Last Operation
 

@@ -273,7 +273,7 @@ func (c *Constraint) checkIfCRDsWithProblematicConversionWebhooksPresent(ctx con
 	)
 
 	if err := c.shootClient.List(ctx, crdList); err != nil {
-		return "", "", "", fmt.Errorf("could not list all CRDs in the shoot: %w", err)
+		return "", "", "", fmt.Errorf("could not list CRDs in the shoot: %w", err)
 	}
 
 	for _, crd := range crdList.Items {
