@@ -27,6 +27,7 @@
 * [Audit a Kubernetes cluster](usage/shoot_auditpolicy.md)
 * [Auto-Scaling for shoot clusters](usage/shoot_autoscaling.md)
 * [Cleanup of Shoot clusters in deletion](usage/shoot_cleanup.md)
+* [`containerd` registry configuration](usage/containerd-registry-configuration.md)
 * [Custom `containerd` configuration](usage/custom-containerd-config.md)
 * [Custom `CoreDNS` configuration](usage/custom-dns-config.md)
 * [(Custom) CSI components](usage/csi_components.md)
