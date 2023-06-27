@@ -346,13 +346,6 @@ func (r *Reconciler) deployEtcdsFunc(garden *operatorv1alpha1.Garden, etcdMain, 
 func (r *Reconciler) deployKubeAPIServerFunc(ctx context.Context, garden *operatorv1alpha1.Garden, kubeAPIServer kubeapiserver.Interface) flow.TaskFn {
 	return func(context.Context) error {
 		var (
-			address                 = gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domain)
-			serverCertificateConfig = kubeapiserver.ServerCertificateConfig{
-				ExtraDNSNames: []string{
-					address,
-					"gardener." + garden.Spec.VirtualCluster.DNS.Domain,
-				},
-			}
 			apiServerConfig *gardencorev1beta1.KubeAPIServerConfig
 			sniConfig       = kubeapiserver.SNIConfig{Enabled: false}
 		)
@@ -368,16 +361,24 @@ func (r *Reconciler) deployKubeAPIServerFunc(ctx context.Context, garden *operat
 			}
 		}
 
+		var domainNames []string
+		if domain := garden.Spec.VirtualCluster.DNS.Domain; domain != nil {
+			domainNames = append(domainNames, *domain)
+		}
+		domainNames = append(domainNames, garden.Spec.VirtualCluster.DNS.Domains...)
+
 		return shared.DeployKubeAPIServer(
 			ctx,
 			r.RuntimeClientSet.Client(),
 			r.GardenNamespace,
 			kubeAPIServer,
 			apiServerConfig,
-			serverCertificateConfig,
+			kubeapiserver.ServerCertificateConfig{
+				ExtraDNSNames: getAPIServerDomains(domainNames),
+			},
 			sniConfig,
-			address,
-			address,
+			gardenerutils.GetAPIServerDomain(domainNames[0]),
+			gardenerutils.GetAPIServerDomain(domainNames[0]),
 			helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials),
 			helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials),
 			false,

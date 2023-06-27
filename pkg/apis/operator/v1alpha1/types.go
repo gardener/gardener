@@ -166,10 +166,14 @@ type VirtualCluster struct {
 
 // DNS holds information about DNS settings.
 type DNS struct {
-	// Domain is the external domain of the virtual garden cluster. This field is immutable.
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	Domain string `json:"domain"`
+	// Deprecated: This field is deprecated and will be removed soon. Please use `Domains` instead.
+	// TODO(timuthy): Drop this after v1.74 has been released.
+	// +optional
+	Domain *string `json:"domain,omitempty"`
+	// Domains are the external domains of the virtual garden cluster.
+	// The first given domain in this list is immutable.
+	// +optional
+	Domains []string `json:"domains,omitempty"`
 }
 
 // ETCD contains configuration for the etcds of the virtual garden cluster.

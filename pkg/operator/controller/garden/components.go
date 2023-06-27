@@ -154,7 +154,14 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.virtualGardenGardenerAccess = r.newGardenerAccess(secretsManager, garden.Spec.VirtualCluster.DNS.Domain)
+
+	var accessDomain string
+	if domains := garden.Spec.VirtualCluster.DNS.Domains; len(domains) > 0 {
+		accessDomain = domains[0]
+	} else {
+		accessDomain = *garden.Spec.VirtualCluster.DNS.Domain
+	}
+	c.virtualGardenGardenerAccess = r.newGardenerAccess(secretsManager, accessDomain)
 
 	// observability components
 	c.kubeStateMetrics, err = r.newKubeStateMetrics()
@@ -643,6 +650,12 @@ func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValue
 		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
 	}
 
+	var domains []string
+	if domain := garden.Spec.VirtualCluster.DNS.Domain; domain != nil {
+		domains = append(domains, *domain)
+	}
+	domains = append(domains, garden.Spec.VirtualCluster.DNS.Domains...)
+
 	return kubeapiserverexposure.NewSNI(
 		r.RuntimeClientSet.Client(),
 		r.RuntimeClientSet.Applier(),
@@ -650,7 +663,7 @@ func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValue
 		r.GardenNamespace,
 		func() *kubeapiserverexposure.SNIValues {
 			return &kubeapiserverexposure.SNIValues{
-				Hosts: []string{gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domain)},
+				Hosts: getAPIServerDomains(domains),
 				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
 					Namespace: ingressGatewayValues[0].Namespace,
 					Labels:    ingressGatewayValues[0].Labels,
@@ -670,4 +683,13 @@ func (r *Reconciler) newGardenerAccess(secretsManager secretsmanager.Interface, 
 			ServerOutOfCluster: gardenerutils.GetAPIServerDomain(domain),
 		},
 	)
+}
+
+func getAPIServerDomains(domains []string) []string {
+	apiServerDomains := make([]string, 0, len(domains)*2)
+	for _, domain := range domains {
+		apiServerDomains = append(apiServerDomains, gardenerutils.GetAPIServerDomain(domain))
+		apiServerDomains = append(apiServerDomains, "gardener."+domain)
+	}
+	return apiServerDomains
 }
