@@ -44,7 +44,10 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-const pathContainerdConfigScript = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/init-containerd-with-registry-mirrors"
+const (
+	pathContainerdConfigScript = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/init-containerd-with-registry-mirrors"
+	unitNameInitializer        = "containerd-configuration-local-setup.service"
+)
 
 var (
 	tplNameInitializer = "init"
@@ -144,11 +147,26 @@ func (e *ensurer) EnsureAdditionalFiles(ctx context.Context, gc extensionscontex
 			},
 		},
 	})
+
+	// With this file, we make the containerd unit dependent on the mirror configuration unit.
+	// Otherwise, containerd might start before we modified the configuration file, i.e., it wouldn't respect the
+	// configured mirrors.
+	appendUniqueFile(new, extensionsv1alpha1.File{
+		Path:        "/etc/systemd/system/containerd.service.d/10-require-containerd-configuration-local-setup.conf",
+		Permissions: pointer.Int32(0644),
+		Content: extensionsv1alpha1.FileContent{
+			Inline: &extensionsv1alpha1.FileContentInline{
+				Data: `[Unit]
+After=` + unitNameInitializer + `
+Requires=` + unitNameInitializer,
+			},
+		},
+	})
+
 	return nil
 }
 
 func (e *ensurer) EnsureAdditionalUnits(_ context.Context, _ extensionscontextwebhook.GardenContext, new, _ *[]extensionsv1alpha1.Unit) error {
-	const unitNameInitializer = "containerd-configuration-local-setup.service"
 	unit := extensionsv1alpha1.Unit{
 		Name:    unitNameInitializer,
 		Command: pointer.String("start"),
