@@ -118,6 +118,37 @@ var _ = Describe("SystemComponentsConfig tests", func() {
 						Effect: corev1.TaintEffectNoSchedule,
 					},
 				}
+				ignoredTaints := []corev1.Taint{
+					{
+						Key:    "node.kubernetes.io/memory-pressure",
+						Effect: corev1.TaintEffectNoSchedule,
+					},
+					{
+						Key:    "node.kubernetes.io/disk-pressure",
+						Effect: corev1.TaintEffectNoSchedule,
+					},
+					{
+						Key:    "node.kubernetes.io/pid-pressure",
+						Effect: corev1.TaintEffectNoSchedule,
+					},
+					{
+						Key:    "node.kubernetes.io/network-unavailable",
+						Effect: corev1.TaintEffectNoSchedule,
+					},
+					{
+						Key:    "node.kubernetes.io/unschedulable",
+						Effect: corev1.TaintEffectNoSchedule,
+					},
+					{
+						Key:    "node.cloudprovider.kubernetes.io/uninitialized",
+						Effect: corev1.TaintEffectNoSchedule,
+					},
+					{
+						Key:    "ToBeDeletedByClusterAutoscaler",
+						Effect: corev1.TaintEffectNoSchedule,
+						Value:  "1687448388",
+					},
+				}
 
 				nodes = append(nodes,
 					corev1.Node{
@@ -133,6 +164,11 @@ var _ = Describe("SystemComponentsConfig tests", func() {
 					corev1.Node{
 						Spec: corev1.NodeSpec{
 							Taints: additionalTaintsPool1,
+						},
+					},
+					corev1.Node{
+						Spec: corev1.NodeSpec{
+							Taints: ignoredTaints,
 						},
 					},
 				)
