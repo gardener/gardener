@@ -16,6 +16,7 @@ package gardenerapiserver
 
 const (
 	secretNameServer = "gardener-apiserver"
+	containerName    = "gardener-apiserver"
 
 	port = 8443
 )

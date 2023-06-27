@@ -18,9 +18,11 @@ import (
 	"context"
 
 	"github.com/Masterminds/semver"
+	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -71,6 +73,7 @@ var _ = Describe("GardenerAPIServer", func() {
 		podDisruptionBudget *policyv1.PodDisruptionBudget
 		serviceRuntime      *corev1.Service
 		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
+		hvpa                *hvpav1alpha1.Hvpa
 	)
 
 	BeforeEach(func() {
@@ -190,6 +193,134 @@ var _ = Describe("GardenerAPIServer", func() {
 							},
 						},
 					},
+				},
+			},
+		}
+		hvpa = &hvpav1alpha1.Hvpa{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-apiserver-hvpa",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+					"high-availability-config.resources.gardener.cloud/type": "server",
+				},
+			},
+			Spec: hvpav1alpha1.HvpaSpec{
+				Replicas: pointer.Int32(1),
+				Hpa: hvpav1alpha1.HpaSpec{
+					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"role": "gardener-apiserver-hpa"}},
+					Deploy:   true,
+					ScaleUp: hvpav1alpha1.ScaleType{
+						UpdatePolicy: hvpav1alpha1.UpdatePolicy{
+							UpdateMode: pointer.String("Auto"),
+						},
+					},
+					ScaleDown: hvpav1alpha1.ScaleType{
+						UpdatePolicy: hvpav1alpha1.UpdatePolicy{
+							UpdateMode: pointer.String("Auto"),
+						},
+					},
+					Template: hvpav1alpha1.HpaTemplate{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{"role": "gardener-apiserver-hpa"},
+						},
+						Spec: hvpav1alpha1.HpaTemplateSpec{
+							MinReplicas: pointer.Int32(1),
+							MaxReplicas: 4,
+							Metrics: []autoscalingv2beta1.MetricSpec{
+								{
+									Type: "Resource",
+									Resource: &autoscalingv2beta1.ResourceMetricSource{
+										Name:                     corev1.ResourceCPU,
+										TargetAverageUtilization: pointer.Int32(80),
+									},
+								},
+								{
+									Type: "Resource",
+									Resource: &autoscalingv2beta1.ResourceMetricSource{
+										Name:                     corev1.ResourceMemory,
+										TargetAverageUtilization: pointer.Int32(80),
+									},
+								},
+							},
+						},
+					},
+				},
+				Vpa: hvpav1alpha1.VpaSpec{
+					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"role": "gardener-apiserver-vpa"}},
+					Deploy:   true,
+					ScaleUp: hvpav1alpha1.ScaleType{
+						UpdatePolicy: hvpav1alpha1.UpdatePolicy{
+							UpdateMode: pointer.String("Auto"),
+						},
+						StabilizationDuration: pointer.String("3m"),
+						MinChange: hvpav1alpha1.ScaleParams{
+							CPU: hvpav1alpha1.ChangeParams{
+								Value:      pointer.String("300m"),
+								Percentage: pointer.Int32(80),
+							},
+							Memory: hvpav1alpha1.ChangeParams{
+								Value:      pointer.String("200M"),
+								Percentage: pointer.Int32(80),
+							},
+						},
+					},
+					ScaleDown: hvpav1alpha1.ScaleType{
+						UpdatePolicy: hvpav1alpha1.UpdatePolicy{
+							UpdateMode: pointer.String("Auto"),
+						},
+						StabilizationDuration: pointer.String("15m"),
+						MinChange: hvpav1alpha1.ScaleParams{
+							CPU: hvpav1alpha1.ChangeParams{
+								Value:      pointer.String("600m"),
+								Percentage: pointer.Int32(80),
+							},
+							Memory: hvpav1alpha1.ChangeParams{
+								Value:      pointer.String("600M"),
+								Percentage: pointer.Int32(80),
+							},
+						},
+					},
+					LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
+						CPU: hvpav1alpha1.ChangeParams{
+							Value:      pointer.String("1"),
+							Percentage: pointer.Int32(70),
+						},
+						Memory: hvpav1alpha1.ChangeParams{
+							Value:      pointer.String("1G"),
+							Percentage: pointer.Int32(70),
+						},
+					},
+					Template: hvpav1alpha1.VpaTemplate{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{"role": "gardener-apiserver-vpa"},
+						},
+						Spec: hvpav1alpha1.VpaTemplateSpec{
+							ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+								ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
+									ContainerName: "gardener-apiserver",
+									MinAllowed: corev1.ResourceList{
+										corev1.ResourceMemory: resource.MustParse("400M"),
+									},
+									MaxAllowed: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("4"),
+										corev1.ResourceMemory: resource.MustParse("25G"),
+									},
+								}},
+							},
+						},
+					},
+				},
+				WeightBasedScalingIntervals: []hvpav1alpha1.WeightBasedScalingInterval{{
+					VpaWeight:         0,
+					StartReplicaCount: 1,
+					LastReplicaCount:  3,
+				}},
+				TargetRef: &autoscalingv2beta1.CrossVersionObjectReference{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+					Name:       "gardener-apiserver",
 				},
 			},
 		}
@@ -909,9 +1040,10 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 
 					It("should successfully deploy all resources when HVPA is enabled", func() {
 						Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-						Expect(managedResourceSecretRuntime.Data).To(HaveLen(2))
+						Expect(managedResourceSecretRuntime.Data).To(HaveLen(3))
 						Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudget)))
 						Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(serviceRuntime)))
+						Expect(string(managedResourceSecretRuntime.Data["hvpa__some-namespace__gardener-apiserver-hvpa.yaml"])).To(Equal(componenttest.Serialize(hvpa)))
 
 						Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
 						Expect(managedResourceSecretVirtual.Data).To(HaveLen(0))

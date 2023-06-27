@@ -122,6 +122,7 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		g.podDisruptionBudget(),
 		g.service(),
 		g.verticalPodAutoscaler(),
+		g.hvpa(),
 	)
 	if err != nil {
 		return err
