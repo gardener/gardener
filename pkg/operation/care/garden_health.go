@@ -100,7 +100,7 @@ func (h *GardenHealth) CheckGarden(
 ) []gardencorev1beta1.Condition {
 
 	var (
-		apiserverAvailability            gardencorev1beta1.Condition
+		apiServerAvailability            gardencorev1beta1.Condition
 		controlPlaneHealthy              gardencorev1beta1.Condition
 		systemComponentsCondition        gardencorev1beta1.Condition
 		virtualGardenComponentsCondition gardencorev1beta1.Condition
@@ -108,7 +108,7 @@ func (h *GardenHealth) CheckGarden(
 	for _, cond := range conditions {
 		switch cond.Type {
 		case operatorv1alpha1.VirtualGardenAPIServerAvailable:
-			apiserverAvailability = cond
+			apiServerAvailability = cond
 		case operatorv1alpha1.VirtualGardenControlPlaneHealthy:
 			controlPlaneHealthy = cond
 		case operatorv1alpha1.GardenSystemComponentsHealthy:
@@ -122,13 +122,13 @@ func (h *GardenHealth) CheckGarden(
 	newSystemComponentsCondition, err1 := h.checkGardenSystemComponents(ctx, checker, systemComponentsCondition)
 	newVirtualGardenComponentsCondition, err2 := h.checkVirtualGardenComponents(ctx, checker, virtualGardenComponentsCondition)
 	newControlPlaneHealthy, err3 := h.checkControlPlane(ctx, checker, controlPlaneHealthy)
-	apiserverAvailability = h.checkAPIServerAvailability(ctx, checker, apiserverAvailability)
+	apiServerAvailability = h.checkAPIServerAvailability(ctx, checker, apiServerAvailability)
 
 	return []gardencorev1beta1.Condition{
 		NewConditionOrError(h.clock, systemComponentsCondition, newSystemComponentsCondition, err1),
 		NewConditionOrError(h.clock, virtualGardenComponentsCondition, newVirtualGardenComponentsCondition, err2),
 		NewConditionOrError(h.clock, controlPlaneHealthy, newControlPlaneHealthy, err3),
-		apiserverAvailability,
+		apiServerAvailability,
 	}
 }
 
@@ -214,9 +214,8 @@ func (h *GardenHealth) checkVirtualGardenComponents(
 	managedResources := sets.List(requiredVirtualGardenManagedResources)
 
 	for _, name := range managedResources {
-		namespace := h.gardenNamespace
 		mr := &resourcesv1alpha1.ManagedResource{}
-		if err := h.runtimeClient.Get(ctx, kubernetesutils.Key(namespace, name), mr); err != nil {
+		if err := h.runtimeClient.Get(ctx, kubernetesutils.Key(h.gardenNamespace, name), mr); err != nil {
 			if apierrors.IsNotFound(err) {
 				exitCondition := checker.FailedCondition(condition, "ResourceNotFound", err.Error())
 				return &exitCondition, nil
