@@ -58,6 +58,8 @@ type Values struct {
 	apiserver.Values
 	// Image is the container images used for the gardener-apiserver pods.
 	Image string
+	// TopologyAwareRoutingEnabled specifies where the topology-aware feature is enabled.
+	TopologyAwareRoutingEnabled bool
 }
 
 // New creates a new instance of DeployWaiter for the gardener-apiserver.
@@ -118,6 +120,7 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
 		g.podDisruptionBudget(),
+		g.service(),
 	)
 	if err != nil {
 		return err

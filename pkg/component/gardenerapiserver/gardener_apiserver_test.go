@@ -17,12 +17,14 @@ package gardenerapiserver_test
 import (
 	"context"
 
+	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -63,6 +65,7 @@ var _ = Describe("GardenerAPIServer", func() {
 		managedResourceSecretVirtual *corev1.Secret
 
 		podDisruptionBudget *policyv1.PodDisruptionBudget
+		serviceRuntime      *corev1.Service
 	)
 
 	BeforeEach(func() {
@@ -73,7 +76,9 @@ var _ = Describe("GardenerAPIServer", func() {
 				ETCDEncryption: apiserver.ETCDEncryptionConfig{
 					Resources: []string{"shootstates.core.gardener.cloud"},
 				},
+				RuntimeVersion: semver.MustParse("1.27.1"),
 			},
+			TopologyAwareRoutingEnabled: true,
 		})
 
 		fakeOps = &retryfake.Ops{MaxAttempts: 2}
@@ -121,6 +126,33 @@ var _ = Describe("GardenerAPIServer", func() {
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"app":  "gardener",
 					"role": "apiserver",
+				}},
+			},
+		}
+		serviceRuntime = &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-apiserver",
+				Namespace: namespace,
+				Annotations: map[string]string{
+					"networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports": `[{"protocol":"TCP","port":8443}]`,
+					"service.kubernetes.io/topology-mode":                                        "auto",
+				},
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+					"endpoint-slice-hints.resources.gardener.cloud/consider": "true",
+				},
+			},
+			Spec: corev1.ServiceSpec{
+				Type: corev1.ServiceTypeClusterIP,
+				Selector: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+				},
+				Ports: []corev1.ServicePort{{
+					Port:       443,
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromInt(8443),
 				}},
 			},
 		}
@@ -821,8 +853,9 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 
 				It("should successfully deploy all resources", func() {
 					Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-					Expect(managedResourceSecretRuntime.Data).To(HaveLen(1))
+					Expect(managedResourceSecretRuntime.Data).To(HaveLen(2))
 					Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudget)))
+					Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(serviceRuntime)))
 
 					Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
 					Expect(managedResourceSecretVirtual.Data).To(HaveLen(0))
