@@ -2087,8 +2087,8 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 		if !availableShootOperations.Has(operation) {
 			allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, sets.List(availableShootOperations)))
 		}
-		if helper.HibernationIsEnabled(shoot) && forbiddenShootOperationsWhenHibernated.Has(operation) {
-			allErrs = append(allErrs, field.Forbidden(fldPathOp, "operation is not permitted when shoot is hibernated"))
+		if helper.IsShootInHibernation(shoot) && forbiddenShootOperationsWhenHibernated.Has(operation) {
+			allErrs = append(allErrs, field.Forbidden(fldPathOp, "operation is not permitted when shoot is hibernated or is waking up"))
 		}
 	}
 
@@ -2096,8 +2096,8 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 		if !availableShootMaintenanceOperations.Has(maintenanceOperation) {
 			allErrs = append(allErrs, field.NotSupported(fldPathMaintOp, maintenanceOperation, sets.List(availableShootMaintenanceOperations)))
 		}
-		if helper.HibernationIsEnabled(shoot) && forbiddenShootOperationsWhenHibernated.Has(maintenanceOperation) {
-			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, "operation is not permitted when shoot is hibernated"))
+		if helper.IsShootInHibernation(shoot) && forbiddenShootOperationsWhenHibernated.Has(maintenanceOperation) {
+			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, "operation is not permitted when shoot is hibernated or is waking up"))
 		}
 	}
 
@@ -2213,7 +2213,7 @@ func validateShootHAControlPlaneSpecUpdate(newShoot, oldShoot *core.Shoot, fldPa
 	if newShoot.Spec.ControlPlane != nil && newShoot.Spec.ControlPlane.HighAvailability != nil {
 		newVal = newShoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type
 		// TODO(@aaronfern): remove this validation of not allowing scale-up to HA while hibernated when https://github.com/gardener/etcd-druid/issues/589 is resolved
-		if !oldValExists && isShootInHibernation(newShoot) {
+		if !oldValExists && helper.IsShootInHibernation(newShoot) {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("highAvailability", "failureTolerance", "type"), "Shoot is currently hibernated and cannot be scaled up to HA. Please make sure your cluster has woken up before scaling it up to HA"))
 		}
 	}
@@ -2237,12 +2237,4 @@ func isShootReadyForRotationStart(lastOperation *core.LastOperation) bool {
 		return true
 	}
 	return lastOperation.Type == core.LastOperationTypeReconcile
-}
-
-func isShootInHibernation(shoot *core.Shoot) bool {
-	if shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil {
-		return *shoot.Spec.Hibernation.Enabled || shoot.Status.IsHibernated
-	}
-
-	return shoot.Status.IsHibernated
 }
