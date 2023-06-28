@@ -16,7 +16,6 @@ package shared
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/Masterminds/semver"
@@ -42,6 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -393,7 +393,7 @@ func convertToAdmissionPluginConfigs(ctx context.Context, gardenClient client.Cl
 		config := kubeapiserver.AdmissionPluginConfig{AdmissionPlugin: plugin}
 		if plugin.KubeconfigSecretName != nil {
 			key := client.ObjectKey{Namespace: namespace, Name: *plugin.KubeconfigSecretName}
-			config.Kubeconfig, err = fetchKubeconfigFromSecret(ctx, gardenClient, key)
+			config.Kubeconfig, err = gardenerutils.FetchKubeconfigFromSecret(ctx, gardenClient, key)
 			if err != nil {
 				return nil, fmt.Errorf("failed reading kubeconfig for admission plugin from referenced secret %s: %w", key, err)
 			}
@@ -402,20 +402,6 @@ func convertToAdmissionPluginConfigs(ctx context.Context, gardenClient client.Cl
 	}
 
 	return out, nil
-}
-
-func fetchKubeconfigFromSecret(ctx context.Context, c client.Client, key client.ObjectKey) ([]byte, error) {
-	secret := &corev1.Secret{}
-	if err := c.Get(ctx, key, secret); err != nil {
-		return nil, err
-	}
-
-	kubeconfig, ok := secret.Data["kubeconfig"]
-	if !ok || len(kubeconfig) == 0 {
-		return nil, errors.New("the secret's field 'kubeconfig' is either not present or empty")
-	}
-
-	return kubeconfig, nil
 }
 
 func computeEnabledKubeAPIServerAdmissionPlugins(defaultPlugins, configuredPlugins []gardencorev1beta1.AdmissionPlugin, isWorkerless bool) []gardencorev1beta1.AdmissionPlugin {
