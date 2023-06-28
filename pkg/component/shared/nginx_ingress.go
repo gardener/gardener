@@ -55,16 +55,18 @@ func NewNginxIngress(
 	}
 
 	values := nginxingress.Values{
-		ImageController:         imageController.String(),
-		ImageDefaultBackend:     imageDefaultBackend.String(),
-		IngressClass:            ingressClass,
-		ConfigData:              config,
-		LoadBalancerAnnotations: loadBalancerAnnotations,
-		PriorityClassName:       priorityClassName,
-		PSPDisabled:             pspDisabled,
-		VPAEnabled:              vpaEnabled,
-		TargetNamespace:         targetNamespace,
-		ClusterType:             clusterType,
+		ImageController:          imageController.String(),
+		ImageDefaultBackend:      imageDefaultBackend.String(),
+		IngressClass:             ingressClass,
+		ConfigData:               config,
+		LoadBalancerAnnotations:  loadBalancerAnnotations,
+		LoadBalancerSourceRanges: loadBalancerSourceRanges,
+		PriorityClassName:        priorityClassName,
+		PSPDisabled:              pspDisabled,
+		VPAEnabled:               vpaEnabled,
+		TargetNamespace:          targetNamespace,
+		ClusterType:              clusterType,
+		ExternalTrafficPolicy:    externalTrafficPolicy,
 	}
 
 	return nginxingress.New(c, namespaceName, values), nil

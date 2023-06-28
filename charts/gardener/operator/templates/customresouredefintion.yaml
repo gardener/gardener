@@ -73,10 +73,10 @@ spec:
                         - kind
                         type: object
                       domain:
-                        description: Domain specifies the IngressDomain of the Garden
-                          cluster pointing to the ingress controller endpoint. It
-                          will be used to construct ingress URLs for system applications
-                          running in the Garden cluster. Once set this field is immutable.
+                        description: Domain specifies the IngressDomain of the cluster
+                          pointing to the ingress controller endpoint. It will be
+                          used to construct ingress URLs for system applications running
+                          in Shoot/Garden clusters. Once set this field is immutable.
                         maxLength: 253
                         pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                         type: string

@@ -16,7 +16,6 @@ package seed
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -80,13 +79,5 @@ func getConfig(seed *gardencorev1beta1.Seed) (map[string]string, error) {
 		}
 	}
 
-	return interfaceMapToStringMap(utils.MergeMaps(defaultConfig, providerConfig)), nil
-}
-
-func interfaceMapToStringMap(in map[string]interface{}) map[string]string {
-	m := make(map[string]string, len(in))
-	for k, v := range in {
-		m[k] = fmt.Sprint(v)
-	}
-	return m
+	return utils.InterfaceMapToStringMap(utils.MergeMaps(defaultConfig, providerConfig)), nil
 }

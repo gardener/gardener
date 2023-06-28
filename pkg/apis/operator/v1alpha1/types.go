@@ -18,7 +18,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -65,7 +64,7 @@ type GardenSpec struct {
 // RuntimeCluster contains configuration for the runtime cluster.
 type RuntimeCluster struct {
 	// Ingress configures Ingress specific settings for the Garden cluster. This field is immutable.
-	Ingress *Ingress `json:"ingress"`
+	Ingress gardencorev1beta1.Ingress `json:"ingress"`
 	// Networking defines the networking configuration of the runtime cluster.
 	Networking RuntimeNetworking `json:"networking"`
 	// Provider defines the provider-specific information for this cluster.
@@ -73,28 +72,6 @@ type RuntimeCluster struct {
 	// Settings contains certain settings for this cluster.
 	// +optional
 	Settings *Settings `json:"settings,omitempty"`
-}
-
-// Ingress configures the Ingress specific settings of the Garden cluster.
-type Ingress struct {
-	// Domain specifies the IngressDomain of the Garden cluster pointing to the ingress controller endpoint. It will be used
-	// to construct ingress URLs for system applications running in the Garden cluster. Once set this field is immutable.
-	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	// +kubebuilder:validation:Pattern="^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
-	Domain string `json:"domain"`
-	// Controller configures a Gardener managed Ingress Controller listening on the ingressDomain
-	Controller IngressController `json:"controller"`
-}
-
-// IngressController enables a Gardener managed Ingress Controller listening on the ingressDomain
-type IngressController struct {
-	// Kind defines which kind of IngressController to use. At the moment only `nginx` is supported
-	// +kubebuilder:validation:Enum="nginx"
-	Kind string `json:"kind"`
-	// ProviderConfig specifies infrastructure specific configuration for the ingressController
-	// +optional
-	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty"`
 }
 
 // RuntimeNetworking defines the networking configuration of the runtime cluster.

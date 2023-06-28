@@ -852,92 +852,6 @@ string
 <p>
 <p>HighAvailability specifies the configuration settings for high availability for a resource.</p>
 </p>
-<h3 id="operator.gardener.cloud/v1alpha1.Ingress">Ingress
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.gardener.cloud/v1alpha1.RuntimeCluster">RuntimeCluster</a>)
-</p>
-<p>
-<p>Ingress configures the Ingress specific settings of the Garden cluster.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>domain</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Domain specifies the IngressDomain of the Garden cluster pointing to the ingress controller endpoint. It will be used
-to construct ingress URLs for system applications running in the Garden cluster. Once set this field is immutable.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>controller</code></br>
-<em>
-<a href="#operator.gardener.cloud/v1alpha1.IngressController">
-IngressController
-</a>
-</em>
-</td>
-<td>
-<p>Controller configures a Gardener managed Ingress Controller listening on the ingressDomain</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.gardener.cloud/v1alpha1.IngressController">IngressController
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.gardener.cloud/v1alpha1.Ingress">Ingress</a>)
-</p>
-<p>
-<p>IngressController enables a Gardener managed Ingress Controller listening on the ingressDomain</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>kind</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Kind defines which kind of IngressController to use. At the moment only <code>nginx</code> is supported</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>providerConfig</code></br>
-<em>
-k8s.io/apimachinery/pkg/runtime.RawExtension
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ProviderConfig specifies infrastructure specific configuration for the ingressController</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="operator.gardener.cloud/v1alpha1.KubeAPIServerConfig">KubeAPIServerConfig
 </h3>
 <p>
@@ -1264,9 +1178,7 @@ string
 <td>
 <code>ingress</code></br>
 <em>
-<a href="#operator.gardener.cloud/v1alpha1.Ingress">
-Ingress
-</a>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress
 </em>
 </td>
 <td>
