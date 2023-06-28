@@ -101,10 +101,10 @@ var _ = Describe("Handler", func() {
 		Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 		Expect(fakeClient.Create(ctx, shoot1)).To(Succeed())
 
-		Expect(handler.ValidateUpdate(ctx, nil, secret)).To(MatchError(ContainSubstring("Secret \"test-kubeconfig\" is forbidden: data kubeconfig can't be removed from secret because secret is in use by shoots: [fake-shoot-name test-shoot]")))
+		Expect(handler.ValidateUpdate(ctx, nil, secret)).To(MatchError(ContainSubstring("Secret \"test-kubeconfig\" is forbidden: data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [fake-shoot-name, test-shoot]")))
 	})
 
-	It("should pass because secret contains data kubeconfig", func() {
+	It("should fail because some shoot references secret and kubeconfig is set to empty", func() {
 		shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
 			{
 				Name:                 "plugin-1",
@@ -114,6 +114,19 @@ var _ = Describe("Handler", func() {
 		Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
 
 		secret.Data = map[string][]byte{"kubeconfig": {}}
-		Expect(handler.ValidateUpdate(ctx, nil, secret)).To(BeNil())
+		Expect(handler.ValidateUpdate(ctx, nil, secret)).To(MatchError(ContainSubstring("Secret \"test-kubeconfig\" is forbidden: data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [fake-shoot-name]")))
+	})
+
+	It("should pass because secret contain kubeconfig and it is not empty", func() {
+		shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
+			{
+				Name:                 "plugin-1",
+				KubeconfigSecretName: pointer.String(secret.Name),
+			},
+		}
+		Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
+
+		secret.Data = map[string][]byte{"kubeconfig": []byte("secret-data")}
+		Expect(handler.ValidateUpdate(ctx, nil, secret)).To(Succeed())
 	})
 })

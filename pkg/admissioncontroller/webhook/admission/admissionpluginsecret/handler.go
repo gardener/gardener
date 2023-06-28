@@ -17,6 +17,7 @@ package admissionpluginsecret
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -54,7 +55,7 @@ func (h *Handler) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) 
 		return apierrors.NewInternalError(err)
 	}
 
-	if _, ok := secret.Data[kubernetes.KubeConfig]; ok {
+	if kubeConfig, ok := secret.Data[kubernetes.KubeConfig]; ok && len(kubeConfig) > 0 {
 		h.Logger.Info("Secret has data `kubeconfig` no need to check further", "name", secret.Name)
 		return nil
 	}
@@ -76,7 +77,7 @@ func (h *Handler) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) 
 	}
 
 	if len(shoots) > 0 {
-		return apierrors.NewForbidden(corev1.Resource("Secret"), req.Name, fmt.Errorf("data kubeconfig can't be removed from secret because secret is in use by shoots: %v", shoots))
+		return apierrors.NewForbidden(corev1.Resource("Secret"), req.Name, fmt.Errorf("data kubeconfig can't be removed from secret or set to empty because secret is in use by shoots: [%v]", strings.Join(shoots, ", ")))
 	}
 
 	return nil
