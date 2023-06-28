@@ -55,7 +55,7 @@ func (h *Handler) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) 
 	}
 
 	if _, ok := secret.Data[kubernetes.KubeConfig]; ok {
-		h.Logger.Info("Secret has data `kubeconfig` no need to check further.", "name", secret.Name)
+		h.Logger.Info("Secret has data `kubeconfig` no need to check further", "name", secret.Name)
 		return nil
 	}
 
