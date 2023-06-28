@@ -35,12 +35,12 @@ type Handler struct {
 	Client client.Reader
 }
 
-// ValidateCreate nil (not implemented by this handler).
+// ValidateCreate returns nil (not implemented by this handler).
 func (h *Handler) ValidateCreate(ctx context.Context, obj runtime.Object) error {
 	return nil
 }
 
-// ValidateUpdate validate admission plugins secret.
+// ValidateUpdate validate an admission plugins secret.
 func (h *Handler) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) error {
 	var shoots []string
 
@@ -54,6 +54,11 @@ func (h *Handler) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) 
 		return apierrors.NewInternalError(err)
 	}
 
+	if _, ok := secret.Data[kubernetes.KubeConfig]; ok {
+		h.Logger.Info("Secret has data `kubeconfig` no need to check further.", "name", secret.Name)
+		return nil
+	}
+
 	// lookup if secret is referenced by any shoot in the same namespace
 	shootList := &gardencorev1beta1.ShootList{}
 	if err := h.Client.List(ctx, shootList, client.InNamespace(req.Namespace)); err != nil {
@@ -64,9 +69,7 @@ func (h *Handler) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) 
 		if shoot.Spec.Kubernetes.KubeAPIServer != nil {
 			for _, plugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
 				if plugin.KubeconfigSecretName != nil && *plugin.KubeconfigSecretName == req.Name {
-					if _, ok := secret.Data[kubernetes.KubeConfig]; !ok {
-						shoots = append(shoots, shoot.Name)
-					}
+					shoots = append(shoots, shoot.Name)
 				}
 			}
 		}

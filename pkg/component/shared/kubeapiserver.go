@@ -81,7 +81,7 @@ func init() {
 func NewKubeAPIServer(
 	ctx context.Context,
 	runtimeClientSet kubernetes.Interface,
-	gardenClient client.Client,
+	resourceConfigClient client.Client,
 	runtimeNamespace string,
 	objectMeta metav1.ObjectMeta,
 	runtimeVersion *semver.Version,
@@ -141,7 +141,7 @@ func NewKubeAPIServer(
 			}
 		}
 
-		auditConfig, err = computeKubeAPIServerAuditConfig(ctx, gardenClient, objectMeta, apiServerConfig.AuditConfig, auditWebhookConfig)
+		auditConfig, err = computeKubeAPIServerAuditConfig(ctx, resourceConfigClient, objectMeta, apiServerConfig.AuditConfig, auditWebhookConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -157,7 +157,7 @@ func NewKubeAPIServer(
 		watchCacheSizes = apiServerConfig.WatchCacheSizes
 	}
 
-	enabledAdmissionPluginConfigs, err := convertToAdmissionPluginConfigs(ctx, gardenClient, objectMeta.Namespace, enabledAdmissionPlugins)
+	enabledAdmissionPluginConfigs, err := convertToAdmissionPluginConfigs(ctx, resourceConfigClient, objectMeta.Namespace, enabledAdmissionPlugins)
 	if err != nil {
 		return nil, err
 	}
