@@ -39,8 +39,9 @@ var _ = Describe("ETCD", func() {
 		ctx    = context.TODO()
 		logger logr.Logger
 
-		kubeAPIServerNamespace = "shoot--foo--bar"
-		namePrefix             = "baz-"
+		kubeAPIServerNamespace      = "shoot--foo--bar"
+		namePrefix                  = "baz-"
+		kubeAPIServerDeploymentName = namePrefix + "kube-apiserver"
 
 		runtimeClient      client.Client
 		targetClient       client.Client
@@ -86,7 +87,7 @@ var _ = Describe("ETCD", func() {
 			Expect(targetClient.Create(ctx, secret2)).To(Succeed())
 			Expect(targetClient.Create(ctx, secret3)).To(Succeed())
 
-			kubeAPIServerDeployment = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: namePrefix + "kube-apiserver", Namespace: kubeAPIServerNamespace}}
+			kubeAPIServerDeployment = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: kubeAPIServerDeploymentName, Namespace: kubeAPIServerNamespace}}
 			Expect(runtimeClient.Create(ctx, kubeAPIServerDeployment)).To(Succeed())
 		})
 
@@ -136,7 +137,7 @@ var _ = Describe("ETCD", func() {
 			It("should create a snapshot of ETCD and annotate kube-apiserver accordingly", func() {
 				etcdMain.EXPECT().Snapshot(ctx, nil)
 
-				Expect(SnapshotETCDAfterRewritingEncryptedData(ctx, runtimeClient, func(ctx context.Context) error { return etcdMain.Snapshot(ctx, nil) }, kubeAPIServerNamespace, namePrefix)).To(Succeed())
+				Expect(SnapshotETCDAfterRewritingEncryptedData(ctx, runtimeClient, func(ctx context.Context) error { return etcdMain.Snapshot(ctx, nil) }, kubeAPIServerNamespace, kubeAPIServerDeploymentName)).To(Succeed())
 
 				Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(kubeAPIServerDeployment), kubeAPIServerDeployment)).To(Succeed())
 				Expect(kubeAPIServerDeployment.Annotations).To(HaveKeyWithValue("credentials.gardener.cloud/etcd-snapshotted", "true"))
@@ -156,7 +157,7 @@ var _ = Describe("ETCD", func() {
 				secret2ResourceVersion := secret2.ResourceVersion
 				secret3ResourceVersion := secret3.ResourceVersion
 
-				Expect(RewriteEncryptedDataRemoveLabel(ctx, logger, runtimeClient, targetClient, kubeAPIServerNamespace, namePrefix, corev1.SchemeGroupVersion.WithKind("SecretList"))).To(Succeed())
+				Expect(RewriteEncryptedDataRemoveLabel(ctx, logger, runtimeClient, targetClient, kubeAPIServerNamespace, kubeAPIServerDeploymentName, corev1.SchemeGroupVersion.WithKind("SecretList"))).To(Succeed())
 
 				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
 				Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())

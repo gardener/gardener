@@ -268,7 +268,7 @@ func (r *Reconciler) reconcile(
 		_ = g.Add(flow.Task{
 			Name: "Snapshotting ETCD after secrets were re-encrypted with new ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return secretsrotation.SnapshotETCDAfterRewritingEncryptedData(ctx, r.RuntimeClientSet.Client(), r.snapshotETCDFunc(secretsManager, c.etcdMain), r.GardenNamespace, namePrefix)
+				return secretsrotation.SnapshotETCDAfterRewritingEncryptedData(ctx, r.RuntimeClientSet.Client(), r.snapshotETCDFunc(secretsManager, c.etcdMain), r.GardenNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer)
 			}).
 				DoIf(allowBackup && helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationPreparing),
 			Dependencies: flow.NewTaskIDs(rewriteSecretsAddLabel),
@@ -276,7 +276,7 @@ func (r *Reconciler) reconcile(
 		_ = g.Add(flow.Task{
 			Name: "Removing label from secrets after rotation of ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClient, r.GardenNamespace, namePrefix, corev1.SchemeGroupVersion.WithKind("SecretList"))
+				return secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClient, r.GardenNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer, corev1.SchemeGroupVersion.WithKind("SecretList"))
 			}).
 				RetryUntilTimeout(30*time.Second, 10*time.Minute).
 				DoIf(helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) == gardencorev1beta1.RotationCompleting),
