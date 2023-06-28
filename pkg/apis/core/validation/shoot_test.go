@@ -4468,6 +4468,64 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start"),
 				Entry("rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete"),
 			)
+
+			DescribeTable("forbid hibernating the shoot when certain rotation operations are in progress",
+				func(status core.ShootStatus) {
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)}
+					shoot.Status = status
+
+					oldShoot := shoot.DeepCopy()
+					oldShoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)}
+
+					Expect(ValidateShootUpdate(shoot, oldShoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.hibernation.enabled"),
+						"Detail": And(
+							ContainSubstring("shoot cannot be hibernated"),
+							Or(
+								ContainSubstring("phase is %q", "Preparing"),
+								ContainSubstring("phase is %q", "Completing"),
+							),
+						),
+					}))))
+				},
+				Entry("ETCD encryption key rotation is in Preparing phase", core.ShootStatus{
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
+								Phase: core.RotationPreparing,
+							},
+						},
+					},
+				}),
+				Entry("ETCD encryption key rotation is in Completing phase", core.ShootStatus{
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
+								Phase: core.RotationCompleting,
+							},
+						},
+					},
+				}),
+				Entry("ServiceAccount key rotation is in Preparing phase", core.ShootStatus{
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
+								Phase: core.RotationPreparing,
+							},
+						},
+					},
+				}),
+				Entry("ServiceAccount key rotation is in Completing phase", core.ShootStatus{
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
+								Phase: core.RotationCompleting,
+							},
+						},
+					},
+				}),
+			)
 		})
 	})
 

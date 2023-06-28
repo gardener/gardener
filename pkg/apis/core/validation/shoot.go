@@ -151,6 +151,7 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	allErrs = append(allErrs, validateKubernetesVersionUpdate125(newShoot, oldShoot)...)
 	allErrs = append(allErrs, ValidateShoot(newShoot)...)
 	allErrs = append(allErrs, ValidateShootHAConfigUpdate(newShoot, oldShoot)...)
+	allErrs = append(allErrs, validateHibernationUpdate(newShoot, oldShoot)...)
 
 	return allErrs
 }
@@ -1022,6 +1023,32 @@ func isPSPDisabled(kubeAPIServerConfig *core.KubeAPIServerConfig) bool {
 		}
 	}
 	return false
+}
+
+func validateHibernationUpdate(new, old *core.Shoot) field.ErrorList {
+	var (
+		allErrs                 = field.ErrorList{}
+		fldPath                 = field.NewPath("spec", "hibernation", "enabled")
+		hibernationEnabledInOld = old.Spec.Hibernation != nil && pointer.BoolDeref(old.Spec.Hibernation.Enabled, false)
+		hibernationEnabledInNew = new.Spec.Hibernation != nil && pointer.BoolDeref(new.Spec.Hibernation.Enabled, false)
+	)
+
+	if !hibernationEnabledInOld && hibernationEnabledInNew {
+		if new.Status.Credentials != nil && new.Status.Credentials.Rotation != nil && new.Status.Credentials.Rotation.ETCDEncryptionKey != nil {
+			etcdEncryptionKeyRotation := new.Status.Credentials.Rotation.ETCDEncryptionKey
+			if etcdEncryptionKeyRotation.Phase == core.RotationPreparing || etcdEncryptionKeyRotation.Phase == core.RotationCompleting {
+				allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("shoot cannot be hibernated when .status.credentials.rotation.etcdEncryptionKey.phase is %q", string(etcdEncryptionKeyRotation.Phase))))
+			}
+		}
+		if new.Status.Credentials != nil && new.Status.Credentials.Rotation != nil && new.Status.Credentials.Rotation.ServiceAccountKey != nil {
+			serviceAccountKeyRotation := new.Status.Credentials.Rotation.ServiceAccountKey
+			if serviceAccountKeyRotation.Phase == core.RotationPreparing || serviceAccountKeyRotation.Phase == core.RotationCompleting {
+				allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("shoot cannot be hibernated when .status.credentials.rotation.serviceAccountKey.phase is %q", string(serviceAccountKeyRotation.Phase))))
+			}
+		}
+	}
+
+	return allErrs
 }
 
 // ValidateKubeAPIServer validates KubeAPIServerConfig.
