@@ -27,28 +27,14 @@ import (
 
 const (
 	serviceName = "gardener-apiserver"
+	servicePort = 443
 )
 
 func (g *gardenerAPIServer) serviceRuntime() *corev1.Service {
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      serviceName,
-			Namespace: g.namespace,
-			Labels:    GetLabels(),
-		},
-		Spec: corev1.ServiceSpec{
-			Type:     corev1.ServiceTypeClusterIP,
-			Selector: GetLabels(),
-			Ports: []corev1.ServicePort{{
-				Port:       443,
-				Protocol:   corev1.ProtocolTCP,
-				TargetPort: intstr.FromInt(port),
-			}},
-		},
-	}
+	service := g.service()
+	service.Namespace = g.namespace
 
 	gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, g.values.TopologyAwareRoutingEnabled, g.values.RuntimeVersion)
-
 	// allow gardener-apiserver being reached from kube-apiserver
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForWebhookTargets(service, networkingv1.NetworkPolicyPort{
 		Port:     utils.IntStrPtrFromInt(port),
@@ -56,4 +42,23 @@ func (g *gardenerAPIServer) serviceRuntime() *corev1.Service {
 	}))
 
 	return service
+}
+
+func (g *gardenerAPIServer) service() *corev1.Service {
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      serviceName,
+			Namespace: metav1.NamespaceSystem,
+			Labels:    GetLabels(),
+		},
+		Spec: corev1.ServiceSpec{
+			Type:     corev1.ServiceTypeClusterIP,
+			Selector: GetLabels(),
+			Ports: []corev1.ServicePort{{
+				Port:       servicePort,
+				Protocol:   corev1.ProtocolTCP,
+				TargetPort: intstr.FromInt(port),
+			}},
+		},
+	}
 }

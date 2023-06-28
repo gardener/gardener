@@ -70,6 +70,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			Requests: corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("20Mi")},
 			Limits:   corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("90Mi")},
 		}
+		clusterIP = "1.2.3.4"
 
 		fakeClient        client.Client
 		fakeSecretManager secretsmanager.Interface
@@ -109,6 +110,8 @@ var _ = Describe("GardenerAPIServer", func() {
 				},
 			}
 		}
+		serviceVirtual *corev1.Service
+		endpoints      *corev1.Endpoints
 	)
 
 	BeforeEach(func() {
@@ -598,6 +601,48 @@ var _ = Describe("GardenerAPIServer", func() {
 			},
 		}
 		utilruntime.Must(gardener.InjectGenericKubeconfig(deployment, "generic-token-kubeconfig", "shoot-access-gardener-apiserver"))
+
+		serviceVirtual = &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-apiserver",
+				Namespace: "kube-system",
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+				},
+			},
+			Spec: corev1.ServiceSpec{
+				Type: corev1.ServiceTypeClusterIP,
+				Selector: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+				},
+				Ports: []corev1.ServicePort{{
+					Port:       443,
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromInt(8443),
+				}},
+			},
+		}
+		endpoints = &corev1.Endpoints{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-apiserver",
+				Namespace: "kube-system",
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+				},
+			},
+			Subsets: []corev1.EndpointSubset{{
+				Ports: []corev1.EndpointPort{{
+					Port:     443,
+					Protocol: corev1.ProtocolTCP,
+				}},
+				Addresses: []corev1.EndpointAddress{{
+					IP: clusterIP,
+				}},
+			}},
+		}
 	})
 
 	Describe("#Deploy", func() {
@@ -607,6 +652,15 @@ var _ = Describe("GardenerAPIServer", func() {
 			Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: namespace}})).To(Succeed())
 			Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client", Namespace: namespace}})).To(Succeed())
 			Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
+
+			// Create runtime service manually since it is required by the Deploy function. In reality, it gets created
+			// via the ManagedResource, however in this unit test the respective controller is not running, hence we
+			// have to create it here.
+			svcRuntime := serviceRuntime.DeepCopy()
+			Expect(fakeClient.Create(ctx, svcRuntime)).To(Succeed())
+			patch := client.MergeFrom(svcRuntime.DeepCopy())
+			svcRuntime.Spec.ClusterIP = clusterIP
+			Expect(fakeClient.Patch(ctx, svcRuntime, patch)).To(Succeed())
 		})
 
 		Context("deployment", func() {
@@ -1307,11 +1361,13 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(deployment)))
 
 					Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
-					Expect(managedResourceSecretVirtual.Data).To(HaveLen(4))
+					Expect(managedResourceSecretVirtual.Data).To(HaveLen(6))
 					Expect(string(managedResourceSecretVirtual.Data["apiservice____v1beta1.core.gardener.cloud.yaml"])).To(Equal(componenttest.Serialize(apiServiceFor("core.gardener.cloud", "v1beta1"))))
 					Expect(string(managedResourceSecretVirtual.Data["apiservice____v1alpha1.seedmanagement.gardener.cloud.yaml"])).To(Equal(componenttest.Serialize(apiServiceFor("seedmanagement.gardener.cloud", "v1alpha1"))))
 					Expect(string(managedResourceSecretVirtual.Data["apiservice____v1alpha1.operations.gardener.cloud.yaml"])).To(Equal(componenttest.Serialize(apiServiceFor("operations.gardener.cloud", "v1alpha1"))))
 					Expect(string(managedResourceSecretVirtual.Data["apiservice____v1alpha1.settings.gardener.cloud.yaml"])).To(Equal(componenttest.Serialize(apiServiceFor("settings.gardener.cloud", "v1alpha1"))))
+					Expect(string(managedResourceSecretVirtual.Data["service__kube-system__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(serviceVirtual)))
+					Expect(string(managedResourceSecretVirtual.Data["endpoints__kube-system__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(endpoints)))
 				})
 
 				Context("when HVPA is disabled", func() {

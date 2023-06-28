@@ -93,6 +93,7 @@ type gardenerAPIServer struct {
 func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 	var (
 		runtimeRegistry = managedresources.NewRegistry(operatorclient.RuntimeScheme, operatorclient.RuntimeCodec, operatorclient.RuntimeSerializer)
+		virtualRegistry = managedresources.NewRegistry(operatorclient.VirtualScheme, operatorclient.VirtualCodec, operatorclient.VirtualSerializer)
 
 		configMapAuditPolicy              = g.emptyConfigMap(configMapAuditPolicyNamePrefix)
 		configMapAdmissionConfigs         = g.emptyConfigMap(configMapAdmissionNamePrefix)
@@ -170,15 +171,18 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	var (
-		virtualRegistry = managedresources.NewRegistry(operatorclient.VirtualScheme, operatorclient.VirtualCodec, operatorclient.VirtualSerializer)
-	)
+	serviceRuntime := &corev1.Service{}
+	if err := g.client.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: g.namespace}, serviceRuntime); err != nil {
+		return err
+	}
 
 	virtualResources, err := virtualRegistry.AddAllAndSerialize(
 		g.apiService(secretCAGardener, gardencorev1beta1.SchemeGroupVersion.Group, gardencorev1beta1.SchemeGroupVersion.Version),
 		g.apiService(secretCAGardener, seedmanagementv1alpha1.SchemeGroupVersion.Group, seedmanagementv1alpha1.SchemeGroupVersion.Version),
 		g.apiService(secretCAGardener, operationsv1alpha1.SchemeGroupVersion.Group, operationsv1alpha1.SchemeGroupVersion.Version),
 		g.apiService(secretCAGardener, settingsv1alpha1.SchemeGroupVersion.Group, settingsv1alpha1.SchemeGroupVersion.Version),
+		g.service(),
+		g.endpoints(serviceRuntime.Spec.ClusterIP),
 	)
 	if err != nil {
 		return err
