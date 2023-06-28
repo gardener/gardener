@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/istio"
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
+	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/component/nginxingress"
 	"github.com/gardener/gardener/pkg/component/seedsystem"
 	"github.com/gardener/gardener/pkg/component/vpa"
@@ -124,7 +125,9 @@ func (h *SeedHealth) checkSeedSystemComponents(
 	}
 	if h.loggingEnabled {
 		managedResources = append(managedResources, fluentoperator.OperatorManagedResourceName)
-		managedResources = append(managedResources, fluentoperator.CustomResourcesManagedResourceName)
+		managedResources = append(managedResources, "seed-"+fluentoperator.CustomResourcesManagedResourceName)
+		managedResources = append(managedResources, fluentoperator.FluentBitManagedResourceName)
+		managedResources = append(managedResources, vali.ManagedResourceNameRuntime)
 	}
 
 	for _, name := range managedResources {

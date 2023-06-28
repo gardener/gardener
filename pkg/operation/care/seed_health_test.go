@@ -38,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
+	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/component/nginxingress"
 	"github.com/gardener/gardener/pkg/component/seedsystem"
 	"github.com/gardener/gardener/pkg/component/vpa"
@@ -64,8 +65,10 @@ var (
 		dependencywatchdog.ManagedResourceDependencyWatchdogProber,
 		hvpa.ManagedResourceName,
 		"istio-system",
-		fluentoperator.CustomResourcesManagedResourceName,
+		"seed-" + fluentoperator.CustomResourcesManagedResourceName,
 		fluentoperator.OperatorManagedResourceName,
+		fluentoperator.FluentBitManagedResourceName,
+		vali.ManagedResourceNameRuntime,
 	}
 )
 

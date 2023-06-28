@@ -54,6 +54,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/logging/eventlogger"
+	"github.com/gardener/gardener/pkg/component/logging/fluentoperator/customresources"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/metricsserver"
@@ -69,7 +70,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/component/vpnshoot"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
@@ -460,11 +460,14 @@ func defaultMonitoring(
 	), nil
 }
 
-func defaultFluentOperatorCustomResources(
+// getFluentBitInputsFilterAndParsers returns all fluent-bit inputs, filters and parsers for the seed
+func getFluentOperatorCustomResources(
 	c client.Client,
 	namespace string,
 	loggingEnabled bool,
-	eventLoggingEnabled bool,
+	seedIsGarden bool,
+	isEventLoggingEnabled bool,
+	isMCMDeploymentEnabled bool,
 ) (
 	deployer component.DeployWaiter,
 	err error,
@@ -473,80 +476,93 @@ func defaultFluentOperatorCustomResources(
 		inputs  []*fluentbitv1alpha2.ClusterInput
 		filters []*fluentbitv1alpha2.ClusterFilter
 		parsers []*fluentbitv1alpha2.ClusterParser
+		outputs []*fluentbitv1alpha2.ClusterOutput
 	)
 
-	if loggingEnabled {
-		componentsFunctions := []component.CentralLoggingConfiguration{
+	componentsFunctions := []component.CentralLoggingConfiguration{
+		// journald components
+		downloader.CentralLoggingConfiguration,
+		// seed system components
+		extensions.CentralLoggingConfiguration,
+		dependencywatchdog.CentralLoggingConfiguration,
+		monitoring.CentralLoggingConfiguration,
+		// shoot control plane components
+		clusterautoscaler.CentralLoggingConfiguration,
+		vpnseedserver.CentralLoggingConfiguration,
+		// shoot system components
+		nodeexporter.CentralLoggingConfiguration,
+		nodeproblemdetector.CentralLoggingConfiguration,
+		vpnshoot.CentralLoggingConfiguration,
+		// shoot addon components
+		kubernetesdashboard.CentralLoggingConfiguration,
+	}
+
+	if !seedIsGarden {
+		componentsFunctions = append(componentsFunctions, []component.CentralLoggingConfiguration{
 			// journald components
 			kubelet.CentralLoggingConfiguration,
 			docker.CentralLoggingConfiguration,
 			containerd.CentralLoggingConfiguration,
-			downloader.CentralLoggingConfiguration,
 			// seed system components
-			extensions.CentralLoggingConfiguration,
-			dependencywatchdog.CentralLoggingConfiguration,
 			resourcemanager.CentralLoggingConfiguration,
-			monitoring.CentralLoggingConfiguration,
 			vali.CentralLoggingConfiguration,
 			// shoot control plane components
 			etcd.CentralLoggingConfiguration,
-			clusterautoscaler.CentralLoggingConfiguration,
 			kubeapiserver.CentralLoggingConfiguration,
 			kubescheduler.CentralLoggingConfiguration,
 			kubecontrollermanager.CentralLoggingConfiguration,
 			kubestatemetrics.CentralLoggingConfiguration,
 			hvpa.CentralLoggingConfiguration,
-			plutono.CentralLoggingConfiguration,
 			vpa.CentralLoggingConfiguration,
-			vpnseedserver.CentralLoggingConfiguration,
 			// shoot system components
 			coredns.CentralLoggingConfiguration,
 			kubeproxy.CentralLoggingConfiguration,
 			metricsserver.CentralLoggingConfiguration,
-			nodeexporter.CentralLoggingConfiguration,
-			nodeproblemdetector.CentralLoggingConfiguration,
-			vpnshoot.CentralLoggingConfiguration,
 			// shoot addon components
-			kubernetesdashboard.CentralLoggingConfiguration,
 			nginxingress.CentralLoggingConfiguration,
+		}...)
+	}
+
+	if isEventLoggingEnabled {
+		componentsFunctions = append(componentsFunctions, eventlogger.CentralLoggingConfiguration)
+	}
+
+	if isMCMDeploymentEnabled {
+		componentsFunctions = append(componentsFunctions, machinecontrollermanager.CentralLoggingConfiguration)
+	}
+
+	// Fetch component specific logging configurations
+	for _, componentFn := range componentsFunctions {
+		loggingConfig, err := componentFn()
+		if err != nil {
+			return nil, err
 		}
 
-		if eventLoggingEnabled {
-			componentsFunctions = append(componentsFunctions, eventlogger.CentralLoggingConfiguration)
+		if len(loggingConfig.Inputs) > 0 {
+			inputs = append(inputs, loggingConfig.Inputs...)
 		}
 
-		if features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment) {
-			componentsFunctions = append(componentsFunctions, machinecontrollermanager.CentralLoggingConfiguration)
+		if len(loggingConfig.Filters) > 0 {
+			filters = append(filters, loggingConfig.Filters...)
 		}
 
-		// Fetch component specific logging configurations
-		for _, componentFn := range componentsFunctions {
-			loggingConfig, err := componentFn()
-			if err != nil {
-				return nil, err
-			}
-
-			if len(loggingConfig.Inputs) > 0 {
-				inputs = append(inputs, loggingConfig.Inputs...)
-			}
-
-			if len(loggingConfig.Filters) > 0 {
-				filters = append(filters, loggingConfig.Filters...)
-			}
-
-			if len(loggingConfig.Parsers) > 0 {
-				parsers = append(parsers, loggingConfig.Parsers...)
-			}
+		if len(loggingConfig.Parsers) > 0 {
+			parsers = append(parsers, loggingConfig.Parsers...)
 		}
 	}
+
+	outputs = []*fluentbitv1alpha2.ClusterOutput{customresources.GetDynamicClusterOutput(map[string]string{
+		v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource,
+	})}
 
 	return shared.NewFluentOperatorCustomResources(
 		c,
 		namespace,
 		loggingEnabled,
-		v1beta1constants.PriorityClassNameSeedSystem600,
+		"seed",
 		inputs,
 		filters,
 		parsers,
+		outputs,
 	)
 }

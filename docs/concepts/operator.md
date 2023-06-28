@@ -218,6 +218,10 @@ Other system components are:
 - ETCD Druid
 - Istio
 
+Few observability components are also managed by the gardener-operator:
+    - Fluent-operator
+    - Vali
+
 As soon as all system components are up, the reconciler deploys the virtual garden cluster.
 It comprises out of two ETCDs (one "main" etcd, one "events" etcd) which are managed by ETCD Druid via `druid.gardener.cloud/v1alpha1.Etcd` custom resources.
 The whole management works similar to how it works for `Shoot`s, so you can take a look at [this document](etcd.md) for more information in general.

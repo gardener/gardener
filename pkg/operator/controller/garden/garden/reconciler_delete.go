@@ -143,12 +143,36 @@ func (r *Reconciler) delete(
 			Fn:           component.OpDestroyAndWait(c.nginxIngressController).Destroy,
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
 		})
+		destroyFluentOperatorCustomResources = g.Add(flow.Task{
+			Name:         "Destroying fluent operator custom resources",
+			Fn:           component.OpDestroyAndWait(c.fluentOperatorCustomResources).Destroy,
+			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
+		})
+		destroyFluentBit = g.Add(flow.Task{
+			Name:         "Destroying Fluent-bit",
+			Fn:           component.OpDestroyAndWait(c.fluentBit).Destroy,
+			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
+		})
+		destroyFluentOperator = g.Add(flow.Task{
+			Name:         "Destroying Fluent Operator",
+			Fn:           component.OpDestroyAndWait(c.fluentOperator).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyFluentOperatorCustomResources, destroyFluentBit),
+		})
+		destroyVali = g.Add(flow.Task{
+			Name:         "Destroying Vali",
+			Fn:           component.OpDestroyAndWait(c.vali).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyFluentOperatorCustomResources),
+		})
 		syncPointCleanedUp = flow.NewTaskIDs(
 			destroyEtcdDruid,
 			destroyIstio,
 			destroyHVPAController,
 			destroyVerticalPodAutoscaler,
 			destroyNginxIngressController,
+			destroyFluentOperatorCustomResources,
+			destroyFluentBit,
+			destroyFluentOperator,
+			destroyVali,
 		)
 
 		destroySystemResources = g.Add(flow.Task{

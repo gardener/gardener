@@ -95,6 +95,10 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				healthyManagedResource("shoot-core-gardener-resource-manager"),
 				healthyManagedResource("shoot-core-gardeneraccess"),
 				healthyManagedResource("nginx-ingress"),
+				healthyManagedResource("fluent-bit"),
+				healthyManagedResource("fluent-operator"),
+				healthyManagedResource("garden-flb-custom-resources"),
+				healthyManagedResource("vali"),
 			))
 
 			g.Expect(runtimeClient.List(ctx, managedResourceList, client.InNamespace("istio-system"))).To(Succeed())

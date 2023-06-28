@@ -129,6 +129,10 @@ func (r *Reconciler) reconcile(
 			Name: "Deploying custom resource definition for Istio",
 			Fn:   c.istioCRD.Deploy,
 		})
+		deployFluentCRD = g.Add(flow.Task{
+			Name: "Deploying custom resource definition for Fluent-bit Operator",
+			Fn:   c.fluentCRD.Deploy,
+		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
 			Fn:           component.OpWait(c.gardenerResourceManager).Deploy,
@@ -164,14 +168,39 @@ func (r *Reconciler) reconcile(
 			Fn:           component.OpWait(c.istio).Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
+		deployFluentOperatorCustomResources = g.Add(flow.Task{
+			Name:         "Deploying Fluent operator CustomResources",
+			Fn:           c.fluentOperatorCustomResources.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployFluentCRD),
+		})
+		deployFluentOperator = g.Add(flow.Task{
+			Name:         "Deploying Fluent Operator",
+			Fn:           component.OpWait(c.fluentOperator).Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployFluentCRD),
+		})
+		deployFluentBit = g.Add(flow.Task{
+			Name:         "Deploying Fluent Bit",
+			Fn:           c.fluentBit.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployFluentCRD),
+		})
+		deployVali = g.Add(flow.Task{
+			Name:         "Deploying Vali",
+			Fn:           c.vali.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
 		syncPointSystemComponents = flow.NewTaskIDs(
 			generateGenericTokenKubeconfig,
 			deploySystemResources,
+			deployFluentCRD,
+			deployFluentOperatorCustomResources,
 			deployVPA,
 			deployHVPA,
 			deployEtcdDruid,
 			deployIstio,
 			deployNginxIngressController,
+			deployFluentOperator,
+			deployFluentBit,
+			deployVali,
 		)
 
 		deployEtcds = g.Add(flow.Task{

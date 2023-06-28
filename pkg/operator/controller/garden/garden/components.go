@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
+	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -40,7 +41,11 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/apiserver"
+	"github.com/gardener/gardener/pkg/component/coredns"
 	"github.com/gardener/gardener/pkg/component/etcd"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/component/gardeneraccess"
 	"github.com/gardener/gardener/pkg/component/gardensystem"
 	"github.com/gardener/gardener/pkg/component/hvpa"
@@ -49,6 +54,14 @@ import (
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
+	"github.com/gardener/gardener/pkg/component/kubeproxy"
+	"github.com/gardener/gardener/pkg/component/kubescheduler"
+	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
+	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
+	"github.com/gardener/gardener/pkg/component/logging/fluentoperator/customresources"
+	"github.com/gardener/gardener/pkg/component/logging/vali"
+	"github.com/gardener/gardener/pkg/component/metricsserver"
+	"github.com/gardener/gardener/pkg/component/nginxingress"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/component/vpa"
@@ -60,10 +73,11 @@ import (
 )
 
 type components struct {
-	etcdCRD  component.Deployer
-	vpaCRD   component.Deployer
-	hvpaCRD  component.Deployer
-	istioCRD component.DeployWaiter
+	etcdCRD   component.Deployer
+	vpaCRD    component.Deployer
+	hvpaCRD   component.Deployer
+	istioCRD  component.DeployWaiter
+	fluentCRD component.DeployWaiter
 
 	gardenerResourceManager component.DeployWaiter
 	system                  component.DeployWaiter
@@ -82,7 +96,11 @@ type components struct {
 	virtualGardenGardenerResourceManager resourcemanager.Interface
 	virtualGardenGardenerAccess          component.Deployer
 
-	kubeStateMetrics component.DeployWaiter
+	kubeStateMetrics              component.DeployWaiter
+	fluentOperator                component.DeployWaiter
+	fluentBit                     component.DeployWaiter
+	fluentOperatorCustomResources component.DeployWaiter
+	vali                          component.Deployer
 }
 
 func (r *Reconciler) instantiateComponents(
@@ -104,6 +122,7 @@ func (r *Reconciler) instantiateComponents(
 		c.hvpaCRD = component.OpDestroy(c.hvpaCRD)
 	}
 	c.istioCRD = istio.NewCRD(r.RuntimeClientSet.ChartApplier())
+	c.fluentCRD = fluentoperator.NewCRDs(applier)
 
 	// garden system components
 	c.gardenerResourceManager, err = r.newGardenerResourceManager(garden, secretsManager)
@@ -172,6 +191,56 @@ func (r *Reconciler) instantiateComponents(
 
 	// observability components
 	c.kubeStateMetrics, err = r.newKubeStateMetrics()
+	if err != nil {
+		return
+	}
+
+	// logging stack components
+	c.fluentOperator, err = sharedcomponent.NewFluentOperator(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		r.ImageVector,
+		true,
+		v1beta1constants.PriorityClassNameGardenSystem200,
+	)
+	if err != nil {
+		return
+	}
+
+	c.fluentBit, err = sharedcomponent.NewFluentBit(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		r.ImageVector,
+		true,
+		v1beta1constants.PriorityClassNameGardenSystem200,
+	)
+	if err != nil {
+		return
+	}
+
+	c.fluentOperatorCustomResources, err = r.newFluentCustomResources(ctx)
+	if err != nil {
+		return
+	}
+
+	c.vali, err = sharedcomponent.NewVali(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		r.ImageVector,
+		nil,
+		component.ClusterTypeSeed,
+		1,
+		false,
+		v1beta1constants.PriorityClassNameGardenSystem200,
+		nil,
+		"",
+		false,
+		hvpaEnabled(),
+		&hvpav1alpha1.MaintenanceTimeWindow{
+			Begin: garden.Spec.VirtualCluster.Maintenance.TimeWindow.Begin,
+			End:   garden.Spec.VirtualCluster.Maintenance.TimeWindow.End,
+		},
+	)
 	if err != nil {
 		return
 	}
@@ -728,4 +797,72 @@ func getLoadBalancerServiceAnnotations(garden *operatorv1alpha1.Garden) map[stri
 		return utils.MergeStringMaps(garden.Spec.RuntimeCluster.Settings.LoadBalancerServices.Annotations)
 	}
 	return nil
+}
+
+func (r *Reconciler) newFluentCustomResources(ctx context.Context) (component.DeployWaiter, error) {
+	var (
+		inputs  []*fluentbitv1alpha2.ClusterInput
+		filters []*fluentbitv1alpha2.ClusterFilter
+		parsers []*fluentbitv1alpha2.ClusterParser
+		outputs []*fluentbitv1alpha2.ClusterOutput
+	)
+
+	componentsFunctions := []component.CentralLoggingConfiguration{
+		// journald components
+		kubelet.CentralLoggingConfiguration,
+		docker.CentralLoggingConfiguration,
+		containerd.CentralLoggingConfiguration,
+		// seed system components
+		resourcemanager.CentralLoggingConfiguration,
+		vali.CentralLoggingConfiguration,
+		// shoot control plane components
+		etcd.CentralLoggingConfiguration,
+		kubeapiserver.CentralLoggingConfiguration,
+		kubescheduler.CentralLoggingConfiguration,
+		kubecontrollermanager.CentralLoggingConfiguration,
+		kubestatemetrics.CentralLoggingConfiguration,
+		hvpa.CentralLoggingConfiguration,
+		vpa.CentralLoggingConfiguration,
+		// shoot system components
+		coredns.CentralLoggingConfiguration,
+		kubeproxy.CentralLoggingConfiguration,
+		metricsserver.CentralLoggingConfiguration,
+		// shoot addon components
+		nginxingress.CentralLoggingConfiguration,
+	}
+
+	// Fetch component specific logging configurations
+	for _, componentFn := range componentsFunctions {
+		loggingConfig, err := componentFn()
+		if err != nil {
+			return nil, err
+		}
+
+		if len(loggingConfig.Inputs) > 0 {
+			inputs = append(inputs, loggingConfig.Inputs...)
+		}
+
+		if len(loggingConfig.Filters) > 0 {
+			filters = append(filters, loggingConfig.Filters...)
+		}
+
+		if len(loggingConfig.Parsers) > 0 {
+			parsers = append(parsers, loggingConfig.Parsers...)
+		}
+	}
+
+	outputs = []*fluentbitv1alpha2.ClusterOutput{customresources.GetStaticClusterOutput(map[string]string{
+		v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource,
+	})}
+
+	return sharedcomponent.NewFluentOperatorCustomResources(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		true,
+		"garden",
+		inputs,
+		filters,
+		parsers,
+		outputs,
+	)
 }

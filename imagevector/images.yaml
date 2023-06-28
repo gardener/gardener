@@ -406,7 +406,7 @@ images:
     name: fluent-bit-to-vali
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/fluent-bit-to-vali
-  tag: "v0.55.3"
+  tag: "v0.55.4"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:

@@ -15,36 +15,42 @@
 package shared
 
 import (
-	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
+	"github.com/gardener/gardener/pkg/utils/images"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
-// NewFluentOperatorCustomResources instantiates a new `Fluent Operator Custom Resources` component.
-func NewFluentOperatorCustomResources(
+// NewFluentBit instantiates a new `Fluent-bit` component.
+func NewFluentBit(
 	c client.Client,
 	gardenNamespaceName string,
+	imageVector imagevector.ImageVector,
 	enabled bool,
-	prefix string,
-	inputs []*fluentbitv1alpha2.ClusterInput,
-	filters []*fluentbitv1alpha2.ClusterFilter,
-	parsers []*fluentbitv1alpha2.ClusterParser,
-	outputs []*fluentbitv1alpha2.ClusterOutput,
+	priorityClassName string,
 ) (
 	deployer component.DeployWaiter,
 	err error,
 ) {
-	deployer = fluentoperator.NewCustomResources(
+	fluentBitImage, err := imageVector.FindImage(images.ImageNameFluentBit)
+	if err != nil {
+		return nil, err
+	}
+
+	fluentBitInitImage, err := imageVector.FindImage(images.ImageNameFluentBitPluginInstaller)
+	if err != nil {
+		return nil, err
+	}
+
+	deployer = fluentoperator.NewFluentBit(
 		c,
 		gardenNamespaceName,
-		fluentoperator.CustomResourcesValues{
-			Prefix:  prefix,
-			Inputs:  inputs,
-			Filters: filters,
-			Parsers: parsers,
-			Outputs: outputs,
+		fluentoperator.FluentBitValues{
+			Image:              fluentBitImage.String(),
+			InitContainerImage: fluentBitInitImage.String(),
+			PriorityClass:      priorityClassName,
 		},
 	)
 

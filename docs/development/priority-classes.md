@@ -38,7 +38,7 @@ When using the `gardener-operator` for managing the garden runtime and virtual c
 | `gardener-system-900`              | 999998900 | Extensions, `reversed-vpn-auth-server`                                                                                                                                             |
 | `gardener-system-800`              | 999998800 | `dependency-watchdog-endpoint`, `dependency-watchdog-probe`, `etcd-druid`, `(auditlog-)mutator`, `vpa-admission-controller`                                                        |
 | `gardener-system-700`              | 999998700 | `auditlog-seed-controller`, `hvpa-controller`, `vpa-recommender`, `vpa-updater`                                                                                                    |
-| `gardener-system-600`              | 999998600 | `aggregate-alertmanager`, `alertmanager`, `fluent-bit`, `plutono`, `kube-state-metrics`, `nginx-ingress-controller`, `nginx-k8s-backend`, `prometheus`, `vali`,  `seed-prometheus` |
+| `gardener-system-600`              | 999998600 | `aggregate-alertmanager`, `alertmanager`, `fluent-operator`, `fluent-bit`, `plutono`, `kube-state-metrics`, `nginx-ingress-controller`, `nginx-k8s-backend`, `prometheus`, `vali`,  `seed-prometheus` |
 | `gardener-reserve-excess-capacity` | -5        | `reserve-excess-capacity` ([ref](https://github.com/gardener/gardener/pull/6135))                                                                                                  |
 
 ### `PriorityClass`es for Shoot Control Plane Components

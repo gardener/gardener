@@ -306,10 +306,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 	// Deploy the CRDs in the seed cluster.
 	log.Info("Deploying custom resource definitions")
-	if err := fluentoperator.NewCRDs(applier).Deploy(ctx); err != nil {
-		return err
-	}
-
 	if err := machinecontrollermanager.NewCRD(seedClient, applier).Deploy(ctx); err != nil {
 		return err
 	}
@@ -337,6 +333,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 			if err := hvpa.NewCRD(applier).Deploy(ctx); err != nil {
 				return err
 			}
+		}
+
+		if err := fluentoperator.NewCRDs(applier).Deploy(ctx); err != nil {
+			return err
 		}
 
 		// When the seed is the garden cluster then gardener-resource-manager is reconciled by the gardener-operator.
@@ -581,11 +581,11 @@ func (r *Reconciler) runReconcileSeedFlow(
 			return err
 		}
 
-		fluentOperatorCustomResources, err := defaultFluentOperatorCustomResources(
+		fluentBit, err := sharedcomponent.NewFluentBit(
 			seedClient,
 			r.GardenNamespace,
 			loggingEnabled,
-			gardenlethelper.IsEventLoggingEnabled(&r.Config),
+			v1beta1constants.PriorityClassNameSeedSystem600,
 		)
 		if err != nil {
 			return err
@@ -652,14 +652,14 @@ func (r *Reconciler) runReconcileSeedFlow(
 				Name: "Deploying kube-state-metrics",
 				Fn:   kubeStateMetrics.Deploy,
 			})
-			reconcileFluentOperatorResources = g.Add(flow.Task{
-				Name: "Deploying Fluent Operator resources",
-				Fn:   component.OpWait(fluentOperatorCustomResources).Deploy,
+			deployFluentOperator = g.Add(flow.Task{
+				Name: "Deploying Fluent Operator",
+				Fn:   component.OpWait(fluentOperator).Deploy,
 			})
 			_ = g.Add(flow.Task{
-				Name:         "Deploying Fluent Operator",
-				Fn:           component.OpWait(fluentOperator).Deploy,
-				Dependencies: flow.NewTaskIDs(reconcileFluentOperatorResources),
+				Name:         "Deploying Fluent Bit",
+				Fn:           component.OpWait(fluentBit).Deploy,
+				Dependencies: flow.NewTaskIDs(deployFluentOperator),
 			})
 			_ = g.Add(flow.Task{
 				Name: "Deploying Plutono",
@@ -703,6 +703,25 @@ func (r *Reconciler) runReconcileSeedFlow(
 			})
 		)
 	}
+
+	fluentOperatorCustomResources, err := getFluentOperatorCustomResources(
+		seedClient,
+		r.GardenNamespace,
+		loggingEnabled,
+		seedIsGarden,
+		gardenlethelper.IsEventLoggingEnabled(&r.Config),
+		features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment),
+	)
+	if err != nil {
+		return err
+	}
+
+	var (
+		_ = g.Add(flow.Task{
+			Name: "Deploying Fluent Operator custom resources",
+			Fn:   fluentOperatorCustomResources.Deploy,
+		})
+	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{Log: log}); err != nil {
 		return flow.Errors(err)
