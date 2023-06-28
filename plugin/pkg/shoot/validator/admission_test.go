@@ -2106,6 +2106,24 @@ var _ = Describe("validator", func() {
 					Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestNonPreviewPatchVersion.Version))
 				})
 
+				It("should default a major.minor kubernetes version only to non-expired versions", func() {
+					shoot.Spec.Kubernetes.Version = "1.6"
+					deprecatedClassification := core.ClassificationDeprecated
+					highestNonExpiredPatchVersion := core.ExpirableVersion{Version: "1.6.9"}
+					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: "1.6.1", Classification: &deprecatedClassification, ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}}, highestNonExpiredPatchVersion)
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(Not(HaveOccurred()))
+					Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestNonExpiredPatchVersion.Version))
+				})
+
 				It("should reject defaulting a major.minor kubernetes version if there is no higher non-preview version available for defaulting", func() {
 					shoot.Spec.Kubernetes.Version = "1.6"
 					preview := core.ClassificationPreview
