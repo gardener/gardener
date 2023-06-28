@@ -26,6 +26,7 @@ import (
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -110,8 +111,12 @@ var _ = Describe("GardenerAPIServer", func() {
 				},
 			}
 		}
-		serviceVirtual *corev1.Service
-		endpoints      *corev1.Endpoints
+		serviceVirtual                   *corev1.Service
+		endpoints                        *corev1.Endpoints
+		clusterRole                      *rbacv1.ClusterRole
+		clusterRoleBinding               *rbacv1.ClusterRoleBinding
+		clusterRoleBindingAuthDelegation *rbacv1.ClusterRoleBinding
+		roleBindingAuthReader            *rbacv1.RoleBinding
 	)
 
 	BeforeEach(func() {
@@ -641,6 +646,78 @@ var _ = Describe("GardenerAPIServer", func() {
 				Addresses: []corev1.EndpointAddress{{
 					IP: clusterIP,
 				}},
+			}},
+		}
+		clusterRole = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:apiserver",
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+				},
+			},
+			Rules: []rbacv1.PolicyRule{{
+				APIGroups: []string{"*"},
+				Resources: []string{"*"},
+				Verbs:     []string{"*"},
+			}},
+		}
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:apiserver",
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "gardener.cloud:system:apiserver",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "gardener-apiserver",
+				Namespace: "kube-system",
+			}},
+		}
+		clusterRoleBindingAuthDelegation = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:apiserver:auth-delegator",
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "system:auth-delegator",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "gardener-apiserver",
+				Namespace: "kube-system",
+			}},
+		}
+		roleBindingAuthReader = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:apiserver:auth-reader",
+				Namespace: "kube-system",
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "apiserver",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "extension-apiserver-authentication-reader",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "gardener-apiserver",
+				Namespace: "kube-system",
 			}},
 		}
 	})
@@ -1361,13 +1438,17 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(deployment)))
 
 					Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
-					Expect(managedResourceSecretVirtual.Data).To(HaveLen(6))
+					Expect(managedResourceSecretVirtual.Data).To(HaveLen(10))
 					Expect(string(managedResourceSecretVirtual.Data["apiservice____v1beta1.core.gardener.cloud.yaml"])).To(Equal(componenttest.Serialize(apiServiceFor("core.gardener.cloud", "v1beta1"))))
 					Expect(string(managedResourceSecretVirtual.Data["apiservice____v1alpha1.seedmanagement.gardener.cloud.yaml"])).To(Equal(componenttest.Serialize(apiServiceFor("seedmanagement.gardener.cloud", "v1alpha1"))))
 					Expect(string(managedResourceSecretVirtual.Data["apiservice____v1alpha1.operations.gardener.cloud.yaml"])).To(Equal(componenttest.Serialize(apiServiceFor("operations.gardener.cloud", "v1alpha1"))))
 					Expect(string(managedResourceSecretVirtual.Data["apiservice____v1alpha1.settings.gardener.cloud.yaml"])).To(Equal(componenttest.Serialize(apiServiceFor("settings.gardener.cloud", "v1alpha1"))))
 					Expect(string(managedResourceSecretVirtual.Data["service__kube-system__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(serviceVirtual)))
 					Expect(string(managedResourceSecretVirtual.Data["endpoints__kube-system__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(endpoints)))
+					Expect(string(managedResourceSecretVirtual.Data["clusterrole____gardener.cloud_system_apiserver.yaml"])).To(Equal(componenttest.Serialize(clusterRole)))
+					Expect(string(managedResourceSecretVirtual.Data["clusterrolebinding____gardener.cloud_system_apiserver.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
+					Expect(string(managedResourceSecretVirtual.Data["clusterrolebinding____gardener.cloud_apiserver_auth-delegator.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingAuthDelegation)))
+					Expect(string(managedResourceSecretVirtual.Data["rolebinding__kube-system__gardener.cloud_apiserver_auth-reader.yaml"])).To(Equal(componenttest.Serialize(roleBindingAuthReader)))
 				})
 
 				Context("when HVPA is disabled", func() {

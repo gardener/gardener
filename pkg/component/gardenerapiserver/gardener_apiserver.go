@@ -183,6 +183,10 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		g.apiService(secretCAGardener, settingsv1alpha1.SchemeGroupVersion.Group, settingsv1alpha1.SchemeGroupVersion.Version),
 		g.service(),
 		g.endpoints(serviceRuntime.Spec.ClusterIP),
+		g.clusterRole(),
+		g.clusterRoleBinding(secretVirtualGardenAccess.ServiceAccountName),
+		g.clusterRoleBindingAuthDelegation(secretVirtualGardenAccess.ServiceAccountName),
+		g.roleBindingAuthReader(secretVirtualGardenAccess.ServiceAccountName),
 	)
 	if err != nil {
 		return err
