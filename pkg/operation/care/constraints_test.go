@@ -22,7 +22,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
@@ -58,6 +57,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/care"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 type webhookTestCase struct {
@@ -450,6 +450,7 @@ var _ = Describe("Constraints", func() {
 			ctx           = context.TODO()
 			seedNamespace = "shoot--foo--bar"
 			seedClient    client.Client
+			shootClient   client.Client
 
 			now   = time.Date(2022, 2, 22, 22, 22, 22, 0, time.UTC)
 			clock clock.Clock
@@ -476,6 +477,7 @@ var _ = Describe("Constraints", func() {
 
 		BeforeEach(func() {
 			seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+			shootClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
 
 			clock = testing.NewFakeClock(now)
 			op = &operation.Operation{
@@ -486,7 +488,7 @@ var _ = Describe("Constraints", func() {
 			}
 			op.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 			constraint = NewConstraint(clock, op, func() (kubernetes.Interface, bool, error) {
-				return nil, false, nil
+				return kubernetesfake.NewClientSetBuilder().WithClient(shootClient).Build(), true, nil
 			})
 		})
 
@@ -495,45 +497,67 @@ var _ = Describe("Constraints", func() {
 				constraints = []gardencorev1beta1.Condition{
 					{Type: gardencorev1beta1.ShootHibernationPossible},
 					{Type: gardencorev1beta1.ShootMaintenancePreconditionsSatisfied},
+					{Type: gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks},
 				}
 			)
 
 			It("should remove the 'CACertificateValiditiesAcceptable' constraint because it's true", func() {
-				Expect(constraint.Check(ctx, constraints)).To(ConsistOf(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal(gardencorev1beta1.ShootHibernationPossible),
-						"Reason":  Equal("ConstraintNotChecked"),
-						"Message": Equal("Shoot control plane is not running at the moment."),
-					}),
-					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal(gardencorev1beta1.ShootMaintenancePreconditionsSatisfied),
-						"Reason":  Equal("ConstraintNotChecked"),
-						"Message": Equal("Shoot control plane is not running at the moment."),
-					}),
+				Expect(constraint.Check(ctx, constraints)).NotTo(ContainCondition(
+					OfType(gardencorev1beta1.ShootCACertificateValiditiesAcceptable),
 				))
 			})
 
 			It("should keep the 'CACertificateValiditiesAcceptable' constraint because it's false (before pardoned)", func() {
 				Expect(seedClient.Create(ctx, newCASecret(now))).To(Succeed())
 
-				Expect(constraint.Check(ctx, constraints)).To(ConsistOf(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal(gardencorev1beta1.ShootHibernationPossible),
-						"Status":  Equal(gardencorev1beta1.ConditionProgressing),
-						"Reason":  Equal("ConstraintNotChecked"),
-						"Message": Equal("Shoot control plane is not running at the moment."),
-					}),
-					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal(gardencorev1beta1.ShootMaintenancePreconditionsSatisfied),
-						"Status":  Equal(gardencorev1beta1.ConditionProgressing),
-						"Reason":  Equal("ConstraintNotChecked"),
-						"Message": Equal("Shoot control plane is not running at the moment."),
-					}),
-					MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(gardencorev1beta1.ShootCACertificateValiditiesAcceptable),
-						"Status": Equal(gardencorev1beta1.ConditionProgressing),
-						"Reason": Equal("ExpiringCACertificates"),
-					}),
+				Expect(constraint.Check(ctx, constraints)).To(ContainCondition(
+					OfType(gardencorev1beta1.ShootCACertificateValiditiesAcceptable),
+					WithStatus(gardencorev1beta1.ConditionProgressing),
+					WithReason("ExpiringCACertificates"),
+				))
+			})
+
+			It("should not keep the `CRDsWithProblematicConversionWebhooks` condition when it's true", func() {
+				Expect(constraint.Check(ctx, constraints)).NotTo(ContainCondition(
+					OfType(gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks),
+				))
+			})
+
+			It("should keep the `CRDsWithProblematicConversionWebhooks` condition when it's false", func() {
+				crd1 := &apiextensionsv1.CustomResourceDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "sample1.example.com",
+					},
+					Spec: apiextensionsv1.CustomResourceDefinitionSpec{
+						Conversion: &apiextensionsv1.CustomResourceConversion{
+							Strategy: "Webhook",
+						},
+					},
+					Status: apiextensionsv1.CustomResourceDefinitionStatus{
+						StoredVersions: []string{"v1", "v1beta1"},
+					},
+				}
+				crd2 := &apiextensionsv1.CustomResourceDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "sample2.example.com",
+					},
+					Spec: apiextensionsv1.CustomResourceDefinitionSpec{
+						Conversion: &apiextensionsv1.CustomResourceConversion{
+							Strategy: "None",
+						},
+					},
+					Status: apiextensionsv1.CustomResourceDefinitionStatus{
+						StoredVersions: []string{"v1"},
+					},
+				}
+				Expect(shootClient.Create(ctx, crd1)).To(Succeed())
+				Expect(shootClient.Create(ctx, crd2)).To(Succeed())
+
+				Expect(constraint.Check(ctx, constraints)).To(ContainCondition(
+					OfType(gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks),
+					WithStatus(gardencorev1beta1.ConditionProgressing),
+					WithReason("CRDsWithProblematicConversionWebhooks"),
+					WithMessage(fmt.Sprintf("Some CRDs in your cluster have multiple stored versions present and have a conversion webhook configured: %s.", crd1.Name)),
 				))
 			})
 		})
