@@ -385,28 +385,20 @@ func ensureAdmissionPluginConfig(plugins []gardencorev1beta1.AdmissionPlugin) ([
 
 func convertToAdmissionPluginConfigs(ctx context.Context, gardenClient client.Client, namespace string, plugins []gardencorev1beta1.AdmissionPlugin) ([]kubeapiserver.AdmissionPluginConfig, error) {
 	var (
-		kubeconfig []byte
-		err        error
-		out        []kubeapiserver.AdmissionPluginConfig
+		err error
+		out []kubeapiserver.AdmissionPluginConfig
 	)
 
 	for _, plugin := range plugins {
+		config := kubeapiserver.AdmissionPluginConfig{AdmissionPlugin: plugin}
 		if plugin.KubeconfigSecretName != nil {
 			key := client.ObjectKey{Namespace: namespace, Name: *plugin.KubeconfigSecretName}
-			kubeconfig, err = fetchKubeconfigFromSecret(ctx, gardenClient, key)
+			config.Kubeconfig, err = fetchKubeconfigFromSecret(ctx, gardenClient, key)
 			if err != nil {
-				return nil, fmt.Errorf("failed reading kubeconfig for webhook from referenced secret %s: %w", key, err)
+				return nil, fmt.Errorf("failed reading kubeconfig for admission plugin from referenced secret %s: %w", key, err)
 			}
-
-			out = append(out, kubeapiserver.AdmissionPluginConfig{
-				AdmissionPlugin: plugin,
-				Kubeconfig:      kubeconfig,
-			})
-		} else {
-			out = append(out, kubeapiserver.AdmissionPluginConfig{
-				AdmissionPlugin: plugin,
-			})
 		}
+		out = append(out, config)
 	}
 
 	return out, nil
