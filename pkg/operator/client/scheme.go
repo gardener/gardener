@@ -26,6 +26,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
+	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -48,25 +49,32 @@ var (
 	VirtualCodec = serializer.NewCodecFactory(VirtualScheme)
 )
 
-func init() {
-	var (
-		runtimeSchemeBuilder = runtime.NewSchemeBuilder(
-			kubernetesscheme.AddToScheme,
-			operatorv1alpha1.AddToScheme,
-			resourcesv1alpha1.AddToScheme,
-			vpaautoscalingv1.AddToScheme,
-			druidv1alpha1.AddToScheme,
-			hvpav1alpha1.AddToScheme,
-			istionetworkingv1beta1.AddToScheme,
-			istionetworkingv1alpha3.AddToScheme,
-		)
-		virtualSchemeBuilder = runtime.NewSchemeBuilder(
-			kubernetesscheme.AddToScheme,
-		)
+var (
+	runtimeSchemeBuilder = runtime.NewSchemeBuilder(
+		kubernetesscheme.AddToScheme,
+		operatorv1alpha1.AddToScheme,
+		resourcesv1alpha1.AddToScheme,
+		vpaautoscalingv1.AddToScheme,
+		druidv1alpha1.AddToScheme,
+		hvpav1alpha1.AddToScheme,
+		istionetworkingv1beta1.AddToScheme,
+		istionetworkingv1alpha3.AddToScheme,
+	)
+	virtualSchemeBuilder = runtime.NewSchemeBuilder(
+		kubernetesscheme.AddToScheme,
+		apiregistrationv1.AddToScheme,
 	)
 
-	utilruntime.Must(runtimeSchemeBuilder.AddToScheme(RuntimeScheme))
+	// AddRuntimeSchemeToScheme adds all object kinds used in the runtime cluster into the given scheme.
+	AddRuntimeSchemeToScheme = runtimeSchemeBuilder.AddToScheme
+	// AddVirtualSchemeToScheme adds all object kinds used in the Virtual cluster into the given scheme.
+	AddVirtualSchemeToScheme = virtualSchemeBuilder.AddToScheme
+)
+
+func init() {
+	utilruntime.Must(AddRuntimeSchemeToScheme(RuntimeScheme))
 	apiextensionsinstall.Install(RuntimeScheme)
-	utilruntime.Must(virtualSchemeBuilder.AddToScheme(VirtualScheme))
+
+	utilruntime.Must(AddVirtualSchemeToScheme(VirtualScheme))
 	apiextensionsinstall.Install(VirtualScheme)
 }

@@ -23,8 +23,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
@@ -125,6 +129,11 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	secretCAGardener, found := g.secretsManager.Get(v1beta1constants.SecretNameCAGardener)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAGardener)
+	}
+
 	secretCAETCD, found := g.secretsManager.Get(v1beta1constants.SecretNameCAETCD)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
@@ -142,7 +151,7 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
 		g.podDisruptionBudget(),
-		g.service(),
+		g.serviceRuntime(),
 		g.verticalPodAutoscaler(),
 		g.hvpa(),
 		g.deployment(secretCAETCD, secretETCDClient, secretGenericTokenKubeconfig, secretServer, secretAdmissionKubeconfigs, secretETCDEncryptionConfiguration, secretAuditWebhookKubeconfig, secretVirtualGardenAccess, configMapAuditPolicy, configMapAdmissionConfigs),
@@ -165,7 +174,12 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		virtualRegistry = managedresources.NewRegistry(operatorclient.VirtualScheme, operatorclient.VirtualCodec, operatorclient.VirtualSerializer)
 	)
 
-	virtualResources, err := virtualRegistry.AddAllAndSerialize()
+	virtualResources, err := virtualRegistry.AddAllAndSerialize(
+		g.apiService(secretCAGardener, gardencorev1beta1.SchemeGroupVersion.Group, gardencorev1beta1.SchemeGroupVersion.Version),
+		g.apiService(secretCAGardener, seedmanagementv1alpha1.SchemeGroupVersion.Group, seedmanagementv1alpha1.SchemeGroupVersion.Version),
+		g.apiService(secretCAGardener, operationsv1alpha1.SchemeGroupVersion.Group, operationsv1alpha1.SchemeGroupVersion.Version),
+		g.apiService(secretCAGardener, settingsv1alpha1.SchemeGroupVersion.Group, settingsv1alpha1.SchemeGroupVersion.Version),
+	)
 	if err != nil {
 		return err
 	}

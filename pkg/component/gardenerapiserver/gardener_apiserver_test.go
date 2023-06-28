@@ -32,16 +32,17 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	. "github.com/gardener/gardener/pkg/component/gardenerapiserver"
 	componenttest "github.com/gardener/gardener/pkg/component/test"
+	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -87,10 +88,35 @@ var _ = Describe("GardenerAPIServer", func() {
 		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
 		hvpa                *hvpav1alpha1.Hvpa
 		deployment          *appsv1.Deployment
+		apiServiceFor       = func(group, version string) *apiregistrationv1.APIService {
+			return &apiregistrationv1.APIService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: version + "." + group,
+					Labels: map[string]string{
+						"app":  "gardener",
+						"role": "apiserver",
+					},
+				},
+				Spec: apiregistrationv1.APIServiceSpec{
+					Service: &apiregistrationv1.ServiceReference{
+						Name:      "gardener-apiserver",
+						Namespace: "kube-system",
+					},
+					Group:                group,
+					Version:              version,
+					GroupPriorityMinimum: 10000,
+					VersionPriority:      20,
+				},
+			}
+		}
 	)
 
 	BeforeEach(func() {
-		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		testSchemeBuilder := runtime.NewSchemeBuilder(operatorclient.AddRuntimeSchemeToScheme, operatorclient.AddVirtualSchemeToScheme)
+		testScheme := runtime.NewScheme()
+		Expect(testSchemeBuilder.AddToScheme(testScheme)).To(Succeed())
+
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(testScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(fakeClient, namespace)
 		values = Values{
 			Values: apiserver.Values{
@@ -1273,19 +1299,29 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					}))
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
+
+					Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
+					Expect(managedResourceSecretRuntime.Data).To(HaveLen(4))
+					Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudget)))
+					Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(serviceRuntime)))
+					Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(deployment)))
+
+					Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
+					Expect(managedResourceSecretVirtual.Data).To(HaveLen(4))
+					Expect(string(managedResourceSecretVirtual.Data["apiservice____v1beta1.core.gardener.cloud.yaml"])).To(Equal(componenttest.Serialize(apiServiceFor("core.gardener.cloud", "v1beta1"))))
+					Expect(string(managedResourceSecretVirtual.Data["apiservice____v1alpha1.seedmanagement.gardener.cloud.yaml"])).To(Equal(componenttest.Serialize(apiServiceFor("seedmanagement.gardener.cloud", "v1alpha1"))))
+					Expect(string(managedResourceSecretVirtual.Data["apiservice____v1alpha1.operations.gardener.cloud.yaml"])).To(Equal(componenttest.Serialize(apiServiceFor("operations.gardener.cloud", "v1alpha1"))))
+					Expect(string(managedResourceSecretVirtual.Data["apiservice____v1alpha1.settings.gardener.cloud.yaml"])).To(Equal(componenttest.Serialize(apiServiceFor("settings.gardener.cloud", "v1alpha1"))))
 				})
 
 				Context("when HVPA is disabled", func() {
-					It("should successfully deploy all resources when HVPA is disabled", func() {
-						Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-						Expect(managedResourceSecretRuntime.Data).To(HaveLen(4))
-						Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudget)))
-						Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(serviceRuntime)))
-						Expect(string(managedResourceSecretRuntime.Data["verticalpodautoscaler__some-namespace__gardener-apiserver-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
-						Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(deployment)))
+					BeforeEach(func() {
+						values.Values.Autoscaling.HVPAEnabled = false
+						deployer = New(fakeClient, namespace, fakeSecretManager, values)
+					})
 
-						Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
-						Expect(managedResourceSecretVirtual.Data).To(HaveLen(0))
+					It("should successfully deploy all resources", func() {
+						Expect(string(managedResourceSecretRuntime.Data["verticalpodautoscaler__some-namespace__gardener-apiserver-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
 					})
 				})
 
@@ -1295,16 +1331,8 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						deployer = New(fakeClient, namespace, fakeSecretManager, values)
 					})
 
-					It("should successfully deploy all resources when HVPA is enabled", func() {
-						Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-						Expect(managedResourceSecretRuntime.Data).To(HaveLen(4))
-						Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudget)))
-						Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(serviceRuntime)))
+					It("should successfully deploy all resources", func() {
 						Expect(string(managedResourceSecretRuntime.Data["hvpa__some-namespace__gardener-apiserver-hvpa.yaml"])).To(Equal(componenttest.Serialize(hvpa)))
-						Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(deployment)))
-
-						Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
-						Expect(managedResourceSecretVirtual.Data).To(HaveLen(0))
 					})
 				})
 			})

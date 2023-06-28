@@ -25,10 +25,14 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-func (g *gardenerAPIServer) service() *corev1.Service {
+const (
+	serviceName = "gardener-apiserver"
+)
+
+func (g *gardenerAPIServer) serviceRuntime() *corev1.Service {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      DeploymentName,
+			Name:      serviceName,
 			Namespace: g.namespace,
 			Labels:    GetLabels(),
 		},
