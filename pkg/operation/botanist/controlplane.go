@@ -148,7 +148,11 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		return err
 	}
 
-	return client.IgnoreNotFound(b.ScaleETCDToZero(ctx))
+	if err := client.IgnoreNotFound(b.ScaleETCDToZero(ctx)); err != nil {
+		return err
+	}
+
+	return b.WaitUntilEtcdsReady(ctx)
 }
 
 // DefaultControlPlane creates the default deployer for the ControlPlane custom resource with the given purpose.
