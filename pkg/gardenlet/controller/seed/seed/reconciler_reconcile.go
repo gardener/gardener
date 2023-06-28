@@ -781,6 +781,45 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
+	fluentOperatorCustomResources, err := sharedcomponent.NewFluentOperatorCustomResources(
+		seedClient,
+		r.GardenNamespace,
+		r.ImageVector,
+		loggingEnabled,
+		v1beta1constants.PriorityClassNameSeedSystem600,
+		inputs,
+		filters,
+		parsers,
+	)
+	if err != nil {
+		return err
+	}
+
+	fluentOperator, err := sharedcomponent.NewFluentOperator(
+		seedClient,
+		r.GardenNamespace,
+		kubernetesVersion,
+		r.ImageVector,
+		loggingEnabled,
+		v1beta1constants.PriorityClassNameSeedSystem600,
+	)
+	if err != nil {
+		return err
+	}
+
+	vali, err := defaultVali(
+		ctx,
+		seedClient,
+		r.ImageVector,
+		r.Config.Logging,
+		r.GardenNamespace,
+		loggingEnabled && gardenlethelper.IsValiEnabled(&r.Config),
+		hvpaEnabled,
+	)
+	if err != nil {
+		return err
+	}
+
 	var (
 		g = flow.NewGraph("Seed cluster creation")
 		_ = g.Add(flow.Task{
@@ -836,6 +875,19 @@ func (r *Reconciler) runReconcileSeedFlow(
 				})
 			}).DoIf(seed.GetInfo().Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.SeedOperationRenewGardenAccessSecrets),
 		})
+		reconcileFluentOperatorResources = g.Add(flow.Task{
+			Name: "Deploying Fluent Operator resources",
+			Fn:   component.OpWait(fluentOperatorCustomResources).Deploy,
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Fluent Operator",
+			Fn:           component.OpWait(fluentOperator).Deploy,
+			Dependencies: flow.NewTaskIDs(reconcileFluentOperatorResources),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying Vali",
+			Fn:   vali.Deploy,
+		})
 	)
 
 	// Use the managed resource for cluster-identity only if there is no cluster-identity config map in kube-system namespace from a different origin than seed.
@@ -890,45 +942,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			return err
 		}
 
-		fluentOperatorCustomResources, err := sharedcomponent.NewFluentOperatorCustomResources(
-			seedClient,
-			r.GardenNamespace,
-			r.ImageVector,
-			loggingEnabled,
-			v1beta1constants.PriorityClassNameSeedSystem600,
-			inputs,
-			filters,
-			parsers,
-		)
-		if err != nil {
-			return err
-		}
-
-		fluentOperator, err := sharedcomponent.NewFluentOperator(
-			seedClient,
-			r.GardenNamespace,
-			kubernetesVersion,
-			r.ImageVector,
-			loggingEnabled,
-			v1beta1constants.PriorityClassNameSeedSystem600,
-		)
-		if err != nil {
-			return err
-		}
-
-		vali, err := defaultVali(
-			ctx,
-			seedClient,
-			r.ImageVector,
-			r.Config.Logging,
-			r.GardenNamespace,
-			loggingEnabled && gardenlethelper.IsValiEnabled(&r.Config),
-			hvpaEnabled,
-		)
-		if err != nil {
-			return err
-		}
-
 		kubeStateMetrics, err := sharedcomponent.NewKubeStateMetrics(
 			seedClient,
 			r.GardenNamespace,
@@ -956,19 +969,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			_ = g.Add(flow.Task{
 				Name: "Deploying kube-state-metrics",
 				Fn:   kubeStateMetrics.Deploy,
-			})
-			reconcileFluentOperatorResources = g.Add(flow.Task{
-				Name: "Deploying Fluent Operator resources",
-				Fn:   component.OpWait(fluentOperatorCustomResources).Deploy,
-			})
-			_ = g.Add(flow.Task{
-				Name:         "Deploying Fluent Operator",
-				Fn:           component.OpWait(fluentOperator).Deploy,
-				Dependencies: flow.NewTaskIDs(reconcileFluentOperatorResources),
-			})
-			_ = g.Add(flow.Task{
-				Name: "Deploying Vali",
-				Fn:   vali.Deploy,
 			})
 		)
 	}
