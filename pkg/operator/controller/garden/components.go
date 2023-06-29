@@ -736,6 +736,7 @@ func getConfig(garden *operatorv1alpha1.Garden) (map[string]string, error) {
 		}
 		providerConfig = map[string]interface{}{}
 	)
+
 	if garden.Spec.RuntimeCluster.Ingress.Controller.ProviderConfig != nil {
 		if err := json.Unmarshal(garden.Spec.RuntimeCluster.Ingress.Controller.ProviderConfig.Raw, &providerConfig); err != nil {
 			return nil, err
