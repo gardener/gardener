@@ -303,8 +303,8 @@ images:
   tag: "0.16.0"
 - name: coredns
   sourceRepository: github.com/coredns/coredns
-  repository: eu.gcr.io/gardener-project/3rd/coredns/coredns
-  tag: "1.10.0"
+  repository: registry.k8s.io/coredns/coredns
+  tag: "v1.10.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
