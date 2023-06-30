@@ -159,7 +159,6 @@ build:
         - pkg/utils/kubernetes
         - pkg/utils/retry
         - pkg/utils/secrets
-        - pkg/utils/secrets/manager
         - pkg/utils/time
         - pkg/utils/timewindow
         - pkg/utils/validation/admissionplugins

@@ -47,7 +47,6 @@ type ShootStorage struct {
 // NewStorage creates a new ShootStorage object.
 func NewStorage(
 	optsGetter generic.RESTOptionsGetter,
-	shootStateStore *genericregistry.Store,
 	internalSecretLister gardencorelisters.InternalSecretLister,
 	secretLister kubecorev1listers.SecretLister,
 	adminKubeconfigMaxExpiration time.Duration,
@@ -64,7 +63,6 @@ func NewStorage(
 	s.AdminKubeconfig = &AdminKubeconfigREST{
 		secretLister:         secretLister,
 		internalSecretLister: internalSecretLister,
-		shootStateStorage:    shootStateStore,
 		shootStorage:         shootRest,
 		maxExpirationSeconds: int64(adminKubeconfigMaxExpiration.Seconds()),
 	}

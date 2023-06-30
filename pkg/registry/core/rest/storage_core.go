@@ -111,7 +111,6 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 
 	shootStorage := shootstore.NewStorage(
 		restOptionsGetter,
-		shootstatestore.NewStorage(restOptionsGetter).ShootState.Store,
 		p.CoreInformerFactory.Core().InternalVersion().InternalSecrets().Lister(),
 		p.KubeInformerFactory.Core().V1().Secrets().Lister(),
 		p.AdminKubeconfigMaxExpiration,
