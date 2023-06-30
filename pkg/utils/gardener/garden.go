@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,6 +31,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
@@ -266,6 +268,52 @@ func NewGardenAccessSecret(name, namespace string) *AccessSecret {
 		ServiceAccountName: strings.TrimPrefix(name, SecretNamePrefixGardenAccess),
 		Class:              resourcesv1alpha1.ResourceManagerClassGarden,
 	}
+}
+
+// InjectGenericGardenKubeconfig injects the volumes, volume mounts, and env vars for the generic garden kubeconfig into
+// the provided object. The access secret name must be the name of a secret containing a JWT token which should be used
+// by the kubeconfig. If the object has multiple containers then the default is to inject it into all of them. If it
+// should only be done for a selection of containers then their respective names must be provided.
+// If any of the containers in the object already has the GARDEN_KUBECONFIG env var, the object is not mutated.
+func InjectGenericGardenKubeconfig(obj runtime.Object, genericKubeconfigName, accessSecretName string, containerNames ...string) error {
+	// check for presence of env var
+	hasGardenKubeconfig := false
+
+	if err := kubernetesutils.VisitPodSpec(obj, func(podSpec *corev1.PodSpec) {
+		kubernetesutils.VisitContainers(podSpec, func(container *corev1.Container) {
+			if kubernetesutils.HasEnvVar(*container, v1beta1constants.EnvGenericGardenKubeconfig) {
+				hasGardenKubeconfig = true
+			}
+		}, containerNames...)
+	}); err != nil {
+		return err
+	}
+
+	if hasGardenKubeconfig {
+		return nil
+	}
+
+	// inject volume and volumeMounts
+	if err := injectGenericKubeconfig(
+		obj,
+		genericKubeconfigName,
+		accessSecretName,
+		"garden-kubeconfig",
+		VolumeMountPathGenericGardenKubeconfig,
+		containerNames...,
+	); err != nil {
+		return err
+	}
+
+	// inject env var
+	return kubernetesutils.VisitPodSpec(obj, func(podSpec *corev1.PodSpec) {
+		kubernetesutils.VisitContainers(podSpec, func(container *corev1.Container) {
+			kubernetesutils.AddEnvVar(container, corev1.EnvVar{
+				Name:  v1beta1constants.EnvGenericGardenKubeconfig,
+				Value: PathGenericGardenKubeconfig,
+			}, true)
+		}, containerNames...)
+	})
 }
 
 // PrepareGardenClientRestConfig takes a base rest config and adds an optional host and CA certificate.

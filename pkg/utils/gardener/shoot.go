@@ -21,11 +21,6 @@ import (
 	"strings"
 	"time"
 
-	appsv1 "k8s.io/api/apps/v1"
-	appsv1beta1 "k8s.io/api/apps/v1beta1"
-	appsv1beta2 "k8s.io/api/apps/v1beta2"
-	batchv1 "k8s.io/api/batch/v1"
-	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -415,54 +410,13 @@ func (s *AccessSecret) Reconcile(ctx context.Context, c client.Client) error {
 // kubeconfig. If the object has multiple containers then the default is to inject it into all of them. If it should
 // only be done for a selection of containers then their respective names must be provided.
 func InjectGenericKubeconfig(obj runtime.Object, genericKubeconfigName, accessSecretName string, containerNames ...string) error {
-	switch o := obj.(type) {
-	case *corev1.Pod:
-		injectGenericKubeconfig(&o.Spec, genericKubeconfigName, accessSecretName, containerNames...)
-
-	case *appsv1.Deployment:
-		injectGenericKubeconfig(&o.Spec.Template.Spec, genericKubeconfigName, accessSecretName, containerNames...)
-
-	case *appsv1beta2.Deployment:
-		injectGenericKubeconfig(&o.Spec.Template.Spec, genericKubeconfigName, accessSecretName, containerNames...)
-
-	case *appsv1beta1.Deployment:
-		injectGenericKubeconfig(&o.Spec.Template.Spec, genericKubeconfigName, accessSecretName, containerNames...)
-
-	case *appsv1.StatefulSet:
-		injectGenericKubeconfig(&o.Spec.Template.Spec, genericKubeconfigName, accessSecretName, containerNames...)
-
-	case *appsv1beta2.StatefulSet:
-		injectGenericKubeconfig(&o.Spec.Template.Spec, genericKubeconfigName, accessSecretName, containerNames...)
-
-	case *appsv1beta1.StatefulSet:
-		injectGenericKubeconfig(&o.Spec.Template.Spec, genericKubeconfigName, accessSecretName, containerNames...)
-
-	case *appsv1.DaemonSet:
-		injectGenericKubeconfig(&o.Spec.Template.Spec, genericKubeconfigName, accessSecretName, containerNames...)
-
-	case *appsv1beta2.DaemonSet:
-		injectGenericKubeconfig(&o.Spec.Template.Spec, genericKubeconfigName, accessSecretName, containerNames...)
-
-	case *batchv1.Job:
-		injectGenericKubeconfig(&o.Spec.Template.Spec, genericKubeconfigName, accessSecretName, containerNames...)
-
-	case *batchv1.CronJob:
-		injectGenericKubeconfig(&o.Spec.JobTemplate.Spec.Template.Spec, genericKubeconfigName, accessSecretName, containerNames...)
-
-	case *batchv1beta1.CronJob:
-		injectGenericKubeconfig(&o.Spec.JobTemplate.Spec.Template.Spec, genericKubeconfigName, accessSecretName, containerNames...)
-
-	default:
-		return fmt.Errorf("unhandled object type %T", obj)
-	}
-
-	return nil
+	return injectGenericKubeconfig(obj, genericKubeconfigName, accessSecretName, "kubeconfig", VolumeMountPathGenericKubeconfig, containerNames...)
 }
 
-func injectGenericKubeconfig(podSpec *corev1.PodSpec, genericKubeconfigName, accessSecretName string, containerNames ...string) {
+func injectGenericKubeconfig(obj runtime.Object, genericKubeconfigName, accessSecretName, volumeName, mountPath string, containerNames ...string) error {
 	var (
 		volume = corev1.Volume{
-			Name: "kubeconfig",
+			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{
 				Projected: &corev1.ProjectedVolumeSource{
 					DefaultMode: pointer.Int32(420),
@@ -498,17 +452,17 @@ func injectGenericKubeconfig(podSpec *corev1.PodSpec, genericKubeconfigName, acc
 
 		volumeMount = corev1.VolumeMount{
 			Name:      volume.Name,
-			MountPath: VolumeMountPathGenericKubeconfig,
+			MountPath: mountPath,
 			ReadOnly:  true,
 		}
 	)
 
-	podSpec.Volumes = append(podSpec.Volumes, volume)
-	for i, container := range podSpec.Containers {
-		if len(containerNames) == 0 || utils.ValueExists(container.Name, containerNames) {
-			podSpec.Containers[i].VolumeMounts = append(podSpec.Containers[i].VolumeMounts, volumeMount)
-		}
-	}
+	return kubernetesutils.VisitPodSpec(obj, func(podSpec *corev1.PodSpec) {
+		kubernetesutils.AddVolume(podSpec, volume, true)
+		kubernetesutils.VisitContainers(podSpec, func(container *corev1.Container) {
+			kubernetesutils.AddVolumeMount(container, volumeMount, true)
+		}, containerNames...)
+	})
 }
 
 // GetShootSeedNames returns the spec.seedName and the status.seedName field in case the provided object is a Shoot.

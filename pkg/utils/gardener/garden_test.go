@@ -21,8 +21,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
@@ -197,6 +199,103 @@ var _ = Describe("Garden", func() {
 				ServiceAccountName: name,
 				Class:              "garden",
 			}))
+		})
+	})
+
+	Describe("#InjectGenericGardenKubeconfig", func() {
+		var (
+			genericTokenKubeconfigSecretName = "generic-token-kubeconfig-12345"
+			tokenSecretName                  = "tokensecret"
+			containerName1                   = "container1"
+			containerName2                   = "container2"
+
+			deployment *appsv1.Deployment
+			podSpec    *corev1.PodSpec
+		)
+
+		BeforeEach(func() {
+			deployment = &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{Name: containerName1},
+								{Name: containerName2},
+							},
+						},
+					},
+				},
+			}
+
+			podSpec = &deployment.Spec.Template.Spec
+		})
+
+		It("should do nothing because object is not handled", func() {
+			Expect(InjectGenericGardenKubeconfig(&corev1.Service{}, genericTokenKubeconfigSecretName, tokenSecretName)).To(MatchError(ContainSubstring("unhandled object type")))
+		})
+
+		It("should do nothing because a container already has the GARDEN_KUBECONFIG env var", func() {
+			container := podSpec.Containers[1]
+			container.Env = []corev1.EnvVar{{Name: "GARDEN_KUBECONFIG"}}
+			podSpec.Containers[1] = container
+
+			Expect(InjectGenericGardenKubeconfig(deployment, genericTokenKubeconfigSecretName, tokenSecretName)).To(Succeed())
+
+			Expect(podSpec.Volumes).To(BeEmpty())
+			Expect(podSpec.Containers[0].VolumeMounts).To(BeEmpty())
+			Expect(podSpec.Containers[1].VolumeMounts).To(BeEmpty())
+		})
+
+		It("should inject the generic kubeconfig into the specified container", func() {
+			Expect(InjectGenericGardenKubeconfig(deployment, genericTokenKubeconfigSecretName, tokenSecretName, containerName1)).To(Succeed())
+
+			Expect(podSpec.Volumes).To(ContainElement(corev1.Volume{
+				Name: "garden-kubeconfig",
+				VolumeSource: corev1.VolumeSource{
+					Projected: &corev1.ProjectedVolumeSource{
+						DefaultMode: pointer.Int32(420),
+						Sources: []corev1.VolumeProjection{
+							{
+								Secret: &corev1.SecretProjection{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: genericTokenKubeconfigSecretName,
+									},
+									Items: []corev1.KeyToPath{{
+										Key:  "kubeconfig",
+										Path: "kubeconfig",
+									}},
+									Optional: pointer.Bool(false),
+								},
+							},
+							{
+								Secret: &corev1.SecretProjection{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: tokenSecretName,
+									},
+									Items: []corev1.KeyToPath{{
+										Key:  "token",
+										Path: "token",
+									}},
+									Optional: pointer.Bool(false),
+								},
+							},
+						},
+					},
+				},
+			}))
+
+			Expect(podSpec.Containers[0].VolumeMounts).To(ContainElement(corev1.VolumeMount{
+				Name:      "garden-kubeconfig",
+				MountPath: "/var/run/secrets/gardener.cloud/garden/generic-kubeconfig",
+				ReadOnly:  true,
+			}))
+			Expect(podSpec.Containers[0].Env).To(ContainElement(corev1.EnvVar{
+				Name:  "GARDEN_KUBECONFIG",
+				Value: "/var/run/secrets/gardener.cloud/garden/generic-kubeconfig/kubeconfig",
+			}))
+
+			Expect(podSpec.Containers[1].VolumeMounts).To(BeEmpty())
+			Expect(podSpec.Containers[1].Env).To(BeEmpty())
 		})
 	})
 })

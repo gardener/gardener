@@ -726,6 +726,9 @@ const (
 	ArchitectureAMD64 = "amd64"
 	// ArchitectureARM64 is a constant for the 'arm64' architecture.
 	ArchitectureARM64 = "arm64"
+
+	// EnvGenericGardenKubeconfig is a constant for the environment variable which holds the path to the generic garden kubeconfig.
+	EnvGenericGardenKubeconfig = "GARDEN_KUBECONFIG"
 )
 
 var (
