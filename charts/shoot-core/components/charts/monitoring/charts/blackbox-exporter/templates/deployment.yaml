@@ -1,8 +1,0 @@
-# TODO(acumino): Drop this chart in release v1.75
-apiVersion: {{ include "deploymentversion" . }}
-kind: Deployment
-metadata:
-  name: blackbox-exporter
-  namespace: kube-system
-  annotations:
-    resources.gardener.cloud/mode: Ignore
