@@ -531,7 +531,10 @@ type Kubernetes struct {
 	// +optional
 	Kubelet *KubeletConfig `json:"kubelet,omitempty" protobuf:"bytes,7,opt,name=kubelet"`
 	// Version is the semantic Kubernetes version to use for the Shoot cluster.
-	Version string `json:"version" protobuf:"bytes,8,opt,name=version"`
+	// Defaults to the highest supported minor and patch version given in the referenced cloud profile.
+	// The version can be omitted completely or partially specified, e.g. `<major>.<minor>`.
+	// +optional
+	Version string `json:"version,omitempty" protobuf:"bytes,8,opt,name=version"`
 	// VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
 	// +optional
 	VerticalPodAutoscaler *VerticalPodAutoscaler `json:"verticalPodAutoscaler,omitempty" protobuf:"bytes,9,opt,name=verticalPodAutoscaler"`

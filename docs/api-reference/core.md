@@ -6284,7 +6284,10 @@ string
 </em>
 </td>
 <td>
-<p>Version is the semantic Kubernetes version to use for the Shoot cluster.</p>
+<em>(Optional)</em>
+<p>Version is the semantic Kubernetes version to use for the Shoot cluster.
+Defaults to the highest supported minor and patch version given in the referenced cloud profile.
+The version can be omitted completely or partially specified, e.g. <code>&lt;major&gt;.&lt;minor&gt;</code>.</p>
 </td>
 </tr>
 <tr>

@@ -431,6 +431,8 @@ type Kubernetes struct {
 	// Kubelet contains configuration settings for the kubelet.
 	Kubelet *KubeletConfig
 	// Version is the semantic Kubernetes version to use for the Shoot cluster.
+	// Defaults to the highest supported minor and patch version given in the referenced cloud profile.
+	// The version can be omitted completely or partially specified, e.g. `<major>.<minor>`.
 	Version string
 	// VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
 	VerticalPodAutoscaler *VerticalPodAutoscaler

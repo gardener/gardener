@@ -9,5 +9,3 @@ spec:
   region: local
   provider:
     type: local
-  kubernetes:
-    version: 1.27.1
