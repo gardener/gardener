@@ -729,6 +729,9 @@ const (
 
 	// EnvGenericGardenKubeconfig is a constant for the environment variable which holds the path to the generic garden kubeconfig.
 	EnvGenericGardenKubeconfig = "GARDEN_KUBECONFIG"
+	// EnvSeedName is a constant for the environment variable which holds the name of the Seed that the extension
+	// controller is running on.
+	EnvSeedName = "SEED_NAME"
 )
 
 var (
