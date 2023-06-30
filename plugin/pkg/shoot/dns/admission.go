@@ -401,7 +401,7 @@ func getDefaultDomains(secretLister kubecorev1listers.SecretLister) ([]string, e
 
 	var defaultDomains []string
 	for _, domainSecret := range domainSecrets {
-		_, domain, _, _, _, err := gardenerutils.GetDomainInfoFromAnnotations(domainSecret.GetAnnotations())
+		_, domain, _, err := gardenerutils.GetDomainInfoFromAnnotations(domainSecret.GetAnnotations())
 		if err != nil {
 			return nil, err
 		}
