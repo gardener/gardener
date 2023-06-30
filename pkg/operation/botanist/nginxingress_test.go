@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -63,8 +64,9 @@ var _ = Describe("NginxIngress", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
+		shootKubernetesVersion, _ := semver.NewVersion("1.22.1")
 		botanist = &Botanist{Operation: &operation.Operation{}}
-		botanist.Shoot = &shootpkg.Shoot{}
+		botanist.Shoot = &shootpkg.Shoot{KubernetesVersion: shootKubernetesVersion}
 		policy := corev1.ServiceExternalTrafficPolicyTypeCluster
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 			Spec: gardencorev1beta1.ShootSpec{
@@ -98,7 +100,7 @@ var _ = Describe("NginxIngress", func() {
 
 		It("should successfully create a nginxingress interface", func() {
 			kubernetesClient.EXPECT().Client()
-			botanist.ImageVector = imagevector.ImageVector{{Name: "nginx-ingress-controller"}, {Name: "ingress-default-backend"}}
+			botanist.ImageVector = imagevector.ImageVector{{Name: "nginx-ingress-controller-seed"}, {Name: "ingress-default-backend"}}
 
 			nginxIngress, err := botanist.DefaultNginxIngress()
 			Expect(nginxIngress).NotTo(BeNil())
@@ -106,6 +108,7 @@ var _ = Describe("NginxIngress", func() {
 		})
 
 		It("should return an error because the controller image cannot be found", func() {
+			kubernetesClient.EXPECT().Client()
 			botanist.ImageVector = imagevector.ImageVector{}
 
 			nginxIngress, err := botanist.DefaultNginxIngress()
@@ -114,6 +117,7 @@ var _ = Describe("NginxIngress", func() {
 		})
 
 		It("should return an error because the default backend image cannot be found", func() {
+			kubernetesClient.EXPECT().Client()
 			botanist.ImageVector = imagevector.ImageVector{{Name: "nginx-ingress-controller"}}
 
 			nginxIngress, err := botanist.DefaultNginxIngress()

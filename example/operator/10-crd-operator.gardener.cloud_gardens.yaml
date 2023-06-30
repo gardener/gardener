@@ -50,6 +50,43 @@ spec:
                 description: RuntimeCluster contains configuration for the runtime
                   cluster.
                 properties:
+                  ingress:
+                    description: Ingress configures Ingress specific settings for
+                      the Garden cluster. This field is immutable.
+                    properties:
+                      controller:
+                        description: Controller configures a Gardener managed Ingress
+                          Controller listening on the ingressDomain
+                        properties:
+                          kind:
+                            description: Kind defines which kind of IngressController
+                              to use. At the moment only `nginx` is supported
+                            enum:
+                            - nginx
+                            type: string
+                          providerConfig:
+                            description: ProviderConfig specifies infrastructure specific
+                              configuration for the ingressController
+                            type: object
+                            x-kubernetes-preserve-unknown-fields: true
+                        required:
+                        - kind
+                        type: object
+                      domain:
+                        description: Domain specifies the IngressDomain of the cluster
+                          pointing to the ingress controller endpoint. It will be
+                          used to construct ingress URLs for system applications running
+                          in Shoot/Garden clusters. Once set this field is immutable.
+                        maxLength: 253
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                    required:
+                    - controller
+                    - domain
+                    type: object
                   networking:
                     description: Networking defines the networking configuration of
                       the runtime cluster.
@@ -150,6 +187,7 @@ spec:
                         type: object
                     type: object
                 required:
+                - ingress
                 - networking
                 - provider
                 type: object

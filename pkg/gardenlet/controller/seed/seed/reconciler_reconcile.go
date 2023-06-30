@@ -790,7 +790,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		nginxLBReady = g.Add(flow.Task{
 			Name: "Waiting until nginx ingress LoadBalancer is ready",
 			Fn: func(ctx context.Context) error {
-				dnsRecord, err = waitForNginxIngressServiceAndGetDNSComponent(ctx, log, seed, r.GardenClient, seedClient, r.ImageVector, kubernetesVersion, r.GardenNamespace)
+				dnsRecord, err = waitForNginxIngressServiceAndGetDNSComponent(ctx, log, seed, r.GardenClient, seedClient, r.ImageVector, kubernetesVersion, r.GardenNamespace, seedIsGarden)
 				return err
 			},
 		})
@@ -1188,6 +1188,7 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 	imageVector imagevector.ImageVector,
 	kubernetesVersion *semver.Version,
 	gardenNamespaceName string,
+	seedIsGarden bool,
 ) (
 	component.DeployMigrateWaiter,
 	error,
@@ -1198,18 +1199,35 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 	}
 
 	var ingressLoadBalancerAddress string
-	providerConfig, err := getConfig(seed.GetInfo())
-	if err != nil {
-		return nil, err
-	}
+	if !seedIsGarden {
+		providerConfig, err := getConfig(seed.GetInfo())
+		if err != nil {
+			return nil, err
+		}
 
-	nginxIngress, err := defaultNginxIngress(seedClient, imageVector, kubernetesVersion, providerConfig, seed.GetLoadBalancerServiceAnnotations(), gardenNamespaceName)
-	if err != nil {
-		return nil, err
-	}
+		nginxIngress, err := sharedcomponent.NewNginxIngress(
+			seedClient,
+			gardenNamespaceName,
+			gardenNamespaceName,
+			imageVector,
+			kubernetesVersion,
+			providerConfig,
+			seed.GetLoadBalancerServiceAnnotations(),
+			nil,
+			v1beta1constants.PriorityClassNameSeedSystem600,
+			true,
+			true,
+			component.ClusterTypeSeed,
+			"",
+			v1beta1constants.SeedNginxIngressClass,
+		)
+		if err != nil {
+			return nil, err
+		}
 
-	if err = component.OpWait(nginxIngress).Deploy(ctx); err != nil {
-		return nil, err
+		if err = component.OpWait(nginxIngress).Deploy(ctx); err != nil {
+			return nil, err
+		}
 	}
 
 	ingressLoadBalancerAddress, err = WaitUntilLoadBalancerIsReady(
@@ -1223,7 +1241,6 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 	if err != nil {
 		return nil, err
 	}
-
 	return getManagedIngressDNSRecord(log, seedClient, gardenNamespaceName, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), ingressLoadBalancerAddress), nil
 }
 

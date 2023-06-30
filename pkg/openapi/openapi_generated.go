@@ -3216,12 +3216,12 @@ func schema_pkg_apis_core_v1beta1_Ingress(ref common.ReferenceCallback) common.O
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "Ingress configures the Ingress specific settings of the Seed cluster",
+				Description: "Ingress configures the Ingress specific settings of the cluster",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"domain": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Domain specifies the IngressDomain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable.",
+							Description: "Domain specifies the IngressDomain of the cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot/Garden clusters. Once set this field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -3252,7 +3252,7 @@ func schema_pkg_apis_core_v1beta1_IngressController(ref common.ReferenceCallback
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Kind defines which kind of IngressController to use, for example `nginx`",
+							Description: "Kind defines which kind of IngressController to use. At the moment only `nginx` is supported",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",

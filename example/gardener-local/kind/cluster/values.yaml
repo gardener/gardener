@@ -5,6 +5,8 @@ gardener:
     deployed: false
   controlPlane:
     deployed: true
+  nginxIngress:
+    deployed: true
   seed:
     deployed: true
     istio:

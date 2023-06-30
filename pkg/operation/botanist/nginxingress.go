@@ -17,6 +17,7 @@ package botanist
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -24,48 +25,47 @@ import (
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/component"
 	extensionsdnsrecord "github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
-	"github.com/gardener/gardener/pkg/component/nginxingress"
+	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // DefaultNginxIngress returns a deployer for the nginxingress.
 func (b *Botanist) DefaultNginxIngress() (component.DeployWaiter, error) {
-	imageController, err := b.ImageVector.FindImage(images.ImageNameNginxIngressController, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
-	if err != nil {
-		return nil, err
-	}
-	imageDefaultBackend, err := b.ImageVector.FindImage(images.ImageNameIngressDefaultBackend, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
-	if err != nil {
-		return nil, err
-	}
-
-	values := nginxingress.Values{
-		ClusterType:         component.ClusterTypeShoot,
-		TargetNamespace:     metav1.NamespaceSystem,
-		IngressClass:        v1beta1constants.IngressKindNginx,
-		PriorityClassName:   v1beta1constants.PriorityClassNameShootSystem600,
-		ImageController:     imageController.String(),
-		ImageDefaultBackend: imageDefaultBackend.String(),
-		VPAEnabled:          b.Shoot.WantsVerticalPodAutoscaler,
-		PSPDisabled:         b.Shoot.PSPDisabled,
-	}
+	var (
+		configData               map[string]string
+		loadBalancerSourceRanges []string
+		externalTrafficPolicy    corev1.ServiceExternalTrafficPolicyType
+	)
 
 	if nginxIngressSpec := b.Shoot.GetInfo().Spec.Addons.NginxIngress; nginxIngressSpec != nil {
-		values.ConfigData = getConfig(nginxIngressSpec.Config)
+		configData = getConfig(nginxIngressSpec.Config)
 
 		if nginxIngressSpec.LoadBalancerSourceRanges != nil {
-			values.LoadBalancerSourceRanges = nginxIngressSpec.LoadBalancerSourceRanges
+			loadBalancerSourceRanges = nginxIngressSpec.LoadBalancerSourceRanges
 		}
 		if nginxIngressSpec.ExternalTrafficPolicy != nil {
-			values.ExternalTrafficPolicy = *nginxIngressSpec.ExternalTrafficPolicy
+			externalTrafficPolicy = *nginxIngressSpec.ExternalTrafficPolicy
 		}
 	}
 
-	return nginxingress.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, values), nil
+	return sharedcomponent.NewNginxIngress(
+		b.SeedClientSet.Client(),
+		b.Shoot.SeedNamespace,
+		metav1.NamespaceSystem,
+		b.ImageVector,
+		b.Shoot.KubernetesVersion,
+		configData,
+		nil,
+		loadBalancerSourceRanges,
+		v1beta1constants.PriorityClassNameShootSystem600,
+		b.Shoot.PSPDisabled,
+		b.Shoot.WantsVerticalPodAutoscaler,
+		component.ClusterTypeShoot,
+		externalTrafficPolicy,
+		v1beta1constants.ShootNginxIngressClass,
+	)
 }
 
 // DeployNginxIngressAddon deploys the NginxIngress Addon component.

@@ -172,4 +172,24 @@ baz`, spaces)).To(Equal(`foo
 			Expect(TimePtrDeref(nil, def)).Should(Equal(def))
 		})
 	})
+
+	Describe("#InterfaceMapToStringMap", func() {
+		input := map[string]interface{}{
+			"foo":   nil,
+			"age":   32,
+			"alive": true,
+			"name":  "haralampi",
+		}
+
+		output := map[string]string{
+			"foo":   "<nil>",
+			"age":   "32",
+			"alive": "true",
+			"name":  "haralampi",
+		}
+
+		It("should return map[string]string", func() {
+			Expect(InterfaceMapToStringMap(input)).Should(Equal(output))
+		})
+	})
 })

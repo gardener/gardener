@@ -129,11 +129,17 @@ func (r *Reconciler) delete(
 			Fn:           component.OpDestroyAndWait(c.verticalPodAutoscaler).Destroy,
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
 		})
+		destroyNginxIngressController = g.Add(flow.Task{
+			Name:         "Destroying nginx-ingress controller",
+			Fn:           component.OpDestroyAndWait(c.nginxIngressController).Destroy,
+			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
+		})
 		syncPointCleanedUp = flow.NewTaskIDs(
 			destroyEtcdDruid,
 			destroyIstio,
 			destroyHVPAController,
 			destroyVerticalPodAutoscaler,
+			destroyNginxIngressController,
 		)
 
 		destroySystemResources = g.Add(flow.Task{

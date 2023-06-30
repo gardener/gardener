@@ -79,6 +79,12 @@ func defaultGarden(backupSecret *corev1.Secret) *operatorv1alpha1.Garden {
 					Pods:     "10.1.0.0/16",
 					Services: "10.2.0.0/16",
 				},
+				Ingress: gardencorev1beta1.Ingress{
+					Domain: "ingress.dev.my-garden.example.com",
+					Controller: gardencorev1beta1.IngressController{
+						Kind: "nginx",
+					},
+				},
 				Provider: operatorv1alpha1.Provider{
 					Zones: []string{"0", "1", "2"},
 				},

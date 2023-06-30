@@ -30,6 +30,7 @@ As of today, this applies to:
 - `hvpa-controller` (when `HVPA` feature gate is enabled)
 - `etcd-druid`
 - `istio` control-plane
+- `nginx-ingress-controller`
 
 Those components are so-called "seed system components".
 As they were already made available by `gardener-operator`, the `gardenlet` just skips them.

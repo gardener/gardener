@@ -15,6 +15,7 @@
 package utils
 
 import (
+	"fmt"
 	"net"
 	"regexp"
 	"strings"
@@ -188,4 +189,13 @@ func IifString(condition bool, onTrue, onFalse string) string {
 		return onTrue
 	}
 	return onFalse
+}
+
+// InterfaceMapToStringMap translates map[string]interface{} to map[string]string.
+func InterfaceMapToStringMap(in map[string]interface{}) map[string]string {
+	m := make(map[string]string, len(in))
+	for k, v := range in {
+		m[k] = fmt.Sprint(v)
+	}
+	return m
 }

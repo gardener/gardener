@@ -16,6 +16,7 @@ package garden
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -52,6 +53,7 @@ import (
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
@@ -69,6 +71,7 @@ type components struct {
 	hvpaController          component.DeployWaiter
 	etcdDruid               component.DeployWaiter
 	istio                   istio.Interface
+	nginxIngressController  component.DeployWaiter
 
 	etcdMain                             etcd.Interface
 	etcdEvents                           etcd.Interface
@@ -121,6 +124,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.istio, err = r.newIstio(garden)
+	if err != nil {
+		return
+	}
+	c.nginxIngressController, err = r.newNginxIngressController(garden)
 	if err != nil {
 		return
 	}
@@ -692,4 +699,58 @@ func getAPIServerDomains(domains []string) []string {
 		apiServerDomains = append(apiServerDomains, "gardener."+domain)
 	}
 	return apiServerDomains
+}
+
+func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden) (component.DeployWaiter, error) {
+	providerConfig, err := getConfig(garden)
+	if err != nil {
+		return nil, err
+	}
+
+	return sharedcomponent.NewNginxIngress(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		r.GardenNamespace,
+		r.ImageVector,
+		r.RuntimeVersion,
+		providerConfig,
+		getLoadBalancerServiceAnnotations(garden),
+		nil,
+		v1beta1constants.PriorityClassNameGardenSystem300,
+		true,
+		true,
+		component.ClusterTypeSeed,
+		"",
+		v1beta1constants.SeedNginxIngressClass,
+	)
+}
+
+func getConfig(garden *operatorv1alpha1.Garden) (map[string]string, error) {
+	var (
+		defaultConfig = map[string]interface{}{
+			"enable-vts-status":            "false",
+			"server-name-hash-bucket-size": "256",
+			"use-proxy-protocol":           "false",
+			"worker-processes":             "2",
+			"allow-snippet-annotations":    "false",
+		}
+		providerConfig = map[string]interface{}{}
+	)
+
+	if garden.Spec.RuntimeCluster.Ingress.Controller.ProviderConfig != nil {
+		if err := json.Unmarshal(garden.Spec.RuntimeCluster.Ingress.Controller.ProviderConfig.Raw, &providerConfig); err != nil {
+			return nil, err
+		}
+	}
+
+	return utils.InterfaceMapToStringMap(utils.MergeMaps(defaultConfig, providerConfig)), nil
+}
+
+// GetLoadBalancerServiceAnnotations returns the load balancer annotations set for the garden if any.
+func getLoadBalancerServiceAnnotations(garden *operatorv1alpha1.Garden) map[string]string {
+	if garden.Spec.RuntimeCluster.Settings != nil && garden.Spec.RuntimeCluster.Settings.LoadBalancerServices != nil {
+		// return copy of annotations to prevent any accidental mutation by components
+		return utils.MergeStringMaps(garden.Spec.RuntimeCluster.Settings.LoadBalancerServices.Annotations)
+	}
+	return nil
 }

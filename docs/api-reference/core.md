@@ -4815,7 +4815,7 @@ float64
 <a href="#core.gardener.cloud/v1beta1.SeedSpec">SeedSpec</a>)
 </p>
 <p>
-<p>Ingress configures the Ingress specific settings of the Seed cluster</p>
+<p>Ingress configures the Ingress specific settings of the cluster</p>
 </p>
 <table>
 <thead>
@@ -4833,8 +4833,8 @@ string
 </em>
 </td>
 <td>
-<p>Domain specifies the IngressDomain of the Seed cluster pointing to the ingress controller endpoint. It will be used
-to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable.</p>
+<p>Domain specifies the IngressDomain of the cluster pointing to the ingress controller endpoint. It will be used
+to construct ingress URLs for system applications running in Shoot/Garden clusters. Once set this field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -4877,7 +4877,7 @@ string
 </em>
 </td>
 <td>
-<p>Kind defines which kind of IngressController to use, for example <code>nginx</code></p>
+<p>Kind defines which kind of IngressController to use. At the moment only <code>nginx</code> is supported</p>
 </td>
 </tr>
 <tr>

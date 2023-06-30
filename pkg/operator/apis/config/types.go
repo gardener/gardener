@@ -23,7 +23,7 @@ import (
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// OperatorConfiguration defines the configuration for the Gardener oeprator.
+// OperatorConfiguration defines the configuration for the Gardener operator.
 type OperatorConfiguration struct {
 	metav1.TypeMeta
 	// RuntimeClientConnection specifies the kubeconfig file and the client connection settings for the proxy server to

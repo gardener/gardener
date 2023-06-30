@@ -1176,6 +1176,17 @@ string
 <tbody>
 <tr>
 <td>
+<code>ingress</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress
+</em>
+</td>
+<td>
+<p>Ingress configures Ingress specific settings for the Garden cluster. This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>networking</code></br>
 <em>
 <a href="#operator.gardener.cloud/v1alpha1.RuntimeNetworking">

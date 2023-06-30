@@ -83,7 +83,15 @@ func AddToManager(mgr manager.Manager, cfg *config.OperatorConfiguration) error 
 			return err
 		}
 
-		if err := (&service.Reconciler{}).AddToManager(mgr, predicate.Or(virtualGardenKubeAPIServerPredicate, virtualGardenIstioIngressPredicate)); err != nil {
+		nginxIngressPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchLabels: map[string]string{
+			"app":       "nginx-ingress",
+			"component": "controller",
+		}})
+		if err != nil {
+			return err
+		}
+
+		if err := (&service.Reconciler{}).AddToManager(mgr, predicate.Or(virtualGardenKubeAPIServerPredicate, virtualGardenIstioIngressPredicate, nginxIngressPredicate)); err != nil {
 			return fmt.Errorf("failed adding Service controller: %w", err)
 		}
 	}

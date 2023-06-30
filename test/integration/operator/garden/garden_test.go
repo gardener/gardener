@@ -190,6 +190,12 @@ var _ = Describe("Garden controller tests", func() {
 						Pods:     "10.1.0.0/16",
 						Services: "10.2.0.0/16",
 					},
+					Ingress: gardencorev1beta1.Ingress{
+						Domain: "ingress.dev.garden.example.com",
+						Controller: gardencorev1beta1.IngressController{
+							Kind: "nginx",
+						},
+					},
 					Provider: operatorv1alpha1.Provider{
 						Zones: []string{"a", "b", "c"},
 					},
@@ -323,6 +329,7 @@ var _ = Describe("Garden controller tests", func() {
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("hvpa")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-druid")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-state-metrics")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("nginx-ingress")})}),
 		))
 
 		// The garden controller waits for the Istio ManagedResources to be healthy, but Istio is not really running in
@@ -351,6 +358,32 @@ var _ = Describe("Garden controller tests", func() {
 				}
 				g.Expect(testClient.Status().Patch(ctx, mr, patch)).To(Succeed(), "for "+mr.Name)
 			}
+		}).Should(Succeed())
+
+		// The garden controller waits for the nginx-ingress ManagedResources to be healthy, but nginx-controller is not really running in
+		// this test, so let's fake this here.
+		By("Patch nginx-ingress ManagedResources to report healthiness")
+		Eventually(func(g Gomega) {
+			mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress", Namespace: testNamespace.Name}}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed(), "for "+mr.Name)
+
+			patch := client.MergeFrom(mr.DeepCopy())
+			mr.Status.ObservedGeneration = mr.Generation
+			mr.Status.Conditions = []gardencorev1beta1.Condition{
+				{
+					Type:               "ResourcesHealthy",
+					Status:             "True",
+					LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
+					LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
+				},
+				{
+					Type:               "ResourcesApplied",
+					Status:             "True",
+					LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
+					LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
+				},
+			}
+			g.Expect(testClient.Status().Patch(ctx, mr, patch)).To(Succeed(), "for "+mr.Name)
 		}).Should(Succeed())
 
 		By("Verify that the virtual garden control plane components have been deployed")

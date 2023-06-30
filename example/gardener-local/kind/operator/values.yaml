@@ -3,6 +3,8 @@ gardener:
     deployed: false
   seed:
     deployed: false
+  nginxIngress:
+    deployed: true
   garden:
     deployed: true
 
