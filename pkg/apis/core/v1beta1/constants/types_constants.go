@@ -82,6 +82,10 @@ const (
 	// for the shoot API server instead the DNS name or load balancer address.
 	SecretNameGardenerInternal = "gardener-internal"
 
+	// SecretPrefixGeneratedBackupBucket is a constant for the prefix of a secret name in the garden cluster related to
+	// BackpuBuckets.
+	SecretPrefixGeneratedBackupBucket = "generated-bucket-"
+
 	// SecretNameGenericTokenKubeconfig is a constant for the name of the kubeconfig used by the shoot controlplane
 	// components to authenticate against the shoot Kubernetes API server.
 	// Use `pkg/extensions.GenericTokenKubeconfigSecretNameFromCluster` instead.
@@ -94,9 +98,9 @@ const (
 	// kubeconfig secret in the seed cluster.
 	AnnotationKeyGenericTokenKubeconfigSecretName = "generic-token-kubeconfig.secret.gardener.cloud/name"
 
-	// SecretPrefixGeneratedBackupBucket is a constant for the prefix of a secret name in the garden cluster related to
-	// BackpuBuckets.
-	SecretPrefixGeneratedBackupBucket = "generated-bucket-"
+	// ExtensionGardenServiceAccountPrefix is the prefix of the default garden ServiceAccount generated for each
+	// ControllerInstallation.
+	ExtensionGardenServiceAccountPrefix = "extension-"
 
 	// DeploymentNameClusterAutoscaler is a constant for the name of a Kubernetes deployment object that contains
 	// the cluster-autoscaler pod.

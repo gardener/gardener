@@ -189,6 +189,11 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, fmt.Errorf("failed to reconcile generic garden kubeconfig: %w", err)
 	}
 
+	gardenAccessSecret, err := r.reconcileGardenAccessSecret(seedCtx, controllerInstallation.Name, namespace.Name)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to reconcile garden access secret: %w", err)
+	}
+
 	var (
 		volumeProvider  string
 		volumeProviders []gardencorev1beta1.SeedVolumeProvider
@@ -413,4 +418,14 @@ func (r *Reconciler) reconcileGenericGardenKubeconfig(ctx context.Context, names
 	}
 
 	return kubeconfigSecret.Name, client.IgnoreAlreadyExists(r.SeedClientSet.Client().Create(ctx, kubeconfigSecret))
+}
+
+func (r *Reconciler) reconcileGardenAccessSecret(ctx context.Context, controllerInstallationName string, namespace string) (*gardenerutils.AccessSecret, error) {
+	accessSecret := gardenerutils.NewGardenAccessSecret("extension", namespace).
+		WithServiceAccountName(v1beta1constants.ExtensionGardenServiceAccountPrefix + controllerInstallationName)
+	if err := accessSecret.Reconcile(ctx, r.SeedClientSet.Client()); err != nil {
+		return nil, err
+	}
+
+	return accessSecret, nil
 }

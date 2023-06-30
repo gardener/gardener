@@ -188,6 +188,19 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				g.Expect(genericKubeconfigSecret.Data).To(HaveKeyWithValue("kubeconfig", Not(BeEmpty())))
 			}).Should(Succeed())
 
+			By("Ensure garden access secret was created")
+			Eventually(func(g Gomega) {
+				secret := &corev1.Secret{}
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: namespace.Name, Name: "garden-access-extension"}, secret)).To(Succeed())
+				g.Expect(secret.Labels).To(And(
+					HaveKeyWithValue("resources.gardener.cloud/class", "garden"),
+					HaveKeyWithValue("resources.gardener.cloud/purpose", "token-requestor"),
+				))
+				g.Expect(secret.Annotations).To(
+					HaveKeyWithValue("serviceaccount.resources.gardener.cloud/name", "extension-"+controllerInstallation.Name),
+				)
+			}).Should(Succeed())
+
 			By("Ensure chart was deployed correctly")
 			values := make(map[string]any)
 			Eventually(func(g Gomega) {
