@@ -1,7 +1,3 @@
-global:
-  vpaEnabled: false
-  pspDisabled: false
-  hasWorkers: true
 monitoring:
   enabled: true
 podsecuritypolicies:

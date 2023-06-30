@@ -1,5 +1,0 @@
-images:
-  node-exporter: image-repository:image-tag
-
-ports:
-  metrics: 16909
