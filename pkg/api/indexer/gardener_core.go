@@ -43,6 +43,15 @@ func BackupBucketSeedNameIndexerFunc(obj client.Object) []string {
 	return []string{pointer.StringDeref(backupBucket.Spec.SeedName, "")}
 }
 
+// BackupEntryBucketNameIndexerFunc extracts the .spec.bucketName field of a BackupBucket.
+func BackupEntryBucketNameIndexerFunc(obj client.Object) []string {
+	backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
+	if !ok {
+		return []string{""}
+	}
+	return []string{backupEntry.Spec.BucketName}
+}
+
 // ControllerInstallationSeedRefNameIndexerFunc extracts the .spec.seedRef.name field of a ControllerInstallation.
 func ControllerInstallationSeedRefNameIndexerFunc(obj client.Object) []string {
 	controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
@@ -121,13 +130,7 @@ func AddBackupEntrySeedName(ctx context.Context, indexer client.FieldIndexer) er
 
 // AddBackupEntryBucketName adds an index for core.BackupEntryBucketName to the given indexer.
 func AddBackupEntryBucketName(ctx context.Context, indexer client.FieldIndexer) error {
-	if err := indexer.IndexField(ctx, &gardencorev1beta1.BackupEntry{}, core.BackupEntryBucketName, func(obj client.Object) []string {
-		backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
-		if !ok {
-			return []string{""}
-		}
-		return []string{backupEntry.Spec.BucketName}
-	}); err != nil {
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.BackupEntry{}, core.BackupEntryBucketName, BackupEntryBucketNameIndexerFunc); err != nil {
 		return fmt.Errorf("failed to add indexer for %s to BackupEntry Informer: %w", core.BackupEntryBucketName, err)
 	}
 	return nil

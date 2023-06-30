@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -82,11 +83,36 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		return err
 	}
 
+	if err := c.Watch(
+		source.NewKindWithCache(&gardencorev1beta1.BackupBucket{}, gardenCluster.GetCache()),
+		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapBackupBucketToBackupEntry), mapper.UpdateWithNew, c.GetLogger()),
+		predicateutils.RelevantStatusChanged(getBackupBucketLastOperation),
+	); err != nil {
+		return err
+	}
+
 	return c.Watch(
 		source.NewKindWithCache(&extensionsv1alpha1.BackupEntry{}, seedCluster.GetCache()),
 		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapExtensionBackupEntryToCoreBackupEntry), mapper.UpdateWithNew, c.GetLogger()),
 		predicateutils.RelevantStatusChanged(predicateutils.GetExtensionLastOperation),
 	)
+}
+
+// MapBackupBucketToBackupEntry is a mapper.MapFunc for mapping a core.gardener.cloud/v1beta1.BackupBucket to the
+// core.gardener.cloud/v1beta1.BackupEntry's referencing it.
+func (r *Reconciler) MapBackupBucketToBackupEntry(ctx context.Context, log logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+	backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
+	if !ok {
+		return nil
+	}
+
+	backupEntryList := &gardencorev1beta1.BackupEntryList{}
+	if err := r.GardenClient.List(ctx, backupEntryList, client.MatchingFields{gardencore.BackupEntryBucketName: backupBucket.Name}); err != nil {
+		log.Error(err, "Failed to list backupentries referencing this bucket", "backupBucketName", backupBucket.Name)
+		return nil
+	}
+
+	return mapper.ObjectListToRequests(backupEntryList)
 }
 
 // MapExtensionBackupEntryToCoreBackupEntry is a mapper.MapFunc for mapping a extensions.gardener.cloud/v1alpha1.BackupEntry to the owning
@@ -112,4 +138,13 @@ func (r *Reconciler) MapExtensionBackupEntryToCoreBackupEntry(ctx context.Contex
 	}
 
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: obj.GetName(), Namespace: shoot.Namespace}}}
+}
+
+func getBackupBucketLastOperation(obj client.Object) *gardencorev1beta1.LastOperation {
+	backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
+	if !ok {
+		return nil
+	}
+
+	return backupBucket.Status.LastOperation
 }
