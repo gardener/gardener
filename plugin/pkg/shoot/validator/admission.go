@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -1079,23 +1080,42 @@ func hasDomainIntersection(domainA, domainB string) bool {
 }
 
 func defaultKubernetesVersion(constraints []core.ExpirableVersion, shootVersion string, fldPath *field.Path) (*string, field.ErrorList) {
-	var allErrs = field.ErrorList{}
+	var (
+		allErrs           = field.ErrorList{}
+		shootVersionMajor *int64
+		shootVersionMinor *int64
+		versionParts      = strings.Split(shootVersion, ".")
+	)
 
-	shootVersionSplit := strings.Split(shootVersion, ".")
-	if len(shootVersionSplit) > 2 {
+	if len(versionParts) == 3 {
 		return nil, allErrs
 	}
-
-	fakeShootVersion := shootVersion + ".0"
-	version, err := semver.NewVersion(fakeShootVersion)
-	if err != nil {
-		allErrs = append(allErrs, field.InternalError(fldPath, err))
-		return nil, allErrs
+	if len(versionParts) == 2 && len(versionParts[1]) > 0 {
+		v, err := strconv.Atoi(versionParts[1])
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath, versionParts[1], "must be a semantic version"))
+			return nil, allErrs
+		}
+		shootVersionMinor = pointer.Int64(int64(v))
+	}
+	if len(versionParts) >= 1 && len(versionParts[0]) > 0 {
+		v, err := strconv.Atoi(versionParts[0])
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath, versionParts[0], "must be a semantic version"))
+			return nil, allErrs
+		}
+		shootVersionMajor = pointer.Int64(int64(v))
 	}
 
-	shootVersionMajor := version.Major()
-	shootVersionMinor := version.Minor()
+	if latestVersion := findLatestVersion(constraints, shootVersionMajor, shootVersionMinor); latestVersion != nil {
+		return pointer.String(latestVersion.String()), nil
+	}
 
+	allErrs = append(allErrs, field.Invalid(fldPath, shootVersion, fmt.Sprintf("couldn't find a suitable version for %s. Suitable versions have a non-expired expiration date and are no 'preview' versions. 'Preview'-classified versions have to be selected explicitly", shootVersion)))
+	return nil, allErrs
+}
+
+func findLatestVersion(constraints []core.ExpirableVersion, major, minor *int64) *semver.Version {
 	var latestVersion *semver.Version
 	for _, versionConstraint := range constraints {
 		// ignore expired versions
@@ -1112,7 +1132,11 @@ func defaultKubernetesVersion(constraints []core.ExpirableVersion, shootVersion 
 		cpVersion := semver.MustParse(versionConstraint.Version)
 
 		// defaulting on patch level: version has to have the same major and minor kubernetes version
-		if cpVersion.Major() != shootVersionMajor || cpVersion.Minor() != shootVersionMinor {
+		if major != nil && cpVersion.Major() != *major {
+			continue
+		}
+
+		if minor != nil && cpVersion.Minor() != *minor {
 			continue
 		}
 
@@ -1121,12 +1145,7 @@ func defaultKubernetesVersion(constraints []core.ExpirableVersion, shootVersion 
 		}
 	}
 
-	if latestVersion != nil {
-		return pointer.String(latestVersion.String()), nil
-	}
-
-	allErrs = append(allErrs, field.Invalid(fldPath, shootVersion, fmt.Sprintf("couldn't find a suitable version for %s. Suitable versions have a non-expired expiration date and are no 'preview' versions. 'Preview'-classified versions have to be selected explicitly", shootVersion)))
-	return nil, allErrs
+	return latestVersion
 }
 
 func validateKubernetesVersionConstraints(constraints []core.ExpirableVersion, shootVersion, oldShootVersion string, fldPath *field.Path) field.ErrorList {
