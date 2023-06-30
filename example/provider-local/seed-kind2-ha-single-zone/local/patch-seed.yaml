@@ -1,9 +1,0 @@
-- op: replace
-  path: /metadata/name
-  value: local2-ha-single-zone
-- op: replace
-  path: /spec/ingress/domain
-  value: ingress.local2-ha-single-zone.seed.local.gardener.cloud
-- op: replace
-  path: /spec/secretRef/name
-  value: seed-local2-ha-single-zone
