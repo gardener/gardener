@@ -2098,7 +2098,7 @@ var _ = Describe("validator", func() {
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
-					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("Unsupported value: \"1.2.3\"")))
 				})
 
 				It("should throw an error because of an invalid major version", func() {
@@ -2170,7 +2170,7 @@ var _ = Describe("validator", func() {
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
-					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("couldn't find a suitable version for 1.24")))
 				})
 
 				It("should be able to explicitly pick preview versions", func() {
@@ -2188,7 +2188,7 @@ var _ = Describe("validator", func() {
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
-					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("couldn't find a suitable version for 1.2")))
 				})
 
 				It("should reject to create a cluster with an expired kubernetes version", func() {
