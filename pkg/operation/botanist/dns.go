@@ -15,8 +15,6 @@
 package botanist
 
 import (
-	"strings"
-
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 )
 
@@ -30,7 +28,6 @@ func (b *Botanist) NeedsExternalDNS() bool {
 	return b.Shoot.GetInfo().Spec.DNS != nil &&
 		b.Shoot.GetInfo().Spec.DNS.Domain != nil &&
 		b.Shoot.ExternalClusterDomain != nil &&
-		!strings.HasSuffix(*b.Shoot.ExternalClusterDomain, ".nip.io") &&
 		b.Shoot.ExternalDomain != nil &&
 		b.Shoot.ExternalDomain.Provider != "unmanaged"
 }

@@ -116,12 +116,6 @@ var _ = Describe("dns", func() {
 			Expect(b.NeedsExternalDNS()).To(BeFalse())
 		})
 
-		It("should be false when Shoot ExternalClusterDomain is in nip.io", func() {
-			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
-			b.Shoot.ExternalClusterDomain = pointer.String("foo.nip.io")
-			Expect(b.NeedsExternalDNS()).To(BeFalse())
-		})
-
 		It("should be false when Shoot ExternalDomain is nil", func() {
 			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 			b.Shoot.ExternalClusterDomain = pointer.String("baz")

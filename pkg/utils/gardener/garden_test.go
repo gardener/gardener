@@ -33,7 +33,7 @@ var _ = Describe("Garden", func() {
 		It("should return all default domain", func() {
 			var (
 				provider = "aws"
-				domain   = "nip.io"
+				domain   = "example.com"
 				data     = map[string][]byte{
 					"foo": []byte("bar"),
 				}
@@ -85,7 +85,7 @@ var _ = Describe("Garden", func() {
 		It("should return the internal domain", func() {
 			var (
 				provider = "aws"
-				domain   = "nip.io"
+				domain   = "example.com"
 				data     = map[string][]byte{
 					"foo": []byte("bar"),
 				}
