@@ -1,6 +1,0 @@
-node-exporter:
-  images:
-    node-exporter: image-repository:image-tag
-blackbox-exporter:
-  images:
-    blackbox-exporter: image-repository:image-tag

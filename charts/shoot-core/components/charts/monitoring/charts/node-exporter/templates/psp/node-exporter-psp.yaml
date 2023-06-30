@@ -1,9 +1,0 @@
-# TODO(shafeeqes): Remove this chart once gardener v1.75 is released
-{{- if not .Values.global.pspDisabled }}
-apiVersion: {{ include "podsecuritypolicyversion" .}}
-kind: PodSecurityPolicy
-metadata:
-  name: gardener.kube-system.node-exporter
-  annotations:
-    resources.gardener.cloud/mode: Ignore
-{{- end }}
