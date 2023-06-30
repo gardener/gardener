@@ -337,7 +337,16 @@ func GetShootAuditPolicyConfigMapRef(apiServerConfig *core.KubeAPIServerConfig) 
 
 // HibernationIsEnabled checks if the given shoot's desired state is hibernated.
 func HibernationIsEnabled(shoot *core.Shoot) bool {
-	return shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil && *shoot.Spec.Hibernation.Enabled
+	return shoot.Spec.Hibernation != nil && pointer.BoolDeref(shoot.Spec.Hibernation.Enabled, false)
+}
+
+// IsShootInHibernation checks if the given shoot is in hibernation or is waking up.
+func IsShootInHibernation(shoot *core.Shoot) bool {
+	if shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil {
+		return *shoot.Spec.Hibernation.Enabled || shoot.Status.IsHibernated
+	}
+
+	return shoot.Status.IsHibernated
 }
 
 // SystemComponentsAllowed checks if the given worker allows system components to be scheduled onto it

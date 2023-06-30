@@ -488,6 +488,34 @@ var _ = Describe("helper", func() {
 		}, true),
 	)
 
+	DescribeTable("#IsShootInHibernation",
+		func(shoot *core.Shoot, hibernated bool) {
+			Expect(IsShootInHibernation(shoot)).To(Equal(hibernated))
+		},
+		Entry("no hibernation section and status.isHibernated is false", &core.Shoot{}, false),
+		Entry("no hibernation section and status.isHibernated is true", &core.Shoot{
+			Status: core.ShootStatus{IsHibernated: true},
+		}, true),
+		Entry("hibernation.enabled = false and status.isHibernated is false", &core.Shoot{
+			Spec: core.ShootSpec{
+				Hibernation: &core.Hibernation{Enabled: &falseVar},
+			},
+		}, false),
+		Entry("hibernation.enabled = false and status.isHibernated is true", &core.Shoot{
+			Spec: core.ShootSpec{
+				Hibernation: &core.Hibernation{Enabled: &falseVar},
+			},
+			Status: core.ShootStatus{
+				IsHibernated: true,
+			},
+		}, true),
+		Entry("hibernation.enabled = true", &core.Shoot{
+			Spec: core.ShootSpec{
+				Hibernation: &core.Hibernation{Enabled: &trueVar},
+			},
+		}, true),
+	)
+
 	DescribeTable("#SeedSettingExcessCapacityReservationEnabled",
 		func(settings *core.SeedSettings, expectation bool) {
 			Expect(SeedSettingExcessCapacityReservationEnabled(settings)).To(Equal(expectation))

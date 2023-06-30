@@ -4396,7 +4396,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
-						"Detail": ContainSubstring("operation is not permitted when shoot is hibernated"),
+						"Detail": ContainSubstring("operation is not permitted when shoot is hibernated or is waking up"),
 					}))))
 					delete(shoot.Annotations, "gardener.cloud/operation")
 
@@ -4404,7 +4404,39 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
-						"Detail": ContainSubstring("operation is not permitted when shoot is hibernated"),
+						"Detail": ContainSubstring("operation is not permitted when shoot is hibernated or is waking up"),
+					}))))
+					delete(shoot.Annotations, "maintenance.gardener.cloud/operation")
+				},
+
+				Entry("rotate-credentials-start", "rotate-credentials-start"),
+				Entry("rotate-credentials-complete", "rotate-credentials-complete"),
+				Entry("rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key-start"),
+				Entry("rotate-etcd-encryption-key-complete", "rotate-etcd-encryption-key-complete"),
+				Entry("rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start"),
+				Entry("rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete"),
+			)
+
+			DescribeTable("forbid certain rotation operations when shoot is waking up",
+				func(operation string) {
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)}
+					shoot.Status = core.ShootStatus{
+						IsHibernated: true,
+					}
+
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", operation)
+					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+						"Detail": ContainSubstring("operation is not permitted when shoot is hibernated or is waking up"),
+					}))))
+					delete(shoot.Annotations, "gardener.cloud/operation")
+
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", operation)
+					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
+						"Detail": ContainSubstring("operation is not permitted when shoot is hibernated or is waking up"),
 					}))))
 					delete(shoot.Annotations, "maintenance.gardener.cloud/operation")
 				},
@@ -4435,6 +4467,64 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("rotate-etcd-encryption-key-complete", "rotate-etcd-encryption-key-complete"),
 				Entry("rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start"),
 				Entry("rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete"),
+			)
+
+			DescribeTable("forbid hibernating the shoot when certain rotation operations are in progress",
+				func(status core.ShootStatus) {
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)}
+					shoot.Status = status
+
+					oldShoot := shoot.DeepCopy()
+					oldShoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)}
+
+					Expect(ValidateShootUpdate(shoot, oldShoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.hibernation.enabled"),
+						"Detail": And(
+							ContainSubstring("shoot cannot be hibernated"),
+							Or(
+								ContainSubstring("phase is %q", "Preparing"),
+								ContainSubstring("phase is %q", "Completing"),
+							),
+						),
+					}))))
+				},
+				Entry("ETCD encryption key rotation is in Preparing phase", core.ShootStatus{
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
+								Phase: core.RotationPreparing,
+							},
+						},
+					},
+				}),
+				Entry("ETCD encryption key rotation is in Completing phase", core.ShootStatus{
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
+								Phase: core.RotationCompleting,
+							},
+						},
+					},
+				}),
+				Entry("ServiceAccount key rotation is in Preparing phase", core.ShootStatus{
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
+								Phase: core.RotationPreparing,
+							},
+						},
+					},
+				}),
+				Entry("ServiceAccount key rotation is in Completing phase", core.ShootStatus{
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							ServiceAccountKey: &core.ServiceAccountKeyRotation{
+								Phase: core.RotationCompleting,
+							},
+						},
+					},
+				}),
 			)
 		})
 	})
