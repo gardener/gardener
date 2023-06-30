@@ -101,15 +101,6 @@ func checkExtensionObject(generation int64, observedGeneration int64, annotation
 	return nil
 }
 
-// CheckBackupBucket checks if an backup bucket object is healthy or not.
-func CheckBackupBucket(obj client.Object) error {
-	bb, ok := obj.(*gardencorev1beta1.BackupBucket)
-	if !ok {
-		return fmt.Errorf("expected *gardencorev1beta1.BackupBucket but got %T", obj)
-	}
-	return checkExtensionObject(bb.Generation, bb.Status.ObservedGeneration, bb.Annotations, bb.Status.LastError, bb.Status.LastOperation)
-}
-
 // CheckBackupEntry checks if an backup entry object is healthy or not.
 func CheckBackupEntry(obj client.Object) error {
 	be, ok := obj.(*gardencorev1beta1.BackupEntry)
