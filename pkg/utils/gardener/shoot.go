@@ -596,8 +596,6 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 		externalDomain.SecretData = defaultDomain.SecretData
 		externalDomain.Provider = defaultDomain.Provider
 		externalDomain.Zone = defaultDomain.Zone
-		externalDomain.IncludeDomains = defaultDomain.IncludeDomains
-		externalDomain.ExcludeDomains = defaultDomain.ExcludeDomains
 
 	case primaryProvider != nil:
 		if primaryProvider.SecretName != nil {
@@ -614,10 +612,6 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 		}
 		if primaryProvider.Type != nil {
 			externalDomain.Provider = *primaryProvider.Type
-		}
-		if domains := primaryProvider.Domains; domains != nil {
-			externalDomain.IncludeDomains = domains.Include
-			externalDomain.ExcludeDomains = domains.Exclude
 		}
 		if zones := primaryProvider.Zones; zones != nil {
 			if len(zones.Include) == 1 {

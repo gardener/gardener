@@ -448,6 +448,8 @@ type DNSProvider struct {
 }
 
 // DNSIncludeExclude contains information about which domains shall be included/excluded.
+// Note: This struct is not used by Gardener anymore. However, providers might still be synced by the DNS extension which
+// is mainly why we can't deprecate or remove it, see https://github.com/gardener/gardener-extension-shoot-dns-service/blob/f599bec786ab6e27e6fd41d423d4e73dd4952f4f/pkg/admission/mutator/shoot_mutator.go#L110.
 type DNSIncludeExclude struct {
 	// Include is a list of domains that shall be included.
 	// +optional

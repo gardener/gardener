@@ -31,12 +31,10 @@ import (
 
 // Domain contains information about a domain configured in the garden cluster.
 type Domain struct {
-	Domain         string
-	Provider       string
-	Zone           string
-	SecretData     map[string][]byte
-	IncludeDomains []string
-	ExcludeDomains []string
+	Domain     string
+	Provider   string
+	Zone       string
+	SecretData map[string][]byte
 }
 
 // GetDefaultDomains finds all the default domain secrets within the given map and returns a list of
