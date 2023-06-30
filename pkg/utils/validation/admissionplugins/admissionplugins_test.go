@@ -81,7 +81,7 @@ var _ = Describe("admissionplugins", func() {
 	Describe("#ValidateAdmissionPlugins", func() {
 		DescribeTable("validate admission plugins",
 			func(plugins []core.AdmissionPlugin, version string, matcher gomegatypes.GomegaMatcher) {
-				errList := ValidateAdmissionPlugins(plugins, version, false, field.NewPath("admissionPlugins"))
+				errList := ValidateAdmissionPlugins(plugins, version, field.NewPath("admissionPlugins"))
 				Expect(errList).To(matcher)
 			},
 			Entry("empty list", nil, "1.18.14", BeEmpty()),
@@ -118,6 +118,12 @@ var _ = Describe("admissionplugins", func() {
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
 				"Detail": Equal("forbidden admission plugin was specified - do not use plugins from the following list: [SecurityContextDeny]"),
 			})))),
+			Entry("adding kubeconfig secret to admission plugin not supporting external kubeconfig", []core.AdmissionPlugin{{Name: "TaintNodesByCondition", KubeconfigSecretName: pointer.String("test-secret")}}, "1.18.4", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal(field.NewPath("admissionPlugins[0].kubeconfigSecretName").String()),
+				"Detail": Equal("admission plugin \"TaintNodesByCondition\" does not allow specifying external kubeconfig"),
+			})))),
+			Entry("adding kubeconfig secret to admission plugin supporting external kubeconfig", []core.AdmissionPlugin{{Name: "ValidatingAdmissionWebhook", KubeconfigSecretName: pointer.String("test-secret")}}, "1.18.4", BeEmpty()),
 		)
 
 		Describe("validate PodSecurity admissionPlugin config", func() {
@@ -128,7 +134,6 @@ var _ = Describe("admissionplugins", func() {
 							getPodSecurityPluginForConfigVersion("v1alpha1"),
 						},
 							kubernetesVersion,
-							false,
 							field.NewPath("admissionPlugins"),
 						)).To(BeEmpty())
 					})
@@ -140,7 +145,6 @@ var _ = Describe("admissionplugins", func() {
 							getPodSecurityPluginForConfigVersion("v1beta1"),
 						},
 							kubernetesVersion,
-							false,
 							field.NewPath("admissionPlugins"),
 						)).To(BeEmpty())
 					})
@@ -150,7 +154,6 @@ var _ = Describe("admissionplugins", func() {
 							getPodSecurityPluginForConfigVersion("v1beta1"),
 						},
 							kubernetesVersion,
-							false,
 							field.NewPath("admissionPlugins"),
 						)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
@@ -166,7 +169,6 @@ var _ = Describe("admissionplugins", func() {
 							getPodSecurityPluginForConfigVersion("v1"),
 						},
 							kubernetesVersion,
-							false,
 							field.NewPath("admissionPlugins"),
 						)).To(BeEmpty())
 					})
@@ -176,7 +178,6 @@ var _ = Describe("admissionplugins", func() {
 							getPodSecurityPluginForConfigVersion("v1"),
 						},
 							kubernetesVersion,
-							false,
 							field.NewPath("admissionPlugins"),
 						)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
@@ -190,7 +191,6 @@ var _ = Describe("admissionplugins", func() {
 							getPodSecurityPluginForConfigVersion("v1"),
 						},
 							kubernetesVersion,
-							false,
 							field.NewPath("admissionPlugins"),
 						)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeInvalid),
@@ -234,7 +234,6 @@ usernames: "admin"
 						},
 					},
 						"v1.24.8",
-						false,
 						field.NewPath("admissionPlugins"),
 					)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
@@ -259,7 +258,6 @@ exemptions:
 						},
 					},
 						"v1.24.8",
-						false,
 						field.NewPath("admissionPlugins"),
 					)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
@@ -268,31 +266,13 @@ exemptions:
 					}))))
 				})
 
-				It("should return error when kubeconfig secret is provided while it is not allowed", func() {
+				It("should not return an error with valid configuration", func() {
 					Expect(ValidateAdmissionPlugins([]core.AdmissionPlugin{
 						{
-							Name:                 "Bar",
-							KubeconfigSecretName: pointer.String("foo"),
+							Name: "PodSecurity",
 						},
 					},
 						"v1.24.8",
-						false,
-						field.NewPath("admissionPlugins"),
-					)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal(field.NewPath("admissionPlugins[0].kubeconfigSecretName").String()),
-					}))))
-				})
-
-				It("should not return an error when kubeconfig secret is provided while it is allowed", func() {
-					Expect(ValidateAdmissionPlugins([]core.AdmissionPlugin{
-						{
-							Name:                 "PodSecurity",
-							KubeconfigSecretName: pointer.String("foo"),
-						},
-					},
-						"v1.24.8",
-						true,
 						field.NewPath("admissionPlugins"),
 					)).To(BeEmpty())
 				})

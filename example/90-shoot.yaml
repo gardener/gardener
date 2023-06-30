@@ -177,6 +177,7 @@ spec:
   #         clusterDefaultNodeSelector: <node-selectors-labels>
   #         namespace1: <node-selectors-labels>
   #         namespace2: <node-selectors-labels>
+  #     kubeconfigSecretName: <name> # Secret with kubeconfig must be specified in `.spec.resources` and referenced here.
   #   auditConfig:
   #     auditPolicy:
   #       configMapRef:

@@ -8,6 +8,10 @@ It is also used to serve http(s) handlers for authorization webhooks.
 
 This section describes the admission webhook handlers that are currently served.
 
+### Admission Plugin Secret Validator
+
+In `Shoot`, `AdmissionPlugin` can have reference to other files. This validation handler validates the referred admission plugin secret and ensures that the secret always contains the required data `kubeconfig`.
+
 ### Kubeconfig Secret Validator
 
 [Malicious Kubeconfigs](https://github.com/kubernetes/kubectl/issues/697) applied by end users may cause a leakage of sensitive data.

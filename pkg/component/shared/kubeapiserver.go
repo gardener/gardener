@@ -41,6 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -80,7 +81,7 @@ func init() {
 func NewKubeAPIServer(
 	ctx context.Context,
 	runtimeClientSet kubernetes.Interface,
-	auditConfigClient client.Client,
+	resourceConfigClient client.Client,
 	runtimeNamespace string,
 	objectMeta metav1.ObjectMeta,
 	runtimeVersion *semver.Version,
@@ -140,7 +141,7 @@ func NewKubeAPIServer(
 			}
 		}
 
-		auditConfig, err = computeKubeAPIServerAuditConfig(ctx, auditConfigClient, objectMeta, apiServerConfig.AuditConfig, auditWebhookConfig)
+		auditConfig, err = computeKubeAPIServerAuditConfig(ctx, resourceConfigClient, objectMeta, apiServerConfig.AuditConfig, auditWebhookConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -156,7 +157,7 @@ func NewKubeAPIServer(
 		watchCacheSizes = apiServerConfig.WatchCacheSizes
 	}
 
-	enabledAdmissionPluginConfigs, err := convertToAdmissionPluginConfigs(enabledAdmissionPlugins)
+	enabledAdmissionPluginConfigs, err := convertToAdmissionPluginConfigs(ctx, resourceConfigClient, objectMeta.Namespace, enabledAdmissionPlugins)
 	if err != nil {
 		return nil, err
 	}
@@ -382,13 +383,22 @@ func ensureAdmissionPluginConfig(plugins []gardencorev1beta1.AdmissionPlugin) ([
 	return plugins, nil
 }
 
-func convertToAdmissionPluginConfigs(plugins []gardencorev1beta1.AdmissionPlugin) ([]kubeapiserver.AdmissionPluginConfig, error) {
-	var out []kubeapiserver.AdmissionPluginConfig
+func convertToAdmissionPluginConfigs(ctx context.Context, gardenClient client.Client, namespace string, plugins []gardencorev1beta1.AdmissionPlugin) ([]kubeapiserver.AdmissionPluginConfig, error) {
+	var (
+		err error
+		out []kubeapiserver.AdmissionPluginConfig
+	)
 
 	for _, plugin := range plugins {
-		out = append(out, kubeapiserver.AdmissionPluginConfig{
-			AdmissionPlugin: plugin,
-		})
+		config := kubeapiserver.AdmissionPluginConfig{AdmissionPlugin: plugin}
+		if plugin.KubeconfigSecretName != nil {
+			key := client.ObjectKey{Namespace: namespace, Name: *plugin.KubeconfigSecretName}
+			config.Kubeconfig, err = gardenerutils.FetchKubeconfigFromSecret(ctx, gardenClient, key)
+			if err != nil {
+				return nil, fmt.Errorf("failed reading kubeconfig for admission plugin from referenced secret %s: %w", key, err)
+			}
+		}
+		out = append(out, config)
 	}
 
 	return out, nil

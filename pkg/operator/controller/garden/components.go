@@ -17,7 +17,6 @@ package garden
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -486,7 +485,7 @@ func (r *Reconciler) computeKubeAPIServerAuditWebhookConfig(ctx context.Context,
 	}
 
 	key := client.ObjectKey{Namespace: r.GardenNamespace, Name: config.KubeconfigSecretName}
-	kubeconfig, err := fetchKubeconfigFromSecret(ctx, r.RuntimeClientSet.Client(), key)
+	kubeconfig, err := gardenerutils.FetchKubeconfigFromSecret(ctx, r.RuntimeClientSet.Client(), key)
 	if err != nil {
 		return nil, fmt.Errorf("failed reading kubeconfig for audit webhook from referenced secret %s: %w", key, err)
 	}
@@ -504,7 +503,7 @@ func (r *Reconciler) computeKubeAPIServerAuthenticationWebhookConfig(ctx context
 	}
 
 	key := client.ObjectKey{Namespace: r.GardenNamespace, Name: config.Webhook.KubeconfigSecretName}
-	kubeconfig, err := fetchKubeconfigFromSecret(ctx, r.RuntimeClientSet.Client(), key)
+	kubeconfig, err := gardenerutils.FetchKubeconfigFromSecret(ctx, r.RuntimeClientSet.Client(), key)
 	if err != nil {
 		return nil, fmt.Errorf("failed reading kubeconfig for audit webhook from referenced secret %s: %w", key, err)
 	}
@@ -527,7 +526,7 @@ func (r *Reconciler) computeKubeAPIServerAuthorizationWebhookConfig(ctx context.
 	}
 
 	key := client.ObjectKey{Namespace: r.GardenNamespace, Name: config.Webhook.KubeconfigSecretName}
-	kubeconfig, err := fetchKubeconfigFromSecret(ctx, r.RuntimeClientSet.Client(), key)
+	kubeconfig, err := gardenerutils.FetchKubeconfigFromSecret(ctx, r.RuntimeClientSet.Client(), key)
 	if err != nil {
 		return nil, fmt.Errorf("failed reading kubeconfig for audit webhook from referenced secret %s: %w", key, err)
 	}
@@ -546,20 +545,6 @@ func (r *Reconciler) computeKubeAPIServerAuthorizationWebhookConfig(ctx context.
 		CacheUnauthorizedTTL: cacheUnauthorizedTTL,
 		Version:              config.Webhook.Version,
 	}, nil
-}
-
-func fetchKubeconfigFromSecret(ctx context.Context, c client.Client, key client.ObjectKey) ([]byte, error) {
-	secret := &corev1.Secret{}
-	if err := c.Get(ctx, key, secret); err != nil {
-		return nil, err
-	}
-
-	kubeconfig, ok := secret.Data["kubeconfig"]
-	if !ok || len(kubeconfig) == 0 {
-		return nil, errors.New("the secret's field 'kubeconfig' is empty")
-	}
-
-	return kubeconfig, nil
 }
 
 func (r *Reconciler) newKubeControllerManager(

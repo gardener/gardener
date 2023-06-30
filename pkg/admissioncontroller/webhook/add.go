@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
+	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/admissionpluginsecret"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/auditpolicy"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/internaldomainsecret"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/kubeconfigsecret"
@@ -83,6 +84,13 @@ func AddToManager(
 		Client: mgr.GetClient(),
 	}).AddToManager(ctx, mgr); err != nil {
 		return fmt.Errorf("failed adding %s webhook handler: %w", seedrestriction.HandlerName, err)
+	}
+
+	if err := (&admissionpluginsecret.Handler{
+		Logger: mgr.GetLogger().WithName("webhook").WithName(admissionpluginsecret.HandlerName),
+		Client: mgr.GetClient(),
+	}).AddToManager(ctx, mgr); err != nil {
+		return fmt.Errorf("failed adding %s webhook handler: %w", admissionpluginsecret.HandlerName, err)
 	}
 
 	return nil

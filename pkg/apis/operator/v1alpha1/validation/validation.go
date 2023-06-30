@@ -158,7 +158,7 @@ func validateVirtualCluster(virtualCluster operatorv1alpha1.VirtualCluster, runt
 			allErrs = append(allErrs, field.InternalError(path, err))
 		}
 
-		allErrs = append(allErrs, gardencorevalidation.ValidateKubeAPIServer(coreKubeAPIServerConfig, virtualCluster.Kubernetes.Version, true, path)...)
+		allErrs = append(allErrs, gardencorevalidation.ValidateKubeAPIServer(coreKubeAPIServerConfig, virtualCluster.Kubernetes.Version, path)...)
 	}
 
 	if kubeControllerManager := virtualCluster.Kubernetes.KubeControllerManager; kubeControllerManager != nil && kubeControllerManager.KubeControllerManagerConfig != nil {

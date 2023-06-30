@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	admissionapiv1 "k8s.io/pod-security-admission/admission/api/v1"
 	admissionapiv1alpha1 "k8s.io/pod-security-admission/admission/api/v1alpha1"
@@ -81,6 +82,8 @@ var (
 		"ValidatingAdmissionPolicy":            {AddedInVersion: "1.26"},
 		"ValidatingAdmissionWebhook":           {Required: true},
 	}
+
+	admissionPluginsSupportingExternalKubeconfig = sets.New("ValidatingAdmissionWebhook", "MutatingAdmissionWebhook", "ImagePolicyWebhook")
 
 	runtimeScheme *runtime.Scheme
 	codec         runtime.Codec
@@ -155,7 +158,7 @@ func getAllForbiddenPlugins() []string {
 }
 
 // ValidateAdmissionPlugins validates the given Kubernetes admission plugins against the given Kubernetes version.
-func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version string, kubeconfigAllowed bool, fldPath *field.Path) field.ErrorList {
+func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	for i, plugin := range admissionPlugins {
@@ -163,11 +166,6 @@ func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version s
 
 		if len(plugin.Name) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("name"), "must provide a name"))
-			return allErrs
-		}
-
-		if !kubeconfigAllowed && plugin.KubeconfigSecretName != nil {
-			allErrs = append(allErrs, field.Forbidden(idxPath.Child("kubeconfigSecretName"), "specifying a secret for a kubeconfig is not allowed"))
 			return allErrs
 		}
 
@@ -182,6 +180,9 @@ func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version s
 			}
 			if pointer.BoolDeref(plugin.Disabled, false) && admissionPluginsVersionRanges[plugin.Name].Required {
 				allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("admission plugin %q cannot be disabled", plugin.Name)))
+			}
+			if plugin.KubeconfigSecretName != nil && !admissionPluginsSupportingExternalKubeconfig.Has(plugin.Name) {
+				allErrs = append(allErrs, field.Forbidden(idxPath.Child("kubeconfigSecretName"), fmt.Sprintf("admission plugin %q does not allow specifying external kubeconfig", plugin.Name)))
 			}
 			if err := validateAdmissionPluginConfig(plugin, version, idxPath); err != nil {
 				allErrs = append(allErrs, err)

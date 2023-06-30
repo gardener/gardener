@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +32,7 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
+	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/utils/pointer"
 
@@ -52,6 +54,7 @@ var _ = Describe("validator", func() {
 			admissionHandler    *ValidateShoot
 			ctrl                *gomock.Controller
 			auth                *mockauthorizer.MockAuthorizer
+			kubeInformerFactory kubeinformers.SharedInformerFactory
 			coreInformerFactory gardencoreinformers.SharedInformerFactory
 			cloudProfile        core.CloudProfile
 			seed                core.Seed
@@ -287,6 +290,13 @@ var _ = Describe("validator", func() {
 					},
 				},
 			}
+
+			secret = corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret-1",
+					Namespace: namespaceName,
+				},
+			}
 		)
 
 		BeforeEach(func() {
@@ -303,6 +313,8 @@ var _ = Describe("validator", func() {
 			admissionHandler, _ = New()
 			admissionHandler.SetAuthorizer(auth)
 			admissionHandler.AssignReadyFunc(func() bool { return true })
+			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
 
@@ -1511,6 +1523,141 @@ var _ = Describe("validator", func() {
 
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(ContainSubstring("cannot schedule shoot '%s' on seed '%s' because none of the provider types in the seed selector of cloud profile '%s' is matching the provider type of the seed", shoot.Name, seed.Name, cloudProfile.Name))
+					})
+				})
+			})
+
+			Context("admission plugin check", func() {
+				BeforeEach(func() {
+					shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{}
+				})
+
+				Context("KubeconfigSecretName is not present for admission plugin", func() {
+					It("should allow because KubeconfigSecretName is not present for admission plugin", func() {
+						shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
+							{
+								Name: "plugin-1",
+							},
+						}
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).To(BeNil())
+					})
+
+					It("should not allow because kubeconfig secret is not referenced in shoot .spec.resources", func() {
+						shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
+							{
+								Name:                 "plugin-1",
+								KubeconfigSecretName: pointer.String("secret-1"),
+							},
+						}
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).To(BeForbiddenError())
+					})
+
+					It("should not allow because referenced kubeconfig secret does not exist", func() {
+						shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
+							{
+								Name:                 "plugin-1",
+								KubeconfigSecretName: pointer.String("secret-1"),
+							},
+						}
+						shoot.Spec.Resources = []core.NamedResourceReference{
+							{
+								Name: "ref-1",
+								ResourceRef: autoscalingv1.CrossVersionObjectReference{
+									Name:       "secret-1",
+									APIVersion: "v1",
+									Kind:       "Secret",
+								},
+							},
+						}
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).To(BeForbiddenError())
+					})
+
+					It("should not allow because referenced kubeconfig secret does not contain data kubeconfig", func() {
+						shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
+							{
+								Name:                 "plugin-1",
+								KubeconfigSecretName: pointer.String("secret-1"),
+							},
+						}
+						shoot.Spec.Resources = []core.NamedResourceReference{
+							{
+								Name: "ref-1",
+								ResourceRef: autoscalingv1.CrossVersionObjectReference{
+									Name:       "secret-1",
+									APIVersion: "v1",
+									Kind:       "Secret",
+								},
+							},
+						}
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+						Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
+
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).To(BeForbiddenError())
+					})
+
+					It("should allow because referenced kubeconfig secret does is valid and contain data kubeconfig", func() {
+						shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []core.AdmissionPlugin{
+							{
+								Name:                 "plugin-1",
+								KubeconfigSecretName: pointer.String("secret-1"),
+							},
+						}
+						shoot.Spec.Resources = []core.NamedResourceReference{
+							{
+								Name: "ref-1",
+								ResourceRef: autoscalingv1.CrossVersionObjectReference{
+									Name:       "secret-1",
+									APIVersion: "v1",
+									Kind:       "Secret",
+								},
+							},
+						}
+						secret.Data = map[string][]byte{"kubeconfig": {}}
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+						Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
+
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).To(BeNil())
 					})
 				})
 			})
