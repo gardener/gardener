@@ -340,13 +340,12 @@ func getLabels() map[string]string {
 
 func getFluentBitLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelApp:                                         v1beta1constants.DaemonSetNameFluentBit,
-		v1beta1constants.LabelRole:                                        v1beta1constants.LabelLogging,
-		v1beta1constants.GardenRole:                                       v1beta1constants.GardenRoleLogging,
-		v1beta1constants.LabelNetworkPolicyToDNS:                          v1beta1constants.LabelNetworkPolicyAllowed,
-		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:             v1beta1constants.LabelNetworkPolicyAllowed,
-		"networking.resources.gardener.cloud/to-logging-tcp-3100":         v1beta1constants.LabelNetworkPolicyAllowed,
-		"networking.resources.gardener.cloud/to-all-shoots-vali-tcp-3100": v1beta1constants.LabelNetworkPolicyAllowed,
-		"networking.resources.gardener.cloud/to-all-shoots-loki-tcp-3100": v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelApp:                                            v1beta1constants.DaemonSetNameFluentBit,
+		v1beta1constants.LabelRole:                                           v1beta1constants.LabelLogging,
+		v1beta1constants.GardenRole:                                          v1beta1constants.GardenRoleLogging,
+		v1beta1constants.LabelNetworkPolicyToDNS:                             v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                v1beta1constants.LabelNetworkPolicyAllowed,
+		"networking.resources.gardener.cloud/to-logging-tcp-3100":            v1beta1constants.LabelNetworkPolicyAllowed,
+		"networking.resources.gardener.cloud/to-all-shoots-logging-tcp-3100": v1beta1constants.LabelNetworkPolicyAllowed,
 	}
 }
