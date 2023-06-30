@@ -22,6 +22,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -248,7 +249,9 @@ var _ = Describe("validator", func() {
 						},
 					},
 					Kubernetes: core.Kubernetes{
-						Version: "1.6.4",
+						Version:                     "1.6.4",
+						AllowPrivilegedContainers:   pointer.Bool(true),
+						EnableStaticTokenKubeconfig: pointer.Bool(true),
 					},
 					Networking: &core.Networking{
 						Nodes:    &nodesCIDR,
@@ -2387,6 +2390,126 @@ var _ = Describe("validator", func() {
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).ToNot(HaveOccurred())
+				})
+			})
+
+			Context("kubernetes enableStaticTokenKubeconfig defaulting", func() {
+				BeforeEach(func() {
+					shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = nil
+
+					cloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{
+						{Version: "1.26.0"},
+						{Version: "1.25.0"},
+					}
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				})
+
+				It("should not default the enableStaticTokenKubeconfig field when it is set", func() {
+					shoot.Spec.Kubernetes.Version = "1.26.0"
+					shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(false)
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(PointTo(Equal(false)))
+				})
+
+				It("should default the enableStaticTokenKubeconfig field to 'true' for k8s version < 1.26", func() {
+					shoot.Spec.Kubernetes.Version = "1.25.0"
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(PointTo(Equal(true)))
+				})
+
+				It("should default the enableStaticTokenKubeconfig field to false for k8s version >= 1.26", func() {
+					shoot.Spec.Kubernetes.Version = "1.26.0"
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(PointTo(Equal(false)))
+				})
+			})
+
+			Context("kubernetes allowPrivilegedContainers defaulting", func() {
+				BeforeEach(func() {
+					shoot.Spec.Kubernetes.AllowPrivilegedContainers = nil
+
+					cloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{
+						{Version: "1.25.0"},
+						{Version: "1.24.0"},
+					}
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				})
+
+				Context("when shoot uses Kubernetes < 1.25", func() {
+					BeforeEach(func() {
+						shoot.Spec.Kubernetes.Version = "1.24.0"
+					})
+
+					It("should set the field to 'true' if PodSecurityPolicy admission plugin is not disabled and shoot has workers", func() {
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(shoot.Spec.Kubernetes.AllowPrivilegedContainers).To(PointTo(Equal(true)))
+					})
+
+					It("should not set the field if the shoot is workerless", func() {
+						shoot.Spec.Provider.Workers = nil
+
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(shoot.Spec.Kubernetes.AllowPrivilegedContainers).To(BeNil())
+					})
+
+					It("should not default the field if PodSecurityPolicy admission plugin is disabled in the shoot spec", func() {
+						shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+							AdmissionPlugins: []core.AdmissionPlugin{
+								{
+									Name:     "PodSecurityPolicy",
+									Disabled: pointer.Bool(true),
+								},
+							},
+						}
+
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(shoot.Spec.Kubernetes.AllowPrivilegedContainers).To(BeNil())
+					})
+				})
+
+				Context("when shoot uses Kubernetes >= 1.25", func() {
+					BeforeEach(func() {
+						shoot.Spec.Kubernetes.Version = "1.25.0"
+					})
+
+					It("should not set the field", func() {
+						shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)
+
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(shoot.Spec.Kubernetes.AllowPrivilegedContainers).To(PointTo(BeFalse()))
+					})
 				})
 			})
 

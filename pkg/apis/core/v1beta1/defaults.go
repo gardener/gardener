@@ -93,15 +93,6 @@ func SetDefaults_Shoot(obj *Shoot) {
 		obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{}
 	}
 
-	if obj.Spec.Kubernetes.EnableStaticTokenKubeconfig == nil {
-		// Error is ignored here because we cannot do anything meaningful with it - variable will default to "false".
-		if k8sLessThan126, _ := versionutils.CheckVersionMeetsConstraint(obj.Spec.Kubernetes.Version, "< 1.26"); k8sLessThan126 {
-			obj.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
-		} else {
-			obj.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(false)
-		}
-	}
-
 	if obj.Spec.Purpose == nil {
 		p := ShootPurposeEvaluation
 		obj.Spec.Purpose = &p
@@ -156,12 +147,6 @@ func SetDefaults_Shoot(obj *Shoot) {
 
 	// these fields are relevant only for shoot with workers
 	if len(obj.Spec.Provider.Workers) > 0 {
-		// Errors are ignored here because we cannot do anything meaningful with them - variables will default to `false`.
-		k8sLess125, _ := versionutils.CheckVersionMeetsConstraint(obj.Spec.Kubernetes.Version, "< 1.25")
-		if obj.Spec.Kubernetes.AllowPrivilegedContainers == nil && k8sLess125 && !isPSPDisabled(obj) {
-			obj.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
-		}
-
 		if obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds == nil {
 			obj.Spec.Kubernetes.KubeAPIServer.DefaultNotReadyTolerationSeconds = pointer.Int64(300)
 		}
@@ -459,15 +444,4 @@ func addTolerations(tolerations *[]Toleration, additionalTolerations ...Tolerati
 		}
 		*tolerations = append(*tolerations, toleration)
 	}
-}
-
-func isPSPDisabled(shoot *Shoot) bool {
-	if shoot.Spec.Kubernetes.KubeAPIServer != nil {
-		for _, plugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
-			if plugin.Name == "PodSecurityPolicy" && pointer.BoolDeref(plugin.Disabled, false) {
-				return true
-			}
-		}
-	}
-	return false
 }

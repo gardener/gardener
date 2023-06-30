@@ -52,6 +52,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
 
@@ -771,6 +772,23 @@ func (c *validationContext) validateKubernetes(a admission.Attributes) field.Err
 		allErrs = append(allErrs, validateKubernetesVersionConstraints(c.cloudProfile.Spec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version, path.Child("version"))...)
 	}
 
+	if c.shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig == nil {
+		// Error is ignored here because we cannot do anything meaningful with it - variable will default to "false".
+		if k8sLessThan126, _ := versionutils.CheckVersionMeetsConstraint(c.shoot.Spec.Kubernetes.Version, "< 1.26"); k8sLessThan126 {
+			c.shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
+		} else {
+			c.shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(false)
+		}
+	}
+
+	if len(c.shoot.Spec.Provider.Workers) > 0 {
+		// Error is ignored here because we cannot do anything meaningful with them - variables will default to `false`.
+		k8sLess125, _ := versionutils.CheckVersionMeetsConstraint(c.shoot.Spec.Kubernetes.Version, "< 1.25")
+		if c.shoot.Spec.Kubernetes.AllowPrivilegedContainers == nil && k8sLess125 && !isPSPDisabled(c.shoot) {
+			c.shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
+		}
+	}
+
 	return allErrs
 }
 
@@ -916,6 +934,17 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 	}
 
 	return allErrs
+}
+
+func isPSPDisabled(shoot *core.Shoot) bool {
+	if shoot.Spec.Kubernetes.KubeAPIServer != nil {
+		for _, plugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
+			if plugin.Name == "PodSecurityPolicy" && pointer.BoolDeref(plugin.Disabled, false) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (c *validationContext) validateAPIVersionForRawExtensions() field.ErrorList {
