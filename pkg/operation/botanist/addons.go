@@ -41,19 +41,11 @@ func (b *Botanist) DeployManagedResourceForAddons(ctx context.Context) error {
 // generateCoreAddonsChart renders the gardener-resource-manager configuration for the core addons. After that it
 // creates a ManagedResource CRD that references the rendered manifests and creates it.
 func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, error) {
-	var (
-		global = map[string]interface{}{
-			"vpaEnabled":  b.Shoot.WantsVerticalPodAutoscaler,
-			"pspDisabled": b.Shoot.PSPDisabled,
-			"hasWorkers":  !b.Shoot.IsWorkerless,
-		}
-		podSecurityPolicies = map[string]interface{}{
-			"allowPrivilegedContainers": pointer.BoolDeref(b.Shoot.GetInfo().Spec.Kubernetes.AllowPrivilegedContainers, false),
-		}
-	)
+	podSecurityPolicies := map[string]interface{}{
+		"allowPrivilegedContainers": pointer.BoolDeref(b.Shoot.GetInfo().Spec.Kubernetes.AllowPrivilegedContainers, false),
+	}
 
 	values := map[string]interface{}{
-		"global":              global,
 		"monitoring":          common.GenerateAddonConfig(map[string]interface{}{}, b.Operation.IsShootMonitoringEnabled()),
 		"podsecuritypolicies": common.GenerateAddonConfig(podSecurityPolicies, !b.Shoot.PSPDisabled && !b.Shoot.IsWorkerless),
 	}
