@@ -59,7 +59,7 @@ type AddArgs struct {
 
 // Add adds an ContainerRuntime controller to the given manager using the given AddArgs.
 func Add(mgr manager.Manager, args AddArgs) error {
-	args.ControllerOptions.Reconciler = NewReconciler(args.Actuator)
+	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.Actuator)
 	return add(mgr, args)
 }
 
