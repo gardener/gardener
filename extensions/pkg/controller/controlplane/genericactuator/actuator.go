@@ -25,10 +25,9 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane"
@@ -66,6 +65,7 @@ type ValuesProvider interface {
 // It creates / deletes the given secrets and applies / deletes the given charts, using the given image vector and
 // the values provided by the given values provider.
 func NewActuator(
+	mgr manager.Manager,
 	providerName string,
 	secretConfigs func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions, shootAccessSecrets func(namespace string) []*gardenerutils.AccessSecret,
 	exposureSecretConfigs func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions, exposureShootAccessSecrets func(namespace string) []*gardenerutils.AccessSecret,
@@ -77,7 +77,10 @@ func NewActuator(
 	atomicShootWebhookConfig *atomic.Value,
 	webhookServerNamespace string,
 	webhookServerPort int,
+	gardenerClientset kubernetesclient.Interface,
 ) controlplane.Actuator {
+	chartApplier := gardenerClientset.ChartApplier()
+
 	return &actuator{
 		providerName: providerName,
 
@@ -100,6 +103,10 @@ func NewActuator(
 		atomicShootWebhookConfig:   atomicShootWebhookConfig,
 		webhookServerNamespace:     webhookServerNamespace,
 		webhookServerPort:          webhookServerPort,
+
+		gardenerClientset: gardenerClientset,
+		chartApplier:      chartApplier,
+		client:            mgr.GetClient(),
 
 		newSecretsManager: extensionssecretsmanager.SecretsManagerForCluster,
 	}
@@ -136,30 +143,6 @@ type actuator struct {
 	client            client.Client
 
 	newSecretsManager newSecretsManagerFunc
-}
-
-// InjectFunc enables injecting Kubernetes dependencies into actuator's dependencies.
-func (a *actuator) InjectFunc(f inject.Func) error {
-	return f(a.vp)
-}
-
-// InjectConfig injects the given config into the actuator.
-func (a *actuator) InjectConfig(config *rest.Config) error {
-	var err error
-	a.gardenerClientset, err = kubernetesclient.NewWithConfig(kubernetesclient.WithRESTConfig(config))
-	if err != nil {
-		return fmt.Errorf("could not create Gardener client: %w", err)
-	}
-
-	a.chartApplier = a.gardenerClientset.ChartApplier()
-
-	return nil
-}
-
-// InjectClient injects the given client into the valuesProvider.
-func (a *actuator) InjectClient(client client.Client) error {
-	a.client = client
-	return nil
 }
 
 const (
