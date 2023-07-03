@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -171,11 +172,8 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			}).Should(Succeed())
 
 			By("Ensure chart was deployed correctly")
-			// Note that the list of feature gates is unexpectedly longer than in reality since the envtest starts
-			// gardener-apiserver which adds its own as well as the default Kubernetes features gates to the same
-			// map that is reused in gardenlet:
-			// `features.DefaultFeatureGate` is the same as `utilfeature.DefaultMutableFeatureGate`
-			Eventually(func(g Gomega) string {
+			values := make(map[string]any)
+			Eventually(func(g Gomega) {
 				managedResource := &resourcesv1alpha1.ManagedResource{}
 				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: "garden", Name: controllerInstallation.Name}, managedResource)).To(Succeed())
 
@@ -184,46 +182,26 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 
 				configMap := &corev1.ConfigMap{}
 				Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_config.yaml"], configMap)).To(Succeed())
+				Expect(yaml.Unmarshal([]byte(configMap.Data["values"]), &values)).To(Succeed())
+			}).Should(Succeed())
 
-				return configMap.Data["values"]
-			}).Should(Equal(`gardener:
+			// The list of feature gates is unexpectedly longer than in reality since the envtest starts gardener-apiserver
+			// in-process which adds its own as well as the default Kubernetes features gates to the same map that is reused
+			// in the tested gardenlet controller:
+			// `features.DefaultFeatureGate` is the same as `utilfeature.DefaultMutableFeatureGate`
+			// Hence, we assert that one of the feature gates is correctly set in the chart values and ignore the rest.
+			gardenletValues := (values["gardener"].(map[string]any))["gardenlet"].(map[string]any)
+			Expect(gardenletValues["featureGates"]).To(HaveKeyWithValue("MachineControllerManagerDeployment", BeFalse()))
+			delete(gardenletValues, "featureGates")
+			(values["gardener"].(map[string]any))["gardenlet"] = gardenletValues
+
+			valuesBytes, err := yaml.Marshal(values)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(string(valuesBytes)).To(Equal(`gardener:
   garden:
     clusterIdentity: ` + gardenClusterIdentity + `
-  gardenlet:
-    featureGates:
-      APIListChunking: true
-      APIPriorityAndFairness: true
-      APIResponseCompression: true
-      APIServerIdentity: true
-      APIServerTracing: false
-      AdvancedAuditing: true
-      AggregatedDiscoveryEndpoint: false
-      AllAlpha: false
-      AllBeta: false
-      ComponentSLIs: false
-      CoreDNSQueryRewriting: false
-      CustomResourceValidationExpressions: true
-      DefaultSeccompProfile: false
-      DisableScalingClassesForShoots: false
-      DryRun: true
-      EfficientWatchResumption: true
-      HVPA: false
-      HVPAForShootedSeed: false
-      IPv6SingleStack: false
-      KMSv2: false
-      MachineControllerManagerDeployment: false
-      MutableShootSpecNetworkingNodes: false
-      OpenAPIEnums: true
-      OpenAPIV3: true
-      RemainingItemCount: true
-      RemoveSelfLink: true
-      ServerSideApply: true
-      ServerSideFieldValidation: true
-      StorageVersionAPI: false
-      StorageVersionHash: true
-      ValidatingAdmissionPolicy: false
-      WatchBookmark: true
-      WorkerlessShoots: false
+  gardenlet: {}
   seed:
     annotations: null
     blockCIDRs: null

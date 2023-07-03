@@ -177,11 +177,6 @@ var _ = BeforeSuite(func() {
 	Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
 	log.Info("Created namespace for test", "namespaceName", gardenNamespace)
 
-	DeferCleanup(func() {
-		By("Delete garden namespace")
-		Expect(testClient.Delete(ctx, gardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
-	})
-
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             testScheme,
@@ -241,5 +236,16 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(func() {
 		By("Stop manager")
 		mgrCancel()
+	})
+
+	DeferCleanup(func() {
+		By("Delete garden namespace")
+		Expect(testClient.Delete(ctx, gardenNamespace)).To(Or(Succeed(), BeNotFoundError()))
+
+		// Wait for garden namespace to be finalized after deleting it.
+		// Otherwise, rerunning the test suite against the same test env is not possible.
+		Eventually(func(g Gomega) {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenNamespace), gardenNamespace)).To(BeNotFoundError())
+		}).Should(Succeed())
 	})
 })
