@@ -65,7 +65,7 @@ func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 // Add creates a new Infrastructure Controller and adds it to the Manager.
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager, args AddArgs) error {
-	args.ControllerOptions.Reconciler = NewReconciler(args.Actuator, args.ConfigValidator)
+	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.Actuator, args.ConfigValidator)
 	return add(mgr, args)
 }
 
