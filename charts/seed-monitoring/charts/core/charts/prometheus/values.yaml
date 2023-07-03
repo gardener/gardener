@@ -106,9 +106,6 @@ allowedMetrics:
   - prometheus_tsdb_reloads_total
   - prometheus_tsdb_storage_blocks_bytes
   - prometheus_tsdb_wal_corruptions_total
-  vpn:
-  - probe_http_status_code
-  - probe_success
 seed:
   apiserver: https://api.foo.bar
   region: antarctica-1

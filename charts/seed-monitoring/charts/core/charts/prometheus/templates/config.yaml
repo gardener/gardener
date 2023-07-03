@@ -273,39 +273,6 @@ data:
       - source_labels: [ __name__ ]
         regex: ^(kubelet_running_pods|process_max_fds|process_open_fds)$
         action: keep
-
-    # Fetch logs of the tunnel pod (vpn-shoot) via the kube-apiserver, which requires a functional tunnel connection.
-    - job_name: tunnel-probe-apiserver-proxy
-      honor_labels: false
-      metrics_path: /probe
-      params:
-        module:
-        - http_apiserver
-      kubernetes_sd_configs:
-      - role: pod
-        namespaces:
-          names: [ kube-system ]
-        api_server: https://kube-apiserver:443
-{{ include "prometheus.kube-auth" . | indent 8 }}
-      relabel_configs:
-      - target_label: type
-        replacement: seed
-      - source_labels: [ __meta_kubernetes_pod_name,__meta_kubernetes_pod_container_name ]
-        action: keep
-        regex: vpn-shoot-(0|.+-.+);vpn-shoot-init
-      - source_labels: [__meta_kubernetes_pod_name,__meta_kubernetes_pod_container_name]
-        target_label: __param_target
-        regex: (.+);(.+)
-        replacement: https://kube-apiserver:443/api/v1/namespaces/kube-system/pods/${1}/log?container=${2}&tailLines=1
-        action: replace
-      - source_labels: [ __param_target ]
-        target_label: instance
-        action: replace
-      - target_label: __address__
-        replacement: 127.0.0.1:9115
-        action: replace
-      metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.vpn | indent 6 }}
 {{- end }}
 
 {{- if .Values.additionalScrapeConfigs }}
