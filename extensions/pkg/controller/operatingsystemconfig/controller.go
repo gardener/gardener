@@ -51,7 +51,7 @@ type AddArgs struct {
 
 // Add adds an operatingsystemconfig controller to the given manager using the given AddArgs.
 func Add(mgr manager.Manager, args AddArgs) error {
-	args.ControllerOptions.Reconciler = NewReconciler(args.Actuator)
+	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.Actuator)
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Types...)
 	return add(mgr, args.ControllerOptions, predicates)
 }

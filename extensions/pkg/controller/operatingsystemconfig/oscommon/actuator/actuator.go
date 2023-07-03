@@ -17,6 +17,7 @@ package actuator
 import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/generator"
@@ -31,21 +32,11 @@ type Actuator struct {
 }
 
 // NewActuator creates a new actuator with the given logger.
-func NewActuator(osName string, generator generator.Generator) operatingsystemconfig.Actuator {
+func NewActuator(mgr manager.Manager, osName string, generator generator.Generator) operatingsystemconfig.Actuator {
 	return &Actuator{
+		scheme:    mgr.GetScheme(),
+		client:    mgr.GetClient(),
 		osName:    osName,
 		generator: generator,
 	}
-}
-
-// InjectScheme injects a runtime Scheme to the Actuator
-func (a *Actuator) InjectScheme(scheme *runtime.Scheme) error {
-	a.scheme = scheme
-	return nil
-}
-
-// InjectClient injects a Client to the Actuator
-func (a *Actuator) InjectClient(client client.Client) error {
-	a.client = client
-	return nil
 }

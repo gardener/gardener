@@ -38,7 +38,7 @@ type AddOptions struct {
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(mgr manager.Manager, ctrlName string, osTypes []string, generator generator.Generator, opts AddOptions) error {
 	return operatingsystemconfig.Add(mgr, operatingsystemconfig.AddArgs{
-		Actuator:          actuator.NewActuator(ctrlName, generator),
+		Actuator:          actuator.NewActuator(mgr, ctrlName, generator),
 		Predicates:        operatingsystemconfig.DefaultPredicates(opts.IgnoreOperationAnnotation),
 		Types:             osTypes,
 		ControllerOptions: opts.Controller,
