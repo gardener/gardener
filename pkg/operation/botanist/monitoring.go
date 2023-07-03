@@ -84,14 +84,24 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		b.Shoot.Components.ControlPlane.ResourceManager,
 	}
 
+	if b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) && gardenlethelper.IsValiEnabled(b.Config) {
+		monitoringComponents = append(monitoringComponents, b.Shoot.Components.Logging.Vali)
+	}
+
 	if !b.Shoot.IsWorkerless {
 		monitoringComponents = append(monitoringComponents,
+			b.Shoot.Components.SystemComponents.BlackboxExporter,
 			b.Shoot.Components.ControlPlane.KubeScheduler,
 			b.Shoot.Components.SystemComponents.CoreDNS,
 			b.Shoot.Components.SystemComponents.KubeProxy,
+			b.Shoot.Components.SystemComponents.NodeExporter,
 			b.Shoot.Components.SystemComponents.VPNShoot,
 			b.Shoot.Components.ControlPlane.VPNSeedServer,
 		)
+
+		if b.ShootUsesDNS() {
+			monitoringComponents = append(monitoringComponents, b.Shoot.Components.SystemComponents.APIServerProxy)
+		}
 
 		if b.Shoot.NodeLocalDNSEnabled {
 			monitoringComponents = append(monitoringComponents, b.Shoot.Components.SystemComponents.NodeLocalDNS)
