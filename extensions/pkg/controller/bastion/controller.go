@@ -57,7 +57,7 @@ func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 // Add creates a new Bastion Controller and adds it to the Manager.
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager, args AddArgs) error {
-	args.ControllerOptions.Reconciler = NewReconciler(args.Actuator, args.ConfigValidator)
+	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.Actuator, args.ConfigValidator)
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
 	return add(mgr, args, predicates)
 }
