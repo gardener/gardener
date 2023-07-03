@@ -638,7 +638,7 @@ func (r *Reconciler) checkIfBackupBucketIsHealthy(ctx context.Context, backupBuc
 		if backupBucket.Status.LastError != nil ||
 			lastOperationState == gardencorev1beta1.LastOperationStateError ||
 			lastOperationState == gardencorev1beta1.LastOperationStateFailed {
-			lastObservedError = fmt.Errorf("assoicated backupBucket state is not Succeeded but %v", lastOperationState)
+			lastObservedError = fmt.Errorf("assoicated BackupBucket state is not Succeeded but %v", lastOperationState)
 			if backupBucket.Status.LastError != nil {
 				lastObservedError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation of associated BackupBucket: %s", backupBucket.Status.LastError.Description), backupBucket.Status.LastError.Codes...)
 			}
