@@ -159,7 +159,7 @@ func DefaultPredicates() []predicate.Predicate {
 // Add creates a new Reconciler and adds it to the Manager.
 // and Start it when the Manager is Started.
 func Register(mgr manager.Manager, args AddArgs, actuator HealthCheckActuator) error {
-	args.ControllerOptions.Reconciler = NewReconciler(actuator, *args.registeredExtension, args.SyncPeriod)
+	args.ControllerOptions.Reconciler = NewReconciler(mgr, actuator, *args.registeredExtension, args.SyncPeriod)
 	return add(mgr, args)
 }
 
