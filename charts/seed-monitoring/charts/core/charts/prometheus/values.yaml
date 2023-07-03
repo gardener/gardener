@@ -115,16 +115,11 @@ shoot:
   apiserver: https://api.foo.bar
   apiserverServerName: api.foo.bar
   provider: aws
-  apiServerProxyEnabled: false
   workerless: false
 
 rules:
   optional:
     alertmanager:
-      enabled: false
-    vali:
-      enabled: true
-    valiTelegraf:
       enabled: false
 
 alerting:

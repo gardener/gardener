@@ -230,22 +230,15 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 					"alertmanager": map[string]interface{}{
 						"enabled": b.Shoot.WantsAlertmanager,
 					},
-					"vali": map[string]interface{}{
-						"enabled": gardenlethelper.IsLoggingEnabled(b.Config),
-					},
-					"valiTelegraf": map[string]interface{}{
-						"enabled": b.isShootNodeLoggingEnabled(),
-					},
 				},
 			},
 			"shoot": map[string]interface{}{
-				"apiserver":             fmt.Sprintf("https://%s", gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain)),
-				"apiserverServerName":   gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
-				"apiServerProxyEnabled": b.ShootUsesDNS(),
-				"provider":              b.Shoot.GetInfo().Spec.Provider.Type,
-				"name":                  b.Shoot.GetInfo().Name,
-				"project":               b.Garden.Project.Name,
-				"workerless":            b.Shoot.IsWorkerless,
+				"apiserver":           fmt.Sprintf("https://%s", gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain)),
+				"apiserverServerName": gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+				"provider":            b.Shoot.GetInfo().Spec.Provider.Type,
+				"name":                b.Shoot.GetInfo().Name,
+				"project":             b.Garden.Project.Name,
+				"workerless":          b.Shoot.IsWorkerless,
 			},
 			"ignoreAlerts":            b.Shoot.IgnoreAlerts,
 			"alerting":                alerting,
