@@ -59,7 +59,7 @@ type AddArgs struct {
 
 // Add adds an Extension controller to the given manager using the given AddArgs.
 func Add(mgr manager.Manager, args AddArgs) error {
-	args.ControllerOptions.Reconciler = NewReconciler(args)
+	args.ControllerOptions.Reconciler = NewReconciler(mgr, args)
 	return add(mgr, args)
 }
 
