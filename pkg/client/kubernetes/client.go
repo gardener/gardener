@@ -171,6 +171,21 @@ func RESTConfigFromClientConnectionConfiguration(cfg *componentbaseconfig.Client
 	return restConfig, nil
 }
 
+// RESTConfigFromKubeconfigFile returns a rest.Config from the bytes of a kubeconfig file.
+// Allowed fields are not considered unsupported if used in the kubeconfig.
+func RESTConfigFromKubeconfigFile(kubeconfigFile string, allowedFields ...string) (*rest.Config, error) {
+	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigFile},
+		&clientcmd.ConfigOverrides{ClusterInfo: clientcmdapi.Cluster{Server: ""}},
+	)
+
+	if err := validateClientConfig(clientConfig, allowedFields); err != nil {
+		return nil, err
+	}
+
+	return clientConfig.ClientConfig()
+}
+
 // RESTConfigFromKubeconfig returns a rest.Config from the bytes of a kubeconfig.
 // Allowed fields are not considered unsupported if used in the kubeconfig.
 func RESTConfigFromKubeconfig(kubeconfig []byte, allowedFields ...string) (*rest.Config, error) {
