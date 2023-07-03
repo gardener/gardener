@@ -106,11 +106,6 @@ allowedMetrics:
   - prometheus_tsdb_reloads_total
   - prometheus_tsdb_storage_blocks_bytes
   - prometheus_tsdb_wal_corruptions_total
-  blackboxExporter:
-  - probe_duration_seconds
-  - probe_http_duration_seconds
-  - probe_success
-  - probe_http_status_code
   vpn:
   - probe_http_status_code
   - probe_success

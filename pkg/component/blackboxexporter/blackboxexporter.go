@@ -52,6 +52,7 @@ const (
 // Interface contains functions for a blackbox-exporter deployer.
 type Interface interface {
 	component.DeployWaiter
+	component.MonitoringComponent
 }
 
 // Values is a set of configuration values for the blackbox-exporter.
