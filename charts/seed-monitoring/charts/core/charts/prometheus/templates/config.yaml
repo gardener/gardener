@@ -274,46 +274,6 @@ data:
         regex: ^(kubelet_running_pods|process_max_fds|process_open_fds)$
         action: keep
 
-{{- if .Values.shoot.apiServerProxyEnabled }}
-    - job_name: apiserver-proxy
-      metrics_path: /metrics
-      scheme: https
-{{ include "prometheus.kube-auth" . | indent 6 }}
-      kubernetes_sd_configs:
-      - role: endpoints
-        api_server: https://kube-apiserver:443
-        namespaces:
-          names: [ kube-system ]
-{{ include "prometheus.kube-auth" . | indent 8 }}
-      relabel_configs:
-      - target_label: type
-        replacement: shoot
-      - source_labels:
-        - __meta_kubernetes_endpoints_name
-        - __meta_kubernetes_endpoint_port_name
-        action: keep
-        regex: apiserver-proxy;metrics
-      - source_labels: [ __meta_kubernetes_pod_name ]
-        target_label: pod
-      - source_labels: [ __meta_kubernetes_pod_node_name ]
-        target_label: node
-      - target_label: __address__
-        replacement: kube-apiserver:443
-      - source_labels: [__meta_kubernetes_pod_name, __meta_kubernetes_pod_container_port_number]
-        regex: (.+);(.+)
-        target_label: __metrics_path__
-        replacement: /api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics
-      metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.apiserverProxy | indent 6 }}
-      # we don't care about admin metrics
-      - source_labels: [ envoy_cluster_name ]
-        regex: ^uds_admin$
-        action: drop
-      - source_labels: [ envoy_listener_address ]
-        regex: ^0.0.0.0_16910$
-        action: drop
-{{- end }}
-
     # Fetch logs of the tunnel pod (vpn-shoot) via the kube-apiserver, which requires a functional tunnel connection.
     - job_name: tunnel-probe-apiserver-proxy
       honor_labels: false

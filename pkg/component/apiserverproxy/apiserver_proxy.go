@@ -104,6 +104,7 @@ func New(client client.Client, namespace string, secretsManager secretsmanager.I
 // Interface contains functions for deploying apiserver-proxy.
 type Interface interface {
 	component.DeployWaiter
+	component.MonitoringComponent
 	SetAdvertiseIPAddress(string)
 }
 

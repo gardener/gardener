@@ -139,24 +139,6 @@ allowedMetrics:
   - vali_panic_total
   - vali_logql_querystats_duplicates_total
   - vali_logql_querystats_ingester_sent_lines_total
-  apiserverProxy:
-  - envoy_cluster_bind_errors
-  - envoy_cluster_lb_healthy_panic
-  - envoy_cluster_update_attempt
-  - envoy_cluster_update_failure
-  - envoy_cluster_upstream_cx_connect_ms_bucket
-  - envoy_cluster_upstream_cx_length_ms_bucket
-  - envoy_cluster_upstream_cx_none_healthy
-  - envoy_cluster_upstream_cx_rx_bytes_total
-  - envoy_cluster_upstream_cx_tx_bytes_total
-  - envoy_listener_downstream_cx_destroy
-  - envoy_listener_downstream_cx_length_ms_bucket
-  - envoy_listener_downstream_cx_overflow
-  - envoy_listener_downstream_cx_total
-  - envoy_tcp_downstream_cx_no_route
-  - envoy_tcp_downstream_cx_rx_bytes_total
-  - envoy_tcp_downstream_cx_total
-  - envoy_tcp_downstream_cx_tx_bytes_total
 seed:
   apiserver: https://api.foo.bar
   region: antarctica-1
