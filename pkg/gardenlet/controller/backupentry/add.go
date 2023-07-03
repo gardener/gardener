@@ -85,7 +85,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 	return c.Watch(
 		source.NewKindWithCache(&extensionsv1alpha1.BackupEntry{}, seedCluster.GetCache()),
 		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapExtensionBackupEntryToCoreBackupEntry), mapper.UpdateWithNew, c.GetLogger()),
-		predicateutils.ExtensionStatusChanged(),
+		predicateutils.RelevantStatusChanged(predicateutils.GetExtensionLastOperation),
 	)
 }
 
