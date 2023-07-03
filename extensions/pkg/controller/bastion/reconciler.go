@@ -50,6 +50,7 @@ type reconciler struct {
 func NewReconciler(mgr manager.Manager, actuator Actuator, configValidator ConfigValidator) reconcile.Reconciler {
 	return reconcilerutils.OperationAnnotationWrapper(
 		func() client.Object { return &extensionsv1alpha1.Bastion{} },
+		mgr,
 		&reconciler{
 			actuator:        actuator,
 			configValidator: configValidator,

@@ -89,6 +89,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 		}).
 		Build(reconcilerutils.OperationAnnotationWrapper(
 			func() client.Object { return &resourcesv1alpha1.ManagedResource{} },
+			mgr,
 			r,
 		))
 	if err != nil {

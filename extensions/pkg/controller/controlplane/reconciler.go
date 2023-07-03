@@ -51,6 +51,7 @@ type reconciler struct {
 func NewReconciler(mgr manager.Manager, actuator Actuator) reconcile.Reconciler {
 	return reconcilerutils.OperationAnnotationWrapper(
 		func() client.Object { return &extensionsv1alpha1.ControlPlane{} },
+		mgr,
 		&reconciler{
 			actuator:      actuator,
 			client:        mgr.GetClient(),

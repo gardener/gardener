@@ -48,6 +48,7 @@ type reconciler struct {
 func NewReconciler(actuator Actuator) reconcile.Reconciler {
 	return reconcilerutils.OperationAnnotationWrapper(
 		func() client.Object { return &extensionsv1alpha1.Worker{} },
+		mgr,
 		&reconciler{
 			actuator:      actuator,
 			statusUpdater: extensionscontroller.NewStatusUpdater(),
