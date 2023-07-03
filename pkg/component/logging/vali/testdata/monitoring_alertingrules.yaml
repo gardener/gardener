@@ -1,0 +1,22 @@
+rule_files:
+- vali.rules.yaml
+
+evaluation_interval: 30s
+
+tests:
+- interval: 30s
+  input_series:
+  - series: 'up{job="vali"}'
+    values: '0+0x40'
+  alert_rule_test:
+  - eval_time: 20m
+    alertname: ValiDown
+    exp_alerts:
+    - exp_labels:
+        service: vali
+        severity: warning
+        type: seed
+        visibility: operator
+      exp_annotations:
+        description: There are no running vali pods. No logs will be collected.
+        summary: Vali is down

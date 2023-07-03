@@ -112,6 +112,12 @@ func init() {
 	telegrafConfigTemplate = template.Must(template.New("telegraf-start").Funcs(sprig.TxtFuncMap()).Parse(telegrafConfigTplContent))
 }
 
+// Interface contains functions for a vali deployer.
+type Interface interface {
+	component.Deployer
+	component.MonitoringComponent
+}
+
 // Values are the values for the Vali.
 type Values struct {
 	ValiImage             string
@@ -145,7 +151,7 @@ func New(
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	values Values,
-) component.Deployer {
+) Interface {
 	return &vali{
 		client:         client,
 		namespace:      namespace,

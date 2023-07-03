@@ -114,31 +114,6 @@ allowedMetrics:
   vpn:
   - probe_http_status_code
   - probe_success
-  vali:
-  - vali_ingester_blocks_per_chunk_sum
-  - vali_ingester_blocks_per_chunk_count
-  - vali_ingester_chunk_age_seconds_sum
-  - vali_ingester_chunk_age_seconds_count
-  - vali_ingester_chunk_bounds_hours_sum
-  - vali_ingester_chunk_bounds_hours_count
-  - vali_ingester_chunk_compression_ratio_sum
-  - vali_ingester_chunk_compression_ratio_count
-  - vali_ingester_chunk_encode_time_seconds_sum
-  - vali_ingester_chunk_encode_time_seconds_count
-  - vali_ingester_chunk_entries_sum
-  - vali_ingester_chunk_entries_count
-  - vali_ingester_chunk_size_bytes_sum
-  - vali_ingester_chunk_size_bytes_count
-  - vali_ingester_chunk_utilization_sum
-  - vali_ingester_chunk_utilization_count
-  - vali_ingester_memory_chunks
-  - vali_ingester_received_chunks
-  - vali_ingester_samples_per_chunk_sum
-  - vali_ingester_samples_per_chunk_count
-  - vali_ingester_sent_chunks
-  - vali_panic_total
-  - vali_logql_querystats_duplicates_total
-  - vali_logql_querystats_ingester_sent_lines_total
 seed:
   apiserver: https://api.foo.bar
   region: antarctica-1

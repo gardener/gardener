@@ -343,54 +343,6 @@ data:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.blackboxExporter | indent 8 }}
 {{- end }}
 
-{{- if  (index .Values.rules.optional "vali" ).enabled }}
-    - job_name: vali
-      honor_labels: false
-      kubernetes_sd_configs:
-      - role: endpoints
-        namespaces:
-          names: [{{ .Release.Namespace }}]
-      relabel_configs:
-      - source_labels:
-        - __meta_kubernetes_service_name
-        - __meta_kubernetes_endpoint_port_name
-        action: keep
-        regex: logging;metrics
-      # common metrics
-      - action: labelmap
-        regex: __meta_kubernetes_service_label_(.+)
-      - source_labels: [ __meta_kubernetes_pod_name ]
-        target_label: pod
-      metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.vali | indent 6 }}
-{{- end }}
-
-{{- if  (index .Values.rules.optional "valiTelegraf" ).enabled }}
-    - job_name: vali-telegraf
-      honor_labels: false
-      kubernetes_sd_configs:
-      - role: endpoints
-        namespaces:
-          names: [{{ .Release.Namespace }}]
-      relabel_configs:
-      - source_labels:
-        - __meta_kubernetes_service_name
-        - __meta_kubernetes_endpoint_port_name
-        action: keep
-        regex: logging;telegraf
-      # common metrics
-      - action: labelmap
-        regex: __meta_kubernetes_service_label_(.+)
-      - source_labels: [ __meta_kubernetes_pod_name ]
-        target_label: pod
-      metric_relabel_configs:
-      - source_labels: [__name__]
-        target_label: __name__
-        regex:  'iptables_(.+)'
-        action: replace
-        replacement: 'shoot_node_logging_incoming_$1'
-{{- end }}
-
 {{- if .Values.additionalScrapeConfigs }}
 {{ toString .Values.additionalScrapeConfigs | indent 4 }}
 {{- end }}
