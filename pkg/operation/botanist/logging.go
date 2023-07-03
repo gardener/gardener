@@ -25,6 +25,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/logging/eventlogger"
+	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
@@ -170,7 +171,7 @@ func (b *Botanist) DefaultEventLogger() (component.Deployer, error) {
 }
 
 // DefaultVali returns a deployer for Vali.
-func (b *Botanist) DefaultVali() (component.Deployer, error) {
+func (b *Botanist) DefaultVali() (vali.Interface, error) {
 	hvpaEnabled := features.DefaultFeatureGate.Enabled(features.HVPA)
 	if b.ManagedSeed != nil {
 		hvpaEnabled = features.DefaultFeatureGate.Enabled(features.HVPAForShootedSeed)
@@ -183,7 +184,6 @@ func (b *Botanist) DefaultVali() (component.Deployer, error) {
 		b.SecretsManager,
 		component.ClusterTypeShoot,
 		b.Shoot.GetReplicas(1),
-		b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config),
 		b.isShootNodeLoggingEnabled(),
 		v1beta1constants.PriorityClassNameShootControlPlane100,
 		nil,

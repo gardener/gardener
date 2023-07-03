@@ -324,14 +324,13 @@ func defaultVali(
 		storage = loggingConfig.Vali.Garden.Storage
 	}
 
-	return shared.NewVali(
+	deployer, err := shared.NewVali(
 		c,
 		gardenNamespaceName,
 		imageVector,
 		nil,
 		component.ClusterTypeSeed,
 		1,
-		isLoggingEnabled,
 		false,
 		v1beta1constants.PriorityClassNameSeedSystem600,
 		storage,
@@ -343,4 +342,13 @@ func defaultVali(
 			End:   maintenanceEnd,
 		},
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	if !isLoggingEnabled {
+		return component.OpDestroy(deployer), err
+	}
+
+	return deployer, err
 }

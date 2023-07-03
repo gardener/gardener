@@ -34,7 +34,6 @@ func NewVali(
 	secretsManager secretsmanager.Interface,
 	clusterType component.ClusterType,
 	replicas int32,
-	isLoggingEnabled bool,
 	isShootNodeLoggingEnabled bool,
 	priorityClassName string,
 	storage *resource.Quantity,
@@ -43,7 +42,7 @@ func NewVali(
 	hvpaEnabled bool,
 	maintenanceTimeWindow *hvpav1alpha1.MaintenanceTimeWindow,
 ) (
-	component.Deployer,
+	vali.Interface,
 	error,
 ) {
 	valiImage, err := imageVector.FindImage(images.ImageNameVali)
@@ -94,8 +93,5 @@ func NewVali(
 		IngressHost:           ingressHost,
 	})
 
-	if !isLoggingEnabled {
-		return component.OpDestroy(deployer), nil
-	}
 	return deployer, nil
 }
