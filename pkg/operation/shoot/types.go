@@ -46,7 +46,9 @@ import (
 	"github.com/gardener/gardener/pkg/component/kubernetesdashboard"
 	"github.com/gardener/gardener/pkg/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
+	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
+	"github.com/gardener/gardener/pkg/component/nodeexporter"
 	"github.com/gardener/gardener/pkg/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/vpa"
@@ -163,7 +165,7 @@ type SystemComponents struct {
 	Namespaces          component.DeployWaiter
 	NodeLocalDNS        nodelocaldns.Interface
 	NodeProblemDetector component.DeployWaiter
-	NodeExporter        component.DeployWaiter
+	NodeExporter        nodeexporter.Interface
 	Resources           component.DeployWaiter
 	VPNShoot            vpnshoot.Interface
 }
@@ -172,7 +174,7 @@ type SystemComponents struct {
 type Logging struct {
 	ShootRBACProxy   component.Deployer
 	ShootEventLogger component.Deployer
-	Vali             component.Deployer
+	Vali             vali.Interface
 }
 
 // Addons contains references for the addons.
