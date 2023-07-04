@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package monitoring_test
+package plutono_test
 
 import (
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
-	. "github.com/gardener/gardener/pkg/component/monitoring"
+	. "github.com/gardener/gardener/pkg/component/plutono"
 )
 
 var _ = Describe("Logging", func() {
@@ -36,52 +36,16 @@ var _ = Describe("Logging", func() {
 				[]*fluentbitv1alpha2.ClusterFilter{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "alertmanager",
+							Name:   "plutono",
 							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
 						},
 						Spec: fluentbitv1alpha2.FilterSpec{
-							Match: "kubernetes.*alertmanager*alertmanager*",
+							Match: "kubernetes.*plutono*plutono*",
 							FilterItems: []fluentbitv1alpha2.FilterItem{
 								{
 									Parser: &fluentbitv1alpha2filter.Parser{
 										KeyName:     "log",
-										Parser:      "alertmanager-parser",
-										ReserveData: pointer.Bool(true),
-									},
-								},
-							},
-						},
-					},
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:   "prometheus--prometheus",
-							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
-						},
-						Spec: fluentbitv1alpha2.FilterSpec{
-							Match: "kubernetes.*prometheus*prometheus*",
-							FilterItems: []fluentbitv1alpha2.FilterItem{
-								{
-									Parser: &fluentbitv1alpha2filter.Parser{
-										KeyName:     "log",
-										Parser:      "prometheus-parser",
-										ReserveData: pointer.Bool(true),
-									},
-								},
-							},
-						},
-					},
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:   "prometheus--blackbox-exporter",
-							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
-						},
-						Spec: fluentbitv1alpha2.FilterSpec{
-							Match: "kubernetes.*prometheus*blackbox-exporter*",
-							FilterItems: []fluentbitv1alpha2.FilterItem{
-								{
-									Parser: &fluentbitv1alpha2filter.Parser{
-										KeyName:     "log",
-										Parser:      "prometheus-parser",
+										Parser:      "plutono-parser",
 										ReserveData: pointer.Bool(true),
 									},
 								},
@@ -89,32 +53,18 @@ var _ = Describe("Logging", func() {
 						},
 					},
 				}))
-
 			Expect(loggingConfig.Parsers).To(Equal(
 				[]*fluentbitv1alpha2.ClusterParser{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:   "alertmanager-parser",
+							Name:   "plutono-parser",
 							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
 						},
 						Spec: fluentbitv1alpha2.ParserSpec{
 							Regex: &fluentbitv1alpha2parser.Regex{
-								Regex:      "^level=(?<severity>\\w+)\\s+ts=(?<time>\\d{4}-\\d{2}-\\d{2}[Tt].*[zZ])\\s+caller=(?<source>[^\\s]*+)\\s+(?<log>.*)",
+								Regex:      " ^t=(?<time>\\d{4}-\\d{2}-\\d{2}T[^ ]*)\\s+lvl=(?<severity>\\w+)\\smsg=\"(?<log>.*)\"\\s+logger=(?<source>.*)",
 								TimeKey:    "time",
-								TimeFormat: "%Y-%m-%dT%H:%M:%S.%L",
-							},
-						},
-					},
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:   "prometheus-parser",
-							Labels: map[string]string{"fluentbit.gardener/type": "seed"},
-						},
-						Spec: fluentbitv1alpha2.ParserSpec{
-							Regex: &fluentbitv1alpha2parser.Regex{
-								Regex:      "^ts=(?<time>\\d{4}-\\d{2}-\\d{2}[Tt]{1}\\d{2}:\\d{2}:\\d{2}\\.\\d+\\S+)\\s+caller=(?<source>.+?)\\s+level=(?<severity>\\w+)\\s+(?<log>.*)$",
-								TimeKey:    "time",
-								TimeFormat: "%Y-%m-%dT%H:%M:%S.%L%z",
+								TimeFormat: "%Y-%m-%dT%H:%M:%S%z",
 							},
 						},
 					},
