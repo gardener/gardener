@@ -4,10 +4,8 @@ title: Access to the Garden Cluster for Extensions
 
 # Access to the Garden Cluster for Extensions
 
-## TL;DR
-
 Extensions that are installed on seed clusters via a `ControllerInstallation` can simply read the kubeconfig file specified by the `GARDEN_KUBECONFIG` environment variable to create a garden cluster client.
-With this, they use a short-lived token (valid for `12h`) for a dedicated `ServiceAccount` in the `seed-<seed-name>` namespace to securely access the garden cluster.
+With this, they use a short-lived token (valid for `12h`) associated with a dedicated `ServiceAccount` in the `seed-<seed-name>` namespace to securely access the garden cluster.
 
 > ⚠️ This feature is under development. The managed `ServiceAccounts` in the garden cluster don't have any API permissions as of now. They will be handled by the `SeedAuthorizer` in the future and equipped with permissions similar to the gardenlets' credentials. See [gardener/gardener#8001](https://github.com/gardener/gardener/issues/8001) for more information.
 
@@ -46,12 +44,11 @@ By default, extensions are equipped with secure access to the garden cluster usi
 They can simply read the file specified by the `GARDEN_KUBECONFIG` and construct a garden client with it.
 
 When installing a [`ControllerInstallation`](controllerregistration.md), gardenlet creates two secrets in the installation's namespace: a generic garden kubeconfig (`generic-garden-kubeconfig-<hash>`) and a garden access secret (`garden-access-extension`).
-Additionally, it injects `volume`, `volumeMounts`, and two environment variables into all objects in the `apps` and `batch` API group:
+Additionally, it injects `volume`, `volumeMounts`, and two environment variables into all (init) containers in all objects in the `apps` and `batch` API groups:
 
-- The `GARDEN_KUBECONFIG` environment variable points to the path where the generic garden kubeconfig is mounted.
-  This in turn contains the garden cluster's address and current CA bundle as well as the path where the garden access token is mounted.
-- The `SEED_NAME` environment variable is set to the name of the `Seed` where the extension is installed.
-This is useful for restricting watches in the garden cluster to relevant objects.
+- `GARDEN_KUBECONFIG`: points to the path where the generic garden kubeconfig is mounted.
+- `SEED_NAME`: set to the name of the `Seed` where the extension is installed. 
+  This is useful for restricting watches in the garden cluster to relevant objects.
 
 For example, a `Deployment` deployed via a `ControllerInstallation` will be mutated as follows:
 
@@ -125,12 +122,11 @@ users:
 ## Using Self-Managed Garden Access
 
 Extensions can also manage their own garden access secrets if required.
-The default garden access secret is always created.
-However, extensions can create additional garden access secrets as needed.
-Note that these garden access secrets need to be mounted manually.
+Note that the default garden access secret is always created.
+However, extensions can create additional garden access secrets as needed and mount them manually.
 For this, gardenlet injects the name of the current generic garden kubeconfig secret into the chart's `.garden.genericKubeconfigSecretName` value.
 
-When injecting `volume`, `volumeMounts`, and the `GARDEN_KUBECONFIG` environment variable, gardenlet skips all objects that already contain the `GARDEN_KUBECONFIG` environment variable.
+When injecting `volume`, `volumeMounts`, and the `GARDEN_KUBECONFIG` environment variable, gardenlet skips all objects that already contain the `GARDEN_KUBECONFIG` environment variable in one of their (init) containers.
 It will still inject the default garden access into all other objects though.
 The `SEED_NAME` environment variable is always injected.
 

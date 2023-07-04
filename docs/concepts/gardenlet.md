@@ -268,8 +268,8 @@ gardener:
     genericKubeconfigSecretName: <secret-name>
   gardenlet:
     featureGates:
-      MachineControllerManagerDeployment: true
-      IPv6SingleStack: false
+      Foo: true
+      Bar: false
       # ...
   seed:
     name: <seed-name>
