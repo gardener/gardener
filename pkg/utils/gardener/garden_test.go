@@ -16,7 +16,6 @@ package gardener_test
 
 import (
 	"fmt"
-	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -89,16 +88,12 @@ var _ = Describe("Garden", func() {
 				data     = map[string][]byte{
 					"foo": []byte("bar"),
 				}
-				includeZones = []string{"a", "b"}
-				excludeZones = []string{"c", "d"}
 
 				secret = &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
-							DNSProvider:     provider,
-							DNSDomain:       domain,
-							DNSIncludeZones: strings.Join(includeZones, ","),
-							DNSExcludeZones: strings.Join(excludeZones, ","),
+							DNSProvider: provider,
+							DNSDomain:   domain,
 						},
 					},
 					Data: data,

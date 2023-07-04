@@ -31,12 +31,6 @@ const (
 	// DNSZone is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
 	// DNS hosted zone id.
 	DNSZone = "dns.gardener.cloud/zone"
-	// DNSIncludeZones is the key for an annotation on a Kubernetes Secret object whose value must point to a list
-	// of zones that shall be included.
-	DNSIncludeZones = "dns.gardener.cloud/include-zones"
-	// DNSExcludeZones is the key for an annotation on a Kubernetes Secret object whose value must point to a list
-	// of zones that shall be excluded.
-	DNSExcludeZones = "dns.gardener.cloud/exclude-zones"
 
 	// APIServerFQDNPrefix is the part of a FQDN which will be used to construct the domain name for the kube-apiserver of
 	// a Shoot cluster. For example, when a Shoot specifies domain 'cluster.example.com', the apiserver domain would be

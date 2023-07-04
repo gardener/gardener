@@ -40,11 +40,9 @@ var _ = Describe("Dns", func() {
 			DNSDomain: "foo",
 		}, BeEmpty(), BeEmpty(), BeEmpty(), HaveOccurred()),
 		Entry("all present", map[string]string{
-			DNSProvider:     "bar",
-			DNSDomain:       "foo",
-			DNSZone:         "zoo",
-			DNSIncludeZones: "a,b,c",
-			DNSExcludeZones: "d,e,f",
+			DNSProvider: "bar",
+			DNSDomain:   "foo",
+			DNSZone:     "zoo",
 		}, Equal("bar"), Equal("foo"), Equal("zoo"), Not(HaveOccurred())),
 	)
 
