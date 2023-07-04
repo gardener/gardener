@@ -26,7 +26,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {
@@ -156,14 +155,6 @@ func SetDefaults_Shoot(obj *Shoot) {
 
 		if obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize == nil {
 			obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = calculateDefaultNodeCIDRMaskSize(&obj.Spec)
-		}
-		k8sLess127, _ := versionutils.CheckVersionMeetsConstraint(obj.Spec.Kubernetes.Version, "< 1.27")
-		if obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod == nil {
-			if k8sLess127 {
-				obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod = &metav1.Duration{Duration: 2 * time.Minute}
-			} else {
-				obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod = &metav1.Duration{Duration: 40 * time.Second}
-			}
 		}
 
 		if obj.Spec.Kubernetes.KubeScheduler == nil {
@@ -295,7 +286,7 @@ func SetDefaults_KubeAPIServerConfig(obj *KubeAPIServerConfig) {
 }
 
 // SetDefaults_KubeControllerManagerConfig sets default values for KubeControllerManagerConfig objects.
-func SetDefaults_KubeControllerManagerConfig(obj *KubeControllerManagerConfig) {}
+func SetDefaults_KubeControllerManagerConfig(_ *KubeControllerManagerConfig) {}
 
 // SetDefaults_Networking sets default values for Networking objects.
 func SetDefaults_Networking(obj *Networking) {

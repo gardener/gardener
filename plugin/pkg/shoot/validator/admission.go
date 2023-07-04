@@ -772,6 +772,7 @@ func (c *validationContext) validateKubernetes(a admission.Attributes) field.Err
 		allErrs = append(allErrs, validateKubernetesVersionConstraints(c.cloudProfile.Spec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version, path.Child("version"))...)
 	}
 
+	// TODO: Consider skipping defaulting if deletionTimestamp is set.
 	if c.shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig == nil {
 		// Error is ignored here because we cannot do anything meaningful with it - variable will default to "false".
 		if k8sLessThan126, _ := versionutils.CheckVersionMeetsConstraint(c.shoot.Spec.Kubernetes.Version, "< 1.26"); k8sLessThan126 {
@@ -780,16 +781,41 @@ func (c *validationContext) validateKubernetes(a admission.Attributes) field.Err
 			c.shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(false)
 		}
 	}
-
 	if len(c.shoot.Spec.Provider.Workers) > 0 {
 		// Error is ignored here because we cannot do anything meaningful with them - variables will default to `false`.
 		k8sLess125, _ := versionutils.CheckVersionMeetsConstraint(c.shoot.Spec.Kubernetes.Version, "< 1.25")
 		if c.shoot.Spec.Kubernetes.AllowPrivilegedContainers == nil && k8sLess125 && !isPSPDisabled(c.shoot) {
 			c.shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
 		}
+
+		k8sLess127, _ := versionutils.CheckVersionMeetsConstraint(*c.shoot.Spec.Kubernetes.Version, "< 1.27")
+		if c.shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod == nil {
+			if k8sLess127 {
+				c.shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod = &metav1.Duration{Duration: 2 * time.Minute}
+			} else {
+				c.shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod = &metav1.Duration{Duration: 40 * time.Second}
+			}
+		} else if upgradeToKubernetes127(c.shoot, c.oldShoot) && defaultNodeGracePeriod(c.oldShoot) {
+			c.shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod = &metav1.Duration{Duration: 40 * time.Second}
+		}
 	}
 
 	return allErrs
+}
+
+func defaultNodeGracePeriod(shoot *core.Shoot) bool {
+	return shoot.Spec.Kubernetes.KubeControllerManager != nil &&
+		reflect.DeepEqual(shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod, &metav1.Duration{Duration: 2 * time.Minute})
+}
+
+func upgradeToKubernetes127(newShoot, oldShoot *core.Shoot) bool {
+	var oldShootK8sLess127 bool
+	if oldShoot.Spec.Kubernetes.Version != nil {
+		oldShootK8sLess127, _ = versionutils.CheckVersionMeetsConstraint(*oldShoot.Spec.Kubernetes.Version, "< 1.27")
+	}
+	newShootK8sGreaterEqual127, _ := versionutils.CheckVersionMeetsConstraint(*newShoot.Spec.Kubernetes.Version, ">= 1.27")
+
+	return oldShootK8sLess127 && newShootK8sGreaterEqual127
 }
 
 func (c *validationContext) validateProvider(a admission.Attributes) field.ErrorList {

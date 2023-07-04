@@ -22,7 +22,6 @@ import (
 
 	"github.com/Masterminds/semver"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -63,21 +62,19 @@ func (shootStrategy) NamespaceScoped() bool {
 	return true
 }
 
-func (shootStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
+func (shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	shoot := obj.(*core.Shoot)
 
 	shoot.Generation = 1
 	shoot.Status = core.ShootStatus{}
 }
 
-func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newShoot := obj.(*core.Shoot)
 	oldShoot := old.(*core.Shoot)
 
 	newShoot.Status = oldShoot.Status               // can only be changed by shoots/status subresource
 	newShoot.Spec.SeedName = oldShoot.Spec.SeedName // can only be changed by shoots/binding subresource
-
-	defaultNodeMonitorGracePeriod(newShoot, oldShoot)
 
 	if mustIncreaseGeneration(oldShoot, newShoot) {
 		newShoot.Generation = oldShoot.Generation + 1
@@ -167,7 +164,7 @@ func mustIncreaseGenerationForSpecChanges(oldShoot, newShoot *core.Shoot) bool {
 	return !apiequality.Semantic.DeepEqual(oldShoot.Spec, newShoot.Spec)
 }
 
-func (shootStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
+func (shootStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
 	shoot := obj.(*core.Shoot)
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, validation.ValidateShoot(shoot)...)
@@ -207,7 +204,7 @@ func (shootStrategy) AllowCreateOnUpdate() bool {
 	return false
 }
 
-func (shootStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
+func (shootStrategy) ValidateUpdate(_ context.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	newShoot := newObj.(*core.Shoot)
 	oldShoot := oldObj.(*core.Shoot)
 	return validation.ValidateShootUpdate(newShoot, oldShoot)
@@ -236,7 +233,7 @@ func NewStatusStrategy() shootStatusStrategy {
 	return shootStatusStrategy{NewStrategy(0)}
 }
 
-func (shootStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+func (shootStatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newShoot := obj.(*core.Shoot)
 	oldShoot := old.(*core.Shoot)
 	newShoot.Spec = oldShoot.Spec
@@ -247,7 +244,7 @@ func (shootStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtim
 	}
 }
 
-func (shootStatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
+func (shootStatusStrategy) ValidateUpdate(_ context.Context, obj, old runtime.Object) field.ErrorList {
 	return validation.ValidateShootStatusUpdate(obj.(*core.Shoot).Status, old.(*core.Shoot).Status)
 }
 
@@ -268,7 +265,7 @@ func NewBindingStrategy() shootBindingStrategy {
 	return shootBindingStrategy{NewStrategy(0)}
 }
 
-func (shootBindingStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+func (shootBindingStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newShoot := obj.(*core.Shoot)
 	oldShoot := old.(*core.Shoot)
 
