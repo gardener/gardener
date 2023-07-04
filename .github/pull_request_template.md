@@ -30,7 +30,7 @@ Write your release note:
 
 Format of block header: <category> <target_group>
 Possible values:
-- category:       breaking|feature|bugfix|doc|other
+- category:       breaking|noteworthy|feature|bugfix|doc|other
 - target_group:   user|operator|developer|dependency
 -->
 ```other operator
