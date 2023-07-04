@@ -427,6 +427,9 @@ type DNS struct {
 
 // DNSProvider contains information about a DNS provider.
 type DNSProvider struct {
+	// Note: This field is not used by Gardener anymore. However, providers might still be synced by the DNS extension which
+	// is mainly why we can't deprecate or remove it, see https://github.com/gardener/gardener-extension-shoot-dns-service/blob/f599bec786ab6e27e6fd41d423d4e73dd4952f4f/pkg/admission/mutator/shoot_mutator.go#L99-L100.
+
 	// Domains contains information about which domains shall be included/excluded for this provider.
 	// +optional
 	Domains *DNSIncludeExclude `json:"domains,omitempty" protobuf:"bytes,1,opt,name=domains"`
@@ -442,14 +445,15 @@ type DNSProvider struct {
 	// Type is the DNS provider type.
 	// +optional
 	Type *string `json:"type,omitempty" protobuf:"bytes,4,opt,name=type"`
+	// Note: This field is not used by Gardener anymore. However, providers might still be synced by the DNS extension which
+	// is mainly why we can't deprecate or remove it, see https://github.com/gardener/gardener-extension-shoot-dns-service/blob/f599bec786ab6e27e6fd41d423d4e73dd4952f4f/pkg/admission/mutator/shoot_mutator.go#L105-L106.
+
 	// Zones contains information about which hosted zones shall be included/excluded for this provider.
 	// +optional
 	Zones *DNSIncludeExclude `json:"zones,omitempty" protobuf:"bytes,5,opt,name=zones"`
 }
 
 // DNSIncludeExclude contains information about which domains shall be included/excluded.
-// Note: This struct is not used by Gardener anymore. However, providers might still be synced by the DNS extension which
-// is mainly why we can't deprecate or remove it, see https://github.com/gardener/gardener-extension-shoot-dns-service/blob/f599bec786ab6e27e6fd41d423d4e73dd4952f4f/pkg/admission/mutator/shoot_mutator.go#L110.
 type DNSIncludeExclude struct {
 	// Include is a list of domains that shall be included.
 	// +optional
