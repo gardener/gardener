@@ -7,6 +7,7 @@ This document describes how to contribute features or hotfixes, and how new Gard
     - [Release Responsible Plan](#release-responsible-plan)
     - [Release Validation](#release-validation)
   - [Contributing New Features or Fixes](#contributing-new-features-or-fixes)
+    - [TODO Statements](#todo-statements)
   - [Cherry Picks](#cherry-picks)
     - [Prerequisites](#prerequisites)
     - [Initiate a Cherry Pick](#initiate-a-cherry-pick)
@@ -21,14 +22,18 @@ Hotfixes are usually maintained for the latest three minor releases, though, the
 
 Version | Week No     | Begin Validation Phase | Due Date           | Release Responsible                              |
 ------- | ----------- | ---------------------- | -------------------| ------------------------------------------------ |
-v1.71   | Week 19-20  | May 8, 2023            | May 21, 2023       | [@shafeeqes](https://github.com/shafeeqes)       |
-v1.72   | Week 21-22  | May 22, 2023           | June 4, 2023       | [@ary1992](https://github.com/ary1992)           |
-v1.73   | Week 23-24  | June 5, 2023           | June 18, 2023      | [@timuthy](https://github.com/timuthy)           |
-v1.74   | Week 25-26  | June 19, 2023          | July 2, 2023       | [@oliver-goetz](https://github.com/oliver-goetz) |
-v1.75   | Week 27-28  | July 3, 2023           | July 16, 2023      | [@rfranzke](https://github.com/rfranzke)         |
 v1.76   | Week 29-30  | July 17, 2023          | July 30, 2023      | [@plkokanov](https://github.com/plkokanov)       |
 v1.77   | Week 31-32  | July 31, 2023          | August 13, 2023    | [@ialidzhikov](https://github.com/ialidzhikov)   |
 v1.78   | Week 33-34  | August 14, 2023        | August 27, 2023    | [@acumino](https://github.com/acumino)           |
+v1.79   | Week 35-36  | August 28, 2023        | September 10, 2023 | [@ScheererJ](https://github.com/ScheererJ)       |
+v1.80   | Week 37-38  | September 11, 2023     | September 24, 2023 | [@shafeeqes](https://github.com/shafeeqes)       |
+v1.81   | Week 39-40  | September 25, 2023     | October 8, 2023    | [@ary1992](https://github.com/ary1992)           |
+v1.82   | Week 41-42  | October 9, 2023        | October 22, 2023   | [@timuthy](https://github.com/timuthy)           |
+v1.83   | Week 43-44  | October 23, 2023       | November 5, 2023   | [@oliver-goetz](https://github.com/oliver-goetz) |
+v1.84   | Week 45-46  | November 6, 2023       | November 19, 2023  | [@rfranzke](https://github.com/rfranzke)         |
+v1.85   | Week 47-48  | November 20, 2023      | December 3, 2023   | [@plkokanov](https://github.com/plkokanov)       |
+v1.86   | Week 49-50  | December 4, 2023       | December 17, 2023  | [@ialidzhikov](https://github.com/ialidzhikov)   |
+v1.87   | Week 01-04  | January 1, 2024        | January 28, 2024   | [@acumino](https://github.com/acumino)           |
 
 Apart from the release of the next version, the release responsible is also taking care of potential hotfix releases of the last three minor versions.
 The release responsible is the main contact person for coordinating new feature PRs for the next minor versions or cherry-pick PRs for the last three minor versions.
@@ -92,6 +97,11 @@ The release responsible is the main contact person for coordinating new feature 
   v1.68   | Week 13-14  | March 27, 2023         | April 9, 2023      | [@acumino](https://github.com/acumino)                                                 |
   v1.69   | Week 15-16  | April 10, 2023         | April 23, 2023     | [@oliver-goetz](https://github.com/oliver-goetz)                                       |
   v1.70   | Week 17-18  | April 24, 2023         | May 7, 2023        | [@ialidzhikov](https://github.com/ialidzhikov)                                         |
+  v1.71   | Week 19-20  | May 8, 2023            | May 21, 2023       | [@shafeeqes](https://github.com/shafeeqes)                                             |
+  v1.72   | Week 21-22  | May 22, 2023           | June 4, 2023       | [@ary1992](https://github.com/ary1992)                                                 |
+  v1.73   | Week 23-24  | June 5, 2023           | June 18, 2023      | [@timuthy](https://github.com/timuthy)                                                 |
+  v1.74   | Week 25-26  | June 19, 2023          | July 2, 2023       | [@oliver-goetz](https://github.com/oliver-goetz)                                       |
+  v1.75   | Week 27-28  | July 3, 2023           | July 16, 2023      | [@rfranzke](https://github.com/rfranzke)                                               |
 </details>
 
 ### Release Validation
