@@ -87,8 +87,6 @@ const (
 	ImageNameMetricsServer = "metrics-server"
 	// ImageNameNginxIngressController is a constant for an image in the image vector with name 'nginx-ingress-controller'.
 	ImageNameNginxIngressController = "nginx-ingress-controller"
-	// ImageNameNginxIngressControllerSeed is a constant for an image in the image vector with name 'nginx-ingress-controller-seed'.
-	ImageNameNginxIngressControllerSeed = "nginx-ingress-controller-seed"
 	// ImageNameNodeExporter is a constant for an image in the image vector with name 'node-exporter'.
 	ImageNameNodeExporter = "node-exporter"
 	// ImageNameNodeLocalDns is a constant for an image in the image vector with name 'node-local-dns'.
