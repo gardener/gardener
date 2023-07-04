@@ -50,6 +50,8 @@ Additionally, it injects `volume`, `volumeMounts`, and two environment variables
 - `SEED_NAME`: set to the name of the `Seed` where the extension is installed. 
   This is useful for restricting watches in the garden cluster to relevant objects.
 
+If an object already contains the `GARDEN_KUBECONFIG` environment variable, it is not overwritten and injection of `volume` and `volumeMounts` is skipped.
+
 For example, a `Deployment` deployed via a `ControllerInstallation` will be mutated as follows:
 
 ```yaml
@@ -118,17 +120,6 @@ users:
   user:
     tokenFile: /var/run/secrets/gardener.cloud/garden/generic-kubeconfig/token
 ```
-
-## Using Self-Managed Garden Access
-
-Extensions can also manage their own garden access secrets if required.
-Note that the default garden access secret is always created.
-However, extensions can create additional garden access secrets as needed and mount them manually.
-For this, gardenlet injects the name of the current generic garden kubeconfig secret into the chart's `.garden.genericKubeconfigSecretName` value.
-
-When injecting `volume`, `volumeMounts`, and the `GARDEN_KUBECONFIG` environment variable, gardenlet skips all objects that already contain the `GARDEN_KUBECONFIG` environment variable in one of their (init) containers.
-It will still inject the default garden access into all other objects though.
-The `SEED_NAME` environment variable is always injected.
 
 ## Renewing All Garden Access Secrets
 
