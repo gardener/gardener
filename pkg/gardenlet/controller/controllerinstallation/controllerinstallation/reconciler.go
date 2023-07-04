@@ -31,6 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -426,9 +427,7 @@ func (r *Reconciler) reconcileGenericGardenKubeconfig(ctx context.Context, names
 		},
 	}
 
-	if err := kubernetesutils.MakeUnique(kubeconfigSecret); err != nil {
-		return "", err
-	}
+	utilruntime.Must(kubernetesutils.MakeUnique(kubeconfigSecret))
 
 	return kubeconfigSecret.Name, client.IgnoreAlreadyExists(r.SeedClientSet.Client().Create(ctx, kubeconfigSecret))
 }
@@ -436,11 +435,8 @@ func (r *Reconciler) reconcileGenericGardenKubeconfig(ctx context.Context, names
 func (r *Reconciler) reconcileGardenAccessSecret(ctx context.Context, controllerInstallationName string, namespace string) (*gardenerutils.AccessSecret, error) {
 	accessSecret := gardenerutils.NewGardenAccessSecret("extension", namespace).
 		WithServiceAccountName(v1beta1constants.ExtensionGardenServiceAccountPrefix + controllerInstallationName)
-	if err := accessSecret.Reconcile(ctx, r.SeedClientSet.Client()); err != nil {
-		return nil, err
-	}
 
-	return accessSecret, nil
+	return accessSecret, accessSecret.Reconcile(ctx, r.SeedClientSet.Client())
 }
 
 var (

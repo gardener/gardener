@@ -16,13 +16,19 @@ package features
 
 import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/component-base/featuregate"
 
 	"github.com/gardener/gardener/pkg/features"
 )
 
 // RegisterFeatureGates registers the feature gates of gardenlet.
 func RegisterFeatureGates() {
-	utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(
+	utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(GetFeatures()...)))
+}
+
+// GetFeatures returns all gardenlet features.
+func GetFeatures() []featuregate.Feature {
+	return []featuregate.Feature{
 		features.HVPA,
 		features.HVPAForShootedSeed,
 		features.DefaultSeccompProfile,
@@ -30,5 +36,5 @@ func RegisterFeatureGates() {
 		features.IPv6SingleStack,
 		features.MachineControllerManagerDeployment,
 		features.DisableScalingClassesForShoots,
-	)))
+	}
 }

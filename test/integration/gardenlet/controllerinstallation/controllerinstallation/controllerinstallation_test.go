@@ -31,7 +31,9 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -215,13 +217,16 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				Expect(yaml.Unmarshal([]byte(configMap.Data["values"]), &values)).To(Succeed())
 			}).Should(Succeed())
 
-			// The list of feature gates is unexpectedly longer than in reality since the envtest starts gardener-apiserver
-			// in-process which adds its own as well as the default Kubernetes features gates to the same map that is reused
-			// in the tested gardenlet controller:
+			// Our envtest setup starts gardener-apiserver in-process which adds its own feature gates as well as the default
+			// Kubernetes features gates to the same map that is reused in the tested gardenlet controller:
 			// `features.DefaultFeatureGate` is the same as `utilfeature.DefaultMutableFeatureGate`
-			// Hence, we assert that one of the feature gates is correctly set in the chart values and ignore the rest.
+			// Hence, these feature gates are also mixed into the helm values.
+			// Here we assert that all known gardenlet features are correctly passed to the helm values but ignore the rest.
 			gardenletValues := (values["gardener"].(map[string]any))["gardenlet"].(map[string]any)
-			Expect(gardenletValues["featureGates"]).To(HaveKeyWithValue("MachineControllerManagerDeployment", BeFalse()))
+			for _, feature := range gardenletfeatures.GetFeatures() {
+				Expect(gardenletValues["featureGates"]).To(HaveKeyWithValue(string(feature), features.DefaultFeatureGate.Enabled(feature)))
+			}
+
 			delete(gardenletValues, "featureGates")
 			(values["gardener"].(map[string]any))["gardenlet"] = gardenletValues
 

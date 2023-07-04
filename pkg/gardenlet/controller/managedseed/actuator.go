@@ -847,12 +847,12 @@ func (a *actuator) createBootstrapKubeconfig(ctx context.Context, objectMeta met
 		)
 
 		// Create a kubeconfig containing a valid service account token as client credentials
-		kubernetesClientSet, err := kubernetesclientset.NewForConfig(&gardenClientRestConfig)
+		kubernetesClientSet, err := kubernetesclientset.NewForConfig(gardenClientRestConfig)
 		if err != nil {
 			return "", fmt.Errorf("failed creating Kubernetes client: %w", err)
 		}
 
-		bootstrapKubeconfig, err = gardenletbootstraputil.ComputeGardenletKubeconfigWithServiceAccountToken(ctx, a.gardenClient, kubernetesClientSet.CoreV1(), &gardenClientRestConfig, serviceAccountName, serviceAccountNamespace)
+		bootstrapKubeconfig, err = gardenletbootstraputil.ComputeGardenletKubeconfigWithServiceAccountToken(ctx, a.gardenClient, kubernetesClientSet.CoreV1(), gardenClientRestConfig, serviceAccountName, serviceAccountNamespace)
 		if err != nil {
 			return "", err
 		}
@@ -865,7 +865,7 @@ func (a *actuator) createBootstrapKubeconfig(ctx context.Context, objectMeta met
 		)
 
 		// Create a kubeconfig containing a valid bootstrap token as client credentials
-		bootstrapKubeconfig, err = gardenletbootstraputil.ComputeGardenletKubeconfigWithBootstrapToken(ctx, a.gardenClient, &gardenClientRestConfig, tokenID, tokenDescription, tokenValidity)
+		bootstrapKubeconfig, err = gardenletbootstraputil.ComputeGardenletKubeconfigWithBootstrapToken(ctx, a.gardenClient, gardenClientRestConfig, tokenID, tokenDescription, tokenValidity)
 		if err != nil {
 			return "", err
 		}

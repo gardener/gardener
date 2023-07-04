@@ -317,7 +317,7 @@ func InjectGenericGardenKubeconfig(obj runtime.Object, genericKubeconfigName, ac
 }
 
 // PrepareGardenClientRestConfig takes a base rest config and adds an optional host and CA certificate.
-func PrepareGardenClientRestConfig(baseConfig *rest.Config, address *string, caCert []byte) rest.Config {
+func PrepareGardenClientRestConfig(baseConfig *rest.Config, address *string, caCert []byte) *rest.Config {
 	gardenClientRestConfig := rest.CopyConfig(baseConfig)
 	if address != nil {
 		gardenClientRestConfig.Host = *address
@@ -327,5 +327,5 @@ func PrepareGardenClientRestConfig(baseConfig *rest.Config, address *string, caC
 			CAData: caCert,
 		}
 	}
-	return *gardenClientRestConfig
+	return gardenClientRestConfig
 }

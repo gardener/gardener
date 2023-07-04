@@ -76,9 +76,17 @@ func VisitPodSpec(obj runtime.Object, visit func(*corev1.PodSpec)) error {
 	return nil
 }
 
-// VisitContainers calls the given visitor for all containers in the given PodSpec. If containerNames are given it only
-// visits containers with matching names. The visitor may mutate the Container.
+// VisitContainers calls the given visitor for all (init) containers in the given PodSpec. If containerNames are given
+// it only visits (init) containers with matching names. The visitor may mutate the Container.
 func VisitContainers(podSpec *corev1.PodSpec, visit func(*corev1.Container), containerNames ...string) {
+	for i, c := range podSpec.InitContainers {
+		container := c
+		if len(containerNames) == 0 || utils.ValueExists(container.Name, containerNames) {
+			visit(&container)
+			podSpec.InitContainers[i] = container
+		}
+	}
+
 	for i, c := range podSpec.Containers {
 		container := c
 		if len(containerNames) == 0 || utils.ValueExists(container.Name, containerNames) {

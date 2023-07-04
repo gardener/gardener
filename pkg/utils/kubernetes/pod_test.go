@@ -34,6 +34,14 @@ var _ = Describe("Pod Utils", func() {
 
 	BeforeEach(func() {
 		podSpec = corev1.PodSpec{
+			InitContainers: []corev1.Container{
+				{
+					Name: "init1",
+				},
+				{
+					Name: "init2",
+				},
+			},
 			Containers: []corev1.Container{
 				{
 					Name: "container1",
@@ -199,6 +207,7 @@ var _ = Describe("Pod Utils", func() {
 
 	Describe("#VisitContainers", func() {
 		It("should do nothing if there are no containers", func() {
+			podSpec.InitContainers = nil
 			podSpec.Containers = nil
 			VisitContainers(&podSpec, func(container *corev1.Container) {
 				Fail("called visitor")
@@ -210,19 +219,19 @@ var _ = Describe("Pod Utils", func() {
 				container.TerminationMessagePath = "visited"
 			})
 
-			for _, container := range podSpec.Containers {
+			for _, container := range append(podSpec.InitContainers, podSpec.Containers...) {
 				Expect(container.TerminationMessagePath).To(Equal("visited"), "should have visited and mutated container %s", container.Name)
 			}
 		})
 
 		It("should visit and mutate only containers with matching names", func() {
-			names := sets.New(podSpec.Containers[0].Name)
+			names := sets.New(podSpec.InitContainers[0].Name, podSpec.Containers[0].Name)
 
 			VisitContainers(&podSpec, func(container *corev1.Container) {
 				container.TerminationMessagePath = "visited"
 			}, names.UnsortedList()...)
 
-			for _, container := range podSpec.Containers {
+			for _, container := range append(podSpec.InitContainers, podSpec.Containers...) {
 				if names.Has(container.Name) {
 					Expect(container.TerminationMessagePath).To(Equal("visited"), "should have visited and mutated container %s", container.Name)
 				} else {

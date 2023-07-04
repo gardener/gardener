@@ -24,6 +24,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -296,6 +297,38 @@ var _ = Describe("Garden", func() {
 
 			Expect(podSpec.Containers[1].VolumeMounts).To(BeEmpty())
 			Expect(podSpec.Containers[1].Env).To(BeEmpty())
+		})
+	})
+
+	Describe("#PrepareGardenClientRestConfig", func() {
+		var baseConfig *rest.Config
+
+		BeforeEach(func() {
+			baseConfig = &rest.Config{
+				Username: "test",
+				Host:     "https://garden.local.gardener.cloud",
+				TLSClientConfig: rest.TLSClientConfig{
+					CAData: []byte("ca"),
+				},
+			}
+		})
+
+		It("should copy the baseConfig if no overwrites are given", func() {
+			config := PrepareGardenClientRestConfig(baseConfig, nil, nil)
+			Expect(config).NotTo(BeIdenticalTo(baseConfig))
+			Expect(config).To(Equal(baseConfig))
+		})
+
+		It("should use the overwrites but copy overthing else", func() {
+			config := PrepareGardenClientRestConfig(baseConfig, pointer.String("other"), []byte("ca2"))
+			Expect(config).NotTo(BeIdenticalTo(baseConfig))
+			Expect(config.Host).To(Equal("other"))
+			Expect(config.TLSClientConfig.CAData).To(BeEquivalentTo("ca2"))
+
+			// everything else should be equal
+			config.Host = baseConfig.Host
+			config.TLSClientConfig.CAData = baseConfig.TLSClientConfig.CAData
+			Expect(config).To(Equal(baseConfig))
 		})
 	})
 })
