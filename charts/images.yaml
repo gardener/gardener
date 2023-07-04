@@ -65,7 +65,7 @@ images:
 - name: nginx-ingress-controller-seed
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: registry.k8s.io/ingress-nginx/controller-chroot
-  tag: "v1.8.0"
+  tag: "v1.8.1"
   targetVersion: ">= 1.24"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -372,7 +372,7 @@ images:
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: registry.k8s.io/ingress-nginx/controller-chroot
-  tag: "v1.8.0"
+  tag: "v1.8.1"
   targetVersion: ">= 1.24"
   labels: *optionalAddonLabels
 
