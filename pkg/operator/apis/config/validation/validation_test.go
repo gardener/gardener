@@ -49,6 +49,9 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 					ConcurrentSyncs: pointer.Int(5),
 					SyncPeriod:      &metav1.Duration{Duration: time.Minute},
 				},
+				GardenCare: config.GardenCareControllerConfiguration{
+					SyncPeriod: &metav1.Duration{Duration: time.Minute},
+				},
 				NetworkPolicy: config.NetworkPolicyControllerConfiguration{
 					ConcurrentSyncs: pointer.Int(5),
 				},
@@ -114,6 +117,30 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("controllers.garden.syncPeriod"),
+					})),
+				))
+			})
+		})
+
+		Context("gardenCare", func() {
+			It("should return errors because sync period is nil", func() {
+				conf.Controllers.GardenCare.SyncPeriod = nil
+
+				Expect(ValidateOperatorConfiguration(conf)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.gardenCare.syncPeriod"),
+					})),
+				))
+			})
+
+			It("should return errors because sync period is < 15s", func() {
+				conf.Controllers.GardenCare.SyncPeriod = &metav1.Duration{Duration: time.Second}
+
+				Expect(ValidateOperatorConfiguration(conf)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.gardenCare.syncPeriod"),
 					})),
 				))
 			})

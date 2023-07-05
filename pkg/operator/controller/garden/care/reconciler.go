@@ -31,19 +31,18 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/operator/apis/config"
 )
 
 var (
 	// NewHealthCheck is used to create a new Health check instance.
 	NewHealthCheck = defaultNewHealthCheck
-
-	careSyncPeriod         = 1 * time.Minute
-	careConditionThreshold = 1 * time.Minute
 )
 
 // Reconciler reconciles garden resources and executes health check operations.
 type Reconciler struct {
 	RuntimeClient   client.Client
+	Config          config.OperatorConfiguration
 	Clock           clock.Clock
 	GardenClientMap clientmap.ClientMap
 	GardenNamespace string
@@ -55,7 +54,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 
 	// Timeout for all calls (e.g. status updates), give status updates a bit of headroom if health checks
 	// themselves run into timeouts, so that we will still update the status with that timeout error.
-	reconcileCtx, cancel := controllerutils.GetMainReconciliationContext(reconcileCtx, careSyncPeriod)
+	reconcileCtx, cancel := controllerutils.GetMainReconciliationContext(reconcileCtx, r.Config.Controllers.GardenCare.SyncPeriod.Duration)
 	defer cancel()
 
 	garden := &operatorv1alpha1.Garden{}
@@ -67,7 +66,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	ctx, cancel := controllerutils.GetChildReconciliationContext(reconcileCtx, careSyncPeriod)
+	ctx, cancel := controllerutils.GetChildReconciliationContext(reconcileCtx, r.Config.Controllers.GardenCare.SyncPeriod.Duration)
 	defer cancel()
 
 	log.V(1).Info("Starting garden care")
@@ -106,14 +105,13 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		}
 	}
 
-	return reconcile.Result{RequeueAfter: careSyncPeriod}, nil
+	return reconcile.Result{RequeueAfter: r.Config.Controllers.GardenCare.SyncPeriod.Duration}, nil
 }
 
 func (r *Reconciler) conditionThresholdsToProgressingMapping() map[gardencorev1beta1.ConditionType]time.Duration {
-	return map[gardencorev1beta1.ConditionType]time.Duration{
-		operatorv1alpha1.VirtualGardenAPIServerAvailable:  careConditionThreshold,
-		operatorv1alpha1.VirtualGardenControlPlaneHealthy: careConditionThreshold,
-		operatorv1alpha1.GardenSystemComponentsHealthy:    careConditionThreshold,
-		operatorv1alpha1.VirtualGardenComponentsHealthy:   careConditionThreshold,
+	conditions := map[gardencorev1beta1.ConditionType]time.Duration{}
+	for _, condition := range r.Config.Controllers.GardenCare.ConditionThresholds {
+		conditions[gardencorev1beta1.ConditionType(condition.Type)] = condition.Duration.Duration
 	}
+	return conditions
 }

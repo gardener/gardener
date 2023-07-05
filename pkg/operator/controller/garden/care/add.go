@@ -22,7 +22,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
-	componentbaseconfig "k8s.io/component-base/config"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -63,10 +62,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		r.GardenClientMap, err = clientmapbuilder.
 			NewGardenClientMapBuilder().
 			WithRuntimeClient(mgr.GetClient()).
-			WithClientConnectionConfig(&componentbaseconfig.ClientConnectionConfiguration{
-				QPS:   100.0,
-				Burst: 130.0,
-			}).
+			WithClientConnectionConfig(&r.Config.VirtualClientConnection).
 			WithGardenNamespace(r.GardenNamespace).
 			Build(mgr.GetLogger())
 		if err != nil {
@@ -83,7 +79,10 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
 			// if going into exponential backoff, wait at most the configured sync period
-			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), careSyncPeriod),
+			RateLimiter: workqueue.NewWithMaxWaitRateLimiter(
+				workqueue.DefaultControllerRateLimiter(),
+				r.Config.Controllers.GardenCare.SyncPeriod.Duration,
+			),
 		}).
 		Watches(
 			source.NewKindWithCache(&operatorv1alpha1.Garden{}, mgr.GetCache()),

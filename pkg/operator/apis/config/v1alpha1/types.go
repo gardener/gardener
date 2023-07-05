@@ -55,12 +55,31 @@ type OperatorConfiguration struct {
 	NodeToleration *NodeTolerationConfiguration `json:"nodeToleration,omitempty"`
 }
 
+// ConditionThreshold defines the threshold of the given condition type.
+type ConditionThreshold struct {
+	// Type is the type of the condition to define the threshold for.
+	Type string `json:"type"`
+	// Duration is the duration how long the condition can stay in the progressing state.
+	Duration metav1.Duration `json:"duration"`
+}
+
 // ControllerConfiguration defines the configuration of the controllers.
 type ControllerConfiguration struct {
 	// Garden is the configuration for the garden controller.
 	Garden GardenControllerConfig `json:"garden"`
+	// GardenCare is the configuration for the garden care controller
+	GardenCare GardenCareControllerConfiguration `json:"gardenCare"`
 	// NetworkPolicy is the configuration for the NetworkPolicy controller.
 	NetworkPolicy NetworkPolicyControllerConfiguration `json:"networkPolicy"`
+}
+
+// GardenCareControllerConfiguration defines the configuration of the GardenCare controller.
+type GardenCareControllerConfiguration struct {
+	// SyncPeriod is the duration how often the existing resources are reconciled (how
+	// often the health check is performed.
+	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
+	// ConditionThresholds defines the condition threshold per condition type.
+	ConditionThresholds []ConditionThreshold `json:"conditionThresholds,omitempty"`
 }
 
 // GardenControllerConfig is the configuration for the garden controller.

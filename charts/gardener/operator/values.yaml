@@ -72,6 +72,17 @@ config:
       # backupLeaderElection:
       #   reelectionPeriod: 5s
       #   etcdConnectionTimeout: 5s
+    gardenCare:
+      syncPeriod: 1m
+      conditionThresholds:
+      - type: SystemComponentsHealthy
+        duration: 1m
+      - type: VirtualGardenComponentsHealthy
+        duration: 1m
+      - type: VirtualGardenAPIServerAvailable
+        duration: 1m
+      - type: VirtualGardenControlPlaneHealthy
+        duration: 1m
     networkPolicy:
       concurrentSyncs: 5
     # additionalNamespaceSelectors:

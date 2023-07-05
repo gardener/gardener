@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/operator/apis/config"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/garden/care"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -49,6 +50,7 @@ var _ = Describe("Garden Care Control", func() {
 	var (
 		ctx             context.Context
 		runtimeClient   client.Client
+		operatorConfig  config.OperatorConfiguration
 		gardenClientMap *fakeclientmap.ClientMap
 		reconciler      *Reconciler
 		garden          *operatorv1alpha1.Garden
@@ -60,6 +62,14 @@ var _ = Describe("Garden Care Control", func() {
 		logf.IntoContext(ctx, logr.Discard())
 
 		runtimeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
+
+		operatorConfig = config.OperatorConfiguration{
+			Controllers: config.ControllerConfiguration{
+				GardenCare: config.GardenCareControllerConfiguration{
+					SyncPeriod: &metav1.Duration{Duration: time.Minute},
+				},
+			},
+		}
 
 		garden = &operatorv1alpha1.Garden{
 			ObjectMeta: metav1.ObjectMeta{
@@ -81,22 +91,22 @@ var _ = Describe("Garden Care Control", func() {
 
 		JustBeforeEach(func() {
 			Expect(runtimeClient.Create(ctx, garden)).To(Succeed())
+			reconciler = &Reconciler{
+				RuntimeClient:   runtimeClient,
+				Config:          operatorConfig,
+				GardenClientMap: gardenClientMap,
+				Clock:           fakeClock,
+			}
 		})
 
 		Context("when garden no longer exists", func() {
 			It("should stop reconciling and not requeue", func() {
-				reconciler = &Reconciler{RuntimeClient: runtimeClient, GardenClientMap: gardenClientMap, Clock: fakeClock}
-
 				req = reconcile.Request{NamespacedName: kubernetesutils.Key("some-other-garden")}
 				Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
 			})
 		})
 
 		Context("when health check setup is successful", func() {
-			JustBeforeEach(func() {
-				reconciler = &Reconciler{RuntimeClient: runtimeClient, GardenClientMap: gardenClientMap, Clock: fakeClock}
-			})
-
 			Context("when no conditions are returned", func() {
 				BeforeEach(func() {
 					DeferCleanup(test.WithVars(&NewHealthCheck,

@@ -103,3 +103,10 @@ func SetDefaults_GardenControllerConfig(obj *GardenControllerConfig) {
 		obj.SyncPeriod = &metav1.Duration{Duration: time.Hour}
 	}
 }
+
+// SetDefaults_GardenCareControllerConfiguration sets defaults for the GardenCareControllerConfiguration object.
+func SetDefaults_GardenCareControllerConfiguration(obj *GardenCareControllerConfiguration) {
+	if obj.SyncPeriod == nil {
+		obj.SyncPeriod = &metav1.Duration{Duration: time.Minute}
+	}
+}
