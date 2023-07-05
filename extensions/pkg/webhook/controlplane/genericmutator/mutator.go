@@ -29,7 +29,7 @@ import (
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionscontextwebhook "github.com/gardener/gardener/extensions/pkg/webhook/context"
@@ -95,6 +95,7 @@ type Ensurer interface {
 
 // NewMutator creates a new controlplane mutator.
 func NewMutator(
+	mgr manager.Manager,
 	ensurer Ensurer,
 	unitSerializer utils.UnitSerializer,
 	kubeletConfigCodec kubelet.ConfigCodec,
@@ -102,6 +103,7 @@ func NewMutator(
 	logger logr.Logger,
 ) extensionswebhook.Mutator {
 	return &mutator{
+		client:             mgr.GetClient(),
 		ensurer:            ensurer,
 		unitSerializer:     unitSerializer,
 		kubeletConfigCodec: kubeletConfigCodec,
@@ -117,17 +119,6 @@ type mutator struct {
 	kubeletConfigCodec kubelet.ConfigCodec
 	fciCodec           utils.FileContentInlineCodec
 	logger             logr.Logger
-}
-
-// InjectClient injects the given client into the ensurer.
-func (m *mutator) InjectClient(client client.Client) error {
-	m.client = client
-	return nil
-}
-
-// InjectFunc injects stuff into the ensurer.
-func (m *mutator) InjectFunc(f inject.Func) error {
-	return f(m.ensurer)
 }
 
 // Mutate validates and if needed mutates the given object.

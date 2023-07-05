@@ -20,9 +20,8 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionscontextwebhook "github.com/gardener/gardener/extensions/pkg/webhook/context"
@@ -35,8 +34,9 @@ type Ensurer interface {
 }
 
 // NewMutator creates a new cloudprovider mutator.
-func NewMutator(logger logr.Logger, ensurer Ensurer) webhook.Mutator {
+func NewMutator(mgr manager.Manager, logger logr.Logger, ensurer Ensurer) webhook.Mutator {
 	return &mutator{
+		client:  mgr.GetClient(),
 		logger:  logger.WithName("mutator"),
 		ensurer: ensurer,
 	}
@@ -46,23 +46,6 @@ type mutator struct {
 	client  client.Client
 	logger  logr.Logger
 	ensurer Ensurer
-}
-
-// InjectClient injects the client into the ensurer.
-func (m *mutator) InjectClient(client client.Client) error {
-	m.client = client
-	if _, err := inject.ClientInto(client, m.ensurer); err != nil {
-		return fmt.Errorf("could not inject the client into the ensurer: %w", err)
-	}
-	return nil
-}
-
-// InjectScheme injects the manager's scheme into the ensurer.
-func (m *mutator) InjectScheme(scheme *runtime.Scheme) error {
-	if _, err := inject.SchemeInto(scheme, m.ensurer); err != nil {
-		return fmt.Errorf("could not inject scheme into the ensurer: %w", err)
-	}
-	return nil
 }
 
 // Mutate validates and if needed mutates the given object.
