@@ -151,7 +151,7 @@ func (r *Reconciler) patchConditionToFalse(ctx context.Context, log logr.Logger,
 
 func (r *Reconciler) reportProgress(log logr.Logger, garden *operatorv1alpha1.Garden) flow.ProgressReporter {
 	return flow.NewImmediateProgressReporter(func(ctx context.Context, stats *flow.Stats) {
-		for i := 0; i < 2; i++ {
+		for i := 0; i < 3; i++ {
 			patch := client.MergeFromWithOptions(garden.DeepCopy(), client.MergeFromWithOptimisticLock{})
 			conditionReconciled := v1beta1helper.GetOrInitConditionWithClock(r.Clock, garden.Status.Conditions, operatorv1alpha1.GardenReconciled)
 			garden.Status.Conditions = v1beta1helper.MergeConditions(garden.Status.Conditions, v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionReconciled, gardencorev1beta1.ConditionProgressing, conditionReasonPrefix(garden)+"Progressing", fmt.Sprintf("Garden operation is currently being processed (%s (%d%%)).", strings.Join(stats.Running.StringList(), ", "), stats.ProgressPercent())))
