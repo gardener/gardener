@@ -24,6 +24,7 @@ import (
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/gardener/gardener/pkg/extensions"
@@ -38,18 +39,14 @@ type reconciler struct {
 }
 
 // NewReconciler creates a new reconciler that will renew the heartbeat lease resource.
-func NewReconciler(extensionName string, namespace string, renewIntervalSeconds int32, clock clock.Clock) reconcile.Reconciler {
+func NewReconciler(mgr manager.Manager, extensionName string, namespace string, renewIntervalSeconds int32, clock clock.Clock) reconcile.Reconciler {
 	return &reconciler{
+		client:               mgr.GetClient(),
 		extensionName:        extensionName,
 		renewIntervalSeconds: renewIntervalSeconds,
 		namespace:            namespace,
 		clock:                clock,
 	}
-}
-
-func (r *reconciler) InjectClient(client client.Client) error {
-	r.client = client
-	return nil
 }
 
 // Reconcile renews the heartbeat lease resource.
