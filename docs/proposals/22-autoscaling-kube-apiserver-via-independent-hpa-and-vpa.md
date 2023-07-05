@@ -254,7 +254,7 @@ ShootKapi, and then would reduce the response to only `apiserver_request_total` 
 caller). 
 
 ### Element: New Custom Pod Metric for ShootKapis
-A new `shoot:apiserver_request_total:rate_by_pod` pod custom metric is made available for each ShootKapi pod on the
+A new `shoot:apiserver_request_total:rate` pod custom metric is made available for each ShootKapi pod on the
 seed. It is provided by the gardener-custom-metrics component. It is the rate of API requests per second, broken down
 by ShootKapi pod.
 
@@ -294,12 +294,12 @@ to the one hereby proposed.
 5. (Outside the scope of this proposal) Use of HVPA removed for other workloads and the preexisting HVPA flag removed.
 
 ### Vision Beyond This Enhancement
-This proposal is part of a mid-term vision which enables the user to select an alternative ShootKapi scaling mode
+This proposal is part of a mid-term vision which enables the operator to select an alternative ShootKapi scaling mode
 for any shoot. Said mode prioritises reliability, and is known to work well even under extreme API request profiles.
 
 The following approach is envisioned (discussion is limited to scaling ShootKapi):
 - The default scaling mode is the one proposed by this GEP.
-- For any shoot, the user is enabled to select an alternative scaling mode. In this mode, the user specifies a fixed
+- For any shoot, the operator is enabled to select an alternative scaling mode. In this mode, the operator specifies a fixed
   vertical scale, and a horizontal scale in the form of (MinimumReplicaCount, MaximumReplicaCount). HPA is used
   to apply the horizontal scale.
 
