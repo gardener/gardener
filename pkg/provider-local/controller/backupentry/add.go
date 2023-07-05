@@ -33,7 +33,7 @@ var DefaultAddOptions = backupoptions.AddOptions{}
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(mgr manager.Manager, opts backupoptions.AddOptions) error {
 	return backupentry.Add(mgr, backupentry.AddArgs{
-		Actuator:          genericactuator.NewActuator(newActuator(opts.ContainerMountPath, opts.BackupBucketPath)),
+		Actuator:          genericactuator.NewActuator(mgr, newActuator(mgr, opts.ContainerMountPath, opts.BackupBucketPath)),
 		ControllerOptions: opts.Controller,
 		Predicates:        backupentry.DefaultPredicates(opts.IgnoreOperationAnnotation),
 		Type:              local.Type,

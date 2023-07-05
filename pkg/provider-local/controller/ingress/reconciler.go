@@ -39,11 +39,6 @@ type reconciler struct {
 	client client.Client
 }
 
-func (r *reconciler) InjectClient(client client.Client) error {
-	r.client = client
-	return nil
-}
-
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 

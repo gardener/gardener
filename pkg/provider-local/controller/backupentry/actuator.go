@@ -22,6 +22,7 @@ import (
 	etcddruidutils "github.com/gardener/etcd-druid/pkg/utils"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -33,16 +34,12 @@ type actuator struct {
 	backBucketPath     string
 }
 
-func newActuator(containerMountPath, backupBucketPath string) genericactuator.BackupEntryDelegate {
+func newActuator(mgr manager.Manager, containerMountPath, backupBucketPath string) genericactuator.BackupEntryDelegate {
 	return &actuator{
+		client:             mgr.GetClient(),
 		containerMountPath: containerMountPath,
 		backBucketPath:     backupBucketPath,
 	}
-}
-
-func (a *actuator) InjectClient(client client.Client) error {
-	a.client = client
-	return nil
 }
 
 func (a *actuator) GetETCDSecretData(_ context.Context, _ logr.Logger, _ *extensionsv1alpha1.BackupEntry, backupSecretData map[string][]byte) (map[string][]byte, error) {

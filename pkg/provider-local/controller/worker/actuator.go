@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -53,7 +53,7 @@ type actuator struct {
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled WorkerPoolConfigs.
-func NewActuator(gardenletManagesMCM bool) worker.Actuator {
+func NewActuator(mgr manager.Manager, clientset kubernetes.Interface, gardenerClientset kubernetesclient.Interface, gardenletManagesMCM bool) worker.Actuator {
 	var (
 		mcmName              string
 		mcmChartSeed         *chart.Chart
@@ -73,19 +73,18 @@ func NewActuator(gardenletManagesMCM bool) worker.Actuator {
 
 	return &actuator{
 		Actuator: genericactuator.NewActuator(
+			mgr,
 			workerDelegate,
 			mcmName,
 			mcmChartSeed,
 			mcmChartShoot,
 			imageVector,
+			clientset,
+			gardenerClientset,
 			chartRendererFactory,
 		),
 		workerDelegate: workerDelegate,
 	}
-}
-
-func (a *actuator) InjectFunc(f inject.Func) error {
-	return f(a.Actuator)
 }
 
 func (a *actuator) Restore(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {

@@ -17,10 +17,12 @@ package worker
 import (
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
+	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
+	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 )
 
@@ -49,9 +51,17 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 	if err := machinev1alpha1.AddToScheme(scheme); err != nil {
 		return err
 	}
+	clientset, err := kubernetes.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		return err
+	}
+	gardenerClientset, err := kubernetesclient.NewWithConfig(kubernetesclient.WithRESTConfig(mgr.GetConfig()))
+	if err != nil {
+		return err
+	}
 
 	return worker.Add(mgr, worker.AddArgs{
-		Actuator:          NewActuator(opts.GardenletManagesMCM),
+		Actuator:          NewActuator(mgr, clientset, gardenerClientset, opts.GardenletManagesMCM),
 		ControllerOptions: opts.Controller,
 		Predicates:        worker.DefaultPredicates(opts.IgnoreOperationAnnotation),
 		Type:              local.Type,

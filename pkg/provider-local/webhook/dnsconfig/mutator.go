@@ -33,11 +33,6 @@ type mutator struct {
 	client client.Client
 }
 
-func (m *mutator) InjectClient(c client.Client) error {
-	m.client = c
-	return nil
-}
-
 func (m *mutator) Mutate(ctx context.Context, newObj, oldObj client.Object) error {
 	var (
 		podMeta *metav1.ObjectMeta
