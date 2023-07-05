@@ -110,7 +110,7 @@ var (
 		string(core.SchedulingProfileBalanced),
 		string(core.SchedulingProfileBinPacking),
 	)
-	forbiddenShootFinalizersOnCreation = sets.New(
+	ForbiddenShootFinalizersOnCreation = sets.New(
 		gardencorev1beta1.GardenerName,
 	)
 
@@ -2080,7 +2080,7 @@ func ValidateFinalizersOnCreation(finalizers []string, fldPath *field.Path) fiel
 
 	for i, finalizer := range finalizers {
 		idxPath := fldPath.Index(i)
-		if forbiddenShootFinalizersOnCreation.Has(finalizer) {
+		if ForbiddenShootFinalizersOnCreation.Has(finalizer) {
 			allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("finalizer %q cannot be added on creation", finalizer)))
 		}
 	}
