@@ -41,6 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
@@ -84,11 +85,11 @@ type GardenHealth struct {
 // NewHealthForGarden creates a new Health instance with the given parameters.
 func NewHealthForGarden(garden *operatorv1alpha1.Garden, runtimeClient client.Client, gardenClientSet kubernetes.Interface, clock clock.Clock, gardenNamespace string) *GardenHealth {
 	return &GardenHealth{
+		garden:          garden,
+		gardenNamespace: gardenNamespace,
 		runtimeClient:   runtimeClient,
 		gardenClientSet: gardenClientSet,
-		garden:          garden,
 		clock:           clock,
-		gardenNamespace: gardenNamespace,
 	}
 }
 
@@ -119,15 +120,35 @@ func (h *GardenHealth) CheckGarden(
 	}
 
 	checker := NewHealthChecker(h.runtimeClient, h.clock, thresholdMappings, nil, nil, nil, nil, nil)
-	newSystemComponentsCondition, err1 := h.checkGardenSystemComponents(ctx, checker, systemComponentsCondition)
-	newVirtualGardenComponentsCondition, err2 := h.checkVirtualGardenComponents(ctx, checker, virtualGardenComponentsCondition)
-	newControlPlaneHealthy, err3 := h.checkControlPlane(ctx, checker, controlPlaneHealthy)
-	apiServerAvailability = h.checkAPIServerAvailability(ctx, checker, apiServerAvailability)
+
+	taskFns := []flow.TaskFn{
+		func(ctx context.Context) error {
+			apiServerAvailability = h.checkAPIServerAvailability(ctx, checker, apiServerAvailability)
+			return nil
+		},
+		func(ctx context.Context) error {
+			newSystemComponentsCondition, err := h.checkGardenSystemComponents(ctx, checker, systemComponentsCondition)
+			systemComponentsCondition = NewConditionOrError(h.clock, systemComponentsCondition, newSystemComponentsCondition, err)
+			return nil
+		},
+		func(ctx context.Context) error {
+			newVirtualGardenComponentsCondition, err := h.checkVirtualGardenComponents(ctx, checker, virtualGardenComponentsCondition)
+			virtualGardenComponentsCondition = NewConditionOrError(h.clock, virtualGardenComponentsCondition, newVirtualGardenComponentsCondition, err)
+			return nil
+		},
+		func(ctx context.Context) error {
+			newControlPlaneHealthy, err := h.checkControlPlane(ctx, checker, controlPlaneHealthy)
+			controlPlaneHealthy = NewConditionOrError(h.clock, controlPlaneHealthy, newControlPlaneHealthy, err)
+			return nil
+		},
+	}
+
+	_ = flow.Parallel(taskFns...)(ctx)
 
 	return []gardencorev1beta1.Condition{
-		NewConditionOrError(h.clock, systemComponentsCondition, newSystemComponentsCondition, err1),
-		NewConditionOrError(h.clock, virtualGardenComponentsCondition, newVirtualGardenComponentsCondition, err2),
-		NewConditionOrError(h.clock, controlPlaneHealthy, newControlPlaneHealthy, err3),
+		systemComponentsCondition,
+		virtualGardenComponentsCondition,
+		controlPlaneHealthy,
 		apiServerAvailability,
 	}
 }
@@ -159,26 +180,37 @@ func (h *GardenHealth) checkControlPlane(ctx context.Context, checker *HealthChe
 	return &c, nil
 }
 
-func (h *GardenHealth) checkGardenSystemComponents(
-	ctx context.Context,
-	checker *HealthChecker,
-	condition gardencorev1beta1.Condition,
-) (
-	*gardencorev1beta1.Condition,
-	error,
-) {
+func (h *GardenHealth) checkGardenSystemComponents(ctx context.Context, checker *HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
 	managedResources := sets.List(requiredGardenRuntimeManagedResources)
 	managedResources = append(managedResources, istio.ManagedResourceNames(true, "virtual-garden-")...)
 
 	if features.DefaultFeatureGate.Enabled(features.HVPA) {
 		managedResources = append(managedResources, hvpa.ManagedResourceName)
 	}
-	if h.garden.Spec.RuntimeCluster.Settings != nil &&
-		h.garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler != nil &&
-		pointer.BoolDeref(h.garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler.Enabled, false) {
+	if h.isVPAEnabled() {
 		managedResources = append(managedResources, vpa.ManagedResourceControlName)
 	}
 
+	return h.checkManagedResources(ctx, checker, condition, managedResources, "SystemComponentsRunning", "All system components are healthy.")
+}
+
+func (h *GardenHealth) checkVirtualGardenComponents(ctx context.Context, checker *HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
+	managedResources := sets.List(requiredVirtualGardenManagedResources)
+
+	return h.checkManagedResources(ctx, checker, condition, managedResources, "VirtualGardenComponentsRunning", "All virtual garden components are healthy.")
+}
+
+func (h *GardenHealth) checkManagedResources(
+	ctx context.Context,
+	checker *HealthChecker,
+	condition gardencorev1beta1.Condition,
+	managedResources []string,
+	successReason string,
+	successMessage string,
+) (
+	*gardencorev1beta1.Condition,
+	error,
+) {
 	for _, name := range managedResources {
 		namespace := h.gardenNamespace
 		if sets.New(istio.ManagedResourceNames(true, "virtual-garden-")...).Has(name) {
@@ -198,38 +230,17 @@ func (h *GardenHealth) checkGardenSystemComponents(
 			return exitCondition, nil
 		}
 	}
-
-	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy.")
+	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, successReason, successMessage)
 	return &c, nil
 }
 
-func (h *GardenHealth) checkVirtualGardenComponents(
-	ctx context.Context,
-	checker *HealthChecker,
-	condition gardencorev1beta1.Condition,
-) (
-	*gardencorev1beta1.Condition,
-	error,
-) {
-	managedResources := sets.List(requiredVirtualGardenManagedResources)
-
-	for _, name := range managedResources {
-		mr := &resourcesv1alpha1.ManagedResource{}
-		if err := h.runtimeClient.Get(ctx, kubernetesutils.Key(h.gardenNamespace, name), mr); err != nil {
-			if apierrors.IsNotFound(err) {
-				exitCondition := checker.FailedCondition(condition, "ResourceNotFound", err.Error())
-				return &exitCondition, nil
-			}
-			return nil, err
-		}
-
-		if exitCondition := checkManagedResourceForGarden(checker, condition, mr); exitCondition != nil {
-			return exitCondition, nil
-		}
+func (h *GardenHealth) isVPAEnabled() bool {
+	if h.garden.Spec.RuntimeCluster.Settings != nil &&
+		h.garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler != nil &&
+		pointer.BoolDeref(h.garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler.Enabled, false) {
+		return true
 	}
-
-	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "VirtualGardenComponentsRunning", "All virtual garden components are healthy.")
-	return &c, nil
+	return false
 }
 
 func checkManagedResourceForGarden(checker *HealthChecker, condition gardencorev1beta1.Condition, managedResource *resourcesv1alpha1.ManagedResource) *gardencorev1beta1.Condition {
