@@ -62,7 +62,7 @@ func (h *Handler) ValidateCreate(ctx context.Context, obj runtime.Object) error 
 		return apierrors.NewConflict(schema.GroupResource{Group: corev1.GroupName, Resource: "Secret"}, secret.Name, fmt.Errorf("cannot create internal domain secret because there can be only one secret with the 'internal-domain' secret role per namespace"))
 	}
 
-	if _, _, _, _, _, err := gardenerutils.GetDomainInfoFromAnnotations(secret.Annotations); err != nil {
+	if _, _, _, err := gardenerutils.GetDomainInfoFromAnnotations(secret.Annotations); err != nil {
 		return apierrors.NewBadRequest(err.Error())
 	}
 
@@ -102,11 +102,11 @@ func (h *Handler) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Obj
 		}
 	}
 
-	_, oldDomain, _, _, _, err := gardenerutils.GetDomainInfoFromAnnotations(oldSecret.Annotations)
+	_, oldDomain, _, err := gardenerutils.GetDomainInfoFromAnnotations(oldSecret.Annotations)
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}
-	_, newDomain, _, _, _, err := gardenerutils.GetDomainInfoFromAnnotations(secret.Annotations)
+	_, newDomain, _, err := gardenerutils.GetDomainInfoFromAnnotations(secret.Annotations)
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}

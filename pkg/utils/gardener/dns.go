@@ -16,7 +16,6 @@ package gardener
 
 import (
 	"fmt"
-	"strings"
 )
 
 const (
@@ -32,12 +31,6 @@ const (
 	// DNSZone is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
 	// DNS hosted zone id.
 	DNSZone = "dns.gardener.cloud/zone"
-	// DNSIncludeZones is the key for an annotation on a Kubernetes Secret object whose value must point to a list
-	// of zones that shall be included.
-	DNSIncludeZones = "dns.gardener.cloud/include-zones"
-	// DNSExcludeZones is the key for an annotation on a Kubernetes Secret object whose value must point to a list
-	// of zones that shall be excluded.
-	DNSExcludeZones = "dns.gardener.cloud/exclude-zones"
 
 	// APIServerFQDNPrefix is the part of a FQDN which will be used to construct the domain name for the kube-apiserver of
 	// a Shoot cluster. For example, when a Shoot specifies domain 'cluster.example.com', the apiserver domain would be
@@ -58,9 +51,9 @@ const (
 )
 
 // GetDomainInfoFromAnnotations returns the provider, domain, and zones that are specified in the given annotations.
-func GetDomainInfoFromAnnotations(annotations map[string]string) (provider string, domain string, zone string, includeZones, excludeZones []string, err error) {
+func GetDomainInfoFromAnnotations(annotations map[string]string) (provider string, domain string, zone string, err error) {
 	if annotations == nil {
-		return "", "", "", nil, nil, fmt.Errorf("domain secret has no annotations")
+		return "", "", "", fmt.Errorf("domain secret has no annotations")
 	}
 
 	if providerAnnotation, ok := annotations[DNSProvider]; ok {
@@ -75,18 +68,11 @@ func GetDomainInfoFromAnnotations(annotations map[string]string) (provider strin
 		zone = zoneAnnotation
 	}
 
-	if includeZonesAnnotation, ok := annotations[DNSIncludeZones]; ok {
-		includeZones = strings.Split(includeZonesAnnotation, ",")
-	}
-	if excludeZonesAnnotation, ok := annotations[DNSExcludeZones]; ok {
-		excludeZones = strings.Split(excludeZonesAnnotation, ",")
-	}
-
 	if len(domain) == 0 {
-		return "", "", "", nil, nil, fmt.Errorf("missing dns domain annotation on domain secret")
+		return "", "", "", fmt.Errorf("missing dns domain annotation on domain secret")
 	}
 	if len(provider) == 0 {
-		return "", "", "", nil, nil, fmt.Errorf("missing dns provider annotation on domain secret")
+		return "", "", "", fmt.Errorf("missing dns provider annotation on domain secret")
 	}
 
 	return

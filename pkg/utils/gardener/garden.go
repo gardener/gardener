@@ -37,14 +37,10 @@ import (
 
 // Domain contains information about a domain configured in the garden cluster.
 type Domain struct {
-	Domain         string
-	Provider       string
-	Zone           string
-	SecretData     map[string][]byte
-	IncludeDomains []string
-	ExcludeDomains []string
-	IncludeZones   []string
-	ExcludeZones   []string
+	Domain     string
+	Provider   string
+	Zone       string
+	SecretData map[string][]byte
 }
 
 // GetDefaultDomains finds all the default domain secrets within the given map and returns a list of
@@ -77,18 +73,16 @@ func GetInternalDomain(secrets map[string]*corev1.Secret) (*Domain, error) {
 }
 
 func constructDomainFromSecret(secret *corev1.Secret) (*Domain, error) {
-	provider, domain, zone, includeZones, excludeZones, err := GetDomainInfoFromAnnotations(secret.Annotations)
+	provider, domain, zone, err := GetDomainInfoFromAnnotations(secret.Annotations)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Domain{
-		Domain:       domain,
-		Provider:     provider,
-		Zone:         zone,
-		SecretData:   secret.Data,
-		IncludeZones: includeZones,
-		ExcludeZones: excludeZones,
+		Domain:     domain,
+		Provider:   provider,
+		Zone:       zone,
+		SecretData: secret.Data,
 	}, nil
 }
 
@@ -134,7 +128,7 @@ func ReadGardenSecrets(
 		// Retrieving default domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role default-domain.
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleDefaultDomain {
-			_, domain, _, _, _, err := GetDomainInfoFromAnnotations(secret.Annotations)
+			_, domain, _, err := GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				log.Error(err, "Error getting information out of default domain secret", "secret", client.ObjectKeyFromObject(&secret))
 				continue
@@ -148,7 +142,7 @@ func ReadGardenSecrets(
 		// Retrieving internal domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role internal-domain.
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleInternalDomain {
-			_, domain, _, _, _, err := GetDomainInfoFromAnnotations(secret.Annotations)
+			_, domain, _, err := GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				log.Error(err, "Error getting information out of internal domain secret", "secret", client.ObjectKeyFromObject(&secret))
 				continue

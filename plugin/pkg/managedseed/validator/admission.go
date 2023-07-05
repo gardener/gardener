@@ -522,7 +522,7 @@ func (v *ManagedSeed) getSeedDNSProviderForDefaultDomain(shoot *gardencore.Shoot
 
 	// Search for a default domain secret that matches the shoot domain
 	for _, secret := range defaultDomainSecrets {
-		provider, domain, _, _, _, err := gardenerutils.GetDomainInfoFromAnnotations(secret.Annotations)
+		provider, domain, _, err := gardenerutils.GetDomainInfoFromAnnotations(secret.Annotations)
 		if err != nil {
 			return nil, apierrors.NewInternalError(fmt.Errorf("could not get domain info from domain secret annotations: %v", err))
 		}

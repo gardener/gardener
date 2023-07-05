@@ -795,8 +795,8 @@ var _ = Describe("Shoot", func() {
 			Expect(ConstructInternalClusterDomain(shootName, shootProject, &Domain{Domain: internalDomain})).To(Equal(expected))
 		},
 
-		Entry("with internal domain key", "foo", "bar", "internal.nip.io", "foo.bar.internal.nip.io"),
-		Entry("without internal domain key", "foo", "bar", "nip.io", "foo.bar.internal.nip.io"),
+		Entry("with internal domain key", "foo", "bar", "internal.example.com", "foo.bar.internal.example.com"),
+		Entry("without internal domain key", "foo", "bar", "example.com", "foo.bar.internal.example.com"),
 	)
 
 	Describe("#ConstructExternalClusterDomain", func() {
