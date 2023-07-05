@@ -253,7 +253,11 @@ The `ControllerInstallation` controller in the `gardenlet` reconciles `Controlle
 #### "Main" Reconciler
 
 This reconciler is responsible for `ControllerInstallation`s referencing a `ControllerDeployment` whose `type=helm`.
-It is responsible for unpacking the Helm chart tarball in the `ControllerDeployment`s `.providerConfig.chart` field and deploying the rendered resources to the seed cluster.
+
+For each `ControllerInstallation`, it creates a namespace on the seed cluster named `extension-<controller-installation-name>`.
+Then, it creates a generic garden kubeconfig and garden access secret for the extension for [accessing the garden cluster](../extensions/garden-api-access.md).
+
+After that, it unpacks the Helm chart tarball in the `ControllerDeployment`s `.providerConfig.chart` field and deploys the rendered resources to the seed cluster.
 The Helm chart values in `.providerConfig.values` will be used and extended with some information about the Gardener environment and the seed cluster:
 
 ```yaml
@@ -261,8 +265,14 @@ gardener:
   version: <gardenlet-version>
   garden:
     clusterIdentity: <identity-of-garden-cluster>
+    genericKubeconfigSecretName: <secret-name>
+  gardenlet:
+    featureGates:
+      Foo: true
+      Bar: false
+      # ...
   seed:
-    identity: <seed-name>
+    name: <seed-name>
     clusterIdentity: <identity-of-seed-cluster>
     annotations: <seed-annotations>
     labels: <seed-labels>

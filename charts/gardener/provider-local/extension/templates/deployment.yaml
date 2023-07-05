@@ -31,6 +31,7 @@ spec:
       labels:
         networking.gardener.cloud/to-runtime-apiserver: allowed
         networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-kind-network: allowed
         networking.resources.gardener.cloud/to-all-shoots-kube-apiserver-tcp-443: allowed
 {{ include "labels" . | indent 8 }}
     spec:

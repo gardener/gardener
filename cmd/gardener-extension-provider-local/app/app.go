@@ -23,6 +23,7 @@ import (
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -36,6 +37,7 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -46,6 +48,8 @@ import (
 	extensionsheartbeatcmd "github.com/gardener/gardener/extensions/pkg/controller/heartbeat/cmd"
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon"
 	extensionscmdwebhook "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	localinstall "github.com/gardener/gardener/pkg/provider-local/apis/local/install"
 	localbackupbucket "github.com/gardener/gardener/pkg/provider-local/controller/backupbucket"
@@ -188,6 +192,8 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 		Use: fmt.Sprintf("%s-controller-manager", local.Name),
 
 		RunE: func(cmd *cobra.Command, args []string) error {
+			seedName := os.Getenv("SEED_NAME")
+
 			if err := aggOption.Complete(); err != nil {
 				return fmt.Errorf("error completing options: %w", err)
 			}
@@ -200,6 +206,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("could not instantiate manager: %w", err)
 			}
+			log := mgr.GetLogger()
 
 			scheme := mgr.GetScheme()
 			if err := controller.AddToScheme(scheme); err != nil {
@@ -220,6 +227,27 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			// add common meta types to schema for controller-runtime to use v1.ListOptions
 			metav1.AddToGroupVersion(scheme, machinev1alpha1.SchemeGroupVersion)
 
+			log.Info("Getting rest config for garden")
+			gardenRESTConfig, err := kubernetes.RESTConfigFromKubeconfigFile(os.Getenv("GARDEN_KUBECONFIG"), kubernetes.AuthTokenFile)
+			if err != nil {
+				return err
+			}
+
+			log.Info("Setting up cluster object for garden")
+			gardenCluster, err := cluster.New(gardenRESTConfig, func(opts *cluster.Options) {
+				opts.Scheme = kubernetes.GardenScheme
+				opts.Logger = log
+			})
+			if err != nil {
+				return fmt.Errorf("failed creating garden cluster object: %w", err)
+			}
+
+			log.Info("Adding garden cluster to manager")
+			if err := mgr.Add(gardenCluster); err != nil {
+				return fmt.Errorf("failed adding garden cluster to manager: %w", err)
+			}
+
+			log.Info("Adding controllers to manager")
 			controlPlaneCtrlOpts.Completed().Apply(&localcontrolplane.DefaultAddOptions.Controller)
 			dnsRecordCtrlOpts.Completed().Apply(&localdnsrecord.DefaultAddOptions)
 			healthCheckCtrlOpts.Completed().Apply(&localhealthcheck.DefaultAddOptions.Controller)
@@ -270,7 +298,13 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("could not add controllers to manager: %w", err)
 			}
 
-			mgr.GetLogger().Info("Started with", "hostIP", serviceCtrlOpts.HostIP)
+			if err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
+				return verifyGardenAccess(ctx, log, gardenCluster.GetClient(), seedName)
+			})); err != nil {
+				return fmt.Errorf("could not add garden runnable to manager: %w", err)
+			}
+
+			log.Info("Started with", "hostIP", serviceCtrlOpts.HostIP)
 
 			if err := mgr.Start(ctx); err != nil {
 				return fmt.Errorf("error running manager: %w", err)
@@ -283,6 +317,23 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 	aggOption.AddFlags(cmd.Flags())
 
 	return cmd
+}
+
+// verifyGardenAccess uses the extension's access to the garden cluster to request objects related to the seed it is
+// running on, but doesn't do anything useful with the objects. We do this for verifying the extension's garden access
+// in e2e tests. If something fails in this runnable, the extension will crash loop.
+func verifyGardenAccess(ctx context.Context, log logr.Logger, c client.Reader, seedName string) error {
+	log = log.WithName("garden-reader").WithValues("seedName", seedName)
+
+	log.Info("Getting Seed")
+	seed := &gardencorev1beta1.Seed{}
+	if err := c.Get(ctx, client.ObjectKey{Name: seedName}, seed); err != nil {
+		return fmt.Errorf("failed reading seed %s: %w", seedName, err)
+	}
+
+	log.Info("Garden access successfully verified")
+
+	return nil
 }
 
 type webhookTriggerer struct {

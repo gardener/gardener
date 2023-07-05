@@ -4,6 +4,11 @@ title: Access to the Garden Cluster for Extensions
 
 # Access to the Garden Cluster for Extensions
 
+Extensions that are installed on seed clusters via a `ControllerInstallation` can simply read the kubeconfig file specified by the `GARDEN_KUBECONFIG` environment variable to create a garden cluster client.
+With this, they use a short-lived token (valid for `12h`) associated with a dedicated `ServiceAccount` in the `seed-<seed-name>` namespace to securely access the garden cluster.
+
+> ⚠️ This feature is under development. The managed `ServiceAccounts` in the garden cluster don't have any API permissions as of now. They will be handled by the `SeedAuthorizer` in the future and equipped with permissions similar to the gardenlets' credentials. See [gardener/gardener#8001](https://github.com/gardener/gardener/issues/8001) for more information.
+
 ## Background
 
 Historically, `gardenlet` has been the only component running in the seed cluster that has access to both the seed cluster and the garden cluster.
@@ -33,7 +38,88 @@ type: Opaque
 
 This will instruct gardenlet to create a new `ServiceAccount` named `example` in its own `seed-<seed-name>` namespace in the garden cluster, request a token for it, and populate the token in the secret's data under the `token` key.
 
-> ⚠️ This feature is under development. The managed `ServiceAccounts` in the garden cluster don't have any API permissions as of now. They will be handled by the `SeedAuthorizer` in the future and equipped with permissions similar to the gardenlets' credentials. See [gardener/gardener#8001](https://github.com/gardener/gardener/issues/8001) for more information.
+## Using Gardenlet-Managed Garden Access
+
+By default, extensions are equipped with secure access to the garden cluster using a dedicated `ServiceAccount` without requiring any additional action.
+They can simply read the file specified by the `GARDEN_KUBECONFIG` and construct a garden client with it.
+
+When installing a [`ControllerInstallation`](controllerregistration.md), gardenlet creates two secrets in the installation's namespace: a generic garden kubeconfig (`generic-garden-kubeconfig-<hash>`) and a garden access secret (`garden-access-extension`).
+Additionally, it injects `volume`, `volumeMounts`, and two environment variables into all (init) containers in all objects in the `apps` and `batch` API groups:
+
+- `GARDEN_KUBECONFIG`: points to the path where the generic garden kubeconfig is mounted.
+- `SEED_NAME`: set to the name of the `Seed` where the extension is installed. 
+  This is useful for restricting watches in the garden cluster to relevant objects.
+
+If an object already contains the `GARDEN_KUBECONFIG` environment variable, it is not overwritten and injection of `volume` and `volumeMounts` is skipped.
+
+For example, a `Deployment` deployed via a `ControllerInstallation` will be mutated as follows:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gardener-extension-provider-local
+  annotations:
+    reference.resources.gardener.cloud/secret-795f7ca6: garden-access-extension
+    reference.resources.gardener.cloud/secret-d5f5a834: generic-garden-kubeconfig-81fb3a88
+spec:
+  template:
+    metadata:
+      annotations:
+        reference.resources.gardener.cloud/secret-795f7ca6: garden-access-extension
+        reference.resources.gardener.cloud/secret-d5f5a834: generic-garden-kubeconfig-81fb3a88
+    spec:
+      containers:
+      - name: gardener-extension-provider-local
+        env:
+        - name: GARDEN_KUBECONFIG
+          value: /var/run/secrets/gardener.cloud/garden/generic-kubeconfig/kubeconfig
+        - name: SEED_NAME
+          value: local
+        volumeMounts:
+        - mountPath: /var/run/secrets/gardener.cloud/garden/generic-kubeconfig
+          name: garden-kubeconfig
+          readOnly: true
+      volumes:
+      - name: garden-kubeconfig
+        projected:
+          defaultMode: 420
+          sources:
+          - secret:
+              items:
+              - key: kubeconfig
+                path: kubeconfig
+              name: generic-garden-kubeconfig-81fb3a88
+              optional: false
+          - secret:
+              items:
+              - key: token
+                path: token
+              name: garden-access-extension
+              optional: false
+```
+
+The generic garden kubeconfig will look like this:
+
+```yaml
+apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    certificate-authority-data: LS0t...
+    server: https://garden.local.gardener.cloud:6443
+  name: garden
+contexts:
+- context:
+    cluster: garden
+    user: extension
+  name: garden
+current-context: garden
+users:
+- name: extension
+  user:
+    tokenFile: /var/run/secrets/gardener.cloud/garden/generic-kubeconfig/token
+```
 
 ## Renewing All Garden Access Secrets
 

@@ -67,8 +67,8 @@ type ValuesProvider interface {
 // the values provided by the given values provider.
 func NewActuator(
 	providerName string,
-	secretConfigs func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions, shootAccessSecrets func(namespace string) []*gardenerutils.ShootAccessSecret,
-	exposureSecretConfigs func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions, exposureShootAccessSecrets func(namespace string) []*gardenerutils.ShootAccessSecret,
+	secretConfigs func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions, shootAccessSecrets func(namespace string) []*gardenerutils.AccessSecret,
+	exposureSecretConfigs func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions, exposureShootAccessSecrets func(namespace string) []*gardenerutils.AccessSecret,
 	configChart, controlPlaneChart, controlPlaneShootChart, controlPlaneShootCRDsChart, storageClassesChart, controlPlaneExposureChart chart.Interface,
 	vp ValuesProvider,
 	chartRendererFactory extensionscontroller.ChartRendererFactory,
@@ -112,10 +112,10 @@ type actuator struct {
 	providerName string
 
 	secretConfigsFunc      func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions
-	shootAccessSecretsFunc func(namespace string) []*gardenerutils.ShootAccessSecret
+	shootAccessSecretsFunc func(namespace string) []*gardenerutils.AccessSecret
 
 	exposureSecretConfigsFunc      func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions
-	exposureShootAccessSecretsFunc func(namespace string) []*gardenerutils.ShootAccessSecret
+	exposureShootAccessSecretsFunc func(namespace string) []*gardenerutils.AccessSecret
 
 	configChart                chart.Interface
 	controlPlaneChart          chart.Interface

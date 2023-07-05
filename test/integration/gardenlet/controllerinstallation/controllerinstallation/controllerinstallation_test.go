@@ -15,6 +15,7 @@
 package controllerinstallation_test
 
 import (
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -24,12 +25,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -170,12 +174,38 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				))
 			}).Should(Succeed())
 
+			By("Ensure generic garden kubeconfig was created")
+			var genericKubeconfigSecret *corev1.Secret
+			Eventually(func(g Gomega) {
+				secretList := &corev1.SecretList{}
+				g.Expect(testClient.List(ctx, secretList, client.InNamespace(namespace.Name))).To(Succeed())
+
+				for _, secret := range secretList.Items {
+					if strings.HasPrefix(secret.Name, "generic-garden-kubeconfig-") {
+						genericKubeconfigSecret = secret.DeepCopy()
+						break
+					}
+				}
+				g.Expect(genericKubeconfigSecret).NotTo(BeNil())
+				g.Expect(genericKubeconfigSecret.Data).To(HaveKeyWithValue("kubeconfig", Not(BeEmpty())))
+			}).Should(Succeed())
+
+			By("Ensure garden access secret was created")
+			Eventually(func(g Gomega) {
+				secret := &corev1.Secret{}
+				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: namespace.Name, Name: "garden-access-extension"}, secret)).To(Succeed())
+				g.Expect(secret.Labels).To(And(
+					HaveKeyWithValue("resources.gardener.cloud/class", "garden"),
+					HaveKeyWithValue("resources.gardener.cloud/purpose", "token-requestor"),
+				))
+				g.Expect(secret.Annotations).To(
+					HaveKeyWithValue("serviceaccount.resources.gardener.cloud/name", "extension-"+controllerInstallation.Name),
+				)
+			}).Should(Succeed())
+
 			By("Ensure chart was deployed correctly")
-			// Note that the list of feature gates is unexpectedly longer than in reality since the envtest starts
-			// gardener-apiserver which adds its own as well as the default Kubernetes features gates to the same
-			// map that is reused in gardenlet:
-			// `features.DefaultFeatureGate` is the same as `utilfeature.DefaultMutableFeatureGate`
-			Eventually(func(g Gomega) string {
+			values := make(map[string]any)
+			Eventually(func(g Gomega) {
 				managedResource := &resourcesv1alpha1.ManagedResource{}
 				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: "garden", Name: controllerInstallation.Name}, managedResource)).To(Succeed())
 
@@ -184,46 +214,30 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 
 				configMap := &corev1.ConfigMap{}
 				Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_config.yaml"], configMap)).To(Succeed())
+				Expect(yaml.Unmarshal([]byte(configMap.Data["values"]), &values)).To(Succeed())
+			}).Should(Succeed())
 
-				return configMap.Data["values"]
-			}).Should(Equal(`gardener:
+			// Our envtest setup starts gardener-apiserver in-process which adds its own feature gates as well as the default
+			// Kubernetes features gates to the same map that is reused in the tested gardenlet controller:
+			// `features.DefaultFeatureGate` is the same as `utilfeature.DefaultMutableFeatureGate`
+			// Hence, these feature gates are also mixed into the helm values.
+			// Here we assert that all known gardenlet features are correctly passed to the helm values but ignore the rest.
+			gardenletValues := (values["gardener"].(map[string]any))["gardenlet"].(map[string]any)
+			for _, feature := range gardenletfeatures.GetFeatures() {
+				Expect(gardenletValues["featureGates"]).To(HaveKeyWithValue(string(feature), features.DefaultFeatureGate.Enabled(feature)))
+			}
+
+			delete(gardenletValues, "featureGates")
+			(values["gardener"].(map[string]any))["gardenlet"] = gardenletValues
+
+			valuesBytes, err := yaml.Marshal(values)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(string(valuesBytes)).To(Equal(`gardener:
   garden:
     clusterIdentity: ` + gardenClusterIdentity + `
-  gardenlet:
-    featureGates:
-      APIListChunking: true
-      APIPriorityAndFairness: true
-      APIResponseCompression: true
-      APIServerIdentity: true
-      APIServerTracing: false
-      AdvancedAuditing: true
-      AggregatedDiscoveryEndpoint: false
-      AllAlpha: false
-      AllBeta: false
-      ComponentSLIs: false
-      CoreDNSQueryRewriting: false
-      CustomResourceValidationExpressions: true
-      DefaultSeccompProfile: false
-      DisableScalingClassesForShoots: false
-      DryRun: true
-      EfficientWatchResumption: true
-      HVPA: false
-      HVPAForShootedSeed: false
-      IPv6SingleStack: false
-      KMSv2: false
-      MachineControllerManagerDeployment: false
-      MutableShootSpecNetworkingNodes: false
-      OpenAPIEnums: true
-      OpenAPIV3: true
-      RemainingItemCount: true
-      RemoveSelfLink: true
-      ServerSideApply: true
-      ServerSideFieldValidation: true
-      StorageVersionAPI: false
-      StorageVersionHash: true
-      ValidatingAdmissionPolicy: false
-      WatchBookmark: true
-      WorkerlessShoots: false
+    genericKubeconfigSecretName: ` + genericKubeconfigSecret.Name + `
+  gardenlet: {}
   seed:
     annotations: null
     blockCIDRs: null

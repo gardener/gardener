@@ -82,18 +82,25 @@ const (
 	// for the shoot API server instead the DNS name or load balancer address.
 	SecretNameGardenerInternal = "gardener-internal"
 
+	// SecretPrefixGeneratedBackupBucket is a constant for the prefix of a secret name in the garden cluster related to
+	// BackpuBuckets.
+	SecretPrefixGeneratedBackupBucket = "generated-bucket-"
+
 	// SecretNameGenericTokenKubeconfig is a constant for the name of the kubeconfig used by the shoot controlplane
 	// components to authenticate against the shoot Kubernetes API server.
 	// Use `pkg/extensions.GenericTokenKubeconfigSecretNameFromCluster` instead.
 	SecretNameGenericTokenKubeconfig = "generic-token-kubeconfig"
+	// SecretNameGenericGardenKubeconfig is a constant for the name of the kubeconfig used by the extension
+	// components to authenticate against the garden Kubernetes API server.
+	SecretNameGenericGardenKubeconfig = "generic-garden-kubeconfig"
 	// AnnotationKeyGenericTokenKubeconfigSecretName is a constant for the key of an annotation on
 	// extensions.gardener.cloud/v1alpha1.Cluster resources whose value contains the name of the generic token
 	// kubeconfig secret in the seed cluster.
 	AnnotationKeyGenericTokenKubeconfigSecretName = "generic-token-kubeconfig.secret.gardener.cloud/name"
 
-	// SecretPrefixGeneratedBackupBucket is a constant for the prefix of a secret name in the garden cluster related to
-	// BackpuBuckets.
-	SecretPrefixGeneratedBackupBucket = "generated-bucket-"
+	// ExtensionGardenServiceAccountPrefix is the prefix of the default garden ServiceAccount generated for each
+	// ControllerInstallation.
+	ExtensionGardenServiceAccountPrefix = "extension-"
 
 	// DeploymentNameClusterAutoscaler is a constant for the name of a Kubernetes deployment object that contains
 	// the cluster-autoscaler pod.
@@ -719,6 +726,12 @@ const (
 	ArchitectureAMD64 = "amd64"
 	// ArchitectureARM64 is a constant for the 'arm64' architecture.
 	ArchitectureARM64 = "arm64"
+
+	// EnvGenericGardenKubeconfig is a constant for the environment variable which holds the path to the generic garden kubeconfig.
+	EnvGenericGardenKubeconfig = "GARDEN_KUBECONFIG"
+	// EnvSeedName is a constant for the environment variable which holds the name of the Seed that the extension
+	// controller is running on.
+	EnvSeedName = "SEED_NAME"
 )
 
 var (

@@ -273,8 +273,8 @@ var _ = Describe("Actuator", func() {
 			"replicas": 1,
 		}
 
-		shootAccessSecretsFunc         func(string) []*gardenerutils.ShootAccessSecret
-		exposureShootAccessSecretsFunc func(string) []*gardenerutils.ShootAccessSecret
+		shootAccessSecretsFunc         func(string) []*gardenerutils.AccessSecret
+		exposureShootAccessSecretsFunc func(string) []*gardenerutils.AccessSecret
 
 		errNotFound = &apierrors.StatusError{ErrStatus: metav1.Status{Reason: metav1.StatusReasonNotFound}}
 		logger      = log.Log.WithName("test")
@@ -301,11 +301,11 @@ var _ = Describe("Actuator", func() {
 			Spec:       extensionsv1alpha1.ControlPlaneSpec{},
 		}
 
-		shootAccessSecretsFunc = func(namespace string) []*gardenerutils.ShootAccessSecret {
-			return []*gardenerutils.ShootAccessSecret{gardenerutils.NewShootAccessSecret("new-cp", namespace)}
+		shootAccessSecretsFunc = func(namespace string) []*gardenerutils.AccessSecret {
+			return []*gardenerutils.AccessSecret{gardenerutils.NewShootAccessSecret("new-cp", namespace)}
 		}
-		exposureShootAccessSecretsFunc = func(namespace string) []*gardenerutils.ShootAccessSecret {
-			return []*gardenerutils.ShootAccessSecret{gardenerutils.NewShootAccessSecret("new-cp-exposure", namespace)}
+		exposureShootAccessSecretsFunc = func(namespace string) []*gardenerutils.AccessSecret {
+			return []*gardenerutils.AccessSecret{gardenerutils.NewShootAccessSecret("new-cp-exposure", namespace)}
 		}
 	})
 

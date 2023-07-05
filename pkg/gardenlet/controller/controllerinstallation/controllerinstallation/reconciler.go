@@ -15,17 +15,27 @@
 package controllerinstallation
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/component-base/featuregate"
 	podsecurityadmissionapi "k8s.io/pod-security-admission/api"
 	"k8s.io/utils/clock"
@@ -33,6 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/yaml"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -43,10 +54,12 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	ctrlinstutils "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/utils"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 const finalizerName = "core.gardener.cloud/controllerinstallation"
@@ -58,8 +71,9 @@ var RequeueDurationWhenResourceDeletionStillPresent = 30 * time.Second
 // Reconciler reconciles ControllerInstallations and deploys them into the seed cluster.
 type Reconciler struct {
 	GardenClient          client.Client
+	GardenConfig          *rest.Config
 	SeedClientSet         kubernetes.Interface
-	Config                config.ControllerInstallationControllerConfiguration
+	Config                config.GardenletConfiguration
 	Clock                 clock.Clock
 	Identity              *gardencorev1beta1.Gardener
 	GardenClusterIdentity string
@@ -179,6 +193,16 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, fmt.Errorf("cluster-identity of seed '%s' not set", seed.Name)
 	}
 
+	genericGardenKubeconfigSecretName, err := r.reconcileGenericGardenKubeconfig(seedCtx, namespace.Name)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to reconcile generic garden kubeconfig: %w", err)
+	}
+
+	gardenAccessSecret, err := r.reconcileGardenAccessSecret(seedCtx, controllerInstallation.Name, namespace.Name)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to reconcile garden access secret: %w", err)
+	}
+
 	var (
 		volumeProvider  string
 		volumeProviders []gardencorev1beta1.SeedVolumeProvider
@@ -201,7 +225,8 @@ func (r *Reconciler) reconcile(
 		"gardener": map[string]interface{}{
 			"version": r.Identity.Version,
 			"garden": map[string]interface{}{
-				"clusterIdentity": r.GardenClusterIdentity,
+				"clusterIdentity":             r.GardenClusterIdentity,
+				"genericKubeconfigSecretName": genericGardenKubeconfigSecretName,
 			},
 			"seed": map[string]interface{}{
 				"name":            seed.Name,
@@ -232,6 +257,11 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 	conditionValid = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionValid, gardencorev1beta1.ConditionTrue, "RegistrationValid", "chart could be rendered successfully.")
+	secretData := release.AsSecretData()
+
+	if err := injectGardenAccessSecrets(secretData, namespace.Name, genericGardenKubeconfigSecretName, gardenAccessSecret.Secret.Name, seed.Name); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to inject garden access secrets: %w", err)
+	}
 
 	if err := managedresources.Create(
 		seedCtx,
@@ -241,7 +271,7 @@ func (r *Reconciler) reconcile(
 		map[string]string{ctrlinstutils.LabelKeyControllerInstallationName: controllerInstallation.Name},
 		false,
 		v1beta1constants.SeedResourceManagerClass,
-		release.AsSecretData(),
+		secretData,
 		nil,
 		nil,
 		nil,
@@ -353,4 +383,161 @@ func getNamespaceForControllerInstallation(controllerInstallation *gardencorev1b
 			Name: gardenerutils.NamespaceNameForControllerInstallation(controllerInstallation),
 		},
 	}
+}
+
+func (r *Reconciler) reconcileGenericGardenKubeconfig(ctx context.Context, namespace string) (string, error) {
+	var (
+		address *string
+		caCert  []byte
+	)
+
+	if gcc := r.Config.GardenClientConnection; gcc != nil {
+		address = gcc.GardenClusterAddress
+		caCert = gcc.GardenClusterCACert
+	}
+
+	restConfig := gardenerutils.PrepareGardenClientRestConfig(r.GardenConfig, address, caCert)
+
+	kubeconfig, err := clientcmd.Write(clientcmdapi.Config{
+		Clusters: map[string]*clientcmdapi.Cluster{"garden": {
+			Server:                   restConfig.Host,
+			InsecureSkipTLSVerify:    restConfig.Insecure,
+			CertificateAuthorityData: restConfig.CAData,
+		}},
+		AuthInfos: map[string]*clientcmdapi.AuthInfo{"extension": {
+			TokenFile: gardenerutils.PathGardenToken,
+		}},
+		Contexts: map[string]*clientcmdapi.Context{"garden": {
+			Cluster:  "garden",
+			AuthInfo: "extension",
+		}},
+		CurrentContext: "garden",
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to serialize generic garden kubeconfig: %w", err)
+	}
+
+	kubeconfigSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      v1beta1constants.SecretNameGenericGardenKubeconfig,
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			secretsutils.DataKeyKubeconfig: kubeconfig,
+		},
+	}
+
+	utilruntime.Must(kubernetesutils.MakeUnique(kubeconfigSecret))
+
+	return kubeconfigSecret.Name, client.IgnoreAlreadyExists(r.SeedClientSet.Client().Create(ctx, kubeconfigSecret))
+}
+
+func (r *Reconciler) reconcileGardenAccessSecret(ctx context.Context, controllerInstallationName string, namespace string) (*gardenerutils.AccessSecret, error) {
+	accessSecret := gardenerutils.NewGardenAccessSecret("extension", namespace).
+		WithServiceAccountName(v1beta1constants.ExtensionGardenServiceAccountPrefix + controllerInstallationName)
+
+	return accessSecret, accessSecret.Reconcile(ctx, r.SeedClientSet.Client())
+}
+
+var (
+	injectionScheme    = kubernetes.SeedScheme
+	injectionAPIGroups = sets.New[string](appsv1.GroupName, batchv1.GroupName)
+)
+
+// injectGardenAccessSecrets iterates over the given rendered secret data and injects the given garden access secrets
+// into all objects in the apps API group.
+func injectGardenAccessSecrets(secretData map[string][]byte, namespace, genericGardenKubeconfigSecretName, gardenAccessSecretName, seedName string) error {
+	return mutateObjects(secretData, func(obj *unstructured.Unstructured) error {
+		// only inject into objects of selected API groups
+		if !injectionAPIGroups.Has(obj.GetObjectKind().GroupVersionKind().Group) {
+			return nil
+		}
+
+		// we can only inject the access secret into objects in the ControllerInstallation's namespace
+		if obj.GetNamespace() != namespace {
+			return nil
+		}
+
+		return mutateTypedObject(obj, func(typedObject runtime.Object) error {
+			// inject garden kubeconfig
+			if err := gardenerutils.InjectGenericGardenKubeconfig(
+				typedObject,
+				genericGardenKubeconfigSecretName,
+				gardenAccessSecretName,
+			); err != nil {
+				return err
+			}
+
+			// inject reference annotations for generic kubeconfig
+			if err := references.InjectAnnotations(typedObject); err != nil {
+				return err
+			}
+
+			// inject seed name env var
+			return kubernetesutils.VisitPodSpec(typedObject, func(podSpec *corev1.PodSpec) {
+				kubernetesutils.VisitContainers(podSpec, func(container *corev1.Container) {
+					kubernetesutils.AddEnvVar(container, corev1.EnvVar{
+						Name:  v1beta1constants.EnvSeedName,
+						Value: seedName,
+					}, true)
+				})
+			})
+		})
+	})
+}
+
+// mutateObject iterates over the given rendered secret data and calls the given mutator for each of them. It marshals
+// the objects back after mutation and updates the secret data.
+func mutateObjects(secretData map[string][]byte, mutate func(obj *unstructured.Unstructured) error) error {
+	for key, data := range secretData {
+		buffer := &bytes.Buffer{}
+		manifestReader := kubernetes.NewManifestReader(data)
+
+		for {
+			_, _ = buffer.WriteString("\n---\n")
+			obj, err := manifestReader.Read()
+			if err == io.EOF {
+				break
+			}
+
+			if err := mutate(obj); err != nil {
+				return err
+			}
+
+			// serialize unstructured back to secret data
+			// Note: we have to do this for all objects, not only for mutated ones, as there could be multiple objects in one file
+			objBytes, err := yaml.Marshal(obj)
+			if err != nil {
+				return err
+			}
+
+			if _, err := buffer.Write(objBytes); err != nil {
+				return err
+			}
+		}
+
+		secretData[key] = buffer.Bytes()
+	}
+
+	return nil
+}
+
+// mutateTypedObject converts the given object to a typed object, calls the mutator, and converts the object back to the
+// original type.
+func mutateTypedObject(obj runtime.Object, mutate func(obj runtime.Object) error) error {
+	// convert to typed object for injection logic
+	typedObject, err := injectionScheme.New(obj.GetObjectKind().GroupVersionKind())
+	if err != nil {
+		return err
+	}
+	if err := injectionScheme.Convert(obj, typedObject, nil); err != nil {
+		return err
+	}
+
+	if err := mutate(typedObject); err != nil {
+		return err
+	}
+
+	// convert back into unstructured for serialization
+	return injectionScheme.Convert(typedObject, obj, nil)
 }

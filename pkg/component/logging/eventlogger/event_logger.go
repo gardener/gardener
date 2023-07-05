@@ -350,7 +350,7 @@ func (l *eventLogger) deleteRBACForShoot(ctx context.Context) error {
 	return kubernetesutils.DeleteObjects(ctx, l.client, l.newShootAccessSecret().Secret)
 }
 
-func (l *eventLogger) newShootAccessSecret() *gardenerutils.ShootAccessSecret {
+func (l *eventLogger) newShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(name, l.namespace)
 }
 

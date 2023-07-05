@@ -1207,7 +1207,7 @@ func (r *resourceManager) ensureShootResources(ctx context.Context) error {
 	return managedresources.CreateForShoot(ctx, r.client, r.namespace, ManagedResourceName, managedresources.LabelValueGardener, false, data)
 }
 
-func (r *resourceManager) newShootAccessSecret() *gardenerutils.ShootAccessSecret {
+func (r *resourceManager) newShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(SecretNameShootAccess, r.namespace)
 }
 
@@ -2034,7 +2034,7 @@ type Secrets struct {
 	// token requestor controller will request a JWT token for itself with this kubeconfig.
 	BootstrapKubeconfig *component.Secret
 
-	shootAccess *gardenerutils.ShootAccessSecret
+	shootAccess *gardenerutils.AccessSecret
 }
 
 func disableControllersAndWebhooksForWorkerlessShoot(config *resourcemanagerv1alpha1.ResourceManagerConfiguration) {

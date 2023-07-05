@@ -335,7 +335,7 @@ func (c *clusterAutoscaler) emptyService() *corev1.Service {
 	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: ServiceName, Namespace: c.namespace}}
 }
 
-func (c *clusterAutoscaler) newShootAccessSecret() *gardenerutils.ShootAccessSecret {
+func (c *clusterAutoscaler) newShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(v1beta1constants.DeploymentNameClusterAutoscaler, c.namespace)
 }
 
