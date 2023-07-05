@@ -21,19 +21,33 @@ import (
 	"k8s.io/utils/pointer"
 )
 
+func getEtcdImageKeys(useEtcdWrapper bool) (etcdImageKey string, etcdbrImageKey string) {
+	switch useEtcdWrapper {
+	case true:
+		etcdImageKey = common.EtcdWrapper
+		etcdbrImageKey = common.BackupRestoreDistroless
+	default:
+		etcdImageKey = common.Etcd
+		etcdbrImageKey = common.BackupRestore
+	}
+	return
+}
+
 // GetEtcdImages returns images for etcd and backup-restore by inspecting the etcd spec and the image vector.
 // It will give preference to images that are set in the etcd spec and only if the image is not found in it should
 // it be picked up from the image vector if it's set there.
 // A return value of nil for either of the images indicates that the image is not set.
-func GetEtcdImages(etcd *druidv1alpha1.Etcd, iv imagevector.ImageVector) (*string, *string, error) {
-	etcdImage, err := chooseImage(common.Etcd, etcd.Spec.Etcd.Image, iv)
+func GetEtcdImages(etcd *druidv1alpha1.Etcd, iv imagevector.ImageVector, useEtcdWrapper bool) (*string, *string, error) {
+	etcdImageKey, etcdbrImageKey := getEtcdImageKeys(useEtcdWrapper)
+	etcdImage, err := chooseImage(etcdImageKey, etcd.Spec.Etcd.Image, iv)
 	if err != nil {
 		return nil, nil, err
 	}
-	etcdBackupRestoreImage, err := chooseImage(common.BackupRestore, etcd.Spec.Backup.Image, iv)
+	etcdBackupRestoreImage, err := chooseImage(etcdbrImageKey, etcd.Spec.Backup.Image, iv)
 	if err != nil {
 		return nil, nil, err
 	}
+
 	return etcdImage, etcdBackupRestoreImage, nil
 }
 
@@ -52,6 +66,7 @@ func chooseImage(key string, specImage *string, iv imagevector.ImageVector) (*st
 }
 
 // GetEtcdBackupRestoreImage returns the image for backup-restore from the given image vector.
-func GetEtcdBackupRestoreImage(iv imagevector.ImageVector) (*string, error) {
-	return chooseImage(common.BackupRestore, nil, iv)
+func GetEtcdBackupRestoreImage(iv imagevector.ImageVector, useEtcdWrapper bool) (*string, error) {
+	_, etcdbrImageKey := getEtcdImageKeys(useEtcdWrapper)
+	return chooseImage(etcdbrImageKey, nil, iv)
 }

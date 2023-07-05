@@ -97,7 +97,7 @@ github.com/fsnotify/fsnotify
 ## explicit; go 1.20
 github.com/gardener/dependency-watchdog/api/prober
 github.com/gardener/dependency-watchdog/api/weeder
-# github.com/gardener/etcd-druid v0.19.2
+# github.com/gardener/etcd-druid v0.19.2 => github.com/stackitcloud/etcd-druid v0.19.3-ske-1
 ## explicit; go 1.20
 github.com/gardener/etcd-druid/api/v1alpha1
 github.com/gardener/etcd-druid/api/validation
@@ -1159,7 +1159,7 @@ k8s.io/apiserver/plugin/pkg/authorizer/webhook
 # k8s.io/autoscaler/vertical-pod-autoscaler v0.14.0
 ## explicit; go 1.19
 k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1
-# k8s.io/client-go v0.28.3
+# k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible => k8s.io/client-go v0.28.3
 ## explicit; go 1.20
 k8s.io/client-go/applyconfigurations/admissionregistration/v1
 k8s.io/client-go/applyconfigurations/admissionregistration/v1alpha1
@@ -1773,3 +1773,5 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.3.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
+# github.com/gardener/etcd-druid => github.com/stackitcloud/etcd-druid v0.19.3-ske-1
+# k8s.io/client-go => k8s.io/client-go v0.28.3

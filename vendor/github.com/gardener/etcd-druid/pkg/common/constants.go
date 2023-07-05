@@ -19,6 +19,10 @@ const (
 	Etcd = "etcd"
 	// BackupRestore is the key for the etcd-backup-restore image in the image vector.
 	BackupRestore = "etcd-backup-restore"
+	// EtcdWrapper is the key for the etcd image in the image vector.
+	EtcdWrapper = "etcd-wrapper"
+	// BackupRestoreDistroless is the key for the etcd-backup-restore image in the image vector.
+	BackupRestoreDistroless = "etcd-backup-restore-distroless"
 	// ChartPath is the directory containing the default image vector file.
 	ChartPath = "charts"
 	// GardenerOwnedBy is a constant for an annotation on a resource that describes the owner resource.
