@@ -45,7 +45,7 @@ func NewNginxIngress(
 	component.DeployWaiter,
 	error,
 ) {
-	imageController, err := imageVector.FindImage(images.ImageNameNginxIngressControllerSeed, imagevector.TargetVersion(kubernetesVersion.String()))
+	imageController, err := imageVector.FindImage(images.ImageNameNginxIngressController, imagevector.TargetVersion(kubernetesVersion.String()))
 	if err != nil {
 		return nil, err
 	}

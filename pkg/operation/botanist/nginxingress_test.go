@@ -100,7 +100,7 @@ var _ = Describe("NginxIngress", func() {
 
 		It("should successfully create a nginxingress interface", func() {
 			kubernetesClient.EXPECT().Client()
-			botanist.ImageVector = imagevector.ImageVector{{Name: "nginx-ingress-controller-seed"}, {Name: "ingress-default-backend"}}
+			botanist.ImageVector = imagevector.ImageVector{{Name: "nginx-ingress-controller"}, {Name: "ingress-default-backend"}}
 
 			nginxIngress, err := botanist.DefaultNginxIngress()
 			Expect(nginxIngress).NotTo(BeNil())

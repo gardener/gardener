@@ -34,7 +34,7 @@ images:
   sourceRepository: github.com/gardener/dependency-watchdog
   repository: eu.gcr.io/gardener-project/gardener/dependency-watchdog
   tag: "v1.1.0"
-- name: nginx-ingress-controller-seed
+- name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: registry.k8s.io/ingress-nginx/controller-chroot
   tag: "v1.4.0"
@@ -48,7 +48,7 @@ images:
       confidentiality_requirement: 'low'
       integrity_requirement: 'low'
       availability_requirement: 'low'
-- name: nginx-ingress-controller-seed
+- name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: registry.k8s.io/ingress-nginx/controller-chroot
   tag: "v1.6.4"
@@ -62,10 +62,10 @@ images:
       confidentiality_requirement: 'low'
       integrity_requirement: 'low'
       availability_requirement: 'low'
-- name: nginx-ingress-controller-seed
+- name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: registry.k8s.io/ingress-nginx/controller-chroot
-  tag: "v1.8.0"
+  tag: "v1.8.1"
   targetVersion: ">= 1.24"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -356,24 +356,6 @@ images:
   sourceRepository: github.com/kubernetes/dashboard
   repository: eu.gcr.io/gardener-project/3rd/kubernetesui/metrics-scraper
   tag: v1.0.7
-  labels: *optionalAddonLabels
-- name: nginx-ingress-controller
-  sourceRepository: github.com/kubernetes/ingress-nginx
-  repository: registry.k8s.io/ingress-nginx/controller-chroot
-  tag: "v1.4.0"
-  targetVersion: "1.22.x"
-  labels: *optionalAddonLabels
-- name: nginx-ingress-controller
-  sourceRepository: github.com/kubernetes/ingress-nginx
-  repository: registry.k8s.io/ingress-nginx/controller-chroot
-  tag: "v1.6.4"
-  targetVersion: "1.23.x"
-  labels: *optionalAddonLabels
-- name: nginx-ingress-controller
-  sourceRepository: github.com/kubernetes/ingress-nginx
-  repository: registry.k8s.io/ingress-nginx/controller-chroot
-  tag: "v1.8.0"
-  targetVersion: ">= 1.24"
   labels: *optionalAddonLabels
 
 # Miscellaenous
