@@ -15,6 +15,8 @@
 package operatingsystemconfig
 
 import (
+	"context"
+
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -57,8 +59,8 @@ func Add(mgr manager.Manager, args AddArgs) error {
 }
 
 // DefaultPredicates returns the default predicates for an operatingsystemconfig reconciler.
-func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
-	return extensionspredicate.DefaultControllerPredicates(ignoreOperationAnnotation, extensionspredicate.ShootNotFailedPredicate())
+func DefaultPredicates(ctx context.Context, mgr manager.Manager, ignoreOperationAnnotation bool) []predicate.Predicate {
+	return extensionspredicate.DefaultControllerPredicates(ignoreOperationAnnotation, extensionspredicate.ShootNotFailedPredicate(ctx, mgr))
 }
 
 func add(mgr manager.Manager, options controller.Options, predicates []predicate.Predicate) error {

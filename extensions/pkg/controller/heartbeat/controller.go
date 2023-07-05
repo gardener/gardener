@@ -15,6 +15,8 @@
 package heartbeat
 
 import (
+	"context"
+
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -41,7 +43,7 @@ type AddOptions struct {
 }
 
 // AddToManager adds the heartbeat controller with the default Options to the manager.
-func AddToManager(mgr manager.Manager) error {
+func AddToManager(_ context.Context, mgr manager.Manager) error {
 	return Add(mgr, AddArgs{
 		ExtensionName:        DefaultAddOptions.ExtensionName,
 		Namespace:            DefaultAddOptions.Namespace,

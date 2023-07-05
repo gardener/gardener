@@ -15,6 +15,8 @@
 package worker
 
 import (
+	"context"
+
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -56,8 +58,8 @@ type AddArgs struct {
 }
 
 // DefaultPredicates returns the default predicates for a Worker reconciler.
-func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
-	return extensionspredicate.DefaultControllerPredicates(ignoreOperationAnnotation, extensionspredicate.ShootNotFailedPredicate())
+func DefaultPredicates(ctx context.Context, mgr manager.Manager, ignoreOperationAnnotation bool) []predicate.Predicate {
+	return extensionspredicate.DefaultControllerPredicates(ignoreOperationAnnotation, extensionspredicate.ShootNotFailedPredicate(ctx, mgr))
 }
 
 // Add creates a new Worker Controller and adds it to the Manager.

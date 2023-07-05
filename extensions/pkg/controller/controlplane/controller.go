@@ -15,6 +15,8 @@
 package controlplane
 
 import (
+	"context"
+
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -53,8 +55,8 @@ type AddArgs struct {
 }
 
 // DefaultPredicates returns the default predicates for a controlplane reconciler.
-func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
-	return extensionspredicate.DefaultControllerPredicates(ignoreOperationAnnotation, extensionspredicate.ShootNotFailedPredicate())
+func DefaultPredicates(ctx context.Context, mgr manager.Manager, ignoreOperationAnnotation bool) []predicate.Predicate {
+	return extensionspredicate.DefaultControllerPredicates(ignoreOperationAnnotation, extensionspredicate.ShootNotFailedPredicate(ctx, mgr))
 }
 
 // Add creates a new ControlPlane Controller and adds it to the Manager.

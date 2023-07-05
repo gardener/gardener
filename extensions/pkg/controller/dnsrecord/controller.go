@@ -15,6 +15,8 @@
 package dnsrecord
 
 import (
+	"context"
+
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -53,7 +55,7 @@ type AddArgs struct {
 }
 
 // DefaultPredicates returns the default predicates for a dnsrecord reconciler.
-func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
+func DefaultPredicates(ctx context.Context, mgr manager.Manager, ignoreOperationAnnotation bool) []predicate.Predicate {
 	return extensionspredicate.DefaultControllerPredicates(ignoreOperationAnnotation,
 		// Special case for preconditions for the DNSRecord controller: Some DNSRecord resources are created in the
 		// 'garden' namespace and don't belong to a Shoot. Most other DNSRecord resources are created in regular shoot
@@ -61,7 +63,7 @@ func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 		// preconditions and ensure at least one of them applies.
 		predicate.Or(
 			extensionspredicate.IsInGardenNamespacePredicate,
-			extensionspredicate.ShootNotFailedPredicate(),
+			extensionspredicate.ShootNotFailedPredicate(ctx, mgr),
 		),
 	)
 }

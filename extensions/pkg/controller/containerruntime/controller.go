@@ -15,6 +15,7 @@
 package containerruntime
 
 import (
+	"context"
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -64,8 +65,8 @@ func Add(mgr manager.Manager, args AddArgs) error {
 }
 
 // DefaultPredicates returns the default predicates for an containerruntime reconciler.
-func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
-	return extensionspredicate.DefaultControllerPredicates(ignoreOperationAnnotation, extensionspredicate.ShootNotFailedPredicate())
+func DefaultPredicates(ctx context.Context, mgr manager.Manager, ignoreOperationAnnotation bool) []predicate.Predicate {
+	return extensionspredicate.DefaultControllerPredicates(ignoreOperationAnnotation, extensionspredicate.ShootNotFailedPredicate(ctx, mgr))
 }
 
 func add(mgr manager.Manager, args AddArgs) error {
