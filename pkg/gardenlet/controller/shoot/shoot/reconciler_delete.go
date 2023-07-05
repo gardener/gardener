@@ -619,7 +619,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		deletePlutono = g.Add(flow.Task{
 			Name:         "Deleting Plutono in Seed",
-			Fn:           flow.TaskFn(botanist.DeletePlutono).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.DestroySeedPlutono).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureDeleted),
 		})
 		destroySeedLogging = g.Add(flow.Task{

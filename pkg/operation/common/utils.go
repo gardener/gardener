@@ -561,47 +561,6 @@ func DeleteAlertmanager(ctx context.Context, k8sClient client.Client, namespace 
 	return kubernetesutils.DeleteObjects(ctx, k8sClient, objs...)
 }
 
-// DeletePlutono deletes the monitoring stack for the shoot owner.
-func DeletePlutono(ctx context.Context, k8sClient kubernetes.Interface, namespace string) error {
-	if k8sClient == nil {
-		return fmt.Errorf("require kubernetes client")
-	}
-
-	deleteOptions := []client.DeleteAllOfOption{
-		client.InNamespace(namespace),
-		client.MatchingLabels{
-			"component": "plutono",
-		},
-	}
-
-	if err := k8sClient.Client().DeleteAllOf(ctx, &appsv1.Deployment{}, append(deleteOptions, client.PropagationPolicy(metav1.DeletePropagationForeground))...); err != nil {
-		return err
-	}
-
-	if err := k8sClient.Client().DeleteAllOf(ctx, &corev1.ConfigMap{}, deleteOptions...); err != nil {
-		return err
-	}
-
-	if err := k8sClient.Client().DeleteAllOf(ctx, &networkingv1.Ingress{}, deleteOptions...); err != nil {
-		return err
-	}
-
-	if err := k8sClient.Client().DeleteAllOf(ctx, &corev1.Secret{}, deleteOptions...); err != nil {
-		return err
-	}
-
-	return client.IgnoreNotFound(
-		k8sClient.Client().Delete(
-			ctx,
-			&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "plutono",
-					Namespace: namespace,
-				}},
-		),
-	)
-}
-
 // DeleteGrafana deletes the Grafana resources that are no longer necessary due to the migration to Plutono.
 func DeleteGrafana(ctx context.Context, k8sClient kubernetes.Interface, namespace string) error {
 	if k8sClient == nil {

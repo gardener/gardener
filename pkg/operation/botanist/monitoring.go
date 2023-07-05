@@ -26,12 +26,15 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/etcd"
+	"github.com/gardener/gardener/pkg/component/plutono"
+	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
@@ -47,15 +50,6 @@ import (
 const (
 	secretNameIngress = v1beta1constants.SecretNameObservabilityIngressUsers
 )
-
-func observabilityIngressSecretConfig(name string) *secrets.BasicAuthSecretConfig {
-	return &secrets.BasicAuthSecretConfig{
-		Name:           name,
-		Format:         secrets.BasicAuthFormatNormal,
-		Username:       "admin",
-		PasswordLength: 32,
-	}
-}
 
 // DeploySeedMonitoring installs the Helm release "seed-monitoring" in the Seed clusters. It comprises components
 // to monitor the Shoot cluster whose control plane runs in the Seed cluster.
@@ -394,11 +388,37 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	return common.DeleteAlertmanager(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
 }
 
-// DeploySeedPlutono deploys the plutono charts to the Seed cluster.
+// DefaultPlutono returns a deployer for Plutono.
+func (b *Botanist) DefaultPlutono() (plutono.Interface, error) {
+	var wildcardCertName *string
+	if b.ControlPlaneWildcardCert != nil {
+		wildcardCertName = pointer.String(b.ControlPlaneWildcardCert.GetName())
+	}
+
+	return shared.NewPlutono(
+		b.SeedClientSet.Client(),
+		b.Shoot.SeedNamespace,
+		b.ImageVector,
+		b.SecretsManager,
+		"",
+		component.ClusterTypeShoot,
+		b.ComputePlutonoHost(),
+		b.ShootUsesDNS(),
+		features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment),
+		b.Shoot.NodeLocalDNSEnabled,
+		b.Shoot.IsWorkerless,
+		b.Shoot.VPNHighAvailabilityEnabled,
+		b.Shoot.GetReplicas(1),
+		wildcardCertName,
+		b.Shoot.WantsVerticalPodAutoscaler,
+	)
+}
+
+// DeploySeedPlutono deploys the plutono in the Seed cluster.
 func (b *Botanist) DeploySeedPlutono(ctx context.Context) error {
 	// disable monitoring if shoot has purpose testing or monitoring and vali is disabled
 	if !b.Operation.WantsPlutono() {
-		if err := b.DeletePlutono(ctx); err != nil {
+		if err := b.Shoot.Components.ControlPlane.Plutono.Destroy(ctx); err != nil {
 			return err
 		}
 
@@ -411,60 +431,13 @@ func (b *Botanist) DeploySeedPlutono(ctx context.Context) error {
 		return err
 	}
 
-	credentialsSecret, err := b.SecretsManager.Generate(ctx, observabilityIngressSecretConfig(secretNameIngress),
-		secretsmanager.Persist(),
-		secretsmanager.Rotate(secretsmanager.InPlace),
-	)
-	if err != nil {
+	if err := b.Shoot.Components.ControlPlane.Plutono.Deploy(ctx); err != nil {
 		return err
 	}
 
-	var (
-		dashboards = strings.Builder{}
-	)
-
-	// Fetch extensions provider-specific monitoring configuration
-	existingConfigMaps := &corev1.ConfigMapList{}
-	if err := b.SeedClientSet.Client().List(ctx, existingConfigMaps,
-		client.InNamespace(b.Shoot.SeedNamespace),
-		client.MatchingLabels{v1beta1constants.LabelExtensionConfiguration: v1beta1constants.LabelMonitoring}); err != nil {
-		return err
-	}
-
-	// Need stable order before passing the dashboards to Plutono config to avoid unnecessary changes
-	kubernetesutils.ByName().Sort(existingConfigMaps)
-
-	// Read extension monitoring configurations
-	for _, cm := range existingConfigMaps.Items {
-		if operatorsDashboard, ok := cm.Data[v1beta1constants.PlutonoConfigMapOperatorDashboard]; ok && operatorsDashboard != "" {
-			dashboards.WriteString(fmt.Sprintln(strings.ReplaceAll(strings.ReplaceAll(operatorsDashboard, "Grafana", "Plutono"), "loki", "vali")))
-		}
-		if usersDashboard, ok := cm.Data[v1beta1constants.PlutonoConfigMapUserDashboard]; ok && usersDashboard != "" {
-			dashboards.WriteString(fmt.Sprintln(strings.ReplaceAll(strings.ReplaceAll(usersDashboard, "Grafana", "Plutono"), "loki", "vali")))
-		}
-	}
-
-	var ingressTLSSecretName string
-	if b.ControlPlaneWildcardCert != nil {
-		ingressTLSSecretName = b.ControlPlaneWildcardCert.GetName()
-	} else {
-		ingressTLSSecret, err := b.SecretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
-			Name:                        "plutono-tls",
-			CommonName:                  "plutono",
-			Organization:                []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:                    b.ComputePlutonoHosts(),
-			CertType:                    secrets.ServerCert,
-			Validity:                    &ingressTLSCertificateValidity,
-			SkipPublishingCACertificate: true,
-		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
-		if err != nil {
-			return err
-		}
-		ingressTLSSecretName = ingressTLSSecret.Name
-	}
-
-	if err := b.deployPlutonoCharts(ctx, credentialsSecret, dashboards.String(), common.PlutonoUsersPrefix, ingressTLSSecretName); err != nil {
-		return err
+	credentialsSecret, found := b.SecretsManager.Get(secretNameIngress)
+	if !found {
+		return fmt.Errorf("secret %q not found", secretNameIngress)
 	}
 
 	return b.syncShootCredentialToGarden(
@@ -474,6 +447,11 @@ func (b *Botanist) DeploySeedPlutono(ctx context.Context) error {
 		map[string]string{"url": "https://" + b.ComputePlutonoHost()},
 		credentialsSecret.Data,
 	)
+}
+
+// DestroySeedPlutono destroy the plutono in the Seed cluster.
+func (b *Botanist) DestroySeedPlutono(ctx context.Context) error {
+	return b.Shoot.Components.ControlPlane.Plutono.Destroy(ctx)
 }
 
 func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretKeys []string) (map[string]interface{}, error) {
@@ -551,44 +529,6 @@ func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretK
 	}
 
 	return configs, nil
-}
-
-func (b *Botanist) deployPlutonoCharts(ctx context.Context, credentialsSecret *corev1.Secret, dashboards, subDomain, ingressTLSSecretName string) error {
-	values, err := b.InjectSeedShootImages(map[string]interface{}{
-		"ingress": map[string]interface{}{
-			"class":          v1beta1constants.SeedNginxIngressClass,
-			"authSecretName": credentialsSecret.Name,
-			"hosts": []map[string]interface{}{
-				{
-					"hostName":   b.ComputeIngressHost(subDomain),
-					"secretName": ingressTLSSecretName,
-				},
-			},
-		},
-		"replicas": b.Shoot.GetReplicas(1),
-		"extensions": map[string]interface{}{
-			"dashboards": dashboards,
-		},
-		"vpaEnabled":             b.Shoot.WantsVerticalPodAutoscaler,
-		"includeIstioDashboards": b.ShootUsesDNS(),
-		"nodeLocalDNS": map[string]interface{}{
-			"enabled": b.Shoot.NodeLocalDNSEnabled,
-		},
-		"reversedVPN": map[string]interface{}{
-			"highAvailabilityEnabled": b.Shoot.VPNHighAvailabilityEnabled,
-		},
-		"workerless": b.Shoot.IsWorkerless,
-	}, images.ImageNamePlutono)
-	if err != nil {
-		return err
-	}
-
-	return b.SeedClientSet.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-monitoring", "charts", "plutono"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(values))
-}
-
-// DeletePlutono will delete all plutono resources from the seed cluster.
-func (b *Botanist) DeletePlutono(ctx context.Context) error {
-	return common.DeletePlutono(ctx, b.SeedClientSet, b.Shoot.SeedNamespace)
 }
 
 // DeleteGrafana will delete all Grafana resources from the seed cluster.

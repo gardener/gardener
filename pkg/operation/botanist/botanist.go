@@ -133,6 +133,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
+	o.Shoot.Components.ControlPlane.Plutono, err = b.DefaultPlutono()
+	if err != nil {
+		return nil, err
+	}
 	o.Shoot.Components.ControlPlane.ResourceManager, err = b.DefaultResourceManager()
 	if err != nil {
 		return nil, err
