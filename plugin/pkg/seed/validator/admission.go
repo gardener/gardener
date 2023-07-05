@@ -54,7 +54,7 @@ type ValidateSeed struct {
 var (
 	_ = admissioninitializer.WantsInternalCoreInformerFactory(&ValidateSeed{})
 
-	readyFuncs = []admission.ReadyFunc{}
+	readyFuncs []admission.ReadyFunc
 )
 
 // New creates a new ValidateSeed admission plugin.

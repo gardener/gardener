@@ -57,7 +57,7 @@ type OpenIDConnectPreset struct {
 var (
 	_ = admissioninitializer.WantsSettingsInformerFactory(&OpenIDConnectPreset{})
 
-	readyFuncs = []admission.ReadyFunc{}
+	readyFuncs []admission.ReadyFunc
 )
 
 // New creates a new OpenIDConnectPreset admission plugin.
@@ -92,7 +92,7 @@ func (o *OpenIDConnectPreset) ValidateInitialization() error {
 var _ admission.MutationInterface = &OpenIDConnectPreset{}
 
 // Admit tries to determine a OpenIDConnectPreset hosted zone for the Shoot's external domain.
-func (o *OpenIDConnectPreset) Admit(ctx context.Context, a admission.Attributes, out admission.ObjectInterfaces) error {
+func (o *OpenIDConnectPreset) Admit(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if o.readyFunc == nil {
 		o.AssignReadyFunc(func() bool {

@@ -82,7 +82,7 @@ var (
 	_ = admissioninitializer.WantsSeedManagementClientset(&ManagedSeed{})
 	_ = admissioninitializer.WantsKubeInformerFactory(&ManagedSeed{})
 
-	readyFuncs = []admission.ReadyFunc{}
+	readyFuncs []admission.ReadyFunc
 )
 
 // New creates a new ManagedSeed admission plugin.
@@ -150,7 +150,7 @@ func (v *ManagedSeed) ValidateInitialization() error {
 var _ admission.MutationInterface = &ManagedSeed{}
 
 // Admit validates and if appropriate mutates the given managed seed against the shoot that it references.
-func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
+func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if v.readyFunc == nil {
 		v.AssignReadyFunc(func() bool {

@@ -74,7 +74,7 @@ type QuotaValidator struct {
 var (
 	_ = admissioninitializer.WantsInternalCoreInformerFactory(&QuotaValidator{})
 
-	readyFuncs = []admission.ReadyFunc{}
+	readyFuncs []admission.ReadyFunc
 )
 
 // New creates a new QuotaValidator admission plugin.
@@ -128,7 +128,7 @@ func (q *QuotaValidator) ValidateInitialization() error {
 var _ admission.ValidationInterface = &QuotaValidator{}
 
 // Validate checks that the requested Shoot resources do not exceed the quota limits.
-func (q *QuotaValidator) Validate(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
+func (q *QuotaValidator) Validate(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if q.readyFunc == nil {
 		q.AssignReadyFunc(func() bool {

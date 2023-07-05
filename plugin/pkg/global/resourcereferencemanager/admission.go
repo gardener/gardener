@@ -95,7 +95,7 @@ var (
 	_ = admissioninitializer.WantsDynamicClient(&ReferenceManager{})
 	_ = admissioninitializer.WantsAuthorizer(&ReferenceManager{})
 
-	readyFuncs = []admission.ReadyFunc{}
+	readyFuncs []admission.ReadyFunc
 
 	// MissingSecretWait is the time how long to wait for a missing secret before re-checking the cache
 	// (and then doing a live lookup).
@@ -229,7 +229,7 @@ func (r *ReferenceManager) ValidateInitialization() error {
 }
 
 // Admit ensures that referenced resources do actually exist.
-func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
+func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if r.readyFunc == nil {
 		r.AssignReadyFunc(func() bool {
@@ -402,7 +402,7 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 				}
 			}
 
-			err = r.ensureBackupBucketReferences(ctx, oldBackupBucket, backupBucket, operation)
+			err = r.ensureBackupBucketReferences(ctx, oldBackupBucket, backupBucket)
 		}
 
 	case core.Kind("BackupEntry"):
@@ -417,7 +417,7 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 				return apierrors.NewBadRequest("could not convert old resource into BackupEntry object")
 			}
 		}
-		err = r.ensureBackupEntryReferences(ctx, oldBackupEntry, backupEntry)
+		err = r.ensureBackupEntryReferences(oldBackupEntry, backupEntry)
 
 	case core.Kind("CloudProfile"):
 		cloudProfile, ok := a.GetObject().(*core.CloudProfile)
@@ -715,7 +715,7 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 	return nil
 }
 
-func (r *ReferenceManager) ensureBackupEntryReferences(ctx context.Context, oldBackupEntry, backupEntry *core.BackupEntry) error {
+func (r *ReferenceManager) ensureBackupEntryReferences(oldBackupEntry, backupEntry *core.BackupEntry) error {
 	if !equality.Semantic.DeepEqual(oldBackupEntry.Spec.SeedName, backupEntry.Spec.SeedName) {
 		if backupEntry.Spec.SeedName != nil {
 			if _, err := r.seedLister.Get(*backupEntry.Spec.SeedName); err != nil {
@@ -733,7 +733,7 @@ func (r *ReferenceManager) ensureBackupEntryReferences(ctx context.Context, oldB
 	return nil
 }
 
-func (r *ReferenceManager) ensureBackupBucketReferences(ctx context.Context, oldBackupBucket, backupBucket *core.BackupBucket, operation admission.Operation) error {
+func (r *ReferenceManager) ensureBackupBucketReferences(ctx context.Context, oldBackupBucket, backupBucket *core.BackupBucket) error {
 	if !equality.Semantic.DeepEqual(oldBackupBucket.Spec.SeedName, backupBucket.Spec.SeedName) {
 		if backupBucket.Spec.SeedName != nil {
 			if _, err := r.seedLister.Get(*backupBucket.Spec.SeedName); err != nil {

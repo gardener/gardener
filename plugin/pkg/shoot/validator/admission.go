@@ -88,7 +88,7 @@ var (
 	_ = admissioninitializer.WantsKubeInformerFactory(&ValidateShoot{})
 	_ = admissioninitializer.WantsAuthorizer(&ValidateShoot{})
 
-	readyFuncs = []admission.ReadyFunc{}
+	readyFuncs []admission.ReadyFunc
 )
 
 // New creates a new ValidateShoot admission plugin.
@@ -170,7 +170,7 @@ func (v *ValidateShoot) ValidateInitialization() error {
 var _ admission.MutationInterface = &ValidateShoot{}
 
 // Admit validates the Shoot details against the referenced CloudProfile.
-func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
+func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if v.readyFunc == nil {
 		v.AssignReadyFunc(func() bool {
@@ -1423,7 +1423,7 @@ func validateZones(constraints []core.Region, region, oldRegion string, worker, 
 }
 
 func validateZone(constraints []core.Region, region, zone string) (bool, []string) {
-	validValues := []string{}
+	var validValues []string
 
 	for _, r := range constraints {
 		if r.Name == region {
@@ -1582,7 +1582,7 @@ func validateCRI(constraints []core.CRI, worker core.Worker, fldPath *field.Path
 }
 
 func validateCRMembership(constraints []core.ContainerRuntime, cr string) (bool, []string) {
-	validValues := []string{}
+	var validValues []string
 	for _, constraint := range constraints {
 		validValues = append(validValues, constraint.Type)
 		if constraint.Type == cr {

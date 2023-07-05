@@ -48,7 +48,7 @@ func Register(plugins *admission.Plugins) {
 }
 
 // NewFactory creates a new PluginFactory.
-func NewFactory(config io.Reader) (admission.Interface, error) {
+func NewFactory(_ io.Reader) (admission.Interface, error) {
 	return New()
 }
 
@@ -124,7 +124,7 @@ func (e *ExtensionValidator) ValidateInitialization() error {
 var _ admission.ValidationInterface = &ExtensionValidator{}
 
 // Validate makes admissions decisions based on the extension types.
-func (e *ExtensionValidator) Validate(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
+func (e *ExtensionValidator) Validate(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	if err := e.waitUntilReady(a); err != nil {
 		return fmt.Errorf("err while waiting for ready %w", err)
 	}

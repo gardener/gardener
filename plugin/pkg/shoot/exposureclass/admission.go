@@ -108,7 +108,7 @@ func (e *ExposureClass) ValidateInitialization() error {
 
 // Admit unite the seed selector and/or tolerations of a Shoot resource
 // with the ones from the referenced ExposureClass.
-func (e *ExposureClass) Admit(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
+func (e *ExposureClass) Admit(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	if err := e.waitUntilReady(a); err != nil {
 		return fmt.Errorf("err while waiting for ready %w", err)
 	}
@@ -199,7 +199,7 @@ func uniteTolerations(shootTolerations []core.Toleration, exposureClassToleratio
 		if shootTolerationsKeys.Has(toleration.Key) {
 			return nil, fmt.Errorf("toleration with key %q conflicts with the ones of referenced exposureclass", toleration.Key)
 		}
-		shootTolerations = append(shootTolerations, core.Toleration(toleration))
+		shootTolerations = append(shootTolerations, toleration)
 	}
 
 	return shootTolerations, nil

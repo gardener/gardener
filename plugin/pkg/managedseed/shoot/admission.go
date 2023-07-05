@@ -58,7 +58,7 @@ var (
 	_ = admissioninitializer.WantsInternalCoreInformerFactory(&Shoot{})
 	_ = admissioninitializer.WantsSeedManagementClientset(&Shoot{})
 
-	readyFuncs = []admission.ReadyFunc{}
+	readyFuncs []admission.ReadyFunc
 )
 
 // New creates a new Shoot admission plugin.
@@ -149,7 +149,7 @@ func (v *Shoot) validateDeleteCollection(ctx context.Context, a admission.Attrib
 	return nil
 }
 
-func (v *Shoot) validateDelete(ctx context.Context, a admission.Attributes) error {
+func (v *Shoot) validateDelete(_ context.Context, a admission.Attributes) error {
 	seedName := a.GetName()
 
 	shoots, err := v.getShoots(labels.Everything())
