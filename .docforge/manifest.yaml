@@ -18,7 +18,6 @@ structure:
       weight: 2
       categories:
         - Operators
-        - Developers
   nodesSelector:
     path: /docs/concepts
 - name: deployment
@@ -28,7 +27,6 @@ structure:
       weight: 3
       categories:
         - Operators
-        - Developers
   nodesSelector:
     path: /docs/deployment
 - name: development
@@ -58,13 +56,21 @@ structure:
         - Operators
   nodesSelector:
     path: /docs/monitoring
+- name: operations
+  properties:
+    frontmatter:
+      title: Operations
+      weight: 7
+      categories:
+        - Operators
+  nodesSelector:
+    path: /docs/operations
 - name: usage
   properties:
     frontmatter:
       title: Usage
-      weight: 7
+      weight: 8
       categories:
-        - Operators
         - Users
   nodesSelector:
     path: /docs/usage

@@ -1,5 +1,7 @@
 ---
 title: Backup and Restore
+categories:
+  - Users
 ---
 
 # Backup and Restore

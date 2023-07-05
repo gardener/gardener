@@ -21,7 +21,7 @@ Instead of doing this one-by-one for each and every component, extensions can re
 Please refer to [High Availability of Deployed Components](../development/high-availability.md) for details.
 
 To reduce costs and to improve the network traffic latency in multi-zone clusters, extensions can make a Service topology-aware.
-Please refer to [this document](../usage/topology_aware_routing.md) for details.
+Please refer to [this document](../operations/topology_aware_routing.md) for details.
 
 ## Is there a naming scheme for (global) resources?
 

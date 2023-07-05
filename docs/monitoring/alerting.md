@@ -29,7 +29,7 @@ A list of operator alerts can be found in the [Operator Alerts](operator_alerts.
 
 ## Email Alerting
 
-Gardener provides the option to deploy an Alertmanager into each seed. This Alertmanager is responsible for sending out alerts to operators for each shoot cluster in the seed. Only email alerts are supported by the Alertmanager managed by Gardener. This is configurable by setting the Gardener controller manager configuration values `alerting`. See [Gardener Configuration and Usage](../usage/configuration.md) on how to configure the Gardener's SMTP secret. If the values are set, a secret with the label `gardener.cloud/role: alerting` will be created in the garden namespace of the garden cluster. This secret will be used by each Alertmanager in each seed.
+Gardener provides the option to deploy an Alertmanager into each seed. This Alertmanager is responsible for sending out alerts to operators for each shoot cluster in the seed. Only email alerts are supported by the Alertmanager managed by Gardener. This is configurable by setting the Gardener controller manager configuration values `alerting`. See [Gardener Configuration and Usage](../operations/configuration.md) on how to configure the Gardener's SMTP secret. If the values are set, a secret with the label `gardener.cloud/role: alerting` will be created in the garden namespace of the garden cluster. This secret will be used by each Alertmanager in each seed.
 
 ## External Alertmanager
 

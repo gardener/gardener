@@ -32,7 +32,7 @@ Please note that all of them are not technical limitations/blockers, but simply 
 
 ## `ManagedSeed`s
 
-It is possible to deploy [`ManagedSeed`s](../usage/managed_seed.md) with `provider-local` by first creating a [`Shoot` in the `garden` namespace](../../example/provider-local/managedseeds/shoot-managedseed.yaml) and then creating a referencing [`ManagedSeed` object](../../example/provider-local/managedseeds/managedseed.yaml).
+It is possible to deploy [`ManagedSeed`s](../operations/managed_seed.md) with `provider-local` by first creating a [`Shoot` in the `garden` namespace](../../example/provider-local/managedseeds/shoot-managedseed.yaml) and then creating a referencing [`ManagedSeed` object](../../example/provider-local/managedseeds/managedseed.yaml).
 
 > Please note that this is only supported by the [`Skaffold`-based setup](../deployment/getting_started_locally.md).
 

@@ -245,7 +245,7 @@ To access the `Shoot`, you can acquire a `kubeconfig` by using the [`shoots/admi
 
 ## (Optional): Setting Up a Second Seed Cluster
 
-There are cases where you would want to create a second seed cluster in your local setup. For example, if you want to test the [control plane migration](../usage/control_plane_migration.md) feature. The following steps describe how to do that.
+There are cases where you would want to create a second seed cluster in your local setup. For example, if you want to test the [control plane migration](../operations/control_plane_migration.md) feature. The following steps describe how to do that.
 
 If you are on macOS, add a new IP address on your loopback device which will be necessary for the new KinD cluster that you will create. On macOS, the default loopback device is `lo0`.
 
@@ -282,7 +282,7 @@ NAME    STATUS   PROVIDER   REGION   AGE     VERSION       K8S VERSION
 local2  Ready    local      local    4m42s   vX.Y.Z-dev    v1.25.1
 ```
 
-If you want to perform control plane migration, you can follow the steps outlined in [Control Plane Migration](../usage/control_plane_migration.md) to migrate the shoot cluster to the second seed you just created.
+If you want to perform control plane migration, you can follow the steps outlined in [Control Plane Migration](../operations/control_plane_migration.md) to migrate the shoot cluster to the second seed you just created.
 
 ## Deleting the `Shoot` Cluster
 

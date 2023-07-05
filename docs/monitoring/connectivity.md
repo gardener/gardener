@@ -1,3 +1,8 @@
+---
+categories:
+  - Users
+---
+
 # Connectivity
 
 ## Shoot Connectivity

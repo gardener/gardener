@@ -1,5 +1,7 @@
 ---
 title: API Server
+categories:
+  - Users
 ---
 
 # Gardener API Server

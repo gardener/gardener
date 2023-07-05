@@ -2,7 +2,7 @@
 
 Adding new components that run in the garden, seed, or shoot cluster is theoretically quite simple - we just need a `Deployment` (or other similar workload resource), the respective container image, and maybe a bit of configuration.
 In practice, however, there are a couple of things to keep in mind in order to make the deployment production-ready.
-This document provides a checklist for them that you can walk through. 
+This document provides a checklist for them that you can walk through.
 
 ## General
 
@@ -11,7 +11,7 @@ This document provides a checklist for them that you can walk through.
    Nowadays, we use [Golang components](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/interfaces.go) instead of Helm charts for deploying components to a cluster.
    Please find a typical structure of such components in the provided [metrics_server.go](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L80-L97) file (configuration values are typically managed in a `Values` structure).
    There are a few exceptions (e.g., [Istio](https://github.com/gardener/gardener/tree/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/istio)) still using charts, however the default should be using a Golang-based implementation.
-   For the exceptional cases, use Golang's [embed](https://pkg.go.dev/embed) package to embed the Helm chart directory ([example 1](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/istio/istiod.go#L59-L60), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/istio/istiod.go#L297-L313)). 
+   For the exceptional cases, use Golang's [embed](https://pkg.go.dev/embed) package to embed the Helm chart directory ([example 1](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/istio/istiod.go#L59-L60), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/istio/istiod.go#L297-L313)).
 
 2. **Choose the proper deployment way** ([example 1 (direct application w/ client)](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubescheduler/kube_scheduler.go#L212-L232), [example 2 (using `ManagedResource`)](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubescheduler/kube_scheduler.go#L447-L488), [example 3 (mixed scenario)](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubestatemetrics/kube_state_metrics.go#L120))
 
@@ -82,10 +82,10 @@ This document provides a checklist for them that you can walk through.
    This might include a combination of `ClusterRole`s and `Role`s.
    Please do not provide elevated privileges due to laziness (e.g., because there is already a `ClusterRole` that can be extended vs. creating a `Role` only when access to a single namespace is needed).
 
-4. **Use [`NetworkPolicy`s](https://kubernetes.io/docs/concepts/services-networking/network-policies/) to restrict network traffic** 
+4. **Use [`NetworkPolicy`s](https://kubernetes.io/docs/concepts/services-networking/network-policies/) to restrict network traffic**
 
    You should restrict both ingress and egress traffic to/from your component as much as possible to ensure that it only gets access to/from other components if really needed.
-   Gardener provides a few default policies for typical usage scenarios. For more information, see [`NetworkPolicy`s In Garden, Seed, Shoot Clusters](../usage/network_policies.md).
+   Gardener provides a few default policies for typical usage scenarios. For more information, see [`NetworkPolicy`s In Garden, Seed, Shoot Clusters](../operations/network_policies.md).
 
 5. **Do not run components in privileged mode** ([example 1](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L324-L328), [example 2](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/nodelocaldns/nodelocaldns.go#L501))
 
@@ -124,13 +124,13 @@ This document provides a checklist for them that you can walk through.
 
 5. **Mark node-critical components** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubeproxy/resources.go#L328))
 
-   To ensure user workload pods are only scheduled to `Nodes` where all node-critical components are ready, these components need to tolerate the `node.gardener.cloud/critical-components-not-ready` taint (`NoSchedule` effect). 
+   To ensure user workload pods are only scheduled to `Nodes` where all node-critical components are ready, these components need to tolerate the `node.gardener.cloud/critical-components-not-ready` taint (`NoSchedule` effect).
    Also, such `DaemonSets` and the included `PodTemplates` need to be labelled with `node.gardener.cloud/critical-component=true`.
    For more information, see [Readiness of Shoot Worker Nodes](../usage/node-readiness.md).
 
 6. **Consider making a `Service` topology-aware** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/vpa/admissioncontroller.go#L154))
 
-   To reduce costs and to improve the network traffic latency in multi-zone Seed clusters, consider making a `Service` topology-aware, if applicable. In short, when a `Service` is topology-aware, Kubernetes routes network traffic to the `Endpoint`s (`Pod`s) which are located in the same zone where the traffic originated from. In this way, the cross availability zone traffic is avoided. See [Topology-Aware Traffic Routing](../usage/topology_aware_routing.md).
+   To reduce costs and to improve the network traffic latency in multi-zone Seed clusters, consider making a `Service` topology-aware, if applicable. In short, when a `Service` is topology-aware, Kubernetes routes network traffic to the `Endpoint`s (`Pod`s) which are located in the same zone where the traffic originated from. In this way, the cross availability zone traffic is avoided. See [Topology-Aware Traffic Routing](../operations/topology_aware_routing.md).
 
 ## Scalability
 

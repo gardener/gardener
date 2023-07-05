@@ -2,7 +2,7 @@
 
 ## Motivation
 
-The enablement of [highly available shoot control-planes](shoot_high_availability.md) requires multi-zone seed clusters. A garden runtime cluster can also be a multi-zone cluster. The topology-aware routing is introduced to reduce costs and to improve network performance by avoiding the cross availability zone traffic, if possible. The cross availability zone traffic is charged by the cloud providers and it comes with higher latency compared to the traffic within the same zone. The topology-aware routing feature enables topology-aware routing for `Service`s deployed in a seed or garden runtime cluster. For the clients consuming these topology-aware services, `kube-proxy` favors the endpoints which are located in the same zone where the traffic originated from. In this way, the cross availability zone traffic is avoided.
+The enablement of [highly available shoot control-planes](../usage/shoot_high_availability.md) requires multi-zone seed clusters. A garden runtime cluster can also be a multi-zone cluster. The topology-aware routing is introduced to reduce costs and to improve network performance by avoiding the cross availability zone traffic, if possible. The cross availability zone traffic is charged by the cloud providers and it comes with higher latency compared to the traffic within the same zone. The topology-aware routing feature enables topology-aware routing for `Service`s deployed in a seed or garden runtime cluster. For the clients consuming these topology-aware services, `kube-proxy` favors the endpoints which are located in the same zone where the traffic originated from. In this way, the cross availability zone traffic is avoided.
 
 ## How it works
 
@@ -15,7 +15,7 @@ The component that is responsible for providing hints in the EndpointSlices reso
    > The controller allocates a proportional amount of endpoints to each zone. This proportion is based on the allocatable CPU cores for nodes running in that zone. For example, if one zone had 2 CPU cores and another zone only had 1 CPU core, the controller would allocate twice as many endpoints to the zone with 2 CPU cores.
 
    In case it is not possible to achieve a balanced distribution of the endpoints, as a safeguard mechanism the controller removes hints from the EndpointSlice resource.
-   In our setup, the clients and the servers are well-known and usually the traffic a component receives does not depend on the zone's allocatable CPU. 
+   In our setup, the clients and the servers are well-known and usually the traffic a component receives does not depend on the zone's allocatable CPU.
    Many components deployed by Gardener are scaled automatically by VPA. In case of an overload of a replica, the VPA should provide and apply enhanced CPU and memory resources. Additionally, Gardener uses the cluster-autoscaler to upscale/downscale Nodes dynamically. Hence, it is not possible to ensure a balanced allocatable CPU across the zones.
 - The TopologyAwareHints feature does not work at low-endpoint counts. It falls apart for a Service with less than 10 Endpoints.
 - Hints provided by the EndpointSlice controller are not deterministic. With cluster-autoscaler running and load increasing, hints can be removed in the next moment. There is no option to enforce the zone-level topology.
