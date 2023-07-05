@@ -15,6 +15,8 @@
 package backupentry
 
 import (
+	"context"
+
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry"
@@ -41,6 +43,6 @@ func AddToManagerWithOptions(mgr manager.Manager, opts backupoptions.AddOptions)
 }
 
 // AddToManager adds a controller with the default Options.
-func AddToManager(mgr manager.Manager) error {
+func AddToManager(_ context.Context, mgr manager.Manager) error {
 	return AddToManagerWithOptions(mgr, DefaultAddOptions)
 }

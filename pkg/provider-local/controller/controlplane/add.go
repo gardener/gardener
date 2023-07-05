@@ -15,6 +15,7 @@
 package controlplane
 
 import (
+	"context"
 	"sync/atomic"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -46,7 +47,7 @@ type AddOptions struct {
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
-func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
+func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddOptions) error {
 	gardenerClientset, err := kubernetesclient.NewWithConfig(kubernetesclient.WithRESTConfig(mgr.GetConfig()))
 	if err != nil {
 		return err
@@ -57,12 +58,12 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 			nil, storageClassChart, nil, NewValuesProvider(), extensionscontroller.ChartRendererFactoryFunc(util.NewChartRendererForShoot),
 			imagevector.ImageVector(), "", opts.ShootWebhookConfig, opts.WebhookServerNamespace, mgr.GetWebhookServer().Port, gardenerClientset),
 		ControllerOptions: opts.Controller,
-		Predicates:        controlplane.DefaultPredicates(opts.IgnoreOperationAnnotation),
+		Predicates:        controlplane.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),
 		Type:              local.Type,
 	})
 }
 
 // AddToManager adds a controller with the default Options.
-func AddToManager(mgr manager.Manager) error {
-	return AddToManagerWithOptions(mgr, DefaultAddOptions)
+func AddToManager(ctx context.Context, mgr manager.Manager) error {
+	return AddToManagerWithOptions(ctx, mgr, DefaultAddOptions)
 }

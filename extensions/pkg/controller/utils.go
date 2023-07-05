@@ -56,25 +56,25 @@ func init() {
 }
 
 // AddToManagerBuilder aggregates various AddToManager functions.
-type AddToManagerBuilder []func(manager.Manager) error
+type AddToManagerBuilder []func(context.Context, manager.Manager) error
 
 // NewAddToManagerBuilder creates a new AddToManagerBuilder and registers the given functions.
-func NewAddToManagerBuilder(funcs ...func(manager.Manager) error) AddToManagerBuilder {
+func NewAddToManagerBuilder(funcs ...func(context.Context, manager.Manager) error) AddToManagerBuilder {
 	var builder AddToManagerBuilder
 	builder.Register(funcs...)
 	return builder
 }
 
 // Register registers the given functions in this builder.
-func (a *AddToManagerBuilder) Register(funcs ...func(manager.Manager) error) {
+func (a *AddToManagerBuilder) Register(funcs ...func(context.Context, manager.Manager) error) {
 	*a = append(*a, funcs...)
 }
 
 // AddToManager traverses over all AddToManager-functions of this builder, sequentially applying
 // them. It exits on the first error and returns it.
-func (a *AddToManagerBuilder) AddToManager(m manager.Manager) error {
+func (a *AddToManagerBuilder) AddToManager(c context.Context, m manager.Manager) error {
 	for _, f := range *a {
-		if err := f(m); err != nil {
+		if err := f(c, m); err != nil {
 			return err
 		}
 	}

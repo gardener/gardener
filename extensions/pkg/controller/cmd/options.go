@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -423,7 +424,7 @@ func (r *RESTOptions) AddFlags(fs *pflag.FlagSet) {
 type SwitchOptions struct {
 	Disabled []string
 
-	nameToAddToManager  map[string]func(manager.Manager) error
+	nameToAddToManager  map[string]func(context.Context, manager.Manager) error
 	addToManagerBuilder extensionscontroller.AddToManagerBuilder
 }
 
@@ -437,11 +438,11 @@ func (d *SwitchOptions) Register(pairs ...NameToAddToManagerFunc) {
 // NameToAddToManagerFunc binds a specific name to a controller's AddToManager function.
 type NameToAddToManagerFunc struct {
 	Name string
-	Func func(manager.Manager) error
+	Func func(context.Context, manager.Manager) error
 }
 
 // Switch binds the given name to the given AddToManager function.
-func Switch(name string, f func(manager.Manager) error) NameToAddToManagerFunc {
+func Switch(name string, f func(context.Context, manager.Manager) error) NameToAddToManagerFunc {
 	return NameToAddToManagerFunc{
 		Name: name,
 		Func: f,
@@ -450,7 +451,7 @@ func Switch(name string, f func(manager.Manager) error) NameToAddToManagerFunc {
 
 // NewSwitchOptions creates new SwitchOptions with the given initial pairs.
 func NewSwitchOptions(pairs ...NameToAddToManagerFunc) *SwitchOptions {
-	opts := SwitchOptions{nameToAddToManager: make(map[string]func(manager.Manager) error)}
+	opts := SwitchOptions{nameToAddToManager: make(map[string]func(context.Context, manager.Manager) error)}
 	opts.Register(pairs...)
 	return &opts
 }
@@ -489,7 +490,7 @@ func (d *SwitchOptions) Completed() *SwitchConfig {
 
 // SwitchConfig is the completed configuration of SwitchOptions.
 type SwitchConfig struct {
-	AddToManager func(manager.Manager) error
+	AddToManager func(context.Context, manager.Manager) error
 }
 
 // GeneralOptions are command line options that can be set for general configuration.
