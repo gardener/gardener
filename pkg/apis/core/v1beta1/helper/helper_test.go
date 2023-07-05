@@ -50,6 +50,45 @@ var _ = Describe("helper", func() {
 			afterTestTime = func(t metav1.Time) bool { return t.After(testTime.Time) }
 		)
 
+		Describe("#BuildConditions", func() {
+			var (
+				conditionTypes = []gardencorev1beta1.ConditionType{"foo"}
+
+				fooCondition = gardencorev1beta1.Condition{
+					Type:               "foo",
+					Status:             gardencorev1beta1.ConditionTrue,
+					Reason:             "foo reason",
+					Message:            "foo message",
+					LastTransitionTime: testTime,
+					LastUpdateTime:     testTime,
+				}
+				barCondition = gardencorev1beta1.Condition{
+					Type:               "bar",
+					Status:             gardencorev1beta1.ConditionTrue,
+					Reason:             "bar reason",
+					Message:            "bar message",
+					LastTransitionTime: testTime,
+					LastUpdateTime:     testTime,
+				}
+				conditions = []gardencorev1beta1.Condition{fooCondition}
+
+				newConditions = []gardencorev1beta1.Condition{}
+			)
+			BeforeEach(func() {
+				newFooCondition := fooCondition.DeepCopy()
+				newFooCondition.LastTransitionTime = metav1.NewTime(time.Unix(11, 11))
+				newConditions = []gardencorev1beta1.Condition{*newFooCondition}
+			})
+
+			It("should replace the existing condition", func() {
+				Expect(BuildConditions(conditions, newConditions, conditionTypes)).To(ConsistOf(newConditions))
+			})
+			It("should keep existing conditions of a different type", func() {
+				conditions = append(conditions, barCondition)
+				Expect(BuildConditions(conditions, newConditions, conditionTypes)).To(ConsistOf(append(newConditions, barCondition)))
+			})
+		})
+
 		DescribeTable("#UpdatedConditionWithClock",
 			func(condition gardencorev1beta1.Condition, status gardencorev1beta1.ConditionStatus, reason, message string, codes []gardencorev1beta1.ErrorCode, matcher gomegatypes.GomegaMatcher) {
 				updated := UpdatedConditionWithClock(fakeClock, condition, status, reason, message, codes...)
