@@ -169,6 +169,7 @@ func (shootStrategy) Validate(_ context.Context, obj runtime.Object) field.Error
 	shoot := obj.(*core.Shoot)
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, validation.ValidateShoot(shoot)...)
+	allErrs = append(allErrs, validation.ValidateFinalizersOnCreation(shoot.Finalizers, field.NewPath("metadata", "finalizers"))...)
 	if gardencorehelper.IsWorkerless(shoot) {
 		if !utilfeature.DefaultFeatureGate.Enabled(features.WorkerlessShoots) {
 			allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "provider", "workers"), "must provide at least one worker pool when WorkerlessShoots feature gate is disabled"))

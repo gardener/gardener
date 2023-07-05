@@ -6164,6 +6164,25 @@ var _ = Describe("Shoot Validation Tests", func() {
 				)),
 		)
 	})
+
+	Describe("#ValidateFinalizersOnCreation", func() {
+		It("should return error if the finalizers contain forbidden finalizers", func() {
+			finalizers := []string{
+				"gardener.cloud/reference-protection",
+				"gardener",
+				"random",
+				"finalizer",
+			}
+
+			Expect(ValidateFinalizersOnCreation(finalizers, field.NewPath("metadata", "finalizers"))).To(
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("metadata.finalizers[1]"),
+					"Detail": ContainSubstring("finalizer %q cannot be added on creation", "gardener"),
+				}))),
+			)
+		})
+	})
 })
 
 func prepareShootForUpdate(shoot *core.Shoot) *core.Shoot {

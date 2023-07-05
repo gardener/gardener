@@ -42,6 +42,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
@@ -108,6 +109,9 @@ var (
 	availableSchedulingProfiles = sets.New(
 		string(core.SchedulingProfileBalanced),
 		string(core.SchedulingProfileBinPacking),
+	)
+	forbiddenShootFinalizersOnCreation = sets.New(
+		gardencorev1beta1.GardenerName,
 	)
 
 	// asymmetric algorithms from https://datatracker.ietf.org/doc/html/rfc7518#section-3.1
@@ -2065,6 +2069,20 @@ func validateCoreDNS(coreDNS *core.CoreDNS, fldPath *field.Path) field.ErrorList
 	}
 	if coreDNS.Rewriting != nil {
 		allErrs = append(allErrs, ValidateCoreDNSRewritingCommonSuffixes(coreDNS.Rewriting.CommonSuffixes, fldPath.Child("rewriting"))...)
+	}
+
+	return allErrs
+}
+
+// ValidateFinalizersOnCreation validates the finalizers of a Shoot object.
+func ValidateFinalizersOnCreation(finalizers []string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for i, finalizer := range finalizers {
+		idxPath := fldPath.Index(i)
+		if forbiddenShootFinalizersOnCreation.Has(finalizer) {
+			allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("finalizer %q cannot be added on creation", finalizer)))
+		}
 	}
 
 	return allErrs
