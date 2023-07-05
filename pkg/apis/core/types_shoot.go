@@ -347,10 +347,10 @@ type DNS struct {
 
 // DNSProvider contains information about a DNS provider.
 type DNSProvider struct {
-	// Note: This field is not used by Gardener anymore. However, providers might still be synced by the DNS extension which
-	// is mainly why we can't deprecate or remove it, see https://github.com/gardener/gardener-extension-shoot-dns-service/blob/f599bec786ab6e27e6fd41d423d4e73dd4952f4f/pkg/admission/mutator/shoot_mutator.go#L105-L106.
+	// TODO(timuthy): Remove this field with release v1.87.
 
 	// Domains contains information about which domains shall be included/excluded for this provider.
+	// Deprecated: This field is deprecated and will be removed in Gardener release v1.87.
 	Domains *DNSIncludeExclude
 	// Primary indicates that this DNSProvider is used for shoot related domains.
 	Primary *bool
@@ -362,10 +362,10 @@ type DNSProvider struct {
 	// Type is the DNS provider type for the Shoot. Only relevant if not the default domain is used for
 	// this shoot.
 	Type *string
-	// Note: This field is not used by Gardener anymore. However, providers might still be synced by the DNS extension which
-	// is mainly why we can't deprecate or remove it, see https://github.com/gardener/gardener-extension-shoot-dns-service/blob/f599bec786ab6e27e6fd41d423d4e73dd4952f4f/pkg/admission/mutator/shoot_mutator.go#L105-L106.
+	// TODO(timuthy): Remove this field with release v1.87.
 
 	// Zones contains information about which hosted zones shall be included/excluded for this provider.
+	// Deprecated: This field is deprecated and will be removed in Gardener release v1.87.
 	Zones *DNSIncludeExclude
 }
 

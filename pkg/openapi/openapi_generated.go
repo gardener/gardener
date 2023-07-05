@@ -2530,7 +2530,7 @@ func schema_pkg_apis_core_v1beta1_DNSProvider(ref common.ReferenceCallback) comm
 				Properties: map[string]spec.Schema{
 					"domains": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Domains contains information about which domains shall be included/excluded for this provider.",
+							Description: "Domains contains information about which domains shall be included/excluded for this provider. Deprecated: This field is deprecated and will be removed in Gardener release v1.87.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"),
 						},
 					},
@@ -2557,7 +2557,7 @@ func schema_pkg_apis_core_v1beta1_DNSProvider(ref common.ReferenceCallback) comm
 					},
 					"zones": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Zones contains information about which hosted zones shall be included/excluded for this provider.",
+							Description: "Zones contains information about which hosted zones shall be included/excluded for this provider. Deprecated: This field is deprecated and will be removed in Gardener release v1.87.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"),
 						},
 					},

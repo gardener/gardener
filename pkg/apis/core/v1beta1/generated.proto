@@ -655,6 +655,7 @@ message DNSIncludeExclude {
 // DNSProvider contains information about a DNS provider.
 message DNSProvider {
   // Domains contains information about which domains shall be included/excluded for this provider.
+  // Deprecated: This field is deprecated and will be removed in Gardener release v1.87.
   // +optional
   optional DNSIncludeExclude domains = 1;
 
@@ -674,6 +675,7 @@ message DNSProvider {
   optional string type = 4;
 
   // Zones contains information about which hosted zones shall be included/excluded for this provider.
+  // Deprecated: This field is deprecated and will be removed in Gardener release v1.87.
   // +optional
   optional DNSIncludeExclude zones = 5;
 }
