@@ -396,10 +396,10 @@ var _ = Describe("Vali", func() {
 					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
 					}),
-				//Scale Vali StatefulSet to zero
+				// Scale Vali StatefulSet to zero
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
 				runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroValiStatefulset),
-				//Path Vali PVC
+				// Path Vali PVC
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypePVC, gomock.AssignableToTypeOf(patch)).DoAndReturn(funcPatchTo200GiStorage),
 				// Remove Ignore annotation form the managed resource
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
@@ -426,10 +426,10 @@ var _ = Describe("Vali", func() {
 					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
 					}),
-				//Scale Vali StatefulSet to zero
+				// Scale Vali StatefulSet to zero
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
 				runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroValiStatefulset),
-				//Delete the Vali PVC
+				// Delete the Vali PVC
 				runtimeClient.EXPECT().Delete(ctx, valiPVC),
 				// Remove Ignore annotation form the managed resource
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
@@ -494,9 +494,9 @@ var _ = Describe("Vali", func() {
 					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
 					}),
-				//Scale Vali StatefulSet to zero
+				// Scale Vali StatefulSet to zero
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch).Return(errNotFound),
-				//Path Vali PVC
+				// Path Vali PVC
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypePVC, gomock.AssignableToTypeOf(patch)).DoAndReturn(funcPatchTo200GiStorage),
 				// Remove Ignore annotation form the managed resource
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
@@ -523,10 +523,10 @@ var _ = Describe("Vali", func() {
 					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
 					}),
-				//Scale Vali StatefulSet to zero
+				// Scale Vali StatefulSet to zero
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
 				runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroValiStatefulset),
-				//Path Vali PVC
+				// Path Vali PVC
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypePVC, gomock.AssignableToTypeOf(patch)).DoAndReturn(funcPatchTo200GiStorage).Return(errNotFound),
 				// Remove Ignore annotation form the managed resource
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
@@ -553,10 +553,10 @@ var _ = Describe("Vali", func() {
 					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
 					}),
-				//Scale Vali StatefulSet to zero
+				// Scale Vali StatefulSet to zero
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
 				runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroValiStatefulset),
-				//Delete the Vali PVC
+				// Delete the Vali PVC
 				runtimeClient.EXPECT().Delete(ctx, valiPVC).Return(errNotFound),
 				// Remove Ignore annotation form the managed resource
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceName), objectOfTypeMR),
@@ -591,7 +591,7 @@ var _ = Describe("Vali", func() {
 					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
 					}),
-				//Scale Vali StatefulSet to zero
+				// Scale Vali StatefulSet to zero
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch).Return(errForbidden),
 			)
 			Expect(valiDeployer.Deploy(ctx)).ToNot(Succeed())
@@ -607,7 +607,7 @@ var _ = Describe("Vali", func() {
 					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
 					}),
-				//Scale Vali StatefulSet to zero
+				// Scale Vali StatefulSet to zero
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
 				runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).Return(errForbidden),
 			)
@@ -624,10 +624,10 @@ var _ = Describe("Vali", func() {
 					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
 					}),
-				//Scale Vali StatefulSet to zero
+				// Scale Vali StatefulSet to zero
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
 				runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroValiStatefulset),
-				//Path Vali PVC
+				// Path Vali PVC
 				runtimeClient.EXPECT().Patch(ctx, objectOfTypePVC, gomock.AssignableToTypeOf(patch)).DoAndReturn(funcPatchTo200GiStorage).Return(errNotFound).Return(errForbidden),
 			)
 			Expect(valiDeployer.Deploy(ctx)).ToNot(Succeed())
@@ -643,10 +643,10 @@ var _ = Describe("Vali", func() {
 					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(skipedManagedResource))
 					}),
-				//Scale Vali StatefulSet to zero
+				// Scale Vali StatefulSet to zero
 				sw.EXPECT().Patch(ctx, statefulset, zeroReplicaRawPatch),
 				runtimeClient.EXPECT().Get(gomock.Any(), valiStatefulSetKey, objectOfTypeSTS).DoAndReturn(funcGetScaledToZeroValiStatefulset),
-				//Delete the Vali PVC
+				// Delete the Vali PVC
 				runtimeClient.EXPECT().Delete(ctx, valiPVC).Return(errForbidden),
 			)
 			Expect(valiDeployer.Deploy(ctx)).ToNot(Succeed())
@@ -1281,17 +1281,6 @@ fi
 	}
 
 	if isRBACProxyEnabled {
-		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(sts.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-			Name:      "kubeconfig",
-			MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
-			ReadOnly:  true,
-		})
-		sts.Spec.Template.Spec.Containers[1].VolumeMounts = append(sts.Spec.Template.Spec.Containers[1].VolumeMounts, corev1.VolumeMount{
-			Name:      "kubeconfig",
-			MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
-			ReadOnly:  true,
-		})
-
 		sts.Spec.Template.ObjectMeta.Labels["networking.gardener.cloud/to-dns"] = "allowed"
 		sts.Spec.Template.ObjectMeta.Labels["networking.resources.gardener.cloud/to-kube-apiserver-tcp-443"] = "allowed"
 
@@ -1382,11 +1371,6 @@ wait
 						Name:      "telegraf-config-volume",
 						MountPath: "/etc/telegraf/start.sh",
 						SubPath:   "start.sh",
-						ReadOnly:  true,
-					},
-					{
-						Name:      "kubeconfig",
-						MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
 						ReadOnly:  true,
 					},
 				},
