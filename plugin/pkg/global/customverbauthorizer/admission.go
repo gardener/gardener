@@ -83,7 +83,7 @@ func (c *CustomVerbAuthorizer) ValidateInitialization() error {
 var _ admission.ValidationInterface = &CustomVerbAuthorizer{}
 
 // Validate makes admissions decisions based on custom verbs.
-func (c *CustomVerbAuthorizer) Validate(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
+func (c *CustomVerbAuthorizer) Validate(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	switch a.GetKind().GroupKind() {
 	case core.Kind("Project"):
 		return c.admitProjects(ctx, a)

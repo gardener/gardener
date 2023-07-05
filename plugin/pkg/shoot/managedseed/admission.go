@@ -61,7 +61,7 @@ var (
 	_ = admissioninitializer.WantsInternalCoreClientset(&ManagedSeed{})
 	_ = admissioninitializer.WantsSeedManagementClientset(&ManagedSeed{})
 
-	readyFuncs = []admission.ReadyFunc{}
+	readyFuncs []admission.ReadyFunc
 )
 
 // New creates a new ManagedSeed admission plugin.

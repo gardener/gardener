@@ -40,7 +40,7 @@ func Register(plugins *admission.Plugins) {
 }
 
 // NewFactory creates a new PluginFactory.
-func NewFactory(config io.Reader) (admission.Interface, error) {
+func NewFactory(_ io.Reader) (admission.Interface, error) {
 	return New()
 }
 
@@ -54,7 +54,7 @@ type Resources struct {
 var (
 	_ = admissioninitializer.WantsInternalCoreClientset(&Resources{})
 
-	readyFuncs = []admission.ReadyFunc{}
+	readyFuncs []admission.ReadyFunc
 )
 
 // New creates a new Resources admission plugin.
@@ -85,7 +85,7 @@ var _ admission.ValidationInterface = &Resources{}
 // Validate makes admissions decisions based on the resources specified in a ControllerRegistration object.
 // It does reject the request if there is any other existing ControllerRegistration object in the system that
 // specifies the same resource kind/type combination like the incoming object.
-func (r *Resources) Validate(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
+func (r *Resources) Validate(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if r.readyFunc == nil {
 		r.AssignReadyFunc(func() bool {

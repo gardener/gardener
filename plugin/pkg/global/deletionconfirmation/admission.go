@@ -49,7 +49,7 @@ func Register(plugins *admission.Plugins) {
 }
 
 // NewFactory creates a new PluginFactory.
-func NewFactory(config io.Reader) (admission.Interface, error) {
+func NewFactory(_ io.Reader) (admission.Interface, error) {
 	return New()
 }
 
@@ -67,7 +67,7 @@ var (
 	_ = admissioninitializer.WantsInternalCoreInformerFactory(&DeletionConfirmation{})
 	_ = admissioninitializer.WantsInternalCoreClientset(&DeletionConfirmation{})
 
-	readyFuncs = []admission.ReadyFunc{}
+	readyFuncs []admission.ReadyFunc
 )
 
 // New creates a new DeletionConfirmation admission plugin.

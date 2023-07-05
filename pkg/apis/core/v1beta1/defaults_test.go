@@ -115,7 +115,7 @@ var _ = Describe("Defaults", func() {
 						Version: "1.22.1",
 					},
 					Provider: Provider{
-						Workers: []Worker{Worker{}},
+						Workers: []Worker{{}},
 					},
 				},
 			}
@@ -352,33 +352,6 @@ var _ = Describe("Defaults", func() {
 		})
 
 		Describe("kubeControllerManager settings", func() {
-			It("should not overwrite the kube-controller-manager's node monitor grace period", func() {
-				nodeMonitorGracePeriod := &metav1.Duration{Duration: time.Minute}
-				obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{NodeMonitorGracePeriod: nodeMonitorGracePeriod}
-
-				SetObjectDefaults_Shoot(obj)
-
-				Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(nodeMonitorGracePeriod))
-			})
-
-			It("should default the kube-controller-manager's node monitor grace period to 2 minutes for Shoot cluster with k8s version < 1.27", func() {
-				obj.Spec.Kubernetes.Version = "1.26.0"
-				obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{}
-
-				SetObjectDefaults_Shoot(obj)
-
-				Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(&metav1.Duration{Duration: 2 * time.Minute}))
-			})
-
-			It("should default the kube-controller-manager's node monitor grace period to 40 seconds for Shoot cluster with k8s version >= 1.27", func() {
-				obj.Spec.Kubernetes.Version = "1.27.0"
-				obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{}
-
-				SetObjectDefaults_Shoot(obj)
-
-				Expect(obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(&metav1.Duration{Duration: 40 * time.Second}))
-			})
-
 			Describe("nodeCIDRMaskSize", func() {
 				Context("IPv4", func() {
 					It("should make nodeCIDRMaskSize big enough for 2*maxPods", func() {
@@ -704,95 +677,6 @@ var _ = Describe("Defaults", func() {
 				SetObjectDefaults_Shoot(obj)
 
 				Expect(obj.Spec.SystemComponents).To(BeNil())
-			})
-		})
-
-		Context("static token kubeconfig", func() {
-			It("should not default the enableStaticTokenKubeconfig field when it is set", func() {
-				obj.Spec.Kubernetes = Kubernetes{
-					Version:                     "1.24.0",
-					EnableStaticTokenKubeconfig: pointer.Bool(false),
-				}
-
-				SetObjectDefaults_Shoot(obj)
-
-				Expect(obj.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(PointTo(BeFalse()))
-			})
-
-			It("should default the enableStaticTokenKubeconfig field to true for k8s version < 1.26", func() {
-				obj.Spec.Kubernetes = Kubernetes{Version: "1.25.0"}
-
-				SetObjectDefaults_Shoot(obj)
-
-				Expect(obj.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(PointTo(BeTrue()))
-			})
-
-			It("should default the enableStaticTokenKubeconfig field to false for k8s version >= 1.26", func() {
-				obj.Spec.Kubernetes = Kubernetes{Version: "1.26.0"}
-
-				SetObjectDefaults_Shoot(obj)
-
-				Expect(obj.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(PointTo(BeFalse()))
-			})
-		})
-
-		Context("k8s version < 1.25", func() {
-			BeforeEach(func() {
-				obj.Spec.Kubernetes = Kubernetes{
-					Version:       "1.24.0",
-					KubeAPIServer: &KubeAPIServerConfig{},
-				}
-				obj.Spec.Provider = Provider{
-					Workers: []Worker{Worker{}},
-				}
-			})
-
-			Context("allowPrivilegedContainers field is not set", func() {
-				It("should set the field to true if PodSecurityPolicy admission plugin is not disabled and shoot has workers", func() {
-					SetObjectDefaults_Shoot(obj)
-
-					Expect(obj.Spec.Kubernetes.AllowPrivilegedContainers).To(PointTo(BeTrue()))
-				})
-
-				It("should not set the field if the shoot is workerless", func() {
-					obj.Spec.Provider.Workers = nil
-					SetObjectDefaults_Shoot(obj)
-
-					Expect(obj.Spec.Kubernetes.AllowPrivilegedContainers).To(BeNil())
-				})
-
-				It("should not default the field if PodSecurityPolicy admission plugin is disabled in the shoot spec", func() {
-					obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{
-						AdmissionPlugins: []AdmissionPlugin{
-							{
-								Name:     "PodSecurityPolicy",
-								Disabled: pointer.Bool(true),
-							},
-						},
-					}
-					SetObjectDefaults_Shoot(obj)
-
-					Expect(obj.Spec.Kubernetes.AllowPrivilegedContainers).To(BeNil())
-				})
-
-				It("should not default the field if the Shoot is workerless", func() {
-					obj.Spec.Provider.Workers = nil
-					SetObjectDefaults_Shoot(obj)
-
-					Expect(obj.Spec.Kubernetes.AllowPrivilegedContainers).To(BeNil())
-				})
-			})
-
-			Context("allowPrivilegedContainers field is set", func() {
-				BeforeEach(func() {
-					obj.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)
-				})
-
-				It("should not set the field", func() {
-					SetObjectDefaults_Shoot(obj)
-
-					Expect(obj.Spec.Kubernetes.AllowPrivilegedContainers).To(PointTo(BeFalse()))
-				})
 			})
 		})
 

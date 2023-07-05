@@ -68,7 +68,7 @@ var (
 	_ = admissioninitializer.WantsInternalCoreInformerFactory(&DNS{})
 	_ = admissioninitializer.WantsKubeInformerFactory(&DNS{})
 
-	readyFuncs = []admission.ReadyFunc{}
+	readyFuncs []admission.ReadyFunc
 )
 
 // New creates a new DNS admission plugin.
@@ -120,7 +120,7 @@ func (d *DNS) ValidateInitialization() error {
 var _ admission.MutationInterface = &DNS{}
 
 // Admit tries to determine a DNS hosted zone for the Shoot's external domain.
-func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
+func (d *DNS) Admit(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if d.readyFunc == nil {
 		d.AssignReadyFunc(func() bool {
@@ -218,7 +218,7 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 
 	// Generate a Shoot domain if none is configured.
 	if !helper.ShootUsesUnmanagedDNS(shoot) {
-		if err := assignDefaultDomainIfNeeded(a, shoot, d.projectLister, defaultDomains); err != nil {
+		if err := assignDefaultDomainIfNeeded(shoot, d.projectLister, defaultDomains); err != nil {
 			return err
 		}
 
@@ -306,7 +306,7 @@ func setPrimaryDNSProvider(a admission.Attributes, shoot *core.Shoot, defaultDom
 // assignDefaultDomainIfNeeded generates a domain <shoot-name>.<project-name>.<default-domain>
 // and sets it in the shoot resource in the `spec.dns.domain` field.
 // If for any reason no domain can be generated, no domain is assigned to the Shoot.
-func assignDefaultDomainIfNeeded(a admission.Attributes, shoot *core.Shoot, projectLister gardencorelisters.ProjectLister, defaultDomains []string) error {
+func assignDefaultDomainIfNeeded(shoot *core.Shoot, projectLister gardencorelisters.ProjectLister, defaultDomains []string) error {
 	project, err := admissionutils.ProjectForNamespaceFromInternalLister(projectLister, shoot.Namespace)
 	if err != nil {
 		return apierrors.NewInternalError(err)

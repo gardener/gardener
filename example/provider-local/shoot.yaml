@@ -26,7 +26,6 @@ spec:
       maxSurge: 1
       maxUnavailable: 0
   kubernetes:
-    version: 1.27.1
     kubelet:
       seccompDefault: true
       serializeImagePulls: false

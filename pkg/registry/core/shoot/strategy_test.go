@@ -16,7 +16,6 @@ package shoot_test
 
 import (
 	"context"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -102,42 +101,6 @@ var _ = Describe("Strategy", func() {
 				shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 
 				Expect(newShoot.Spec.SeedName).To(Equal(oldShoot.Spec.SeedName))
-			})
-		})
-
-		Context("nodeMonitorGracePeriod change", func() {
-			var (
-				oldShoot *core.Shoot
-				newShoot *core.Shoot
-			)
-
-			BeforeEach(func() {
-				oldShoot = &core.Shoot{
-					Spec: core.ShootSpec{
-						Kubernetes: core.Kubernetes{
-							Version: "1.26.0",
-							KubeControllerManager: &core.KubeControllerManagerConfig{
-								NodeMonitorGracePeriod: &metav1.Duration{Duration: 2 * time.Minute},
-							},
-						},
-					},
-				}
-				newShoot = oldShoot.DeepCopy()
-			})
-
-			It("should overwrite the  kube-controller-manager's nodeMonitorGracePeriod field if the value is set to 2m, when shoot is upgraded to k8s version 1.27", func() {
-				newShoot.Spec.Kubernetes.Version = "1.27.0"
-				shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-
-				Expect(newShoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(&metav1.Duration{Duration: 40 * time.Second}))
-			})
-
-			It("should not overwrite the  kube-controller-manager's nodeMonitorGracePeriod field if the value is not set to 2m, when shoot is upgraded to k8s version 1.27", func() {
-				newShoot.Spec.Kubernetes.Version = "1.27.0"
-				newShoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod = &metav1.Duration{Duration: 3 * time.Minute}
-				shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-
-				Expect(newShoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(&metav1.Duration{Duration: 3 * time.Minute}))
 			})
 		})
 

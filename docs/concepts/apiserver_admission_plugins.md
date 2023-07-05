@@ -150,7 +150,7 @@ _(enabled by default)_
 This admission controller reacts on `CREATE`, `UPDATE` and `DELETE` operations for `Shoot`s.
 It validates certain configurations in the specification against the referred `CloudProfile` (e.g., machine images, machine types, used Kubernetes version, ...).
 Generally, it performs validations that cannot be handled by the static API validation due to their dynamic nature (e.g., when something needs to be checked against referred resources).
-Additionally, it takes over certain defaulting tasks (e.g., default machine image for worker pools).
+Additionally, it takes over certain defaulting tasks (e.g., default machine image for worker pools, default Kubernetes version).
 
 ## `ShootManagedSeed`
 

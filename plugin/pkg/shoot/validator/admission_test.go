@@ -22,6 +22,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -248,7 +249,12 @@ var _ = Describe("validator", func() {
 						},
 					},
 					Kubernetes: core.Kubernetes{
-						Version: "1.6.4",
+						Version:                     "1.6.4",
+						AllowPrivilegedContainers:   pointer.Bool(true),
+						EnableStaticTokenKubeconfig: pointer.Bool(true),
+						KubeControllerManager: &core.KubeControllerManagerConfig{
+							NodeMonitorGracePeriod: &metav1.Duration{Duration: 40 * time.Second},
+						},
 					},
 					Networking: &core.Networking{
 						Nodes:    &nodesCIDR,
@@ -2056,9 +2062,51 @@ var _ = Describe("validator", func() {
 			})
 
 			Context("kubernetes version checks", func() {
+				var (
+					highestSupportedVersion    core.ExpirableVersion
+					highestSupported126Release core.ExpirableVersion
+					highestPreviewVersion      core.ExpirableVersion
+					expiredVersion             core.ExpirableVersion
+				)
+
+				BeforeEach(func() {
+					preview := core.ClassificationPreview
+					deprecatedClassification := core.ClassificationDeprecated
+
+					highestPreviewVersion = core.ExpirableVersion{Version: "1.28.0", Classification: &preview}
+					highestSupportedVersion = core.ExpirableVersion{Version: "1.27.3"}
+					highestSupported126Release = core.ExpirableVersion{Version: "1.26.7"}
+					expiredVersion = core.ExpirableVersion{Version: "1.26.8", Classification: &deprecatedClassification, ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}}
+
+					cloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{
+						highestPreviewVersion,
+						highestSupportedVersion,
+						{Version: "1.27.2"},
+						{Version: "1.26.6"},
+						highestSupported126Release,
+						expiredVersion,
+						{Version: "1.25.11"},
+						{Version: "1.24.12", Classification: &deprecatedClassification, ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}},
+					}
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				})
+
 				It("should reject due to an invalid kubernetes version", func() {
 					shoot.Spec.Kubernetes.Version = "1.2.3"
 
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(MatchError(ContainSubstring("Unsupported value: \"1.2.3\"")))
+				})
+
+				It("should throw an error because of an invalid major version", func() {
+					shoot.Spec.Kubernetes.Version = "foo"
+
 					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
@@ -2067,73 +2115,69 @@ var _ = Describe("validator", func() {
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
-					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("must be a semantic version")))
+				})
+
+				It("should throw an error because of an invalid minor version", func() {
+					shoot.Spec.Kubernetes.Version = "1.bar"
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(MatchError(ContainSubstring("must be a semantic version")))
+				})
+
+				It("should default a kubernetes version to latest major.minor.patch version", func() {
+					shoot.Spec.Kubernetes.Version = ""
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(Not(HaveOccurred()))
+					Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestSupportedVersion.Version))
+				})
+
+				It("should default a major kubernetes version to latest minor.patch version", func() {
+					shoot.Spec.Kubernetes.Version = "1"
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(Not(HaveOccurred()))
+					Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestSupportedVersion.Version))
 				})
 
 				It("should default a major.minor kubernetes version to latest patch version", func() {
-					shoot.Spec.Kubernetes.Version = "1.6"
-					highestPatchVersion := core.ExpirableVersion{Version: "1.6.6"}
-					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, highestPatchVersion, core.ExpirableVersion{Version: "1.7.1"}, core.ExpirableVersion{Version: "1.7.2"})
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					shoot.Spec.Kubernetes.Version = "1.26"
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).To(Not(HaveOccurred()))
-					Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestPatchVersion.Version))
-				})
-
-				It("should default a major.minor kubernetes version only to non-preview versions", func() {
-					shoot.Spec.Kubernetes.Version = "1.6"
-					preview := core.ClassificationPreview
-					previewVersion := core.ExpirableVersion{Version: "1.6.6", Classification: &preview}
-					highestNonPreviewPatchVersion := core.ExpirableVersion{Version: "1.6.5"}
-					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, previewVersion, highestNonPreviewPatchVersion, core.ExpirableVersion{Version: "1.7.1"}, core.ExpirableVersion{Version: "1.7.2"})
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-
-					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).To(Not(HaveOccurred()))
-					Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestNonPreviewPatchVersion.Version))
+					Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestSupported126Release.Version))
 				})
 
 				It("should reject defaulting a major.minor kubernetes version if there is no higher non-preview version available for defaulting", func() {
-					shoot.Spec.Kubernetes.Version = "1.6"
-					preview := core.ClassificationPreview
-					previewVersion := core.ExpirableVersion{Version: "1.6.6", Classification: &preview}
-					highestNonPreviewPatchVersion := core.ExpirableVersion{Version: "1.6.5", Classification: &preview}
-					cloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{previewVersion, highestNonPreviewPatchVersion, {Version: "1.7.1"}, {Version: "1.7.2"}}
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					shoot.Spec.Kubernetes.Version = "1.24"
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
-					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("couldn't find a suitable version for 1.24")))
 				})
 
 				It("should be able to explicitly pick preview versions", func() {
-					shoot.Spec.Kubernetes.Version = "1.6.6"
-					preview := core.ClassificationPreview
-					previewVersion := core.ExpirableVersion{Version: "1.6.6", Classification: &preview}
-					cloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{previewVersion}
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					shoot.Spec.Kubernetes.Version = highestPreviewVersion.Version
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
@@ -2142,159 +2186,335 @@ var _ = Describe("validator", func() {
 				})
 
 				It("should reject: default only exactly matching minor kubernetes version", func() {
-					shoot.Spec.Kubernetes.Version = "1.8"
-					highestPatchVersion := core.ExpirableVersion{Version: "1.81.5"}
-					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: "1.81.0"}, highestPatchVersion)
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					shoot.Spec.Kubernetes.Version = "1.2"
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
-					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("couldn't find a suitable version for 1.2")))
 				})
 
 				It("should reject to create a cluster with an expired kubernetes version", func() {
-					deprecatedClassification := core.ClassificationDeprecated
-					expiredKubernetesVersion := "1.24.1"
-					validKubernetesVersion := "1.24.3"
-					shoot.Spec.Kubernetes.Version = expiredKubernetesVersion
-					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: expiredKubernetesVersion, Classification: &deprecatedClassification, ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}}, core.ExpirableVersion{Version: validKubernetesVersion})
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					shoot.Spec.Kubernetes.Version = expiredVersion.Version
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
-					Expect(err).To(MatchError(ContainSubstring("spec.kubernetes.version: Unsupported value: %q", expiredKubernetesVersion)))
+					Expect(err).To(MatchError(ContainSubstring("spec.kubernetes.version: Unsupported value: %q", expiredVersion.Version)))
 				})
 
 				It("should allow to delete a cluster with an expired kubernetes version", func() {
-					deprecatedClassification := core.ClassificationDeprecated
-					expiredKubernetesVersion := "1.24.1"
-					validKubernetesVersion := "1.24.3"
-					shoot.Spec.Kubernetes.Version = expiredKubernetesVersion
-					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: expiredKubernetesVersion, Classification: &deprecatedClassification, ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}}, core.ExpirableVersion{Version: validKubernetesVersion})
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					shoot.Spec.Kubernetes.Version = expiredVersion.Version
 
 					attrs := admission.NewAttributesRecord(nil, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("should not choose the default kubernetes version if version is not specified", func() {
+					shoot.Spec.Kubernetes.Version = "1.26"
+					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{}
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(BeNil())
 				})
 
 				It("should choose the default kubernetes version if only major.minor is given in a worker group", func() {
-					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.24")}
-					highestPatchVersion := core.ExpirableVersion{Version: "1.24.5"}
-					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: "1.24.0"}, highestPatchVersion)
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					shoot.Spec.Kubernetes.Version = "1.26"
+					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.26")}
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).NotTo(HaveOccurred())
-					Expect(*shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(Equal(highestPatchVersion.Version))
-				})
-
-				It("should work to create a cluster without a worker group kubernetes version set", func() {
-					shoot.Spec.Kubernetes.Version = "1.24.5"
-					highestPatchVersion := core.ExpirableVersion{Version: "1.24.5"}
-					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: "1.24.0"}, highestPatchVersion)
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-
-					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-					err := admissionHandler.Admit(ctx, attrs, nil)
-
-					Expect(err).NotTo(HaveOccurred())
-					Expect(shoot.Spec.Provider.Workers[0].Kubernetes).To(BeNil())
+					Expect(*shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(Equal(highestSupported126Release.Version))
 				})
 
 				It("should work to create a cluster with a worker group kubernetes version set smaller than control plane version", func() {
-					shoot.Spec.Kubernetes.Version = "1.24.5"
-					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.23.0")}
-					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: "1.23.0"}, core.ExpirableVersion{Version: "1.24.5"})
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					shoot.Spec.Kubernetes.Version = highestSupportedVersion.Version
+					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.26.6")}
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).NotTo(HaveOccurred())
-					Expect(shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(Equal(pointer.String("1.23.0")))
+					Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestSupportedVersion.Version))
+					Expect(shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(Equal(pointer.String("1.26.6")))
 				})
 
 				It("should work to create a cluster with a worker group kubernetes version set equal to control plane version", func() {
-					shoot.Spec.Kubernetes.Version = "1.24.5"
-					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.24.5")}
-					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: "1.23.0"}, core.ExpirableVersion{Version: "1.24.5"})
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					shoot.Spec.Kubernetes.Version = highestSupportedVersion.Version
+					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String(highestSupportedVersion.Version)}
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).NotTo(HaveOccurred())
-					Expect(shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(Equal(pointer.String("1.24.5")))
+					Expect(shoot.Spec.Kubernetes.Version).To(Equal(highestSupportedVersion.Version))
+					Expect(shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(Equal(pointer.String(highestSupportedVersion.Version)))
 				})
 
 				It("should reject to create a cluster with an expired worker group kubernetes version", func() {
-					deprecatedClassification := core.ClassificationDeprecated
-					expiredKubernetesVersion := "1.24.1"
-					validKubernetesVersion := "1.24.3"
-					shoot.Spec.Kubernetes.Version = validKubernetesVersion
-					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: &expiredKubernetesVersion}
-					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: expiredKubernetesVersion, Classification: &deprecatedClassification, ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}}, core.ExpirableVersion{Version: validKubernetesVersion})
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					shoot.Spec.Kubernetes.Version = highestSupportedVersion.Version
+					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: &expiredVersion.Version}
 
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
-					Expect(err).To(MatchError(ContainSubstring("spec.provider.workers[0].kubernetes.version: Unsupported value: %q", expiredKubernetesVersion)))
+					Expect(err).To(MatchError(ContainSubstring("spec.provider.workers[0].kubernetes.version: Unsupported value: %q", expiredVersion.Version)))
 				})
 
 				It("should allow to delete a cluster with an expired worker group kubernetes version", func() {
-					deprecatedClassification := core.ClassificationDeprecated
-					expiredKubernetesVersion := "1.24.1"
-					validKubernetesVersion := "1.24.3"
-					shoot.Spec.Kubernetes.Version = validKubernetesVersion
-					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: &expiredKubernetesVersion}
-					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: expiredKubernetesVersion, Classification: &deprecatedClassification, ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)}}, core.ExpirableVersion{Version: validKubernetesVersion})
-
-					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					shoot.Spec.Kubernetes.Version = highestSupportedVersion.Version
+					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: &expiredVersion.Version}
 
 					attrs := admission.NewAttributesRecord(nil, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).ToNot(HaveOccurred())
+				})
+			})
+
+			Context("kubernetes enableStaticTokenKubeconfig defaulting", func() {
+				BeforeEach(func() {
+					shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = nil
+
+					cloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{
+						{Version: "1.26.0"},
+						{Version: "1.25.0"},
+					}
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				})
+
+				It("should not default the enableStaticTokenKubeconfig field when it is set", func() {
+					shoot.Spec.Kubernetes.Version = "1.26.0"
+					shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(false)
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(PointTo(Equal(false)))
+				})
+
+				It("should not default the enableStaticTokenKubeconfig field when shoot is in deletion", func() {
+					shoot.Spec.Kubernetes.Version = "1.25.0"
+					oldShoot := shoot.DeepCopy()
+					shoot.SetDeletionTimestamp(&metav1.Time{})
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(BeNil())
+				})
+
+				It("should default the enableStaticTokenKubeconfig field to 'true' for k8s version < 1.26", func() {
+					shoot.Spec.Kubernetes.Version = "1.25.0"
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(PointTo(Equal(true)))
+				})
+
+				It("should default the enableStaticTokenKubeconfig field to false for k8s version >= 1.26", func() {
+					shoot.Spec.Kubernetes.Version = "1.26.0"
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(PointTo(Equal(false)))
+				})
+			})
+
+			Context("kubernetes allowPrivilegedContainers defaulting", func() {
+				BeforeEach(func() {
+					shoot.Spec.Kubernetes.AllowPrivilegedContainers = nil
+
+					cloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{
+						{Version: "1.25.0"},
+						{Version: "1.24.0"},
+					}
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				})
+
+				Context("when shoot uses Kubernetes < 1.25", func() {
+					BeforeEach(func() {
+						shoot.Spec.Kubernetes.Version = "1.24.0"
+					})
+
+					It("should set the field to 'true' if PodSecurityPolicy admission plugin is not disabled and shoot has workers", func() {
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(shoot.Spec.Kubernetes.AllowPrivilegedContainers).To(PointTo(Equal(true)))
+					})
+
+					It("should not set the field if shoot is in deletion", func() {
+						oldShoot := shoot.DeepCopy()
+						shoot.SetDeletionTimestamp(&metav1.Time{})
+
+						attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(shoot.Spec.Kubernetes.AllowPrivilegedContainers).To(BeNil())
+					})
+
+					It("should not set the field if the shoot is workerless", func() {
+						shoot.Spec.Provider.Workers = nil
+
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(shoot.Spec.Kubernetes.AllowPrivilegedContainers).To(BeNil())
+					})
+
+					It("should not default the field if PodSecurityPolicy admission plugin is disabled in the shoot spec", func() {
+						shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+							AdmissionPlugins: []core.AdmissionPlugin{
+								{
+									Name:     "PodSecurityPolicy",
+									Disabled: pointer.Bool(true),
+								},
+							},
+						}
+
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(shoot.Spec.Kubernetes.AllowPrivilegedContainers).To(BeNil())
+					})
+				})
+
+				Context("when shoot uses Kubernetes >= 1.25", func() {
+					BeforeEach(func() {
+						shoot.Spec.Kubernetes.Version = "1.25.0"
+					})
+
+					It("should not set the field", func() {
+						shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)
+
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(shoot.Spec.Kubernetes.AllowPrivilegedContainers).To(PointTo(BeFalse()))
+					})
+				})
+			})
+
+			Context("kubernetes kube-controller-manager's node monitor grace period defaulting", func() {
+				BeforeEach(func() {
+					cloudProfile.Spec.Kubernetes.Versions = []core.ExpirableVersion{
+						{Version: "1.26.0"},
+						{Version: "1.26.9"},
+						{Version: "1.27.0"},
+					}
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				})
+
+				It("should not overwrite the kube-controller-manager's node monitor grace period", func() {
+					nodeMonitorGracePeriod := &metav1.Duration{Duration: time.Minute}
+					shoot.Spec.Kubernetes.Version = "1.27.0"
+					shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{NodeMonitorGracePeriod: nodeMonitorGracePeriod}
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+
+					Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(nodeMonitorGracePeriod))
+				})
+
+				It("should not default the kube-controller-manager's node monitor grace period when shoot is in deletion", func() {
+					oldShoot := shoot.DeepCopy()
+					shoot.Spec.Kubernetes.Version = "1.26.0"
+					shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{}
+					shoot.SetDeletionTimestamp(&metav1.Time{})
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+
+					Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(BeNil())
+				})
+
+				It("should default the kube-controller-manager's node monitor grace period to 2 minutes for Shoot cluster with k8s version < 1.27", func() {
+					shoot.Spec.Kubernetes.Version = "1.26.0"
+					shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{}
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+
+					Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(&metav1.Duration{Duration: 2 * time.Minute}))
+				})
+
+				It("should default the kube-controller-manager's node monitor grace period to 40 seconds for Shoot cluster with k8s version >= 1.27", func() {
+					shoot.Spec.Kubernetes.Version = "1.27.0"
+					shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{}
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+
+					Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(&metav1.Duration{Duration: 40 * time.Second}))
+				})
+
+				It("should overwrite the  kube-controller-manager's nodeMonitorGracePeriod field if the value is set to 2m, when shoot is upgraded to k8s version 1.27", func() {
+					shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{NodeMonitorGracePeriod: &metav1.Duration{Duration: 2 * time.Minute}}
+					shoot.Spec.Kubernetes.Version = "1.27.0"
+					oldShoot := shoot.DeepCopy()
+					oldShoot.Spec.Kubernetes.Version = "1.26.0"
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+
+					Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(&metav1.Duration{Duration: 40 * time.Second}))
+				})
+
+				It("should not overwrite the  kube-controller-manager's nodeMonitorGracePeriod field if the value is set to 2m, when shoot is not upgraded to k8s version 1.27", func() {
+					nodeMonitorGracePeriod := &metav1.Duration{Duration: 2 * time.Minute}
+					shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{NodeMonitorGracePeriod: nodeMonitorGracePeriod}
+					shoot.Spec.Kubernetes.Version = "1.26.9"
+					oldShoot := shoot.DeepCopy()
+					oldShoot.Spec.Kubernetes.Version = "1.26.0"
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+
+					Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(nodeMonitorGracePeriod))
+				})
+
+				It("should not overwrite the  kube-controller-manager's nodeMonitorGracePeriod field if the value is not set to 2m, when shoot is upgraded to k8s version 1.27", func() {
+					nodeMonitorGracePeriod := &metav1.Duration{Duration: 121 * time.Second}
+					shoot.Spec.Kubernetes.KubeControllerManager = &core.KubeControllerManagerConfig{NodeMonitorGracePeriod: nodeMonitorGracePeriod}
+					shoot.Spec.Kubernetes.Version = "1.27.0"
+					oldShoot := shoot.DeepCopy()
+					oldShoot.Spec.Kubernetes.Version = "1.26.0"
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+
+					Expect(shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod).To(Equal(nodeMonitorGracePeriod))
 				})
 			})
 
@@ -3323,7 +3543,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).NotTo(HaveOccurred())
-						Expect(*newShoot).To(Equal(shoot))
+						Expect(newShoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(shoot.Spec.Provider.Workers[0].Machine.Image))
 					})
 
 					It("should keep machine image of the old shoot (version unset in new shoot)", func() {
@@ -3335,7 +3555,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).NotTo(HaveOccurred())
-						Expect(*newShoot).To(Equal(shoot))
+						Expect(newShoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(shoot.Spec.Provider.Workers[0].Machine.Image))
 					})
 
 					It("should use updated machine image version as specified", func() {

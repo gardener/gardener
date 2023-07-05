@@ -4170,8 +4170,7 @@ func schema_pkg_apis_core_v1beta1_Kubernetes(ref common.ReferenceCallback) commo
 					},
 					"version": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Version is the semantic Kubernetes version to use for the Shoot cluster.",
-							Default:     "",
+							Description: "Version is the semantic Kubernetes version to use for the Shoot cluster. Defaults to the highest supported minor and patch version given in the referenced cloud profile. The version can be omitted completely or partially specified, e.g. `<major>.<minor>`.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -4190,7 +4189,6 @@ func schema_pkg_apis_core_v1beta1_Kubernetes(ref common.ReferenceCallback) commo
 						},
 					},
 				},
-				Required: []string{"version"},
 			},
 		},
 		Dependencies: []string{

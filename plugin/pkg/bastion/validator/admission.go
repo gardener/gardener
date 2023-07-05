@@ -56,7 +56,7 @@ type Bastion struct {
 var (
 	_ = admissioninitializer.WantsInternalCoreClientset(&Bastion{})
 
-	readyFuncs = []admission.ReadyFunc{}
+	readyFuncs []admission.ReadyFunc
 )
 
 // New creates a new Bastion admission plugin.
@@ -88,7 +88,7 @@ func (v *Bastion) ValidateInitialization() error {
 var _ admission.MutationInterface = &Bastion{}
 
 // Admit validates and if appropriate mutates the given bastion against the shoot that it references.
-func (v *Bastion) Admit(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
+func (v *Bastion) Admit(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if v.readyFunc == nil {
 		v.AssignReadyFunc(func() bool {
