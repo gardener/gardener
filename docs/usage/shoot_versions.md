@@ -130,7 +130,7 @@ In this case, the version is again upgraded in the **next** maintenance time.
 **Depending on the circumstances described above, it can happen that the cluster receives multiple consecutive minor Kubernetes version updates!**
 
 Kubernetes "minor version jumps" are not allowed - meaning to skip the update to the consecutive minor version and directly update to any version after that.
-For instance, the version `1.24.x` can only update to a version `1.24.x`, not to `1.26.x` or any other version.
+For instance, the version `1.24.x` can only update to a version `1.25.x`, not to `1.26.x` or any other version.
 This is because Kubernetes does not guarantee upgradability in this case, leading to possibly broken Shoot clusters.
 The administrator has to set up the `CloudProfile` in such a way that consecutive Kubernetes minor versions are available.
 Otherwise, Shoot clusters will fail to upgrade during the maintenance time.
