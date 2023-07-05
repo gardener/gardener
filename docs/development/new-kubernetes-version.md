@@ -81,7 +81,11 @@ There is a CI/CD job that runs periodically and releases a new `hyperkube` image
 - Maintain copies of the `DaemonSet` controller's scheduling logic:
   - `gardener-resource-manager`'s [`Node` controller](../concepts/resource-manager.md#node-controllerpkgresourcemanagercontrollernode) uses a copy of parts of the `DaemonSet` controller's logic for determining whether a specific `Node` should run a daemon pod of a given `DaemonSet`: see [this file](https://github.com/gardener/gardener/blob/master/pkg/resourcemanager/controller/node/helper/daemon_controller.go).
   - Check the referenced upstream files for changes to the `DaemonSet` controller's logic and adapt our copies accordingly. This might include introducing version-specific checks in our codebase to handle different shoot cluster versions.
-- Bump the used Kubernetes version for local `Shoot` and local e2e test.
+- Maintain version specific defaulting logic in shoot admission plugin:
+  - Sometimes default values for shoots are intentionally changed with the introduction of a new Kubernetes version.
+  - The final Kubernetes version for a shoot is determined in the [Shoot Validator Admission Plugin](https://github.com/gardener/gardener/blob/17dfefaffed6c5e125e35b6614c8dcad801839f1/plugin/pkg/shoot/validator/admission.go).
+  - Any defaulting logic that depends on the version should be placed in this admission plugin ([example](https://github.com/gardener/gardener/blob/f754c071e6cf8e45f7ac7bc5924acaf81b96dc06/plugin/pkg/shoot/validator/admission.go#L782)).
+- Bump the used Kubernetes version for local e2e test.
   - See [this](https://github.com/gardener/gardener/pull/5255/commits/5707c4c7a4fd265b176387178b755cabeea89ffe) example commit.
 
 #### Filing the Pull Request

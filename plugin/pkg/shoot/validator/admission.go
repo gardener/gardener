@@ -956,7 +956,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 				if defaultVersion != nil {
 					worker.Kubernetes.Version = defaultVersion
 				} else {
-					// We assume that the 'defaultVersion' is already calculated correctly, so only run validation if the verion was not defaulted.
+					// We assume that the 'defaultVersion' is already calculated correctly, so only run validation if the version was not defaulted.
 					allErrs = append(allErrs, validateKubernetesVersionConstraints(c.cloudProfile.Spec.Kubernetes.Versions, *worker.Kubernetes.Version, oldWorkerKubernetesVersion, idxPath.Child("kubernetes", "version"))...)
 				}
 			}

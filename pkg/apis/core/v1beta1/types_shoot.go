@@ -530,6 +530,10 @@ type Kubernetes struct {
 	// Kubelet contains configuration settings for the kubelet.
 	// +optional
 	Kubelet *KubeletConfig `json:"kubelet,omitempty" protobuf:"bytes,7,opt,name=kubelet"`
+	// Note: Even though 'Version' is an optional field for users, we deliberately chose to not make it a pointer
+	// because the field is guaranteed to be not-empty after the admission plugin processed the shoot object.
+	// Thus, pointer handling for this field is not beneficial and would make things more cumbersome.
+
 	// Version is the semantic Kubernetes version to use for the Shoot cluster.
 	// Defaults to the highest supported minor and patch version given in the referenced cloud profile.
 	// The version can be omitted completely or partially specified, e.g. `<major>.<minor>`.
