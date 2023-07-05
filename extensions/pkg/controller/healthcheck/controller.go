@@ -116,7 +116,7 @@ func DefaultRegistration(extensionType string, kind schema.GroupVersionKind, get
 		shootRestOptions = *opts.HealthCheckConfig.ShootRESTOptions
 	}
 
-	healthCheckActuator := NewActuator(args.Type, args.GetExtensionGroupVersionKind().Kind, getExtensionObjFunc, healthChecks, shootRestOptions)
+	healthCheckActuator := NewActuator(mgr, args.Type, args.GetExtensionGroupVersionKind().Kind, getExtensionObjFunc, healthChecks, shootRestOptions)
 	return Register(mgr, args, healthCheckActuator)
 }
 
