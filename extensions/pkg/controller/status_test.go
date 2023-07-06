@@ -61,8 +61,7 @@ var _ = Describe("Status", func() {
 		c = mockclient.NewMockClient(ctrl)
 		sw = mockclient.NewMockStatusWriter(ctrl)
 
-		statusUpdater = NewStatusUpdater()
-		statusUpdater.InjectClient(c)
+		statusUpdater = NewStatusUpdater(c)
 
 		obj = &extensionsv1alpha1.Infrastructure{
 			ObjectMeta: metav1.ObjectMeta{

@@ -35,9 +35,9 @@ import (
 
 // addTestControllerToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
-func addTestControllerToManagerWithOptions(mgr manager.Manager, ignoreOperationAnnotation bool) error {
-	return backupbucket.Add(mgr, backupbucket.AddArgs{
-		Actuator: &actuator{},
+func addTestControllerToManagerWithOptions(ctx context.Context, mgr manager.Manager, ignoreOperationAnnotation bool) error {
+	return backupbucket.Add(ctx, mgr, backupbucket.AddArgs{
+		Actuator: &actuator{client: mgr.GetClient()},
 		ControllerOptions: controller.Options{
 			// Use custom rate limiter to slow down re-enqueuing in case of errors.
 			// Some tests rely on reading an error state which is removed too quickly by subsequent reconciliations.
@@ -51,11 +51,6 @@ func addTestControllerToManagerWithOptions(mgr manager.Manager, ignoreOperationA
 
 type actuator struct {
 	client client.Client
-}
-
-func (a *actuator) InjectClient(client client.Client) error {
-	a.client = client
-	return nil
 }
 
 // Reconcile updates the time-out annotation on the `BackupBucket` with the value of the `time-in` annotation. This is

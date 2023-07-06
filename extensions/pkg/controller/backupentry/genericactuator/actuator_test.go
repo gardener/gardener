@@ -27,13 +27,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry"
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator"
 	extensionsmockgenericactuator "github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator/mock"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
 )
 
 const (
@@ -47,6 +47,7 @@ const (
 var _ = Describe("Actuator", func() {
 	var (
 		ctrl *gomock.Controller
+		mgr  *mockmanager.MockManager
 
 		be = &extensionsv1alpha1.BackupEntry{
 			ObjectMeta: metav1.ObjectMeta{
@@ -103,6 +104,9 @@ var _ = Describe("Actuator", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
+
+		// Create fake manager
+		mgr = mockmanager.NewMockManager(ctrl)
 	})
 
 	AfterEach(func() {
@@ -121,6 +125,7 @@ var _ = Describe("Actuator", func() {
 				// Create fake client
 				client = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).
 					WithObjects(seedNamespace, beSecret).Build()
+				mgr.EXPECT().GetClient().Return(client)
 			})
 
 			It("should create secrets", func() {
@@ -129,12 +134,10 @@ var _ = Describe("Actuator", func() {
 				backupEntryDelegate.EXPECT().GetETCDSecretData(context.TODO(), gomock.AssignableToTypeOf(logr.Logger{}), be, backupProviderSecretData).Return(etcdBackupSecretData, nil)
 
 				// Create actuator
-				a = genericactuator.NewActuator(backupEntryDelegate)
-				err := a.(inject.Client).InjectClient(client)
-				Expect(err).NotTo(HaveOccurred())
+				a = genericactuator.NewActuator(mgr, backupEntryDelegate)
 
 				// Call Reconcile method and check the result
-				err = a.Reconcile(context.TODO(), log, be)
+				err := a.Reconcile(context.TODO(), log, be)
 				Expect(err).NotTo(HaveOccurred())
 
 				deployedSecret := &corev1.Secret{}
@@ -149,6 +152,7 @@ var _ = Describe("Actuator", func() {
 				// Create fake client
 				client = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).
 					WithObjects(beSecret).Build()
+				mgr.EXPECT().GetClient().Return(client)
 			})
 
 			It("should not create secrets", func() {
@@ -156,12 +160,10 @@ var _ = Describe("Actuator", func() {
 				backupEntryDelegate := extensionsmockgenericactuator.NewMockBackupEntryDelegate(ctrl)
 
 				// Create actuator
-				a = genericactuator.NewActuator(backupEntryDelegate)
-				err := a.(inject.Client).InjectClient(client)
-				Expect(err).NotTo(HaveOccurred())
+				a = genericactuator.NewActuator(mgr, backupEntryDelegate)
 
 				// Call Reconcile method and check the result
-				err = a.Reconcile(context.TODO(), log, be)
+				err := a.Reconcile(context.TODO(), log, be)
 				Expect(err).NotTo(HaveOccurred())
 
 				deployedSecret := &corev1.Secret{}

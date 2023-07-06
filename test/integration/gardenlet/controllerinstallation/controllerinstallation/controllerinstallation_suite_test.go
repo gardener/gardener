@@ -227,7 +227,7 @@ var _ = BeforeSuite(func() {
 		},
 		Identity:              identity,
 		GardenClusterIdentity: gardenClusterIdentity,
-	}).AddToManager(mgr, mgr)).To(Succeed())
+	}).AddToManager(ctx, mgr, mgr)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

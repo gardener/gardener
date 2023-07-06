@@ -114,7 +114,7 @@ var _ = BeforeSuite(func() {
 			ConcurrentSyncs: pointer.Int(5),
 		},
 		Clock: fakeClock,
-	}).AddToManager(mgr)).To(Succeed())
+	}).AddToManager(ctx, mgr)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

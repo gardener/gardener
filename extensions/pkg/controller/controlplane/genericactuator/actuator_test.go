@@ -39,7 +39,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionsmockgenericactuator "github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator/mock"
@@ -53,6 +52,7 @@ import (
 	mockchartrenderer "github.com/gardener/gardener/pkg/chartrenderer/mock"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	mockchartutil "github.com/gardener/gardener/pkg/utils/chart/mocks"
@@ -84,6 +84,7 @@ var (
 	pFalse, pTrue = &vFalse, &vTrue
 
 	fakeClock *testclock.FakeClock
+	mgr       *mockmanager.MockManager
 )
 
 func TestControlPlane(t *testing.T) {
@@ -288,6 +289,9 @@ var _ = Describe("Actuator", func() {
 			return extensionssecretsmanager.SecretsManagerForCluster(ctx, logger, fakeClock, fakeClient, cluster, identity, secretConfigs)
 		}
 
+		// Create fake manager
+		mgr = mockmanager.NewMockManager(ctrl)
+
 		deterministicReader := strings.NewReader(strings.Repeat("-", 10000))
 		fakeClock = testclock.NewFakeClock(time.Unix(1649848746, 0))
 
@@ -323,6 +327,7 @@ var _ = Describe("Actuator", func() {
 
 			// Create mock client
 			c := mockclient.NewMockClient(ctrl)
+			mgr.EXPECT().GetClient().Return(c)
 
 			if webhookConfig != nil {
 				c.EXPECT().Get(ctx, resourceKeyShootWebhooksNetworkPolicy, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(errNotFound)
@@ -374,6 +379,7 @@ webhooks:
 			gardenerClientset := kubernetesmock.NewMockInterface(ctrl)
 			gardenerClientset.EXPECT().Version().Return(seedVersion)
 			chartApplier := kubernetesmock.NewMockChartApplier(ctrl)
+			gardenerClientset.EXPECT().ChartApplier().Return(chartApplier)
 
 			// Create mock chart renderer and factory
 			chartRenderer := mockchartrenderer.NewMockInterface(ctrl)
@@ -439,11 +445,7 @@ webhooks:
 				})
 
 			// Create actuator
-			a := NewActuator(providerName, getSecretsConfigs, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, ccmShootChart, cpShootCRDsChart, storageClassesChart, nil, vp, crf, imageVector, configName, atomicWebhookConfig, webhookServerNamespace, webhookServerPort)
-			err := a.(inject.Client).InjectClient(c)
-			Expect(err).NotTo(HaveOccurred())
-			a.(*actuator).gardenerClientset = gardenerClientset
-			a.(*actuator).chartApplier = chartApplier
+			a := NewActuator(mgr, providerName, getSecretsConfigs, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, ccmShootChart, cpShootCRDsChart, storageClassesChart, nil, vp, crf, imageVector, configName, atomicWebhookConfig, webhookServerNamespace, webhookServerPort, gardenerClientset)
 			a.(*actuator).newSecretsManager = newSecretsManager
 
 			// Call Reconcile method and check the result
@@ -473,11 +475,14 @@ webhooks:
 			// Create mock values provider
 			vp := extensionsmockgenericactuator.NewMockValuesProvider(ctrl)
 
-			// Create mock chart applier
+			// Create mock Gardener clientset and chart applier
+			gardenerClientset := kubernetesmock.NewMockInterface(ctrl)
 			chartApplier := kubernetesmock.NewMockChartApplier(ctrl)
+			gardenerClientset.EXPECT().ChartApplier().Return(chartApplier)
 
 			// Create mock clients
 			client := mockclient.NewMockClient(ctrl)
+			mgr.EXPECT().GetClient().Return(client)
 
 			client.EXPECT().Delete(ctx, deletedMRForStorageClassesChart).Return(nil)
 			client.EXPECT().Delete(ctx, deletedMRSecretForStorageClassesChart).Return(nil)
@@ -519,10 +524,8 @@ webhooks:
 			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecretsFunc(namespace)[0].Secret.Name, Namespace: namespace}})
 
 			// Create actuator
-			a := NewActuator(providerName, getSecretsConfigs, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, nil, cpShootCRDsChart, nil, nil, vp, nil, nil, configName, atomicWebhookConfig, webhookServerNamespace, webhookServerPort)
-			Expect(a.(inject.Client).InjectClient(client)).To(Succeed())
+			a := NewActuator(mgr, providerName, getSecretsConfigs, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, nil, cpShootCRDsChart, nil, nil, vp, nil, nil, configName, atomicWebhookConfig, webhookServerNamespace, webhookServerPort, gardenerClientset)
 			a.(*actuator).newSecretsManager = newSecretsManager
-			a.(*actuator).chartApplier = chartApplier
 
 			// Call Delete method and check the result
 			Expect(a.Delete(ctx, logger, cp, cluster)).To(Succeed())
@@ -539,11 +542,13 @@ webhooks:
 		func() {
 			// Create mock client
 			c := mockclient.NewMockClient(ctrl)
+			mgr.EXPECT().GetClient().Return(c)
 
 			// Create mock Gardener clientset and chart applier
 			gardenerClientset := kubernetesmock.NewMockInterface(ctrl)
 			gardenerClientset.EXPECT().Version().Return(seedVersion)
 			chartApplier := kubernetesmock.NewMockChartApplier(ctrl)
+			gardenerClientset.EXPECT().ChartApplier().Return(chartApplier)
 
 			// Create mock charts
 			cpExposureChart := mockchartutil.NewMockInterface(ctrl)
@@ -579,10 +584,7 @@ webhooks:
 				})
 
 			// Create actuator
-			a := NewActuator(providerName, nil, nil, getSecretsConfigsExposure, exposureShootAccessSecretsFunc, nil, nil, nil, nil, nil, cpExposureChart, vp, nil, imageVector, "", nil, "", 0)
-			Expect(a.(inject.Client).InjectClient(c)).To(Succeed())
-			a.(*actuator).gardenerClientset = gardenerClientset
-			a.(*actuator).chartApplier = chartApplier
+			a := NewActuator(mgr, providerName, nil, nil, getSecretsConfigsExposure, exposureShootAccessSecretsFunc, nil, nil, nil, nil, nil, cpExposureChart, vp, nil, imageVector, "", nil, "", 0, gardenerClientset)
 			a.(*actuator).newSecretsManager = newSecretsManager
 
 			// Call Reconcile method and check the result
@@ -602,6 +604,12 @@ webhooks:
 		func() {
 			// Create mock clients
 			client := mockclient.NewMockClient(ctrl)
+			mgr.EXPECT().GetClient().Return(client)
+
+			// Create mock Gardener clientset and chart applier
+			gardenerClientset := kubernetesmock.NewMockInterface(ctrl)
+			chartApplier := kubernetesmock.NewMockChartApplier(ctrl)
+			gardenerClientset.EXPECT().ChartApplier().Return(chartApplier)
 
 			// Create mock charts
 			cpExposureChart := mockchartutil.NewMockInterface(ctrl)
@@ -611,8 +619,7 @@ webhooks:
 			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: exposureShootAccessSecretsFunc(namespace)[0].Secret.Name, Namespace: namespace}})
 
 			// Create actuator
-			a := NewActuator(providerName, nil, nil, getSecretsConfigsExposure, exposureShootAccessSecretsFunc, nil, nil, nil, nil, nil, cpExposureChart, nil, nil, nil, "", nil, "", 0)
-			Expect(a.(inject.Client).InjectClient(client)).To(Succeed())
+			a := NewActuator(mgr, providerName, nil, nil, getSecretsConfigsExposure, exposureShootAccessSecretsFunc, nil, nil, nil, nil, nil, cpExposureChart, nil, nil, nil, "", nil, "", 0, gardenerClientset)
 			a.(*actuator).newSecretsManager = newSecretsManager
 
 			// Call Delete method and check the result

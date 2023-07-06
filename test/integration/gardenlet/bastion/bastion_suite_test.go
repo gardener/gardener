@@ -181,7 +181,7 @@ var _ = BeforeSuite(func() {
 		Clock: fakeClock,
 		// limit exponential backoff in tests
 		RateLimiter: workqueue.NewWithMaxWaitRateLimiter(workqueue.DefaultControllerRateLimiter(), 100*time.Millisecond),
-	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
+	}).AddToManager(ctx, mgr, mgr, mgr)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

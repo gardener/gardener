@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +32,8 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
+	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
 )
 
 func TestHandler(t *testing.T) {
@@ -40,8 +43,12 @@ func TestHandler(t *testing.T) {
 
 var _ = Describe("Controller Mapper", func() {
 	var (
-		ctx        = context.TODO()
+		ctx = context.TODO()
+
 		fakeClient client.Client
+		ctrl       *gomock.Controller
+		cache      *mockcache.MockCache
+		mgr        *mockmanager.MockManager
 
 		namespace = "some-namespace"
 		cluster   *extensionsv1alpha1.Cluster
@@ -52,6 +59,10 @@ var _ = Describe("Controller Mapper", func() {
 
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		ctrl = gomock.NewController(GinkgoT())
+		cache = mockcache.NewMockCache(ctrl)
+		mgr = mockmanager.NewMockManager(ctrl)
+		mgr.EXPECT().GetCache().Return(cache).AnyTimes()
 
 		cluster = &extensionsv1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
@@ -72,7 +83,7 @@ var _ = Describe("Controller Mapper", func() {
 		var mapper Mapper
 
 		BeforeEach(func() {
-			mapper = ClusterToObjectMapper(newObjListFunc, nil)
+			mapper = ClusterToObjectMapper(ctx, mgr, newObjListFunc, nil)
 		})
 
 		It("should find all objects for the passed cluster", func() {
@@ -94,7 +105,7 @@ var _ = Describe("Controller Mapper", func() {
 					},
 				},
 			}
-			mapper = ClusterToObjectMapper(newObjListFunc, predicates)
+			mapper = ClusterToObjectMapper(ctx, mgr, newObjListFunc, predicates)
 
 			Expect(fakeClient.Create(ctx, infra)).To(Succeed())
 

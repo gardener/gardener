@@ -32,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
@@ -41,6 +40,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
 )
 
 var _ = Describe("Worker Reconcile", func() {
@@ -74,12 +74,16 @@ var _ = Describe("Worker Reconcile", func() {
 		ctrl   *gomock.Controller
 		ctx    context.Context
 		logger logr.Logger
+		mgr    *mockmanager.MockManager
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		ctx = context.TODO()
 		logger = log.Log.WithName("Reconcile-Test-Controller")
+
+		// Create fake manager
+		mgr = mockmanager.NewMockManager(ctrl)
 	})
 
 	AfterEach(func() {
@@ -106,13 +110,9 @@ var _ = Describe("Worker Reconcile", func() {
 	)
 
 	DescribeTable("Reconcile function", func(t *test) {
-		reconciler := worker.NewReconciler(t.fields.actuator(ctrl))
-		expectInject(inject.ClientInto(t.fields.client, reconciler))
-		expectInject(inject.InjectorInto(func(i interface{}) error {
-			expectInject(inject.ClientInto(t.fields.client, i))
-			expectInject(inject.APIReaderInto(t.fields.client, i))
-			return nil
-		}, reconciler))
+		mgr.EXPECT().GetClient().Return(t.fields.client).AnyTimes()
+		mgr.EXPECT().GetAPIReader().Return(t.fields.client).AnyTimes()
+		reconciler := worker.NewReconciler(mgr, t.fields.actuator(ctrl))
 
 		got, err := reconciler.Reconcile(ctx, t.args.request)
 		Expect(err != nil).To(Equal(t.wantErr))
@@ -403,11 +403,6 @@ func getCluster() *extensionsv1alpha1.Cluster {
 			},
 		},
 	}
-}
-
-func expectInject(ok bool, err error) {
-	Expect(err).NotTo(HaveOccurred())
-	Expect(ok).To(BeTrue(), "no injection happened")
 }
 
 func encode(obj runtime.Object) []byte {

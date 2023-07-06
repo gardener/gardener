@@ -29,7 +29,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -58,8 +57,8 @@ var _ = Describe("Add", func() {
 	)
 
 	BeforeEach(func() {
-		reconciler = &Reconciler{}
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		reconciler = &Reconciler{Client: fakeClient}
 
 		managedSeedSet = &seedmanagementv1alpha1.ManagedSeedSet{
 			ObjectMeta: metav1.ObjectMeta{
@@ -82,7 +81,7 @@ var _ = Describe("Add", func() {
 		)
 
 		BeforeEach(func() {
-			pred = reconciler.ShootPredicate()
+			pred = reconciler.ShootPredicate(ctx)
 
 			oldShoot = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -111,9 +110,6 @@ var _ = Describe("Add", func() {
 					},
 				},
 			}
-
-			Expect(inject.StopChannelInto(ctx.Done(), pred)).To(BeTrue())
-			Expect(inject.ClientInto(fakeClient, pred)).To(BeTrue())
 		})
 
 		It("should return false for create, update and delete event when Shoot does not references any ManagedSeedSet", func() {
@@ -320,7 +316,7 @@ var _ = Describe("Add", func() {
 		)
 
 		BeforeEach(func() {
-			pred = reconciler.ManagedSeedPredicate()
+			pred = reconciler.ManagedSeedPredicate(ctx)
 
 			oldManagedSeed = &seedmanagementv1alpha1.ManagedSeed{
 				ObjectMeta: metav1.ObjectMeta{
@@ -349,9 +345,6 @@ var _ = Describe("Add", func() {
 					},
 				},
 			}
-
-			Expect(inject.StopChannelInto(ctx.Done(), pred)).To(BeTrue())
-			Expect(inject.ClientInto(fakeClient, pred)).To(BeTrue())
 		})
 
 		It("should return true for update event and false for create and delete event when deletion timestamp is set", func() {
@@ -457,7 +450,7 @@ var _ = Describe("Add", func() {
 		)
 
 		BeforeEach(func() {
-			pred = reconciler.SeedPredicate()
+			pred = reconciler.SeedPredicate(ctx)
 
 			managedSeed = &seedmanagementv1alpha1.ManagedSeed{
 				ObjectMeta: metav1.ObjectMeta{
@@ -487,9 +480,6 @@ var _ = Describe("Add", func() {
 					Namespace: namespace,
 				},
 			}
-
-			Expect(inject.StopChannelInto(ctx.Done(), pred)).To(BeTrue())
-			Expect(inject.ClientInto(fakeClient, pred)).To(BeTrue())
 		})
 
 		It("should return true for update and false for create and delete event when Seed Ready status changes", func() {

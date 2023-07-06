@@ -17,6 +17,7 @@ package predicate_test
 import (
 	"context"
 
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,12 +25,12 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	. "github.com/gardener/gardener/extensions/pkg/predicate"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
 )
 
 var _ = Describe("Preconditions", func() {
@@ -70,7 +71,9 @@ var _ = Describe("Preconditions", func() {
 
 	Describe("#ShootNotFailedPredicate", func() {
 		var (
-			ctx = context.TODO()
+			ctrl *gomock.Controller
+			ctx  context.Context
+			mgr  *mockmanager.MockManager
 
 			fakeClient client.Client
 			pred       predicate.Predicate
@@ -80,13 +83,18 @@ var _ = Describe("Preconditions", func() {
 		)
 
 		BeforeEach(func() {
+			ctrl = gomock.NewController(GinkgoT())
+			ctx = context.TODO()
+
 			fakeClient = fakeclient.NewClientBuilder().
 				WithScheme(kubernetes.SeedScheme).
 				Build()
 
-			pred = ShootNotFailedPredicate()
-			Expect(inject.StopChannelInto(ctx.Done(), pred)).To(BeTrue())
-			Expect(inject.ClientInto(fakeClient, pred)).To(BeTrue())
+			// Create fake manager
+			mgr = mockmanager.NewMockManager(ctrl)
+			mgr.EXPECT().GetClient().Return(fakeClient)
+
+			pred = ShootNotFailedPredicate(ctx, mgr)
 
 			obj = &extensionsv1alpha1.Infrastructure{ObjectMeta: metav1.ObjectMeta{Namespace: namespace}}
 		})

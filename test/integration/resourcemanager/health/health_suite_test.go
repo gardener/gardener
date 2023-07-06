@@ -120,11 +120,11 @@ var _ = BeforeSuite(func() {
 	Expect((&health.Reconciler{
 		Config:      cfg,
 		ClassFilter: classFilter,
-	}).AddToManager(mgr, mgr, mgr, false, "")).To(Succeed())
+	}).AddToManager(ctx, mgr, mgr, mgr, false, "")).To(Succeed())
 	Expect((&progressing.Reconciler{
 		Config:      cfg,
 		ClassFilter: classFilter,
-	}).AddToManager(mgr, mgr, mgr, false, "")).To(Succeed())
+	}).AddToManager(ctx, mgr, mgr, mgr, false, "")).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

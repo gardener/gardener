@@ -25,7 +25,6 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -131,9 +130,7 @@ var _ = Describe("Add", func() {
 
 		BeforeEach(func() {
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-			p = reconciler.HelmTypePredicate(fakeClient)
-
-			Expect(inject.StopChannelInto(ctx.Done(), p)).To(BeTrue())
+			p = reconciler.HelmTypePredicate(ctx, fakeClient)
 
 			controllerDeployment = &gardencorev1beta1.ControllerDeployment{
 				ObjectMeta: metav1.ObjectMeta{

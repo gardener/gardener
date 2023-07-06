@@ -129,7 +129,7 @@ var _ = BeforeSuite(func() {
 			}},
 		},
 		Clock: fakeClock,
-	}).AddToManager(mgr)).To(Succeed())
+	}).AddToManager(ctx, mgr)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
