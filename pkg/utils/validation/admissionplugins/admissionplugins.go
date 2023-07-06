@@ -85,6 +85,12 @@ var (
 
 	admissionPluginsSupportingExternalKubeconfig = sets.New("ValidatingAdmissionWebhook", "MutatingAdmissionWebhook", "ImagePolicyWebhook")
 
+	// These plugins can be specified in the Shoot spec even if the version doesn't support it. This is required to facilitate migration of these plugins in some cases.
+	// For example, the "PodSecurityPolicy" plugin should be disabled in the Shoot spec for an upgrade from Kubernetes v1.24 to v1.25, but in v1.25 this plugin is not
+	// supported. gardener-apiserver will/should take care to clean this plugin from the spec, because otherwise this will be passed to the kube-apiserver as a flag and
+	// kube-apiserver will panic. See https://github.com/gardener/gardener/pull/8212 for more details.
+	pluginsInMigration = sets.New("PodSecurityPolicy")
+
 	runtimeScheme *runtime.Scheme
 	codec         runtime.Codec
 )
@@ -172,7 +178,11 @@ func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version s
 		supported, err := IsAdmissionPluginSupported(plugin.Name, version)
 		if err != nil {
 			allErrs = append(allErrs, field.Invalid(idxPath.Child("name"), plugin.Name, err.Error()))
-		} else if !supported && !pointer.BoolDeref(plugin.Disabled, false) {
+		} else if !supported {
+			// If the plugin is not supported, but it's disabled and is a plugin in migration, then skip it.
+			if pointer.BoolDeref(plugin.Disabled, false) && pluginsInMigration.Has(plugin.Name) {
+				continue
+			}
 			allErrs = append(allErrs, field.Forbidden(idxPath.Child("name"), fmt.Sprintf("admission plugin %q is not supported in Kubernetes version %s", plugin.Name, version)))
 		} else {
 			if admissionPluginsVersionRanges[plugin.Name].Forbidden {
