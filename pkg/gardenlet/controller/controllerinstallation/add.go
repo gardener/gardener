@@ -15,6 +15,7 @@
 package controllerinstallation
 
 import (
+	"context"
 	"fmt"
 
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -30,6 +31,7 @@ import (
 
 // AddToManager adds all ControllerInstallation controllers to the given manager.
 func AddToManager(
+	ctx context.Context,
 	mgr manager.Manager,
 	gardenCluster cluster.Cluster,
 	seedCluster cluster.Cluster,
@@ -49,7 +51,7 @@ func AddToManager(
 		Config:                cfg,
 		Identity:              identity,
 		GardenClusterIdentity: gardenClusterIdentity,
-	}).AddToManager(mgr, gardenCluster); err != nil {
+	}).AddToManager(ctx, mgr, gardenCluster); err != nil {
 		return fmt.Errorf("failed adding main reconciler: %w", err)
 	}
 
