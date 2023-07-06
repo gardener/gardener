@@ -172,9 +172,9 @@ type SystemComponents struct {
 
 // Logging contains references to logging deployers
 type Logging struct {
-	ShootRBACProxy   component.Deployer
-	ShootEventLogger component.Deployer
-	Vali             vali.Interface
+	ShootRBACProxy component.Deployer
+	EventLogger    component.Deployer
+	Vali           vali.Interface
 }
 
 // Addons contains references for the addons.

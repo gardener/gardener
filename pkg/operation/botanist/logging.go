@@ -55,11 +55,11 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	}
 
 	if b.isShootEventLoggerEnabled() {
-		if err := b.Shoot.Components.Logging.ShootEventLogger.Deploy(ctx); err != nil {
+		if err := b.Shoot.Components.Logging.EventLogger.Deploy(ctx); err != nil {
 			return err
 		}
 	} else {
-		if err := b.Shoot.Components.Logging.ShootEventLogger.Destroy(ctx); err != nil {
+		if err := b.Shoot.Components.Logging.EventLogger.Destroy(ctx); err != nil {
 			return err
 		}
 	}
@@ -94,7 +94,7 @@ func (b *Botanist) DestroySeedLogging(ctx context.Context) error {
 		return err
 	}
 
-	if err := b.Shoot.Components.Logging.ShootEventLogger.Destroy(ctx); err != nil {
+	if err := b.Shoot.Components.Logging.EventLogger.Destroy(ctx); err != nil {
 		return err
 	}
 
@@ -115,7 +115,7 @@ func (b *Botanist) destroyLokiBasedShootLoggingStackRetainingPvc(ctx context.Con
 	}
 
 	// The EventLogger is not dependent on Loki/Vali and therefore doesn't need to be deleted.
-	// if err := b.Shoot.Components.Logging.ShootEventLogger.Destroy(ctx); err != nil {
+	// if err := b.Shoot.Components.Logging.EventLogger.Destroy(ctx); err != nil {
 	// 	return err
 	// }
 
