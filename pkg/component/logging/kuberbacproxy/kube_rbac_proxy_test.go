@@ -39,8 +39,6 @@ var _ = Describe("KubeRBACProxy", func() {
 	const (
 		namespace           = "shoot--foo--bar"
 		managedResourceName = "shoot-node-logging"
-		kubeRBACProxyName   = "kube-rbac-proxy"
-		valitailName        = "gardener-valitail"
 	)
 
 	var (
@@ -158,21 +156,9 @@ var _ = Describe("KubeRBACProxy", func() {
 				}})))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_logging_valitail.yaml"])).To(Equal(test.Serialize(&rbacv1.ClusterRoleBinding{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "gardener.cloud:logging:valitail",
-					Labels: map[string]string{
-						"app": valitailName,
-					},
+					Name:        "gardener.cloud:logging:valitail",
+					Annotations: map[string]string{"resources.gardener.cloud/mode": "Ignore"},
 				},
-				RoleRef: rbacv1.RoleRef{
-					APIGroup: rbacv1.GroupName,
-					Kind:     "ClusterRole",
-					Name:     "gardener.cloud:logging:valitail",
-				},
-				Subjects: []rbacv1.Subject{{
-					Kind:      rbacv1.ServiceAccountKind,
-					Name:      valitailName,
-					Namespace: metav1.NamespaceSystem,
-				}},
 			})))
 		})
 	})

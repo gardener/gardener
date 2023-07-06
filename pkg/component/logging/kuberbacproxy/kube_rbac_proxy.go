@@ -30,8 +30,6 @@ import (
 
 const (
 	managedResourceName = "shoot-node-logging"
-
-	valitailRBACName = "gardener.cloud:logging:valitail"
 )
 
 // New creates a new instance of kubeRBACProxy for the kube-rbac-proxy.
@@ -67,26 +65,16 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 
 		valitailClusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        valitailRBACName,
+				Name:        "gardener.cloud:logging:valitail",
 				Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore},
 			},
 		}
 
 		valitailClusterRoleBinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   "gardener.cloud:logging:valitail",
-				Labels: getValitailLabels(),
+				Name:        "gardener.cloud:logging:valitail",
+				Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore},
 			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     valitailClusterRole.Name,
-			},
-			Subjects: []rbacv1.Subject{{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      "gardener-valitail",
-				Namespace: metav1.NamespaceSystem,
-			}},
 		}
 
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
@@ -106,10 +94,4 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 
 func (k *kubeRBACProxy) Destroy(ctx context.Context) error {
 	return managedresources.DeleteForShoot(ctx, k.client, k.namespace, managedResourceName)
-}
-
-func getValitailLabels() map[string]string {
-	return map[string]string{
-		"app": "gardener-valitail",
-	}
 }

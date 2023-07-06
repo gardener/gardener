@@ -233,6 +233,7 @@ func (v *vali) Deploy(ctx context.Context) error {
 			AddAllAndSerialize(
 				v.getKubeRBACProxyClusterRoleBinding(kubeRBACProxyShootAccessSecret.ServiceAccountName),
 				v.getValitailClusterRole(),
+				v.getValitailClusterRoleBinding(valitailShootAccessSecret.ServiceAccountName),
 			)
 		if err != nil {
 			return err
@@ -972,6 +973,25 @@ func (v *vali) getValitailClusterRole() *rbacv1.ClusterRole {
 				Verbs:           []string{"create"},
 			},
 		},
+	}
+}
+
+func (v *vali) getValitailClusterRoleBinding(serviceAccountName string) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "gardener.cloud:logging:valitail",
+			Labels: map[string]string{v1beta1constants.LabelApp: valitailName},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     valitailClusterRoleName,
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      serviceAccountName,
+			Namespace: metav1.NamespaceSystem,
+		}},
 	}
 }
 

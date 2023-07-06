@@ -218,10 +218,11 @@ var _ = Describe("Vali", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretTarget), managedResourceSecretTarget)).To(Succeed())
 			Expect(managedResourceSecretTarget.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecretTarget.Data).To(HaveLen(2))
+			Expect(managedResourceSecretTarget.Data).To(HaveLen(3))
 
 			Expect(string(managedResourceSecretTarget.Data["clusterrolebinding____gardener.cloud_logging_kube-rbac-proxy.yaml"])).To(Equal(test.Serialize(getKubeRBACProxyClusterRoleBinding())))
 			Expect(string(managedResourceSecretTarget.Data["clusterrole____gardener.cloud_logging_valitail.yaml"])).To(Equal(test.Serialize(getValitailClusterRole())))
+			Expect(string(managedResourceSecretTarget.Data["clusterrolebinding____gardener.cloud_logging_valitail.yaml"])).To(Equal(test.Serialize(getValitailClusterRoleBinding())))
 		})
 
 		It("should successfully deploy all resources for seed", func() {
@@ -1583,6 +1584,25 @@ func getValitailClusterRole() *rbacv1.ClusterRole {
 				Verbs:           []string{"create"},
 			},
 		},
+	}
+}
+
+func getValitailClusterRoleBinding() *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "gardener.cloud:logging:valitail",
+			Labels: map[string]string{"app": "gardener-valitail"},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     "gardener.cloud:logging:valitail",
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      "ServiceAccount",
+			Name:      "gardener-valitail",
+			Namespace: "kube-system",
+		}},
 	}
 }
 
