@@ -125,7 +125,7 @@ func AddToManager(
 		Config:         *cfg,
 		ImageVector:    imageVector,
 		ShootClientMap: shootClientMap,
-	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
+	}).AddToManager(ctx, mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding ManagedSeed controller: %w", err)
 	}
 
