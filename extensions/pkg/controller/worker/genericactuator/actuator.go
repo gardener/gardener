@@ -28,11 +28,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
@@ -71,13 +70,17 @@ type genericActuator struct {
 // It provides a default implementation that allows easier integration of providers.
 // If machine-controller-manager should not be managed then only the delegateFactory must be provided.
 func NewActuator(
+	mgr manager.Manager,
 	delegateFactory DelegateFactory,
 	mcmName string,
 	mcmSeedChart,
 	mcmShootChart chart.Interface,
 	imageVector imagevector.ImageVector,
+	clientset kubernetes.Interface,
+	gardenerClientset kubernetesclient.Interface,
 	chartRendererFactory extensionscontroller.ChartRendererFactory,
 ) worker.Actuator {
+
 	return &genericActuator{
 		delegateFactory:      delegateFactory,
 		mcmManaged:           mcmName != "" && mcmSeedChart != nil && mcmShootChart != nil && imageVector != nil && chartRendererFactory != nil,
@@ -85,45 +88,14 @@ func NewActuator(
 		mcmSeedChart:         mcmSeedChart,
 		mcmShootChart:        mcmShootChart,
 		imageVector:          imageVector,
+		client:               mgr.GetClient(),
+		clientset:            clientset,
+		reader:               mgr.GetAPIReader(),
+		scheme:               mgr.GetScheme(),
+		gardenerClientset:    gardenerClientset,
+		chartApplier:         gardenerClientset.ChartApplier(),
 		chartRendererFactory: chartRendererFactory,
 	}
-}
-
-func (a *genericActuator) InjectFunc(f inject.Func) error {
-	return f(a.delegateFactory)
-}
-
-func (a *genericActuator) InjectClient(client client.Client) error {
-	a.client = client
-	return nil
-}
-
-func (a *genericActuator) InjectAPIReader(reader client.Reader) error {
-	a.reader = reader
-	return nil
-}
-
-func (a *genericActuator) InjectScheme(scheme *runtime.Scheme) error {
-	a.scheme = scheme
-	return nil
-}
-
-func (a *genericActuator) InjectConfig(config *rest.Config) error {
-	var err error
-
-	a.clientset, err = kubernetes.NewForConfig(config)
-	if err != nil {
-		return fmt.Errorf("could not create Kubernetes client: %w", err)
-	}
-
-	a.gardenerClientset, err = kubernetesclient.NewWithConfig(kubernetesclient.WithRESTConfig(config))
-	if err != nil {
-		return fmt.Errorf("could not create Gardener client: %w", err)
-	}
-
-	a.chartApplier = a.gardenerClientset.ChartApplier()
-
-	return nil
 }
 
 func (a *genericActuator) cleanupMachineDeployments(ctx context.Context, logger logr.Logger, existingMachineDeployments *machinev1alpha1.MachineDeploymentList, wantedMachineDeployments worker.MachineDeployments) error {
