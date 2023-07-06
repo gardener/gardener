@@ -110,6 +110,7 @@ var (
 		string(core.SchedulingProfileBalanced),
 		string(core.SchedulingProfileBinPacking),
 	)
+	// ForbiddenShootFinalizersOnCreation is a list of finalizers which are forbidden to be specified on Shoot creation.
 	ForbiddenShootFinalizersOnCreation = sets.New(
 		gardencorev1beta1.GardenerName,
 		v1beta1constants.ReferenceProtectionFinalizerName,
