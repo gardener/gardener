@@ -1,6 +1,6 @@
 ---
 title: Autoscaling Shoot `kube-apiserver` via Independently Driven HPA and VPA
-gep-number: 0022
+gep-number: 0023
 creation-date: 2023-01-31
 status: implementable
 authors:
@@ -11,10 +11,10 @@ reviewers:
 - "@timebertt"
 ---
 
-# GEP-22: Autoscaling Shoot kube-apiserver via Independently Driven HPA and VPA
+# GEP-23: Autoscaling Shoot kube-apiserver via Independently Driven HPA and VPA
 
 ## Table of Contents
-- [GEP-22: Autoscaling Shoot kube-apiserver via Independently Driven HPA and VPA](#gep-22-autoscaling-shoot-kube-apiserver-via-independently-driven-hpa-and-vpa)
+- [GEP-23: Autoscaling Shoot kube-apiserver via Independently Driven HPA and VPA](#gep-23-autoscaling-shoot-kube-apiserver-via-independently-driven-hpa-and-vpa)
   - [Table of Contents](#table-of-contents)
   - [Summary](#summary)
   - [Motivation](#motivation)
@@ -98,7 +98,7 @@ that would result in the originally intended behavior. Simply put, in a 3-D spac
 utilization data, and the other two are the horizontal and vertical scale suggested by the recommender, this is a line -
 a line which is a weighted average of the two lines which are individual HPA and VPA recommendations (Fig. 1).
 
-![HVPA scaling space](./assets/gep22-hvpa-scaling-space.png "HVPA scaling space")
+![HVPA scaling space](./assets/gep23-hvpa-scaling-space.png "HVPA scaling space")
 
 _Fig. 1: HVPA policy as a weighted average of HPA and VPA policies. HPA and VPA policies in blue. HVPA intended policy
 in green lies in the plane defined by HPA and VPA. In orange, a vertical-only and
@@ -231,7 +231,7 @@ ShootKapi pods on the seed and derives custom metrics based on it. The component
 service to the seed kube-apiserver. It occupies the custom metrics API extension point and is responsible for providing
 all custom metrics for the seed kube-apiserver, including the one driving the ShootKapi HPA.
 
-![Design outline](./assets/gep22-design-outline.png "Design outline")
+![Design outline](./assets/gep23-design-outline.png "Design outline")
 
 _Fig 2: Proposed design_
 
