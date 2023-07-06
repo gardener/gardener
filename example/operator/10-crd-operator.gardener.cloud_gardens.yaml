@@ -154,7 +154,7 @@ spec:
                         type: object
                       topologyAwareRouting:
                         description: TopologyAwareRouting controls certain settings
-                          for topology-aware traffic routing in the cluster. See https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md.
+                          for topology-aware traffic routing in the cluster. See https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.
                         properties:
                           enabled:
                             description: Enabled controls whether certain Services
