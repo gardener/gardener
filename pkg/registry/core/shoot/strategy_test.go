@@ -88,6 +88,7 @@ var _ = Describe("Strategy", func() {
 					Finalizers: []string{
 						"random",
 						gardencorev1beta1.GardenerName,
+						v1beta1constants.ReferenceProtectionFinalizerName,
 						"some-finalizer",
 					},
 				},

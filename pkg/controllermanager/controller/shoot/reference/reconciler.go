@@ -40,7 +40,7 @@ import (
 )
 
 // FinalizerName is the name of the finalizer used for the reference protection.
-const FinalizerName = "gardener.cloud/reference-protection"
+const FinalizerName = v1beta1constants.ReferenceProtectionFinalizerName
 
 // Reconciler checks the shoot in the given request for references to further objects in order to protect them from
 // deletions as long as they are still referenced.

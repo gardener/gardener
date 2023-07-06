@@ -102,6 +102,9 @@ const (
 	// ControllerInstallation.
 	ExtensionGardenServiceAccountPrefix = "extension-"
 
+	// ReferenceProtectionFinalizerName is the name of the finalizer used for the reference protection.
+	ReferenceProtectionFinalizerName = "gardener.cloud/reference-protection"
+
 	// DeploymentNameClusterAutoscaler is a constant for the name of a Kubernetes deployment object that contains
 	// the cluster-autoscaler pod.
 	DeploymentNameClusterAutoscaler = "cluster-autoscaler"

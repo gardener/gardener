@@ -112,6 +112,7 @@ var (
 	)
 	ForbiddenShootFinalizersOnCreation = sets.New(
 		gardencorev1beta1.GardenerName,
+		v1beta1constants.ReferenceProtectionFinalizerName,
 	)
 
 	// asymmetric algorithms from https://datatracker.ietf.org/doc/html/rfc7518#section-3.1
