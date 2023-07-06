@@ -28,6 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/common"
@@ -46,8 +47,11 @@ type actuator struct {
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled DNSRecord resources.
-func NewActuator(writeToHostsFile bool) dnsrecord.Actuator {
-	return &actuator{writeToHostsFile: writeToHostsFile}
+func NewActuator(mgr manager.Manager, writeToHostsFile bool) dnsrecord.Actuator {
+	return &actuator{
+		RESTConfigContext: common.NewRESTConfigContext(mgr),
+		writeToHostsFile:  writeToHostsFile,
+	}
 }
 
 func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, dnsrecord *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster) error {

@@ -60,7 +60,9 @@ func NewActuator(mgr manager.Manager, clientset kubernetes.Interface, gardenerCl
 		mcmChartShoot        *chart.Chart
 		imageVector          imagevector.ImageVector
 		chartRendererFactory extensionscontroller.ChartRendererFactory
-		workerDelegate       = &delegateFactory{}
+		workerDelegate       = &delegateFactory{
+			RESTConfigContext: common.NewRESTConfigContext(mgr),
+		}
 	)
 
 	if !gardenletManagesMCM {

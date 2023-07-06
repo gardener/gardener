@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
 )
@@ -40,21 +41,6 @@ func NewClientContext(client client.Client, scheme *runtime.Scheme, decoder runt
 		decoder = serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder()
 	}
 	return ClientContext{client: client, scheme: scheme, decoder: decoder}
-}
-
-// InjectScheme injects the given scheme into the valuesProvider.
-func (cc *ClientContext) InjectScheme(scheme *runtime.Scheme) error {
-	cc.scheme = scheme
-	if scheme != nil {
-		cc.decoder = serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder()
-	}
-	return nil
-}
-
-// InjectClient injects the given client into the context.
-func (cc *ClientContext) InjectClient(client client.Client) error {
-	cc.client = client
-	return nil
 }
 
 // Scheme returns the scheme of the context
@@ -81,10 +67,12 @@ type RESTConfigContext struct {
 	restConfig *rest.Config
 }
 
-// InjectConfig injects the given REST config into the context.
-func (cc *RESTConfigContext) InjectConfig(config *rest.Config) error {
-	cc.restConfig = config
-	return nil
+// NewRESTConfigContext creates a ClientContext with the REST config.
+func NewRESTConfigContext(mgr manager.Manager) RESTConfigContext {
+	return RESTConfigContext{
+		ClientContext: NewClientContext(mgr.GetClient(), mgr.GetScheme(), nil),
+		restConfig:    mgr.GetConfig(),
+	}
 }
 
 // RESTConfig returns the rest config of the context
@@ -104,29 +92,12 @@ type ChartRendererContext struct {
 
 // NewChartRendererContext creates a new chart renderer context using a
 // dedicated factory for the renderer,
-func NewChartRendererContext(factory chartrenderer.Factory) ChartRendererContext {
-	return ChartRendererContext{factory: factory}
-}
-
-// InjectConfig injects the given REST config into the context and
-// creates an appropriate chart renderer
-func (cc *ChartRendererContext) InjectConfig(config *rest.Config) error {
-	err := cc.RESTConfigContext.InjectConfig(config)
-	if err != nil {
-		return err
+func NewChartRendererContext(mgr manager.Manager, factory chartrenderer.Factory, chartRenderer chartrenderer.Interface) ChartRendererContext {
+	return ChartRendererContext{
+		RESTConfigContext: NewRESTConfigContext(mgr),
+		factory:           factory,
+		chartRenderer:     chartRenderer,
 	}
-
-	if cc.factory == nil {
-		cc.factory = chartrenderer.DefaultFactory()
-	}
-	chartRenderer, err := cc.factory.NewForConfig(config)
-	if err != nil {
-		return err
-	}
-
-	cc.chartRenderer = chartRenderer
-
-	return nil
 }
 
 // ChartRenderer returns the chart renderer of the context
