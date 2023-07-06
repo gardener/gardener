@@ -202,7 +202,7 @@ make kind-operator-down
 
 As of today, the `gardener-operator` only has one controller which is now described in more detail.
 
-#### [`Garden` Controller](../../pkg/operator/controller/garden)
+#### [`Garden` Controller](../../pkg/operator/controller/garden/garden)
 
 The reconciler first generates a general CA certificate which is valid for ~`30d` and auto-rotated when 80% of its lifetime is reached.
 Afterwards, it brings up the so-called "garden system components".
@@ -255,6 +255,29 @@ It is also mandatory to provide an IPv4 CIDR for the service network of the virt
 This range is used by the API server to compute the cluster IPs of `Service`s.
 
 The controller maintains the `Reconciled` condition which indicates the status of an operation.
+
+#### [`GardenCare` Controller](../../pkg/operator/controller/garden/care)
+
+This reconciler performs four "care" actions related to `Garden`s.
+
+It maintains four conditions and performs the following checks:
+
+- `SystemComponentsHealthy`: The conditions of the `ManagedResource`s applied to the runtime cluster are checked (e.g., `ResourcesApplied`).
+- `VirtualGardenComponentsHealthy`: The conditions of the `ManagedResource`s applied to the virtual cluster are checked (e.g., `ResourcesApplied`).
+- `VirtualGardenAPIServerAvailable`: The `/healthz` endpoint of the garden's `virtual-garden-kube-apiserver` is called and considered healthy when it responds with `200 OK`.
+- `VirtualGardenControlPlaneHealthy`: The control plane is considered healthy when the respective `Deployment`s (for example `virtual-garden-kube-apiserver`,`virtual-garden-kube-controller-manager`), and `Etcd`s (for example `virtual-garden-etcd-main`) exist and are healthy.
+
+If all checks for a certain conditions are succeeded, then its `status` will be set to `True`.
+Otherwise, it will be set to `False`.
+
+If at least one check fails and there is threshold configuration for the conditions (in `.controllers.gardenCare.conditionThresholds`), then the status will be set:
+
+- to `Progressing` if it was `True` before.
+- to `Progressing` if it was `Progressing` before and the `lastUpdateTime` of the condition does not exceed the configured threshold duration yet.
+- to `False` if it was `Progressing` before and the `lastUpdateTime` of the condition exceeds the configured threshold duration.
+
+The condition thresholds can be used to prevent reporting issues too early just because there is a rollout or a short disruption.
+Only if the unhealthiness persists for at least the configured threshold duration, then the issues will be reported (by setting the status to `False`).
 
 #### [`NetworkPolicy` Controller Registrar](../../pkg/controller/networkpolicy)
 
