@@ -185,10 +185,14 @@ func (v *vali) Deploy(ctx context.Context) error {
 		telegrafConfigMapName            string
 		genericTokenKubeconfigSecretName string
 		valitailShootAccessSecret        = v.newValitailShootAccessSecret()
+		kubeRBACProxyShootAccessSecret   = v.newKubeRBACProxyShootAccessSecret()
 	)
 
 	if v.values.ShootNodeLoggingEnabled {
 		if err := valitailShootAccessSecret.Reconcile(ctx, v.client); err != nil {
+			return err
+		}
+		if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, v.client); err != nil {
 			return err
 		}
 
@@ -224,6 +228,7 @@ func (v *vali) Deploy(ctx context.Context) error {
 	} else {
 		if err := kubernetesutils.DeleteObjects(ctx, v.client,
 			valitailShootAccessSecret.Secret,
+			kubeRBACProxyShootAccessSecret.Secret,
 		); err != nil {
 			return err
 		}
@@ -254,6 +259,7 @@ func (v *vali) Destroy(ctx context.Context) error {
 
 	return kubernetesutils.DeleteObjects(ctx, v.client,
 		v.newValitailShootAccessSecret().Secret,
+		v.newKubeRBACProxyShootAccessSecret().Secret,
 	)
 }
 
@@ -261,6 +267,10 @@ func (v *vali) newValitailShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret("valitail", v.namespace).
 		WithServiceAccountName(valitailName).
 		WithTargetSecret(ValitailTokenSecretName, metav1.NamespaceSystem)
+}
+
+func (v *vali) newKubeRBACProxyShootAccessSecret() *gardenerutils.AccessSecret {
+	return gardenerutils.NewShootAccessSecret(kubeRBACProxyName, v.namespace)
 }
 
 func (v *vali) getHVPA() *hvpav1alpha1.Hvpa {

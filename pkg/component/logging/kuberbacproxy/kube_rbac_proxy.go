@@ -24,16 +24,13 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 const (
 	managedResourceName = "shoot-node-logging"
 
-	kubeRBACProxyName = "kube-rbac-proxy"
-	clusterRoleName   = "gardener.cloud:logging:kube-rbac-proxy"
+	clusterRoleName = "gardener.cloud:logging:kube-rbac-proxy"
 
 	valitailRBACName = "gardener.cloud:logging:valitail"
 )
@@ -59,11 +56,6 @@ type kubeRBACProxy struct {
 }
 
 func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
-	kubeRBACProxyShootAccessSecret := k.newKubeRBACProxyShootAccessSecret()
-	if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, k.client); err != nil {
-		return err
-	}
-
 	var (
 		kubeRBACProxyClusterRolebinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
@@ -77,7 +69,7 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 			},
 			Subjects: []rbacv1.Subject{{
 				Kind:      rbacv1.ServiceAccountKind,
-				Name:      kubeRBACProxyShootAccessSecret.ServiceAccountName,
+				Name:      "kube-rbac-proxy",
 				Namespace: metav1.NamespaceSystem,
 			}},
 		}
@@ -149,22 +141,12 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 }
 
 func (k *kubeRBACProxy) Destroy(ctx context.Context) error {
-	if err := managedresources.DeleteForShoot(ctx, k.client, k.namespace, managedResourceName); err != nil {
-		return err
-	}
-
-	return kubernetesutils.DeleteObjects(ctx, k.client,
-		k.newKubeRBACProxyShootAccessSecret().Secret,
-	)
-}
-
-func (k *kubeRBACProxy) newKubeRBACProxyShootAccessSecret() *gardenerutils.AccessSecret {
-	return gardenerutils.NewShootAccessSecret(kubeRBACProxyName, k.namespace)
+	return managedresources.DeleteForShoot(ctx, k.client, k.namespace, managedResourceName)
 }
 
 func getKubeRBACProxyLabels() map[string]string {
 	return map[string]string{
-		"app": kubeRBACProxyName,
+		"app": "kube-rbac-proxy",
 	}
 }
 
