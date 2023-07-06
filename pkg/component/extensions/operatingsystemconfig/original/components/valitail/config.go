@@ -28,7 +28,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
-	"github.com/gardener/gardener/pkg/component/logging/kuberbacproxy"
+	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -153,7 +153,7 @@ func getFetchTokenScriptFile() (extensionsv1alpha1.File, error) {
 		"pathCredentialsCACert": downloader.PathCredentialsCACert,
 		"pathAuthToken":         PathAuthToken,
 		"dataKeyToken":          resourcesv1alpha1.DataKeyToken,
-		"secretName":            kuberbacproxy.ValitailTokenSecretName,
+		"secretName":            vali.ValitailTokenSecretName,
 	}); err != nil {
 		return extensionsv1alpha1.File{}, err
 	}

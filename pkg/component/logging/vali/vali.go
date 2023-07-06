@@ -68,6 +68,11 @@ const (
 	valiMountPathConfig     = "/etc/vali"
 	valiMountPathInitScript = "/"
 
+	valitailName = "gardener-valitail"
+	// ValitailTokenSecretName is the name of a secret in the kube-system namespace in the target cluster containing
+	// valitail's token for communication with the kube-apiserver.
+	ValitailTokenSecretName = valitailName
+
 	curatorName            = "curator"
 	curatorPort            = 2718
 	curatorMetricsPortName = "curatormetrics"
@@ -127,15 +132,15 @@ type Values struct {
 	RenameLokiToValiImage string
 	InitLargeDirImage     string
 
-	ClusterType           component.ClusterType
-	Replicas              int32
-	PriorityClassName     string
-	IngressHost           string
-	AuthEnabled           bool
-	KubeRBACProxyEnabled  bool
-	HVPAEnabled           bool
-	Storage               *resource.Quantity
-	MaintenanceTimeWindow *hvpav1alpha1.MaintenanceTimeWindow
+	ClusterType             component.ClusterType
+	Replicas                int32
+	PriorityClassName       string
+	IngressHost             string
+	AuthEnabled             bool
+	ShootNodeLoggingEnabled bool
+	HVPAEnabled             bool
+	Storage                 *resource.Quantity
+	MaintenanceTimeWindow   *hvpav1alpha1.MaintenanceTimeWindow
 }
 
 type vali struct {
@@ -176,8 +181,17 @@ func (v *vali) Deploy(ctx context.Context) error {
 		resources = append(resources, v.getHVPA())
 	}
 
-	var telegrafConfigMapName, genericTokenKubeconfigSecretName string
-	if v.values.KubeRBACProxyEnabled {
+	var (
+		telegrafConfigMapName            string
+		genericTokenKubeconfigSecretName string
+		valitailShootAccessSecret        = v.newValitailShootAccessSecret()
+	)
+
+	if v.values.ShootNodeLoggingEnabled {
+		if err := valitailShootAccessSecret.Reconcile(ctx, v.client); err != nil {
+			return err
+		}
+
 		ingressTLSSecret, err := v.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 			Name:                        "vali-tls",
 			CommonName:                  v.values.IngressHost,
@@ -207,6 +221,12 @@ func (v *vali) Deploy(ctx context.Context) error {
 			v.getIngress(ingressTLSSecret.Name),
 			telegrafConfigMap,
 		)
+	} else {
+		if err := kubernetesutils.DeleteObjects(ctx, v.client,
+			valitailShootAccessSecret.Secret,
+		); err != nil {
+			return err
+		}
 	}
 
 	valiConfigMap, err := v.getValiConfigMap()
@@ -228,7 +248,19 @@ func (v *vali) Deploy(ctx context.Context) error {
 }
 
 func (v *vali) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, v.client, v.namespace, ManagedResourceControlName)
+	if err := managedresources.DeleteForSeed(ctx, v.client, v.namespace, ManagedResourceControlName); err != nil {
+		return err
+	}
+
+	return kubernetesutils.DeleteObjects(ctx, v.client,
+		v.newValitailShootAccessSecret().Secret,
+	)
+}
+
+func (v *vali) newValitailShootAccessSecret() *gardenerutils.AccessSecret {
+	return gardenerutils.NewShootAccessSecret("valitail", v.namespace).
+		WithServiceAccountName(valitailName).
+		WithTargetSecret(ValitailTokenSecretName, metav1.NamespaceSystem)
 }
 
 func (v *vali) getHVPA() *hvpav1alpha1.Hvpa {
@@ -382,7 +414,7 @@ func (v *vali) getHVPA() *hvpav1alpha1.Hvpa {
 		hvpa.Spec.Vpa.ScaleDown.UpdatePolicy.UpdateMode = pointer.String(hvpav1alpha1.UpdateModeMaintenanceWindow)
 	}
 
-	if v.values.KubeRBACProxyEnabled {
+	if v.values.ShootNodeLoggingEnabled {
 		hvpa.Spec.Vpa.Template.Spec.ResourcePolicy.ContainerPolicies = append(hvpa.Spec.Vpa.Template.Spec.ResourcePolicy.ContainerPolicies,
 			vpaautoscalingv1.ContainerResourcePolicy{
 				ContainerName:    kubeRBACProxyName,
@@ -468,7 +500,7 @@ func (v *vali) getService() *corev1.Service {
 		}}
 	)
 
-	if v.values.KubeRBACProxyEnabled {
+	if v.values.ShootNodeLoggingEnabled {
 		service.Spec.Ports = append(service.Spec.Ports,
 			corev1.ServicePort{
 				Port:       kubeRBACProxyPort,
@@ -759,7 +791,7 @@ fi
 		statefulSet.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests[corev1.ResourceStorage] = *v.values.Storage
 	}
 
-	if v.values.KubeRBACProxyEnabled {
+	if v.values.ShootNodeLoggingEnabled {
 		statefulSet.Spec.Template.Labels[v1beta1constants.LabelNetworkPolicyToDNS] = v1beta1constants.LabelNetworkPolicyAllowed
 		statefulSet.Spec.Template.Labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port)] = v1beta1constants.LabelNetworkPolicyAllowed
 		statefulSet.Spec.Template.Spec.Containers = append(statefulSet.Spec.Template.Spec.Containers,

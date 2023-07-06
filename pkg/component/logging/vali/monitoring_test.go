@@ -37,7 +37,7 @@ var _ = Describe("Monitoring", func() {
 
 	It("should successfully test the scrape config when node logging is enabled", func() {
 		component = New(nil, "test-namespace", nil, Values{
-			KubeRBACProxyEnabled: true,
+			ShootNodeLoggingEnabled: true,
 		})
 		test.ScrapeConfigs(component, expectedScrapeConfigVali, expectedScrapeConfigValiTelegraf)
 	})

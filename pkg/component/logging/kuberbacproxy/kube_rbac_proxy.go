@@ -35,11 +35,7 @@ const (
 	kubeRBACProxyName = "kube-rbac-proxy"
 	clusterRoleName   = "gardener.cloud:logging:kube-rbac-proxy"
 
-	valitailName     = "gardener-valitail"
 	valitailRBACName = "gardener.cloud:logging:valitail"
-	// ValitailTokenSecretName is the name of a secret in the kube-system namespace in the target cluster containing
-	// valitail's token for communication with the kube-apiserver.
-	ValitailTokenSecretName = valitailName
 )
 
 // New creates a new instance of kubeRBACProxy for the kube-rbac-proxy.
@@ -65,11 +61,6 @@ type kubeRBACProxy struct {
 func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 	kubeRBACProxyShootAccessSecret := k.newKubeRBACProxyShootAccessSecret()
 	if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, k.client); err != nil {
-		return err
-	}
-
-	valitailShootAccessSecret := k.newValitailShootAccessSecret()
-	if err := valitailShootAccessSecret.Reconcile(ctx, k.client); err != nil {
 		return err
 	}
 
@@ -137,7 +128,7 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 			},
 			Subjects: []rbacv1.Subject{{
 				Kind:      rbacv1.ServiceAccountKind,
-				Name:      valitailShootAccessSecret.ServiceAccountName,
+				Name:      "gardener-valitail",
 				Namespace: metav1.NamespaceSystem,
 			}},
 		}
@@ -164,18 +155,11 @@ func (k *kubeRBACProxy) Destroy(ctx context.Context) error {
 
 	return kubernetesutils.DeleteObjects(ctx, k.client,
 		k.newKubeRBACProxyShootAccessSecret().Secret,
-		k.newValitailShootAccessSecret().Secret,
 	)
 }
 
 func (k *kubeRBACProxy) newKubeRBACProxyShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(kubeRBACProxyName, k.namespace)
-}
-
-func (k *kubeRBACProxy) newValitailShootAccessSecret() *gardenerutils.AccessSecret {
-	return gardenerutils.NewShootAccessSecret("valitail", k.namespace).
-		WithServiceAccountName(valitailName).
-		WithTargetSecret(ValitailTokenSecretName, metav1.NamespaceSystem)
 }
 
 func getKubeRBACProxyLabels() map[string]string {
@@ -186,6 +170,6 @@ func getKubeRBACProxyLabels() map[string]string {
 
 func getValitailLabels() map[string]string {
 	return map[string]string{
-		"app": valitailName,
+		"app": "gardener-valitail",
 	}
 }
