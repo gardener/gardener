@@ -37,7 +37,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	contextutils "github.com/gardener/gardener/pkg/utils/context"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -46,7 +45,7 @@ import (
 const ControllerName = "managedseedset"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager) error {
+func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
@@ -70,7 +69,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 				OwnerType:    &seedmanagementv1alpha1.ManagedSeedSet{},
 				IsController: true,
 			},
-			builder.WithPredicates(r.ShootPredicate()),
+			builder.WithPredicates(r.ShootPredicate(ctx)),
 		).
 		Watches(
 			&source.Kind{Type: &seedmanagementv1alpha1.ManagedSeed{}},
@@ -78,7 +77,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 				OwnerType:    &seedmanagementv1alpha1.ManagedSeedSet{},
 				IsController: true,
 			},
-			builder.WithPredicates(r.ManagedSeedPredicate()),
+			builder.WithPredicates(r.ManagedSeedPredicate(ctx)),
 		).
 		Build(r)
 	if err != nil {
@@ -88,28 +87,21 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	return c.Watch(
 		&source.Kind{Type: &gardencorev1beta1.Seed{}},
 		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapSeedToManagedSeedSet), mapper.UpdateWithNew, c.GetLogger()),
-		r.SeedPredicate(),
+		r.SeedPredicate(ctx),
 	)
 }
 
 // ShootPredicate returns the predicate for Shoot events.
-func (r *Reconciler) ShootPredicate() predicate.Predicate {
-	return &shootPredicate{}
+func (r *Reconciler) ShootPredicate(ctx context.Context) predicate.Predicate {
+	return &shootPredicate{
+		ctx:    ctx,
+		reader: r.Client,
+	}
 }
 
 type shootPredicate struct {
 	ctx    context.Context
 	reader client.Reader
-}
-
-func (p *shootPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
-	p.ctx = contextutils.FromStopChannel(stopChan)
-	return nil
-}
-
-func (p *shootPredicate) InjectClient(client client.Client) error {
-	p.reader = client
-	return nil
 }
 
 func (p *shootPredicate) Create(e event.CreateEvent) bool { return p.filterShoot(e.Object) }
@@ -200,23 +192,16 @@ func (p *shootPredicate) getManagedSeedSetPendingReplicaReason(shoot *gardencore
 }
 
 // ManagedSeedPredicate returns the predicate for ManagedSeed events.
-func (r *Reconciler) ManagedSeedPredicate() predicate.Predicate {
-	return &managedSeedPredicate{}
+func (r *Reconciler) ManagedSeedPredicate(ctx context.Context) predicate.Predicate {
+	return &managedSeedPredicate{
+		ctx:    ctx,
+		reader: r.Client,
+	}
 }
 
 type managedSeedPredicate struct {
 	ctx    context.Context
 	reader client.Reader
-}
-
-func (p *managedSeedPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
-	p.ctx = contextutils.FromStopChannel(stopChan)
-	return nil
-}
-
-func (p *managedSeedPredicate) InjectClient(client client.Client) error {
-	p.reader = client
-	return nil
 }
 
 func (p *managedSeedPredicate) Create(e event.CreateEvent) bool {
@@ -301,23 +286,16 @@ func (p *managedSeedPredicate) getManagedSeedSetPendingReplicaReason(managedSeed
 }
 
 // SeedPredicate returns the predicate for Seed events.
-func (r *Reconciler) SeedPredicate() predicate.Predicate {
-	return &seedPredicate{}
+func (r *Reconciler) SeedPredicate(ctx context.Context) predicate.Predicate {
+	return &seedPredicate{
+		ctx:    ctx,
+		reader: r.Client,
+	}
 }
 
 type seedPredicate struct {
 	ctx    context.Context
 	reader client.Reader
-}
-
-func (p *seedPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
-	p.ctx = contextutils.FromStopChannel(stopChan)
-	return nil
-}
-
-func (p *seedPredicate) InjectClient(client client.Client) error {
-	p.reader = client
-	return nil
 }
 
 func (p *seedPredicate) Create(e event.CreateEvent) bool { return p.filterSeed(e.Object) }

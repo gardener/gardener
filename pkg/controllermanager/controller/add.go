@@ -15,6 +15,7 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 
 	kubernetesclientset "k8s.io/client-go/kubernetes"
@@ -37,7 +38,7 @@ import (
 )
 
 // AddToManager adds all controller-manager controllers to the given manager.
-func AddToManager(mgr manager.Manager, cfg *config.ControllerManagerConfiguration) error {
+func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.ControllerManagerConfiguration) error {
 	kubernetesClient, err := kubernetesclientset.NewForConfig(mgr.GetConfig())
 	if err != nil {
 		return fmt.Errorf("failed creating Kubernetes client: %w", err)
@@ -88,7 +89,7 @@ func AddToManager(mgr manager.Manager, cfg *config.ControllerManagerConfiguratio
 
 	if err := (&managedseedset.Reconciler{
 		Config: *cfg.Controllers.ManagedSeedSet,
-	}).AddToManager(mgr); err != nil {
+	}).AddToManager(ctx, mgr); err != nil {
 		return fmt.Errorf("failed adding ManagedSeedSet controller: %w", err)
 	}
 
