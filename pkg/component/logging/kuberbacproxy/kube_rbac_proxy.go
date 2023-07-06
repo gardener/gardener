@@ -67,41 +67,14 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 
 		valitailClusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   valitailRBACName,
-				Labels: getValitailLabels(),
-			},
-			Rules: []rbacv1.PolicyRule{
-				{
-					APIGroups: []string{
-						"",
-					},
-					Resources: []string{
-						"nodes",
-						"nodes/proxy",
-						"services",
-						"endpoints",
-						"pods",
-					},
-					Verbs: []string{
-						"get",
-						"list",
-						"watch",
-					},
-				},
-				{
-					NonResourceURLs: []string{
-						"/vali/api/v1/push",
-					},
-					Verbs: []string{
-						"create",
-					},
-				},
+				Name:        valitailRBACName,
+				Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore},
 			},
 		}
 
 		valitailClusterRoleBinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   valitailRBACName,
+				Name:   "gardener.cloud:logging:valitail",
 				Labels: getValitailLabels(),
 			},
 			RoleRef: rbacv1.RoleRef{

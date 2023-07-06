@@ -69,7 +69,8 @@ const (
 	valiMountPathConfig     = "/etc/vali"
 	valiMountPathInitScript = "/"
 
-	valitailName = "gardener-valitail"
+	valitailName            = "gardener-valitail"
+	valitailClusterRoleName = "gardener.cloud:logging:valitail"
 	// ValitailTokenSecretName is the name of a secret in the kube-system namespace in the target cluster containing
 	// valitail's token for communication with the kube-apiserver.
 	ValitailTokenSecretName = valitailName
@@ -231,6 +232,7 @@ func (v *vali) Deploy(ctx context.Context) error {
 			NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer).
 			AddAllAndSerialize(
 				v.getKubeRBACProxyClusterRoleBinding(kubeRBACProxyShootAccessSecret.ServiceAccountName),
+				v.getValitailClusterRole(),
 			)
 		if err != nil {
 			return err
@@ -940,6 +942,36 @@ func (v *vali) getKubeRBACProxyClusterRoleBinding(serviceAccountName string) *rb
 			Name:      serviceAccountName,
 			Namespace: metav1.NamespaceSystem,
 		}},
+	}
+}
+
+func (v *vali) getValitailClusterRole() *rbacv1.ClusterRole {
+	return &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   valitailClusterRoleName,
+			Labels: map[string]string{v1beta1constants.LabelApp: valitailName},
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{
+					"nodes",
+					"nodes/proxy",
+					"services",
+					"endpoints",
+					"pods",
+				},
+				Verbs: []string{
+					"get",
+					"list",
+					"watch",
+				},
+			},
+			{
+				NonResourceURLs: []string{"/vali/api/v1/push"},
+				Verbs:           []string{"create"},
+			},
+		},
 	}
 }
 

@@ -218,9 +218,10 @@ var _ = Describe("Vali", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretTarget), managedResourceSecretTarget)).To(Succeed())
 			Expect(managedResourceSecretTarget.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecretTarget.Data).To(HaveLen(1))
+			Expect(managedResourceSecretTarget.Data).To(HaveLen(2))
 
 			Expect(string(managedResourceSecretTarget.Data["clusterrolebinding____gardener.cloud_logging_kube-rbac-proxy.yaml"])).To(Equal(test.Serialize(getKubeRBACProxyClusterRoleBinding())))
+			Expect(string(managedResourceSecretTarget.Data["clusterrole____gardener.cloud_logging_valitail.yaml"])).To(Equal(test.Serialize(getValitailClusterRole())))
 		})
 
 		It("should successfully deploy all resources for seed", func() {
@@ -1552,6 +1553,36 @@ func getKubeRBACProxyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 			Name:      "kube-rbac-proxy",
 			Namespace: "kube-system",
 		}},
+	}
+}
+
+func getValitailClusterRole() *rbacv1.ClusterRole {
+	return &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "gardener.cloud:logging:valitail",
+			Labels: map[string]string{"app": "gardener-valitail"},
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{
+					"nodes",
+					"nodes/proxy",
+					"services",
+					"endpoints",
+					"pods",
+				},
+				Verbs: []string{
+					"get",
+					"list",
+					"watch",
+				},
+			},
+			{
+				NonResourceURLs: []string{"/vali/api/v1/push"},
+				Verbs:           []string{"create"},
+			},
+		},
 	}
 }
 
