@@ -361,7 +361,7 @@ var _ = Describe("Predicate", func() {
 					Name: entryName,
 				},
 			}
-			p = RelevantStatusChanged(GetExtensionLastOperation)
+			p = LastOperationChanged(GetExtensionLastOperation)
 		})
 
 		It("should return false for all events because the extension backupbucket has operation annotation reconcile", func() {

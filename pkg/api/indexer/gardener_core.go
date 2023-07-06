@@ -43,7 +43,7 @@ func BackupBucketSeedNameIndexerFunc(obj client.Object) []string {
 	return []string{pointer.StringDeref(backupBucket.Spec.SeedName, "")}
 }
 
-// BackupEntryBucketNameIndexerFunc extracts the .spec.bucketName field of a BackupBucket.
+// BackupEntryBucketNameIndexerFunc extracts the .spec.bucketName field of a BackupEntry.
 func BackupEntryBucketNameIndexerFunc(obj client.Object) []string {
 	backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
 	if !ok {

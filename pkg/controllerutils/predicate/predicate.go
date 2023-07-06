@@ -139,8 +139,8 @@ func ManagedResourceConditionsChanged() predicate.Predicate {
 	)
 }
 
-// RelevantStatusChanged returns a predicate which returns true when the status change of the passed object is relevant.
-func RelevantStatusChanged(getLastOperation func(client.Object) *gardencorev1beta1.LastOperation) predicate.Predicate {
+// LastOperationChanged returns a predicate which returns true when the LastOperation of the passed object is changed.
+func LastOperationChanged(getLastOperation func(client.Object) *gardencorev1beta1.LastOperation) predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			// If the object has the operation annotation reconcile, this means it's not picked up by the extension controller.

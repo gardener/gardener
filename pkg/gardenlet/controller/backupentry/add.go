@@ -86,7 +86,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 	if err := c.Watch(
 		source.NewKindWithCache(&gardencorev1beta1.BackupBucket{}, gardenCluster.GetCache()),
 		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapBackupBucketToBackupEntry), mapper.UpdateWithNew, c.GetLogger()),
-		predicateutils.RelevantStatusChanged(getBackupBucketLastOperation),
+		predicateutils.LastOperationChanged(getBackupBucketLastOperation),
 	); err != nil {
 		return err
 	}
@@ -94,12 +94,12 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 	return c.Watch(
 		source.NewKindWithCache(&extensionsv1alpha1.BackupEntry{}, seedCluster.GetCache()),
 		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapExtensionBackupEntryToCoreBackupEntry), mapper.UpdateWithNew, c.GetLogger()),
-		predicateutils.RelevantStatusChanged(predicateutils.GetExtensionLastOperation),
+		predicateutils.LastOperationChanged(predicateutils.GetExtensionLastOperation),
 	)
 }
 
 // MapBackupBucketToBackupEntry is a mapper.MapFunc for mapping a core.gardener.cloud/v1beta1.BackupBucket to the
-// core.gardener.cloud/v1beta1.BackupEntry's referencing it.
+// core.gardener.cloud/v1beta1.BackupEntry that references it..
 func (r *Reconciler) MapBackupBucketToBackupEntry(ctx context.Context, log logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
 	backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
 	if !ok {

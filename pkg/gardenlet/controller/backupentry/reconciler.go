@@ -622,33 +622,31 @@ func (r *Reconciler) newExtensionComponent(log logr.Logger, backupEntry *gardenc
 }
 
 func (r *Reconciler) checkIfBackupBucketIsHealthy(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket) error {
-	var lastObservedError error
-
 	if err := r.GardenClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket); err != nil {
 		return fmt.Errorf("failed getting associated BackupBucket %q: %w", backupBucket.Name, err)
 	}
 
-	if backupBucket.Status.LastOperation != nil {
-		// check for lastOperation and errors, and if none are present, BackupBucket is ready
-		lastOperationState := backupBucket.Status.LastOperation.State
-		if lastOperationState == gardencorev1beta1.LastOperationStateProcessing {
-			// the backupEntry will be requeued when the state of the BackupBucket changes to Succeeded
-			return nil
-		}
-		if backupBucket.Status.LastError != nil ||
-			lastOperationState == gardencorev1beta1.LastOperationStateError ||
-			lastOperationState == gardencorev1beta1.LastOperationStateFailed {
-			lastObservedError = fmt.Errorf("assoicated BackupBucket state is not Succeeded but %v", lastOperationState)
-			if backupBucket.Status.LastError != nil {
-				lastObservedError = v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation of associated BackupBucket: %s", backupBucket.Status.LastError.Description), backupBucket.Status.LastError.Codes...)
-			}
-		}
-	} else {
-		// if the BackupBucket did not record a lastOperation yet, record it as error in the backupentry status
-		lastObservedError = fmt.Errorf("associated BackupBucket did not record a last operation yet")
+	if backupBucket.Status.LastError != nil {
+		return v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation of associated BackupBucket: %s", backupBucket.Status.LastError.Description), backupBucket.Status.LastError.Codes...)
 	}
 
-	return lastObservedError
+	if backupBucket.Status.ObservedGeneration != backupBucket.Generation {
+		return fmt.Errorf("observed generation outdated (%d/%d)", backupBucket.Status.ObservedGeneration, backupBucket.Generation)
+	}
+
+	if op, ok := backupBucket.Annotations[v1beta1constants.GardenerOperation]; ok {
+		return fmt.Errorf("gardener operation %q is not yet picked up by controller", op)
+	}
+
+	if backupBucket.Status.LastOperation == nil {
+		return fmt.Errorf("associated BackupBucket did not record a last operation yet")
+	}
+
+	if backupBucket.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
+		return fmt.Errorf("assoicated BackupBucket state is not Succeeded but %v", backupBucket.Status.LastOperation.State)
+	}
+
+	return nil
 }
 
 func (r *Reconciler) getGardenSecret(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket) (*corev1.Secret, error) {
