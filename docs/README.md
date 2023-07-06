@@ -36,20 +36,14 @@
 * [Dockershim removal](usage/docker-shim-removal.md)
 * [Endpoints and Ports of a Shoot Control-Plane](usage/control-plane-endpoints-and-ports.md)
 * [ExposureClasses](usage/exposureclasses.md)
-* [Gardener configuration and usage](usage/configuration.md)
 * [Hibernate a Cluster](usage/shoot_hibernate.md)
 * [IPv6 in Gardener Clusters](usage/ipv6.md)
-* [Istio](usage/istio.md)
-* [`NetworkPolicy`s In Garden, Seed, Shoot Clusters](usage/network_policies.md)
 * [`NodeLocalDNS` feature](usage/node-local-dns.md)
 * [OpenIDConnect presets](usage/openidconnect-presets.md)
 * [Projects](usage/projects.md)
 * [Project Namespace Access](usage/project_namespace_access.md)
 * [Readiness of Shoot Worker Nodes](usage/node-readiness.md)
-* [Register Shoot as Seed](usage/managed_seed.md)
 * [Reversed Cluster VPN](usage/reversed-vpn-tunnel.md)
-* [Seed Bootstrapping](usage/seed_bootstrapping.md)
-* [Seed Settings](usage/seed_settings.md)
 * [Shoot Cluster Purposes](usage/shoot_purposes.md)
 * [Shoot Scheduling Profiles](usage/shoot_scheduling_profiles.md)
 * [Shoot Credentials Rotation](usage/shoot_credentials_rotation.md)
@@ -67,7 +61,6 @@
 * [Accessing Shoot Clusters](usage/shoot_access.md)
 * [Supported Kubernetes versions](usage/supported_k8s_versions.md)
 * [Tolerations](usage/tolerations.md)
-* [Topology-Aware Traffic Routing](usage/topology_aware_routing.md)
 * [Trigger shoot operations](usage/shoot_operations.md)
 * [Troubleshooting guide](usage/trouble_shooting_guide.md)
 * [Trusted TLS certificate for shoot control planes](usage/trusted-tls-for-control-planes.md)
@@ -190,6 +183,17 @@
 * [Feature Gates in Gardener](deployment/feature_gates.md)
 * [Configuring the Logging stack](deployment/configuring_logging.md)
 * [SecretBinding Provider Controller](deployment/secret_binding_provider_controller.md)
+
+## Operations
+
+* [Gardener configuration and usage](operations/configuration.md)
+* [Control Plane Migration](operations/control_plane_migration.md)
+* [Istio](operations/istio.md)
+* [Register Shoot as Seed](operations/managed_seed.md)
+* [`NetworkPolicy`s In Garden, Seed, Shoot Clusters](operations/network_policies.md)
+* [Seed Bootstrapping](operations/seed_bootstrapping.md)
+* [Seed Settings](operations/seed_settings.md)
+* [Topology-Aware Traffic Routing](operations/topology_aware_routing.md)
 
 ## Monitoring
 

@@ -1,5 +1,7 @@
 ---
 title: Cluster API
+categories:
+  - Users
 ---
 
 # Relation Between Gardener API and Cluster API (SIG Cluster Lifecycle)

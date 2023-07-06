@@ -283,7 +283,7 @@ However, it can also be used to have a streamlined seed cluster registration pro
 > This procedure doesn’t describe all the possible configurations
 > for the `Seed` resource. For more information, see:
 > - [Example Seed resource](../../example/50-seed.yaml)
-> - [Configurable Seed settings](../usage/seed_settings.md)
+> - [Configurable Seed settings](../operations/seed_settings.md)
 
 ### Adjust the gardenlet Component Configuration
 
@@ -495,7 +495,7 @@ This helm chart creates:
 3.  Check that the seed cluster is registered and `READY` in the garden cluster.
 
     Check that the seed cluster `sweet-seed` exists and all conditions indicate that it’s available.
-    If so, the [Gardenlet is sending regular heartbeats](../concepts/gardenlet.md#heartbeats) and the [seed bootstrapping](../usage/seed_bootstrapping.md) was successful.
+    If so, the [Gardenlet is sending regular heartbeats](../concepts/gardenlet.md#heartbeats) and the [seed bootstrapping](../operations/seed_bootstrapping.md) was successful.
 
     Check that the conditions on the `Seed` resource look similar to the following:
 

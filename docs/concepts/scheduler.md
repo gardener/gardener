@@ -85,7 +85,7 @@ The region does not matter, i.e., `testing` shoots may also be scheduled on a se
 ## `shoots/binding` Subresource
 
 The `shoots/binding` subresource is used to bind a `Shoot` to a `Seed`. On creation of a shoot cluster/s, the scheduler updates the binding automatically if an appropriate seed cluster is available.
-Only an operator with the necessary RBAC can update this binding manually. This can be done by changing the `.spec.seedName` of the shoot. However, if a different seed is already assigned to the shoot, this will trigger a control-plane migration. For required steps, please see [Triggering the Migration](../usage/control_plane_migration.md#triggering-the-migration).
+Only an operator with the necessary RBAC can update this binding manually. This can be done by changing the `.spec.seedName` of the shoot. However, if a different seed is already assigned to the shoot, this will trigger a control-plane migration. For required steps, please see [Triggering the Migration](../operations/control_plane_migration.md#triggering-the-migration).
 
 ## `spec.seedName` Field in the `Shoot` Specification
 Similar to the `.spec.nodeName` field in `Pod`s, the `Shoot` specification has an optional `.spec.seedName` field. If this field is set on creation, the shoot will be scheduled to this seed. However, this field can only be set by users having RBAC for the `shoots/binding` subresource. If this field is not set, the `scheduler` will assign a suitable seed automatically and populate this field with the seed name.
@@ -106,7 +106,7 @@ Seeds have a practical limit of how many shoots they can accommodate. Exceeding 
 
 This mechanism works as follows:
 
-* The `gardenlet` is configured with certain *resources* and their total *capacity* (and, for certain resources, the amount *reserved* for Gardener), see [/example/20-componentconfig-gardenlet.yaml](../../example/20-componentconfig-gardenlet.yaml). Currently, the only such resource is the maximum number of shoots that can be scheduled onto a seed. 
+* The `gardenlet` is configured with certain *resources* and their total *capacity* (and, for certain resources, the amount *reserved* for Gardener), see [/example/20-componentconfig-gardenlet.yaml](../../example/20-componentconfig-gardenlet.yaml). Currently, the only such resource is the maximum number of shoots that can be scheduled onto a seed.
 * The `gardenlet` seed controller updates the `capacity` and `allocatable` fields in the Seed status with the capacity of each resource and how much of it is actually available to be consumed by shoots. The `allocatable` value of a resource is equal to `capacity` minus `reserved`.
 * When scheduling shoots, the scheduler filters out all candidate seeds whose allocatable capacity for shoots would be exceeded if the shoot is scheduled onto the seed.
 

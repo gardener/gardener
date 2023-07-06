@@ -9310,7 +9310,7 @@ are not considered by the scheduler.</p>
 </p>
 <p>
 <p>SeedSettingTopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed.
-See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md">https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md</a>.</p>
+See <a href="https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md">https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md</a>.</p>
 </p>
 <table>
 <thead>
@@ -9483,7 +9483,7 @@ SeedSettingTopologyAwareRouting
 <td>
 <em>(Optional)</em>
 <p>TopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed.
-See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md">https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md</a>.</p>
+See <a href="https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md">https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md</a>.</p>
 </td>
 </tr>
 </tbody>

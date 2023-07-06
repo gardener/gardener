@@ -20,4 +20,4 @@ The provider extension doesn't need to care about the same.
 
 The shoot's kube-apiserver must be allowed to talk to the provider extension.
 To achieve this, you need to make sure that the relevant `NetworkPolicy` get created for allowing the network traffic.
-Please refer to [this guide](../usage/network_policies.md#webhook-servers) for more information.
+Please refer to [this guide](../operations/network_policies.md#webhook-servers) for more information.

@@ -70,7 +70,7 @@ Using a runtime cluster without VPA is not supported.
 
 #### Topology-Aware Traffic Routing
 
-Refer to the [Topology-Aware Traffic Routing documentation](../usage/topology_aware_routing.md) as this document contains the documentation for the topology-aware routing setting for the garden runtime cluster.
+Refer to the [Topology-Aware Traffic Routing documentation](../operations/topology_aware_routing.md) as this document contains the documentation for the topology-aware routing setting for the garden runtime cluster.
 
 ## Credentials Rotation
 
@@ -102,7 +102,7 @@ This command sets up a new KinD cluster named `gardener-local` and stores the ku
 
 > It might be helpful to copy this file to `$HOME/.kube/config`, since you will need to target this KinD cluster multiple times.
 Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind/operator/kubeconfig` for all future steps via `export KUBECONFIG=$PWD/example/gardener-local/kind/operator/kubeconfig`.
- 
+
 All the following steps assume that you are using this kubeconfig.
 
 ### Setting Up Gardener Operator

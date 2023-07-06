@@ -6749,7 +6749,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettingTopologyAwareRouting(ref common.Ref
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "SeedSettingTopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed. See https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md.",
+				Description: "SeedSettingTopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed. See https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"enabled": {
@@ -6834,7 +6834,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettings(ref common.ReferenceCallback) com
 					},
 					"topologyAwareRouting": {
 						SchemaProps: spec.SchemaProps{
-							Description: "TopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed. See https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md.",
+							Description: "TopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed. See https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingTopologyAwareRouting"),
 						},
 					},

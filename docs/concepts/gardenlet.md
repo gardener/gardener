@@ -225,7 +225,7 @@ Hence, if the `Shoot` is deleted, the `BackupEntry` resource also gets deleted.
 In this case, the controller deletes the `extensions.gardener.cloud/v1alpha1.BackupEntry` resource in the seed cluster and waits until the responsible extension controller has deleted it.
 Afterwards, the finalizer of the `core.gardener.cloud/v1beta1.BackupEntry` resource is released so that it finally disappears from the system.
 
-If the `spec.seedName` and `.status.seedName` of the `core.gardener.cloud/v1beta1.BackupEntry` are different, the controller will migrate it by annotating the `extensions.gardener.cloud/v1alpha1.BackupEntry` in the `Source Seed` with `gardener.cloud/operation: migrate`, waiting for it to be migrated successfully and eventually deleting it from the `Source Seed` cluster. Afterwards, the controller will recreate the `extensions.gardener.cloud/v1alpha1.BackupEntry` in the `Destination Seed`, annotate it with `gardener.cloud/operation: restore` and wait for the restore operation to finish. For more details about control plane migration, please read [Shoot Control Plane Migration](../usage/control_plane_migration.md#shoot-control-plane-migration).
+If the `spec.seedName` and `.status.seedName` of the `core.gardener.cloud/v1beta1.BackupEntry` are different, the controller will migrate it by annotating the `extensions.gardener.cloud/v1alpha1.BackupEntry` in the `Source Seed` with `gardener.cloud/operation: migrate`, waiting for it to be migrated successfully and eventually deleting it from the `Source Seed` cluster. Afterwards, the controller will recreate the `extensions.gardener.cloud/v1alpha1.BackupEntry` in the `Destination Seed`, annotate it with `gardener.cloud/operation: restore` and wait for the restore operation to finish. For more details about control plane migration, please read [Shoot Control Plane Migration](../operations/control_plane_migration.md#shoot-control-plane-migration).
 
 ##### Keep Backup for Deleted Shoots
 
@@ -312,7 +312,7 @@ The `NetworkPolicy` controller reconciles `NetworkPolicy`s in all relevant names
 
 The controller resolves the IP address of the Kubernetes service in the `default` namespace and creates an egress `NetworkPolicy`s for it.
 
-For more details about `NetworkPolicy`s in Gardener, please see [`NetworkPolicy`s In Garden, Seed, Shoot Clusters](../usage/network_policies.md).
+For more details about `NetworkPolicy`s in Gardener, please see [`NetworkPolicy`s In Garden, Seed, Shoot Clusters](../operations/network_policies.md).
 
 ### [`Seed` Controller](../../pkg/gardenlet/controller/seed)
 
@@ -373,8 +373,8 @@ It is also responsible for syncing the [`Cluster` cluster](../extensions/cluster
 
 The main reconciliation logic is performed in 3 different task flows dedicated to specific operation types:
 
-- `reconcile` (operations: create, reconcile, restore): this is the main flow responsible for creation and regular reconciliation of shoots. Hibernating a shoot also triggers this flow. It is also used for restoration of the shoot control plane on the new seed (second half of a [Control Plane Migration](../usage/control_plane_migration.md#shoot-control-plane-migration))
-- `migrate`: this flow is triggered when `spec.seedName` specifies a different seed than `status.seedName`. It performs the first half of the [Control Plane Migration](../usage/control_plane_migration.md#shoot-control-plane-migration), i.e., a backup (`migrate` operation) of all control plane components followed by a "shallow delete".
+- `reconcile` (operations: create, reconcile, restore): this is the main flow responsible for creation and regular reconciliation of shoots. Hibernating a shoot also triggers this flow. It is also used for restoration of the shoot control plane on the new seed (second half of a [Control Plane Migration](../operations/control_plane_migration.md#shoot-control-plane-migration))
+- `migrate`: this flow is triggered when `spec.seedName` specifies a different seed than `status.seedName`. It performs the first half of the [Control Plane Migration](../operations/control_plane_migration.md#shoot-control-plane-migration), i.e., a backup (`migrate` operation) of all control plane components followed by a "shallow delete".
 - `delete`: this flow is triggered when the shoot's `deletionTimestamp` is set, i.e., when it is deleted.
 
 The gardenlet takes special care to prevent unnecessary shoot reconciliations.
@@ -465,7 +465,7 @@ creates a clone of itself with the same version and the same configuration
 that it currently has.
 Then it deploys the gardenlet clone into the managed seed cluster.
 
-For more information, see [Register Shoot as Seed](../usage/managed_seed.md).
+For more information, see [Register Shoot as Seed](../operations/managed_seed.md).
 
 ## Migrating from Previous Gardener Versions
 

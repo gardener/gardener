@@ -44,8 +44,8 @@ Also, it specifies that this controller is the primary one responsible for the l
 Setting `primary` to `false` would allow to register additional, secondary controllers that may also watch/react on the `OperatingSystemConfig/coreos` resources, however, only the primary controller may change/update the main `status` of the extension object (that are used to "communicate" with the gardenlet).
 Particularly, only the primary controller may set `.status.lastOperation`, `.status.lastError`, `.status.observedGeneration`, and `.status.state`.
 Secondary controllers may contribute to the `.status.conditions[]` if they like, of course.
- 
-Secondary controllers might be helpful in scenarios where additional tasks need to be completed which are not part of the reconciliation logic of the primary controller but separated out into a dedicated extension. 
+
+Secondary controllers might be helpful in scenarios where additional tasks need to be completed which are not part of the reconciliation logic of the primary controller but separated out into a dedicated extension.
 
 ⚠️ There must be exactly one primary controller for every registered kind/type combination.
 Also, please note that the `primary` field cannot be changed after creation of the `ControllerRegistration`.
@@ -224,7 +224,7 @@ The `lifecycle` field tells Gardener when to perform a certain action on the `Ex
 
  - `reconcile: AfterKubeAPIServer` means that the extension resource will be reconciled after the successful reconciliation of the `kube-apiserver` during shoot reconciliation. This is also the default behaviour if this value is not specified. During shoot hibernation, the opposite rule is applied, meaning that in this case the reconciliation of the extension will happen before the `kube-apiserver` is scaled to 0 replicas. On the other hand, if the extension needs to be reconciled before the `kube-apiserver` and scaled down after it, then the value `BeforeKubeAPIServer` should be used.
 - `delete: BeforeKubeAPIServer` means that the extension resource will be deleted before the `kube-apiserver` is destroyed during shoot deletion. This is the default behaviour if this value is not specified.
-- `migrate: BeforeKubeAPIServer` means that the extension resource will be migrated before the `kube-apiserver` is destroyed in the source cluster during [control plane migration](../usage/control_plane_migration.md). This is the default behaviour if this value is not specified. The restoration of the control plane follows the reconciliation control flow.
+- `migrate: BeforeKubeAPIServer` means that the extension resource will be migrated before the `kube-apiserver` is destroyed in the source cluster during [control plane migration](../operations/control_plane_migration.md). This is the default behaviour if this value is not specified. The restoration of the control plane follows the reconciliation control flow.
 
 ### Deployment Configuration Options
 

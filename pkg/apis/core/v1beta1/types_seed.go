@@ -263,7 +263,7 @@ type SeedSettings struct {
 	// +optional
 	DependencyWatchdog *SeedSettingDependencyWatchdog `json:"dependencyWatchdog,omitempty" protobuf:"bytes,7,opt,name=dependencyWatchdog"`
 	// TopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed.
-	// See https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md.
+	// See https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.
 	// +optional
 	TopologyAwareRouting *SeedSettingTopologyAwareRouting `json:"topologyAwareRouting,omitempty" protobuf:"bytes,8,opt,name=topologyAwareRouting"`
 }
@@ -384,7 +384,7 @@ type SeedSettingDependencyWatchdogProber struct {
 }
 
 // SeedSettingTopologyAwareRouting controls certain settings for topology-aware traffic routing in the seed.
-// See https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md.
+// See https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.
 type SeedSettingTopologyAwareRouting struct {
 	// Enabled controls whether certain Services deployed in the seed cluster should be topology-aware.
 	// These Services are etcd-main-client, etcd-events-client, kube-apiserver, gardener-resource-manager and vpa-webhook.

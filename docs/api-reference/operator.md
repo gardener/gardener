@@ -1377,7 +1377,7 @@ map[string]string
 </p>
 <p>
 <p>SettingTopologyAwareRouting controls certain settings for topology-aware traffic routing in the cluster.
-See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md">https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md</a>.</p>
+See <a href="https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md">https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md</a>.</p>
 </p>
 <table>
 <thead>
@@ -1497,7 +1497,7 @@ SettingTopologyAwareRouting
 <td>
 <em>(Optional)</em>
 <p>TopologyAwareRouting controls certain settings for topology-aware traffic routing in the cluster.
-See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md">https://github.com/gardener/gardener/blob/master/docs/usage/topology_aware_routing.md</a>.</p>
+See <a href="https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md">https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md</a>.</p>
 </td>
 </tr>
 </tbody>
