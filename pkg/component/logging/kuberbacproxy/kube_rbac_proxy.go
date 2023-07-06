@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -30,12 +31,12 @@ import (
 const (
 	managedResourceName = "shoot-node-logging"
 
-	clusterRoleName = "gardener.cloud:logging:kube-rbac-proxy"
-
 	valitailRBACName = "gardener.cloud:logging:valitail"
 )
 
 // New creates a new instance of kubeRBACProxy for the kube-rbac-proxy.
+// Deprecated: This component is deprecated and will be removed after gardener/gardener@v1.78 has been released.
+// TODO(rfranzke): Delete the `shoot-node-logging` ManagedResource and drop this component after gardener/gardener@v1.78 has been released.
 func New(client client.Client, namespace string) (component.Deployer, error) {
 	if client == nil {
 		return nil, errors.New("client cannot be nil")
@@ -59,19 +60,9 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 	var (
 		kubeRBACProxyClusterRolebinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   clusterRoleName,
-				Labels: getKubeRBACProxyLabels(),
+				Name:        "gardener.cloud:logging:kube-rbac-proxy",
+				Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore},
 			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     "system:auth-delegator",
-			},
-			Subjects: []rbacv1.Subject{{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      "kube-rbac-proxy",
-				Namespace: metav1.NamespaceSystem,
-			}},
 		}
 
 		valitailClusterRole = &rbacv1.ClusterRole{
@@ -142,12 +133,6 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 
 func (k *kubeRBACProxy) Destroy(ctx context.Context) error {
 	return managedresources.DeleteForShoot(ctx, k.client, k.namespace, managedResourceName)
-}
-
-func getKubeRBACProxyLabels() map[string]string {
-	return map[string]string{
-		"app": "kube-rbac-proxy",
-	}
 }
 
 func getValitailLabels() map[string]string {

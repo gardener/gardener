@@ -172,6 +172,7 @@ type SystemComponents struct {
 
 // Logging contains references to logging deployers
 type Logging struct {
+	// TODO(rfranzke): Drop the `ShootRBACProxy` field after gardener/gardener@v1.78 has been released.
 	ShootRBACProxy component.Deployer
 	EventLogger    component.Deployer
 	Vali           vali.Interface

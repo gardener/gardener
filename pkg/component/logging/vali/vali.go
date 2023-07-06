@@ -28,6 +28,7 @@ import (
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,8 +53,8 @@ import (
 )
 
 const (
-	// ManagedResourceControlName is the name of the Vali managed resource.
-	ManagedResourceControlName = "vali"
+	managedResourceNameRuntime = "vali"
+	managedResourceNameTarget  = "vali-target"
 
 	valiName                = "vali"
 	valiServiceName         = "vali"
@@ -225,7 +226,24 @@ func (v *vali) Deploy(ctx context.Context) error {
 			v.getIngress(ingressTLSSecret.Name),
 			telegrafConfigMap,
 		)
+
+		resourcesTarget, err := managedresources.
+			NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer).
+			AddAllAndSerialize(
+				v.getKubeRBACProxyClusterRoleBinding(kubeRBACProxyShootAccessSecret.ServiceAccountName),
+			)
+		if err != nil {
+			return err
+		}
+
+		if err := managedresources.CreateForShoot(ctx, v.client, v.namespace, managedResourceNameTarget, managedresources.LabelValueGardener, false, resourcesTarget); err != nil {
+			return err
+		}
 	} else {
+		if err := managedresources.DeleteForShoot(ctx, v.client, v.namespace, managedResourceNameTarget); err != nil {
+			return err
+		}
+
 		if err := kubernetesutils.DeleteObjects(ctx, v.client,
 			valitailShootAccessSecret.Secret,
 			kubeRBACProxyShootAccessSecret.Secret,
@@ -249,11 +267,15 @@ func (v *vali) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, v.client, v.namespace, ManagedResourceControlName, false, registry.SerializedObjects())
+	return managedresources.CreateForSeed(ctx, v.client, v.namespace, managedResourceNameRuntime, false, registry.SerializedObjects())
 }
 
 func (v *vali) Destroy(ctx context.Context) error {
-	if err := managedresources.DeleteForSeed(ctx, v.client, v.namespace, ManagedResourceControlName); err != nil {
+	if err := managedresources.DeleteForShoot(ctx, v.client, v.namespace, managedResourceNameTarget); err != nil {
+		return err
+	}
+
+	if err := managedresources.DeleteForSeed(ctx, v.client, v.namespace, managedResourceNameRuntime); err != nil {
 		return err
 	}
 
@@ -902,6 +924,25 @@ wait
 	return statefulSet
 }
 
+func (v *vali) getKubeRBACProxyClusterRoleBinding(serviceAccountName string) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "gardener.cloud:logging:kube-rbac-proxy",
+			Labels: map[string]string{v1beta1constants.LabelApp: kubeRBACProxyName},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     "system:auth-delegator",
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      serviceAccountName,
+			Namespace: metav1.NamespaceSystem,
+		}},
+	}
+}
+
 func getLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging,
@@ -914,7 +955,7 @@ func getLabels() map[string]string {
 // current one.
 // Caution: If the passed storage capacity is less than the current one the existing PVC and its PV will be deleted.
 func (v *vali) resizeOrDeleteValiDataVolumeIfStorageNotTheSame(ctx context.Context) error {
-	managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: ManagedResourceControlName, Namespace: v.namespace}}
+	managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameRuntime, Namespace: v.namespace}}
 	addOrRemoveIgnoreAnnotationFromManagedResource := func(addIgnoreAnnotation bool) error {
 		// In order to not create the managed resource here first check if exists.
 		if err := v.client.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource); err != nil {
