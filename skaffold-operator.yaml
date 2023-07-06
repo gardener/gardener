@@ -114,6 +114,7 @@ build:
         - pkg/component/logging/fluentoperator
         - pkg/component/logging/fluentoperator/customresources
         - pkg/component/logging/vali
+        - pkg/component/plutono
         - pkg/component/resourcemanager
         - pkg/component/resourcemanager/constants
         - pkg/component/seedsystem
