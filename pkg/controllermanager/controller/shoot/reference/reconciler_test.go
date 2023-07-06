@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot/reference"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -256,17 +257,17 @@ var _ = Describe("Shoot References", func() {
 
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(result).To(Equal(emptyResult()))
-			Expect(updatedShoot.ObjectMeta.Finalizers).To(ConsistOf(Equal(FinalizerName)))
+			Expect(updatedShoot.ObjectMeta.Finalizers).To(ConsistOf(Equal(v1beta1constants.ReferenceProtectionFinalizerName)))
 			Expect(updatedSecrets).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"ObjectMeta": MatchFields(IgnoreExtras, Fields{
-						"Finalizers": ConsistOf(FinalizerName),
+						"Finalizers": ConsistOf(v1beta1constants.ReferenceProtectionFinalizerName),
 						"Name":       Equal(secretName),
 					}),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"ObjectMeta": MatchFields(IgnoreExtras, Fields{
-						"Finalizers": ConsistOf(FinalizerName),
+						"Finalizers": ConsistOf(v1beta1constants.ReferenceProtectionFinalizerName),
 						"Name":       Equal(secretName2),
 					}),
 				})),
@@ -275,11 +276,11 @@ var _ = Describe("Shoot References", func() {
 
 		It("should remove finalizer from shoot and secret because shoot is in deletion", func() {
 			secretName := secrets[0].Name
-			secrets[0].Finalizers = []string{FinalizerName}
+			secrets[0].Finalizers = []string{v1beta1constants.ReferenceProtectionFinalizerName}
 
 			now := metav1.Now()
 			shoot.ObjectMeta.DeletionTimestamp = &now
-			shoot.Finalizers = []string{FinalizerName}
+			shoot.Finalizers = []string{v1beta1constants.ReferenceProtectionFinalizerName}
 
 			shoot.Spec.DNS = &gardencorev1beta1.DNS{
 				Domain: pointer.String("shoot.example.com"),
@@ -332,11 +333,11 @@ var _ = Describe("Shoot References", func() {
 
 		It("should remove finalizer only from shoot because secret is still referenced by another shoot", func() {
 			secretName := secrets[0].Name
-			secrets[0].Finalizers = []string{FinalizerName}
+			secrets[0].Finalizers = []string{v1beta1constants.ReferenceProtectionFinalizerName}
 
 			now := metav1.Now()
 			shoot.ObjectMeta.DeletionTimestamp = &now
-			shoot.Finalizers = []string{FinalizerName}
+			shoot.Finalizers = []string{v1beta1constants.ReferenceProtectionFinalizerName}
 
 			dnsProvider := gardencorev1beta1.DNSProvider{Type: pointer.String("managed-dns"), SecretName: pointer.String(secretName)}
 
@@ -393,10 +394,10 @@ var _ = Describe("Shoot References", func() {
 
 		It("should remove finalizer from secret because it is not referenced any more", func() {
 			secretName := secrets[1].Name
-			secrets[0].Finalizers = []string{FinalizerName}
-			secrets[1].Finalizers = []string{FinalizerName}
+			secrets[0].Finalizers = []string{v1beta1constants.ReferenceProtectionFinalizerName}
+			secrets[1].Finalizers = []string{v1beta1constants.ReferenceProtectionFinalizerName}
 
-			shoot.Finalizers = []string{FinalizerName}
+			shoot.Finalizers = []string{v1beta1constants.ReferenceProtectionFinalizerName}
 
 			shoot.Spec.DNS = &gardencorev1beta1.DNS{
 				Domain: pointer.String("shoot.example.com"),
@@ -556,11 +557,11 @@ var _ = Describe("Shoot References", func() {
 
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(result).To(Equal(emptyResult()))
-			Expect(updatedShoot.ObjectMeta.Finalizers).To(ConsistOf(Equal(FinalizerName)))
+			Expect(updatedShoot.ObjectMeta.Finalizers).To(ConsistOf(Equal(v1beta1constants.ReferenceProtectionFinalizerName)))
 			Expect(updatedConfigMap).To(PointTo(
 				MatchFields(IgnoreExtras, Fields{
 					"ObjectMeta": MatchFields(IgnoreExtras, Fields{
-						"Finalizers": ConsistOf(FinalizerName),
+						"Finalizers": ConsistOf(v1beta1constants.ReferenceProtectionFinalizerName),
 						"Name":       Equal(configMapName),
 					}),
 				})),
@@ -569,11 +570,11 @@ var _ = Describe("Shoot References", func() {
 
 		It("should remove finalizer from shoot and configmap because shoot is in deletion", func() {
 			configMapName := configMaps[0].Name
-			configMaps[0].Finalizers = []string{FinalizerName}
+			configMaps[0].Finalizers = []string{v1beta1constants.ReferenceProtectionFinalizerName}
 
 			now := metav1.Now()
 			shoot.ObjectMeta.DeletionTimestamp = &now
-			shoot.Finalizers = []string{FinalizerName}
+			shoot.Finalizers = []string{v1beta1constants.ReferenceProtectionFinalizerName}
 
 			shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
 				AuditConfig: &gardencorev1beta1.AuditConfig{
@@ -629,11 +630,11 @@ var _ = Describe("Shoot References", func() {
 
 		It("should remove finalizer only from shoot because configmap is still referenced by another shoot", func() {
 			configMapName := configMaps[0].Name
-			configMaps[0].Finalizers = []string{FinalizerName}
+			configMaps[0].Finalizers = []string{v1beta1constants.ReferenceProtectionFinalizerName}
 
 			now := metav1.Now()
 			shoot.ObjectMeta.DeletionTimestamp = &now
-			shoot.Finalizers = []string{FinalizerName}
+			shoot.Finalizers = []string{v1beta1constants.ReferenceProtectionFinalizerName}
 
 			apiServerConfig := &gardencorev1beta1.KubeAPIServerConfig{
 				AuditConfig: &gardencorev1beta1.AuditConfig{
@@ -695,10 +696,10 @@ var _ = Describe("Shoot References", func() {
 
 		It("should remove finalizer from configmap because it is not referenced any more", func() {
 			configMapName := configMaps[1].Name
-			configMaps[0].Finalizers = []string{FinalizerName}
-			configMaps[1].Finalizers = []string{FinalizerName}
+			configMaps[0].Finalizers = []string{v1beta1constants.ReferenceProtectionFinalizerName}
+			configMaps[1].Finalizers = []string{v1beta1constants.ReferenceProtectionFinalizerName}
 
-			shoot.Finalizers = []string{FinalizerName}
+			shoot.Finalizers = []string{v1beta1constants.ReferenceProtectionFinalizerName}
 
 			shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
 				AuditConfig: &gardencorev1beta1.AuditConfig{
@@ -885,17 +886,17 @@ var _ = Describe("Shoot References", func() {
 
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(result).To(Equal(emptyResult()))
-			Expect(updatedShoot.ObjectMeta.Finalizers).To(ConsistOf(Equal(FinalizerName)))
+			Expect(updatedShoot.ObjectMeta.Finalizers).To(ConsistOf(Equal(v1beta1constants.ReferenceProtectionFinalizerName)))
 			Expect(updatedSecrets).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"ObjectMeta": MatchFields(IgnoreExtras, Fields{
-						"Finalizers": ConsistOf(FinalizerName),
+						"Finalizers": ConsistOf(v1beta1constants.ReferenceProtectionFinalizerName),
 						"Name":       Equal(secretName),
 					}),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"ObjectMeta": MatchFields(IgnoreExtras, Fields{
-						"Finalizers": ConsistOf(FinalizerName),
+						"Finalizers": ConsistOf(v1beta1constants.ReferenceProtectionFinalizerName),
 						"Name":       Equal(secretName2),
 					}),
 				})),
@@ -904,11 +905,11 @@ var _ = Describe("Shoot References", func() {
 
 		It("should remove finalizer from secret because shoot is in deletion", func() {
 			secretName := secrets[0].Name
-			secrets[0].Finalizers = []string{FinalizerName}
+			secrets[0].Finalizers = []string{v1beta1constants.ReferenceProtectionFinalizerName}
 
 			now := metav1.Now()
 			shoot.ObjectMeta.DeletionTimestamp = &now
-			shoot.Finalizers = []string{FinalizerName}
+			shoot.Finalizers = []string{v1beta1constants.ReferenceProtectionFinalizerName}
 
 			shoot.Spec.Resources = []gardencorev1beta1.NamedResourceReference{
 				{
@@ -965,10 +966,10 @@ var _ = Describe("Shoot References", func() {
 
 		It("should remove finalizer from secret because it is not referenced any more", func() {
 			secretName := secrets[1].Name
-			secrets[0].Finalizers = []string{FinalizerName}
-			secrets[1].Finalizers = []string{FinalizerName}
+			secrets[0].Finalizers = []string{v1beta1constants.ReferenceProtectionFinalizerName}
+			secrets[1].Finalizers = []string{v1beta1constants.ReferenceProtectionFinalizerName}
 
-			shoot.Finalizers = []string{FinalizerName}
+			shoot.Finalizers = []string{v1beta1constants.ReferenceProtectionFinalizerName}
 
 			shoot.Spec.Resources = []gardencorev1beta1.NamedResourceReference{
 				{

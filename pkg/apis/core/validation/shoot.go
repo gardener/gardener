@@ -2081,9 +2081,8 @@ func ValidateFinalizersOnCreation(finalizers []string, fldPath *field.Path) fiel
 	allErrs := field.ErrorList{}
 
 	for i, finalizer := range finalizers {
-		idxPath := fldPath.Index(i)
 		if ForbiddenShootFinalizersOnCreation.Has(finalizer) {
-			allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("finalizer %q cannot be added on creation", finalizer)))
+			allErrs = append(allErrs, field.Forbidden(fldPath.Index(i), fmt.Sprintf("finalizer %q cannot be added on creation", finalizer)))
 		}
 	}
 

@@ -39,9 +39,6 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-// FinalizerName is the name of the finalizer used for the reference protection.
-const FinalizerName = v1beta1constants.ReferenceProtectionFinalizerName
-
 // Reconciler checks the shoot in the given request for references to further objects in order to protect them from
 // deletions as long as they are still referenced.
 type Reconciler struct {
@@ -78,9 +75,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	// Remove finalizer from shoot in case it's being deleted and not handled by Gardener anymore.
 	if shoot.DeletionTimestamp != nil && !controllerutil.ContainsFinalizer(shoot, gardencorev1beta1.GardenerName) {
-		if controllerutil.ContainsFinalizer(shoot, FinalizerName) {
+		if controllerutil.ContainsFinalizer(shoot, v1beta1constants.ReferenceProtectionFinalizerName) {
 			log.Info("Removing finalizer")
-			if err := controllerutils.RemoveFinalizers(ctx, r.Client, shoot, FinalizerName); err != nil {
+			if err := controllerutils.RemoveFinalizers(ctx, r.Client, shoot, v1beta1constants.ReferenceProtectionFinalizerName); err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 			}
 		}
@@ -100,13 +97,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	// Manage finalizers on shoot.
 	var (
-		hasFinalizer   = controllerutil.ContainsFinalizer(shoot, FinalizerName)
+		hasFinalizer   = controllerutil.ContainsFinalizer(shoot, v1beta1constants.ReferenceProtectionFinalizerName)
 		needsFinalizer = addedFinalizerToSecret || addedFinalizerToConfigMap
 	)
 
 	if needsFinalizer && !hasFinalizer {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(ctx, r.Client, shoot, FinalizerName); err != nil {
+		if err := controllerutils.AddFinalizers(ctx, r.Client, shoot, v1beta1constants.ReferenceProtectionFinalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to add finalizer: %w", err)
 		}
 		return reconcile.Result{}, nil
@@ -114,7 +111,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	if !needsFinalizer && hasFinalizer {
 		log.Info("Removing finalizer")
-		if err := controllerutils.RemoveFinalizers(ctx, r.Client, shoot, FinalizerName); err != nil {
+		if err := controllerutils.RemoveFinalizers(ctx, r.Client, shoot, v1beta1constants.ReferenceProtectionFinalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 		}
 	}
@@ -147,9 +144,9 @@ func (r *Reconciler) handleReferencedSecrets(ctx context.Context, log logr.Logge
 
 			atomic.StoreUint32(&added, 1)
 
-			if !controllerutil.ContainsFinalizer(secret, FinalizerName) {
+			if !controllerutil.ContainsFinalizer(secret, v1beta1constants.ReferenceProtectionFinalizerName) {
 				log.Info("Adding finalizer to secret", "secret", client.ObjectKeyFromObject(secret))
-				if err := controllerutils.AddFinalizers(ctx, r.Client, secret, FinalizerName); err != nil {
+				if err := controllerutils.AddFinalizers(ctx, r.Client, secret, v1beta1constants.ReferenceProtectionFinalizerName); err != nil {
 					return fmt.Errorf("failed to add finalizer to secret: %w", err)
 				}
 			}
@@ -182,9 +179,9 @@ func (r *Reconciler) handleReferencedConfigMap(ctx context.Context, log logr.Log
 
 			atomic.StoreUint32(&added, 1)
 
-			if !controllerutil.ContainsFinalizer(configMap, FinalizerName) {
+			if !controllerutil.ContainsFinalizer(configMap, v1beta1constants.ReferenceProtectionFinalizerName) {
 				log.Info("Adding finalizer to ConfigMap", "configMap", client.ObjectKeyFromObject(configMap))
-				if err := controllerutils.AddFinalizers(ctx, r.Client, configMap, FinalizerName); err != nil {
+				if err := controllerutils.AddFinalizers(ctx, r.Client, configMap, v1beta1constants.ReferenceProtectionFinalizerName); err != nil {
 					return fmt.Errorf("failed to add finalizer to ConfigMap: %w", err)
 				}
 			}
@@ -206,9 +203,9 @@ func (r *Reconciler) releaseUnreferencedSecrets(ctx context.Context, log logr.Lo
 	for _, secret := range secrets {
 		s := secret
 		fns = append(fns, func(ctx context.Context) error {
-			if controllerutil.ContainsFinalizer(&s, FinalizerName) {
+			if controllerutil.ContainsFinalizer(&s, v1beta1constants.ReferenceProtectionFinalizerName) {
 				log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(&s))
-				if err := controllerutils.RemoveFinalizers(ctx, r.Client, &s, FinalizerName); err != nil {
+				if err := controllerutils.RemoveFinalizers(ctx, r.Client, &s, v1beta1constants.ReferenceProtectionFinalizerName); err != nil {
 					return fmt.Errorf("failed to remove finalizer from secret: %w", err)
 				}
 			}
@@ -229,9 +226,9 @@ func (r *Reconciler) releaseUnreferencedConfigMaps(ctx context.Context, log logr
 	for _, configMap := range configMaps {
 		cm := configMap
 		fns = append(fns, func(ctx context.Context) error {
-			if controllerutil.ContainsFinalizer(&cm, FinalizerName) {
+			if controllerutil.ContainsFinalizer(&cm, v1beta1constants.ReferenceProtectionFinalizerName) {
 				log.Info("Removing finalizer from ConfigMap", "configMap", client.ObjectKeyFromObject(&cm))
-				if err := controllerutils.RemoveFinalizers(ctx, r.Client, &cm, FinalizerName); err != nil {
+				if err := controllerutils.RemoveFinalizers(ctx, r.Client, &cm, v1beta1constants.ReferenceProtectionFinalizerName); err != nil {
 					return fmt.Errorf("failed to remove finalizer from ConfigMap: %w", err)
 				}
 			}
@@ -274,7 +271,7 @@ func (r *Reconciler) getUnreferencedSecrets(ctx context.Context, shoot *gardenco
 
 	var secretsToRelease []corev1.Secret
 	for _, secret := range secrets.Items {
-		if !controllerutil.ContainsFinalizer(&secret, FinalizerName) {
+		if !controllerutil.ContainsFinalizer(&secret, v1beta1constants.ReferenceProtectionFinalizerName) {
 			continue
 		}
 		if referencedSecrets.Has(secret.Name) {
@@ -319,7 +316,7 @@ func (r *Reconciler) getUnreferencedConfigMaps(ctx context.Context, shoot *garde
 
 	var configMapsToRelease []corev1.ConfigMap
 	for _, configMap := range configMaps.Items {
-		if !controllerutil.ContainsFinalizer(&configMap, FinalizerName) {
+		if !controllerutil.ContainsFinalizer(&configMap, v1beta1constants.ReferenceProtectionFinalizerName) {
 			continue
 		}
 		if referencedConfigMaps.Has(configMap.Name) {

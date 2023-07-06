@@ -68,7 +68,7 @@ func (shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	shoot.Generation = 1
 	shoot.Status = core.ShootStatus{}
 
-	// TODO(shafeeqes): Drop this after gardener v1.78 has been released.
+	// TODO(shafeeqes): Drop this after gardener v1.80 has been released.
 	removeForbiddenFinalizers(shoot)
 }
 
