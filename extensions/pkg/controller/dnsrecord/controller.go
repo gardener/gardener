@@ -69,7 +69,7 @@ func DefaultPredicates(ctx context.Context, mgr manager.Manager, ignoreOperation
 }
 
 // Add creates a new dnsrecord controller and adds it to the given Manager.
-func Add(mgr manager.Manager, args AddArgs) error {
+func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.Actuator)
 
 	ctrl, err := controller.New(ControllerName, mgr, args.ControllerOptions)
@@ -81,7 +81,7 @@ func Add(mgr manager.Manager, args AddArgs) error {
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
 			&source.Kind{Type: &extensionsv1alpha1.Cluster{}},
-			mapper.EnqueueRequestsFrom(ClusterToDNSRecordMapper(predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
+			mapper.EnqueueRequestsFrom(ctx, mgr, ClusterToDNSRecordMapper(ctx, mgr, predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
 		); err != nil {
 			return err
 		}

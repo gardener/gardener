@@ -41,7 +41,7 @@ import (
 const ControllerName = "token-invalidator"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Cluster) error {
+func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targetCluster cluster.Cluster) error {
 	if r.TargetReader == nil {
 		r.TargetReader = targetCluster.GetAPIReader()
 	}
@@ -71,7 +71,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 
 	return c.Watch(
 		source.NewKindWithCache(&corev1.ServiceAccount{}, targetCluster.GetCache()),
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapServiceAccountToSecrets), mapper.UpdateWithOldAndNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr, mapper.MapFunc(r.MapServiceAccountToSecrets), mapper.UpdateWithOldAndNew, c.GetLogger()),
 		r.ServiceAccountPredicate(),
 	)
 }

@@ -15,6 +15,7 @@
 package health
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -45,7 +46,7 @@ import (
 const ControllerName = "health"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, targetCacheDisabled bool, clusterID string) error {
+func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, targetCacheDisabled bool, clusterID string) error {
 	if r.SourceClient == nil {
 		r.SourceClient = sourceCluster.GetClient()
 	}
@@ -114,7 +115,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 
 			if err := c.Watch(
 				source.NewKindWithCache(obj, targetCluster.GetCache()),
-				mapper.EnqueueRequestsFrom(utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
+				mapper.EnqueueRequestsFrom(ctx, mgr, utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
 				utils.HealthStatusChanged(c.GetLogger()),
 			); err != nil {
 				return fmt.Errorf("error starting watch for GVK %s: %w", gvk.String(), err)

@@ -15,6 +15,8 @@
 package progressing
 
 import (
+	"context"
+
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
@@ -36,7 +38,7 @@ import (
 const ControllerName = "health-progressing"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, targetCacheDisabled bool, clusterID string) error {
+func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, targetCacheDisabled bool, clusterID string) error {
 	if r.SourceClient == nil {
 		r.SourceClient = sourceCluster.GetClient()
 	}
@@ -86,15 +88,15 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 		// adding labels to managed resources and watch them explicitly.
 		b = b.Watches(
 			source.NewKindWithCache(&appsv1.Deployment{}, targetCluster.GetCache()),
-			mapper.EnqueueRequestsFrom(utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
+			mapper.EnqueueRequestsFrom(ctx, mgr, utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
 			builder.WithPredicates(r.ProgressingStatusChanged()),
 		).Watches(
 			source.NewKindWithCache(&appsv1.StatefulSet{}, targetCluster.GetCache()),
-			mapper.EnqueueRequestsFrom(utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
+			mapper.EnqueueRequestsFrom(ctx, mgr, utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
 			builder.WithPredicates(r.ProgressingStatusChanged()),
 		).Watches(
 			source.NewKindWithCache(&appsv1.DaemonSet{}, targetCluster.GetCache()),
-			mapper.EnqueueRequestsFrom(utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
+			mapper.EnqueueRequestsFrom(ctx, mgr, utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
 			builder.WithPredicates(r.ProgressingStatusChanged()),
 		)
 	}

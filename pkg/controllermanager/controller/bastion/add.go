@@ -41,7 +41,7 @@ import (
 const ControllerName = "bastion"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager) error {
+func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
@@ -63,7 +63,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 
 	return c.Watch(
 		&source.Kind{Type: &gardencorev1beta1.Shoot{}},
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapShootToBastions), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr, mapper.MapFunc(r.MapShootToBastions), mapper.UpdateWithNew, c.GetLogger()),
 		r.ShootPredicate(),
 	)
 }

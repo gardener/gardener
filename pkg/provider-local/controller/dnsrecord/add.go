@@ -42,7 +42,7 @@ type AddOptions struct {
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddOptions) error {
-	return dnsrecord.Add(mgr, dnsrecord.AddArgs{
+	return dnsrecord.Add(ctx, mgr, dnsrecord.AddArgs{
 		Actuator:          NewActuator(mgr, opts.WriteToHostsFile),
 		ControllerOptions: opts.Controller,
 		Predicates:        dnsrecord.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),

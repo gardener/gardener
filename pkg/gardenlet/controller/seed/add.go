@@ -15,6 +15,7 @@
 package seed
 
 import (
+	"context"
 	"fmt"
 
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -33,6 +34,7 @@ import (
 
 // AddToManager adds all Seed controllers to the given manager.
 func AddToManager(
+	ctx context.Context,
 	mgr manager.Manager,
 	gardenCluster cluster.Cluster,
 	seedCluster cluster.Cluster,
@@ -47,7 +49,7 @@ func AddToManager(
 		Config:         *cfg.Controllers.SeedCare,
 		SeedName:       cfg.SeedConfig.Name,
 		LoggingEnabled: gardenlethelper.IsLoggingEnabled(&cfg),
-	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
+	}).AddToManager(ctx, mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding care reconciler: %w", err)
 	}
 

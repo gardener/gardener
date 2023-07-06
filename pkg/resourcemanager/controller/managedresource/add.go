@@ -43,7 +43,7 @@ import (
 const ControllerName = "managedresource"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster) error {
+func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster) error {
 	if r.SourceClient == nil {
 		r.SourceClient = sourceCluster.GetClient()
 	}
@@ -98,7 +98,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 
 	return c.Watch(
 		&source.Kind{Type: &corev1.Secret{}},
-		mapper.EnqueueRequestsFrom(r.MapSecretToManagedResources(
+		mapper.EnqueueRequestsFrom(ctx, mgr, r.MapSecretToManagedResources(
 			r.ClassFilter,
 			predicate.Or(
 				resourcemanagerpredicate.NotIgnored(),

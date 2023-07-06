@@ -59,9 +59,9 @@ type AddArgs struct {
 }
 
 // Add adds an ContainerRuntime controller to the given manager using the given AddArgs.
-func Add(mgr manager.Manager, args AddArgs) error {
+func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.Actuator)
-	return add(mgr, args)
+	return add(ctx, mgr, args)
 }
 
 // DefaultPredicates returns the default predicates for an containerruntime reconciler.
@@ -69,7 +69,7 @@ func DefaultPredicates(ctx context.Context, mgr manager.Manager, ignoreOperation
 	return extensionspredicate.DefaultControllerPredicates(ignoreOperationAnnotation, extensionspredicate.ShootNotFailedPredicate(ctx, mgr))
 }
 
-func add(mgr manager.Manager, args AddArgs) error {
+func add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	ctrl, err := controller.New(ControllerName, mgr, args.ControllerOptions)
 	if err != nil {
 		return err
@@ -80,7 +80,7 @@ func add(mgr manager.Manager, args AddArgs) error {
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
 			&source.Kind{Type: &extensionsv1alpha1.Cluster{}},
-			mapper.EnqueueRequestsFrom(ClusterToContainerResourceMapper(predicates...), mapper.UpdateWithNew, ctrl.GetLogger()),
+			mapper.EnqueueRequestsFrom(ctx, mgr, ClusterToContainerResourceMapper(ctx, mgr, predicates...), mapper.UpdateWithNew, ctrl.GetLogger()),
 		); err != nil {
 			return err
 		}

@@ -45,7 +45,7 @@ import (
 const ControllerName = "networkpolicy"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Cluster) error {
+func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targetCluster cluster.Cluster) error {
 	if r.TargetClient == nil {
 		r.TargetClient = targetCluster.GetClient()
 	}
@@ -89,7 +89,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 
 	if err := c.Watch(
 		source.NewKindWithCache(networkPolicy, targetCluster.GetCache()),
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapNetworkPolicyToService), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr, mapper.MapFunc(r.MapNetworkPolicyToService), mapper.UpdateWithNew, c.GetLogger()),
 		networkPolicyPredicate,
 	); err != nil {
 		return err
@@ -98,7 +98,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 	if r.Config.IngressControllerSelector != nil {
 		if err := c.Watch(
 			source.NewKindWithCache(&networkingv1.Ingress{}, targetCluster.GetCache()),
-			mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapIngressToServices), mapper.UpdateWithNew, c.GetLogger()),
+			mapper.EnqueueRequestsFrom(ctx, mgr, mapper.MapFunc(r.MapIngressToServices), mapper.UpdateWithNew, c.GetLogger()),
 			r.IngressPredicate(),
 		); err != nil {
 			return err
@@ -110,7 +110,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 
 	return c.Watch(
 		source.NewKindWithCache(namespace, targetCluster.GetCache()),
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapToAllServices), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr, mapper.MapFunc(r.MapToAllServices), mapper.UpdateWithNew, c.GetLogger()),
 	)
 }
 

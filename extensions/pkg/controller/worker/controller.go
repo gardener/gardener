@@ -64,19 +64,19 @@ func DefaultPredicates(ctx context.Context, mgr manager.Manager, ignoreOperation
 
 // Add creates a new Worker Controller and adds it to the Manager.
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, args AddArgs) error {
+func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.Actuator)
 
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
-	if err := add(mgr, args, predicates); err != nil {
+	if err := add(ctx, mgr, args, predicates); err != nil {
 		return err
 	}
 
-	return addStateUpdatingController(mgr, args.ControllerOptions, args.Type)
+	return addStateUpdatingController(ctx, mgr, args.ControllerOptions, args.Type)
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) error {
+func add(ctx context.Context, mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) error {
 	ctrl, err := controller.New(ControllerName, mgr, args.ControllerOptions)
 	if err != nil {
 		return err
@@ -85,7 +85,7 @@ func add(mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) er
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
 			&source.Kind{Type: &extensionsv1alpha1.Cluster{}},
-			mapper.EnqueueRequestsFrom(ClusterToWorkerMapper(predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
+			mapper.EnqueueRequestsFrom(ctx, mgr, ClusterToWorkerMapper(ctx, mgr, predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
 		); err != nil {
 			return err
 		}
@@ -94,7 +94,7 @@ func add(mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) er
 	return ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.Worker{}}, &handler.EnqueueRequestForObject{}, predicates...)
 }
 
-func addStateUpdatingController(mgr manager.Manager, options controller.Options, extensionType string) error {
+func addStateUpdatingController(ctx context.Context, mgr manager.Manager, options controller.Options, extensionType string) error {
 	var (
 		machinePredicates = []predicate.Predicate{
 			predicate.Or(
@@ -117,7 +117,7 @@ func addStateUpdatingController(mgr manager.Manager, options controller.Options,
 
 	if err := ctrl.Watch(
 		&source.Kind{Type: &machinev1alpha1.MachineSet{}},
-		mapper.EnqueueRequestsFrom(MachineSetToWorkerMapper(workerPredicates), mapper.UpdateWithNew, ctrl.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr, MachineSetToWorkerMapper(workerPredicates), mapper.UpdateWithNew, ctrl.GetLogger()),
 		machinePredicates...,
 	); err != nil {
 		return err
@@ -125,7 +125,7 @@ func addStateUpdatingController(mgr manager.Manager, options controller.Options,
 
 	return ctrl.Watch(
 		&source.Kind{Type: &machinev1alpha1.Machine{}},
-		mapper.EnqueueRequestsFrom(MachineToWorkerMapper(workerPredicates), mapper.UpdateWithNew, ctrl.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr, MachineToWorkerMapper(workerPredicates), mapper.UpdateWithNew, ctrl.GetLogger()),
 		machinePredicates...,
 	)
 }

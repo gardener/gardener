@@ -252,7 +252,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 	if err := mgr.Add(&controllerutils.ControlledRunner{
 		Manager:            mgr,
 		BootstrapRunnables: []manager.Runnable{&bootstrappers.IdentityDeterminer{Logger: log, SourceClient: mgr.GetClient(), Config: cfg}},
-		ActualRunnables:    []manager.Runnable{manager.RunnableFunc(func(context.Context) error { return controller.AddToManager(mgr, mgr, targetCluster, cfg) })},
+		ActualRunnables:    []manager.Runnable{manager.RunnableFunc(func(context.Context) error { return controller.AddToManager(ctx, mgr, mgr, targetCluster, cfg) })},
 	}); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
 	}
