@@ -81,32 +81,6 @@ allowedMetrics:
   - mcm_machine_current_status_phase
   - process_max_fds
   - process_open_fds
-  nodeExporter:
-  - node_boot_time_seconds
-  - node_cpu_seconds_total
-  - node_disk_read_bytes_total
-  - node_disk_written_bytes_total
-  - node_disk_io_time_weighted_seconds_total
-  - node_disk_io_time_seconds_total
-  - node_disk_write_time_seconds_total
-  - node_disk_writes_completed_total
-  - node_disk_read_time_seconds_total
-  - node_disk_reads_completed_total
-  - node_filesystem_avail_bytes
-  - node_filesystem_files
-  - node_filesystem_files_free
-  - node_filesystem_free_bytes
-  - node_filesystem_readonly
-  - node_filesystem_size_bytes
-  - node_load1
-  - node_load15
-  - node_load5
-  - node_memory_.+
-  - node_nf_conntrack_.+
-  - node_scrape_collector_duration_seconds
-  - node_scrape_collector_success
-  - process_max_fds
-  - process_open_fds
   prometheus:
   - process_max_fds
   - process_open_fds
@@ -132,57 +106,6 @@ allowedMetrics:
   - prometheus_tsdb_reloads_total
   - prometheus_tsdb_storage_blocks_bytes
   - prometheus_tsdb_wal_corruptions_total
-  blackboxExporter:
-  - probe_duration_seconds
-  - probe_http_duration_seconds
-  - probe_success
-  - probe_http_status_code
-  vpn:
-  - probe_http_status_code
-  - probe_success
-  vali:
-  - vali_ingester_blocks_per_chunk_sum
-  - vali_ingester_blocks_per_chunk_count
-  - vali_ingester_chunk_age_seconds_sum
-  - vali_ingester_chunk_age_seconds_count
-  - vali_ingester_chunk_bounds_hours_sum
-  - vali_ingester_chunk_bounds_hours_count
-  - vali_ingester_chunk_compression_ratio_sum
-  - vali_ingester_chunk_compression_ratio_count
-  - vali_ingester_chunk_encode_time_seconds_sum
-  - vali_ingester_chunk_encode_time_seconds_count
-  - vali_ingester_chunk_entries_sum
-  - vali_ingester_chunk_entries_count
-  - vali_ingester_chunk_size_bytes_sum
-  - vali_ingester_chunk_size_bytes_count
-  - vali_ingester_chunk_utilization_sum
-  - vali_ingester_chunk_utilization_count
-  - vali_ingester_memory_chunks
-  - vali_ingester_received_chunks
-  - vali_ingester_samples_per_chunk_sum
-  - vali_ingester_samples_per_chunk_count
-  - vali_ingester_sent_chunks
-  - vali_panic_total
-  - vali_logql_querystats_duplicates_total
-  - vali_logql_querystats_ingester_sent_lines_total
-  apiserverProxy:
-  - envoy_cluster_bind_errors
-  - envoy_cluster_lb_healthy_panic
-  - envoy_cluster_update_attempt
-  - envoy_cluster_update_failure
-  - envoy_cluster_upstream_cx_connect_ms_bucket
-  - envoy_cluster_upstream_cx_length_ms_bucket
-  - envoy_cluster_upstream_cx_none_healthy
-  - envoy_cluster_upstream_cx_rx_bytes_total
-  - envoy_cluster_upstream_cx_tx_bytes_total
-  - envoy_listener_downstream_cx_destroy
-  - envoy_listener_downstream_cx_length_ms_bucket
-  - envoy_listener_downstream_cx_overflow
-  - envoy_listener_downstream_cx_total
-  - envoy_tcp_downstream_cx_no_route
-  - envoy_tcp_downstream_cx_rx_bytes_total
-  - envoy_tcp_downstream_cx_total
-  - envoy_tcp_downstream_cx_tx_bytes_total
 seed:
   apiserver: https://api.foo.bar
   region: antarctica-1
@@ -192,16 +115,11 @@ shoot:
   apiserver: https://api.foo.bar
   apiserverServerName: api.foo.bar
   provider: aws
-  apiServerProxyEnabled: false
   workerless: false
 
 rules:
   optional:
     alertmanager:
-      enabled: false
-    vali:
-      enabled: true
-    valiTelegraf:
       enabled: false
 
 alerting:

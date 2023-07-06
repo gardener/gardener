@@ -84,14 +84,24 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		b.Shoot.Components.ControlPlane.ResourceManager,
 	}
 
+	if b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) && gardenlethelper.IsValiEnabled(b.Config) {
+		monitoringComponents = append(monitoringComponents, b.Shoot.Components.Logging.Vali)
+	}
+
 	if !b.Shoot.IsWorkerless {
 		monitoringComponents = append(monitoringComponents,
+			b.Shoot.Components.SystemComponents.BlackboxExporter,
 			b.Shoot.Components.ControlPlane.KubeScheduler,
 			b.Shoot.Components.SystemComponents.CoreDNS,
 			b.Shoot.Components.SystemComponents.KubeProxy,
+			b.Shoot.Components.SystemComponents.NodeExporter,
 			b.Shoot.Components.SystemComponents.VPNShoot,
 			b.Shoot.Components.ControlPlane.VPNSeedServer,
 		)
+
+		if b.ShootUsesDNS() {
+			monitoringComponents = append(monitoringComponents, b.Shoot.Components.SystemComponents.APIServerProxy)
+		}
 
 		if b.Shoot.NodeLocalDNSEnabled {
 			monitoringComponents = append(monitoringComponents, b.Shoot.Components.SystemComponents.NodeLocalDNS)
@@ -220,22 +230,15 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 					"alertmanager": map[string]interface{}{
 						"enabled": b.Shoot.WantsAlertmanager,
 					},
-					"vali": map[string]interface{}{
-						"enabled": gardenlethelper.IsLoggingEnabled(b.Config),
-					},
-					"valiTelegraf": map[string]interface{}{
-						"enabled": b.isShootNodeLoggingEnabled(),
-					},
 				},
 			},
 			"shoot": map[string]interface{}{
-				"apiserver":             fmt.Sprintf("https://%s", gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain)),
-				"apiserverServerName":   gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
-				"apiServerProxyEnabled": b.ShootUsesDNS(),
-				"provider":              b.Shoot.GetInfo().Spec.Provider.Type,
-				"name":                  b.Shoot.GetInfo().Name,
-				"project":               b.Garden.Project.Name,
-				"workerless":            b.Shoot.IsWorkerless,
+				"apiserver":           fmt.Sprintf("https://%s", gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain)),
+				"apiserverServerName": gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+				"provider":            b.Shoot.GetInfo().Spec.Provider.Type,
+				"name":                b.Shoot.GetInfo().Name,
+				"project":             b.Garden.Project.Name,
+				"workerless":          b.Shoot.IsWorkerless,
 			},
 			"ignoreAlerts":            b.Shoot.IgnoreAlerts,
 			"alerting":                alerting,

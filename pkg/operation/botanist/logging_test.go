@@ -39,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	mockvali "github.com/gardener/gardener/pkg/component/logging/vali/mock"
 	mockcomponent "github.com/gardener/gardener/pkg/component/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -60,7 +61,7 @@ var _ = Describe("Logging", func() {
 		botanist                 *Botanist
 		shootRBACProxyDeployer   *mockcomponent.MockDeployer
 		shootEventLoggerDeployer *mockcomponent.MockDeployer
-		shootValiDeployer        *mockcomponent.MockDeployer
+		shootValiDeployer        *mockvali.MockInterface
 		fakeSecretManager        secretsmanager.Interface
 		chartApplier             *mock.MockChartApplier
 		ctx                      = context.TODO()
@@ -86,7 +87,7 @@ var _ = Describe("Logging", func() {
 
 		shootRBACProxyDeployer = mockcomponent.NewMockDeployer(ctrl)
 		shootEventLoggerDeployer = mockcomponent.NewMockDeployer(ctrl)
-		shootValiDeployer = mockcomponent.NewMockDeployer(ctrl)
+		shootValiDeployer = mockvali.NewMockInterface(ctrl)
 		fakeSecretManager = fakesecretsmanager.New(c, seedNamespace)
 
 		botanist = &Botanist{

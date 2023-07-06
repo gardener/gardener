@@ -59,6 +59,7 @@ const (
 // Interface contains functions for a node-exporter deployer.
 type Interface interface {
 	component.DeployWaiter
+	component.MonitoringComponent
 }
 
 // Values is a set of configuration values for the node-exporter component.
