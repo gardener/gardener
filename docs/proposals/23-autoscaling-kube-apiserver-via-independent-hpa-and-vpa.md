@@ -37,7 +37,6 @@ reviewers:
     - [Element: HPA](#element-hpa)
     - [Element: VPA](#element-vpa)
     - [Transition Strategy](#transition-strategy)
-    - [Vision Beyond This Enhancement](#vision-beyond-this-enhancement)
   - [Discussion and Limitations](#discussion-and-limitations)
       - [Gardener-custom metrics precludes the use of other sources of custom metrics](#gardener-custom-metrics-precludes-the-use-of-other-sources-of-custom-metrics)
       - [Observed fluctuations in actual compute efficiency affecting ShootKapi workloads](#observed-fluctuations-in-actual-compute-efficiency-affecting-shootkapi-workloads)
@@ -211,6 +210,10 @@ other than the one in the shoot control plane, is outside the scope of this GEP.
 different mode of autoscaling (e.g. vertical-only, where HVPA is only used to stabilize VPA behavior), and it is
 advantageous from project execution perspective to address them as a separate concern.
 
+The scaling approach hereby proposed may be suitable for scaling the `virtual-garden-kube-apiserver` and
+`gardener-apiserver` components, which are part of the virtual garden cluster control plane. Scaling those components
+is outside the scope of this GEP.
+
 ## Proposal
 ShootKapi HVPA is replaced by individual HPA and VPA. Undesirable interference between HPA and VPA is avoided through
 the use of sufficiently independent driving signals. HPA is driven by the rate of HTTP requests to kube-apiserver. VPA is
@@ -292,16 +295,6 @@ to the one hereby proposed.
    individual garden/seed instances, and not to the code base as a whole).
 4. New feature flag promoted and eventually removed.
 5. (Outside the scope of this proposal) Use of HVPA removed for other workloads and the preexisting HVPA flag removed.
-
-### Vision Beyond This Enhancement
-This proposal is part of a mid-term vision which enables the operator to select an alternative ShootKapi scaling mode
-for any shoot. Said mode prioritises reliability, and is known to work well even under extreme API request profiles.
-
-The following approach is envisioned (discussion is limited to scaling ShootKapi):
-- The default scaling mode is the one proposed by this GEP.
-- For any shoot, the operator is enabled to select an alternative scaling mode. In this mode, the operator specifies a fixed
-  vertical scale, and a horizontal scale in the form of (MinimumReplicaCount, MaximumReplicaCount). HPA is used
-  to apply the horizontal scale.
 
 ## Discussion and Limitations
 Overall, multidimensional autoscaling is a job which cannot be accomplished efficiently with the one-dimensional
