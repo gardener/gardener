@@ -176,12 +176,14 @@ func cleanupAdmissionPlugins(shoot *core.Shoot) {
 		shootAdmissionPlugins = shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins
 	)
 
+	kubernetesVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
+	if err != nil {
+		return
+	}
+
 	for _, plugin := range shootAdmissionPlugins {
-		if constraint, ok := admissionpluginsvalidation.PluginsInMigration[plugin.Name]; ok {
-			// It should be safe to use MustParse here since Canonicalize runs after validation.
-			if constraint.Check(semver.MustParse(shoot.Spec.Kubernetes.Version)) {
-				continue
-			}
+		if constraint, ok := admissionpluginsvalidation.PluginsInMigration[plugin.Name]; ok && constraint.Check(kubernetesVersion) {
+			continue
 		}
 
 		admissionPlugins = append(admissionPlugins, plugin)

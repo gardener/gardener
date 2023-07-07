@@ -168,6 +168,12 @@ func getAllForbiddenPlugins() []string {
 func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	kubernetesVersion, err := semver.NewVersion(version)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "kubernetes", "version"), version, err.Error()))
+		return allErrs
+	}
+
 	for i, plugin := range admissionPlugins {
 		idxPath := fldPath.Index(i)
 
@@ -181,10 +187,8 @@ func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version s
 			allErrs = append(allErrs, field.Invalid(idxPath.Child("name"), plugin.Name, err.Error()))
 		} else if !supported {
 			// If the plugin is not supported, but it's disabled and it's a plugin in migration, then skip it.
-			if constraint, ok := PluginsInMigration[plugin.Name]; ok {
-				if constraint.Check(semver.MustParse(version)) && pointer.BoolDeref(plugin.Disabled, false) {
-					continue
-				}
+			if constraint, ok := PluginsInMigration[plugin.Name]; ok && constraint.Check(kubernetesVersion) && pointer.BoolDeref(plugin.Disabled, false) {
+				continue
 			}
 			allErrs = append(allErrs, field.Forbidden(idxPath.Child("name"), fmt.Sprintf("admission plugin %q is not supported in Kubernetes version %s", plugin.Name, version)))
 		} else {
