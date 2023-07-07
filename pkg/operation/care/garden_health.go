@@ -235,12 +235,9 @@ func (h *GardenHealth) checkManagedResources(
 }
 
 func (h *GardenHealth) isVPAEnabled() bool {
-	if h.garden.Spec.RuntimeCluster.Settings != nil &&
+	return h.garden.Spec.RuntimeCluster.Settings != nil &&
 		h.garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler != nil &&
-		pointer.BoolDeref(h.garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler.Enabled, false) {
-		return true
-	}
-	return false
+		pointer.BoolDeref(h.garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler.Enabled, false)
 }
 
 func checkManagedResourceForGarden(checker *HealthChecker, condition gardencorev1beta1.Condition, managedResource *resourcesv1alpha1.ManagedResource) *gardencorev1beta1.Condition {
