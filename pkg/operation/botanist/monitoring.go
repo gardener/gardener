@@ -408,6 +408,7 @@ func (b *Botanist) DefaultPlutono() (plutono.Interface, error) {
 		b.Shoot.NodeLocalDNSEnabled,
 		b.Shoot.IsWorkerless,
 		b.Shoot.VPNHighAvailabilityEnabled,
+		v1beta1constants.PriorityClassNameShootControlPlane100,
 		b.Shoot.GetReplicas(1),
 		wildcardCertName,
 		b.Shoot.WantsVerticalPodAutoscaler,
@@ -447,11 +448,6 @@ func (b *Botanist) DeploySeedPlutono(ctx context.Context) error {
 		map[string]string{"url": "https://" + b.ComputePlutonoHost()},
 		credentialsSecret.Data,
 	)
-}
-
-// DestroySeedPlutono destroy the plutono in the Seed cluster.
-func (b *Botanist) DestroySeedPlutono(ctx context.Context) error {
-	return b.Shoot.Components.ControlPlane.Plutono.Destroy(ctx)
 }
 
 func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretKeys []string) (map[string]interface{}, error) {

@@ -37,6 +37,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
@@ -52,6 +53,7 @@ const (
 	ManagedResourceName = "plutono"
 
 	name                          = "plutono"
+	plotonoMountPathDashboards    = "/var/lib/plutono/dashboards"
 	port                          = 3000
 	ingressTLSCertificateValidity = 730 * 24 * time.Hour
 )
@@ -80,26 +82,28 @@ type Values struct {
 	AuthSecretName string
 	// ClusterType specifies the type of the cluster to which plutono is being deployed.
 	ClusterType component.ClusterType
+	// GardenletManagesMCM specifies whether MCM is managed by gardenlet.
+	GardenletManagesMCM bool
 	// Image is the container image used for plutono.
 	Image string
 	// IngressHost is the host name of plutono.
 	IngressHost string
 	// IncludeIstioDashboards specifies whether to include istio dashboard.
 	IncludeIstioDashboards bool
-	// IsGardenletManagesMCM specifies whether MCM is managed by gardenlet.
-	IsGardenletManagesMCM bool
-	// IsNodeLocalDNSEnabled specifies whether the node-local-dns is enabled for cluster.
-	IsNodeLocalDNSEnabled bool
 	// IsWorkerless specifies whether the cluster managed by this API server has worker nodes.
 	IsWorkerless bool
-	// IsVPNHighAvailabilityEnabled specifies whether the cluster is configured with HA VPN.
-	IsVPNHighAvailabilityEnabled bool
+	// NodeLocalDNSEnabled specifies whether the node-local-dns is enabled for cluster.
+	NodeLocalDNSEnabled bool
+	// PriorityClassName is the name of the priority class.
+	PriorityClassName string
 	// Replicas is the number of pod replicas for the plutono.
 	Replicas int32
-	// WildcardCertName is name of wildcard tls certificate which is issued for the seed's ingress domain.
-	WildcardCertName *string
 	// VPAEnabled states whether VerticalPodAutoscaler is enabled.
 	VPAEnabled bool
+	// VPNHighAvailabilityEnabled specifies whether the cluster is configured with HA VPN.
+	VPNHighAvailabilityEnabled bool
+	// WildcardCertName is name of wildcard tls certificate which is issued for the seed's ingress domain.
+	WildcardCertName *string
 }
 
 // New creates a new instance of DeployWaiter for plutono.
@@ -125,13 +129,17 @@ type plutono struct {
 }
 
 func (p *plutono) Deploy(ctx context.Context) error {
-	dashBoardConfigMap, data, err := p.computeResourcesData(ctx)
+	dashboardConfigMap, data, err := p.computeResourcesData(ctx)
 	if err != nil {
 		return err
 	}
 
 	// dashboards configmap is not deployed as part of MR because it can breach the secret size limit.
-	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, p.client, dashBoardConfigMap, func() error { return nil })
+	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, p.client, dashboardConfigMap, func() error {
+		metav1.SetMetaDataLabel(&dashboardConfigMap.ObjectMeta, "component", name)
+		metav1.SetMetaDataLabel(&dashboardConfigMap.ObjectMeta, references.LabelKeyGarbageCollectable, references.LabelValueGarbageCollectable)
+		return nil
+	})
 	if err != nil {
 		return err
 	}
@@ -182,7 +190,7 @@ providers:
   disableDeletion: false
   editable: false
   options:
-    path: /var/lib/plutono/dashboards
+    path: ` + plotonoMountPathDashboards + `
 `,
 			},
 		}
@@ -198,7 +206,7 @@ providers:
 			},
 		}
 
-		dashBoardConfigMap = &corev1.ConfigMap{
+		dashboardConfigMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "plutono-dashboards",
 				Namespace: p.namespace,
@@ -210,12 +218,12 @@ providers:
 	if dashboards, err := p.getDashboards(ctx); err != nil {
 		return nil, nil, err
 	} else {
-		dashBoardConfigMap.Data = dashboards
+		dashboardConfigMap.Data = dashboards
 	}
 
 	utilruntime.Must(kubernetesutils.MakeUnique(providerConfigMap))
 	utilruntime.Must(kubernetesutils.MakeUnique(dataSourceConfigMap))
-	utilruntime.Must(kubernetesutils.MakeUnique(dashBoardConfigMap))
+	utilruntime.Must(kubernetesutils.MakeUnique(dashboardConfigMap))
 
 	var (
 		deployment *appsv1.Deployment
@@ -223,7 +231,7 @@ providers:
 		ingress    *networkingv1.Ingress
 	)
 
-	deployment = p.getDeployment(providerConfigMap.Name, dataSourceConfigMap.Name, dashBoardConfigMap.Name)
+	deployment = p.getDeployment(providerConfigMap.Name, dataSourceConfigMap.Name, dashboardConfigMap.Name)
 	service = p.getService()
 
 	ingress, err = p.getIngress(ctx)
@@ -242,12 +250,12 @@ providers:
 		return nil, nil, err
 	}
 
-	return dashBoardConfigMap, data, nil
+	return dashboardConfigMap, data, nil
 }
 
 func getLabels() map[string]string {
 	return map[string]string{
-		"component": "plutono",
+		"component": name,
 	}
 }
 
@@ -266,6 +274,12 @@ func convertToCompactJSON(data map[string]string) (map[string]string, error) {
 }
 
 func (p *plutono) getDataSource() string {
+	url := "http://prometheus-web:80"
+	maxLine := "1000"
+	if p.values.ClusterType == component.ClusterTypeSeed {
+		url = "http://aggregate-prometheus-web:80"
+		maxLine = "5000"
+	}
 
 	datasource := `apiVersion: 1
 
@@ -276,39 +290,20 @@ deleteDatasources:
 
 # list of datasources to insert/update depending
 # whats available in the database
-`
-	if p.values.ClusterType == component.ClusterTypeShoot {
-		datasource = datasource + `datasources:
+datasources:
 - name: prometheus
   type: prometheus
   access: proxy
-  url: http://prometheus-web:80
+  url: ` + url + `
   basicAuth: false
   isDefault: true
   version: 1
   editable: false
   jsonData:
     timeInterval: 1m
-- name: vali
-  type: vali
-  access: proxy
-  url: http://logging.` + p.namespace + `.svc:3100
-  jsonData:
-    maxLines: 1000
 `
-	} else {
-		datasource = datasource + `datasources:
-- name: prometheus
-  type: prometheus
-  access: proxy
-  url: http://aggregate-prometheus-web:80
-  basicAuth: false
-  isDefault: true
-  version: 1
-  editable: false
-  jsonData:
-    timeInterval: 1m
-- name: seed-prometheus
+	if p.values.ClusterType == component.ClusterTypeSeed {
+		datasource += `- name: seed-prometheus
   type: prometheus
   access: proxy
   url: http://seed-prometheus-web:80
@@ -317,14 +312,16 @@ deleteDatasources:
   editable: false
   jsonData:
     timeInterval: 1m
-- name: vali
-  type: vali
-  access: proxy
-  url: http://logging.` + p.namespace + `.svc:3100
-  jsonData:
-    maxLines: 5000
 `
 	}
+
+	datasource += `- name: vali
+  type: vali
+  access: proxy
+  url: http://logging.` + p.namespace + `.svc:` + fmt.Sprint(vali.ValiPort) + `
+  jsonData:
+    maxLines: ` + maxLine + `
+`
 
 	return datasource
 }
@@ -351,16 +348,16 @@ func (p *plutono) getDashboards(ctx context.Context) (map[string]string, error) 
 			ignorePaths.Insert("worker", "dns", "istio", "machine-controller-manager", "ha-vpn")
 		} else {
 			ignorePaths.Insert("workerless")
-			if !p.values.IsNodeLocalDNSEnabled {
+			if !p.values.NodeLocalDNSEnabled {
 				ignorePaths.Insert("dns")
 			}
 			if !p.values.IncludeIstioDashboards {
 				ignorePaths.Insert("istio")
 			}
-			if !p.values.IsGardenletManagesMCM {
+			if !p.values.GardenletManagesMCM {
 				ignorePaths.Insert("machine-controller-manager")
 			}
-			if !p.values.IsVPNHighAvailabilityEnabled {
+			if !p.values.VPNHighAvailabilityEnabled {
 				ignorePaths.Insert("ha-vpn")
 			}
 		}
@@ -459,8 +456,6 @@ func (p *plutono) getService() *corev1.Service {
 }
 
 func (p *plutono) getDeployment(providerConfigMapName, dataSourceConfigMapName, dashBoardConfigMapName string) *appsv1.Deployment {
-	sizeLimit := resource.MustParse("100Mi")
-
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -468,7 +463,7 @@ func (p *plutono) getDeployment(providerConfigMapName, dataSourceConfigMapName, 
 			Labels:    getLabels(),
 		},
 		Spec: appsv1.DeploymentSpec{
-			RevisionHistoryLimit: pointer.Int32(1),
+			RevisionHistoryLimit: pointer.Int32(2),
 			Replicas:             pointer.Int32(p.values.Replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: getLabels(),
@@ -476,11 +471,13 @@ func (p *plutono) getDeployment(providerConfigMapName, dataSourceConfigMapName, 
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: utils.MergeStringMaps(getLabels(), map[string]string{
-						v1beta1constants.LabelNetworkPolicyToDNS:          v1beta1constants.LabelNetworkPolicyAllowed,
-						gardenerutils.NetworkPolicyLabel("logging", 3100): v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToDNS:                          v1beta1constants.LabelNetworkPolicyAllowed,
+						gardenerutils.NetworkPolicyLabel(vali.ServiceName, vali.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed,
 					}),
 				},
 				Spec: corev1.PodSpec{
+					AutomountServiceAccountToken: pointer.Bool(false),
+					PriorityClassName:            p.values.PriorityClassName,
 					Containers: []corev1.Container{
 						{
 							Name:            name,
@@ -496,7 +493,7 @@ func (p *plutono) getDeployment(providerConfigMapName, dataSourceConfigMapName, 
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "plutono-dashboards",
-									MountPath: "/var/lib/plutono/dashboards",
+									MountPath: plotonoMountPathDashboards,
 								},
 								{
 									Name:      "plutono-datasources",
@@ -563,8 +560,6 @@ func (p *plutono) getDeployment(providerConfigMapName, dataSourceConfigMapName, 
 
 	if p.values.ClusterType == component.ClusterTypeSeed {
 		deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring})
-		deployment.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
-		deployment.Spec.Template.Spec.PriorityClassName = v1beta1constants.PriorityClassNameSeedSystem600
 		deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
 			v1beta1constants.LabelRole:                                         v1beta1constants.LabelMonitoring,
 			"networking.gardener.cloud/to-seed-prometheus":                     v1beta1constants.LabelNetworkPolicyAllowed,
@@ -587,7 +582,6 @@ func (p *plutono) getDeployment(providerConfigMapName, dataSourceConfigMapName, 
 		})
 	} else {
 		deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring})
-		deployment.Spec.Template.Spec.PriorityClassName = v1beta1constants.PriorityClassNameShootControlPlane100
 		deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
 			v1beta1constants.GardenRole:                              v1beta1constants.GardenRoleMonitoring,
 			gardenerutils.NetworkPolicyLabel("prometheus-web", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
@@ -605,7 +599,7 @@ func (p *plutono) getDeployment(providerConfigMapName, dataSourceConfigMapName, 
 			Name: "plutono-storage",
 			VolumeSource: corev1.VolumeSource{
 				EmptyDir: &corev1.EmptyDirVolumeSource{
-					SizeLimit: &sizeLimit,
+					SizeLimit: utils.QuantityPtr(resource.MustParse("100Mi")),
 				},
 			},
 		})
@@ -616,9 +610,11 @@ func (p *plutono) getDeployment(providerConfigMapName, dataSourceConfigMapName, 
 }
 
 func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error) {
-	pathType := networkingv1.PathTypePrefix
-	credentialsSecretName := p.values.AuthSecretName
-	caName := v1beta1constants.SecretNameCASeed
+	var (
+		pathType              = networkingv1.PathTypePrefix
+		credentialsSecretName = p.values.AuthSecretName
+		caName                = v1beta1constants.SecretNameCASeed
+	)
 
 	if p.values.ClusterType == component.ClusterTypeShoot {
 		credentialsSecret, err := p.secretsManager.Generate(ctx, &secrets.BasicAuthSecretConfig{

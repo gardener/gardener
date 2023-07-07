@@ -128,6 +128,13 @@ metadata:
 `
 
 			dataSourceConfigMapYAMLFor = func(clusterType comp.ClusterType) string {
+				url := "http://prometheus-web:80"
+				maxLine := "1000"
+				if clusterType == comp.ClusterTypeSeed {
+					url = "http://aggregate-prometheus-web:80"
+					maxLine = "5000"
+				}
+
 				configMapData := `apiVersion: 1
 
     # list of datasources that should be deleted from the database
@@ -137,38 +144,20 @@ metadata:
 
     # list of datasources to insert/update depending
     # whats available in the database
+    datasources:
+    - name: prometheus
+      type: prometheus
+      access: proxy
+      url: ` + url + `
+      basicAuth: false
+      isDefault: true
+      version: 1
+      editable: false
+      jsonData:
+        timeInterval: 1m
 `
-				if clusterType == comp.ClusterTypeShoot {
-					configMapData += `    datasources:
-    - name: prometheus
-      type: prometheus
-      access: proxy
-      url: http://prometheus-web:80
-      basicAuth: false
-      isDefault: true
-      version: 1
-      editable: false
-      jsonData:
-        timeInterval: 1m
-    - name: vali
-      type: vali
-      access: proxy
-      url: http://logging.` + namespace + `.svc:3100
-      jsonData:
-        maxLines: 1000`
-				} else {
-					configMapData += `    datasources:
-    - name: prometheus
-      type: prometheus
-      access: proxy
-      url: http://aggregate-prometheus-web:80
-      basicAuth: false
-      isDefault: true
-      version: 1
-      editable: false
-      jsonData:
-        timeInterval: 1m
-    - name: seed-prometheus
+				if clusterType == comp.ClusterTypeSeed {
+					configMapData += `    - name: seed-prometheus
       type: prometheus
       access: proxy
       url: http://seed-prometheus-web:80
@@ -177,13 +166,14 @@ metadata:
       editable: false
       jsonData:
         timeInterval: 1m
-    - name: vali
+`
+				}
+				configMapData += `    - name: vali
       type: vali
       access: proxy
       url: http://logging.` + namespace + `.svc:3100
       jsonData:
-        maxLines: 5000`
-				}
+        maxLines: ` + maxLine
 
 				configMap := `apiVersion: v1
 data:
@@ -211,7 +201,6 @@ metadata:
 			}
 
 			deploymentYAMLFor = func(clusterType comp.ClusterType, dashboardConfigMap string) *appsv1.Deployment {
-				sizeLimit := resource.MustParse("100Mi")
 				providerConfigMap := "plutono-dashboard-providers-29d306e7"
 				dataSourceConfigMap := "plutono-datasources-27f1a6c5"
 				if clusterType == comp.ClusterTypeShoot {
@@ -229,7 +218,7 @@ metadata:
 						Labels:    getLabels(),
 					},
 					Spec: appsv1.DeploymentSpec{
-						RevisionHistoryLimit: pointer.Int32(1),
+						RevisionHistoryLimit: pointer.Int32(2),
 						Replicas:             pointer.Int32(values.Replicas),
 						Selector: &metav1.LabelSelector{
 							MatchLabels: getLabels(),
@@ -242,6 +231,8 @@ metadata:
 								}),
 							},
 							Spec: corev1.PodSpec{
+								AutomountServiceAccountToken: pointer.Bool(false),
+								PriorityClassName:            values.PriorityClassName,
 								Containers: []corev1.Container{
 									{
 										Name:            "plutono",
@@ -323,9 +314,7 @@ metadata:
 				}
 
 				if clusterType == comp.ClusterTypeSeed {
-					deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring})
-					deployment.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
-					deployment.Spec.Template.Spec.PriorityClassName = v1beta1constants.PriorityClassNameSeedSystem600
+					deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{"role": "monitoring"})
 					deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
 						v1beta1constants.LabelRole:                                         v1beta1constants.LabelMonitoring,
 						"networking.gardener.cloud/to-seed-prometheus":                     v1beta1constants.LabelNetworkPolicyAllowed,
@@ -347,8 +336,7 @@ metadata:
 						},
 					})
 				} else {
-					deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring})
-					deployment.Spec.Template.Spec.PriorityClassName = v1beta1constants.PriorityClassNameShootControlPlane100
+					deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{"gardener.cloud/role": "monitoring"})
 					deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
 						v1beta1constants.GardenRole:                              v1beta1constants.GardenRoleMonitoring,
 						gardenerutils.NetworkPolicyLabel("prometheus-web", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
@@ -366,7 +354,7 @@ metadata:
 						Name: "plutono-storage",
 						VolumeSource: corev1.VolumeSource{
 							EmptyDir: &corev1.EmptyDirVolumeSource{
-								SizeLimit: &sizeLimit,
+								SizeLimit: utils.QuantityPtr(resource.MustParse("100Mi")),
 							},
 						},
 					})
@@ -532,9 +520,9 @@ status:
 			Context("w/ include istio, node-local-dns, mcm, ha-vpn, vpa", func() {
 				BeforeEach(func() {
 					values.IncludeIstioDashboards = true
-					values.IsGardenletManagesMCM = true
-					values.IsNodeLocalDNSEnabled = true
-					values.IsVPNHighAvailabilityEnabled = true
+					values.GardenletManagesMCM = true
+					values.NodeLocalDNSEnabled = true
+					values.VPNHighAvailabilityEnabled = true
 					values.VPAEnabled = true
 				})
 

@@ -53,12 +53,16 @@ import (
 )
 
 const (
+	// ValiPort is the port exposed by the vali.
+	ValiPort = 3100
+	// ServiceName is the name of the logging service.
+	ServiceName = "logging"
+
 	managedResourceNameRuntime = "vali"
 	managedResourceNameTarget  = "vali-target"
 
 	valiName                = "vali"
 	valiServiceName         = "vali"
-	valiPort                = 3100
 	valiMetricsPortName     = "metrics"
 	valiUserAndGroupId      = 10001
 	valiConfigMapVolumeName = "config"
@@ -512,7 +516,7 @@ func (v *vali) getService() *corev1.Service {
 	var (
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        "logging",
+				Name:        ServiceName,
 				Namespace:   v.namespace,
 				Labels:      getLabels(),
 				Annotations: map[string]string{},
@@ -522,15 +526,15 @@ func (v *vali) getService() *corev1.Service {
 				Selector: getLabels(),
 				Ports: []corev1.ServicePort{{
 					Name:       valiMetricsPortName,
-					Port:       valiPort,
+					Port:       ValiPort,
 					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(valiPort),
+					TargetPort: intstr.FromInt(ValiPort),
 				}},
 			},
 		}
 
 		networkPolicyPorts = []networkingv1.NetworkPolicyPort{{
-			Port:     utils.IntStrPtrFromInt(valiPort),
+			Port:     utils.IntStrPtrFromInt(ValiPort),
 			Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 		}}
 	)
@@ -715,7 +719,7 @@ fi
 								},
 								Ports: []corev1.ContainerPort{{
 									Name:          valiMetricsPortName,
-									ContainerPort: valiPort,
+									ContainerPort: ValiPort,
 									Protocol:      corev1.ProtocolTCP,
 								}},
 								LivenessProbe: &corev1.Probe{
@@ -835,7 +839,7 @@ fi
 				Image: v.values.KubeRBACProxyImage,
 				Args: []string{
 					fmt.Sprintf("--insecure-listen-address=0.0.0.0:%d", kubeRBACProxyPort),
-					fmt.Sprintf("--upstream=http://127.0.0.1:%d/", valiPort),
+					fmt.Sprintf("--upstream=http://127.0.0.1:%d/", ValiPort),
 					"--kubeconfig=" + gardenerutils.PathGenericKubeconfig,
 					"--logtostderr=true",
 					"--v=6",

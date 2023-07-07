@@ -363,7 +363,10 @@ func defaultPlutono(
 	ingressHot string,
 	authSecret string,
 	wildcardCertName *string,
-) (plutono.Interface, error) {
+) (
+	plutono.Interface,
+	error,
+) {
 	return shared.NewPlutono(
 		c,
 		namespace,
@@ -377,6 +380,7 @@ func defaultPlutono(
 		false,
 		false,
 		false,
+		v1beta1constants.PriorityClassNameSeedSystem600,
 		1,
 		wildcardCertName,
 		false,
