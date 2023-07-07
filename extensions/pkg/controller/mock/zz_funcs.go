@@ -5,6 +5,7 @@
 package mock
 
 import (
+	context "context"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -35,15 +36,15 @@ func (m *MockAddToManager) EXPECT() *MockAddToManagerMockRecorder {
 }
 
 // Do mocks base method.
-func (m *MockAddToManager) Do(arg0 manager.Manager) error {
+func (m *MockAddToManager) Do(arg0 context.Context, arg1 manager.Manager) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Do", arg0)
+	ret := m.ctrl.Call(m, "Do", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Do indicates an expected call of Do.
-func (mr *MockAddToManagerMockRecorder) Do(arg0 interface{}) *gomock.Call {
+func (mr *MockAddToManagerMockRecorder) Do(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Do", reflect.TypeOf((*MockAddToManager)(nil).Do), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Do", reflect.TypeOf((*MockAddToManager)(nil).Do), arg0, arg1)
 }
