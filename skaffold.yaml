@@ -877,6 +877,7 @@ build:
         - pkg/component/extensions/operatingsystemconfig/utils
         - pkg/component/extensions/worker
         - pkg/component/gardeneraccess
+        - pkg/component/gardenerapiserver
         - pkg/component/hvpa
         - pkg/component/istio
         - pkg/component/kubeapiserver
@@ -918,6 +919,7 @@ build:
         - pkg/operation/garden
         - pkg/operation/seed
         - pkg/operation/shoot
+        - pkg/operator/client
         - pkg/resourcemanager/apis/config
         - pkg/resourcemanager/apis/config/v1alpha1
         - pkg/resourcemanager/controller/garbagecollector/references

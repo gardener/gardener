@@ -91,6 +91,7 @@ build:
         - pkg/component/extensions/operatingsystemconfig/utils
         - pkg/component/extensions/worker
         - pkg/component/gardeneraccess
+        - pkg/component/gardenerapiserver
         - pkg/component/gardensystem
         - pkg/component/hvpa
         - pkg/component/istio
