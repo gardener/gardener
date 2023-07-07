@@ -38,7 +38,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/features"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
+	admissionpluginsvalidation "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
 )
 
 type shootStrategy struct {
@@ -166,9 +166,8 @@ func (shootStrategy) Validate(_ context.Context, obj runtime.Object) field.Error
 
 func (shootStrategy) Canonicalize(obj runtime.Object) {
 	shoot := obj.(*core.Shoot)
-	if versionutils.ConstraintK8sGreaterEqual125.Check(semver.MustParse(shoot.Spec.Kubernetes.Version)) {
-		cleanupAdmissionPlugins(shoot)
-	}
+
+	cleanupAdmissionPlugins(shoot)
 }
 
 func cleanupAdmissionPlugins(shoot *core.Shoot) {
@@ -178,9 +177,14 @@ func cleanupAdmissionPlugins(shoot *core.Shoot) {
 	)
 
 	for _, plugin := range shootAdmissionPlugins {
-		if plugin.Name != "PodSecurityPolicy" {
-			admissionPlugins = append(admissionPlugins, plugin)
+		if constraint, ok := admissionpluginsvalidation.PluginsInMigration[plugin.Name]; ok {
+			// It should be safe to use MustParse here since Canonicalize runs after validation.
+			if constraint.Check(semver.MustParse(shoot.Spec.Kubernetes.Version)) {
+				continue
+			}
 		}
+
+		admissionPlugins = append(admissionPlugins, plugin)
 	}
 
 	shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = admissionPlugins
