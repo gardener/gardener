@@ -49,6 +49,7 @@ LOGCHECK                   := $(TOOLS_BIN_DIR)/logcheck.so # plugin binary
 MOCKGEN                    := $(TOOLS_BIN_DIR)/mockgen
 OPENAPI_GEN                := $(TOOLS_BIN_DIR)/openapi-gen
 PROMTOOL                   := $(TOOLS_BIN_DIR)/promtool
+PROTOC                     := $(TOOLS_BIN_DIR)/protoc
 PROTOC_GEN_GOGO            := $(TOOLS_BIN_DIR)/protoc-gen-gogo
 REPORT_COLLECTOR           := $(TOOLS_BIN_DIR)/report-collector
 SETUP_ENVTEST              := $(TOOLS_BIN_DIR)/setup-envtest
@@ -174,6 +175,9 @@ $(OPENAPI_GEN): go.mod
 
 $(PROMTOOL): $(TOOLS_PKG_PATH)/install-promtool.sh
 	@$(TOOLS_PKG_PATH)/install-promtool.sh
+
+$(PROTOC):
+	@$(TOOLS_BIN_DIR)/../../download-protoc.sh
 
 $(PROTOC_GEN_GOGO): go.mod
 	go build -o $(PROTOC_GEN_GOGO) k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo
