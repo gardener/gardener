@@ -31,7 +31,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
-	"github.com/gardener/gardener/pkg/component/logging/kuberbacproxy"
+	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -223,7 +223,7 @@ func GenerateRBACResourcesData(secretNames []string) (map[string][]byte, error) 
 				{
 					APIGroups:     []string{""},
 					Resources:     []string{"secrets"},
-					ResourceNames: append(secretNames, Name, kuberbacproxy.ValitailTokenSecretName),
+					ResourceNames: append(secretNames, Name, vali.ValitailTokenSecretName),
 					Verbs:         []string{"get"},
 				},
 			},

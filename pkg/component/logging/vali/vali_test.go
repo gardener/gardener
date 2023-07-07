@@ -26,6 +26,7 @@ import (
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,22 +51,26 @@ import (
 )
 
 const (
-	namespace                 = "shoot--foo--bar"
-	managedResourceName       = "vali"
-	managedResourceSecretName = "managedresource-vali"
-	valiName                  = "vali"
-	valiConfigMapName         = "vali-config-7d883cf0"
-	telegrafConfigMapName     = "telegraf-config-b4c38756"
-	maintenanceBegin          = "210000-0000"
-	maintenanceEnd            = "223000-0000"
-	valiImage                 = "vali:0.0.1"
-	curatorImage              = "curator:0.0.1"
-	alpineImage               = "alpine:0.0.1"
-	initLargeDirImage         = "tune2fs:0.0.1"
-	telegrafImage             = "telegraf-iptables:0.0.1"
-	kubeRBACProxyImage        = "kube-rbac-proxy:0.0.1"
-	priorityClassName         = "foo-bar"
-	valiHost                  = "vali.foo.bar"
+	namespace                          = "shoot--foo--bar"
+	managedResourceName                = "vali"
+	managedResourceSecretName          = "managedresource-vali"
+	managedResourceNameTarget          = "vali-target"
+	managedResourceSecretNameTarget    = "managedresource-vali-target"
+	valiName                           = "vali"
+	valiConfigMapName                  = "vali-config-7d883cf0"
+	telegrafConfigMapName              = "telegraf-config-b4c38756"
+	maintenanceBegin                   = "210000-0000"
+	maintenanceEnd                     = "223000-0000"
+	valiImage                          = "vali:0.0.1"
+	curatorImage                       = "curator:0.0.1"
+	alpineImage                        = "alpine:0.0.1"
+	initLargeDirImage                  = "tune2fs:0.0.1"
+	telegrafImage                      = "telegraf-iptables:0.0.1"
+	kubeRBACProxyImage                 = "kube-rbac-proxy:0.0.1"
+	priorityClassName                  = "foo-bar"
+	valiHost                           = "vali.foo.bar"
+	valitailShootAccessSecretName      = "shoot-access-valitail"
+	kubeRBacProxyShootAccessSecretName = "shoot-access-kube-rbac-proxy"
 )
 
 var _ = Describe("Vali", func() {
@@ -75,9 +80,11 @@ var _ = Describe("Vali", func() {
 
 	Describe("#Deploy", func() {
 		var (
-			c                     client.Client
-			managedResource       *resourcesv1alpha1.ManagedResource
-			managedResourceSecret *corev1.Secret
+			c                           client.Client
+			managedResource             *resourcesv1alpha1.ManagedResource
+			managedResourceSecret       *corev1.Secret
+			managedResourceTarget       *resourcesv1alpha1.ManagedResource
+			managedResourceSecretTarget *corev1.Secret
 
 			fakeSecretManager secretsmanager.Interface
 			storage           = resource.MustParse("60Gi")
@@ -107,6 +114,19 @@ var _ = Describe("Vali", func() {
 					Namespace: namespace,
 				},
 			}
+
+			managedResourceTarget = &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      managedResourceNameTarget,
+					Namespace: namespace,
+				},
+			}
+			managedResourceSecretTarget = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      managedResourceSecretNameTarget,
+					Namespace: namespace,
+				},
+			}
 		})
 
 		It("should successfully deploy all resources for shoot", func() {
@@ -115,11 +135,11 @@ var _ = Describe("Vali", func() {
 				namespace,
 				fakeSecretManager,
 				Values{
-					Replicas:             1,
-					AuthEnabled:          true,
-					Storage:              &storage,
-					KubeRBACProxyEnabled: true,
-					HVPAEnabled:          true,
+					Replicas:                1,
+					AuthEnabled:             true,
+					Storage:                 &storage,
+					ShootNodeLoggingEnabled: true,
+					HVPAEnabled:             true,
 					MaintenanceTimeWindow: &hvpav1alpha1.MaintenanceTimeWindow{
 						Begin: maintenanceBegin,
 						End:   maintenanceEnd,
@@ -140,6 +160,9 @@ var _ = Describe("Vali", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKey{Name: valitailShootAccessSecretName, Namespace: namespace}, &corev1.Secret{})).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Name: kubeRBacProxyShootAccessSecretName, Namespace: namespace}, &corev1.Secret{})).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 			Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
@@ -171,6 +194,35 @@ var _ = Describe("Vali", func() {
 			Expect(string(managedResourceSecret.Data["ingress__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getIngress())))
 			Expect(string(managedResourceSecret.Data["service__shoot--foo--bar__logging.yaml"])).To(Equal(test.Serialize(getService(true, "shoot"))))
 			Expect(string(managedResourceSecret.Data["statefulset__shoot--foo--bar__vali.yaml"])).To(Equal(test.Serialize(getStatefulSet(true))))
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceTarget), managedResourceTarget)).To(Succeed())
+			Expect(managedResourceTarget).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
+					Kind:       "ManagedResource",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            managedResourceNameTarget,
+					Namespace:       namespace,
+					ResourceVersion: "1",
+					Labels:          map[string]string{"origin": "gardener"},
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+					SecretRefs: []corev1.LocalObjectReference{{
+						Name: managedResourceSecretTarget.Name,
+					}},
+					KeepObjects: pointer.Bool(false),
+				},
+			}))
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretTarget), managedResourceSecretTarget)).To(Succeed())
+			Expect(managedResourceSecretTarget.Type).To(Equal(corev1.SecretTypeOpaque))
+			Expect(managedResourceSecretTarget.Data).To(HaveLen(3))
+
+			Expect(string(managedResourceSecretTarget.Data["clusterrolebinding____gardener.cloud_logging_kube-rbac-proxy.yaml"])).To(Equal(test.Serialize(getKubeRBACProxyClusterRoleBinding())))
+			Expect(string(managedResourceSecretTarget.Data["clusterrole____gardener.cloud_logging_valitail.yaml"])).To(Equal(test.Serialize(getValitailClusterRole())))
+			Expect(string(managedResourceSecretTarget.Data["clusterrolebinding____gardener.cloud_logging_valitail.yaml"])).To(Equal(test.Serialize(getValitailClusterRoleBinding())))
 		})
 
 		It("should successfully deploy all resources for seed", func() {
@@ -199,7 +251,17 @@ var _ = Describe("Vali", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
 
+			Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: valitailShootAccessSecretName, Namespace: namespace}})).To(Succeed())
+			Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: kubeRBacProxyShootAccessSecretName, Namespace: namespace}})).To(Succeed())
+			Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretNameTarget, Namespace: namespace}})).To(Succeed())
+			Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameTarget, Namespace: namespace}})).To(Succeed())
+
 			Expect(valiDeployer.Deploy(ctx)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKey{Name: valitailShootAccessSecretName, Namespace: namespace}, &corev1.Secret{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: kubeRBacProxyShootAccessSecretName, Namespace: namespace}, &corev1.Secret{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: managedResourceSecretNameTarget, Namespace: namespace}, &corev1.Secret{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: managedResourceNameTarget, Namespace: namespace}, &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 			Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
@@ -407,6 +469,12 @@ var _ = Describe("Vali", func() {
 					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
+				// Delete target managed resource
+				runtimeClient.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameTarget, Namespace: gardenNamespace}}),
+				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretNameTarget, Namespace: gardenNamespace}}),
+				// Delete shoot access secrets
+				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: valitailShootAccessSecretName, Namespace: gardenNamespace}}),
+				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: kubeRBacProxyShootAccessSecretName, Namespace: gardenNamespace}}),
 				// Create Managed resource
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceSecretName), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
@@ -437,6 +505,12 @@ var _ = Describe("Vali", func() {
 					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
+				// Delete target managed resource
+				runtimeClient.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameTarget, Namespace: gardenNamespace}}),
+				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretNameTarget, Namespace: gardenNamespace}}),
+				// Delete shoot access secrets
+				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: valitailShootAccessSecretName, Namespace: gardenNamespace}}),
+				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: kubeRBacProxyShootAccessSecretName, Namespace: gardenNamespace}}),
 				// Create Managed resource
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceSecretName), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
@@ -456,6 +530,12 @@ var _ = Describe("Vali", func() {
 					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
+				// Delete target managed resource
+				runtimeClient.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameTarget, Namespace: gardenNamespace}}),
+				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretNameTarget, Namespace: gardenNamespace}}),
+				// Delete shoot access secrets
+				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: valitailShootAccessSecretName, Namespace: gardenNamespace}}),
+				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: kubeRBacProxyShootAccessSecretName, Namespace: gardenNamespace}}),
 				// Create Managed resource
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceSecretName), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
@@ -475,6 +555,12 @@ var _ = Describe("Vali", func() {
 					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
+				// Delete target managed resource
+				runtimeClient.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameTarget, Namespace: gardenNamespace}}),
+				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretNameTarget, Namespace: gardenNamespace}}),
+				// Delete shoot access secrets
+				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: valitailShootAccessSecretName, Namespace: gardenNamespace}}),
+				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: kubeRBacProxyShootAccessSecretName, Namespace: gardenNamespace}}),
 				// Create Managed resource
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceSecretName), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
@@ -504,6 +590,12 @@ var _ = Describe("Vali", func() {
 					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
+				// Delete target managed resource
+				runtimeClient.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameTarget, Namespace: gardenNamespace}}),
+				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretNameTarget, Namespace: gardenNamespace}}),
+				// Delete shoot access secrets
+				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: valitailShootAccessSecretName, Namespace: gardenNamespace}}),
+				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: kubeRBacProxyShootAccessSecretName, Namespace: gardenNamespace}}),
 				// Create Managed resource
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceSecretName), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
@@ -534,6 +626,12 @@ var _ = Describe("Vali", func() {
 					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
+				// Delete target managed resource
+				runtimeClient.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameTarget, Namespace: gardenNamespace}}),
+				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretNameTarget, Namespace: gardenNamespace}}),
+				// Delete shoot access secrets
+				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: valitailShootAccessSecretName, Namespace: gardenNamespace}}),
+				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: kubeRBacProxyShootAccessSecretName, Namespace: gardenNamespace}}),
 				// Create Managed resource
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceSecretName), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
@@ -564,6 +662,12 @@ var _ = Describe("Vali", func() {
 					Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
+				// Delete target managed resource
+				runtimeClient.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameTarget, Namespace: gardenNamespace}}),
+				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretNameTarget, Namespace: gardenNamespace}}),
+				// Delete shoot access secrets
+				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: valitailShootAccessSecretName, Namespace: gardenNamespace}}),
+				runtimeClient.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: kubeRBacProxyShootAccessSecretName, Namespace: gardenNamespace}}),
 				// Create Managed resource
 				runtimeClient.EXPECT().Get(ctx, kubernetesutils.Key(gardenNamespace, managedResourceSecretName), objectOfTypeSecret),
 				runtimeClient.EXPECT().Update(ctx, objectOfTypeSecret),
@@ -1432,6 +1536,74 @@ wait
 	utilruntime.Must(references.InjectAnnotations(sts))
 
 	return sts
+}
+
+func getKubeRBACProxyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "gardener.cloud:logging:kube-rbac-proxy",
+			Labels: map[string]string{"app": "kube-rbac-proxy"},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     "system:auth-delegator",
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      "ServiceAccount",
+			Name:      "kube-rbac-proxy",
+			Namespace: "kube-system",
+		}},
+	}
+}
+
+func getValitailClusterRole() *rbacv1.ClusterRole {
+	return &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "gardener.cloud:logging:valitail",
+			Labels: map[string]string{"app": "gardener-valitail"},
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{
+					"nodes",
+					"nodes/proxy",
+					"services",
+					"endpoints",
+					"pods",
+				},
+				Verbs: []string{
+					"get",
+					"list",
+					"watch",
+				},
+			},
+			{
+				NonResourceURLs: []string{"/vali/api/v1/push"},
+				Verbs:           []string{"create"},
+			},
+		},
+	}
+}
+
+func getValitailClusterRoleBinding() *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "gardener.cloud:logging:valitail",
+			Labels: map[string]string{"app": "gardener-valitail"},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     "gardener.cloud:logging:valitail",
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      "ServiceAccount",
+			Name:      "gardener-valitail",
+			Namespace: "kube-system",
+		}},
+	}
 }
 
 func getLabels() map[string]string {

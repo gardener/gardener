@@ -39,8 +39,6 @@ var _ = Describe("KubeRBACProxy", func() {
 	const (
 		namespace           = "shoot--foo--bar"
 		managedResourceName = "shoot-node-logging"
-		kubeRBACProxyName   = "kube-rbac-proxy"
-		valitailName        = "gardener-valitail"
 	)
 
 	var (
@@ -147,74 +145,20 @@ var _ = Describe("KubeRBACProxy", func() {
 					Kind:       "ClusterRole",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "gardener.cloud:logging:valitail",
-					Labels: map[string]string{
-						"app": valitailName,
-					},
-				},
-				Rules: []rbacv1.PolicyRule{
-					{
-						APIGroups: []string{
-							"",
-						},
-						Resources: []string{
-							"nodes",
-							"nodes/proxy",
-							"services",
-							"endpoints",
-							"pods",
-						},
-						Verbs: []string{
-							"get",
-							"list",
-							"watch",
-						},
-					},
-					{
-						NonResourceURLs: []string{
-							"/vali/api/v1/push",
-						},
-						Verbs: []string{
-							"create",
-						},
-					},
+					Name:        "gardener.cloud:logging:valitail",
+					Annotations: map[string]string{"resources.gardener.cloud/mode": "Ignore"},
 				},
 			})))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_logging_kube-rbac-proxy.yaml"])).To(Equal(test.Serialize(&rbacv1.ClusterRoleBinding{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "gardener.cloud:logging:kube-rbac-proxy",
-					Labels: map[string]string{
-						"app": kubeRBACProxyName,
-					},
-				},
-				RoleRef: rbacv1.RoleRef{
-					APIGroup: rbacv1.GroupName,
-					Kind:     "ClusterRole",
-					Name:     "system:auth-delegator",
-				},
-				Subjects: []rbacv1.Subject{{
-					Kind:      rbacv1.ServiceAccountKind,
-					Name:      kubeRBACProxyName,
-					Namespace: metav1.NamespaceSystem,
-				}},
-			})))
+					Name:        "gardener.cloud:logging:kube-rbac-proxy",
+					Annotations: map[string]string{"resources.gardener.cloud/mode": "Ignore"},
+				}})))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_logging_valitail.yaml"])).To(Equal(test.Serialize(&rbacv1.ClusterRoleBinding{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "gardener.cloud:logging:valitail",
-					Labels: map[string]string{
-						"app": valitailName,
-					},
+					Name:        "gardener.cloud:logging:valitail",
+					Annotations: map[string]string{"resources.gardener.cloud/mode": "Ignore"},
 				},
-				RoleRef: rbacv1.RoleRef{
-					APIGroup: rbacv1.GroupName,
-					Kind:     "ClusterRole",
-					Name:     "gardener.cloud:logging:valitail",
-				},
-				Subjects: []rbacv1.Subject{{
-					Kind:      rbacv1.ServiceAccountKind,
-					Name:      valitailName,
-					Namespace: metav1.NamespaceSystem,
-				}},
 			})))
 		})
 	})

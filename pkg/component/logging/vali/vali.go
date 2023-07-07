@@ -28,6 +28,7 @@ import (
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,8 +53,8 @@ import (
 )
 
 const (
-	// ManagedResourceControlName is the name of the Vali managed resource.
-	ManagedResourceControlName = "vali"
+	managedResourceNameRuntime = "vali"
+	managedResourceNameTarget  = "vali-target"
 
 	valiName                = "vali"
 	valiServiceName         = "vali"
@@ -67,6 +68,12 @@ const (
 	valiMountPathData       = "/data"
 	valiMountPathConfig     = "/etc/vali"
 	valiMountPathInitScript = "/"
+
+	valitailName            = "gardener-valitail"
+	valitailClusterRoleName = "gardener.cloud:logging:valitail"
+	// ValitailTokenSecretName is the name of a secret in the kube-system namespace in the target cluster containing
+	// valitail's token for communication with the kube-apiserver.
+	ValitailTokenSecretName = valitailName
 
 	curatorName            = "curator"
 	curatorPort            = 2718
@@ -127,15 +134,15 @@ type Values struct {
 	RenameLokiToValiImage string
 	InitLargeDirImage     string
 
-	ClusterType           component.ClusterType
-	Replicas              int32
-	PriorityClassName     string
-	IngressHost           string
-	AuthEnabled           bool
-	KubeRBACProxyEnabled  bool
-	HVPAEnabled           bool
-	Storage               *resource.Quantity
-	MaintenanceTimeWindow *hvpav1alpha1.MaintenanceTimeWindow
+	ClusterType             component.ClusterType
+	Replicas                int32
+	PriorityClassName       string
+	IngressHost             string
+	AuthEnabled             bool
+	ShootNodeLoggingEnabled bool
+	HVPAEnabled             bool
+	Storage                 *resource.Quantity
+	MaintenanceTimeWindow   *hvpav1alpha1.MaintenanceTimeWindow
 }
 
 type vali struct {
@@ -176,8 +183,21 @@ func (v *vali) Deploy(ctx context.Context) error {
 		resources = append(resources, v.getHVPA())
 	}
 
-	var telegrafConfigMapName, genericTokenKubeconfigSecretName string
-	if v.values.KubeRBACProxyEnabled {
+	var (
+		telegrafConfigMapName            string
+		genericTokenKubeconfigSecretName string
+		valitailShootAccessSecret        = v.newValitailShootAccessSecret()
+		kubeRBACProxyShootAccessSecret   = v.newKubeRBACProxyShootAccessSecret()
+	)
+
+	if v.values.ShootNodeLoggingEnabled {
+		if err := valitailShootAccessSecret.Reconcile(ctx, v.client); err != nil {
+			return err
+		}
+		if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, v.client); err != nil {
+			return err
+		}
+
 		ingressTLSSecret, err := v.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 			Name:                        "vali-tls",
 			CommonName:                  v.values.IngressHost,
@@ -207,6 +227,32 @@ func (v *vali) Deploy(ctx context.Context) error {
 			v.getIngress(ingressTLSSecret.Name),
 			telegrafConfigMap,
 		)
+
+		resourcesTarget, err := managedresources.
+			NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer).
+			AddAllAndSerialize(
+				v.getKubeRBACProxyClusterRoleBinding(kubeRBACProxyShootAccessSecret.ServiceAccountName),
+				v.getValitailClusterRole(),
+				v.getValitailClusterRoleBinding(valitailShootAccessSecret.ServiceAccountName),
+			)
+		if err != nil {
+			return err
+		}
+
+		if err := managedresources.CreateForShoot(ctx, v.client, v.namespace, managedResourceNameTarget, managedresources.LabelValueGardener, false, resourcesTarget); err != nil {
+			return err
+		}
+	} else {
+		if err := managedresources.DeleteForShoot(ctx, v.client, v.namespace, managedResourceNameTarget); err != nil {
+			return err
+		}
+
+		if err := kubernetesutils.DeleteObjects(ctx, v.client,
+			valitailShootAccessSecret.Secret,
+			kubeRBACProxyShootAccessSecret.Secret,
+		); err != nil {
+			return err
+		}
 	}
 
 	valiConfigMap, err := v.getValiConfigMap()
@@ -224,11 +270,32 @@ func (v *vali) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, v.client, v.namespace, ManagedResourceControlName, false, registry.SerializedObjects())
+	return managedresources.CreateForSeed(ctx, v.client, v.namespace, managedResourceNameRuntime, false, registry.SerializedObjects())
 }
 
 func (v *vali) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, v.client, v.namespace, ManagedResourceControlName)
+	if err := managedresources.DeleteForShoot(ctx, v.client, v.namespace, managedResourceNameTarget); err != nil {
+		return err
+	}
+
+	if err := managedresources.DeleteForSeed(ctx, v.client, v.namespace, managedResourceNameRuntime); err != nil {
+		return err
+	}
+
+	return kubernetesutils.DeleteObjects(ctx, v.client,
+		v.newValitailShootAccessSecret().Secret,
+		v.newKubeRBACProxyShootAccessSecret().Secret,
+	)
+}
+
+func (v *vali) newValitailShootAccessSecret() *gardenerutils.AccessSecret {
+	return gardenerutils.NewShootAccessSecret("valitail", v.namespace).
+		WithServiceAccountName(valitailName).
+		WithTargetSecret(ValitailTokenSecretName, metav1.NamespaceSystem)
+}
+
+func (v *vali) newKubeRBACProxyShootAccessSecret() *gardenerutils.AccessSecret {
+	return gardenerutils.NewShootAccessSecret(kubeRBACProxyName, v.namespace)
 }
 
 func (v *vali) getHVPA() *hvpav1alpha1.Hvpa {
@@ -382,7 +449,7 @@ func (v *vali) getHVPA() *hvpav1alpha1.Hvpa {
 		hvpa.Spec.Vpa.ScaleDown.UpdatePolicy.UpdateMode = pointer.String(hvpav1alpha1.UpdateModeMaintenanceWindow)
 	}
 
-	if v.values.KubeRBACProxyEnabled {
+	if v.values.ShootNodeLoggingEnabled {
 		hvpa.Spec.Vpa.Template.Spec.ResourcePolicy.ContainerPolicies = append(hvpa.Spec.Vpa.Template.Spec.ResourcePolicy.ContainerPolicies,
 			vpaautoscalingv1.ContainerResourcePolicy{
 				ContainerName:    kubeRBACProxyName,
@@ -468,7 +535,7 @@ func (v *vali) getService() *corev1.Service {
 		}}
 	)
 
-	if v.values.KubeRBACProxyEnabled {
+	if v.values.ShootNodeLoggingEnabled {
 		service.Spec.Ports = append(service.Spec.Ports,
 			corev1.ServicePort{
 				Port:       kubeRBACProxyPort,
@@ -759,7 +826,7 @@ fi
 		statefulSet.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests[corev1.ResourceStorage] = *v.values.Storage
 	}
 
-	if v.values.KubeRBACProxyEnabled {
+	if v.values.ShootNodeLoggingEnabled {
 		statefulSet.Spec.Template.Labels[v1beta1constants.LabelNetworkPolicyToDNS] = v1beta1constants.LabelNetworkPolicyAllowed
 		statefulSet.Spec.Template.Labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port)] = v1beta1constants.LabelNetworkPolicyAllowed
 		statefulSet.Spec.Template.Spec.Containers = append(statefulSet.Spec.Template.Spec.Containers,
@@ -860,6 +927,74 @@ wait
 	return statefulSet
 }
 
+func (v *vali) getKubeRBACProxyClusterRoleBinding(serviceAccountName string) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "gardener.cloud:logging:kube-rbac-proxy",
+			Labels: map[string]string{v1beta1constants.LabelApp: kubeRBACProxyName},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     "system:auth-delegator",
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      serviceAccountName,
+			Namespace: metav1.NamespaceSystem,
+		}},
+	}
+}
+
+func (v *vali) getValitailClusterRole() *rbacv1.ClusterRole {
+	return &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   valitailClusterRoleName,
+			Labels: map[string]string{v1beta1constants.LabelApp: valitailName},
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{
+					"nodes",
+					"nodes/proxy",
+					"services",
+					"endpoints",
+					"pods",
+				},
+				Verbs: []string{
+					"get",
+					"list",
+					"watch",
+				},
+			},
+			{
+				NonResourceURLs: []string{"/vali/api/v1/push"},
+				Verbs:           []string{"create"},
+			},
+		},
+	}
+}
+
+func (v *vali) getValitailClusterRoleBinding(serviceAccountName string) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "gardener.cloud:logging:valitail",
+			Labels: map[string]string{v1beta1constants.LabelApp: valitailName},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     valitailClusterRoleName,
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      serviceAccountName,
+			Namespace: metav1.NamespaceSystem,
+		}},
+	}
+}
+
 func getLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging,
@@ -872,7 +1007,7 @@ func getLabels() map[string]string {
 // current one.
 // Caution: If the passed storage capacity is less than the current one the existing PVC and its PV will be deleted.
 func (v *vali) resizeOrDeleteValiDataVolumeIfStorageNotTheSame(ctx context.Context) error {
-	managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: ManagedResourceControlName, Namespace: v.namespace}}
+	managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameRuntime, Namespace: v.namespace}}
 	addOrRemoveIgnoreAnnotationFromManagedResource := func(addIgnoreAnnotation bool) error {
 		// In order to not create the managed resource here first check if exists.
 		if err := v.client.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource); err != nil {

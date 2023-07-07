@@ -167,7 +167,7 @@ func (v *vali) ScrapeConfigs() ([]string, error) {
 		return nil, err
 	}
 
-	if !v.values.KubeRBACProxyEnabled {
+	if !v.values.ShootNodeLoggingEnabled {
 		return []string{scrapeConfigVali.String()}, nil
 	}
 

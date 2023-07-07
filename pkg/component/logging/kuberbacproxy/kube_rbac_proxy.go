@@ -22,27 +22,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 const (
 	managedResourceName = "shoot-node-logging"
-
-	kubeRBACProxyName = "kube-rbac-proxy"
-	clusterRoleName   = "gardener.cloud:logging:kube-rbac-proxy"
-
-	valitailName     = "gardener-valitail"
-	valitailRBACName = "gardener.cloud:logging:valitail"
-	// ValitailTokenSecretName is the name of a secret in the kube-system namespace in the target cluster containing
-	// valitail's token for communication with the kube-apiserver.
-	ValitailTokenSecretName = valitailName
 )
 
 // New creates a new instance of kubeRBACProxy for the kube-rbac-proxy.
+// Deprecated: This component is deprecated and will be removed after gardener/gardener@v1.78 has been released.
+// TODO(rfranzke): Delete the `shoot-node-logging` ManagedResource and drop this component after gardener/gardener@v1.78 has been released.
 func New(client client.Client, namespace string) (component.Deployer, error) {
 	if client == nil {
 		return nil, errors.New("client cannot be nil")
@@ -63,83 +55,26 @@ type kubeRBACProxy struct {
 }
 
 func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
-	kubeRBACProxyShootAccessSecret := k.newKubeRBACProxyShootAccessSecret()
-	if err := kubeRBACProxyShootAccessSecret.Reconcile(ctx, k.client); err != nil {
-		return err
-	}
-
-	valitailShootAccessSecret := k.newValitailShootAccessSecret()
-	if err := valitailShootAccessSecret.Reconcile(ctx, k.client); err != nil {
-		return err
-	}
-
 	var (
 		kubeRBACProxyClusterRolebinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   clusterRoleName,
-				Labels: getKubeRBACProxyLabels(),
+				Name:        "gardener.cloud:logging:kube-rbac-proxy",
+				Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore},
 			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     "system:auth-delegator",
-			},
-			Subjects: []rbacv1.Subject{{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      kubeRBACProxyShootAccessSecret.ServiceAccountName,
-				Namespace: metav1.NamespaceSystem,
-			}},
 		}
 
 		valitailClusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   valitailRBACName,
-				Labels: getValitailLabels(),
-			},
-			Rules: []rbacv1.PolicyRule{
-				{
-					APIGroups: []string{
-						"",
-					},
-					Resources: []string{
-						"nodes",
-						"nodes/proxy",
-						"services",
-						"endpoints",
-						"pods",
-					},
-					Verbs: []string{
-						"get",
-						"list",
-						"watch",
-					},
-				},
-				{
-					NonResourceURLs: []string{
-						"/vali/api/v1/push",
-					},
-					Verbs: []string{
-						"create",
-					},
-				},
+				Name:        "gardener.cloud:logging:valitail",
+				Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore},
 			},
 		}
 
 		valitailClusterRoleBinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   valitailRBACName,
-				Labels: getValitailLabels(),
+				Name:        "gardener.cloud:logging:valitail",
+				Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore},
 			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     valitailClusterRole.Name,
-			},
-			Subjects: []rbacv1.Subject{{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      valitailShootAccessSecret.ServiceAccountName,
-				Namespace: metav1.NamespaceSystem,
-			}},
 		}
 
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
@@ -158,34 +93,5 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 }
 
 func (k *kubeRBACProxy) Destroy(ctx context.Context) error {
-	if err := managedresources.DeleteForShoot(ctx, k.client, k.namespace, managedResourceName); err != nil {
-		return err
-	}
-
-	return kubernetesutils.DeleteObjects(ctx, k.client,
-		k.newKubeRBACProxyShootAccessSecret().Secret,
-		k.newValitailShootAccessSecret().Secret,
-	)
-}
-
-func (k *kubeRBACProxy) newKubeRBACProxyShootAccessSecret() *gardenerutils.AccessSecret {
-	return gardenerutils.NewShootAccessSecret(kubeRBACProxyName, k.namespace)
-}
-
-func (k *kubeRBACProxy) newValitailShootAccessSecret() *gardenerutils.AccessSecret {
-	return gardenerutils.NewShootAccessSecret("valitail", k.namespace).
-		WithServiceAccountName(valitailName).
-		WithTargetSecret(ValitailTokenSecretName, metav1.NamespaceSystem)
-}
-
-func getKubeRBACProxyLabels() map[string]string {
-	return map[string]string{
-		"app": kubeRBACProxyName,
-	}
-}
-
-func getValitailLabels() map[string]string {
-	return map[string]string{
-		"app": valitailName,
-	}
+	return managedresources.DeleteForShoot(ctx, k.client, k.namespace, managedResourceName)
 }
