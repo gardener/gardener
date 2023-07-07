@@ -123,7 +123,7 @@ func ReconcileSecretETCDEncryptionConfiguration(
 		return err
 	}
 
-	// reconcile labels of existing secret
+	// creation of secret failed as it already exists => reconcile labels of existing secret
 	if err := c.Get(ctx, client.ObjectKeyFromObject(secretETCDEncryptionConfiguration), secretETCDEncryptionConfiguration); err != nil {
 		return err
 	}

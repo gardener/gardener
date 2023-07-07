@@ -229,9 +229,13 @@ func (g *gardenerAPIServer) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	if err := g.waitUntilRuntimeManagedResourceHealthyAndNotProgressing(ctx); err != nil {
+	if err := g.waitUntilRuntimeManagedResourceHealthyAndNotProgressing(timeoutCtx); err != nil {
 		return err
 	}
+
+	timeoutCtx, cancel = context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+
 	return managedresources.WaitUntilHealthy(timeoutCtx, g.client, g.namespace, managedResourceNameVirtual)
 }
 
@@ -242,6 +246,10 @@ func (g *gardenerAPIServer) WaitCleanup(ctx context.Context) error {
 	if err := managedresources.WaitUntilDeleted(timeoutCtx, g.client, g.namespace, managedResourceNameVirtual); err != nil {
 		return err
 	}
+
+	timeoutCtx, cancel = context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+
 	return managedresources.WaitUntilDeleted(timeoutCtx, g.client, g.namespace, managedResourceNameRuntime)
 }
 
