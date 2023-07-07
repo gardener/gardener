@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	serviceName = "gardener-apiserver"
+	serviceName = DeploymentName
 	servicePort = 443
 )
 
