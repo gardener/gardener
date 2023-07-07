@@ -439,12 +439,6 @@ func (r *Reconciler) updateBackupBucketStatusOperationStart(ctx context.Context,
 	case gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationTypeReconcile:
 		description = "Reconciliation of BackupBucket state initialized."
 
-	case gardencorev1beta1.LastOperationTypeRestore:
-		description = "Restoration of BackupBucket state initialized."
-
-	case gardencorev1beta1.LastOperationTypeMigrate:
-		description = "Migration of BackupBucket state initialized."
-
 	case gardencorev1beta1.LastOperationTypeDelete:
 		description = "Deletion of BackupBucket state initialized."
 	}

@@ -42,11 +42,9 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsbackupentry "github.com/gardener/gardener/pkg/component/extensions/backupentry"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
 var (
@@ -153,8 +151,20 @@ func (r *Reconciler) reconcileBackupEntry(
 		}
 	)
 
-	if err := r.waitUntilBackupBucketReconciled(gardenCtx, log, backupBucket); err != nil {
-		return reconcile.Result{}, fmt.Errorf("associated BackupBucket %q is not ready yet with err: %w", backupEntry.Spec.BucketName, err)
+	if err := r.checkIfBackupBucketIsHealthy(gardenCtx, backupBucket); err != nil {
+		reconcileErr := &gardencorev1beta1.LastError{
+			Codes:       v1beta1helper.ExtractErrorCodes(err),
+			Description: err.Error(),
+		}
+
+		r.Recorder.Event(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, reconcileErr.Description)
+
+		if updateErr := r.updateBackupEntryStatusError(gardenCtx, backupEntry, operationType, reconcileErr.Description, reconcileErr); updateErr != nil {
+			return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation error: %w", updateErr)
+		}
+
+		// the backupEntry will be requeued when the state of the BackupBucket changes to Succeeded
+		return reconcile.Result{}, nil
 	}
 
 	gardenSecret, err := r.getGardenSecret(gardenCtx, backupBucket)
@@ -303,8 +313,20 @@ func (r *Reconciler) deleteBackupEntry(
 			},
 		}
 
-		if err := r.waitUntilBackupBucketReconciled(gardenCtx, log, backupBucket); err != nil {
-			return reconcile.Result{}, fmt.Errorf("associated BackupBucket %q is not ready yet with err: %w", backupEntry.Spec.BucketName, err)
+		if err := r.checkIfBackupBucketIsHealthy(gardenCtx, backupBucket); err != nil {
+			reconcileErr := &gardencorev1beta1.LastError{
+				Codes:       v1beta1helper.ExtractErrorCodes(err),
+				Description: err.Error(),
+			}
+
+			r.Recorder.Event(backupEntry, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, reconcileErr.Description)
+
+			if updateErr := r.updateBackupEntryStatusError(gardenCtx, backupEntry, operationType, reconcileErr.Description, reconcileErr); updateErr != nil {
+				return reconcile.Result{}, fmt.Errorf("could not update status after reconciliation error: %w", updateErr)
+			}
+
+			// the backupEntry will be requeued when the state of the BackupBucket changes to Succeeded
+			return reconcile.Result{}, nil
 		}
 
 		gardenSecret, err := r.getGardenSecret(gardenCtx, backupBucket)
@@ -599,19 +621,32 @@ func (r *Reconciler) newExtensionComponent(log logr.Logger, backupEntry *gardenc
 	)
 }
 
-func (r *Reconciler) waitUntilBackupBucketReconciled(ctx context.Context, log logr.Logger, backupBucket *gardencorev1beta1.BackupBucket) error {
-	return extensions.WaitUntilObjectReadyWithHealthFunction(
-		ctx,
-		r.GardenClient,
-		log,
-		health.CheckBackupBucket,
-		backupBucket,
-		"BackupBucket",
-		DefaultInterval,
-		DefaultSevereThreshold,
-		DefaultTimeout,
-		nil,
-	)
+func (r *Reconciler) checkIfBackupBucketIsHealthy(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket) error {
+	if err := r.GardenClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket); err != nil {
+		return fmt.Errorf("failed getting associated BackupBucket %q: %w", backupBucket.Name, err)
+	}
+
+	if backupBucket.Status.LastError != nil {
+		return v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation of associated BackupBucket: %s", backupBucket.Status.LastError.Description), backupBucket.Status.LastError.Codes...)
+	}
+
+	if backupBucket.Status.ObservedGeneration != backupBucket.Generation {
+		return fmt.Errorf("observed generation outdated (%d/%d)", backupBucket.Status.ObservedGeneration, backupBucket.Generation)
+	}
+
+	if op, ok := backupBucket.Annotations[v1beta1constants.GardenerOperation]; ok {
+		return fmt.Errorf("gardener operation %q is not yet picked up by controller", op)
+	}
+
+	if backupBucket.Status.LastOperation == nil {
+		return fmt.Errorf("associated BackupBucket did not record a last operation yet")
+	}
+
+	if backupBucket.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
+		return fmt.Errorf("assoicated BackupBucket state is not Succeeded but %v", backupBucket.Status.LastOperation.State)
+	}
+
+	return nil
 }
 
 func (r *Reconciler) getGardenSecret(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket) (*corev1.Secret, error) {

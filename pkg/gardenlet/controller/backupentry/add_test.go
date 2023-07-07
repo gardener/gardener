@@ -22,6 +22,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -30,8 +31,11 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 )
 
@@ -134,6 +138,82 @@ var _ = Describe("Add", func() {
 			Expect(fakeClient.Create(ctx, cluster)).To(Succeed())
 
 			Expect(reconciler.MapExtensionBackupEntryToCoreBackupEntry(ctx, log, nil, extensionBackupEntry)).To(BeNil())
+		})
+	})
+
+	Describe("#MapBackupBucketToBackupEntry", func() {
+		var (
+			ctx          = context.TODO()
+			log          = logr.Discard()
+			backupEntry1 *gardencorev1beta1.BackupEntry
+			backupEntry2 *gardencorev1beta1.BackupEntry
+			backupEntry3 *gardencorev1beta1.BackupEntry
+			backupBucket *gardencorev1beta1.BackupBucket
+			fakeClient   client.Client
+		)
+
+		BeforeEach(func() {
+			backupBucket = &gardencorev1beta1.BackupBucket{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "bucket",
+				},
+			}
+
+			backupEntry1 = &gardencorev1beta1.BackupEntry{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "entry-1",
+					Namespace: "garden-test1",
+				},
+				Spec: gardencorev1beta1.BackupEntrySpec{
+					BucketName: backupBucket.Name,
+				},
+			}
+
+			backupEntry2 = &gardencorev1beta1.BackupEntry{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "entry-2",
+					Namespace: "garden-test2",
+				},
+				Spec: gardencorev1beta1.BackupEntrySpec{
+					BucketName: "random-bucket",
+				},
+			}
+
+			backupEntry3 = &gardencorev1beta1.BackupEntry{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "entry-3",
+					Namespace: "garden-test3",
+				},
+				Spec: gardencorev1beta1.BackupEntrySpec{
+					BucketName: backupBucket.Name,
+				},
+			}
+
+			testScheme := runtime.NewScheme()
+			Expect(kubernetes.AddGardenSchemeToScheme(testScheme)).To(Succeed())
+
+			fakeClient = fakeclient.NewClientBuilder().
+				WithScheme(testScheme).
+				WithIndex(&gardencorev1beta1.BackupEntry{}, core.BackupEntryBucketName, indexer.BackupEntryBucketNameIndexerFunc).
+				Build()
+			reconciler = &Reconciler{
+				GardenClient: fakeClient,
+			}
+		})
+
+		It("should return nil when the object is not BackupBucket", func() {
+			Expect(reconciler.MapBackupBucketToBackupEntry(ctx, log, nil, &corev1.Secret{})).To(BeNil())
+		})
+
+		It("should return requests with the name and namespace of backupentries referencing this backupbucket", func() {
+			Expect(fakeClient.Create(ctx, backupEntry1)).To(Succeed())
+			Expect(fakeClient.Create(ctx, backupEntry2)).To(Succeed())
+			Expect(fakeClient.Create(ctx, backupEntry3)).To(Succeed())
+
+			Expect(reconciler.MapBackupBucketToBackupEntry(ctx, log, nil, backupBucket)).To(ConsistOf(
+				reconcile.Request{NamespacedName: types.NamespacedName{Name: backupEntry1.Name, Namespace: backupEntry1.Namespace}},
+				reconcile.Request{NamespacedName: types.NamespacedName{Name: backupEntry3.Name, Namespace: backupEntry3.Namespace}},
+			))
 		})
 	})
 })

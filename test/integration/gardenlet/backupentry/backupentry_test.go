@@ -55,6 +55,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 		cluster              *extensionsv1alpha1.Cluster
 
 		reconcileExtensionBackupEntry func(bool)
+		reconcileCoreBackupBucket     func(bool)
 	)
 
 	JustBeforeEach(func() {
@@ -69,6 +70,27 @@ var _ = Describe("BackupEntry controller tests", func() {
 		fakeClock.SetTime(time.Now().Round(time.Second))
 
 		reconcileExtensionBackupEntry = func(makeReady bool) {
+			By("Ensure extension secret and extension backupentry is created")
+			EventuallyWithOffset(1, func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(Succeed())
+				g.Expect(extensionSecret.Data).To(Equal(gardenSecret.Data))
+
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(Succeed())
+				g.Expect(extensionBackupEntry.Annotations).To(HaveKey("gardener.cloud/operation"))
+				g.Expect(extensionBackupEntry.Spec).To(MatchFields(IgnoreExtras, Fields{
+					"DefaultSpec": MatchFields(IgnoreExtras, Fields{
+						"Type":           Equal(backupBucket.Spec.Provider.Type),
+						"ProviderConfig": Equal(backupBucket.Spec.ProviderConfig),
+					}),
+					"Region":                     Equal(backupBucket.Spec.Provider.Region),
+					"BackupBucketProviderStatus": Equal(backupBucket.Status.ProviderStatus),
+					"SecretRef": MatchFields(IgnoreExtras, Fields{
+						"Name":      Equal(extensionSecret.Name),
+						"Namespace": Equal(extensionSecret.Namespace),
+					}),
+				}))
+			}).Should(Succeed())
+
 			// These should be done by the extension controller, we are faking it here for the tests.
 			ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(Succeed())
 			operationType := extensionBackupEntry.Annotations[v1beta1constants.GardenerOperation]
@@ -109,6 +131,25 @@ var _ = Describe("BackupEntry controller tests", func() {
 				delete(extensionBackupEntry.Annotations, v1beta1constants.GardenerOperation)
 				ExpectWithOffset(1, testClient.Patch(ctx, extensionBackupEntry, patch)).To(Succeed())
 			}
+		}
+
+		reconcileCoreBackupBucket = func(makeReady bool) {
+			ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)).To(Succeed())
+			patch := client.MergeFrom(backupBucket.DeepCopy())
+			lastOperationState := gardencorev1beta1.LastOperationStateSucceeded
+			if !makeReady {
+				lastOperationState = gardencorev1beta1.LastOperationStateError
+			}
+
+			backupBucket.Status = gardencorev1beta1.BackupBucketStatus{
+				ObservedGeneration: 1,
+				LastOperation: &gardencorev1beta1.LastOperation{
+					State: lastOperationState,
+					Type:  gardencorev1beta1.LastOperationTypeReconcile,
+				},
+				ProviderStatus: providerStatus,
+			}
+			ExpectWithOffset(1, testClient.Status().Patch(ctx, backupBucket, patch)).To(Succeed())
 		}
 
 		By("Create BackupBucket secret in garden")
@@ -323,49 +364,18 @@ var _ = Describe("BackupEntry controller tests", func() {
 			},
 		}
 
-		By("Mimic ready condition of BackupBucket")
-		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupBucket), backupBucket)).To(Succeed())
-		patch := client.MergeFrom(backupBucket.DeepCopy())
-		backupBucket.Status = gardencorev1beta1.BackupBucketStatus{
-			ObservedGeneration: 1,
-			LastOperation: &gardencorev1beta1.LastOperation{
-				State: gardencorev1beta1.LastOperationStateSucceeded,
-				Type:  gardencorev1beta1.LastOperationTypeReconcile,
-			},
-			ProviderStatus: providerStatus,
-		}
-		Expect(testClient.Status().Patch(ctx, backupBucket, patch)).To(Succeed())
-
 		By("Ensure finalizer got added")
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
 			g.Expect(backupEntry.Finalizers).To(ConsistOf("gardener"))
 		}).Should(Succeed())
 
-		By("Ensure extension secret and extension backupentry is created")
-		Eventually(func(g Gomega) {
-			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionSecret), extensionSecret)).To(Succeed())
-			g.Expect(extensionSecret.Data).To(Equal(gardenSecret.Data))
-
-			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionBackupEntry), extensionBackupEntry)).To(Succeed())
-			g.Expect(extensionBackupEntry.Annotations).To(HaveKey("gardener.cloud/operation"))
-			g.Expect(extensionBackupEntry.Spec).To(MatchFields(IgnoreExtras, Fields{
-				"DefaultSpec": MatchFields(IgnoreExtras, Fields{
-					"Type":           Equal(backupBucket.Spec.Provider.Type),
-					"ProviderConfig": Equal(backupBucket.Spec.ProviderConfig),
-				}),
-				"Region":                     Equal(backupBucket.Spec.Provider.Region),
-				"BackupBucketProviderStatus": Equal(backupBucket.Status.ProviderStatus),
-				"SecretRef": MatchFields(IgnoreExtras, Fields{
-					"Name":      Equal(extensionSecret.Name),
-					"Namespace": Equal(extensionSecret.Namespace),
-				}),
-			}))
-		}).Should(Succeed())
+		By("Mimic core BackupBucket condition")
+		reconcileCoreBackupBucket(true)
 	})
 
 	Context("reconcile", func() {
-		It("should set the BackupEntry status as Succeeded if the extension BackupEntry is ready", func() {
+		It("should set the BackupEntry status as Succeeded if the associated BackupBucket extension BackupEntry is ready", func() {
 			By("Mimic extension backupEntry condition")
 			reconcileExtensionBackupEntry(true)
 
@@ -377,6 +387,19 @@ var _ = Describe("BackupEntry controller tests", func() {
 				g.Expect(backupEntry.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
 				g.Expect(backupEntry.Status.LastOperation.Progress).To(Equal(int32(100)))
 				g.Expect(backupEntry.Status.ObservedGeneration).To(Equal(backupEntry.Generation))
+			}).Should(Succeed())
+		})
+
+		It("should set the BackupEntry status as Error if the associated BackupBucket condition is not ready", func() {
+			By("Mimic core BackupBucket error condition")
+			reconcileCoreBackupBucket(false)
+
+			By("Ensure the BackupEntry status is set")
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupEntry), backupEntry)).To(Succeed())
+				g.Expect(backupEntry.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
+				g.Expect(backupEntry.Status.LastError).NotTo(BeNil())
+				g.Expect(backupEntry.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateError))
 			}).Should(Succeed())
 		})
 
@@ -490,6 +513,7 @@ var _ = Describe("BackupEntry controller tests", func() {
 		BeforeEach(func() {
 			annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRestore}
 		})
+
 		It("should restore the BackupEntry", func() {
 			By("Mimic extension backupEntry condition")
 			reconcileExtensionBackupEntry(true)

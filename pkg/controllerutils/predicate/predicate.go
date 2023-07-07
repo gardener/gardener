@@ -139,8 +139,8 @@ func ManagedResourceConditionsChanged() predicate.Predicate {
 	)
 }
 
-// ExtensionStatusChanged returns a predicate which returns true when the status of the extension object has changed.
-func ExtensionStatusChanged() predicate.Predicate {
+// LastOperationChanged returns a predicate which returns true when the LastOperation of the passed object is changed.
+func LastOperationChanged(getLastOperation func(client.Object) *gardencorev1beta1.LastOperation) predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			// If the object has the operation annotation reconcile, this means it's not picked up by the extension controller.
@@ -151,7 +151,7 @@ func ExtensionStatusChanged() predicate.Predicate {
 
 			// If lastOperation State is failed then we admit reconciliation.
 			// This is not possible during create but possible during a controller restart.
-			return lastOperationStateFailed(e.Object)
+			return lastOperationStateFailed(getLastOperation(e.Object))
 		},
 
 		UpdateFunc: func(e event.UpdateEvent) bool {
@@ -171,7 +171,7 @@ func ExtensionStatusChanged() predicate.Predicate {
 			}
 
 			// If lastOperation State has changed to Succeeded or Error then we admit reconciliation.
-			return lastOperationStateChanged(e.ObjectOld, e.ObjectNew)
+			return lastOperationStateChanged(getLastOperation(e.ObjectOld), getLastOperation(e.ObjectNew))
 		},
 
 		DeleteFunc:  func(event.DeleteEvent) bool { return false },
@@ -179,45 +179,39 @@ func ExtensionStatusChanged() predicate.Predicate {
 	}
 }
 
-func lastOperationStateFailed(obj client.Object) bool {
-	acc, err := extensions.Accessor(obj)
-	if err != nil {
+func lastOperationStateFailed(lastOperation *gardencorev1beta1.LastOperation) bool {
+	if lastOperation == nil {
 		return false
 	}
 
-	if acc.GetExtensionStatus().GetLastOperation() == nil {
-		return false
-	}
-
-	return acc.GetExtensionStatus().GetLastOperation().State == gardencorev1beta1.LastOperationStateFailed
+	return lastOperation.State == gardencorev1beta1.LastOperationStateFailed
 }
 
-func lastOperationStateChanged(oldObj, newObj client.Object) bool {
-	newAcc, err := extensions.Accessor(newObj)
-	if err != nil {
+func lastOperationStateChanged(oldLastOp, newLastOp *gardencorev1beta1.LastOperation) bool {
+	if newLastOp == nil {
 		return false
 	}
 
-	oldAcc, err := extensions.Accessor(oldObj)
-	if err != nil {
-		return false
-	}
-
-	if newAcc.GetExtensionStatus().GetLastOperation() == nil {
-		return false
-	}
-
-	lastOperationState := newAcc.GetExtensionStatus().GetLastOperation().State
-	newLastOperationStateSucceededOrErroneous := lastOperationState == gardencorev1beta1.LastOperationStateSucceeded || lastOperationState == gardencorev1beta1.LastOperationStateError || lastOperationState == gardencorev1beta1.LastOperationStateFailed
+	newLastOperationStateSucceededOrErroneous := newLastOp.State == gardencorev1beta1.LastOperationStateSucceeded || newLastOp.State == gardencorev1beta1.LastOperationStateError || newLastOp.State == gardencorev1beta1.LastOperationStateFailed
 
 	if newLastOperationStateSucceededOrErroneous {
-		if oldAcc.GetExtensionStatus().GetLastOperation() != nil {
-			return !reflect.DeepEqual(oldAcc.GetExtensionStatus().GetLastOperation(), newAcc.GetExtensionStatus().GetLastOperation())
+		if oldLastOp != nil {
+			return !reflect.DeepEqual(oldLastOp, newLastOp)
 		}
 		return true
 	}
 
 	return false
+}
+
+// GetExtensionLastOperation returns the LastOperation of the passed extension object.
+func GetExtensionLastOperation(obj client.Object) *gardencorev1beta1.LastOperation {
+	acc, err := extensions.Accessor(obj)
+	if err != nil {
+		return nil
+	}
+
+	return acc.GetExtensionStatus().GetLastOperation()
 }
 
 // SeedNamePredicate returns a predicate which returns true for objects that are being migrated to a different
