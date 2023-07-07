@@ -96,6 +96,12 @@ var _ = Describe("admissionplugins", func() {
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
 				"Detail": Equal("admission plugin \"PodSecurityPolicy\" is not supported in Kubernetes version 1.26.6"),
 			})))),
+			Entry("unsupported admission plugin but is disabled", []core.AdmissionPlugin{{Name: "ClusterTrustBundleAttest", Disabled: pointer.Bool(true)}}, "1.26.6", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
+				"Detail": Equal("admission plugin \"ClusterTrustBundleAttest\" is not supported in Kubernetes version 1.26.6"),
+			})))),
+			Entry("unsupported admission plugin and is disabled but plugin in migration", []core.AdmissionPlugin{{Name: "PodSecurityPolicy", Disabled: pointer.Bool(true)}}, "1.25.6", BeEmpty()),
 			Entry("admission plugin without name", []core.AdmissionPlugin{{}}, "1.18.14", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeRequired),
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),

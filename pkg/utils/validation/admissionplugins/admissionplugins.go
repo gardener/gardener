@@ -85,6 +85,13 @@ var (
 
 	admissionPluginsSupportingExternalKubeconfig = sets.New("ValidatingAdmissionWebhook", "MutatingAdmissionWebhook", "ImagePolicyWebhook")
 
+	// PluginsInMigration is the list of plugins which can be specified in the Shoot spec if the constraints are satisfied. This is required to facilitate migration of
+	// these plugins in some cases. For example, the "PodSecurityPolicy" plugin should be disabled in the Shoot spec for an upgrade from Kubernetes v1.24 to v1.25, but in v1.25
+	// this plugin is not supported. gardener-apiserver will take care to clean this plugin from the spec. See https://github.com/gardener/gardener/pull/8212 for more details.
+	PluginsInMigration = map[string]*semver.Constraints{
+		"PodSecurityPolicy": versionutils.ConstraintK8sGreaterEqual125,
+	}
+
 	runtimeScheme *runtime.Scheme
 	codec         runtime.Codec
 )
@@ -161,6 +168,12 @@ func getAllForbiddenPlugins() []string {
 func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	kubernetesVersion, err := semver.NewVersion(version)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "kubernetes", "version"), version, err.Error()))
+		return allErrs
+	}
+
 	for i, plugin := range admissionPlugins {
 		idxPath := fldPath.Index(i)
 
@@ -172,7 +185,11 @@ func ValidateAdmissionPlugins(admissionPlugins []core.AdmissionPlugin, version s
 		supported, err := IsAdmissionPluginSupported(plugin.Name, version)
 		if err != nil {
 			allErrs = append(allErrs, field.Invalid(idxPath.Child("name"), plugin.Name, err.Error()))
-		} else if !supported && !pointer.BoolDeref(plugin.Disabled, false) {
+		} else if !supported {
+			// If the plugin is not supported, but it's disabled and it's a plugin in migration, then skip it.
+			if constraint, ok := PluginsInMigration[plugin.Name]; ok && constraint.Check(kubernetesVersion) && pointer.BoolDeref(plugin.Disabled, false) {
+				continue
+			}
 			allErrs = append(allErrs, field.Forbidden(idxPath.Child("name"), fmt.Sprintf("admission plugin %q is not supported in Kubernetes version %s", plugin.Name, version)))
 		} else {
 			if admissionPluginsVersionRanges[plugin.Name].Forbidden {

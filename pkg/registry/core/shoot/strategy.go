@@ -17,12 +17,10 @@ package shoot
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"time"
 
 	"github.com/Masterminds/semver"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,7 +38,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/features"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
+	admissionpluginsvalidation "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
 )
 
 type shootStrategy struct {
@@ -81,18 +79,6 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 
 	if mustIncreaseGeneration(oldShoot, newShoot) {
 		newShoot.Generation = oldShoot.Generation + 1
-	}
-}
-
-// defaultNodeMonitorGracePeriod will set the kube controller manager's nodeMonitorGracePeriod to 40s when upgrading the shoot to k8s version 1.27
-// and the old shoot was having default value for nodeMonitorGracePeriod of 2m0s.
-func defaultNodeMonitorGracePeriod(newShoot, oldShoot *core.Shoot) {
-	oldShootK8sLess127, _ := versionutils.CheckVersionMeetsConstraint(oldShoot.Spec.Kubernetes.Version, "< 1.27")
-	newShootK8sGreaterEqual127, _ := versionutils.CheckVersionMeetsConstraint(newShoot.Spec.Kubernetes.Version, ">= 1.27")
-	defaultNodeMonitorGracePeriod := &metav1.Duration{Duration: 2 * time.Minute}
-
-	if oldShootK8sLess127 && newShootK8sGreaterEqual127 && newShoot.Spec.Kubernetes.KubeControllerManager != nil && reflect.DeepEqual(newShoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod, defaultNodeMonitorGracePeriod) {
-		newShoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod = &metav1.Duration{Duration: 40 * time.Second}
 	}
 }
 
@@ -197,9 +183,8 @@ func (shootStrategy) Validate(_ context.Context, obj runtime.Object) field.Error
 
 func (shootStrategy) Canonicalize(obj runtime.Object) {
 	shoot := obj.(*core.Shoot)
-	if versionutils.ConstraintK8sGreaterEqual125.Check(semver.MustParse(shoot.Spec.Kubernetes.Version)) {
-		cleanupAdmissionPlugins(shoot)
-	}
+
+	cleanupAdmissionPlugins(shoot)
 }
 
 func cleanupAdmissionPlugins(shoot *core.Shoot) {
@@ -208,10 +193,17 @@ func cleanupAdmissionPlugins(shoot *core.Shoot) {
 		shootAdmissionPlugins = shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins
 	)
 
+	kubernetesVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
+	if err != nil {
+		return
+	}
+
 	for _, plugin := range shootAdmissionPlugins {
-		if plugin.Name != "PodSecurityPolicy" {
-			admissionPlugins = append(admissionPlugins, plugin)
+		if constraint, ok := admissionpluginsvalidation.PluginsInMigration[plugin.Name]; ok && constraint.Check(kubernetesVersion) {
+			continue
 		}
+
+		admissionPlugins = append(admissionPlugins, plugin)
 	}
 
 	shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = admissionPlugins
