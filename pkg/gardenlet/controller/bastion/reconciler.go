@@ -43,12 +43,6 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-const (
-	// finalizerName is the Kubernetes finalizerName that is used to control the cleanup of
-	// Bastion resources in the seed cluster.
-	finalizerName = gardencorev1beta1.GardenerName
-)
-
 // RequeueDurationWhenResourceDeletionStillPresent is the duration used for requeueing when owned resources are still in
 // the process of being deleted when deleting a Bastion.
 var RequeueDurationWhenResourceDeletionStillPresent = 5 * time.Second
@@ -109,9 +103,9 @@ func (r *Reconciler) reconcileBastion(
 	bastion *operationsv1alpha1.Bastion,
 	shoot *gardencorev1beta1.Shoot,
 ) error {
-	if !controllerutil.ContainsFinalizer(bastion, finalizerName) {
+	if !controllerutil.ContainsFinalizer(bastion, gardencorev1beta1.GardenerName) {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(gardenCtx, r.GardenClient, bastion, finalizerName); err != nil {
+		if err := controllerutils.AddFinalizers(gardenCtx, r.GardenClient, bastion, gardencorev1beta1.GardenerName); err != nil {
 			return fmt.Errorf("failed to add finalizer: %w", err)
 		}
 	}
@@ -211,7 +205,7 @@ func (r *Reconciler) cleanupBastion(
 	bastion *operationsv1alpha1.Bastion,
 	shoot *gardencorev1beta1.Shoot,
 ) error {
-	if !sets.New(bastion.Finalizers...).Has(finalizerName) {
+	if !sets.New(bastion.Finalizers...).Has(gardencorev1beta1.GardenerName) {
 		return nil
 	}
 
@@ -225,9 +219,9 @@ func (r *Reconciler) cleanupBastion(
 		if apierrors.IsNotFound(err) {
 			log.Info("Successfully deleted")
 
-			if controllerutil.ContainsFinalizer(bastion, finalizerName) {
+			if controllerutil.ContainsFinalizer(bastion, gardencorev1beta1.GardenerName) {
 				log.Info("Removing finalizer")
-				if err := controllerutils.RemoveFinalizers(gardenCtx, r.GardenClient, bastion, finalizerName); err != nil {
+				if err := controllerutils.RemoveFinalizers(gardenCtx, r.GardenClient, bastion, gardencorev1beta1.GardenerName); err != nil {
 					return fmt.Errorf("failed to remove finalizer: %w", err)
 				}
 			}

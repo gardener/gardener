@@ -36,7 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/api/core/shoot"
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
@@ -68,6 +67,9 @@ func (shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 
 	shoot.Generation = 1
 	shoot.Status = core.ShootStatus{}
+
+	// TODO(shafeeqes): Drop this after gardener v1.80 has been released.
+	removeForbiddenFinalizers(shoot)
 }
 
 func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
@@ -137,7 +139,7 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 				mustIncrease, mustRemoveOperationAnnotation = true, false
 
 			case v1beta1constants.ShootOperationRotateSSHKeypair:
-				if !helper.ShootEnablesSSHAccess(newShoot) {
+				if !gardencorehelper.ShootEnablesSSHAccess(newShoot) {
 					// If SSH is not enabled for the Shoot, don't increase generation, just remove the annotation
 					mustIncrease, mustRemoveOperationAnnotation = false, true
 				} else {
@@ -165,10 +167,24 @@ func mustIncreaseGenerationForSpecChanges(oldShoot, newShoot *core.Shoot) bool {
 	return !apiequality.Semantic.DeepEqual(oldShoot.Spec, newShoot.Spec)
 }
 
+func removeForbiddenFinalizers(shoot *core.Shoot) {
+	finalizers := []string{}
+
+	for _, finalizer := range shoot.Finalizers {
+		if validation.ForbiddenShootFinalizersOnCreation.Has(finalizer) {
+			continue
+		}
+		finalizers = append(finalizers, finalizer)
+	}
+
+	shoot.Finalizers = finalizers
+}
+
 func (shootStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
 	shoot := obj.(*core.Shoot)
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, validation.ValidateShoot(shoot)...)
+	allErrs = append(allErrs, validation.ValidateFinalizersOnCreation(shoot.Finalizers, field.NewPath("metadata", "finalizers"))...)
 	if gardencorehelper.IsWorkerless(shoot) {
 		if !utilfeature.DefaultFeatureGate.Enabled(features.WorkerlessShoots) {
 			allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "provider", "workers"), "must provide at least one worker pool when WorkerlessShoots feature gate is disabled"))
