@@ -14,7 +14,7 @@ spec:
       terminationGracePeriodSeconds: 1
       containers:
       - name: dev
-        image: docker:20.10-dind
+        image: docker:24.0.3-dind
         command:
         - /bin/sh
         - -c
@@ -22,7 +22,7 @@ spec:
           set -ex
           cd
           apk add bash bash-completion curl fzf g++ git jq less lsof make mandoc mc procps sed tmux tmux-doc yq vim go
-          apk add --repository=http://dl-cdn.alpinelinux.org/alpine/edge/main mount
+          apk add --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing mount
           apk add --repository=http://dl-cdn.alpinelinux.org/alpine/edge/k9s k9s
           echo golang            && curl -sLO "https://go.dev/dl/$(curl -sL https://golang.org/VERSION?m=text).linux-amd64.tar.gz" && tar -C /usr/local -xzf go1.*.linux-amd64.tar.gz
           echo helm              && curl -sLO "https://get.helm.sh/helm-$(curl -sL https://api.github.com/repos/helm/helm/releases/latest | jq .tag_name -r)-linux-amd64.tar.gz" && tar -xzf helm-*-linux-amd64.tar.gz && mv linux-amd64/helm /usr/local/bin/helm
