@@ -53,7 +53,7 @@ type actuator struct {
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled WorkerPoolConfigs.
-func NewActuator(mgr manager.Manager, clientset kubernetes.Interface, gardenerClientset kubernetesclient.Interface, gardenletManagesMCM bool) worker.Actuator {
+func NewActuator(mgr manager.Manager, gardenletManagesMCM bool) (worker.Actuator, error) {
 	var (
 		mcmName              string
 		mcmChartSeed         *chart.Chart
@@ -73,20 +73,23 @@ func NewActuator(mgr manager.Manager, clientset kubernetes.Interface, gardenerCl
 		chartRendererFactory = extensionscontroller.ChartRendererFactoryFunc(util.NewChartRendererForShoot)
 	}
 
-	return &actuator{
-		Actuator: genericactuator.NewActuator(
-			mgr,
-			workerDelegate,
-			mcmName,
-			mcmChartSeed,
-			mcmChartShoot,
-			imageVector,
-			clientset,
-			gardenerClientset,
-			chartRendererFactory,
-		),
-		workerDelegate: workerDelegate,
+	genericactuator, err := genericactuator.NewActuator(
+		mgr,
+		workerDelegate,
+		mcmName,
+		mcmChartSeed,
+		mcmChartShoot,
+		imageVector,
+		chartRendererFactory,
+	)
+	if err != nil {
+		return nil, err
 	}
+
+	return &actuator{
+		Actuator:       genericactuator,
+		workerDelegate: workerDelegate,
+	}, nil
 }
 
 func (a *actuator) Restore(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {

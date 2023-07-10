@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -57,7 +56,6 @@ type genericActuator struct {
 	imageVector     imagevector.ImageVector
 
 	client               client.Client
-	clientset            kubernetes.Interface
 	reader               client.Reader
 	scheme               *runtime.Scheme
 	gardenerClientset    kubernetesclient.Interface
@@ -76,10 +74,12 @@ func NewActuator(
 	mcmSeedChart,
 	mcmShootChart chart.Interface,
 	imageVector imagevector.ImageVector,
-	clientset kubernetes.Interface,
-	gardenerClientset kubernetesclient.Interface,
 	chartRendererFactory extensionscontroller.ChartRendererFactory,
-) worker.Actuator {
+) (worker.Actuator, error) {
+	gardenerClientset, err := kubernetesclient.NewWithConfig(kubernetesclient.WithRESTConfig(mgr.GetConfig()))
+	if err != nil {
+		return nil, err
+	}
 
 	return &genericActuator{
 		delegateFactory:      delegateFactory,
@@ -89,13 +89,12 @@ func NewActuator(
 		mcmShootChart:        mcmShootChart,
 		imageVector:          imageVector,
 		client:               mgr.GetClient(),
-		clientset:            clientset,
 		reader:               mgr.GetAPIReader(),
 		scheme:               mgr.GetScheme(),
 		gardenerClientset:    gardenerClientset,
 		chartApplier:         gardenerClientset.ChartApplier(),
 		chartRendererFactory: chartRendererFactory,
-	}
+	}, nil
 }
 
 func (a *genericActuator) cleanupMachineDeployments(ctx context.Context, logger logr.Logger, existingMachineDeployments *machinev1alpha1.MachineDeploymentList, wantedMachineDeployments worker.MachineDeployments) error {

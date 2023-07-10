@@ -379,7 +379,7 @@ webhooks:
 			gardenerClientset := kubernetesmock.NewMockInterface(ctrl)
 			gardenerClientset.EXPECT().Version().Return(seedVersion)
 			chartApplier := kubernetesmock.NewMockChartApplier(ctrl)
-			gardenerClientset.EXPECT().ChartApplier().Return(chartApplier)
+			gardenerClientset.EXPECT().ChartApplier().Return(chartApplier).AnyTimes()
 
 			// Create mock chart renderer and factory
 			chartRenderer := mockchartrenderer.NewMockInterface(ctrl)
@@ -478,7 +478,7 @@ webhooks:
 			// Create mock Gardener clientset and chart applier
 			gardenerClientset := kubernetesmock.NewMockInterface(ctrl)
 			chartApplier := kubernetesmock.NewMockChartApplier(ctrl)
-			gardenerClientset.EXPECT().ChartApplier().Return(chartApplier)
+			gardenerClientset.EXPECT().ChartApplier().Return(chartApplier).AnyTimes()
 
 			// Create mock clients
 			client := mockclient.NewMockClient(ctrl)
@@ -608,8 +608,6 @@ webhooks:
 
 			// Create mock Gardener clientset and chart applier
 			gardenerClientset := kubernetesmock.NewMockInterface(ctrl)
-			chartApplier := kubernetesmock.NewMockChartApplier(ctrl)
-			gardenerClientset.EXPECT().ChartApplier().Return(chartApplier)
 
 			// Create mock charts
 			cpExposureChart := mockchartutil.NewMockInterface(ctrl)

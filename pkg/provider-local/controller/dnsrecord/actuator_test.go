@@ -373,8 +373,6 @@ foo bar
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
 			mgr = mockmanager.NewMockManager(ctrl)
-			mgr.EXPECT().GetScheme().Return(scheme.Scheme)
-			mgr.EXPECT().GetConfig().Return(nil)
 		})
 
 		Describe("Successful reconciliation", func() {

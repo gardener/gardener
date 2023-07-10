@@ -22,8 +22,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
@@ -40,8 +38,6 @@ import (
 type Actuator struct {
 	restConfig *rest.Config
 	seedClient client.Client
-	scheme     *runtime.Scheme
-	decoder    runtime.Decoder
 
 	provider            string
 	extensionKind       string
@@ -55,8 +51,6 @@ func NewActuator(mgr manager.Manager, provider, extensionKind string, getExtensi
 	return &Actuator{
 		restConfig: mgr.GetConfig(),
 		seedClient: mgr.GetClient(),
-		scheme:     mgr.GetScheme(),
-		decoder:    serializer.NewCodecFactory(mgr.GetScheme()).UniversalDecoder(),
 
 		healthChecks:        healthChecks,
 		getExtensionObjFunc: getExtensionObjFunc,

@@ -115,7 +115,7 @@ func (s *statusUpdater) ProcessingCustom(
 	updater UpdaterFunc,
 ) error {
 	if s.client == nil {
-		return fmt.Errorf("client is not set. Call InjectClient() first")
+		return fmt.Errorf("client is not set")
 	}
 
 	log.Info(description) //nolint:logcheck
@@ -153,7 +153,7 @@ func (s *statusUpdater) ErrorCustom(
 	updater UpdaterFunc,
 ) error {
 	if s.client == nil {
-		return fmt.Errorf("client is not set. Call InjectClient() first")
+		return fmt.Errorf("client is not set")
 	}
 
 	var (
@@ -195,7 +195,7 @@ func (s *statusUpdater) SuccessCustom(
 	updater UpdaterFunc,
 ) error {
 	if s.client == nil {
-		return fmt.Errorf("client is not set. Call InjectClient() first")
+		return fmt.Errorf("client is not set")
 	}
 
 	log.Info(description) //nolint:logcheck

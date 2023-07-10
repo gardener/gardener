@@ -79,8 +79,6 @@ func NewActuator(
 	webhookServerPort int,
 	gardenerClientset kubernetesclient.Interface,
 ) controlplane.Actuator {
-	chartApplier := gardenerClientset.ChartApplier()
-
 	return &actuator{
 		providerName: providerName,
 
@@ -105,7 +103,6 @@ func NewActuator(
 		webhookServerPort:          webhookServerPort,
 
 		gardenerClientset: gardenerClientset,
-		chartApplier:      chartApplier,
 		client:            mgr.GetClient(),
 
 		newSecretsManager: extensionssecretsmanager.SecretsManagerForCluster,
@@ -139,7 +136,6 @@ type actuator struct {
 	webhookServerPort          int
 
 	gardenerClientset kubernetesclient.Interface
-	chartApplier      kubernetesclient.ChartApplier
 	client            client.Client
 
 	newSecretsManager newSecretsManagerFunc
@@ -223,7 +219,7 @@ func (a *actuator) reconcileControlPlaneExposure(
 	// Apply control plane exposure chart
 	log.Info("Applying control plane exposure chart", "values", values)
 	version := cluster.Shoot.Spec.Kubernetes.Version
-	if err := a.controlPlaneExposureChart.Apply(ctx, a.chartApplier, cp.Namespace, a.imageVector, a.gardenerClientset.Version(), version, values); err != nil {
+	if err := a.controlPlaneExposureChart.Apply(ctx, a.gardenerClientset.ChartApplier(), cp.Namespace, a.imageVector, a.gardenerClientset.Version(), version, values); err != nil {
 		return false, fmt.Errorf("could not apply control plane exposure chart for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 	}
 
@@ -288,7 +284,7 @@ func (a *actuator) reconcileControlPlane(
 
 		// Apply config chart
 		log.Info("Applying configuration chart")
-		if err := a.configChart.Apply(ctx, a.chartApplier, cp.Namespace, nil, "", "", values); err != nil {
+		if err := a.configChart.Apply(ctx, a.gardenerClientset.ChartApplier(), cp.Namespace, nil, "", "", values); err != nil {
 			return false, fmt.Errorf("could not apply configuration chart for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 		}
 	}
@@ -334,7 +330,7 @@ func (a *actuator) reconcileControlPlane(
 		}
 
 		log.Info("Applying control plane chart")
-		if err := a.controlPlaneChart.Apply(ctx, a.chartApplier, cp.Namespace, a.imageVector, a.gardenerClientset.Version(), version, values); err != nil {
+		if err := a.controlPlaneChart.Apply(ctx, a.gardenerClientset.ChartApplier(), cp.Namespace, a.imageVector, a.gardenerClientset.Version(), version, values); err != nil {
 			return false, fmt.Errorf("could not apply control plane chart for controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 		}
 	}
@@ -455,7 +451,7 @@ func (a *actuator) deleteControlPlane(
 
 		// Apply config chart
 		log.Info("Applying configuration chart before deletion")
-		if err := a.configChart.Apply(ctx, a.chartApplier, cp.Namespace, nil, "", "", values); err != nil {
+		if err := a.configChart.Apply(ctx, a.gardenerClientset.ChartApplier(), cp.Namespace, nil, "", "", values); err != nil {
 			return fmt.Errorf("could not apply configuration chart before deletion of controlplane '%s': %w", kubernetesutils.ObjectName(cp), err)
 		}
 	}
