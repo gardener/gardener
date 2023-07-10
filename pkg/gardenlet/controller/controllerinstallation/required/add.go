@@ -92,7 +92,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 	} {
 		eventHandler := mapper.EnqueueRequestsFrom(
 			ctx,
-			mgr,
+			mgr.GetCache(),
 			r.MapObjectKindToControllerInstallations(extension.objectKind, extension.newObjectListFunc),
 			mapper.UpdateWithNew,
 			c.GetLogger(),

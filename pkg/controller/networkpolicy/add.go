@@ -93,7 +93,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runt
 
 	if err := c.Watch(
 		source.NewKindWithCache(&corev1.Endpoints{}, runtimeCluster.GetCache()),
-		mapper.EnqueueRequestsFrom(ctx, mgr, mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, c.GetLogger()),
 		r.IsKubernetesEndpoint(),
 	); err != nil {
 		return err
@@ -101,7 +101,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runt
 
 	if err := c.Watch(
 		source.NewKindWithCache(&networkingv1.NetworkPolicy{}, runtimeCluster.GetCache()),
-		mapper.EnqueueRequestsFrom(ctx, mgr, mapper.MapFunc(r.MapObjectToNamespace), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToNamespace), mapper.UpdateWithNew, c.GetLogger()),
 		r.NetworkPolicyPredicate(),
 	); err != nil {
 		return err
@@ -115,7 +115,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runt
 
 	return c.Watch(
 		&source.Channel{Source: r.ResolverUpdate},
-		mapper.EnqueueRequestsFrom(ctx, mgr, mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, c.GetLogger()),
 	)
 }
 

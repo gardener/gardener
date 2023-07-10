@@ -67,7 +67,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 
 	if err := c.Watch(
 		&source.Kind{Type: &gardencorev1beta1.Shoot{}},
-		mapper.EnqueueRequestsFrom(ctx, mgr, mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
 		r.OnlyNewlyCreatedObjects(),
 		predicate.GenerationChangedPredicate{},
 	); err != nil {
@@ -76,7 +76,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 
 	if err := c.Watch(
 		&source.Kind{Type: &gardencorev1beta1.BackupEntry{}},
-		mapper.EnqueueRequestsFrom(ctx, mgr, mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
 		r.OnlyNewlyCreatedObjects(),
 		predicate.GenerationChangedPredicate{},
 	); err != nil {
@@ -85,7 +85,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 
 	if err := c.Watch(
 		&source.Kind{Type: &gardencorev1beta1.Quota{}},
-		mapper.EnqueueRequestsFrom(ctx, mgr, mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
 		r.OnlyNewlyCreatedObjects(),
 		r.NeedsSecretBindingReferenceLabelPredicate(),
 	); err != nil {
@@ -94,7 +94,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 
 	return c.Watch(
 		&source.Kind{Type: &corev1.Secret{}},
-		mapper.EnqueueRequestsFrom(ctx, mgr, mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToProject), mapper.UpdateWithNew, c.GetLogger()),
 		r.OnlyNewlyCreatedObjects(),
 		r.NeedsSecretBindingReferenceLabelPredicate(),
 	)

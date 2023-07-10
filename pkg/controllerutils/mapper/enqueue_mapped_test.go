@@ -72,7 +72,7 @@ var _ = Describe("EnqueueMapped", func() {
 
 		Describe("#Create", func() {
 			It("should work map and enqueue", func() {
-				handler = EnqueueRequestsFrom(ctx, mgr, mapper, 0, logger)
+				handler = EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper, 0, logger)
 				handler.Create(event.CreateEvent{Object: secret1}, queue)
 				expectItems(queue, secret1)
 			})
@@ -80,7 +80,7 @@ var _ = Describe("EnqueueMapped", func() {
 
 		Describe("#Delete", func() {
 			It("should work map and enqueue", func() {
-				handler = EnqueueRequestsFrom(ctx, mgr, mapper, 0, logger)
+				handler = EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper, 0, logger)
 				handler.Delete(event.DeleteEvent{Object: secret1}, queue)
 				expectItems(queue, secret1)
 			})
@@ -88,7 +88,7 @@ var _ = Describe("EnqueueMapped", func() {
 
 		Describe("#Generic", func() {
 			It("should work map and enqueue", func() {
-				handler = EnqueueRequestsFrom(ctx, mgr, mapper, 0, logger)
+				handler = EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper, 0, logger)
 				handler.Generic(event.GenericEvent{Object: secret1}, queue)
 				expectItems(queue, secret1)
 			})
@@ -96,7 +96,7 @@ var _ = Describe("EnqueueMapped", func() {
 
 		Context("UpdateWithOldAndNew", func() {
 			BeforeEach(func() {
-				handler = EnqueueRequestsFrom(ctx, mgr, mapper, UpdateWithOldAndNew, logger)
+				handler = EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper, UpdateWithOldAndNew, logger)
 			})
 
 			Describe("#Update", func() {
@@ -109,7 +109,7 @@ var _ = Describe("EnqueueMapped", func() {
 
 		Context("UpdateWithNew", func() {
 			BeforeEach(func() {
-				handler = EnqueueRequestsFrom(ctx, mgr, mapper, UpdateWithNew, logger)
+				handler = EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper, UpdateWithNew, logger)
 			})
 
 			Describe("#Update", func() {
@@ -122,7 +122,7 @@ var _ = Describe("EnqueueMapped", func() {
 
 		Context("UpdateWithOld", func() {
 			BeforeEach(func() {
-				handler = EnqueueRequestsFrom(ctx, mgr, mapper, UpdateWithOld, logger)
+				handler = EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper, UpdateWithOld, logger)
 			})
 
 			Describe("#Update", func() {

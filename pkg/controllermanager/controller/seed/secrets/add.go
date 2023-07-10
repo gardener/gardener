@@ -66,7 +66,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 
 	return c.Watch(
 		&source.Kind{Type: &corev1.Secret{}},
-		mapper.EnqueueRequestsFrom(ctx, mgr, mapper.MapFunc(r.MapToAllSeeds), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToAllSeeds), mapper.UpdateWithNew, c.GetLogger()),
 		r.GardenSecretPredicate(),
 		r.SecretPredicate(),
 	)

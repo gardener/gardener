@@ -88,15 +88,15 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 		// adding labels to managed resources and watch them explicitly.
 		b = b.Watches(
 			source.NewKindWithCache(&appsv1.Deployment{}, targetCluster.GetCache()),
-			mapper.EnqueueRequestsFrom(ctx, mgr, utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
 			builder.WithPredicates(r.ProgressingStatusChanged()),
 		).Watches(
 			source.NewKindWithCache(&appsv1.StatefulSet{}, targetCluster.GetCache()),
-			mapper.EnqueueRequestsFrom(ctx, mgr, utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
 			builder.WithPredicates(r.ProgressingStatusChanged()),
 		).Watches(
 			source.NewKindWithCache(&appsv1.DaemonSet{}, targetCluster.GetCache()),
-			mapper.EnqueueRequestsFrom(ctx, mgr, utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
 			builder.WithPredicates(r.ProgressingStatusChanged()),
 		)
 	}

@@ -79,7 +79,7 @@ func add(ctx context.Context, mgr manager.Manager, args AddArgs, predicates []pr
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
 			&source.Kind{Type: &corev1.Secret{}},
-			mapper.EnqueueRequestsFrom(ctx, mgr, SecretToBackupBucketMapper(predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), SecretToBackupBucketMapper(predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
 		); err != nil {
 			return err
 		}

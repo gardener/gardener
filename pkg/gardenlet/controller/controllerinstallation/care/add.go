@@ -78,7 +78,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 
 	return c.Watch(
 		source.NewKindWithCache(&resourcesv1alpha1.ManagedResource{}, seedCluster.GetCache()),
-		mapper.EnqueueRequestsFrom(ctx, mgr, mapper.MapFunc(r.MapManagedResourceToControllerInstallation), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapManagedResourceToControllerInstallation), mapper.UpdateWithNew, c.GetLogger()),
 		r.IsExtensionDeployment(),
 		predicateutils.ManagedResourceConditionsChanged(),
 	)

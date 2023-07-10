@@ -89,7 +89,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targ
 
 	if err := c.Watch(
 		source.NewKindWithCache(networkPolicy, targetCluster.GetCache()),
-		mapper.EnqueueRequestsFrom(ctx, mgr, mapper.MapFunc(r.MapNetworkPolicyToService), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapNetworkPolicyToService), mapper.UpdateWithNew, c.GetLogger()),
 		networkPolicyPredicate,
 	); err != nil {
 		return err
@@ -98,7 +98,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targ
 	if r.Config.IngressControllerSelector != nil {
 		if err := c.Watch(
 			source.NewKindWithCache(&networkingv1.Ingress{}, targetCluster.GetCache()),
-			mapper.EnqueueRequestsFrom(ctx, mgr, mapper.MapFunc(r.MapIngressToServices), mapper.UpdateWithNew, c.GetLogger()),
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapIngressToServices), mapper.UpdateWithNew, c.GetLogger()),
 			r.IngressPredicate(),
 		); err != nil {
 			return err
@@ -110,7 +110,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targ
 
 	return c.Watch(
 		source.NewKindWithCache(namespace, targetCluster.GetCache()),
-		mapper.EnqueueRequestsFrom(ctx, mgr, mapper.MapFunc(r.MapToAllServices), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToAllServices), mapper.UpdateWithNew, c.GetLogger()),
 	)
 }
 

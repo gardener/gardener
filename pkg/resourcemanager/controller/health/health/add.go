@@ -115,7 +115,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 
 			if err := c.Watch(
 				source.NewKindWithCache(obj, targetCluster.GetCache()),
-				mapper.EnqueueRequestsFrom(ctx, mgr, utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
+				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
 				utils.HealthStatusChanged(c.GetLogger()),
 			); err != nil {
 				return fmt.Errorf("error starting watch for GVK %s: %w", gvk.String(), err)

@@ -54,7 +54,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 		)).
 		Watches(
 			&source.Kind{Type: &resourcesv1alpha1.ManagedResource{}},
-			mapper.EnqueueRequestsFrom(ctx, mgr, mapper.MapFunc(r.MapManagedResourcesToSecrets), mapper.UpdateWithOldAndNew, logr.Discard()),
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapManagedResourcesToSecrets), mapper.UpdateWithOldAndNew, logr.Discard()),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
 		WithOptions(controller.Options{

@@ -24,10 +24,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -53,13 +53,13 @@ func (f MapFunc) Map(ctx context.Context, log logr.Logger, reader client.Reader,
 // behavior on UpdateEvents.
 // For UpdateEvents, the given UpdateBehavior decides if only the old, only the new or both objects should be mapped
 // and enqueued.
-func EnqueueRequestsFrom(ctx context.Context, mgr manager.Manager, m Mapper, updateBehavior UpdateBehavior, log logr.Logger) handler.EventHandler {
+func EnqueueRequestsFrom(ctx context.Context, cache cache.Cache, m Mapper, updateBehavior UpdateBehavior, log logr.Logger) handler.EventHandler {
 	return &enqueueRequestsFromMapFunc{
 		mapper:         m,
 		updateBehavior: updateBehavior,
 		ctx:            ctx,
 		log:            log,
-		reader:         mgr.GetCache(),
+		reader:         cache,
 	}
 }
 
