@@ -88,8 +88,8 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 		}).
 		Build(reconcilerutils.OperationAnnotationWrapper(
-			func() client.Object { return &resourcesv1alpha1.ManagedResource{} },
 			mgr,
+			func() client.Object { return &resourcesv1alpha1.ManagedResource{} },
 			r,
 		))
 	if err != nil {

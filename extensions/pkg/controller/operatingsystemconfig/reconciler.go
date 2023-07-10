@@ -51,8 +51,8 @@ type reconciler struct {
 // OperatingSystemConfig resources of Gardener's `extensions.gardener.cloud` API group.
 func NewReconciler(mgr manager.Manager, actuator Actuator) reconcile.Reconciler {
 	return reconcilerutils.OperationAnnotationWrapper(
-		func() client.Object { return &extensionsv1alpha1.OperatingSystemConfig{} },
 		mgr,
+		func() client.Object { return &extensionsv1alpha1.OperatingSystemConfig{} },
 		&reconciler{
 			actuator:      actuator,
 			client:        mgr.GetClient(),

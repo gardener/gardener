@@ -34,7 +34,7 @@ type operationAnnotationWrapper struct {
 // removes the Gardener operation annotation before `Reconcile` is called.
 //
 // This is useful in conjunction with the HasOperationAnnotation predicate.
-func OperationAnnotationWrapper(newObjFunc func() client.Object, mgr manager.Manager, reconciler reconcile.Reconciler) reconcile.Reconciler {
+func OperationAnnotationWrapper(mgr manager.Manager, newObjFunc func() client.Object, reconciler reconcile.Reconciler) reconcile.Reconciler {
 	return &operationAnnotationWrapper{
 		client:     mgr.GetClient(),
 		newObjFunc: newObjFunc,

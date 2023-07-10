@@ -48,8 +48,8 @@ type reconciler struct {
 // backupentry resources of Gardener's `extensions.gardener.cloud` API group.
 func NewReconciler(mgr manager.Manager, actuator Actuator) reconcile.Reconciler {
 	return reconcilerutils.OperationAnnotationWrapper(
-		func() client.Object { return &extensionsv1alpha1.BackupEntry{} },
 		mgr,
+		func() client.Object { return &extensionsv1alpha1.BackupEntry{} },
 		&reconciler{
 			actuator:      actuator,
 			client:        mgr.GetClient(),

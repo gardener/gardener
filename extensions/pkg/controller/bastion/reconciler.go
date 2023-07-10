@@ -49,8 +49,8 @@ type reconciler struct {
 // bastion resources of Gardener's `extensions.gardener.cloud` API group.
 func NewReconciler(mgr manager.Manager, actuator Actuator, configValidator ConfigValidator) reconcile.Reconciler {
 	return reconcilerutils.OperationAnnotationWrapper(
-		func() client.Object { return &extensionsv1alpha1.Bastion{} },
 		mgr,
+		func() client.Object { return &extensionsv1alpha1.Bastion{} },
 		&reconciler{
 			actuator:        actuator,
 			configValidator: configValidator,

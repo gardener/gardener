@@ -50,8 +50,8 @@ type reconciler struct {
 // controlplane resources of Gardener's `extensions.gardener.cloud` API group.
 func NewReconciler(mgr manager.Manager, actuator Actuator) reconcile.Reconciler {
 	return reconcilerutils.OperationAnnotationWrapper(
-		func() client.Object { return &extensionsv1alpha1.ControlPlane{} },
 		mgr,
+		func() client.Object { return &extensionsv1alpha1.ControlPlane{} },
 		&reconciler{
 			actuator:      actuator,
 			client:        mgr.GetClient(),
