@@ -55,7 +55,7 @@ func (w *workerDelegate) findMachineImage(name, version string) (string, error) 
 	// Try to look up machine image in worker provider status as it was not found in CloudProfile.
 	if providerStatus := w.worker.Status.ProviderStatus; providerStatus != nil {
 		workerStatus := &api.WorkerStatus{}
-		if _, _, err := w.Decoder().Decode(providerStatus.Raw, nil, workerStatus); err != nil {
+		if _, _, err := w.decoder.Decode(providerStatus.Raw, nil, workerStatus); err != nil {
 			return "", fmt.Errorf("could not decode worker status of worker '%s': %w", kubernetesutils.ObjectName(w.worker), err)
 		}
 

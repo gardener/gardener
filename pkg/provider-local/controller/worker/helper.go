@@ -34,7 +34,7 @@ func (w *workerDelegate) decodeWorkerProviderStatus() (*api.WorkerStatus, error)
 		return workerStatus, nil
 	}
 
-	if _, _, err := w.Decoder().Decode(w.worker.Status.ProviderStatus.Raw, nil, workerStatus); err != nil {
+	if _, _, err := w.decoder.Decode(w.worker.Status.ProviderStatus.Raw, nil, workerStatus); err != nil {
 		return nil, fmt.Errorf("could not decode WorkerStatus '%s': %w", kubernetesutils.ObjectName(w.worker), err)
 	}
 
@@ -49,11 +49,11 @@ func (w *workerDelegate) updateWorkerProviderStatus(ctx context.Context, workerS
 		},
 	}
 
-	if err := w.Scheme().Convert(workerStatus, workerStatusV1alpha1, nil); err != nil {
+	if err := w.scheme.Convert(workerStatus, workerStatusV1alpha1, nil); err != nil {
 		return err
 	}
 
 	patch := client.MergeFrom(w.worker.DeepCopy())
 	w.worker.Status.ProviderStatus = &runtime.RawExtension{Object: workerStatusV1alpha1}
-	return w.Client().Status().Patch(ctx, w.worker, patch)
+	return w.client.Status().Patch(ctx, w.worker, patch)
 }

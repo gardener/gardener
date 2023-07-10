@@ -24,7 +24,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -33,13 +32,13 @@ import (
 )
 
 type actuator struct {
-	common.RESTConfigContext
+	client client.Client
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled Infrastructure resources.
 func NewActuator(mgr manager.Manager) infrastructure.Actuator {
 	return &actuator{
-		RESTConfigContext: common.NewRESTConfigContext(mgr),
+		client: mgr.GetClient(),
 	}
 }
 
@@ -96,7 +95,7 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 		networkPolicyAllowToMachinePods,
 		networkPolicyAllowMachinePods,
 	} {
-		if err := a.Client().Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
+		if err := a.client.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
 			return err
 		}
 	}
@@ -105,7 +104,7 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 }
 
 func (a *actuator) Delete(ctx context.Context, _ logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, _ *extensionscontroller.Cluster) error {
-	return kubernetesutils.DeleteObjects(ctx, a.Client(),
+	return kubernetesutils.DeleteObjects(ctx, a.client,
 		emptyNetworkPolicy("allow-machine-pods", infrastructure.Namespace),
 		emptyNetworkPolicy("allow-to-istio-ingress-gateway", infrastructure.Namespace),
 		emptyNetworkPolicy("allow-to-provider-local-coredns", infrastructure.Namespace),

@@ -55,13 +55,13 @@ func (w *workerDelegate) DeployMachineClasses(ctx context.Context) error {
 	}
 
 	for _, obj := range w.machineClassSecrets {
-		if err := w.Client().Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
+		if err := w.client.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
 			return fmt.Errorf("failed to apply machine class secret %s: %w", obj.GetName(), err)
 		}
 	}
 
 	for _, obj := range w.machineClasses {
-		if err := w.Client().Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
+		if err := w.client.Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
 			return fmt.Errorf("failed to apply machine class %s: %w", obj.GetName(), err)
 		}
 	}

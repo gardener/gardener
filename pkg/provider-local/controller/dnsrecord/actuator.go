@@ -31,7 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	"github.com/gardener/gardener/extensions/pkg/controller/dnsrecord"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -40,7 +39,7 @@ import (
 const pathEtcHosts = "/etc/hosts"
 
 type actuator struct {
-	common.RESTConfigContext
+	client client.Client
 
 	lock             sync.Mutex
 	writeToHostsFile bool
@@ -49,8 +48,8 @@ type actuator struct {
 // NewActuator creates a new Actuator that updates the status of the handled DNSRecord resources.
 func NewActuator(mgr manager.Manager, writeToHostsFile bool) dnsrecord.Actuator {
 	return &actuator{
-		RESTConfigContext: common.NewRESTConfigContext(mgr),
-		writeToHostsFile:  writeToHostsFile,
+		client:           mgr.GetClient(),
+		writeToHostsFile: writeToHostsFile,
 	}
 }
 
@@ -194,7 +193,7 @@ func (a *actuator) updateCoreDNSRewritingRules(ctx context.Context, log logr.Log
 	}
 
 	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: dnsRecord.Namespace}}
-	if err := a.Client().Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err != nil {
+	if err := a.client.Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err != nil {
 		return err
 	}
 
@@ -204,14 +203,14 @@ func (a *actuator) updateCoreDNSRewritingRules(ctx context.Context, log logr.Log
 	}
 
 	corednsConfig := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "coredns-custom", Namespace: "gardener-extension-provider-local-coredns"}}
-	if err := a.Client().Get(ctx, client.ObjectKeyFromObject(corednsConfig), corednsConfig); err != nil {
+	if err := a.client.Get(ctx, client.ObjectKeyFromObject(corednsConfig), corednsConfig); err != nil {
 		return err
 	}
 
 	originalConfig := corednsConfig.DeepCopy()
 	mutateCorednsRules(corednsConfig, dnsRecord, zone)
 
-	return a.Client().Patch(ctx, corednsConfig, client.MergeFrom(originalConfig))
+	return a.client.Patch(ctx, corednsConfig, client.MergeFrom(originalConfig))
 }
 
 func deleteCoreDNSRewriteRule(corednsConfig *corev1.ConfigMap, dnsRecord *extensionsv1alpha1.DNSRecord, zone *string) {
