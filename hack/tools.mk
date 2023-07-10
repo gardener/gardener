@@ -67,6 +67,7 @@ GO_VULN_CHECK_VERSION ?= latest
 HELM_VERSION ?= v3.11.2
 KIND_VERSION ?= v0.18.0
 KUBECTL_VERSION ?= v1.24.11
+PROTOC_VERSION ?= 23.4
 SKAFFOLD_VERSION ?= v2.2.0
 YQ_VERSION ?= v4.31.2
 
@@ -176,8 +177,8 @@ $(OPENAPI_GEN): go.mod
 $(PROMTOOL): $(TOOLS_PKG_PATH)/install-promtool.sh
 	@$(TOOLS_PKG_PATH)/install-promtool.sh
 
-$(PROTOC):
-	@$(TOOLS_BIN_DIR)/../../download-protoc.sh
+$(PROTOC): $(call tool_version_file,$(PROTOC),$(PROTOC_VERSION))
+	@PROTOC_VERSION=$(PROTOC_VERSION) $(TOOLS_BIN_DIR)/../../download-protoc.sh
 
 $(PROTOC_GEN_GOGO): go.mod
 	go build -o $(PROTOC_GEN_GOGO) k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo

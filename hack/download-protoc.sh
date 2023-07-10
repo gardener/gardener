@@ -18,26 +18,33 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
-DOWNLOAD_DIR="$(dirname $0)"/tools/bin
-PROTOC_VERSION=23.3
-PROTOC_ZIP=protoc-v$PROTOC_VERSION-$OS-$ARCH.zip
+TOOLS_BIN_DIR=${TOOLS_BIN_DIR:-$(dirname "$0")/tools/bin}
 
-if [[ $OS == "darwin" ]]; then
+os=$(uname -s | tr '[:upper:]' '[:lower:]')
+arch=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+protoc_zip=protoc-v"$PROTOC_VERSION"-"$os"-"$arch".zip
+
+if [[ $os == "darwin" ]]; then
   url="https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-osx-universal_binary.zip"
-elif [[ $OS == "linux" && $ARCH == "amd64" ]]; then
+elif [[ $os == "linux" && $arch == "amd64" ]]; then
   url="https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
-elif [[ $OS == "linux" && $ARCH == "arm64" ]]; then
+elif [[ $os == "linux" && $arch == "arm64" ]]; then
   url="https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-aarch_64.zip"
 else
-  echo "${os}/${arch} is not supported."
+  if ! command -v protoc &>/dev/null; then
+    echo "Unable to automatically install protoc for ${os}/${arch}. Please install it yourself and retry."
+    exit 1
+  fi
 fi
 
-curl -L -o $DOWNLOAD_DIR/$PROTOC_ZIP "$url"
-unzip -o $DOWNLOAD_DIR/$PROTOC_ZIP -d $DOWNLOAD_DIR >/dev/null
-mv -f $DOWNLOAD_DIR/bin/protoc $DOWNLOAD_DIR/protoc
-chmod -R +rX $DOWNLOAD_DIR/protoc
-rm -fr $DOWNLOAD_DIR/bin $DOWNLOAD_DIR/$PROTOC_ZIP
+out_dir=$(mktemp -d)
+function cleanup_output {
+    rm -rf "$out_dir"
+}
+trap cleanup_output EXIT
 
-echo "WARNING: Protobuf changes are not being validated"
+curl -L -o "$out_dir"/"$protoc_zip" "$url"
+unzip -o "$out_dir"/"$protoc_zip" -d "$out_dir" >/dev/null
+mv -f "$out_dir"/bin/protoc "$TOOLS_BIN_DIR"/protoc
+cp -r "$out_dir"/include "$TOOLS_BIN_DIR"
+chmod -R +rX "$TOOLS_BIN_DIR"/protoc
