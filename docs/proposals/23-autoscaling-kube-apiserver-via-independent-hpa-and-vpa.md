@@ -245,9 +245,6 @@ Gardener, based on custom calculations. The proposed design can naturally be ext
 input data and a non-volatile cache for acquired data. However, in the scope of this proposal, the only data source
 is the aforementioned metrics scrape, and the calculated values only need to be briefly cached in memory.
 
-A single replica is deployed, as highly available autoscaling setup is currently prevented by limitations in
-the autoscalers utilized by Gardener.
-
 A kube-apiserver's metrics response measures megabytes in size. To reduce the amount of network traffic, this proposal
 utilizes compressed HTTP responses when scraping metrics. Outside the scope of this proposal, a future enhancement is
 possible, in which a metrics filter component is added as a sidecar to each ShootKapi pod. Each such sidecar would
@@ -255,6 +252,22 @@ mirror the metrics endpoint of its respective ShootKapi, with the only addition 
 HTTP request parameter (e.g. `GET /metrics?name=apiserver_request_total` would forward a `GET /metrics` request to the
 ShootKapi, and then would reduce the response to only `apiserver_request_total` counters, before passing it on to the
 caller). 
+
+#### High availability operation
+A single gardener-custom-metrics replica does not satisfy Gardener's high availability (HA) requirements. Autoscaling
+operations can tolerate brief (1-2 minutes) periods of metrics signal outage without disruption to autoscaling service
+availability. However, node provisioning delays easily exceed that tolerable amount, and do not allow timely fail over
+via creation of a new replica after the existing one fails.
+
+For a seed in high availability mode, gardener-custom-metrics is deployed in a multi-replica active/passive arrangement,
+based on the well established controller leader election mechanism used by other Gardener components.
+Passive replicas do not respond to metrics requests. Readiness probes report "ready" status on the active replica,
+and "not ready" on passive ones. All metrics requests are routed to the one active replica, by means of a K8s service
+acting on the readiness probes.
+
+Since gardener-custom-metrics replicas do not interfere with each other, an active/passive arrangement is not
+necessitated by functional requirements. A simpler active/active is technically possible, but pragmatically undesirable
+due to the substantial amount of cross availability zone network traffic each active replica generates.
 
 ### Element: New Custom Pod Metric for ShootKapis
 A new `shoot:apiserver_request_total:rate` pod custom metric is made available for each ShootKapi pod on the
