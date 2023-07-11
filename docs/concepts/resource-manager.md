@@ -413,7 +413,7 @@ In order to enable the _TokenInvalidator_ you have to set both `.controllers.tok
 The below graphic shows an overview of the Token Invalidator for Service account secrets in the Shoot cluster.
 ![image](images/resource-manager-token-invalidator.jpg)
 
-### [TokenRequestor Controller](../../pkg/resourcemanager/controller/tokenrequestor)
+### [TokenRequestor Controller](../../pkg/controller/tokenrequestor)
 
 This controller provides the service to create and auto-renew tokens via the [`TokenRequest` API](https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-request-v1/).
 
