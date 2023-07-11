@@ -49,6 +49,7 @@ LOGCHECK                   := $(TOOLS_BIN_DIR)/logcheck.so # plugin binary
 MOCKGEN                    := $(TOOLS_BIN_DIR)/mockgen
 OPENAPI_GEN                := $(TOOLS_BIN_DIR)/openapi-gen
 PROMTOOL                   := $(TOOLS_BIN_DIR)/promtool
+PROTOC                     := $(TOOLS_BIN_DIR)/protoc
 PROTOC_GEN_GOGO            := $(TOOLS_BIN_DIR)/protoc-gen-gogo
 REPORT_COLLECTOR           := $(TOOLS_BIN_DIR)/report-collector
 SETUP_ENVTEST              := $(TOOLS_BIN_DIR)/setup-envtest
@@ -66,6 +67,7 @@ GO_VULN_CHECK_VERSION ?= latest
 HELM_VERSION ?= v3.11.2
 KIND_VERSION ?= v0.18.0
 KUBECTL_VERSION ?= v1.24.11
+PROTOC_VERSION ?= 23.4
 SKAFFOLD_VERSION ?= v2.2.0
 YQ_VERSION ?= v4.31.2
 
@@ -174,6 +176,9 @@ $(OPENAPI_GEN): go.mod
 
 $(PROMTOOL): $(TOOLS_PKG_PATH)/install-promtool.sh
 	@$(TOOLS_PKG_PATH)/install-promtool.sh
+
+$(PROTOC): $(call tool_version_file,$(PROTOC),$(PROTOC_VERSION))
+	@PROTOC_VERSION=$(PROTOC_VERSION) $(TOOLS_PKG_PATH)/install-protoc.sh
 
 $(PROTOC_GEN_GOGO): go.mod
 	go build -o $(PROTOC_GEN_GOGO) k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo
