@@ -178,7 +178,7 @@ $(PROMTOOL): $(TOOLS_PKG_PATH)/install-promtool.sh
 	@$(TOOLS_PKG_PATH)/install-promtool.sh
 
 $(PROTOC): $(call tool_version_file,$(PROTOC),$(PROTOC_VERSION))
-	@PROTOC_VERSION=$(PROTOC_VERSION) $(TOOLS_PKG_PATH)/download-protoc.sh
+	@PROTOC_VERSION=$(PROTOC_VERSION) $(TOOLS_PKG_PATH)/install-protoc.sh
 
 $(PROTOC_GEN_GOGO): go.mod
 	go build -o $(PROTOC_GEN_GOGO) k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo
