@@ -153,6 +153,7 @@ build:
         - pkg/operator/apis/config/validation
         - pkg/operator/client
         - pkg/operator/controller
+        - pkg/operator/controller/garden
         - pkg/operator/controller/garden/care
         - pkg/operator/controller/garden/garden
         - pkg/operator/controller/networkpolicyregistrar

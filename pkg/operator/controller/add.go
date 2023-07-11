@@ -26,12 +26,10 @@ import (
 
 	"github.com/gardener/gardener/charts"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controller/service"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
-	"github.com/gardener/gardener/pkg/operator/controller/garden/care"
-	"github.com/gardener/gardener/pkg/operator/controller/garden/garden"
+	"github.com/gardener/gardener/pkg/operator/controller/garden"
 	"github.com/gardener/gardener/pkg/operator/controller/networkpolicyregistrar"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -57,33 +55,8 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 		return err
 	}
 
-	gardenClientMap, err := clientmapbuilder.
-		NewGardenClientMapBuilder().
-		WithRuntimeClient(mgr.GetClient()).
-		WithClientConnectionConfig(&cfg.VirtualClientConnection).
-		Build(mgr.GetLogger())
-	if err != nil {
-		return fmt.Errorf("failed to build garden ClientMap: %w", err)
-	}
-	if err := mgr.Add(gardenClientMap); err != nil {
+	if err := garden.AddToManager(ctx, mgr, cfg, identity, imageVector, componentImageVectors); err != nil {
 		return err
-	}
-
-	if err := (&garden.Reconciler{
-		Config:                *cfg,
-		Identity:              identity,
-		ImageVector:           imageVector,
-		ComponentImageVectors: componentImageVectors,
-		GardenClientMap:       gardenClientMap,
-	}).AddToManager(mgr); err != nil {
-		return fmt.Errorf("failed adding Garden controller: %w", err)
-	}
-
-	if err := (&care.Reconciler{
-		Config:          *cfg,
-		GardenClientMap: gardenClientMap,
-	}).AddToManager(ctx, mgr); err != nil {
-		return fmt.Errorf("failed adding Garden-Care controller: %w", err)
 	}
 
 	if err := (&networkpolicyregistrar.Reconciler{
