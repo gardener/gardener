@@ -18,7 +18,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-TOOLS_BIN_DIR=${TOOLS_BIN_DIR:-$(dirname "$0")/tools/bin}
+TOOLS_BIN_DIR=${TOOLS_BIN_DIR:-$(dirname "$0")/bin}
 
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
 arch=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
