@@ -74,9 +74,8 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 	// Initialize conditions based on the current status.
 	conditionTypes := []gardencorev1beta1.ConditionType{
 		operatorv1alpha1.VirtualGardenAPIServerAvailable,
-		operatorv1alpha1.VirtualGardenControlPlaneHealthy,
-		operatorv1alpha1.GardenSystemComponentsHealthy,
-		operatorv1alpha1.VirtualGardenComponentsHealthy,
+		operatorv1alpha1.RuntimeComponentsHealthy,
+		operatorv1alpha1.VirtualComponentsHealthy,
 	}
 	var conditions []gardencorev1beta1.Condition
 	for _, cond := range conditionTypes {
@@ -99,7 +98,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		log.Info("Updating garden status conditions")
 		patch := client.MergeFromWithOptions(garden.DeepCopy(), client.MergeFromWithOptimisticLock{})
 		garden.Status.Conditions = conditions
-		if err := r.RuntimeClient.Status().Patch(ctx, garden, patch); err != nil {
+		if err := r.RuntimeClient.Status().Patch(reconcileCtx, garden, patch); err != nil {
 			log.Error(err, "Could not update garden status")
 			return reconcile.Result{}, err
 		}

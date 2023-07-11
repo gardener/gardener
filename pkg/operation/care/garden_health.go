@@ -101,21 +101,18 @@ func (h *GardenHealth) CheckGarden(
 ) []gardencorev1beta1.Condition {
 
 	var (
-		apiServerAvailability            gardencorev1beta1.Condition
-		controlPlaneHealthy              gardencorev1beta1.Condition
-		systemComponentsCondition        gardencorev1beta1.Condition
-		virtualGardenComponentsCondition gardencorev1beta1.Condition
+		apiServerAvailability      gardencorev1beta1.Condition
+		runtimeComponentsCondition gardencorev1beta1.Condition
+		virtualComponentsCondition gardencorev1beta1.Condition
 	)
 	for _, cond := range conditions {
 		switch cond.Type {
 		case operatorv1alpha1.VirtualGardenAPIServerAvailable:
 			apiServerAvailability = cond
-		case operatorv1alpha1.VirtualGardenControlPlaneHealthy:
-			controlPlaneHealthy = cond
-		case operatorv1alpha1.GardenSystemComponentsHealthy:
-			systemComponentsCondition = cond
-		case operatorv1alpha1.VirtualGardenComponentsHealthy:
-			virtualGardenComponentsCondition = cond
+		case operatorv1alpha1.RuntimeComponentsHealthy:
+			runtimeComponentsCondition = cond
+		case operatorv1alpha1.VirtualComponentsHealthy:
+			virtualComponentsCondition = cond
 		}
 	}
 
@@ -127,18 +124,13 @@ func (h *GardenHealth) CheckGarden(
 			return nil
 		},
 		func(ctx context.Context) error {
-			newSystemComponentsCondition, err := h.checkGardenSystemComponents(ctx, checker, systemComponentsCondition)
-			systemComponentsCondition = NewConditionOrError(h.clock, systemComponentsCondition, newSystemComponentsCondition, err)
+			newRuntimeComponentsCondition, err := h.checkRuntimeComponents(ctx, checker, runtimeComponentsCondition)
+			runtimeComponentsCondition = NewConditionOrError(h.clock, runtimeComponentsCondition, newRuntimeComponentsCondition, err)
 			return nil
 		},
 		func(ctx context.Context) error {
-			newVirtualGardenComponentsCondition, err := h.checkVirtualGardenComponents(ctx, checker, virtualGardenComponentsCondition)
-			virtualGardenComponentsCondition = NewConditionOrError(h.clock, virtualGardenComponentsCondition, newVirtualGardenComponentsCondition, err)
-			return nil
-		},
-		func(ctx context.Context) error {
-			newControlPlaneHealthy, err := h.checkControlPlane(ctx, checker, controlPlaneHealthy)
-			controlPlaneHealthy = NewConditionOrError(h.clock, controlPlaneHealthy, newControlPlaneHealthy, err)
+			newVirtualComponentsCondition, err := h.checkVirtualComponents(ctx, checker, virtualComponentsCondition)
+			virtualComponentsCondition = NewConditionOrError(h.clock, virtualComponentsCondition, newVirtualComponentsCondition, err)
 			return nil
 		},
 	}
@@ -146,14 +138,13 @@ func (h *GardenHealth) CheckGarden(
 	_ = flow.Parallel(taskFns...)(ctx)
 
 	return []gardencorev1beta1.Condition{
-		systemComponentsCondition,
-		virtualGardenComponentsCondition,
-		controlPlaneHealthy,
+		runtimeComponentsCondition,
+		virtualComponentsCondition,
 		apiServerAvailability,
 	}
 }
 
-// checkAPIServerAvailability checks if the API server of a virtual garden is reachable and measure the response time.
+// checkAPIServerAvailability checks if the API server of a virtual garden is reachable and measures the response time.
 func (h *GardenHealth) checkAPIServerAvailability(ctx context.Context, checker *HealthChecker, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
 	if h.gardenClientSet == nil {
 		return checker.FailedCondition(condition, "VirtualGardenAPIServerDown", "Could not reach virtual garden API server during client initialization.")
@@ -164,23 +155,7 @@ func (h *GardenHealth) checkAPIServerAvailability(ctx context.Context, checker *
 	})
 }
 
-// checkControlPlane checks whether the core components of the virtual garden controlplane (ETCD, KAPI, KCM..) are healthy.
-func (h *GardenHealth) checkControlPlane(ctx context.Context, checker *HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
-	if exitCondition, err := checker.CheckControlPlane(
-		ctx,
-		h.gardenNamespace,
-		requiredVirtualGardenControlPlaneDeployments,
-		requiredVirtualGardenControlPlaneEtcds,
-		condition,
-	); err != nil || exitCondition != nil {
-		return exitCondition, err
-	}
-
-	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "VirtualGardenControlPlaneRunning", "All control plane components are healthy.")
-	return &c, nil
-}
-
-func (h *GardenHealth) checkGardenSystemComponents(ctx context.Context, checker *HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
+func (h *GardenHealth) checkRuntimeComponents(ctx context.Context, checker *HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
 	managedResources := sets.List(requiredGardenRuntimeManagedResources)
 	managedResources = append(managedResources, istio.ManagedResourceNames(true, "virtual-garden-")...)
 
@@ -191,13 +166,23 @@ func (h *GardenHealth) checkGardenSystemComponents(ctx context.Context, checker 
 		managedResources = append(managedResources, vpa.ManagedResourceControlName)
 	}
 
-	return h.checkManagedResources(ctx, checker, condition, managedResources, "SystemComponentsRunning", "All system components are healthy.")
+	return h.checkManagedResources(ctx, checker, condition, managedResources, "RuntimeComponentsRunning", "All runtime components are healthy.")
 }
 
-func (h *GardenHealth) checkVirtualGardenComponents(ctx context.Context, checker *HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
+func (h *GardenHealth) checkVirtualComponents(ctx context.Context, checker *HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
+	if exitCondition, err := checker.checkControlPlane(
+		ctx,
+		h.gardenNamespace,
+		requiredVirtualGardenControlPlaneDeployments,
+		requiredVirtualGardenControlPlaneEtcds,
+		condition,
+	); err != nil || exitCondition != nil {
+		return exitCondition, err
+	}
+
 	managedResources := sets.List(requiredVirtualGardenManagedResources)
 
-	return h.checkManagedResources(ctx, checker, condition, managedResources, "VirtualGardenComponentsRunning", "All virtual garden components are healthy.")
+	return h.checkManagedResources(ctx, checker, condition, managedResources, "VirtualComponentsRunning", "All virtual garden components are healthy.")
 }
 
 func (h *GardenHealth) checkManagedResources(

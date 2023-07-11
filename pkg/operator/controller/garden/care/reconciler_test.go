@@ -123,7 +123,7 @@ var _ = Describe("Garden Care Control", func() {
 
 				It("should remove conditions", func() {
 					gardenSystemComponentsCondition := gardencorev1beta1.Condition{
-						Type:   operatorv1alpha1.GardenSystemComponentsHealthy,
+						Type:   operatorv1alpha1.RuntimeComponentsHealthy,
 						Status: gardencorev1beta1.ConditionTrue,
 					}
 
@@ -160,7 +160,7 @@ var _ = Describe("Garden Care Control", func() {
 
 				It("should not amend existing conditions", func() {
 					gardenSystemComponentsCondition := gardencorev1beta1.Condition{
-						Type:   operatorv1alpha1.GardenSystemComponentsHealthy,
+						Type:   operatorv1alpha1.RuntimeComponentsHealthy,
 						Status: gardencorev1beta1.ConditionTrue,
 					}
 
@@ -183,7 +183,7 @@ var _ = Describe("Garden Care Control", func() {
 				BeforeEach(func() {
 					conditions = []gardencorev1beta1.Condition{
 						{
-							Type:   operatorv1alpha1.GardenSystemComponentsHealthy,
+							Type:   operatorv1alpha1.RuntimeComponentsHealthy,
 							Status: gardencorev1beta1.ConditionTrue,
 							Reason: "foo",
 						},

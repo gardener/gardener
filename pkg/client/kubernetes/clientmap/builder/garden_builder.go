@@ -25,8 +25,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
 )
 
-// GardenClientMapBuilder can build a ClientMap which can be used to construct a ClientMap for requesting and storing
-// clients for virtual gardens.
+// GardenClientMapBuilder can build a ClientMap which can be used to
+// request and store clients for virtual gardens.
 type GardenClientMapBuilder struct {
 	runtimeClient          client.Client
 	clientConnectionConfig *componentbaseconfig.ClientConnectionConfiguration

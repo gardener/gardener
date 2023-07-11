@@ -262,13 +262,12 @@ This reconciler performs four "care" actions related to `Garden`s.
 
 It maintains four conditions and performs the following checks:
 
-- `SystemComponentsHealthy`: The conditions of the `ManagedResource`s applied to the runtime cluster are checked (e.g., `ResourcesApplied`).
-- `VirtualGardenComponentsHealthy`: The conditions of the `ManagedResource`s applied to the virtual cluster are checked (e.g., `ResourcesApplied`).
+- `RuntimeComponentsHealthy`: The conditions of the `ManagedResource`s applied to the runtime cluster are checked (e.g., `ResourcesApplied`).
+- `VirtualComponentsHealthy`: The virtual components are considered healthy when the respective `Deployment`s (for example `virtual-garden-kube-apiserver`,`virtual-garden-kube-controller-manager`), and `Etcd`s (for example `virtual-garden-etcd-main`) exist and are healthy. Additionally, the conditions of the `ManagedResource`s applied to the virtual cluster are checked (e.g., `ResourcesApplied`).
 - `VirtualGardenAPIServerAvailable`: The `/healthz` endpoint of the garden's `virtual-garden-kube-apiserver` is called and considered healthy when it responds with `200 OK`.
-- `VirtualGardenControlPlaneHealthy`: The control plane is considered healthy when the respective `Deployment`s (for example `virtual-garden-kube-apiserver`,`virtual-garden-kube-controller-manager`), and `Etcd`s (for example `virtual-garden-etcd-main`) exist and are healthy.
 
-If all checks for a certain conditions are succeeded, then its `status` will be set to `True`.
-Otherwise, it will be set to `False`.
+If all checks for a certain condition are succeeded, then its `status` will be set to `True`.
+Otherwise, it will be set to `False` or `Progressing`.
 
 If at least one check fails and there is threshold configuration for the conditions (in `.controllers.gardenCare.conditionThresholds`), then the status will be set:
 

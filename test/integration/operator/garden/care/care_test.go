@@ -136,12 +136,12 @@ var _ = Describe("Garden Care controller tests", func() {
 
 	Context("when all ManagedResources for the Garden are missing", func() {
 		It("should set condition to False", func() {
-			By("Expect SystemComponentsHealthy condition to be False")
+			By("Expect RuntimeComponentsHealthy condition to be False")
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
 				return garden.Status.Conditions
 			}).Should(ContainCondition(
-				OfType(operatorv1alpha1.GardenSystemComponentsHealthy),
+				OfType(operatorv1alpha1.RuntimeComponentsHealthy),
 				WithStatus(gardencorev1beta1.ConditionFalse),
 				WithReason("ResourceNotFound"),
 				WithMessageSubstrings("not found"),
@@ -175,12 +175,12 @@ var _ = Describe("Garden Care controller tests", func() {
 		})
 
 		It("should set condition to False because all ManagedResource statuses are outdated", func() {
-			By("Expect SystemComponentsHealthy condition to be False")
+			By("Expect RuntimeComponentsHealthy condition to be False")
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
 				return garden.Status.Conditions
 			}).Should(ContainCondition(
-				OfType(operatorv1alpha1.GardenSystemComponentsHealthy),
+				OfType(operatorv1alpha1.RuntimeComponentsHealthy),
 				WithStatus(gardencorev1beta1.ConditionFalse),
 				WithReason("OutdatedStatus"),
 				WithMessageSubstrings("observed generation of managed resource"),
@@ -192,12 +192,12 @@ var _ = Describe("Garden Care controller tests", func() {
 				updateManagedResourceStatusToHealthy(name)
 			}
 
-			By("Expect SystemComponentsHealthy condition to be False")
+			By("Expect RuntimeComponentsHealthy condition to be False")
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
 				return garden.Status.Conditions
 			}).Should(ContainCondition(
-				OfType(operatorv1alpha1.GardenSystemComponentsHealthy),
+				OfType(operatorv1alpha1.RuntimeComponentsHealthy),
 				WithStatus(gardencorev1beta1.ConditionFalse),
 				WithReason("OutdatedStatus"),
 				WithMessageSubstrings("observed generation of managed resource"),
@@ -209,21 +209,35 @@ var _ = Describe("Garden Care controller tests", func() {
 				updateManagedResourceStatusToHealthy(name)
 			}
 
-			By("Expect SystemComponentsHealthy condition to be True")
+			By("Expect RuntimeComponentsHealthy condition to be True")
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
 				return garden.Status.Conditions
 			}).Should(ContainCondition(
-				OfType(operatorv1alpha1.GardenSystemComponentsHealthy),
+				OfType(operatorv1alpha1.RuntimeComponentsHealthy),
 				WithStatus(gardencorev1beta1.ConditionTrue),
-				WithReason("SystemComponentsRunning"),
-				WithMessageSubstrings("All system components are healthy."),
+				WithReason("RuntimeComponentsRunning"),
+				WithMessageSubstrings("All runtime components are healthy."),
 			))
 		})
 	})
 
 	Context("when ManagedResources for Virtual Cluster exist", func() {
 		BeforeEach(func() {
+			By("Create deployments")
+			createDeployments(requiredControlPlaneDeployments)
+			By("Update deployment status to healthy")
+			for _, name := range requiredControlPlaneDeployments {
+				updateDeploymentStatusToHealthy(name)
+			}
+
+			By("Create ETCDs")
+			createETCDs(requiredControlPlaneETCDs)
+			By("Update ETCD status to healthy")
+			for _, name := range requiredControlPlaneETCDs {
+				updateETCDStatusToHealthy(name)
+			}
+
 			for _, name := range requiredVirtualGardenManagedResources {
 				By("Create ManagedResource for " + name)
 				managedResource := &resourcesv1alpha1.ManagedResource{
@@ -248,12 +262,12 @@ var _ = Describe("Garden Care controller tests", func() {
 		})
 
 		It("should set condition to False because all ManagedResource statuses are outdated", func() {
-			By("Expect SystemComponentsHealthy condition to be False")
+			By("Expect RuntimeComponentsHealthy condition to be False")
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
 				return garden.Status.Conditions
 			}).Should(ContainCondition(
-				OfType(operatorv1alpha1.VirtualGardenComponentsHealthy),
+				OfType(operatorv1alpha1.VirtualComponentsHealthy),
 				WithStatus(gardencorev1beta1.ConditionFalse),
 				WithReason("OutdatedStatus"),
 				WithMessageSubstrings("observed generation of managed resource"),
@@ -265,12 +279,12 @@ var _ = Describe("Garden Care controller tests", func() {
 				updateManagedResourceStatusToHealthy(name)
 			}
 
-			By("Expect SystemComponentsHealthy condition to be False")
+			By("Expect RuntimeComponentsHealthy condition to be False")
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
 				return garden.Status.Conditions
 			}).Should(ContainCondition(
-				OfType(operatorv1alpha1.VirtualGardenComponentsHealthy),
+				OfType(operatorv1alpha1.VirtualComponentsHealthy),
 				WithStatus(gardencorev1beta1.ConditionFalse),
 				WithReason("OutdatedStatus"),
 				WithMessageSubstrings("observed generation of managed resource"),
@@ -287,9 +301,9 @@ var _ = Describe("Garden Care controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
 				return garden.Status.Conditions
 			}).Should(ContainCondition(
-				OfType(operatorv1alpha1.VirtualGardenComponentsHealthy),
+				OfType(operatorv1alpha1.VirtualComponentsHealthy),
 				WithStatus(gardencorev1beta1.ConditionTrue),
-				WithReason("VirtualGardenComponentsRunning"),
+				WithReason("VirtualComponentsRunning"),
 				WithMessageSubstrings("All virtual garden components are healthy."),
 			))
 		})
@@ -297,12 +311,12 @@ var _ = Describe("Garden Care controller tests", func() {
 
 	Context("when all control-plane components of the Garden are missing", func() {
 		It("should set condition to False", func() {
-			By("Expect VirtualGardenControlPlaneHealthy condition to be False")
+			By("Expect VirtualComponentsHealthy condition to be False")
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
 				return garden.Status.Conditions
 			}).Should(ContainCondition(
-				OfType(operatorv1alpha1.VirtualGardenControlPlaneHealthy),
+				OfType(operatorv1alpha1.VirtualComponentsHealthy),
 				WithStatus(gardencorev1beta1.ConditionFalse),
 				WithReason("DeploymentMissing"),
 				WithMessageSubstrings("Missing required deployments"),
@@ -314,15 +328,40 @@ var _ = Describe("Garden Care controller tests", func() {
 		BeforeEach(func() {
 			By("Create deployments")
 			createDeployments(requiredControlPlaneDeployments)
+
+			for _, name := range requiredVirtualGardenManagedResources {
+				By("Create ManagedResource for " + name)
+				managedResource := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      name,
+						Namespace: getManagedResourceNamespace(name, testNamespace.Name),
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						SecretRefs: []corev1.LocalObjectReference{{Name: "foo-secret"}},
+					},
+				}
+				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
+				log.Info("Created ManagedResource for test", "managedResource", client.ObjectKeyFromObject(managedResource))
+			}
+			for _, name := range requiredVirtualGardenManagedResources {
+				updateManagedResourceStatusToHealthy(name)
+			}
+		})
+
+		AfterEach(func() {
+			for _, name := range requiredVirtualGardenManagedResources {
+				By("Delete ManagedResource for " + name)
+				Expect(testClient.Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: getManagedResourceNamespace(name, testNamespace.Name)}})).To(Succeed())
+			}
 		})
 
 		It("should set condition to False because status of all deployments are outdated", func() {
-			By("Expect VirtualGardenControlPlaneHealthy condition to be False")
+			By("Expect VirtualComponentsHealthy condition to be False")
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
 				return garden.Status.Conditions
 			}).Should(ContainCondition(
-				OfType(operatorv1alpha1.VirtualGardenControlPlaneHealthy),
+				OfType(operatorv1alpha1.VirtualComponentsHealthy),
 				WithStatus(gardencorev1beta1.ConditionFalse),
 				WithReason("DeploymentUnhealthy"),
 				WithMessageSubstrings("observed generation outdated"),
@@ -334,12 +373,12 @@ var _ = Describe("Garden Care controller tests", func() {
 				updateDeploymentStatusToHealthy(name)
 			}
 
-			By("Expect VirtualGardenControlPlaneHealthy condition to be False")
+			By("Expect VirtualComponentsHealthy condition to be False")
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
 				return garden.Status.Conditions
 			}).Should(ContainCondition(
-				OfType(operatorv1alpha1.VirtualGardenControlPlaneHealthy),
+				OfType(operatorv1alpha1.VirtualComponentsHealthy),
 				WithStatus(gardencorev1beta1.ConditionFalse),
 				WithReason("DeploymentUnhealthy"),
 				WithMessageSubstrings("observed generation outdated"),
@@ -351,12 +390,12 @@ var _ = Describe("Garden Care controller tests", func() {
 				updateDeploymentStatusToHealthy(name)
 			}
 
-			By("Expect VirtualGardenControlPlaneHealthy condition to be False")
+			By("Expect VirtualComponentsHealthy condition to be False")
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
 				return garden.Status.Conditions
 			}).Should(ContainCondition(
-				OfType(operatorv1alpha1.VirtualGardenControlPlaneHealthy),
+				OfType(operatorv1alpha1.VirtualComponentsHealthy),
 				WithStatus(gardencorev1beta1.ConditionFalse),
 				WithReason("EtcdMissing"),
 				WithMessageSubstrings("Missing required etcds"),
@@ -369,12 +408,12 @@ var _ = Describe("Garden Care controller tests", func() {
 			}
 			createETCDs(requiredControlPlaneETCDs)
 
-			By("Expect VirtualGardenControlPlaneHealthy condition to be False")
+			By("Expect VirtualComponentsHealthy condition to be False")
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
 				return garden.Status.Conditions
 			}).Should(ContainCondition(
-				OfType(operatorv1alpha1.VirtualGardenControlPlaneHealthy),
+				OfType(operatorv1alpha1.VirtualComponentsHealthy),
 				WithStatus(gardencorev1beta1.ConditionFalse),
 				WithReason("EtcdUnhealthy"),
 				WithMessageSubstrings("is unhealthy"),
@@ -390,12 +429,12 @@ var _ = Describe("Garden Care controller tests", func() {
 				updateETCDStatusToHealthy(name)
 			}
 
-			By("Expect VirtualGardenControlPlaneHealthy condition to be False")
+			By("Expect VirtualComponentsHealthy condition to be False")
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
 				return garden.Status.Conditions
 			}).Should(ContainCondition(
-				OfType(operatorv1alpha1.VirtualGardenControlPlaneHealthy),
+				OfType(operatorv1alpha1.VirtualComponentsHealthy),
 				WithStatus(gardencorev1beta1.ConditionFalse),
 				WithReason("EtcdUnhealthy"),
 				WithMessageSubstrings("is unhealthy"),
@@ -411,15 +450,15 @@ var _ = Describe("Garden Care controller tests", func() {
 				updateETCDStatusToHealthy(name)
 			}
 
-			By("Expect VirtualGardenControlPlaneHealthy condition to be True")
+			By("Expect VirtualComponentsHealthy condition to be True")
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
 				return garden.Status.Conditions
 			}).Should(ContainCondition(
-				OfType(operatorv1alpha1.VirtualGardenControlPlaneHealthy),
+				OfType(operatorv1alpha1.VirtualComponentsHealthy),
 				WithStatus(gardencorev1beta1.ConditionTrue),
-				WithReason("VirtualGardenControlPlaneRunning"),
-				WithMessageSubstrings("All control plane components are healthy."),
+				WithReason("VirtualComponentsRunning"),
+				WithMessageSubstrings("All virtual garden components are healthy."),
 			))
 		})
 	})

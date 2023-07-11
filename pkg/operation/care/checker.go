@@ -517,8 +517,8 @@ func computeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.Set[stri
 	return requiredMonitoringStatefulSets
 }
 
-// CheckControlPlane checks whether the control plane components in the given listers are complete and healthy.
-func (b *HealthChecker) CheckControlPlane(
+// checkControlPlane checks whether the control plane components in the given listers are complete and healthy.
+func (b *HealthChecker) checkControlPlane(
 	ctx context.Context,
 	namespace string,
 	requiredControlPlaneDeployments sets.Set[string],
@@ -570,7 +570,7 @@ func (b *HealthChecker) CheckShootControlPlane(
 		return nil, err
 	}
 
-	return b.CheckControlPlane(ctx, namespace, requiredControlPlaneDeployments, requiredShootControlPlaneEtcds, condition)
+	return b.checkControlPlane(ctx, namespace, requiredControlPlaneDeployments, requiredShootControlPlaneEtcds, condition)
 }
 
 // FailedCondition returns a progressing or false condition depending on the progressing threshold.

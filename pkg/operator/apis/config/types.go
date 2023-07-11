@@ -73,7 +73,7 @@ type ControllerConfiguration struct {
 // GardenCareControllerConfiguration defines the configuration of the GardenCare controller.
 type GardenCareControllerConfiguration struct {
 	// SyncPeriod is the duration how often the existing resources are reconciled (how
-	// often the health check is performed.
+	// often the health check is performed).
 	SyncPeriod *metav1.Duration
 	// ConditionThresholds defines the condition threshold per condition type.
 	ConditionThresholds []ConditionThreshold
