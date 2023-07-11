@@ -477,13 +477,13 @@ images:
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
-      network_exposure: 'public'
+      network_exposure: 'private'
       authentication_enforced: false
       user_interaction: 'end-user'
       confidentiality_requirement: 'high'
       integrity_requirement: 'high'
       availability_requirement: 'low'
-      comment: network exposure is public due to the outbound connectivity, there is no exposed endpoint requiring auth.
+      comment: valitail is running as a client (not as a server) and as such is not publicly exposed to the internet. Vulnerabilities with Attack Vector:Network are not exploitable.
   - name: 'cloud.gardener.cnudie/responsibles'
     value:
     - type: 'githubTeam'
