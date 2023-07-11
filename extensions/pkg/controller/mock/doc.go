@@ -17,9 +17,13 @@
 
 package mock
 
-import "sigs.k8s.io/controller-runtime/pkg/manager"
+import (
+	"context"
+
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+)
 
 // AddToManager allows mocking controller's AddToManager functions.
 type AddToManager interface {
-	Do(manager.Manager) error
+	Do(context.Context, manager.Manager) error
 }

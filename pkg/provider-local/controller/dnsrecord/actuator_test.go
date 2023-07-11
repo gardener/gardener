@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
@@ -27,12 +28,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/dnsrecord"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
 	. "github.com/gardener/gardener/pkg/provider-local/controller/dnsrecord"
 )
 
@@ -301,8 +302,11 @@ foo bar
 		var (
 			actuator dnsrecord.Actuator
 			c        client.Client
-			ctx      = context.TODO()
-			cluster  = &extensionscontroller.Cluster{
+			ctrl     *gomock.Controller
+			mgr      *mockmanager.MockManager
+
+			ctx     = context.TODO()
+			cluster = &extensionscontroller.Cluster{
 				Seed: &v1beta1.Seed{
 					Spec: v1beta1.SeedSpec{
 						Provider: v1beta1.SeedProvider{
@@ -367,12 +371,15 @@ foo bar
 		)
 
 		BeforeEach(func() {
-			actuator = NewActuator(false)
+			ctrl = gomock.NewController(GinkgoT())
+			mgr = mockmanager.NewMockManager(ctrl)
 		})
 
 		Describe("Successful reconciliation", func() {
 			It("Should add single zone rewrite rule", func() {
-				c = initializeClient(actuator, singleZoneNamespace, extensionNamespace, emptyConfigMap)
+				c = initializeClient(singleZoneNamespace, extensionNamespace, emptyConfigMap)
+				mgr.EXPECT().GetClient().Return(c)
+				actuator = NewActuator(mgr, false)
 				Expect(actuator.Reconcile(ctx, log, apiDNSRecord, cluster)).NotTo(HaveOccurred())
 				result := &corev1.ConfigMap{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(emptyConfigMap), result)).NotTo(HaveOccurred())
@@ -381,7 +388,9 @@ foo bar
 			})
 
 			It("Should add multi zone rewrite rule", func() {
-				c = initializeClient(actuator, multiZoneNamespace, extensionNamespace, emptyConfigMap)
+				c = initializeClient(multiZoneNamespace, extensionNamespace, emptyConfigMap)
+				mgr.EXPECT().GetClient().Return(c)
+				actuator = NewActuator(mgr, false)
 				Expect(actuator.Reconcile(ctx, log, apiDNSRecord, cluster)).NotTo(HaveOccurred())
 				result := &corev1.ConfigMap{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(emptyConfigMap), result)).NotTo(HaveOccurred())
@@ -390,7 +399,9 @@ foo bar
 			})
 
 			It("Should ignore other dns entries", func() {
-				c = initializeClient(actuator, singleZoneNamespace, extensionNamespace, emptyConfigMap)
+				c = initializeClient(singleZoneNamespace, extensionNamespace, emptyConfigMap)
+				mgr.EXPECT().GetClient().Return(c)
+				actuator = NewActuator(mgr, false)
 				Expect(actuator.Reconcile(ctx, log, otherDNSRecord, cluster)).NotTo(HaveOccurred())
 				result := &corev1.ConfigMap{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(emptyConfigMap), result)).NotTo(HaveOccurred())
@@ -400,7 +411,9 @@ foo bar
 
 		Describe("Successful deletion", func() {
 			It("Should remove single zone rewrite rule", func() {
-				c = initializeClient(actuator, singleZoneNamespace, extensionNamespace, configMapWithRule)
+				c = initializeClient(singleZoneNamespace, extensionNamespace, configMapWithRule)
+				mgr.EXPECT().GetClient().Return(c)
+				actuator = NewActuator(mgr, false)
 				Expect(actuator.Delete(ctx, log, apiDNSRecord, cluster)).NotTo(HaveOccurred())
 				result := &corev1.ConfigMap{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapWithRule), result)).NotTo(HaveOccurred())
@@ -408,7 +421,9 @@ foo bar
 			})
 
 			It("Should remove multi zone rewrite rule", func() {
-				c = initializeClient(actuator, multiZoneNamespace, extensionNamespace, configMapWithRule)
+				c = initializeClient(multiZoneNamespace, extensionNamespace, configMapWithRule)
+				mgr.EXPECT().GetClient().Return(c)
+				actuator = NewActuator(mgr, false)
 				Expect(actuator.Delete(ctx, log, apiDNSRecord, cluster)).NotTo(HaveOccurred())
 				result := &corev1.ConfigMap{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapWithRule), result)).NotTo(HaveOccurred())
@@ -416,7 +431,9 @@ foo bar
 			})
 
 			It("Should ignore other dns entries", func() {
-				c = initializeClient(actuator, singleZoneNamespace, extensionNamespace, configMapWithRule)
+				c = initializeClient(singleZoneNamespace, extensionNamespace, configMapWithRule)
+				mgr.EXPECT().GetClient().Return(c)
+				actuator = NewActuator(mgr, false)
 				Expect(actuator.Delete(ctx, log, otherDNSRecord, cluster)).NotTo(HaveOccurred())
 				result := &corev1.ConfigMap{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapWithRule), result)).NotTo(HaveOccurred())
@@ -426,9 +443,7 @@ foo bar
 	})
 })
 
-func initializeClient(actuator dnsrecord.Actuator, objects ...client.Object) client.Client {
+func initializeClient(objects ...client.Object) client.Client {
 	client := fakeclient.NewClientBuilder().WithObjects(objects...).WithScheme(scheme.Scheme).Build()
-	err := actuator.(inject.Client).InjectClient(client)
-	Expect(err).NotTo(HaveOccurred())
 	return client
 }

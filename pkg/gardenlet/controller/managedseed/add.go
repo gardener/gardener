@@ -39,7 +39,6 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	"github.com/gardener/gardener/pkg/utils"
-	contextutils "github.com/gardener/gardener/pkg/utils/context"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -58,6 +57,7 @@ const (
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(
+	ctx context.Context,
 	mgr manager.Manager,
 	gardenCluster cluster.Cluster,
 	seedCluster cluster.Cluster,
@@ -103,7 +103,7 @@ func (r *Reconciler) AddToManager(
 			source.NewKindWithCache(&seedmanagementv1alpha1.ManagedSeed{}, gardenCluster.GetCache()),
 			r.EnqueueWithJitterDelay(),
 			builder.WithPredicates(
-				r.ManagedSeedPredicate(r.Config.SeedConfig.SeedTemplate.Name),
+				r.ManagedSeedPredicate(ctx, r.Config.SeedConfig.SeedTemplate.Name),
 				&predicate.GenerationChangedPredicate{},
 			),
 		).
@@ -114,14 +114,15 @@ func (r *Reconciler) AddToManager(
 
 	return c.Watch(
 		source.NewKindWithCache(&gardencorev1beta1.Seed{}, gardenCluster.GetCache()),
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapSeedToManagedSeed), mapper.UpdateWithNew, c.GetLogger()),
-		r.SeedOfManagedSeedPredicate(r.Config.SeedConfig.SeedTemplate.Name),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapSeedToManagedSeed), mapper.UpdateWithNew, c.GetLogger()),
+		r.SeedOfManagedSeedPredicate(ctx, r.Config.SeedConfig.SeedTemplate.Name),
 	)
 }
 
 // ManagedSeedPredicate returns the predicate for ManagedSeed events.
-func (r *Reconciler) ManagedSeedPredicate(seedName string) predicate.Predicate {
+func (r *Reconciler) ManagedSeedPredicate(ctx context.Context, seedName string) predicate.Predicate {
 	return &managedSeedPredicate{
+		ctx:      ctx,
 		reader:   r.GardenClient,
 		seedName: seedName,
 	}
@@ -131,11 +132,6 @@ type managedSeedPredicate struct {
 	ctx      context.Context
 	reader   client.Reader
 	seedName string
-}
-
-func (p *managedSeedPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
-	p.ctx = contextutils.FromStopChannel(stopChan)
-	return nil
 }
 
 func (p *managedSeedPredicate) Create(e event.CreateEvent) bool {
@@ -164,8 +160,9 @@ func (p *managedSeedPredicate) filterManagedSeed(obj client.Object) bool {
 }
 
 // SeedOfManagedSeedPredicate returns the predicate for Seed events.
-func (r *Reconciler) SeedOfManagedSeedPredicate(seedName string) predicate.Predicate {
+func (r *Reconciler) SeedOfManagedSeedPredicate(ctx context.Context, seedName string) predicate.Predicate {
 	return &seedOfManagedSeedPredicate{
+		ctx:             ctx,
 		reader:          r.GardenClient,
 		gardenNamespace: r.GardenNamespaceGarden,
 		seedName:        seedName,
@@ -177,11 +174,6 @@ type seedOfManagedSeedPredicate struct {
 	reader          client.Reader
 	gardenNamespace string
 	seedName        string
-}
-
-func (p *seedOfManagedSeedPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
-	p.ctx = contextutils.FromStopChannel(stopChan)
-	return nil
 }
 
 func (p *seedOfManagedSeedPredicate) Create(e event.CreateEvent) bool {

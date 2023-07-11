@@ -15,6 +15,8 @@
 package heartbeat
 
 import (
+	"context"
+
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -41,7 +43,7 @@ type AddOptions struct {
 }
 
 // AddToManager adds the heartbeat controller with the default Options to the manager.
-func AddToManager(mgr manager.Manager) error {
+func AddToManager(_ context.Context, mgr manager.Manager) error {
 	return Add(mgr, AddArgs{
 		ExtensionName:        DefaultAddOptions.ExtensionName,
 		Namespace:            DefaultAddOptions.Namespace,
@@ -66,7 +68,7 @@ type AddArgs struct {
 
 // Add creates a new heartbeat controller and adds it to the given manager.
 func Add(mgr manager.Manager, args AddArgs) error {
-	args.ControllerOptions.Reconciler = NewReconciler(args.ExtensionName, args.Namespace, args.RenewIntervalSeconds, args.Clock)
+	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.ExtensionName, args.Namespace, args.RenewIntervalSeconds, args.Clock)
 	args.ControllerOptions.MaxConcurrentReconciles = 1
 
 	ctrl, err := controller.New(ControllerName, mgr, args.ControllerOptions)

@@ -100,24 +100,24 @@ func AddToManager(
 	if err := (&backupbucket.Reconciler{
 		Config:   *cfg.Controllers.BackupBucket,
 		SeedName: cfg.SeedConfig.Name,
-	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
+	}).AddToManager(ctx, mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding BackupBucket controller: %w", err)
 	}
 
 	if err := (&backupentry.Reconciler{
 		Config:   *cfg.Controllers.BackupEntry,
 		SeedName: cfg.SeedConfig.Name,
-	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
+	}).AddToManager(ctx, mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding BackupEntry controller: %w", err)
 	}
 
 	if err := (&bastion.Reconciler{
 		Config: *cfg.Controllers.Bastion,
-	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
+	}).AddToManager(ctx, mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding Bastion controller: %w", err)
 	}
 
-	if err := controllerinstallation.AddToManager(mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, gardenClusterIdentity); err != nil {
+	if err := controllerinstallation.AddToManager(ctx, mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, gardenClusterIdentity); err != nil {
 		return fmt.Errorf("failed adding ControllerInstallation controller: %w", err)
 	}
 
@@ -125,7 +125,7 @@ func AddToManager(
 		Config:         *cfg,
 		ImageVector:    imageVector,
 		ShootClientMap: shootClientMap,
-	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
+	}).AddToManager(ctx, mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding ManagedSeed controller: %w", err)
 	}
 
@@ -133,7 +133,7 @@ func AddToManager(
 		return fmt.Errorf("failed adding NetworkPolicy controller: %w", err)
 	}
 
-	if err := seed.AddToManager(mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, healthManager, imageVector, componentImageVectors); err != nil {
+	if err := seed.AddToManager(ctx, mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, healthManager, imageVector, componentImageVectors); err != nil {
 		return fmt.Errorf("failed adding Seed controller: %w", err)
 	}
 

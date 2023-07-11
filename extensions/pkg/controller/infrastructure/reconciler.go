@@ -24,8 +24,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -47,35 +47,18 @@ type reconciler struct {
 
 // NewReconciler creates a new reconcile.Reconciler that reconciles
 // infrastructure resources of Gardener's `extensions.gardener.cloud` API group.
-func NewReconciler(actuator Actuator, configValidator ConfigValidator) reconcile.Reconciler {
+func NewReconciler(mgr manager.Manager, actuator Actuator, configValidator ConfigValidator) reconcile.Reconciler {
 	return reconcilerutils.OperationAnnotationWrapper(
+		mgr,
 		func() client.Object { return &extensionsv1alpha1.Infrastructure{} },
 		&reconciler{
 			actuator:        actuator,
 			configValidator: configValidator,
-			statusUpdater:   extensionscontroller.NewStatusUpdater(),
+			client:          mgr.GetClient(),
+			reader:          mgr.GetAPIReader(),
+			statusUpdater:   extensionscontroller.NewStatusUpdater(mgr.GetClient()),
 		},
 	)
-}
-
-func (r *reconciler) InjectFunc(f inject.Func) error {
-	if r.configValidator != nil {
-		if err := f(r.configValidator); err != nil {
-			return err
-		}
-	}
-	return f(r.actuator)
-}
-
-func (r *reconciler) InjectClient(client client.Client) error {
-	r.client = client
-	r.statusUpdater.InjectClient(client)
-	return nil
-}
-
-func (r *reconciler) InjectAPIReader(reader client.Reader) error {
-	r.reader = reader
-	return nil
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {

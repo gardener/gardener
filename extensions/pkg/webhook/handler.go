@@ -29,7 +29,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
@@ -106,16 +105,6 @@ type handler struct {
 	decoder    runtime.Decoder
 	scheme     *runtime.Scheme
 	logger     logr.Logger
-}
-
-// InjectFunc calls the inject.Func on the handler mutators.
-func (h *handler) InjectFunc(f inject.Func) error {
-	for _, mutator := range h.mutatorMap {
-		if err := f(mutator); err != nil {
-			return fmt.Errorf("could not inject into the mutator: %w", err)
-		}
-	}
-	return nil
 }
 
 // Handle handles the given admission request.

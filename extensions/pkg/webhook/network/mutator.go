@@ -20,6 +20,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -29,8 +30,9 @@ import (
 type MutateFn func(new, old *extensionsv1alpha1.Network) error
 
 // NewMutator creates a new network mutator.
-func NewMutator(logger logr.Logger, mutateFn MutateFn) webhook.Mutator {
+func NewMutator(mgr manager.Manager, logger logr.Logger, mutateFn MutateFn) webhook.Mutator {
 	return &mutator{
+		client:     mgr.GetClient(),
 		logger:     logger.WithName("mutator"),
 		mutateFunc: mutateFn,
 	}
@@ -40,12 +42,6 @@ type mutator struct {
 	client     client.Client
 	logger     logr.Logger
 	mutateFunc MutateFn
-}
-
-// InjectClient injects the given client into the ensurer.
-func (m *mutator) InjectClient(client client.Client) error {
-	m.client = client
-	return nil
 }
 
 // Mutate validates and if needed mutates the given object.

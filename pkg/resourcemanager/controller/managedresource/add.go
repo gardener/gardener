@@ -43,7 +43,7 @@ import (
 const ControllerName = "managedresource"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster) error {
+func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster) error {
 	if r.SourceClient == nil {
 		r.SourceClient = sourceCluster.GetClient()
 	}
@@ -88,6 +88,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 			MaxConcurrentReconciles: pointer.IntDeref(r.Config.ConcurrentSyncs, 0),
 		}).
 		Build(reconcilerutils.OperationAnnotationWrapper(
+			mgr,
 			func() client.Object { return &resourcesv1alpha1.ManagedResource{} },
 			r,
 		))
@@ -97,7 +98,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 
 	return c.Watch(
 		&source.Kind{Type: &corev1.Secret{}},
-		mapper.EnqueueRequestsFrom(r.MapSecretToManagedResources(
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), r.MapSecretToManagedResources(
 			r.ClassFilter,
 			predicate.Or(
 				resourcemanagerpredicate.NotIgnored(),

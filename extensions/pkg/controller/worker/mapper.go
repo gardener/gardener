@@ -21,9 +21,9 @@ import (
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
@@ -32,8 +32,8 @@ import (
 
 // ClusterToWorkerMapper returns a mapper that returns requests for Worker whose
 // referenced clusters have been modified.
-func ClusterToWorkerMapper(predicates []predicate.Predicate) mapper.Mapper {
-	return mapper.ClusterToObjectMapper(func() client.ObjectList { return &extensionsv1alpha1.WorkerList{} }, predicates)
+func ClusterToWorkerMapper(ctx context.Context, mgr manager.Manager, predicates []predicate.Predicate) mapper.Mapper {
+	return mapper.ClusterToObjectMapper(ctx, mgr, func() client.ObjectList { return &extensionsv1alpha1.WorkerList{} }, predicates)
 }
 
 // MachineSetToWorkerMapper returns a mapper that returns requests for Worker whose
@@ -78,15 +78,6 @@ func newMachineSetToObjectMapper(newObjListFunc func() client.ObjectList, predic
 type machineToObjectMapper struct {
 	newObjListFunc func() client.ObjectList
 	predicates     []predicate.Predicate
-}
-
-func (m *machineToObjectMapper) InjectFunc(f inject.Func) error {
-	for _, p := range m.predicates {
-		if err := f(p); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (m *machineToObjectMapper) Map(ctx context.Context, _ logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {

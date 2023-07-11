@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	extensionsworkerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
@@ -45,13 +46,8 @@ type stateReconciler struct {
 
 // NewStateReconciler creates a new reconcile.Reconciler that reconciles
 // Worker's State resources of Gardener's `extensions.gardener.cloud` API group.
-func NewStateReconciler() reconcile.Reconciler {
-	return &stateReconciler{}
-}
-
-func (r *stateReconciler) InjectClient(client client.Client) error {
-	r.client = client
-	return nil
+func NewStateReconciler(mgr manager.Manager) reconcile.Reconciler {
+	return &stateReconciler{client: mgr.GetClient()}
 }
 
 func (r *stateReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {

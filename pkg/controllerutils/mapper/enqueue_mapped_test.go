@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -28,17 +29,22 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	. "github.com/gardener/gardener/pkg/controllerutils/mapper"
+	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
+	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
 )
 
 var _ = Describe("EnqueueMapped", func() {
 	Describe("#EnqueueRequestsFrom", func() {
 		var (
+			ctx     = context.TODO()
 			mapper  Mapper
 			logger  logr.Logger
 			handler handler.EventHandler
+			ctrl    *gomock.Controller
+			mgr     *mockmanager.MockManager
+			cache   *mockcache.MockCache
 
 			queue   workqueue.RateLimitingInterface
 			secret1 *corev1.Secret
@@ -54,14 +60,10 @@ var _ = Describe("EnqueueMapped", func() {
 			})
 
 			logger = logr.Discard()
-			handler = EnqueueRequestsFrom(mapper, 0, logger)
-
-			_, ok := handler.(inject.Cache)
-			Expect(ok).To(BeTrue())
-			_, ok = handler.(inject.Stoppable)
-			Expect(ok).To(BeTrue())
-			_, ok = handler.(inject.Injector)
-			Expect(ok).To(BeTrue())
+			ctrl = gomock.NewController(GinkgoT())
+			cache = mockcache.NewMockCache(ctrl)
+			mgr = mockmanager.NewMockManager(ctrl)
+			mgr.EXPECT().GetCache().Return(cache)
 
 			queue = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 			secret1 = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "secret1", Namespace: "namespace"}}
@@ -70,6 +72,7 @@ var _ = Describe("EnqueueMapped", func() {
 
 		Describe("#Create", func() {
 			It("should work map and enqueue", func() {
+				handler = EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper, 0, logger)
 				handler.Create(event.CreateEvent{Object: secret1}, queue)
 				expectItems(queue, secret1)
 			})
@@ -77,6 +80,7 @@ var _ = Describe("EnqueueMapped", func() {
 
 		Describe("#Delete", func() {
 			It("should work map and enqueue", func() {
+				handler = EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper, 0, logger)
 				handler.Delete(event.DeleteEvent{Object: secret1}, queue)
 				expectItems(queue, secret1)
 			})
@@ -84,6 +88,7 @@ var _ = Describe("EnqueueMapped", func() {
 
 		Describe("#Generic", func() {
 			It("should work map and enqueue", func() {
+				handler = EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper, 0, logger)
 				handler.Generic(event.GenericEvent{Object: secret1}, queue)
 				expectItems(queue, secret1)
 			})
@@ -91,7 +96,7 @@ var _ = Describe("EnqueueMapped", func() {
 
 		Context("UpdateWithOldAndNew", func() {
 			BeforeEach(func() {
-				handler = EnqueueRequestsFrom(mapper, UpdateWithOldAndNew, logger)
+				handler = EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper, UpdateWithOldAndNew, logger)
 			})
 
 			Describe("#Update", func() {
@@ -104,7 +109,7 @@ var _ = Describe("EnqueueMapped", func() {
 
 		Context("UpdateWithNew", func() {
 			BeforeEach(func() {
-				handler = EnqueueRequestsFrom(mapper, UpdateWithNew, logger)
+				handler = EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper, UpdateWithNew, logger)
 			})
 
 			Describe("#Update", func() {
@@ -117,7 +122,7 @@ var _ = Describe("EnqueueMapped", func() {
 
 		Context("UpdateWithOld", func() {
 			BeforeEach(func() {
-				handler = EnqueueRequestsFrom(mapper, UpdateWithOld, logger)
+				handler = EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper, UpdateWithOld, logger)
 			})
 
 			Describe("#Update", func() {

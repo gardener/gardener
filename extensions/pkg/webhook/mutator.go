@@ -16,10 +16,8 @@ package webhook
 
 import (
 	"context"
-	"fmt"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 // Mutator validates and if needed mutates objects.
@@ -37,14 +35,6 @@ type MutatorWithShootClient interface {
 }
 type mutatorWrapper struct {
 	Mutator
-}
-
-// InjectFunc calls the inject.Func on the handler mutators.
-func (d *mutatorWrapper) InjectFunc(f inject.Func) error {
-	if err := f(d.Mutator); err != nil {
-		return fmt.Errorf("could not inject into the mutator: %w", err)
-	}
-	return nil
 }
 
 func hybridMutator(mut Mutator) Mutator {

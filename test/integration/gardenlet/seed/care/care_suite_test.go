@@ -146,7 +146,7 @@ var _ = BeforeSuite(func() {
 		},
 		Namespace: &testNamespace.Name,
 		SeedName:  seedName,
-	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
+	}).AddToManager(ctx, mgr, mgr, mgr)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

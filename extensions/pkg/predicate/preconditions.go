@@ -19,11 +19,11 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	contextutils "github.com/gardener/gardener/pkg/utils/context"
 )
 
 // IsInGardenNamespacePredicate is a predicate which returns true when the provided object is in the 'garden' namespace.
@@ -33,23 +33,16 @@ var IsInGardenNamespacePredicate = predicate.NewPredicateFuncs(func(obj client.O
 
 // ShootNotFailedPredicate returns a predicate which returns true when the Shoot's `.status.lastOperation.state` is not
 // equals 'Failed'.
-func ShootNotFailedPredicate() predicate.Predicate {
-	return &shootNotFailedPredicate{}
+func ShootNotFailedPredicate(ctx context.Context, mgr manager.Manager) predicate.Predicate {
+	return &shootNotFailedPredicate{
+		ctx:    ctx,
+		reader: mgr.GetClient(),
+	}
 }
 
 type shootNotFailedPredicate struct {
 	ctx    context.Context
 	reader client.Reader
-}
-
-func (p *shootNotFailedPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
-	p.ctx = contextutils.FromStopChannel(stopChan)
-	return nil
-}
-
-func (p *shootNotFailedPredicate) InjectClient(client client.Client) error {
-	p.reader = client
-	return nil
 }
 
 func (p *shootNotFailedPredicate) Create(e event.CreateEvent) bool {

@@ -533,7 +533,6 @@ build:
         - extensions/pkg/controller/backupentry
         - extensions/pkg/controller/backupentry/genericactuator
         - extensions/pkg/controller/cmd
-        - extensions/pkg/controller/common
         - extensions/pkg/controller/controlplane
         - extensions/pkg/controller/controlplane/genericactuator
         - extensions/pkg/controller/dnsrecord

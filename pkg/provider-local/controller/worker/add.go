@@ -15,6 +15,8 @@
 package worker
 
 import (
+	"context"
+
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -41,7 +43,7 @@ type AddOptions struct {
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
-func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
+func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddOptions) error {
 	scheme := mgr.GetScheme()
 	if err := apiextensionsscheme.AddToScheme(scheme); err != nil {
 		return err
@@ -50,15 +52,20 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 		return err
 	}
 
-	return worker.Add(mgr, worker.AddArgs{
-		Actuator:          NewActuator(opts.GardenletManagesMCM),
+	actuator, err := NewActuator(mgr, opts.GardenletManagesMCM)
+	if err != nil {
+		return err
+	}
+
+	return worker.Add(ctx, mgr, worker.AddArgs{
+		Actuator:          actuator,
 		ControllerOptions: opts.Controller,
-		Predicates:        worker.DefaultPredicates(opts.IgnoreOperationAnnotation),
+		Predicates:        worker.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),
 		Type:              local.Type,
 	})
 }
 
 // AddToManager adds a controller with the default Options.
-func AddToManager(mgr manager.Manager) error {
-	return AddToManagerWithOptions(mgr, DefaultAddOptions)
+func AddToManager(ctx context.Context, mgr manager.Manager) error {
+	return AddToManagerWithOptions(ctx, mgr, DefaultAddOptions)
 }

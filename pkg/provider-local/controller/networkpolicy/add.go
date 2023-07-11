@@ -15,6 +15,7 @@
 package networkpolicy
 
 import (
+	"context"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -32,7 +33,7 @@ import (
 const ControllerName = "networkpolicy"
 
 // AddToManager adds a controller to the given manager.
-func AddToManager(mgr manager.Manager) error {
+func AddToManager(_ context.Context, mgr manager.Manager) error {
 	return (&Reconciler{}).AddToManager(mgr)
 }
 

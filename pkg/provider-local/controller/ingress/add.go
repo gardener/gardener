@@ -15,6 +15,8 @@
 package ingress
 
 import (
+	"context"
+
 	networkingv1 "k8s.io/api/networking/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -37,7 +39,7 @@ type AddOptions struct {
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
-	opts.Controller.Reconciler = &reconciler{}
+	opts.Controller.Reconciler = &reconciler{client: mgr.GetClient()}
 
 	ctrl, err := controller.New(ControllerName, mgr, opts.Controller)
 	if err != nil {
@@ -48,6 +50,6 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 }
 
 // AddToManager adds a controller with the default Options.
-func AddToManager(mgr manager.Manager) error {
+func AddToManager(_ context.Context, mgr manager.Manager) error {
 	return AddToManagerWithOptions(mgr, DefaultAddOptions)
 }

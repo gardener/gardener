@@ -41,7 +41,7 @@ import (
 const ControllerName = "controllerregistration-seed"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager) error {
+func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
@@ -63,7 +63,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 
 	if err := c.Watch(
 		&source.Kind{Type: &gardencorev1beta1.ControllerRegistration{}},
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapToAllSeeds), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToAllSeeds), mapper.UpdateWithNew, c.GetLogger()),
 		predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
 	); err != nil {
 		return err
@@ -71,7 +71,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 
 	if err := c.Watch(
 		&source.Kind{Type: &gardencorev1beta1.BackupBucket{}},
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapBackupBucketToSeed), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapBackupBucketToSeed), mapper.UpdateWithNew, c.GetLogger()),
 		r.BackupBucketPredicate(),
 	); err != nil {
 		return err
@@ -79,7 +79,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 
 	if err := c.Watch(
 		&source.Kind{Type: &gardencorev1beta1.BackupEntry{}},
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapBackupEntryToSeed), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapBackupEntryToSeed), mapper.UpdateWithNew, c.GetLogger()),
 		r.BackupEntryPredicate(),
 	); err != nil {
 		return err
@@ -87,7 +87,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 
 	if err := c.Watch(
 		&source.Kind{Type: &gardencorev1beta1.ControllerInstallation{}},
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapControllerInstallationToSeed), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapControllerInstallationToSeed), mapper.UpdateWithNew, c.GetLogger()),
 		r.ControllerInstallationPredicate(),
 	); err != nil {
 		return err
@@ -95,7 +95,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 
 	if err := c.Watch(
 		&source.Kind{Type: &gardencorev1beta1.ControllerDeployment{}},
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapControllerDeploymentToAllSeeds), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapControllerDeploymentToAllSeeds), mapper.UpdateWithNew, c.GetLogger()),
 		predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
 	); err != nil {
 		return err
@@ -103,7 +103,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 
 	return c.Watch(
 		&source.Kind{Type: &gardencorev1beta1.Shoot{}},
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapShootToSeed), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapShootToSeed), mapper.UpdateWithNew, c.GetLogger()),
 		r.ShootPredicate(),
 	)
 }

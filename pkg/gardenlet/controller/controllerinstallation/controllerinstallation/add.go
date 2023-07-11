@@ -31,7 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	contextutils "github.com/gardener/gardener/pkg/utils/context"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -39,7 +38,7 @@ import (
 const ControllerName = "controllerinstallation"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Cluster) error {
+func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gardenCluster cluster.Cluster) error {
 	if r.GardenClient == nil {
 		r.GardenClient = gardenCluster.GetClient()
 	}
@@ -61,7 +60,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(
 				r.ControllerInstallationPredicate(),
-				r.HelmTypePredicate(gardenCluster.GetClient()),
+				r.HelmTypePredicate(ctx, gardenCluster.GetClient()),
 			),
 		).
 		Complete(r)
@@ -97,18 +96,16 @@ func (r *Reconciler) ControllerInstallationPredicate() predicate.Predicate {
 
 // HelmTypePredicate is a predicate which checks whether the ControllerDeployment referenced in the
 // ControllerInstallation has .type=helm.
-func (r *Reconciler) HelmTypePredicate(reader client.Reader) predicate.Predicate {
-	return &helmTypePredicate{reader: reader}
+func (r *Reconciler) HelmTypePredicate(ctx context.Context, reader client.Reader) predicate.Predicate {
+	return &helmTypePredicate{
+		ctx:    ctx,
+		reader: reader,
+	}
 }
 
 type helmTypePredicate struct {
 	ctx    context.Context
 	reader client.Reader
-}
-
-func (p *helmTypePredicate) InjectStopChannel(stopChan <-chan struct{}) error {
-	p.ctx = contextutils.FromStopChannel(stopChan)
-	return nil
 }
 
 func (p *helmTypePredicate) Create(e event.CreateEvent) bool   { return p.isResponsible(e.Object) }

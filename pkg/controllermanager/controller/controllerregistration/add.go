@@ -15,6 +15,7 @@
 package controllerregistration
 
 import (
+	"context"
 	"fmt"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -26,10 +27,10 @@ import (
 )
 
 // AddToManager adds all ControllerRegistration controllers to the given manager.
-func AddToManager(mgr manager.Manager, cfg config.ControllerManagerConfiguration) error {
+func AddToManager(ctx context.Context, mgr manager.Manager, cfg config.ControllerManagerConfiguration) error {
 	if err := (&seed.Reconciler{
 		Config: *cfg.Controllers.ControllerRegistration,
-	}).AddToManager(mgr); err != nil {
+	}).AddToManager(ctx, mgr); err != nil {
 		return fmt.Errorf("failed adding Seed reconciler: %w", err)
 	}
 

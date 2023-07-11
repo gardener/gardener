@@ -103,7 +103,7 @@ func prepareAndRunTest(ignoreOperationAnnotation bool) {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Register controller")
-	Expect(addTestControllerToManagerWithOptions(mgr, ignoreOperationAnnotation)).To(Succeed())
+	Expect(addTestControllerToManagerWithOptions(ctx, mgr, ignoreOperationAnnotation)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

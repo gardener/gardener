@@ -15,6 +15,7 @@
 package health
 
 import (
+	"context"
 	"fmt"
 
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -27,18 +28,18 @@ import (
 )
 
 // AddToManager adds all health controllers to the given manager.
-func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, cfg config.ResourceManagerConfiguration, targetCacheDisabled bool) error {
+func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, cfg config.ResourceManagerConfiguration, targetCacheDisabled bool) error {
 	if err := (&health.Reconciler{
 		Config:      cfg.Controllers.Health,
 		ClassFilter: resourcemanagerpredicate.NewClassFilter(*cfg.Controllers.ResourceClass),
-	}).AddToManager(mgr, sourceCluster, targetCluster, targetCacheDisabled, *cfg.Controllers.ClusterID); err != nil {
+	}).AddToManager(ctx, mgr, sourceCluster, targetCluster, targetCacheDisabled, *cfg.Controllers.ClusterID); err != nil {
 		return fmt.Errorf("failed adding health reconciler: %w", err)
 	}
 
 	if err := (&progressing.Reconciler{
 		Config:      cfg.Controllers.Health,
 		ClassFilter: resourcemanagerpredicate.NewClassFilter(*cfg.Controllers.ResourceClass),
-	}).AddToManager(mgr, sourceCluster, targetCluster, targetCacheDisabled, *cfg.Controllers.ClusterID); err != nil {
+	}).AddToManager(ctx, mgr, sourceCluster, targetCluster, targetCacheDisabled, *cfg.Controllers.ClusterID); err != nil {
 		return fmt.Errorf("failed adding progressing reconciler: %w", err)
 	}
 

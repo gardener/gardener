@@ -52,7 +52,7 @@ var (
 
 func (w *workerDelegate) GetMachineControllerManagerChartValues(ctx context.Context) (map[string]interface{}, error) {
 	namespace := &corev1.Namespace{}
-	if err := w.Client().Get(ctx, kubernetesutils.Key(w.worker.Namespace), namespace); err != nil {
+	if err := w.client.Get(ctx, kubernetesutils.Key(w.worker.Namespace), namespace); err != nil {
 		return nil, err
 	}
 

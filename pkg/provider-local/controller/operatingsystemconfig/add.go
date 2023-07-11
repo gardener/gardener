@@ -15,6 +15,8 @@
 package operatingsystemconfig
 
 import (
+	"context"
+
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon"
@@ -22,6 +24,6 @@ import (
 )
 
 // AddToManager adds a controller with the default Options.
-func AddToManager(mgr manager.Manager) error {
-	return oscommon.AddToManager(mgr, local.Name, []string{local.Type}, cloudInitGenerator)
+func AddToManager(ctx context.Context, mgr manager.Manager) error {
+	return oscommon.AddToManager(ctx, mgr, local.Name, []string{local.Type}, cloudInitGenerator)
 }

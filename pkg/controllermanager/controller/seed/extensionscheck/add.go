@@ -37,7 +37,7 @@ import (
 const ControllerName = "seed-extensions-check"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager) error {
+func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
@@ -63,7 +63,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 
 	return c.Watch(
 		&source.Kind{Type: &gardencorev1beta1.ControllerInstallation{}},
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapControllerInstallationToSeed), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapControllerInstallationToSeed), mapper.UpdateWithNew, c.GetLogger()),
 		predicateutils.RelevantConditionsChanged(
 			func(obj client.Object) []gardencorev1beta1.Condition {
 				controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)

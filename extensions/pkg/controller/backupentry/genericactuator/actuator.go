@@ -24,7 +24,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -38,21 +38,11 @@ type actuator struct {
 	client              client.Client
 }
 
-// InjectClient injects the given client into the valuesProvider.
-func (a *actuator) InjectClient(client client.Client) error {
-	a.client = client
-	return nil
-}
-
-// InjectFunc enables injecting Kubernetes dependencies into actuator's dependencies.
-func (a *actuator) InjectFunc(f inject.Func) error {
-	return f(a.backupEntryDelegate)
-}
-
 // NewActuator creates a new Actuator that updates the status of the handled BackupEntry resources.
-func NewActuator(backupEntryDelegate BackupEntryDelegate) backupentry.Actuator {
+func NewActuator(mgr manager.Manager, backupEntryDelegate BackupEntryDelegate) backupentry.Actuator {
 	return &actuator{
 		backupEntryDelegate: backupEntryDelegate,
+		client:              mgr.GetClient(),
 	}
 }
 

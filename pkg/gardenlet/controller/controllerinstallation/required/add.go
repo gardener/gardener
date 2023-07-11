@@ -46,7 +46,7 @@ import (
 const ControllerName = "controllerinstallation-required"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluster cluster.Cluster) error {
+func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gardenCluster, seedCluster cluster.Cluster) error {
 	if r.GardenClient == nil {
 		r.GardenClient = gardenCluster.GetClient()
 	}
@@ -91,6 +91,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 		{extensionsv1alpha1.WorkerResource, &extensionsv1alpha1.Worker{}, func() client.ObjectList { return &extensionsv1alpha1.WorkerList{} }},
 	} {
 		eventHandler := mapper.EnqueueRequestsFrom(
+			ctx,
+			mgr.GetCache(),
 			r.MapObjectKindToControllerInstallations(extension.objectKind, extension.newObjectListFunc),
 			mapper.UpdateWithNew,
 			c.GetLogger(),

@@ -29,9 +29,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
-
-	contextutils "github.com/gardener/gardener/pkg/utils/context"
 )
 
 // Mapper maps an object to a collection of keys to be enqueued
@@ -56,11 +53,13 @@ func (f MapFunc) Map(ctx context.Context, log logr.Logger, reader client.Reader,
 // behavior on UpdateEvents.
 // For UpdateEvents, the given UpdateBehavior decides if only the old, only the new or both objects should be mapped
 // and enqueued.
-func EnqueueRequestsFrom(m Mapper, updateBehavior UpdateBehavior, log logr.Logger) handler.EventHandler {
+func EnqueueRequestsFrom(ctx context.Context, cache cache.Cache, m Mapper, updateBehavior UpdateBehavior, log logr.Logger) handler.EventHandler {
 	return &enqueueRequestsFromMapFunc{
 		mapper:         m,
 		updateBehavior: updateBehavior,
+		ctx:            ctx,
 		log:            log,
+		reader:         cache,
 	}
 }
 
@@ -86,23 +85,6 @@ const (
 	// UpdateWithNew considers only the new object in case of an update.
 	UpdateWithNew
 )
-
-func (e *enqueueRequestsFromMapFunc) InjectCache(c cache.Cache) error {
-	e.reader = c
-	return nil
-}
-
-func (e *enqueueRequestsFromMapFunc) InjectStopChannel(stopCh <-chan struct{}) error {
-	e.ctx = contextutils.FromStopChannel(stopCh)
-	return nil
-}
-
-func (e *enqueueRequestsFromMapFunc) InjectFunc(f inject.Func) error {
-	if f == nil {
-		return nil
-	}
-	return f(e.mapper)
-}
 
 func (e *enqueueRequestsFromMapFunc) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
 	e.mapAndEnqueue(q, evt.Object)

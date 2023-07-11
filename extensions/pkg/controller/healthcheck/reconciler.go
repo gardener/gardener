@@ -26,8 +26,8 @@ import (
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/pkg/api/extensions"
@@ -56,21 +56,13 @@ const (
 
 // NewReconciler creates a new performHealthCheck.Reconciler that reconciles
 // the registered extension resources (Gardener's `extensions.gardener.cloud` API group).
-func NewReconciler(actuator HealthCheckActuator, registeredExtension RegisteredExtension, syncPeriod metav1.Duration) reconcile.Reconciler {
+func NewReconciler(mgr manager.Manager, actuator HealthCheckActuator, registeredExtension RegisteredExtension, syncPeriod metav1.Duration) reconcile.Reconciler {
 	return &reconciler{
 		actuator:            actuator,
+		client:              mgr.GetClient(),
 		registeredExtension: registeredExtension,
 		syncPeriod:          syncPeriod,
 	}
-}
-
-func (r *reconciler) InjectFunc(f inject.Func) error {
-	return f(r.actuator)
-}
-
-func (r *reconciler) InjectClient(client client.Client) error {
-	r.client = client
-	return nil
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {

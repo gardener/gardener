@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/extension"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -43,14 +44,10 @@ type actuator struct {
 }
 
 // NewActuator returns an actuator responsible for Extension resources.
-func NewActuator() extension.Actuator {
-	return &actuator{}
-}
-
-// InjectClient injects the controller runtime client into the reconciler.
-func (a *actuator) InjectClient(client client.Client) error {
-	a.client = client
-	return nil
+func NewActuator(mgr manager.Manager) extension.Actuator {
+	return &actuator{
+		client: mgr.GetClient(),
+	}
 }
 
 // Reconcile the extension resource.

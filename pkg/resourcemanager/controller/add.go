@@ -15,6 +15,7 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Masterminds/semver"
@@ -40,7 +41,7 @@ import (
 )
 
 // AddToManager adds all controllers to the given manager.
-func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, cfg *config.ResourceManagerConfiguration) error {
+func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, cfg *config.ResourceManagerConfiguration) error {
 	targetClientSet, err := kubernetesclientset.NewForConfig(targetCluster.GetConfig())
 	if err != nil {
 		return fmt.Errorf("failed creating Kubernetes client: %w", err)
@@ -81,7 +82,7 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 		}
 	}
 
-	if err := health.AddToManager(mgr, sourceCluster, targetCluster, *cfg, targetCacheDisabled); err != nil {
+	if err := health.AddToManager(ctx, mgr, sourceCluster, targetCluster, *cfg, targetCacheDisabled); err != nil {
 		return fmt.Errorf("failed adding health controller: %w", err)
 	}
 
@@ -90,14 +91,14 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 		ClassFilter:               resourcemanagerpredicate.NewClassFilter(*cfg.Controllers.ResourceClass),
 		ClusterID:                 *cfg.Controllers.ClusterID,
 		GarbageCollectorActivated: cfg.Controllers.GarbageCollector.Enabled,
-	}).AddToManager(mgr, sourceCluster, targetCluster); err != nil {
+	}).AddToManager(ctx, mgr, sourceCluster, targetCluster); err != nil {
 		return fmt.Errorf("failed adding managed resource controller: %w", err)
 	}
 
 	if cfg.Controllers.NetworkPolicy.Enabled {
 		if err := (&networkpolicy.Reconciler{
 			Config: cfg.Controllers.NetworkPolicy,
-		}).AddToManager(mgr, targetCluster); err != nil {
+		}).AddToManager(ctx, mgr, targetCluster); err != nil {
 			return fmt.Errorf("failed adding networkpolicy controller: %w", err)
 		}
 	}
@@ -105,14 +106,14 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 	if err := (&secret.Reconciler{
 		Config:      cfg.Controllers.Secret,
 		ClassFilter: resourcemanagerpredicate.NewClassFilter(*cfg.Controllers.ResourceClass),
-	}).AddToManager(mgr, sourceCluster); err != nil {
+	}).AddToManager(ctx, mgr, sourceCluster); err != nil {
 		return fmt.Errorf("failed adding secret controller: %w", err)
 	}
 
 	if cfg.Controllers.TokenInvalidator.Enabled {
 		if err := (&tokeninvalidator.Reconciler{
 			Config: cfg.Controllers.TokenInvalidator,
-		}).AddToManager(mgr, targetCluster); err != nil {
+		}).AddToManager(ctx, mgr, targetCluster); err != nil {
 			return fmt.Errorf("failed adding token invalidator controller: %w", err)
 		}
 	}

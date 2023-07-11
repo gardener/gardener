@@ -15,7 +15,10 @@
 package containerruntime
 
 import (
+	"context"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -24,6 +27,6 @@ import (
 
 // ClusterToContainerResourceMapper returns a mapper that returns requests for Container resource whose
 // referenced clusters have been modified.
-func ClusterToContainerResourceMapper(predicates ...predicate.Predicate) mapper.Mapper {
-	return mapper.ClusterToObjectMapper(func() client.ObjectList { return &extensionsv1alpha1.ContainerRuntimeList{} }, predicates)
+func ClusterToContainerResourceMapper(ctx context.Context, mgr manager.Manager, predicates ...predicate.Predicate) mapper.Mapper {
+	return mapper.ClusterToObjectMapper(ctx, mgr, func() client.ObjectList { return &extensionsv1alpha1.ContainerRuntimeList{} }, predicates)
 }

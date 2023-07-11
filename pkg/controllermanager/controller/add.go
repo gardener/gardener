@@ -15,6 +15,7 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 
 	kubernetesclientset "k8s.io/client-go/kubernetes"
@@ -37,7 +38,7 @@ import (
 )
 
 // AddToManager adds all controller-manager controllers to the given manager.
-func AddToManager(mgr manager.Manager, cfg *config.ControllerManagerConfiguration) error {
+func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.ControllerManagerConfiguration) error {
 	kubernetesClient, err := kubernetesclientset.NewForConfig(mgr.GetConfig())
 	if err != nil {
 		return fmt.Errorf("failed creating Kubernetes client: %w", err)
@@ -45,7 +46,7 @@ func AddToManager(mgr manager.Manager, cfg *config.ControllerManagerConfiguratio
 
 	if err := (&bastion.Reconciler{
 		Config: *cfg.Controllers.Bastion,
-	}).AddToManager(mgr); err != nil {
+	}).AddToManager(ctx, mgr); err != nil {
 		return fmt.Errorf("failed adding Bastion controller: %w", err)
 	}
 
@@ -68,7 +69,7 @@ func AddToManager(mgr manager.Manager, cfg *config.ControllerManagerConfiguratio
 		return fmt.Errorf("failed adding ControllerDeployment controller: %w", err)
 	}
 
-	if err := controllerregistration.AddToManager(mgr, *cfg); err != nil {
+	if err := controllerregistration.AddToManager(ctx, mgr, *cfg); err != nil {
 		return fmt.Errorf("failed adding ControllerRegistration controller: %w", err)
 	}
 
@@ -88,11 +89,11 @@ func AddToManager(mgr manager.Manager, cfg *config.ControllerManagerConfiguratio
 
 	if err := (&managedseedset.Reconciler{
 		Config: *cfg.Controllers.ManagedSeedSet,
-	}).AddToManager(mgr); err != nil {
+	}).AddToManager(ctx, mgr); err != nil {
 		return fmt.Errorf("failed adding ManagedSeedSet controller: %w", err)
 	}
 
-	if err := project.AddToManager(mgr, *cfg); err != nil {
+	if err := project.AddToManager(ctx, mgr, *cfg); err != nil {
 		return fmt.Errorf("failed adding Project controller: %w", err)
 	}
 
@@ -108,11 +109,11 @@ func AddToManager(mgr manager.Manager, cfg *config.ControllerManagerConfiguratio
 		return fmt.Errorf("failed adding SecretBinding controller: %w", err)
 	}
 
-	if err := seed.AddToManager(mgr, *cfg); err != nil {
+	if err := seed.AddToManager(ctx, mgr, *cfg); err != nil {
 		return fmt.Errorf("failed adding Seed controller: %w", err)
 	}
 
-	if err := shoot.AddToManager(mgr, *cfg); err != nil {
+	if err := shoot.AddToManager(ctx, mgr, *cfg); err != nil {
 		return fmt.Errorf("failed adding Shoot controller: %w", err)
 	}
 

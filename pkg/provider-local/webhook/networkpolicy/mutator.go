@@ -28,11 +28,6 @@ type mutator struct {
 	client client.Client
 }
 
-func (m *mutator) InjectClient(client client.Client) error {
-	m.client = client
-	return nil
-}
-
 func (m *mutator) Mutate(ctx context.Context, newObj, _ client.Object) error {
 	if newObj.GetName() != "allow-to-private-networks" {
 		return nil

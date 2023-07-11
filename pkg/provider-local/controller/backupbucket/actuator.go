@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/backupbucket"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -36,15 +37,11 @@ type actuator struct {
 	bbDirectory string
 }
 
-func newActuator(bbDirectory string) backupbucket.Actuator {
+func newActuator(mgr manager.Manager, bbDirectory string) backupbucket.Actuator {
 	return &actuator{
+		client:      mgr.GetClient(),
 		bbDirectory: bbDirectory,
 	}
-}
-
-func (a *actuator) InjectClient(client client.Client) error {
-	a.client = client
-	return nil
 }
 
 func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, backupBucket *extensionsv1alpha1.BackupBucket) error {

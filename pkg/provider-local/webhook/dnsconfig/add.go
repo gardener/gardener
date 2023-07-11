@@ -55,7 +55,7 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 
 	logger = logger.WithValues("provider", provider)
 
-	handler, err := extensionswebhook.NewBuilder(mgr, logger).WithMutator(&mutator{}, types...).Build()
+	handler, err := extensionswebhook.NewBuilder(mgr, logger).WithMutator(&mutator{client: mgr.GetClient()}, types...).Build()
 	if err != nil {
 		return nil, err
 	}

@@ -34,7 +34,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
@@ -47,6 +46,7 @@ import (
 	mockkubelet "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet/mock"
 	mockutils "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/utils/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
 )
 
 const (
@@ -80,6 +80,8 @@ var _ = Describe("Mutator", func() {
 	var (
 		ctrl   *gomock.Controller
 		logger = log.Log.WithName("test")
+		mgr    *mockmanager.MockManager
+		c      *mockclient.MockClient
 
 		kubernetesVersion       = "1.25.4"
 		kubernetesVersionSemver = semver.MustParse(kubernetesVersion)
@@ -114,6 +116,11 @@ var _ = Describe("Mutator", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
+
+		// Create fake manager and client
+		mgr = mockmanager.NewMockManager(ctrl)
+		c = mockclient.NewMockClient(ctrl)
+		mgr.EXPECT().GetClient().Return(c)
 	})
 
 	AfterEach(func() {
@@ -136,7 +143,7 @@ var _ = Describe("Mutator", func() {
 			kcc = mockkubelet.NewMockConfigCodec(ctrl)
 			us = mockutils.NewMockUnitSerializer(ctrl)
 			fcic = mockutils.NewMockFileContentInlineCodec(ctrl)
-			mutator = genericmutator.NewMutator(ensurer, us, kcc, fcic, logger)
+			mutator = genericmutator.NewMutator(mgr, ensurer, us, kcc, fcic, logger)
 			oldObj = nil
 			newObj = nil
 		})
@@ -280,8 +287,7 @@ var _ = Describe("Mutator", func() {
 		)
 
 		DescribeTable("EnsureETCD", func(newObj, oldObj *druidv1alpha1.Etcd) {
-			client := mockclient.NewMockClient(ctrl)
-			client.EXPECT().Get(context.TODO(), clusterKey, &extensionsv1alpha1.Cluster{}).DoAndReturn(clientGet(clusterObject(cluster)))
+			c.EXPECT().Get(context.TODO(), clusterKey, &extensionsv1alpha1.Cluster{}).DoAndReturn(clientGet(clusterObject(cluster)))
 
 			ensurer.EXPECT().EnsureETCD(context.TODO(), gomock.Any(), newObj, oldObj).Return(nil).Do(func(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *druidv1alpha1.Etcd) {
 				_, err := gctx.GetCluster(ctx)
@@ -290,11 +296,8 @@ var _ = Describe("Mutator", func() {
 				}
 			})
 
-			err := mutator.(inject.Client).InjectClient(client)
-			Expect(err).To(Not(HaveOccurred()))
-
 			// Call Mutate method and check the result
-			err = mutator.Mutate(context.TODO(), newObj, oldObj)
+			err := mutator.Mutate(context.TODO(), newObj, oldObj)
 			Expect(err).To(Not(HaveOccurred()))
 		},
 			Entry(
@@ -330,8 +333,6 @@ var _ = Describe("Mutator", func() {
 				mutatedKubeletConfig *kubeletconfigv1beta1.KubeletConfiguration
 				additionalUnit       = extensionsv1alpha1.Unit{Name: "custom-mtu.service"}
 				additionalFile       = extensionsv1alpha1.File{Path: "/test/path"}
-
-				c *mockclient.MockClient
 			)
 
 			BeforeEach(func() {
@@ -402,10 +403,6 @@ var _ = Describe("Mutator", func() {
 						"Foo": true,
 					},
 				}
-
-				c = mockclient.NewMockClient(ctrl)
-				err := mutator.(inject.Client).InjectClient(c)
-				Expect(err).To(Not(HaveOccurred()))
 
 				c.EXPECT().Get(context.TODO(), clusterKey, &extensionsv1alpha1.Cluster{}).DoAndReturn(clientGet(clusterObject(cluster)))
 			})

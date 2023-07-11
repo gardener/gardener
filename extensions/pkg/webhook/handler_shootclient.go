@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
@@ -50,6 +49,8 @@ func NewHandlerWithShootClient(mgr manager.Manager, types []Type, mutator Mutato
 			Handler: &handlerShootClient{
 				typesMap: typesMap,
 				mutator:  mutator,
+				client:   mgr.GetClient(),
+				decoder:  serializer.NewCodecFactory(mgr.GetScheme()).UniversalDecoder(),
 				logger:   logger.WithName("handlerShootClient"),
 			},
 			RecoverPanic: true,
@@ -63,23 +64,6 @@ type handlerShootClient struct {
 	client   client.Client
 	decoder  runtime.Decoder
 	logger   logr.Logger
-}
-
-// InjectScheme injects the given scheme into the handler.
-func (h *handlerShootClient) InjectScheme(s *runtime.Scheme) error {
-	h.decoder = serializer.NewCodecFactory(s).UniversalDecoder()
-	return nil
-}
-
-// InjectFunc injects stuff into the mutator.
-func (h *handlerShootClient) InjectFunc(f inject.Func) error {
-	return f(h.mutator)
-}
-
-// InjectClient injects a client.
-func (h *handlerShootClient) InjectClient(client client.Client) error {
-	h.client = client
-	return nil
 }
 
 func (h *handlerShootClient) Handle(ctx context.Context, req admission.Request) admission.Response {

@@ -46,7 +46,7 @@ import (
 const ControllerName = "networkpolicy"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager, runtimeCluster cluster.Cluster) error {
+func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, runtimeCluster cluster.Cluster) error {
 	if r.RuntimeClient == nil {
 		r.RuntimeClient = runtimeCluster.GetClient()
 	}
@@ -93,7 +93,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, runtimeCluster cluster.Cl
 
 	if err := c.Watch(
 		source.NewKindWithCache(&corev1.Endpoints{}, runtimeCluster.GetCache()),
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, c.GetLogger()),
 		r.IsKubernetesEndpoint(),
 	); err != nil {
 		return err
@@ -101,7 +101,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, runtimeCluster cluster.Cl
 
 	if err := c.Watch(
 		source.NewKindWithCache(&networkingv1.NetworkPolicy{}, runtimeCluster.GetCache()),
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapObjectToNamespace), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapObjectToNamespace), mapper.UpdateWithNew, c.GetLogger()),
 		r.NetworkPolicyPredicate(),
 	); err != nil {
 		return err
@@ -115,7 +115,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, runtimeCluster cluster.Cl
 
 	return c.Watch(
 		&source.Channel{Source: r.ResolverUpdate},
-		mapper.EnqueueRequestsFrom(mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, c.GetLogger()),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapToNamespaces), mapper.UpdateWithNew, c.GetLogger()),
 	)
 }
 

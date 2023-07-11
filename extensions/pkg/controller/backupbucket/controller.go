@@ -15,6 +15,8 @@
 package backupbucket
 
 import (
+	"context"
+
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -61,14 +63,14 @@ func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 
 // Add creates a new BackupBucket Controller and adds it to the Manager.
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, args AddArgs) error {
-	args.ControllerOptions.Reconciler = NewReconciler(args.Actuator)
+func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
+	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.Actuator)
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
-	return add(mgr, args, predicates)
+	return add(ctx, mgr, args, predicates)
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) error {
+func add(ctx context.Context, mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) error {
 	ctrl, err := controller.New(ControllerName, mgr, args.ControllerOptions)
 	if err != nil {
 		return err
@@ -77,7 +79,7 @@ func add(mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) er
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
 			&source.Kind{Type: &corev1.Secret{}},
-			mapper.EnqueueRequestsFrom(SecretToBackupBucketMapper(predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
+			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), SecretToBackupBucketMapper(predicates), mapper.UpdateWithNew, ctrl.GetLogger()),
 		); err != nil {
 			return err
 		}

@@ -20,13 +20,12 @@ import (
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
-	contextutils "github.com/gardener/gardener/pkg/utils/context"
 )
 
 type clusterToObjectMapper struct {
@@ -34,25 +33,6 @@ type clusterToObjectMapper struct {
 	reader         cache.Cache
 	newObjListFunc func() client.ObjectList
 	predicates     []predicate.Predicate
-}
-
-func (m *clusterToObjectMapper) InjectCache(c cache.Cache) error {
-	m.reader = c
-	return nil
-}
-
-func (m *clusterToObjectMapper) InjectStopChannel(stopCh <-chan struct{}) error {
-	m.ctx = contextutils.FromStopChannel(stopCh)
-	return nil
-}
-
-func (m *clusterToObjectMapper) InjectFunc(f inject.Func) error {
-	for _, p := range m.predicates {
-		if err := f(p); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (m *clusterToObjectMapper) Map(ctx context.Context, _ logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
@@ -73,6 +53,11 @@ func (m *clusterToObjectMapper) Map(ctx context.Context, _ logr.Logger, reader c
 
 // ClusterToObjectMapper returns a mapper that returns requests for objects whose
 // referenced clusters have been modified.
-func ClusterToObjectMapper(newObjListFunc func() client.ObjectList, predicates []predicate.Predicate) Mapper {
-	return &clusterToObjectMapper{newObjListFunc: newObjListFunc, predicates: predicates}
+func ClusterToObjectMapper(ctx context.Context, mgr manager.Manager, newObjListFunc func() client.ObjectList, predicates []predicate.Predicate) Mapper {
+	return &clusterToObjectMapper{
+		ctx:            ctx,
+		reader:         mgr.GetCache(),
+		newObjListFunc: newObjListFunc,
+		predicates:     predicates,
+	}
 }

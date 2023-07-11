@@ -17,8 +17,6 @@ package webhook
 import (
 	"context"
 	"net/http"
-
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 // remoteAddrContextKey is a context key. It will be filled by the remoteAddrInjectingHandler with the received
@@ -31,11 +29,6 @@ var remoteAddrContextKey = struct{}{}
 type remoteAddrInjectingHandler struct {
 	// Handler is the underlying handler.
 	http.Handler
-}
-
-// InjectFunc injects into the underlying handler.
-func (h remoteAddrInjectingHandler) InjectFunc(f inject.Func) error {
-	return f(h.Handler)
 }
 
 // ServerHTTP implements http.Handler by delegating to the underlying handler but injecting request.RemoteAddr into

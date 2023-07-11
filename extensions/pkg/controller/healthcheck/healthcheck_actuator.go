@@ -22,12 +22,11 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -39,8 +38,6 @@ import (
 type Actuator struct {
 	restConfig *rest.Config
 	seedClient client.Client
-	scheme     *runtime.Scheme
-	decoder    runtime.Decoder
 
 	provider            string
 	extensionKind       string
@@ -50,33 +47,17 @@ type Actuator struct {
 }
 
 // NewActuator creates a new Actuator.
-func NewActuator(provider, extensionKind string, getExtensionObjFunc GetExtensionObjectFunc, healthChecks []ConditionTypeToHealthCheck, shootRESTOptions extensionsconfig.RESTOptions) HealthCheckActuator {
+func NewActuator(mgr manager.Manager, provider, extensionKind string, getExtensionObjFunc GetExtensionObjectFunc, healthChecks []ConditionTypeToHealthCheck, shootRESTOptions extensionsconfig.RESTOptions) HealthCheckActuator {
 	return &Actuator{
+		restConfig: mgr.GetConfig(),
+		seedClient: mgr.GetClient(),
+
 		healthChecks:        healthChecks,
 		getExtensionObjFunc: getExtensionObjFunc,
 		provider:            provider,
 		extensionKind:       extensionKind,
 		shootRESTOptions:    shootRESTOptions,
 	}
-}
-
-// InjectScheme injects the given runtime.Scheme into this Actuator.
-func (a *Actuator) InjectScheme(scheme *runtime.Scheme) error {
-	a.scheme = scheme
-	a.decoder = serializer.NewCodecFactory(a.scheme).UniversalDecoder()
-	return nil
-}
-
-// InjectClient injects the given client.Client into this Actuator.
-func (a *Actuator) InjectClient(client client.Client) error {
-	a.seedClient = client
-	return nil
-}
-
-// InjectConfig injects the given rest.Config into this Actuator.
-func (a *Actuator) InjectConfig(config *rest.Config) error {
-	a.restConfig = config
-	return nil
 }
 
 type healthCheckUnsuccessful struct {

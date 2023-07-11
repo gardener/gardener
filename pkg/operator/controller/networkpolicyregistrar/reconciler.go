@@ -62,7 +62,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			Services:   garden.Spec.RuntimeCluster.Networking.Services,
 			BlockCIDRs: garden.Spec.RuntimeCluster.Networking.BlockCIDRs,
 		},
-	}).AddToManager(r.Manager, r.Manager); err != nil {
+	}).AddToManager(ctx, r.Manager, r.Manager); err != nil {
 		return reconcile.Result{}, err
 	}
 

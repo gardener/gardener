@@ -30,7 +30,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -81,7 +80,7 @@ var _ = Describe("Add", func() {
 		)
 
 		BeforeEach(func() {
-			p = reconciler.ManagedSeedPredicate(seedNameFromSeedConfig)
+			p = reconciler.ManagedSeedPredicate(ctx, seedNameFromSeedConfig)
 
 			oldManagedSeed = &seedmanagementv1alpha1.ManagedSeed{
 				ObjectMeta: metav1.ObjectMeta{
@@ -96,8 +95,6 @@ var _ = Describe("Add", func() {
 					Namespace: namespace,
 				},
 			}
-
-			Expect(inject.StopChannelInto(ctx.Done(), p)).To(BeTrue())
 		})
 
 		It("should return false when ManagedSeed does not reference any shoot", func() {
@@ -179,7 +176,7 @@ var _ = Describe("Add", func() {
 		)
 
 		BeforeEach(func() {
-			p = reconciler.SeedOfManagedSeedPredicate(seedNameFromSeedConfig)
+			p = reconciler.SeedOfManagedSeedPredicate(ctx, seedNameFromSeedConfig)
 
 			oldSeed = &gardencorev1beta1.Seed{
 				ObjectMeta: metav1.ObjectMeta{
@@ -199,8 +196,6 @@ var _ = Describe("Add", func() {
 					Namespace: namespace,
 				},
 			}
-
-			Expect(inject.StopChannelInto(ctx.Done(), p)).To(BeTrue())
 		})
 
 		It("should return false if the object is not seed", func() {

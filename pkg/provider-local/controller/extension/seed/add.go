@@ -15,6 +15,7 @@
 package seed
 
 import (
+	"context"
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -45,19 +46,19 @@ type AddOptions struct {
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
-func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
-	return extension.Add(mgr, extension.AddArgs{
-		Actuator:          NewActuator(),
+func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddOptions) error {
+	return extension.Add(ctx, mgr, extension.AddArgs{
+		Actuator:          NewActuator(mgr),
 		ControllerOptions: opts.Controller,
 		Name:              ApplicationName,
 		FinalizerSuffix:   Type,
 		Resync:            60 * time.Minute,
-		Predicates:        extension.DefaultPredicates(opts.IgnoreOperationAnnotation),
+		Predicates:        extension.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),
 		Type:              Type,
 	})
 }
 
 // AddToManager adds a controller with the default Options.
-func AddToManager(mgr manager.Manager) error {
-	return AddToManagerWithOptions(mgr, DefaultAddOptions)
+func AddToManager(ctx context.Context, mgr manager.Manager) error {
+	return AddToManagerWithOptions(ctx, mgr, DefaultAddOptions)
 }

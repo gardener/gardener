@@ -736,12 +736,12 @@ var _ = Describe("Options", func() {
 					)
 				)
 
-				f1.EXPECT().Do(nil)
+				f1.EXPECT().Do(nil, nil)
 
 				switches.Disabled = []string{name2}
 
 				Expect(switches.Complete()).To(Succeed())
-				Expect(switches.Completed().AddToManager(nil)).To(Succeed())
+				Expect(switches.Completed().AddToManager(nil, nil)).To(Succeed())
 			})
 		})
 	})
