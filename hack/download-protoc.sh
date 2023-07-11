@@ -45,6 +45,6 @@ trap cleanup_output EXIT
 
 curl -L -o "$out_dir"/"$protoc_zip" "$url"
 unzip -o "$out_dir"/"$protoc_zip" -d "$out_dir" >/dev/null
-mv -f "$out_dir"/bin/protoc "$TOOLS_BIN_DIR"/protoc
+rm -rf "$TOOLS_BIN_DIR"/include
+cp -f "$out_dir"/bin/protoc "$TOOLS_BIN_DIR"/protoc
 cp -r "$out_dir"/include "$TOOLS_BIN_DIR"
-chmod -R +rX "$TOOLS_BIN_DIR"/protoc
