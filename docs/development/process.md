@@ -25,8 +25,8 @@ Version | Week No     | Begin Validation Phase | Due Date           | Release Re
 v1.76   | Week 29-30  | July 17, 2023          | July 30, 2023      | [@plkokanov](https://github.com/plkokanov)       |
 v1.77   | Week 31-32  | July 31, 2023          | August 13, 2023    | [@ialidzhikov](https://github.com/ialidzhikov)   |
 v1.78   | Week 33-34  | August 14, 2023        | August 27, 2023    | [@acumino](https://github.com/acumino)           |
-v1.79   | Week 35-36  | August 28, 2023        | September 10, 2023 | [@ScheererJ](https://github.com/ScheererJ)       |
-v1.80   | Week 37-38  | September 11, 2023     | September 24, 2023 | [@shafeeqes](https://github.com/shafeeqes)       |
+v1.79   | Week 35-36  | August 28, 2023        | September 10, 2023 | [@shafeeqes](https://github.com/shafeeqes)       |
+v1.80   | Week 37-38  | September 11, 2023     | September 24, 2023 | [@ScheererJ](https://github.com/ScheererJ)       |
 v1.81   | Week 39-40  | September 25, 2023     | October 8, 2023    | [@ary1992](https://github.com/ary1992)           |
 v1.82   | Week 41-42  | October 9, 2023        | October 22, 2023   | [@timuthy](https://github.com/timuthy)           |
 v1.83   | Week 43-44  | October 23, 2023       | November 5, 2023   | [@oliver-goetz](https://github.com/oliver-goetz) |
