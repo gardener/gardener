@@ -96,3 +96,12 @@ func OperatingSystemConfigUnitNames(config *extensionsv1alpha1.OperatingSystemCo
 	}
 	return unitNames
 }
+
+// OperatingSystemConfigFilePaths returns the paths of the files in the OperatingSystemConfig
+func OperatingSystemConfigFilePaths(config *extensionsv1alpha1.OperatingSystemConfig) []string {
+	filePaths := make([]string, 0, len(config.Spec.Files))
+	for _, file := range config.Spec.Files {
+		filePaths = append(filePaths, file.Path)
+	}
+	return filePaths
+}

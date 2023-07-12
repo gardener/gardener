@@ -25,11 +25,11 @@ import (
 // Actuator acts upon OperatingSystemConfig resources.
 type Actuator interface {
 	// Reconcile the operating system config.
-	Reconcile(context.Context, logr.Logger, *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, error)
+	Reconcile(context.Context, logr.Logger, *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, []string, error)
 	// Delete the operating system config.
 	Delete(context.Context, logr.Logger, *extensionsv1alpha1.OperatingSystemConfig) error
 	// Restore the operating system config.
-	Restore(context.Context, logr.Logger, *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, error)
+	Restore(context.Context, logr.Logger, *extensionsv1alpha1.OperatingSystemConfig) ([]byte, *string, []string, []string, error)
 	// Migrate the operating system config.
 	Migrate(context.Context, logr.Logger, *extensionsv1alpha1.OperatingSystemConfig) error
 }
