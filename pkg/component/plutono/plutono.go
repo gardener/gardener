@@ -53,7 +53,7 @@ const (
 	ManagedResourceName = "plutono"
 
 	name                          = "plutono"
-	plotonoMountPathDashboards    = "/var/lib/plutono/dashboards"
+	plutonoMountPathDashboards    = "/var/lib/plutono/dashboards"
 	port                          = 3000
 	ingressTLSCertificateValidity = 730 * 24 * time.Hour
 )
@@ -78,7 +78,7 @@ type Interface interface {
 
 // Values is a set of configuration values for the plutono component.
 type Values struct {
-	// AuthSecretName is the secret name of plotono credentials.
+	// AuthSecretName is the secret name of plutono credentials.
 	AuthSecretName string
 	// ClusterType specifies the type of the cluster to which plutono is being deployed.
 	ClusterType component.ClusterType
@@ -190,7 +190,7 @@ providers:
   disableDeletion: false
   editable: false
   options:
-    path: ` + plotonoMountPathDashboards + `
+    path: ` + plutonoMountPathDashboards + `
 `,
 			},
 		}
@@ -345,7 +345,7 @@ func (p *plutono) getDashboards(ctx context.Context) (map[string]string, error) 
 			ignorePaths.Insert("vpa")
 		}
 		if p.values.IsWorkerless {
-			ignorePaths.Insert("worker", "dns", "istio", "machine-controller-manager", "ha-vpn")
+			ignorePaths.Insert("worker")
 		} else {
 			ignorePaths.Insert("workerless")
 			if !p.values.NodeLocalDNSEnabled {
@@ -455,7 +455,7 @@ func (p *plutono) getService() *corev1.Service {
 	return service
 }
 
-func (p *plutono) getDeployment(providerConfigMapName, dataSourceConfigMapName, dashBoardConfigMapName string) *appsv1.Deployment {
+func (p *plutono) getDeployment(providerConfigMapName, dataSourceConfigMapName, dashboardConfigMapName string) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -493,7 +493,7 @@ func (p *plutono) getDeployment(providerConfigMapName, dataSourceConfigMapName, 
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "plutono-dashboards",
-									MountPath: plotonoMountPathDashboards,
+									MountPath: plutonoMountPathDashboards,
 								},
 								{
 									Name:      "plutono-datasources",
@@ -527,7 +527,7 @@ func (p *plutono) getDeployment(providerConfigMapName, dataSourceConfigMapName, 
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: dashBoardConfigMapName,
+										Name: dashboardConfigMapName,
 									},
 								},
 							},
