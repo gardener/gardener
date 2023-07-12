@@ -283,6 +283,7 @@ func (b *Botanist) generateCloudConfigExecutorResourcesForWorker(
 		kubeletDataVolume,
 		*oscDataOriginal.Command,
 		oscDataOriginal.Units,
+		oscDataOriginal.Files,
 	)
 	if err != nil {
 		return "", nil, err

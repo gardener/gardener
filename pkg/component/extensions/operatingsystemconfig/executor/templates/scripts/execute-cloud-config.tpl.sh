@@ -4,6 +4,8 @@ PATH_CLOUDCONFIG_DOWNLOADER_SERVER="{{ .pathCredentialsServer }}"
 PATH_CLOUDCONFIG_DOWNLOADER_CA_CERT="{{ .pathCredentialsCACert }}"
 PATH_CLOUDCONFIG="{{ .pathDownloadedCloudConfig }}"
 PATH_CLOUDCONFIG_OLD="${PATH_CLOUDCONFIG}.old"
+PATH_CLOUDCONFIG_FILES="{{ .pathDownloadedCloudConfig }}_files"
+PATH_CLOUDCONFIG_FILES_OLD="${PATH_CLOUDCONFIG}_files.old"
 PATH_CHECKSUM="{{ .pathDownloadedChecksum }}"
 PATH_CCD_SCRIPT="{{ .pathCCDScript }}"
 PATH_CCD_SCRIPT_CHECKSUM="{{ .pathCCDScriptChecksum }}"
@@ -16,6 +18,17 @@ PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBELET="{{ .pathHyperKubeImageUsedForLa
 PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBECTL="{{ .pathHyperKubeImageUsedForLastCopyKubectl }}"
 
 mkdir -p "{{ .pathKubeletDirectory }}" "$PATH_HYPERKUBE_DOWNLOADS"
+
+deleteOrphan() {
+  if [[ ! -f "$PATH_CLOUDCONFIG_FILES_OLD" ]]; then
+    touch "$PATH_CLOUDCONFIG_FILES_OLD"
+  fi
+  # sort for join to work
+  sort -o "$PATH_CLOUDCONFIG_FILES" "$PATH_CLOUDCONFIG_FILES"
+  # calculates old_files - new_files and deletes them
+  join -t $'\n' -v 1 "$PATH_CLOUDCONFIG_FILES_OLD" "$PATH_CLOUDCONFIG_FILES" | xargs -L1 rm -f
+  mv "$PATH_CLOUDCONFIG_FILES" "$PATH_CLOUDCONFIG_FILES_OLD"
+}
 
 {{ if .kubeletDataVolume -}}
 function format-data-device() {
@@ -224,6 +237,12 @@ if [[ -f "{{ .pathKubeletKubeconfigReal }}" ]]; then
     fi
   fi
 fi
+
+cat << 'EOF' > "$PATH_CLOUDCONFIG_FILES"
+{{ .cloudConfigFiles }}
+EOF
+
+deleteOrphan
 
 # Apply most recent cloud-config user-data, reload the systemd daemon and restart the units to make the changes
 # effective.

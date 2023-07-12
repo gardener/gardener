@@ -191,6 +191,8 @@ type Data struct {
 	Command *string
 	// Units is the list of systemd unit names.
 	Units []string
+	// Files is the list of file paths.
+	Files []string
 }
 
 // Deploy uses the client to create or update the OperatingSystemConfig custom resources.
@@ -257,6 +259,7 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 					Content: string(secret.Data[extensionsv1alpha1.OperatingSystemConfigSecretDataKey]),
 					Command: osc.Status.Command,
 					Units:   osc.Status.Units,
+					Files:   osc.Status.Files,
 				}
 
 				o.lock.Lock()
