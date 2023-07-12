@@ -503,6 +503,10 @@ func (p *plutono) getDeployment(providerConfigMapName, dataSourceConfigMapName, 
 									Name:      "plutono-dashboard-providers",
 									MountPath: "/etc/plutono/provisioning/dashboards",
 								},
+								{
+									Name:      "plutono-storage",
+									MountPath: "/var/lib/plutono",
+								},
 							},
 							Ports: []corev1.ContainerPort{
 								{
@@ -552,6 +556,14 @@ func (p *plutono) getDeployment(providerConfigMapName, dataSourceConfigMapName, 
 								},
 							},
 						},
+						{
+							Name: "plutono-storage",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{
+									SizeLimit: utils.QuantityPtr(resource.MustParse("100Mi")),
+								},
+							},
+						},
 					},
 				},
 			},
@@ -570,16 +582,6 @@ func (p *plutono) getDeployment(providerConfigMapName, dataSourceConfigMapName, 
 			{Name: "PL_AUTH_BASIC_ENABLED", Value: "true"},
 			{Name: "PL_AUTH_DISABLE_LOGIN_FORM", Value: "false"},
 		}...)
-		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-			Name:      "plutono-storage",
-			MountPath: "/var/plutono-storage",
-		})
-		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-			Name: "plutono-storage",
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{},
-			},
-		})
 	} else {
 		deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring})
 		deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
@@ -591,18 +593,6 @@ func (p *plutono) getDeployment(providerConfigMapName, dataSourceConfigMapName, 
 			{Name: "PL_AUTH_DISABLE_LOGIN_FORM", Value: "true"},
 			{Name: "PL_AUTH_DISABLE_SIGNOUT_MENU", Value: "true"},
 		}...)
-		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-			Name:      "plutono-storage",
-			MountPath: "/var/lib/plutono",
-		})
-		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-			Name: "plutono-storage",
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{
-					SizeLimit: utils.QuantityPtr(resource.MustParse("100Mi")),
-				},
-			},
-		})
 	}
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
