@@ -36,16 +36,12 @@ import (
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-)
-
-const (
-	// PluginName is the name of this admission plugin.
-	PluginName = "DeletionConfirmation"
+	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(PluginName, NewFactory)
+	plugins.Register(plugin.PluginNameDeletionConfirmation, NewFactory)
 }
 
 // NewFactory creates a new PluginFactory.

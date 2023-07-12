@@ -27,16 +27,12 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
-)
-
-const (
-	// PluginName is the name of this admission plugin.
-	PluginName = "ControllerRegistrationResources"
+	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(PluginName, NewFactory)
+	plugins.Register(plugin.PluginNameControllerRegistrationResources, NewFactory)
 }
 
 // NewFactory creates a new PluginFactory.

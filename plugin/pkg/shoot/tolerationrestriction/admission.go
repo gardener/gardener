@@ -31,19 +31,15 @@ import (
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	"github.com/gardener/gardener/pkg/utils"
+	plugin "github.com/gardener/gardener/plugin/pkg"
 	"github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction"
 	"github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction/validation"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
 
-const (
-	// PluginName is the name of this admission plugin.
-	PluginName = "ShootTolerationRestriction"
-)
-
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(PluginName, func(cfg io.Reader) (admission.Interface, error) {
+	plugins.Register(plugin.PluginNameShootTolerationRestriction, func(cfg io.Reader) (admission.Interface, error) {
 		config, err := LoadConfiguration(cfg)
 		if err != nil {
 			return nil, err

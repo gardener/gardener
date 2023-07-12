@@ -1,0 +1,110 @@
+// Copyright 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package pkg
+
+import (
+	"k8s.io/apiserver/pkg/admission/plugin/namespace/lifecycle"
+	"k8s.io/apiserver/pkg/admission/plugin/resourcequota"
+	"k8s.io/apiserver/pkg/admission/plugin/validatingadmissionpolicy"
+	mutatingwebhook "k8s.io/apiserver/pkg/admission/plugin/webhook/mutating"
+	validatingwebhook "k8s.io/apiserver/pkg/admission/plugin/webhook/validating"
+)
+
+const (
+	// PluginNameBastion is the name of the Bastion admission plugin.
+	PluginNameBastion = "Bastion"
+	// PluginNameControllerRegistrationResources is the name of the ControllerRegistrationResources admission plugin.
+	PluginNameControllerRegistrationResources = "ControllerRegistrationResources"
+	// PluginNameCustomVerbAuthorizer is the name of the CustomVerbAuthorizer admission plugin.
+	PluginNameCustomVerbAuthorizer = "CustomVerbAuthorizer"
+	// PluginNameDeletionConfirmation is the name of the DeletionConfirmation admission plugin.
+	PluginNameDeletionConfirmation = "DeletionConfirmation"
+	// PluginNameExtensionLabels is the name of the ExtensionLabels admission plugin.
+	PluginNameExtensionLabels = "ExtensionLabels"
+	// PluginNameExtensionValidator is the name of the ExtensionValidator admission plugin.
+	PluginNameExtensionValidator = "ExtensionValidator"
+	// PluginNameResourceReferenceManager is the name of the ResourceReferenceManager admission plugin.
+	PluginNameResourceReferenceManager = "ResourceReferenceManager"
+	// PluginNameManagedSeedShoot is the name of the ManagedSeedShoot admission plugin.
+	PluginNameManagedSeedShoot = "ManagedSeedShoot"
+	// PluginNameManagedSeed is the name of the ManagedSeed admission plugin.
+	PluginNameManagedSeed = "ManagedSeed"
+	// PluginNameProjectValidator is the name of the ProjectValidator admission plugin.
+	PluginNameProjectValidator = "ProjectValidator"
+	// PluginNameSeedValidator is the name of the SeedValidator admission plugin.
+	PluginNameSeedValidator = "SeedValidator"
+	// PluginNameShootDNS is the name of the ShootDNS admission plugin.
+	PluginNameShootDNS = "ShootDNS"
+	// PluginNameShootDNSRewriting is the name of the ShootDNSRewriting admission plugin.
+	PluginNameShootDNSRewriting = "ShootDNSRewriting"
+	// PluginNameShootExposureClass is the name of the ShootExposureClass admission plugin.
+	PluginNameShootExposureClass = "ShootExposureClass"
+	// PluginNameShootManagedSeed is the name of the ShootManagedSeed admission plugin.
+	PluginNameShootManagedSeed = "ShootManagedSeed"
+	// PluginNameShootNodeLocalDNSEnabledByDefault is the name of the ShootNodeLocalDNSEnabledByDefault admission plugin.
+	PluginNameShootNodeLocalDNSEnabledByDefault = "ShootNodeLocalDNSEnabledByDefault"
+	// PluginNameClusterOpenIDConnectPreset is the name of the ClusterOpenIDConnectPreset admission plugin.
+	PluginNameClusterOpenIDConnectPreset = "ClusterOpenIDConnectPreset"
+	// PluginNameOpenIDConnectPreset is the name of the OpenIDConnectPreset admission plugin.
+	PluginNameOpenIDConnectPreset = "OpenIDConnectPreset"
+	// PluginNameShootQuotaValidator is the name of the ShootQuotaValidator admission plugin.
+	PluginNameShootQuotaValidator = "ShootQuotaValidator"
+	// PluginNameShootTolerationRestriction is the name of the ShootTolerationRestriction admission plugin.
+	PluginNameShootTolerationRestriction = "ShootTolerationRestriction"
+	// PluginNameShootValidator is the name of the ShootValidator admission plugin.
+	PluginNameShootValidator = "ShootValidator"
+	// PluginNameShootVPAEnabledByDefault is the name of the ShootVPAEnabledByDefault admission plugin.
+	PluginNameShootVPAEnabledByDefault = "ShootVPAEnabledByDefault"
+)
+
+// AllPluginNames returns the names of all plugins.
+func AllPluginNames() []string {
+	return []string{
+		lifecycle.PluginName,                        // NamespaceLifecycle
+		PluginNameResourceReferenceManager,          // ResourceReferenceManager
+		PluginNameExtensionValidator,                // ExtensionValidator
+		PluginNameExtensionLabels,                   // ExtensionLabels
+		PluginNameShootTolerationRestriction,        // ShootTolerationRestriction
+		PluginNameShootExposureClass,                // ShootExposureClass
+		PluginNameShootDNS,                          // ShootDNS
+		PluginNameShootManagedSeed,                  // ShootManagedSeed
+		PluginNameShootNodeLocalDNSEnabledByDefault, // ShootNodeLocalDNSEnabledByDefault
+		PluginNameShootDNSRewriting,                 // ShootDNSRewriting
+		PluginNameShootQuotaValidator,               // ShootQuotaValidator
+		PluginNameShootValidator,                    // ShootValidator
+		PluginNameSeedValidator,                     // SeedValidator
+		PluginNameControllerRegistrationResources,   // ControllerRegistrationResources
+		PluginNameProjectValidator,                  // ProjectValidator
+		PluginNameDeletionConfirmation,              // DeletionConfirmation
+		PluginNameOpenIDConnectPreset,               // OpenIDConnectPreset
+		PluginNameClusterOpenIDConnectPreset,        // ClusterOpenIDConnectPreset
+		PluginNameCustomVerbAuthorizer,              // CustomVerbAuthorizer
+		PluginNameShootVPAEnabledByDefault,          // ShootVPAEnabledByDefault
+		PluginNameManagedSeed,                       // ManagedSeed
+		PluginNameManagedSeedShoot,                  // ManagedSeedShoot
+		PluginNameBastion,                           // Bastion
+
+		// new admission plugins should generally be inserted above here
+		// webhook, and resourcequota plugins must go at the end
+
+		mutatingwebhook.PluginName,           // MutatingAdmissionWebhook
+		validatingadmissionpolicy.PluginName, // ValidatingAdmissionPolicy
+		validatingwebhook.PluginName,         // ValidatingAdmissionWebhook
+
+		// This plugin must remain the last one in the list since it updates the quota usage
+		// which can only happen reliably if previous plugins permitted the request.
+		resourcequota.PluginName, // ResourceQuota
+	}
+}

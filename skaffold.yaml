@@ -166,6 +166,7 @@ build:
         - pkg/utils/validation/features
         - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
+        - plugin/pkg
         - plugin/pkg/bastion/validator
         - plugin/pkg/controllerregistration/resources
         - plugin/pkg/global/customverbauthorizer

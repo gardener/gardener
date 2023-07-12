@@ -24,16 +24,12 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
-)
-
-const (
-	// PluginName is the name of this admission plugin.
-	PluginName = "ShootNodeLocalDNSEnabledByDefault"
+	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(PluginName, func(config io.Reader) (admission.Interface, error) {
+	plugins.Register(plugin.PluginNameShootNodeLocalDNSEnabledByDefault, func(config io.Reader) (admission.Interface, error) {
 		return New(), nil
 	})
 }
