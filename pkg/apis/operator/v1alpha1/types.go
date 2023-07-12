@@ -18,6 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -157,6 +158,8 @@ type VirtualCluster struct {
 	// ETCD contains configuration for the etcds of the virtual garden cluster.
 	// +optional
 	ETCD *ETCD `json:"etcd,omitempty"`
+	// Gardener contains the configuration options for the Gardener control plane components.
+	Gardener Gardener `json:"gardener"`
 	// Kubernetes contains the version and configuration options for the Kubernetes components of the virtual garden
 	// cluster.
 	Kubernetes Kubernetes `json:"kubernetes"`
@@ -396,6 +399,75 @@ type KubeControllerManagerConfig struct {
 	// +kubebuilder:default=`48h`
 	// +optional
 	CertificateSigningDuration *metav1.Duration `json:"certificateSigningDuration,omitempty"`
+}
+
+// Gardener contains the configuration settings for the Gardener componenets.
+type Gardener struct {
+	// ClusterIdentity is the identity of the garden cluster. This field is immutable.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	ClusterIdentity string `json:"clusterIdentity"`
+	// APIServer contains configuration settings for the gardener-apiserver.
+	// +optional
+	APIServer *GardenerAPIServerConfig `json:"gardenerAPIServer,omitempty"`
+	// ControllerManager contains configuration settings for the gardener-controller-manager.
+	// +optional
+	ControllerManager *GardenerControllerManagerConfig `json:"gardenerControllerManager,omitempty"`
+	// Scheduler contains configuration settings for the gardener-scheduler.
+	// +optional
+	Scheduler *GardenerSchedulerConfig `json:"gardenerScheduler,omitempty"`
+}
+
+// GardenerAPIServerConfig contains configuration settings for the gardener-apiserver.
+type GardenerAPIServerConfig struct {
+	gardencorev1beta1.KubernetesConfig `json:",inline"`
+	// AdmissionPlugins contains the list of user-defined admission plugins (additional to those managed by Gardener),
+	// and, if desired, the corresponding configuration.
+	// +optional
+	AdmissionPlugins []gardencorev1beta1.AdmissionPlugin `json:"admissionPlugins,omitempty"`
+	// AuditConfig contains configuration settings for the audit of the kube-apiserver.
+	// +optional
+	AuditConfig *gardencorev1beta1.AuditConfig `json:"auditConfig,omitempty"`
+	// Logging contains configuration for the log level and HTTP access logs.
+	// +optional
+	Logging *gardencorev1beta1.KubeAPIServerLogging `json:"logging,omitempty"`
+	// Requests contains configuration for request-specific settings for the kube-apiserver.
+	// +optional
+	Requests *gardencorev1beta1.KubeAPIServerRequests `json:"requests,omitempty"`
+	// WatchCacheSizes contains configuration of the API server's watch cache sizes.
+	// Configuring these flags might be useful for large-scale Shoot clusters with a lot of parallel update requests
+	// and a lot of watching controllers (e.g. large ManagedSeed clusters). When the API server's watch cache's
+	// capacity is too small to cope with the amount of update requests and watchers for a particular resource, it
+	// might happen that controller watches are permanently stopped with `too old resource version` errors.
+	// Starting from kubernetes v1.19, the API server's watch cache size is adapted dynamically and setting the watch
+	// cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).
+	// +optional
+	WatchCacheSizes *gardencorev1beta1.WatchCacheSizes `json:"watchCacheSizes,omitempty"`
+}
+
+// GardenerControllerManagerConfig contains configuration settings for the gardener-controller-manager.
+type GardenerControllerManagerConfig struct {
+	gardencorev1beta1.KubernetesConfig `json:",inline"`
+	// DefaultProjectQuotas is the default configuration matching projects are set up with if a quota is not already
+	// specified.
+	// +optional
+	DefaultProjectQuotas []ProjectQuotaConfiguration `json:"defaultProjectQuotas,omitempty"`
+}
+
+// ProjectQuotaConfiguration defines quota configurations.
+type ProjectQuotaConfiguration struct {
+	// Config is the quota specification used for the project set-up.
+	// Only v1.ResourceQuota resources are supported.
+	Config runtime.RawExtension `json:"config"`
+	// ProjectSelector is an optional setting to select the projects considered for quotas.
+	// Defaults to empty LabelSelector, which matches all projects.
+	// +optional
+	ProjectSelector *metav1.LabelSelector `json:"projectSelector,omitempty"`
+}
+
+// GardenerSchedulerConfig contains configuration settings for the gardener-scheduler.
+type GardenerSchedulerConfig struct {
+	gardencorev1beta1.KubernetesConfig `json:",inline"`
 }
 
 // GardenStatus is the status of a garden environment.

@@ -170,6 +170,9 @@ var _ = Describe("Garden controller tests", func() {
 					DNS: operatorv1alpha1.DNS{
 						Domains: []string{"virtual-garden.local.gardener.cloud"},
 					},
+					Gardener: operatorv1alpha1.Gardener{
+						ClusterIdentity: "test",
+					},
 					Kubernetes: operatorv1alpha1.Kubernetes{
 						Version: "1.26.3",
 					},
