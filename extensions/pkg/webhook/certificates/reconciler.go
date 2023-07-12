@@ -99,9 +99,10 @@ func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 	// started before this controller)
 	if !present {
 		// cache is not started yet, we need an uncached client for the initial setup
-		uncachedClient, err := client.NewDelegatingClient(client.NewDelegatingClientInput{
-			Client:      r.client,
-			CacheReader: mgr.GetAPIReader(),
+		uncachedClient, err := client.New(mgr.GetConfig(), client.Options{
+			Cache: &client.CacheOptions{
+				Reader: mgr.GetAPIReader(),
+			},
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create new unchached client: %w", err)

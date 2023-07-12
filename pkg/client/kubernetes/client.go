@@ -302,10 +302,11 @@ func newClientSet(conf *Config) (Interface, error) {
 		if conf.disableCache {
 			runtimeClient = uncachedClient
 		} else {
-			delegatingClient, err := client.NewDelegatingClient(client.NewDelegatingClientInput{
-				CacheReader:     runtimeCache,
-				Client:          uncachedClient,
-				UncachedObjects: conf.uncachedObjects,
+			delegatingClient, err := client.New(conf.restConfig, client.Options{
+				Cache: &client.CacheOptions{
+					Reader:     runtimeCache,
+					DisableFor: conf.uncachedObjects,
+				},
 			})
 			if err != nil {
 				return nil, err

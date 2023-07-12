@@ -306,23 +306,21 @@ func (g *garden) Start(ctx context.Context) error {
 		// read a secret from another namespace. There might be secrets in namespace other than the seed-specific
 		// namespace (e.g., backup secret in the SeedSpec). Hence, let's use a fallback client which falls back to an
 		// uncached reader in case it fails to read objects from the cache.
-		opts.NewClient = func(cache cache.Cache, config *rest.Config, options client.Options, uncachedObjects ...client.Object) (client.Client, error) {
-			uncachedClient, err := client.New(config, options)
+		opts.NewClient = func(config *rest.Config, options client.Options) (client.Client, error) {
+			uncachedOptions := options
+			uncachedOptions.Cache = nil
+			uncachedClient, err := client.New(config, uncachedOptions)
 			if err != nil {
 				return nil, err
 			}
 
-			delegatingClient, err := client.NewDelegatingClient(client.NewDelegatingClientInput{
-				CacheReader:     cache,
-				Client:          uncachedClient,
-				UncachedObjects: uncachedObjects,
-			})
+			cachedClient, err := client.New(config, options)
 			if err != nil {
 				return nil, err
 			}
 
 			return &kubernetes.FallbackClient{
-				Client: delegatingClient,
+				Client: cachedClient,
 				Reader: uncachedClient,
 			}, nil
 		}
