@@ -23,11 +23,14 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 const (
+	// DeploymentName is the name of the admission controller deployment.
+	DeploymentName = "gardener-admission-controller"
 	// ServiceName is the name of the admission controller service.
 	ServiceName = "gardener-admission-controller"
 
@@ -62,7 +65,8 @@ type admissioncontroller struct {
 
 func (a admissioncontroller) Deploy(ctx context.Context) error {
 	var (
-		runtimeRegistry = managedresources.NewRegistry(operatorclient.RuntimeScheme, operatorclient.RuntimeCodec, operatorclient.RuntimeSerializer)
+		runtimeRegistry           = managedresources.NewRegistry(operatorclient.RuntimeScheme, operatorclient.RuntimeCodec, operatorclient.RuntimeSerializer)
+		virtualGardenAccessSecret = a.newVirtualGardenAccessSecret()
 	)
 
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize()
@@ -72,6 +76,10 @@ func (a admissioncontroller) Deploy(ctx context.Context) error {
 
 	secretServer, err := a.reconcileSecretServer(ctx)
 	if err != nil {
+		return err
+	}
+
+	if err := virtualGardenAccessSecret.Reconcile(ctx, a.client); err != nil {
 		return err
 	}
 
@@ -116,7 +124,11 @@ func (a admissioncontroller) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.DeleteForSeed(ctx, a.client, a.namespace, managedResourceNameRuntime)
+	if err := managedresources.DeleteForSeed(ctx, a.client, a.namespace, managedResourceNameRuntime); err != nil {
+		return err
+	}
+
+	return kubernetesutils.DeleteObjects(ctx, a.client, a.newVirtualGardenAccessSecret().Secret)
 }
 
 func (a admissioncontroller) WaitCleanup(ctx context.Context) error {
