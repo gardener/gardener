@@ -28,6 +28,9 @@ import (
 )
 
 const (
+	// ServiceName is the name of the admission controller service.
+	ServiceName = "gardener-admission-controller"
+
 	managedResourceNameRuntime = "gardener-admission-controller-runtime"
 	managedResourceNameVirtual = "gardener-admission-controller-virtual"
 )
@@ -63,6 +66,11 @@ func (a admissioncontroller) Deploy(ctx context.Context) error {
 	)
 
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize()
+	if err != nil {
+		return err
+	}
+
+	secretServer, err := a.reconcileSecretServer(ctx)
 	if err != nil {
 		return err
 	}
