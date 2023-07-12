@@ -126,16 +126,25 @@ function upgrade_to_next_release() {
 function set_gardener_upgrade_version_env_variables() {
   if [[ -z "$GARDENER_PREVIOUS_RELEASE" ]]; then
     previous_minor_version=$(echo "$VERSION" | awk -F. '{printf("%s.%d", $1, $2-1)}')
+    pre_previous_minor_version=$(echo "$previous_minor_version" | awk -F. '{printf("%s.%d", $1, $2-1)}')
     # List all the tags that match the previous minor version pattern
     tag_list=$(git tag -l "${previous_minor_version}.*")
+    tag_list_pre=$(git tag -l "${pre_previous_minor_version}.*")
 
-    if [ -z "$tag_list" ]; then
-      # Use release branch of previous version as backup
+    # Find the most recent tag for the previous minor version
+    if [ "$tag_list" ]; then
+      export GARDENER_PREVIOUS_RELEASE=$(echo "$tag_list" | tail -n 1)
+    # Try to use release branch of previous version as backup
+    elif [ "$(git ls-remote https://github.com/gardener/gardener release-"${previous_minor_version}")" ]; then
       export GARDENER_PREVIOUS_RELEASE="release-${previous_minor_version}"
       echo "No tags found for the previous minor version ($VERSION) to upgrade Gardener. Using branch $GARDENER_PREVIOUS_RELEASE instead." >&2
+    # If the release branch is found neither, use the tag of the pre previous version as last resort
+    elif [ "$tag_list_pre" ]; then
+      export GARDENER_PREVIOUS_RELEASE=$(echo "$tag_list_pre" | tail -n 1)
+      echo "No tags and branches found for the previous minor version ($VERSION) to upgrade Gardener. Using tag $GARDENER_PREVIOUS_RELEASE instead." >&2
     else
-      # Find the most recent tag for the previous minor version
-      export GARDENER_PREVIOUS_RELEASE=$(echo "$tag_list" | tail -n 1)
+      echo "No tags and release branches found for the previous and pre-previous minor version ($VERSION) to upgrade Gardener." >&2
+      exit 1
     fi
   fi
 
