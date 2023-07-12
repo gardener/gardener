@@ -15,5 +15,6 @@
 package gardeneradmissioncontroller
 
 const (
-	secretNameServerCert = "gardener-admission-controller-cert"
+	secretNameServerCert      = "gardener-admission-controller-cert"
+	volumeMountPathServerCert = "/etc/gardener-admission-controller/srv"
 )

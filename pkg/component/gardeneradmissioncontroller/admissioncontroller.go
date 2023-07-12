@@ -20,6 +20,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -34,6 +35,10 @@ const (
 	// ServiceName is the name of the admission controller service.
 	ServiceName = "gardener-admission-controller"
 
+	serverPort  = 2719
+	healthzPort = 2722
+	metricsPort = 2723
+
 	managedResourceNameRuntime = "gardener-admission-controller-runtime"
 	managedResourceNameVirtual = "gardener-admission-controller-virtual"
 )
@@ -44,6 +49,15 @@ var TimeoutWaitForManagedResource = 5 * time.Minute
 
 // Values contains configuration values for the gardener-admission-controller resources.
 type Values struct {
+	ClientConnection               ClientConnection
+	LogLevel                       string
+	ResourceAdmissionConfiguration *admissioncontrollerv1alpha1.ResourceAdmissionConfiguration
+}
+
+// ClientConnection holds values for the client connection.
+type ClientConnection struct {
+	QPS   float32
+	Burst int32
 }
 
 // New creates a new instance of DeployWaiter for the gardener-admission-controller.
@@ -69,12 +83,7 @@ func (a admissioncontroller) Deploy(ctx context.Context) error {
 		virtualGardenAccessSecret = a.newVirtualGardenAccessSecret()
 	)
 
-	runtimeResources, err := runtimeRegistry.AddAllAndSerialize()
-	if err != nil {
-		return err
-	}
-
-	secretServer, err := a.reconcileSecretServer(ctx)
+	secretServerCert, err := a.reconcileSecretServerCert(ctx)
 	if err != nil {
 		return err
 	}
@@ -83,8 +92,20 @@ func (a admissioncontroller) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	admissonConfigMap, err := a.admissionConfigConfigMap()
+	if err != nil {
+		return err
+	}
+
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
+
+	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
+		admissonConfigMap,
+	)
+	if err != nil {
+		return err
+	}
 
 	if err := managedresources.CreateForSeed(ctx, a.client, a.namespace, managedResourceNameRuntime, false, runtimeResources); err != nil {
 		return err

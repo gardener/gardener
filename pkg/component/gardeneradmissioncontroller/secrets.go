@@ -26,7 +26,7 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
-func (a admissioncontroller) reconcileSecretServer(ctx context.Context) (*corev1.Secret, error) {
+func (a admissioncontroller) reconcileSecretServerCert(ctx context.Context) (*corev1.Secret, error) {
 	return a.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 		Name:                        secretNameServerCert,
 		CommonName:                  ServiceName,
