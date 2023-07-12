@@ -196,13 +196,15 @@ make operator-down
 make kind-operator-down
 ```
 
-## Implementation Details
+## Controllers
 
-### Controllers
+As of today, the `gardener-operator` only has two controllers which are now described in more detail.
 
-As of today, the `gardener-operator` only has one controller which is now described in more detail.
+### [`Garden` Controller](../../pkg/operator/controller/garden)
 
-#### [`Garden` Controller](../../pkg/operator/controller/garden/garden)
+The Garden controller in the operator reconciles Garden objects with the help of the following reconcilers.
+
+#### [`Main` Reconciler](../../pkg/operator/controller/garden/garden)
 
 The reconciler first generates a general CA certificate which is valid for ~`30d` and auto-rotated when 80% of its lifetime is reached.
 Afterwards, it brings up the so-called "garden system components".
@@ -256,7 +258,7 @@ This range is used by the API server to compute the cluster IPs of `Service`s.
 
 The controller maintains the `Reconciled` condition which indicates the status of an operation.
 
-#### [`GardenCare` Controller](../../pkg/operator/controller/garden/care)
+#### [`Care` Reconciler](../../pkg/operator/controller/garden/care)
 
 This reconciler performs four "care" actions related to `Garden`s.
 
@@ -278,18 +280,18 @@ If at least one check fails and there is threshold configuration for the conditi
 The condition thresholds can be used to prevent reporting issues too early just because there is a rollout or a short disruption.
 Only if the unhealthiness persists for at least the configured threshold duration, then the issues will be reported (by setting the status to `False`).
 
-#### [`NetworkPolicy` Controller Registrar](../../pkg/controller/networkpolicy)
+### [`NetworkPolicy` Controller Registrar](../../pkg/controller/networkpolicy)
 
 This controller registers the same `NetworkPolicy` controller which is also used in `gardenlet`, please read it up [here](gardenlet.md#networkpolicy-controllerpkggardenletcontrollernetworkpolicy) for more details.
 
 The registration happens as soon as the `Garden` resource is created.
 It contains the networking information of the garden runtime cluster which is required configuration for the `NetworkPolicy` controller.
 
-### Webhooks
+## Webhooks
 
 As of today, the `gardener-operator` only has one webhook handler which is now described in more detail.
 
-#### Validation
+### Validation
 
 This webhook handler validates `CREATE`/`UPDATE`/`DELETE` operations on `Garden` resources.
 Simple validation is performed via [standard CRD validation](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#validation).
@@ -302,7 +304,7 @@ This prevents users from accidental/undesired deletions.
 Another validation is to check that there is only one `Garden` resource at a time.
 It prevents creating a second `Garden` when there is already one in the system.
 
-#### Defaulting
+### Defaulting
 
 This webhook handler mutates the `Garden` resource on `CREATE`/`UPDATE`/`DELETE` operations.
 Simple defaulting is performed via [standard CRD defaulting](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#defaulting).

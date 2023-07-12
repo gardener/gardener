@@ -122,7 +122,7 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 			})
 		})
 
-		Context("gardenCare", func() {
+		Context("GardenCare", func() {
 			It("should return errors because sync period is nil", func() {
 				conf.Controllers.GardenCare.SyncPeriod = nil
 

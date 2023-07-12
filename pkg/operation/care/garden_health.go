@@ -99,7 +99,6 @@ func (h *GardenHealth) CheckGarden(
 	conditions []gardencorev1beta1.Condition,
 	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
 ) []gardencorev1beta1.Condition {
-
 	var (
 		apiServerAvailability      gardencorev1beta1.Condition
 		runtimeComponentsCondition gardencorev1beta1.Condition

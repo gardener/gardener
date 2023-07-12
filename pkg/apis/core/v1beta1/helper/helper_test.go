@@ -74,6 +74,7 @@ var _ = Describe("helper", func() {
 
 				newConditions = []gardencorev1beta1.Condition{}
 			)
+
 			BeforeEach(func() {
 				newFooCondition := fooCondition.DeepCopy()
 				newFooCondition.LastTransitionTime = metav1.NewTime(time.Unix(11, 11))
@@ -83,6 +84,7 @@ var _ = Describe("helper", func() {
 			It("should replace the existing condition", func() {
 				Expect(BuildConditions(conditions, newConditions, conditionTypes)).To(ConsistOf(newConditions))
 			})
+
 			It("should keep existing conditions of a different type", func() {
 				conditions = append(conditions, barCondition)
 				Expect(BuildConditions(conditions, newConditions, conditionTypes)).To(ConsistOf(append(newConditions, barCondition)))
