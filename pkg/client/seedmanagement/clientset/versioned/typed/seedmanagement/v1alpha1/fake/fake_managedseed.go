@@ -20,11 +20,13 @@ package fake
 
 import (
 	"context"
+	json "encoding/json"
+	"fmt"
 
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/client/seedmanagement/applyconfiguration/seedmanagement/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -36,9 +38,9 @@ type FakeManagedSeeds struct {
 	ns   string
 }
 
-var managedseedsResource = schema.GroupVersionResource{Group: "seedmanagement.gardener.cloud", Version: "v1alpha1", Resource: "managedseeds"}
+var managedseedsResource = v1alpha1.SchemeGroupVersion.WithResource("managedseeds")
 
-var managedseedsKind = schema.GroupVersionKind{Group: "seedmanagement.gardener.cloud", Version: "v1alpha1", Kind: "ManagedSeed"}
+var managedseedsKind = v1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")
 
 // Get takes name of the managedSeed, and returns the corresponding managedSeed object, and an error if there is any.
 func (c *FakeManagedSeeds) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ManagedSeed, err error) {
@@ -134,6 +136,51 @@ func (c *FakeManagedSeeds) DeleteCollection(ctx context.Context, opts v1.DeleteO
 func (c *FakeManagedSeeds) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ManagedSeed, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(managedseedsResource, c.ns, name, pt, data, subresources...), &v1alpha1.ManagedSeed{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.ManagedSeed), err
+}
+
+// Apply takes the given apply declarative configuration, applies it and returns the applied managedSeed.
+func (c *FakeManagedSeeds) Apply(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeedApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.ManagedSeed, err error) {
+	if managedSeed == nil {
+		return nil, fmt.Errorf("managedSeed provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(managedSeed)
+	if err != nil {
+		return nil, err
+	}
+	name := managedSeed.Name
+	if name == nil {
+		return nil, fmt.Errorf("managedSeed.Name must be provided to Apply")
+	}
+	obj, err := c.Fake.
+		Invokes(testing.NewPatchSubresourceAction(managedseedsResource, c.ns, *name, types.ApplyPatchType, data), &v1alpha1.ManagedSeed{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.ManagedSeed), err
+}
+
+// ApplyStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
+func (c *FakeManagedSeeds) ApplyStatus(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeedApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.ManagedSeed, err error) {
+	if managedSeed == nil {
+		return nil, fmt.Errorf("managedSeed provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(managedSeed)
+	if err != nil {
+		return nil, err
+	}
+	name := managedSeed.Name
+	if name == nil {
+		return nil, fmt.Errorf("managedSeed.Name must be provided to Apply")
+	}
+	obj, err := c.Fake.
+		Invokes(testing.NewPatchSubresourceAction(managedseedsResource, c.ns, *name, types.ApplyPatchType, data, "status"), &v1alpha1.ManagedSeed{})
 
 	if obj == nil {
 		return nil, err

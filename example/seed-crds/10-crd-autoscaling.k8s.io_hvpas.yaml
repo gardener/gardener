@@ -462,7 +462,7 @@ spec:
                                           type: string
                                         name:
                                           description: 'Name of the referent; More
-                                            info: http://kubernetes.io/docs/user-guide/identifiers#names'
+                                            info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                                           type: string
                                       required:
                                       - kind
@@ -652,7 +652,7 @@ spec:
                     description: 'Kind of the referent; More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                     type: string
                   name:
-                    description: 'Name of the referent; More info: http://kubernetes.io/docs/user-guide/identifiers#names'
+                    description: 'Name of the referent; More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
                     type: string
                 required:
                 - kind

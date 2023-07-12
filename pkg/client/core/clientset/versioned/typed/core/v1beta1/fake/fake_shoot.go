@@ -24,7 +24,6 @@ import (
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -36,9 +35,9 @@ type FakeShoots struct {
 	ns   string
 }
 
-var shootsResource = schema.GroupVersionResource{Group: "core.gardener.cloud", Version: "v1beta1", Resource: "shoots"}
+var shootsResource = v1beta1.SchemeGroupVersion.WithResource("shoots")
 
-var shootsKind = schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "v1beta1", Kind: "Shoot"}
+var shootsKind = v1beta1.SchemeGroupVersion.WithKind("Shoot")
 
 // Get takes name of the shoot, and returns the corresponding shoot object, and an error if there is any.
 func (c *FakeShoots) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.Shoot, err error) {

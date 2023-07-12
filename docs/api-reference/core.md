@@ -7549,8 +7549,8 @@ See <a href="https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-g
 <td>
 <code>externalTrafficPolicy</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#serviceexternaltrafficpolicytype-v1-core">
-Kubernetes core/v1.ServiceExternalTrafficPolicyType
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#serviceexternaltrafficpolicy-v1-core">
+Kubernetes core/v1.ServiceExternalTrafficPolicy
 </a>
 </em>
 </td>
@@ -9286,8 +9286,8 @@ map[string]string
 <td>
 <code>externalTrafficPolicy</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#serviceexternaltrafficpolicytype-v1-core">
-Kubernetes core/v1.ServiceExternalTrafficPolicyType
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#serviceexternaltrafficpolicy-v1-core">
+Kubernetes core/v1.ServiceExternalTrafficPolicy
 </a>
 </em>
 </td>
@@ -9360,8 +9360,8 @@ map[string]string
 <td>
 <code>externalTrafficPolicy</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#serviceexternaltrafficpolicytype-v1-core">
-Kubernetes core/v1.ServiceExternalTrafficPolicyType
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#serviceexternaltrafficpolicy-v1-core">
+Kubernetes core/v1.ServiceExternalTrafficPolicy
 </a>
 </em>
 </td>
