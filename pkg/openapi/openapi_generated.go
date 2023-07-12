@@ -36,6 +36,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequest":       schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequest(ref),
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequestSpec":   schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequestSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequestStatus": schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequestStatus(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerLogging":                        schema_pkg_apis_core_v1beta1_APIServerLogging(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerRequests":                       schema_pkg_apis_core_v1beta1_APIServerRequests(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addon":                                   schema_pkg_apis_core_v1beta1_Addon(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons":                                  schema_pkg_apis_core_v1beta1_Addons(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin":                         schema_pkg_apis_core_v1beta1_AdmissionPlugin(ref),
@@ -100,8 +102,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.InternalSecret":                          schema_pkg_apis_core_v1beta1_InternalSecret(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.InternalSecretList":                      schema_pkg_apis_core_v1beta1_InternalSecretList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerConfig":                     schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerLogging":                    schema_pkg_apis_core_v1beta1_KubeAPIServerLogging(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerRequests":                   schema_pkg_apis_core_v1beta1_KubeAPIServerRequests(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeControllerManagerConfig":             schema_pkg_apis_core_v1beta1_KubeControllerManagerConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeProxyConfig":                         schema_pkg_apis_core_v1beta1_KubeProxyConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeSchedulerConfig":                     schema_pkg_apis_core_v1beta1_KubeSchedulerConfig(ref),
@@ -665,6 +665,60 @@ func schema_pkg_apis_authentication_v1alpha1_AdminKubeconfigRequestStatus(ref co
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_APIServerLogging(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "APIServerLogging contains configuration for the logs level and http access logs",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"verbosity": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Verbosity is the kube-apiserver log verbosity level Defaults to 2.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"httpAccessVerbosity": {
+						SchemaProps: spec.SchemaProps{
+							Description: "HTTPAccessVerbosity is the kube-apiserver access logs level",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_APIServerRequests(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "APIServerRequests contains configuration for request-specific settings for the kube-apiserver.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"maxNonMutatingInflight": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server exceeds this, it rejects requests.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"maxMutatingInflight": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server exceeds this, it rejects requests.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -3505,7 +3559,7 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 					"requests": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Requests contains configuration for request-specific settings for the kube-apiserver.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerRequests"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerRequests"),
 						},
 					},
 					"enableAnonymousAuthentication": {
@@ -3524,7 +3578,7 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 					"logging": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Logging contains configuration for the log level and HTTP access logs.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerLogging"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerLogging"),
 						},
 					},
 					"defaultNotReadyTolerationSeconds": {
@@ -3545,61 +3599,7 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerLogging", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerRequests", "github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
-	}
-}
-
-func schema_pkg_apis_core_v1beta1_KubeAPIServerLogging(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "KubeAPIServerLogging contains configuration for the logs level and http access logs",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"verbosity": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Verbosity is the kube-apiserver log verbosity level Defaults to 2.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-					"httpAccessVerbosity": {
-						SchemaProps: spec.SchemaProps{
-							Description: "HTTPAccessVerbosity is the kube-apiserver access logs level",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-func schema_pkg_apis_core_v1beta1_KubeAPIServerRequests(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"maxNonMutatingInflight": {
-						SchemaProps: spec.SchemaProps{
-							Description: "MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server exceeds this, it rejects requests.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-					"maxMutatingInflight": {
-						SchemaProps: spec.SchemaProps{
-							Description: "MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server exceeds this, it rejects requests.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-				},
-			},
-		},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerLogging", "github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerRequests", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 

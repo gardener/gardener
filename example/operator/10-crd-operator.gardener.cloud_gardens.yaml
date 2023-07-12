@@ -305,6 +305,300 @@ spec:
                             type: object
                         type: object
                     type: object
+                  gardener:
+                    description: Gardener contains the configuration options for the
+                      Gardener control plane components.
+                    properties:
+                      clusterIdentity:
+                        description: ClusterIdentity is the identity of the garden
+                          cluster. This field is immutable.
+                        minLength: 1
+                        type: string
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                      gardenerAPIServer:
+                        description: APIServer contains configuration settings for
+                          the gardener-apiserver.
+                        properties:
+                          admissionPlugins:
+                            description: AdmissionPlugins contains the list of user-defined
+                              admission plugins (additional to those managed by Gardener),
+                              and, if desired, the corresponding configuration.
+                            items:
+                              description: AdmissionPlugin contains information about
+                                a specific admission plugin and its corresponding
+                                configuration.
+                              properties:
+                                config:
+                                  description: Config is the configuration of the
+                                    plugin.
+                                  type: object
+                                  x-kubernetes-preserve-unknown-fields: true
+                                disabled:
+                                  description: Disabled specifies whether this plugin
+                                    should be disabled.
+                                  type: boolean
+                                kubeconfigSecretName:
+                                  description: KubeconfigSecretName specifies the
+                                    name of a secret containing the kubeconfig for
+                                    this admission plugin.
+                                  type: string
+                                name:
+                                  description: Name is the name of the plugin.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
+                          auditConfig:
+                            description: AuditConfig contains configuration settings
+                              for the audit of the kube-apiserver.
+                            properties:
+                              auditPolicy:
+                                description: AuditPolicy contains configuration settings
+                                  for audit policy of the kube-apiserver.
+                                properties:
+                                  configMapRef:
+                                    description: ConfigMapRef is a reference to a
+                                      ConfigMap object in the same namespace, which
+                                      contains the audit policy for the kube-apiserver.
+                                    properties:
+                                      apiVersion:
+                                        description: API version of the referent.
+                                        type: string
+                                      fieldPath:
+                                        description: 'If referring to a piece of an
+                                          object instead of an entire object, this
+                                          string should contain a valid JSON/Go field
+                                          access statement, such as desiredState.manifest.containers[2].
+                                          For example, if the object reference is
+                                          to a container within a pod, this would
+                                          take on a value like: "spec.containers{name}"
+                                          (where "name" refers to the name of the
+                                          container that triggered the event) or if
+                                          no container name is specified "spec.containers[2]"
+                                          (container with index 2 in this pod). This
+                                          syntax is chosen only to have some well-defined
+                                          way of referencing a part of an object.
+                                          TODO: this design is not final and this
+                                          field is subject to change in the future.'
+                                        type: string
+                                      kind:
+                                        description: 'Kind of the referent. More info:
+                                          https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                                        type: string
+                                      name:
+                                        description: 'Name of the referent. More info:
+                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                        type: string
+                                      namespace:
+                                        description: 'Namespace of the referent. More
+                                          info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                                        type: string
+                                      resourceVersion:
+                                        description: 'Specific resourceVersion to
+                                          which this reference is made, if any. More
+                                          info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                                        type: string
+                                      uid:
+                                        description: 'UID of the referent. More info:
+                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                                        type: string
+                                    type: object
+                                    x-kubernetes-map-type: atomic
+                                type: object
+                            type: object
+                          featureGates:
+                            additionalProperties:
+                              type: boolean
+                            description: FeatureGates contains information about enabled
+                              feature gates.
+                            type: object
+                          logging:
+                            description: Logging contains configuration for the log
+                              level and HTTP access logs.
+                            properties:
+                              httpAccessVerbosity:
+                                description: HTTPAccessVerbosity is the kube-apiserver
+                                  access logs level
+                                format: int32
+                                type: integer
+                              verbosity:
+                                description: Verbosity is the kube-apiserver log verbosity
+                                  level Defaults to 2.
+                                format: int32
+                                type: integer
+                            type: object
+                          requests:
+                            description: Requests contains configuration for request-specific
+                              settings for the kube-apiserver.
+                            properties:
+                              maxMutatingInflight:
+                                description: MaxMutatingInflight is the maximum number
+                                  of mutating requests in flight at a given time.
+                                  When the server exceeds this, it rejects requests.
+                                format: int32
+                                type: integer
+                              maxNonMutatingInflight:
+                                description: MaxNonMutatingInflight is the maximum
+                                  number of non-mutating requests in flight at a given
+                                  time. When the server exceeds this, it rejects requests.
+                                format: int32
+                                type: integer
+                            type: object
+                          watchCacheSizes:
+                            description: WatchCacheSizes contains configuration of
+                              the API server's watch cache sizes. Configuring these
+                              flags might be useful for large-scale Shoot clusters
+                              with a lot of parallel update requests and a lot of
+                              watching controllers (e.g. large ManagedSeed clusters).
+                              When the API server's watch cache's capacity is too
+                              small to cope with the amount of update requests and
+                              watchers for a particular resource, it might happen
+                              that controller watches are permanently stopped with
+                              `too old resource version` errors. Starting from kubernetes
+                              v1.19, the API server's watch cache size is adapted
+                              dynamically and setting the watch cache size flags will
+                              have no effect, except when setting it to 0 (which disables
+                              the watch cache).
+                            properties:
+                              default:
+                                description: 'Default configures the default watch
+                                  cache size of the kube-apiserver (flag `--default-watch-cache-size`,
+                                  defaults to 100). See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/'
+                                format: int32
+                                type: integer
+                              resources:
+                                description: 'Resources configures the watch cache
+                                  size of the kube-apiserver per resource (flag `--watch-cache-sizes`).
+                                  See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/'
+                                items:
+                                  description: ResourceWatchCacheSize contains configuration
+                                    of the API server's watch cache size for one specific
+                                    resource.
+                                  properties:
+                                    apiGroup:
+                                      description: APIGroup is the API group of the
+                                        resource for which the watch cache size should
+                                        be configured. An unset value is used to specify
+                                        the legacy core API (e.g. for `secrets`).
+                                      type: string
+                                    resource:
+                                      description: Resource is the name of the resource
+                                        for which the watch cache size should be configured
+                                        (in lowercase plural form, e.g. `secrets`).
+                                      type: string
+                                    size:
+                                      description: CacheSize specifies the watch cache
+                                        size that should be configured for the specified
+                                        resource.
+                                      format: int32
+                                      type: integer
+                                  required:
+                                  - resource
+                                  - size
+                                  type: object
+                                type: array
+                            type: object
+                        type: object
+                      gardenerControllerManager:
+                        description: ControllerManager contains configuration settings
+                          for the gardener-controller-manager.
+                        properties:
+                          defaultProjectQuotas:
+                            description: DefaultProjectQuotas is the default configuration
+                              matching projects are set up with if a quota is not
+                              already specified.
+                            items:
+                              description: ProjectQuotaConfiguration defines quota
+                                configurations.
+                              properties:
+                                config:
+                                  description: Config is the quota specification used
+                                    for the project set-up. Only v1.ResourceQuota
+                                    resources are supported.
+                                  type: object
+                                  x-kubernetes-preserve-unknown-fields: true
+                                projectSelector:
+                                  description: ProjectSelector is an optional setting
+                                    to select the projects considered for quotas.
+                                    Defaults to empty LabelSelector, which matches
+                                    all projects.
+                                  properties:
+                                    matchExpressions:
+                                      description: matchExpressions is a list of label
+                                        selector requirements. The requirements are
+                                        ANDed.
+                                      items:
+                                        description: A label selector requirement
+                                          is a selector that contains values, a key,
+                                          and an operator that relates the key and
+                                          values.
+                                        properties:
+                                          key:
+                                            description: key is the label key that
+                                              the selector applies to.
+                                            type: string
+                                          operator:
+                                            description: operator represents a key's
+                                              relationship to a set of values. Valid
+                                              operators are In, NotIn, Exists and
+                                              DoesNotExist.
+                                            type: string
+                                          values:
+                                            description: values is an array of string
+                                              values. If the operator is In or NotIn,
+                                              the values array must be non-empty.
+                                              If the operator is Exists or DoesNotExist,
+                                              the values array must be empty. This
+                                              array is replaced during a strategic
+                                              merge patch.
+                                            items:
+                                              type: string
+                                            type: array
+                                        required:
+                                        - key
+                                        - operator
+                                        type: object
+                                      type: array
+                                    matchLabels:
+                                      additionalProperties:
+                                        type: string
+                                      description: matchLabels is a map of {key,value}
+                                        pairs. A single {key,value} in the matchLabels
+                                        map is equivalent to an element of matchExpressions,
+                                        whose key field is "key", the operator is
+                                        "In", and the values array contains only "value".
+                                        The requirements are ANDed.
+                                      type: object
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                              required:
+                              - config
+                              type: object
+                            type: array
+                          featureGates:
+                            additionalProperties:
+                              type: boolean
+                            description: FeatureGates contains information about enabled
+                              feature gates.
+                            type: object
+                        type: object
+                      gardenerScheduler:
+                        description: Scheduler contains configuration settings for
+                          the gardener-scheduler.
+                        properties:
+                          featureGates:
+                            additionalProperties:
+                              type: boolean
+                            description: FeatureGates contains information about enabled
+                              feature gates.
+                            type: object
+                        type: object
+                    required:
+                    - clusterIdentity
+                    type: object
                   kubernetes:
                     description: Kubernetes contains the version and configuration
                       options for the Kubernetes components of the virtual garden
@@ -927,6 +1221,7 @@ spec:
                     type: object
                 required:
                 - dns
+                - gardener
                 - kubernetes
                 - maintenance
                 - networking
