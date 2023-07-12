@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -52,6 +53,7 @@ type Values struct {
 	ClientConnection               ClientConnection
 	LogLevel                       string
 	ResourceAdmissionConfiguration *admissioncontrollerv1alpha1.ResourceAdmissionConfiguration
+	ReplicaCount                   int32
 }
 
 // ClientConnection holds values for the client connection.
@@ -101,6 +103,7 @@ func (a admissioncontroller) Deploy(ctx context.Context) error {
 	defer cancel()
 
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
+		a.podDisruptionBudget(),
 		admissonConfigMap,
 	)
 	if err != nil {
@@ -164,4 +167,12 @@ func (a admissioncontroller) WaitCleanup(ctx context.Context) error {
 			return managedresources.WaitUntilDeleted(ctx, a.client, a.namespace, managedResourceNameVirtual)
 		},
 	)(timeoutCtx)
+}
+
+// GetLabels returns the labels for the gardener-admission-controller.
+func GetLabels() map[string]string {
+	return map[string]string{
+		v1beta1constants.LabelApp:  v1beta1constants.LabelGardener,
+		v1beta1constants.LabelRole: "admission-controller",
+	}
 }
