@@ -518,7 +518,7 @@ var _ = Describe("Defaults", func() {
 				maxMutatingRequestsInflight    int32 = 456
 			)
 
-			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{Requests: &KubeAPIServerRequests{}}
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{Requests: &APIServerRequests{}}
 			obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxNonMutatingInflight = &maxNonMutatingRequestsInflight
 			obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight = &maxMutatingRequestsInflight
 
@@ -558,7 +558,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not overwrite the log verbosity level", func() {
-			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{Logging: &KubeAPIServerLogging{Verbosity: pointer.Int32(3)}}
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{Logging: &APIServerLogging{Verbosity: pointer.Int32(3)}}
 			SetObjectDefaults_Shoot(obj)
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.Logging.Verbosity).To(PointTo(Equal(int32(3))))
 		})

@@ -430,10 +430,10 @@ type GardenerAPIServerConfig struct {
 	AuditConfig *gardencorev1beta1.AuditConfig `json:"auditConfig,omitempty"`
 	// Logging contains configuration for the log level and HTTP access logs.
 	// +optional
-	Logging *gardencorev1beta1.KubeAPIServerLogging `json:"logging,omitempty"`
+	Logging *gardencorev1beta1.APIServerLogging `json:"logging,omitempty"`
 	// Requests contains configuration for request-specific settings for the kube-apiserver.
 	// +optional
-	Requests *gardencorev1beta1.KubeAPIServerRequests `json:"requests,omitempty"`
+	Requests *gardencorev1beta1.APIServerRequests `json:"requests,omitempty"`
 	// WatchCacheSizes contains configuration of the API server's watch cache sizes.
 	// Configuring these flags might be useful for large-scale Shoot clusters with a lot of parallel update requests
 	// and a lot of watching controllers (e.g. large ManagedSeed clusters). When the API server's watch cache's

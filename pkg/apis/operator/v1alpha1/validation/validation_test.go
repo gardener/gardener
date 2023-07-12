@@ -1058,31 +1058,31 @@ var _ = Describe("Validation Tests", func() {
 						var negativeSize int32 = -1
 
 						DescribeTable("Logging validation",
-							func(loggingConfig *gardencorev1beta1.KubeAPIServerLogging, matcher gomegatypes.GomegaMatcher) {
+							func(loggingConfig *gardencorev1beta1.APIServerLogging, matcher gomegatypes.GomegaMatcher) {
 								garden.Spec.VirtualCluster.Gardener.APIServer.Logging = loggingConfig
 								Expect(ValidateGarden(garden)).To(matcher)
 							},
 
 							Entry("valid (unset)", nil, BeEmpty()),
-							Entry("valid (fields unset)", &gardencorev1beta1.KubeAPIServerLogging{}, BeEmpty()),
-							Entry("valid (verbosity=0)", &gardencorev1beta1.KubeAPIServerLogging{
+							Entry("valid (fields unset)", &gardencorev1beta1.APIServerLogging{}, BeEmpty()),
+							Entry("valid (verbosity=0)", &gardencorev1beta1.APIServerLogging{
 								Verbosity: pointer.Int32(0),
 							}, BeEmpty()),
-							Entry("valid (httpAccessVerbosity=0)", &gardencorev1beta1.KubeAPIServerLogging{
+							Entry("valid (httpAccessVerbosity=0)", &gardencorev1beta1.APIServerLogging{
 								HTTPAccessVerbosity: pointer.Int32(0),
 							}, BeEmpty()),
-							Entry("valid (verbosity>0)", &gardencorev1beta1.KubeAPIServerLogging{
+							Entry("valid (verbosity>0)", &gardencorev1beta1.APIServerLogging{
 								Verbosity: pointer.Int32(3),
 							}, BeEmpty()),
-							Entry("valid (httpAccessVerbosity>0)", &gardencorev1beta1.KubeAPIServerLogging{
+							Entry("valid (httpAccessVerbosity>0)", &gardencorev1beta1.APIServerLogging{
 								HTTPAccessVerbosity: pointer.Int32(3),
 							}, BeEmpty()),
-							Entry("invalid (verbosity<0)", &gardencorev1beta1.KubeAPIServerLogging{
+							Entry("invalid (verbosity<0)", &gardencorev1beta1.APIServerLogging{
 								Verbosity: pointer.Int32(negativeSize),
 							}, ConsistOf(
 								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.logging.verbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
 							)),
-							Entry("invalid (httpAccessVerbosity<0)", &gardencorev1beta1.KubeAPIServerLogging{
+							Entry("invalid (httpAccessVerbosity<0)", &gardencorev1beta1.APIServerLogging{
 								HTTPAccessVerbosity: pointer.Int32(negativeSize),
 							}, ConsistOf(
 								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.logging.httpAccessVerbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
@@ -1092,7 +1092,7 @@ var _ = Describe("Validation Tests", func() {
 
 					Context("Requests", func() {
 						It("should not allow too high values for max inflight requests fields", func() {
-							garden.Spec.VirtualCluster.Gardener.APIServer.Requests = &gardencorev1beta1.KubeAPIServerRequests{
+							garden.Spec.VirtualCluster.Gardener.APIServer.Requests = &gardencorev1beta1.APIServerRequests{
 								MaxNonMutatingInflight: pointer.Int32(123123123),
 								MaxMutatingInflight:    pointer.Int32(412412412),
 							}
@@ -1107,7 +1107,7 @@ var _ = Describe("Validation Tests", func() {
 						})
 
 						It("should not allow negative values for max inflight requests fields", func() {
-							garden.Spec.VirtualCluster.Gardener.APIServer.Requests = &gardencorev1beta1.KubeAPIServerRequests{
+							garden.Spec.VirtualCluster.Gardener.APIServer.Requests = &gardencorev1beta1.APIServerRequests{
 								MaxNonMutatingInflight: pointer.Int32(-1),
 								MaxMutatingInflight:    pointer.Int32(-1),
 							}

@@ -935,8 +935,8 @@ func ValidateWatchCacheSizes(sizes *core.WatchCacheSizes, fldPath *field.Path) f
 	return allErrs
 }
 
-// ValidateKubeAPIServerLogging validates the given KubeAPIServer Logging fields.
-func ValidateKubeAPIServerLogging(loggingConfig *core.KubeAPIServerLogging, fldPath *field.Path) field.ErrorList {
+// ValidateAPIServerLogging validates the given KubeAPIServer Logging fields.
+func ValidateAPIServerLogging(loggingConfig *core.APIServerLogging, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if loggingConfig != nil {
 		if verbosity := loggingConfig.Verbosity; verbosity != nil {
@@ -949,8 +949,8 @@ func ValidateKubeAPIServerLogging(loggingConfig *core.KubeAPIServerLogging, fldP
 	return allErrs
 }
 
-// ValidateKubeAPIServerRequests validates the given KubeAPIServer request fields.
-func ValidateKubeAPIServerRequests(requests *core.KubeAPIServerRequests, fldPath *field.Path) field.ErrorList {
+// ValidateAPIServerRequests validates the given KubeAPIServer request fields.
+func ValidateAPIServerRequests(requests *core.APIServerRequests, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if requests != nil {
@@ -1156,7 +1156,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 
 	allErrs = append(allErrs, ValidateWatchCacheSizes(kubeAPIServer.WatchCacheSizes, fldPath.Child("watchCacheSizes"))...)
 
-	allErrs = append(allErrs, ValidateKubeAPIServerLogging(kubeAPIServer.Logging, fldPath.Child("logging"))...)
+	allErrs = append(allErrs, ValidateAPIServerLogging(kubeAPIServer.Logging, fldPath.Child("logging"))...)
 
 	if defaultNotReadyTolerationSeconds := kubeAPIServer.DefaultNotReadyTolerationSeconds; defaultNotReadyTolerationSeconds != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*defaultNotReadyTolerationSeconds), fldPath.Child("defaultNotReadyTolerationSeconds"))...)
@@ -1165,7 +1165,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*defaultUnreachableTolerationSeconds), fldPath.Child("defaultUnreachableTolerationSeconds"))...)
 	}
 
-	allErrs = append(allErrs, ValidateKubeAPIServerRequests(kubeAPIServer.Requests, fldPath.Child("requests"))...)
+	allErrs = append(allErrs, ValidateAPIServerRequests(kubeAPIServer.Requests, fldPath.Child("requests"))...)
 
 	if kubeAPIServer.ServiceAccountConfig != nil {
 		if kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration != nil {

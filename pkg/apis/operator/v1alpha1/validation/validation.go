@@ -243,7 +243,7 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 	}
 
 	if config.Logging != nil {
-		logging := &gardencore.KubeAPIServerLogging{}
+		logging := &gardencore.APIServerLogging{}
 		if err := gardenCoreScheme.Convert(config.Logging, logging, nil); err != nil {
 			allErrs = append(allErrs, field.InternalError(fldPath.Child("logging"), err))
 		}
@@ -251,11 +251,11 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 	}
 
 	if config.Requests != nil {
-		requests := &gardencore.KubeAPIServerRequests{}
+		requests := &gardencore.APIServerRequests{}
 		if err := gardenCoreScheme.Convert(config.Requests, requests, nil); err != nil {
 			allErrs = append(allErrs, field.InternalError(fldPath.Child("requests"), err))
 		}
-		allErrs = append(allErrs, gardencorevalidation.ValidateKubeAPIServerRequests(requests, fldPath.Child("requests"))...)
+		allErrs = append(allErrs, gardencorevalidation.ValidateAPIServerRequests(requests, fldPath.Child("requests"))...)
 	}
 
 	return allErrs

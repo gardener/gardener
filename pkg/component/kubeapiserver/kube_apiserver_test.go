@@ -2408,7 +2408,7 @@ rules:
 						Values: apiserver.Values{
 							EnabledAdmissionPlugins: admissionPlugins,
 							Autoscaling:             apiserver.AutoscalingConfig{APIServerResources: apiServerResources},
-							Logging: &gardencorev1beta1.KubeAPIServerLogging{
+							Logging: &gardencorev1beta1.APIServerLogging{
 								Verbosity:           pointer.Int32(3),
 								HTTPAccessVerbosity: pointer.Int32(3),
 							},
@@ -3054,7 +3054,7 @@ rules:
 				})
 
 				It("should configure the request settings if provided", func() {
-					requests := &gardencorev1beta1.KubeAPIServerRequests{
+					requests := &gardencorev1beta1.APIServerRequests{
 						MaxNonMutatingInflight: pointer.Int32(123),
 						MaxMutatingInflight:    pointer.Int32(456),
 					}
@@ -3210,7 +3210,7 @@ rules:
 				})
 
 				It("should configure the KubeAPISeverLogging settings if provided", func() {
-					logging := &gardencorev1beta1.KubeAPIServerLogging{
+					logging := &gardencorev1beta1.APIServerLogging{
 						Verbosity:           pointer.Int32(3),
 						HTTPAccessVerbosity: pointer.Int32(3),
 					}

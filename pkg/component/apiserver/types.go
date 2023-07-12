@@ -51,9 +51,9 @@ type Values struct {
 	// FeatureGates is the set of feature gates.
 	FeatureGates map[string]bool
 	// Logging contains configuration settings for the log and access logging verbosity
-	Logging *gardencorev1beta1.KubeAPIServerLogging
+	Logging *gardencorev1beta1.APIServerLogging
 	// Requests contains configuration for the API server requests.
-	Requests *gardencorev1beta1.KubeAPIServerRequests
+	Requests *gardencorev1beta1.APIServerRequests
 	// RuntimeVersion is the Kubernetes version of the runtime cluster.
 	RuntimeVersion *semver.Version
 	// WatchCacheSizes are the configured sizes for the watch caches.

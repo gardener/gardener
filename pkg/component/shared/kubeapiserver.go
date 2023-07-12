@@ -120,10 +120,10 @@ func NewKubeAPIServer(
 		eventTTL                            *metav1.Duration
 		featureGates                        map[string]bool
 		oidcConfig                          *gardencorev1beta1.OIDCConfig
-		requests                            *gardencorev1beta1.KubeAPIServerRequests
+		requests                            *gardencorev1beta1.APIServerRequests
 		runtimeConfig                       map[string]bool
 		watchCacheSizes                     *gardencorev1beta1.WatchCacheSizes
-		logging                             *gardencorev1beta1.KubeAPIServerLogging
+		logging                             *gardencorev1beta1.APIServerLogging
 	)
 
 	if apiServerConfig != nil {
