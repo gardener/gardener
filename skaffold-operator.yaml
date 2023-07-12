@@ -203,6 +203,7 @@ build:
         - pkg/utils/validation/features
         - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
+        - plugin/pkg
         - vendor
         - VERSION
       ldflags:

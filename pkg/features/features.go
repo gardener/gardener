@@ -101,7 +101,8 @@ const (
 // feature gate map for gardener-apiserver. Hence, we reuse it for all our components.
 var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 
-var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
+// AllFeatureGates is the list of all feature gates.
+var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HVPA:                               {Default: false, PreRelease: featuregate.Alpha},
 	HVPAForShootedSeed:                 {Default: false, PreRelease: featuregate.Alpha},
 	DefaultSeccompProfile:              {Default: false, PreRelease: featuregate.Alpha},
@@ -118,7 +119,7 @@ func GetFeatures(featureGates ...featuregate.Feature) map[featuregate.Feature]fe
 	out := make(map[featuregate.Feature]featuregate.FeatureSpec)
 
 	for _, fg := range featureGates {
-		if spec, ok := allFeatureGates[fg]; ok {
+		if spec, ok := AllFeatureGates[fg]; ok {
 			out[fg] = spec
 		}
 	}
