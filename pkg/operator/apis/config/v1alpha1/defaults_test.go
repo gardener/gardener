@@ -135,7 +135,7 @@ var _ = Describe("Defaults", func() {
 
 		Describe("Controller configuration", func() {
 			Describe("Garden controller", func() {
-				It("should not default the object", func() {
+				It("should default the object", func() {
 					obj := &GardenControllerConfig{}
 
 					SetDefaults_GardenControllerConfig(obj)
@@ -167,6 +167,26 @@ var _ = Describe("Defaults", func() {
 					Expect(obj.Controllers.Garden.ETCDConfig.BackupCompactionController.Workers).To(PointTo(Equal(int64(3))))
 					Expect(obj.Controllers.Garden.ETCDConfig.BackupCompactionController.EnableBackupCompaction).To(PointTo(Equal(false)))
 					Expect(obj.Controllers.Garden.ETCDConfig.BackupCompactionController.EventsThreshold).To(PointTo(Equal(int64(1000000))))
+				})
+			})
+
+			Describe("GardenCare controller", func() {
+				It("should default the object", func() {
+					obj := &GardenCareControllerConfiguration{}
+
+					SetDefaults_GardenCareControllerConfiguration(obj)
+
+					Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
+				})
+
+				It("should not overwrite existing values", func() {
+					obj := &GardenCareControllerConfiguration{
+						SyncPeriod: &metav1.Duration{Duration: time.Second},
+					}
+
+					SetDefaults_GardenCareControllerConfiguration(obj)
+
+					Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Second})))
 				})
 			})
 		})

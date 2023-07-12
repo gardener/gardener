@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
@@ -43,7 +44,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
@@ -246,9 +246,12 @@ func (r *Reconciler) reconcile(
 		initializeVirtualClusterClient = g.Add(flow.Task{
 			Name: "Initializing connection to virtual garden cluster",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				var err error
-				virtualClusterClient, err = r.initializeVirtualClusterClient(ctx)
-				return err
+				virtualClusterClientSet, err := r.GardenClientMap.GetClient(ctx, keys.ForGarden(garden))
+				if err != nil {
+					return err
+				}
+				virtualClusterClient = virtualClusterClientSet.Client()
+				return nil
 			}).
 				RetryUntilTimeout(time.Second, 30*time.Second),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService, deployVirtualGardenGardenerAccess, renewVirtualClusterAccess),
@@ -398,42 +401,6 @@ func (r *Reconciler) snapshotETCDFunc(secretsManager secretsmanager.Interface, e
 	return func(ctx context.Context) error {
 		return shared.SnapshotEtcd(ctx, secretsManager, etcdMain)
 	}
-}
-
-// NewClientFromSecretObject is an alias for kubernetes.NewClientFromSecretObject.
-var NewClientFromSecretObject = kubernetes.NewClientFromSecretObject
-
-func (r *Reconciler) initializeVirtualClusterClient(ctx context.Context) (client.Client, error) {
-	virtualGardenAccessSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-		Name:      v1beta1constants.SecretNameGardenerInternal,
-		Namespace: r.GardenNamespace,
-	}}
-
-	if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKeyFromObject(virtualGardenAccessSecret), virtualGardenAccessSecret); err != nil {
-		return nil, err
-	}
-
-	// Kubeconfig secrets are created with empty authinfo and it's expected that gardener-resource-manager eventually
-	// populates a token, so let's check whether the read secret already contains authinfo
-	tokenPopulated, err := tokenrequest.IsTokenPopulated(virtualGardenAccessSecret)
-	if err != nil {
-		return nil, err
-	}
-	if !tokenPopulated {
-		return nil, fmt.Errorf("token for virtual garden kubeconfig was not populated yet")
-	}
-
-	clientSet, err := NewClientFromSecretObject(
-		virtualGardenAccessSecret,
-		kubernetes.WithClientConnectionOptions(r.Config.VirtualClientConnection),
-		kubernetes.WithClientOptions(client.Options{Scheme: operatorclient.VirtualScheme}),
-		kubernetes.WithDisabledCachedClient(),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return clientSet.Client(), nil
 }
 
 // deployVirtualGardenGardenerResourceManager deploys the virtual-garden-gardener-resource-manager

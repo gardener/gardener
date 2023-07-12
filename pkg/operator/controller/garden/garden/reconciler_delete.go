@@ -29,6 +29,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
@@ -99,6 +100,13 @@ func (r *Reconciler) delete(
 			Fn:           func(ctx context.Context) error { return r.cleanupGenericTokenKubeconfig(ctx, secretsManager) },
 			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer, destroyVirtualGardenGardenerResourceManager),
 		})
+		invalidateClient = g.Add(flow.Task{
+			Name: "Invalidate client for virtual garden",
+			Fn: func(ctx context.Context) error {
+				return r.GardenClientMap.InvalidateClient(keys.ForGarden(garden))
+			},
+			Dependencies: flow.NewTaskIDs(destroyKubeAPIServer, destroyVirtualGardenGardenerResourceManager),
+		})
 		syncPointVirtualGardenControlPlaneDestroyed = flow.NewTaskIDs(
 			cleanupGenericTokenKubeconfig,
 			destroyVirtualGardenGardenerAccess,
@@ -108,6 +116,7 @@ func (r *Reconciler) delete(
 			destroyKubeAPIServerService,
 			destroyKubeAPIServer,
 			destroyEtcd,
+			invalidateClient,
 		)
 
 		destroyEtcdDruid = g.Add(flow.Task{

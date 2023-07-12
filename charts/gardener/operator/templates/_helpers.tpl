@@ -77,6 +77,16 @@ config.yaml: |
       etcdConfig:
 {{ toYaml .Values.config.controllers.garden.etcdConfig | indent 8 }}
       {{- end }}
+    {{- if .Values.config.controllers.gardenCare }}
+    gardenCare:
+      {{- if .Values.config.controllers.gardenCare.syncPeriod }}
+      syncPeriod: {{ .Values.config.controllers.gardenCare.syncPeriod }}
+      {{- end }}
+      {{- if .Values.config.controllers.gardenCare.conditionThresholds }}
+      conditionThresholds:
+{{ toYaml .Values.config.controllers.gardenCare.conditionThresholds | indent 6 }}
+      {{- end }}
+    {{- end }}
     {{- if .Values.config.controllers.networkPolicy }}
     networkPolicy:
       {{- if .Values.config.controllers.networkPolicy.concurrentSyncs }}

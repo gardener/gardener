@@ -314,7 +314,7 @@ var _ = Describe("health check", func() {
 
 			checker := care.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion, gardenerVersion)
 
-			exitCondition, err := checker.CheckControlPlane(ctx, shoot, seedNamespace, condition)
+			exitCondition, err := checker.CheckShootControlPlane(ctx, shoot, seedNamespace, condition)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},

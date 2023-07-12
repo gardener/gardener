@@ -15,6 +15,7 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -35,7 +36,7 @@ import (
 )
 
 // AddToManager adds all controllers to the given manager.
-func AddToManager(mgr manager.Manager, cfg *config.OperatorConfiguration) error {
+func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.OperatorConfiguration) error {
 	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(charts.Path, "images.yaml"))
 	if err != nil {
 		return fmt.Errorf("failed reading image vector override: %w", err)
@@ -54,13 +55,8 @@ func AddToManager(mgr manager.Manager, cfg *config.OperatorConfiguration) error 
 		return err
 	}
 
-	if err := (&garden.Reconciler{
-		Config:                *cfg,
-		Identity:              identity,
-		ImageVector:           imageVector,
-		ComponentImageVectors: componentImageVectors,
-	}).AddToManager(mgr); err != nil {
-		return fmt.Errorf("failed adding Garden controller: %w", err)
+	if err := garden.AddToManager(ctx, mgr, cfg, identity, imageVector, componentImageVectors); err != nil {
+		return err
 	}
 
 	if err := (&networkpolicyregistrar.Reconciler{

@@ -34,7 +34,8 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
-const managedResourceName = "shoot-core-gardeneraccess"
+// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
+const ManagedResourceName = "shoot-core-gardeneraccess"
 
 // New creates a new instance of the deployer for GardenerAccess.
 func New(
@@ -107,7 +108,7 @@ func (g *gardener) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, g.client, g.namespace, managedResourceName, managedresources.LabelValueGardener, true, data)
+	return managedresources.CreateForShoot(ctx, g.client, g.namespace, ManagedResourceName, managedresources.LabelValueGardener, true, data)
 }
 
 func (g *gardener) Destroy(ctx context.Context) error {
@@ -118,7 +119,7 @@ func (g *gardener) Destroy(ctx context.Context) error {
 		}
 	}
 
-	return managedresources.DeleteForShoot(ctx, g.client, g.namespace, managedResourceName)
+	return managedresources.DeleteForShoot(ctx, g.client, g.namespace, ManagedResourceName)
 }
 
 func (g *gardener) computeResourcesData(serviceAccountNames ...string) (map[string][]byte, error) {

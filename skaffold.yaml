@@ -789,6 +789,7 @@ build:
         - pkg/client/kubernetes/clientmap/builder
         - pkg/client/kubernetes/clientmap/internal
         - pkg/client/kubernetes/clientmap/keys
+        - pkg/component/gardensystem
         - pkg/controller/networkpolicy
         - pkg/controller/networkpolicy/helper
         - pkg/controller/networkpolicy/hostnameresolver
@@ -832,6 +833,7 @@ build:
         - pkg/logger
         - pkg/operation
         - pkg/operation/botanist
+        - pkg/operator/client
         - pkg/component/apiserverproxy
         - pkg/component
         - pkg/component/backupentry

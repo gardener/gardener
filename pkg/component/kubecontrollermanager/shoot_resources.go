@@ -50,5 +50,5 @@ func (k *kubeControllerManager) reconcileShootResources(ctx context.Context, ser
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, k.seedClient.Client(), k.namespace, managedResourceName, managedresources.LabelValueGardener, true, data)
+	return managedresources.CreateForShoot(ctx, k.seedClient.Client(), k.namespace, ManagedResourceName, managedresources.LabelValueGardener, true, data)
 }

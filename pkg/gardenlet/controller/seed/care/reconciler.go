@@ -92,7 +92,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 	if v1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) {
 		// Rebuild seed conditions to ensure that only the conditions with the
 		// correct types will be updated, and any other conditions will remain intact
-		conditions = buildSeedConditions(seed.Status.Conditions, updatedConditions, conditionTypes)
+		conditions = v1beta1helper.BuildConditions(seed.Status.Conditions, updatedConditions, conditionTypes)
 
 		log.Info("Updating seed status conditions")
 		patch := client.StrategicMergeFrom(seed.DeepCopy())
@@ -112,12 +112,4 @@ func (r *Reconciler) conditionThresholdsToProgressingMapping() map[gardencorev1b
 		out[gardencorev1beta1.ConditionType(threshold.Type)] = threshold.Duration.Duration
 	}
 	return out
-}
-
-// buildSeedConditions builds and returns the seed conditions using the given seed conditions as a base,
-// by first removing all conditions with the given types and then merging the given conditions (which must be of the same types).
-func buildSeedConditions(seedConditions []gardencorev1beta1.Condition, conditions []gardencorev1beta1.Condition, conditionTypes []gardencorev1beta1.ConditionType) []gardencorev1beta1.Condition {
-	result := v1beta1helper.RemoveConditions(seedConditions, conditionTypes...)
-	result = v1beta1helper.MergeConditions(result, conditions...)
-	return result
 }

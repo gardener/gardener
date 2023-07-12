@@ -23,7 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	. "github.com/gardener/gardener/pkg/operator/controller/garden"
+	. "github.com/gardener/gardener/pkg/operator/controller/garden/garden"
 )
 
 var _ = Describe("Add", func() {
