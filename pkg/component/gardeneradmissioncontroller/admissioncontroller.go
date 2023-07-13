@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
@@ -54,6 +55,8 @@ type Values struct {
 	LogLevel                       string
 	ResourceAdmissionConfiguration *admissioncontrollerv1alpha1.ResourceAdmissionConfiguration
 	ReplicaCount                   int32
+	RuntimeVersion                 *semver.Version
+	TopologyAwareRoutingEnabled    bool
 }
 
 // ClientConnection holds values for the client connection.
@@ -104,6 +107,7 @@ func (a admissioncontroller) Deploy(ctx context.Context) error {
 
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
 		a.podDisruptionBudget(),
+		a.service(),
 		admissonConfigMap,
 	)
 	if err != nil {
