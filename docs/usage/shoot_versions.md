@@ -9,7 +9,7 @@ Patch releases are done more frequently.
 
 When using the term `Machine image` in the following, we refer to the OS version that comes with the machine image of the node/worker pool of a Gardener Shoot cluster.
 As such, we are not referring to the `CloudProvider` specific machine image like the [`AMI`](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) for AWS.
-For more information on how Gardener maps machine image versions to `CloudProvider` specific machine images, take a look at the individual gardener extension providers, such as the [provider for AWS](https://github.com/gardener/gardener-extension-provider-aws/blob/master/docs/usage-as-operator.md).
+For more information on how Gardener maps machine image versions to `CloudProvider` specific machine images, take a look at the individual gardener extension providers, such as the [provider for AWS](https://github.com/gardener/gardener-extension-provider-aws/blob/master/docs/operations/operations.md).
 
 Gardener should be configured accordingly to reflect the "logical state" of a version.
 It should be possible to define the Kubernetes or Machine image versions that still receive bug fixes and security patches, and also vice-versa to define the version that are out-of-maintenance and are potentially vulnerable.
