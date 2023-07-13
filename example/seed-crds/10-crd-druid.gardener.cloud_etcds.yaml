@@ -1704,7 +1704,9 @@ spec:
             description: EtcdStatus defines the observed state of Etcd.
             properties:
               clusterSize:
-                description: Cluster size is the size of the etcd cluster.
+                description: 'Cluster size is the current size of the etcd cluster.
+                  Deprecated: this field will not be populated with any value and
+                  will be removed in the future.'
                 format: int32
                 type: integer
               conditions:
@@ -1765,8 +1767,9 @@ spec:
                     type: string
                 type: object
               labelSelector:
-                description: LabelSelector is a label query over pods that should
-                  match the replica count. It must match the pod template's labels.
+                description: 'LabelSelector is a label query over pods that should
+                  match the replica count. It must match the pod template''s labels.
+                  Deprecated: this field will be removed in the future.'
                 properties:
                   matchExpressions:
                     description: matchExpressions is a list of label selector requirements.
@@ -1870,11 +1873,13 @@ spec:
                 format: int32
                 type: integer
               serviceName:
-                description: ServiceName is the name of the etcd service.
+                description: 'ServiceName is the name of the etcd service. Deprecated:
+                  this field will be removed in the future.'
                 type: string
               updatedReplicas:
-                description: UpdatedReplicas is the count of updated replicas in the
-                  etcd cluster.
+                description: 'UpdatedReplicas is the count of updated replicas in
+                  the etcd cluster. Deprecated: this field will be removed in the
+                  future.'
                 format: int32
                 type: integer
             type: object
