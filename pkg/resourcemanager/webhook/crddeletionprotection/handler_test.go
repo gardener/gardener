@@ -71,11 +71,10 @@ var _ = Describe("handler", func() {
 			request.Operation = admissionv1.Delete
 
 			var err error
-			decoder, err = admission.NewDecoder(kubernetes.SeedScheme)
+			decoder = admission.NewDecoder(kubernetes.SeedScheme)
 			Expect(err).NotTo(HaveOccurred())
 
-			handler = &Handler{Logger: log, SourceReader: c}
-			Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
+			handler = &Handler{Logger: log, SourceReader: c, Decoder: decoder}
 		})
 
 		AfterEach(func() {

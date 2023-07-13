@@ -52,7 +52,7 @@ var _ = Describe("admission", func() {
 		request = admission.Request{}
 
 		var err error
-		decoder, err = admission.NewDecoder(kubernetes.SeedScheme)
+		decoder = admission.NewDecoder(kubernetes.SeedScheme)
 		Expect(err).NotTo(HaveOccurred())
 	})
 

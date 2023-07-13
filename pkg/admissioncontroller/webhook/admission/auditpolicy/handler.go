@@ -82,14 +82,7 @@ type Handler struct {
 	Logger    logr.Logger
 	APIReader client.Reader
 	Client    client.Reader
-
-	decoder *admission.Decoder
-}
-
-// InjectDecoder injects the decoder.
-func (h *Handler) InjectDecoder(d *admission.Decoder) error {
-	h.decoder = d
-	return nil
+	Decoder   *admission.Decoder
 }
 
 // Handle validates audit policies.
@@ -184,7 +177,7 @@ func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request)
 		return admissionwebhook.Allowed("operation is not update")
 	}
 
-	if err := h.decoder.Decode(request, cm); err != nil {
+	if err := h.Decoder.Decode(request, cm); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
@@ -228,7 +221,7 @@ func (h *Handler) admitConfigMap(ctx context.Context, request admission.Request)
 
 func (h *Handler) getOldObject(request admission.Request, oldObj runtime.Object) error {
 	if len(request.OldObject.Raw) != 0 {
-		return h.decoder.DecodeRaw(request.OldObject, oldObj)
+		return h.Decoder.DecodeRaw(request.OldObject, oldObj)
 	}
 	return fmt.Errorf("could not find old object")
 }

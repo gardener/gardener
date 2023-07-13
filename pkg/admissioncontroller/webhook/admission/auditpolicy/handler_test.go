@@ -164,12 +164,9 @@ rules:
 		mockReader = mockclient.NewMockReader(ctrl)
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 
-		var err error
-		decoder, err = admission.NewDecoder(kubernetes.GardenScheme)
-		Expect(err).NotTo(HaveOccurred())
+		decoder = admission.NewDecoder(kubernetes.GardenScheme)
 
-		handler = &Handler{Logger: log, APIReader: mockReader, Client: fakeClient}
-		Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
+		handler = &Handler{Logger: log, APIReader: mockReader, Client: fakeClient, Decoder: decoder}
 
 		request = admission.Request{}
 

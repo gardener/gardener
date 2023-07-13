@@ -21,6 +21,7 @@ import (
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/crddeletionprotection"
@@ -56,6 +57,7 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 		if err := (&crddeletionprotection.Handler{
 			Logger:       mgr.GetLogger().WithName("webhook").WithName(crddeletionprotection.HandlerName),
 			SourceReader: sourceCluster.GetAPIReader(),
+			Decoder:      admission.NewDecoder(mgr.GetScheme()),
 		}).AddToManager(mgr); err != nil {
 			return fmt.Errorf("failed adding %s webhook handler: %w", crddeletionprotection.HandlerName, err)
 		}
@@ -81,6 +83,7 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 			TargetClient:  targetCluster.GetClient(),
 			TargetVersion: targetVersion,
 			Config:        cfg.Webhooks.HighAvailabilityConfig,
+			Decoder:       admission.NewDecoder(mgr.GetScheme()),
 		}).AddToManager(mgr); err != nil {
 			return fmt.Errorf("failed adding %s webhook handler: %w", highavailabilityconfig.HandlerName, err)
 		}

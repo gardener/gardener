@@ -58,14 +58,7 @@ type Handler struct {
 	TargetClient  client.Reader
 	TargetVersion *semver.Version
 	Config        config.HighAvailabilityConfigWebhookConfig
-
-	decoder *admission.Decoder
-}
-
-// InjectDecoder injects the decoder.
-func (h *Handler) InjectDecoder(d *admission.Decoder) error {
-	h.decoder = d
-	return nil
+	Decoder       *admission.Decoder
 }
 
 // Handle defaults the high availability settings of the provided resource.
@@ -146,7 +139,7 @@ func (h *Handler) handleDeployment(
 	error,
 ) {
 	deployment := &appsv1.Deployment{}
-	if err := h.decoder.Decode(req, deployment); err != nil {
+	if err := h.Decoder.Decode(req, deployment); err != nil {
 		return nil, err
 	}
 
@@ -199,7 +192,7 @@ func (h *Handler) handleStatefulSet(
 	error,
 ) {
 	statefulSet := &appsv1.StatefulSet{}
-	if err := h.decoder.Decode(req, statefulSet); err != nil {
+	if err := h.Decoder.Decode(req, statefulSet); err != nil {
 		return nil, err
 	}
 
@@ -242,7 +235,7 @@ func (h *Handler) handleStatefulSet(
 
 func (h *Handler) handleHvpa(req admission.Request, failureToleranceType *gardencorev1beta1.FailureToleranceType) (runtime.Object, error) {
 	hvpa := &hvpav1alpha1.Hvpa{}
-	if err := h.decoder.Decode(req, hvpa); err != nil {
+	if err := h.Decoder.Decode(req, hvpa); err != nil {
 		return nil, err
 	}
 
@@ -267,7 +260,7 @@ func (h *Handler) handleHorizontalPodAutoscaler(req admission.Request, failureTo
 	switch req.Kind.Version {
 	case autoscalingv2beta1.SchemeGroupVersion.Version:
 		hpa := &autoscalingv2beta1.HorizontalPodAutoscaler{}
-		if err := h.decoder.Decode(req, hpa); err != nil {
+		if err := h.Decoder.Decode(req, hpa); err != nil {
 			return nil, err
 		}
 
@@ -288,7 +281,7 @@ func (h *Handler) handleHorizontalPodAutoscaler(req admission.Request, failureTo
 		return hpa, nil
 	case autoscalingv2.SchemeGroupVersion.Version:
 		hpa := &autoscalingv2.HorizontalPodAutoscaler{}
-		if err := h.decoder.Decode(req, hpa); err != nil {
+		if err := h.Decoder.Decode(req, hpa); err != nil {
 			return nil, err
 		}
 
