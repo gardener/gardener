@@ -64,7 +64,7 @@ const (
 // GetHostMountPathFromSecretRef returns the hostPath configured for the given store.
 func GetHostMountPathFromSecretRef(ctx context.Context, client client.Client, logger logr.Logger, store *druidv1alpha1.StoreSpec, namespace string) (string, error) {
 	if store.SecretRef == nil {
-		logger.Info("secretRef is not defined for store, using default hostPath")
+		logger.Info("secretRef is not defined for store, using default hostPath", "namespace", namespace)
 		return LocalProviderDefaultMountPath, nil
 	}
 
