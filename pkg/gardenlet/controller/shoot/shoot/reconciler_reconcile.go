@@ -458,10 +458,20 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.DeleteBastions).SkipIf(shootSSHAccessEnabled),
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilInfrastructureReady, waitUntilControlPlaneReady),
 		})
+		deployExtensionResourcesAfterKAPI = g.Add(flow.Task{
+			Name:         deployExtensionAfterKAPIMsg,
+			Fn:           flow.TaskFn(botanist.DeployExtensionsAfterKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources, initializeShootClients),
+		})
+		waitUntilExtensionResourcesAfterKAPIReady = g.Add(flow.Task{
+			Name:         waitExtensionAfterKAPIMsg,
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.WaitAfterKubeAPIServer).SkipIf(skipReadiness),
+			Dependencies: flow.NewTaskIDs(deployExtensionResourcesAfterKAPI),
+		})
 		deployOperatingSystemConfig = g.Add(flow.Task{
 			Name:         "Deploying operating system specific configuration for shoot workers",
 			Fn:           flow.TaskFn(botanist.DeployOperatingSystemConfig).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsWorkerless),
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilInfrastructureReady, waitUntilControlPlaneReady, deleteBastions),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilInfrastructureReady, waitUntilControlPlaneReady, deleteBastions, waitUntilExtensionResourcesAfterKAPIReady),
 		})
 		waitUntilOperatingSystemConfigReady = g.Add(flow.Task{
 			Name: "Waiting until operating system configurations for worker nodes have been reconciled",
@@ -707,17 +717,6 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Name:         "Reconciling Plutono for Shoot in Seed for the monitoring stack",
 			Fn:           flow.TaskFn(botanist.DeploySeedPlutono).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(deploySeedMonitoring),
-		})
-
-		deployExtensionResourcesAfterKAPI = g.Add(flow.Task{
-			Name:         deployExtensionAfterKAPIMsg,
-			Fn:           flow.TaskFn(botanist.DeployExtensionsAfterKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, initializeShootClients),
-		})
-		waitUntilExtensionResourcesAfterKAPIReady = g.Add(flow.Task{
-			Name:         waitExtensionAfterKAPIMsg,
-			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.WaitAfterKubeAPIServer).SkipIf(skipReadiness),
-			Dependencies: flow.NewTaskIDs(deployExtensionResourcesAfterKAPI),
 		})
 
 		hibernateControlPlane = g.Add(flow.Task{
