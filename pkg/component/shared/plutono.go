@@ -33,7 +33,7 @@ func NewPlutono(
 	authSecretName string,
 	clusterType component.ClusterType,
 	ingressHost string,
-	includeIstioDashboards, gardenletManagesMCMbool, nodeLocalDNSEnabled, isWorkerless, vpnHighAvailabilityEnabled bool,
+	includeIstioDashboards, gardenletManagesMCM, nodeLocalDNSEnabled, isWorkerless, vpnHighAvailabilityEnabled bool,
 	priorityClassName string,
 	replicas int32,
 	wildcardCertName *string,
@@ -51,7 +51,7 @@ func NewPlutono(
 		plutono.Values{
 			AuthSecretName:             authSecretName,
 			ClusterType:                clusterType,
-			GardenletManagesMCM:        gardenletManagesMCMbool,
+			GardenletManagesMCM:        gardenletManagesMCM,
 			Image:                      plutonoImage.String(),
 			IngressHost:                ingressHost,
 			IncludeIstioDashboards:     includeIstioDashboards,
