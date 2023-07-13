@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
@@ -57,6 +58,7 @@ type Values struct {
 	ReplicaCount                   int32
 	RuntimeVersion                 *semver.Version
 	TopologyAwareRoutingEnabled    bool
+	VPAEnabled                     bool
 }
 
 // ClientConnection holds values for the client connection.
@@ -108,6 +110,7 @@ func (a admissioncontroller) Deploy(ctx context.Context) error {
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
 		a.podDisruptionBudget(),
 		a.service(),
+		a.vpa(),
 		admissonConfigMap,
 	)
 	if err != nil {
@@ -178,5 +181,13 @@ func GetLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.LabelApp:  v1beta1constants.LabelGardener,
 		v1beta1constants.LabelRole: "admission-controller",
+	}
+}
+
+func getObjectMeta(name, namespace string) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Name:      name,
+		Namespace: namespace,
+		Labels:    GetLabels(),
 	}
 }

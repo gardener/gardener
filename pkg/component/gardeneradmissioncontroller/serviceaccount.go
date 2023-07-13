@@ -15,22 +15,11 @@
 package gardeneradmissioncontroller
 
 import (
-	policyv1 "k8s.io/api/policy/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	gardenerutils "github.com/gardener/gardener/pkg/utils"
+	corev1 "k8s.io/api/core/v1"
 )
 
-func (a admissioncontroller) podDisruptionBudget() *policyv1.PodDisruptionBudget {
-	if a.values.ReplicaCount <= 1 {
-		return nil
-	}
-
-	return &policyv1.PodDisruptionBudget{
+func (a admissioncontroller) serviceAccount() *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
 		ObjectMeta: getObjectMeta(DeploymentName, a.namespace),
-		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: gardenerutils.IntStrPtrFromInt(1),
-			Selector:       &metav1.LabelSelector{MatchLabels: GetLabels()},
-		},
 	}
 }

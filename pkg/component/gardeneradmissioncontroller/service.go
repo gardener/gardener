@@ -24,11 +24,7 @@ import (
 
 func (a admissioncontroller) service() *corev1.Service {
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      ServiceName,
-			Namespace: a.namespace,
-			Labels:    GetLabels(),
-		},
+		ObjectMeta: getObjectMeta(ServiceName, a.namespace),
 		Spec: corev1.ServiceSpec{
 			Type:     corev1.ServiceTypeClusterIP,
 			Selector: GetLabels(),

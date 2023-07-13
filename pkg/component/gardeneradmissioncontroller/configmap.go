@@ -15,7 +15,6 @@
 package gardeneradmissioncontroller
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 
 	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
@@ -83,10 +82,7 @@ func (a admissioncontroller) admissionConfigConfigMap() (*corev1.ConfigMap, erro
 	}
 
 	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      DeploymentName,
-			Namespace: a.namespace,
-		},
+		ObjectMeta: getObjectMeta(DeploymentName, a.namespace),
 		Data: map[string]string{
 			"config.yaml": string(data),
 		},
