@@ -16,6 +16,7 @@ package gardeneradmissioncontroller
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -38,6 +39,8 @@ const (
 	// ServiceName is the name of the admission controller service.
 	ServiceName = "gardener-admission-controller"
 
+	roleName = "admission-controller"
+
 	serverPort  = 2719
 	healthzPort = 2722
 	metricsPort = 2723
@@ -54,6 +57,7 @@ var TimeoutWaitForManagedResource = 5 * time.Minute
 type Values struct {
 	ClientConnection               ClientConnection
 	LogLevel                       string
+	Image                          string
 	ResourceAdmissionConfiguration *admissioncontrollerv1alpha1.ResourceAdmissionConfiguration
 	ReplicaCount                   int32
 	RuntimeVersion                 *semver.Version
@@ -104,10 +108,16 @@ func (a admissioncontroller) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	secretGenericTokenKubeconfig, found := a.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
+	}
+
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
+		a.deployment(secretServerCert.Name, secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, admissonConfigMap.Name),
 		a.podDisruptionBudget(),
 		a.service(),
 		a.vpa(),
@@ -180,7 +190,7 @@ func (a admissioncontroller) WaitCleanup(ctx context.Context) error {
 func GetLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.LabelApp:  v1beta1constants.LabelGardener,
-		v1beta1constants.LabelRole: "admission-controller",
+		v1beta1constants.LabelRole: roleName,
 	}
 }
 

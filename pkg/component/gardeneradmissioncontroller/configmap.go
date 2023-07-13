@@ -84,7 +84,7 @@ func (a admissioncontroller) admissionConfigConfigMap() (*corev1.ConfigMap, erro
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: getObjectMeta(DeploymentName, a.namespace),
 		Data: map[string]string{
-			"config.yaml": string(data),
+			dataConfigKey: string(data),
 		},
 	}
 

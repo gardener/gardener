@@ -22,6 +22,8 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
+// TODO Add network labels
+
 func (a admissioncontroller) service() *corev1.Service {
 	svc := &corev1.Service{
 		ObjectMeta: getObjectMeta(ServiceName, a.namespace),
