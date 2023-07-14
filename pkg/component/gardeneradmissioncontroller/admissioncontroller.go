@@ -25,6 +25,7 @@ import (
 
 	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -134,13 +135,17 @@ func (a admissioncontroller) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	var (
-		virtualRegistry = managedresources.NewRegistry(operatorclient.VirtualScheme, operatorclient.VirtualCodec, operatorclient.VirtualSerializer)
-	)
+	var virtualRegistry = managedresources.NewRegistry(operatorclient.VirtualScheme, operatorclient.VirtualCodec, operatorclient.VirtualSerializer)
+
+	caSecret, found := a.secretsManager.Get(operatorv1alpha1.SecretNameCAGardener)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
+	}
 
 	virtualResources, err := virtualRegistry.AddAllAndSerialize(
 		a.clusterRole(),
 		a.clusterRoleBinding(virtualGardenAccessSecret.ServiceAccountName),
+		a.validatingwebhookconfiguration(caSecret),
 	)
 	if err != nil {
 		return err
