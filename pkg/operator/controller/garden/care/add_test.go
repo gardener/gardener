@@ -81,40 +81,54 @@ var _ = Describe("Add", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectNew: garden})).To(BeFalse())
 			})
 
-			It("should return false because Reconciled condition does not exist", func() {
+			It("should return false because last operation is nil on old garden", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectOld: garden, ObjectNew: garden})).To(BeFalse())
 			})
 
-			It("should return false because Reconciled condition was true before", func() {
-				garden.Status.Conditions = []gardencorev1beta1.Condition{{Type: operatorv1alpha1.GardenReconciled, Status: gardencorev1beta1.ConditionTrue}}
-				Expect(p.Update(event.UpdateEvent{ObjectOld: garden, ObjectNew: garden})).To(BeFalse())
+			It("should return false because last operation is nil on new garden", func() {
+				oldShoot := garden.DeepCopy()
+				oldShoot.Status.LastOperation = &gardencorev1beta1.LastOperation{}
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldShoot, ObjectNew: garden})).To(BeFalse())
 			})
 
-			It("should return false because Reconciled condition is no longer true", func() {
-				garden.Status.Conditions = []gardencorev1beta1.Condition{{Type: operatorv1alpha1.GardenReconciled, Status: gardencorev1beta1.ConditionFalse}}
-				oldGarden := garden.DeepCopy()
-				oldGarden.Status.Conditions[0].Status = gardencorev1beta1.ConditionTrue
-				Expect(p.Update(event.UpdateEvent{ObjectOld: oldGarden, ObjectNew: garden})).To(BeFalse())
+			It("should return false because last operation type is 'Delete' on old garden", func() {
+				garden.Status.LastOperation = &gardencorev1beta1.LastOperation{}
+				oldShoot := garden.DeepCopy()
+				oldShoot.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeDelete
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldShoot, ObjectNew: garden})).To(BeFalse())
 			})
 
-			It("should return false because Reconciled condition does no longer exist", func() {
-				oldGarden := garden.DeepCopy()
-				oldGarden.Status.Conditions = []gardencorev1beta1.Condition{{Type: operatorv1alpha1.GardenReconciled, Status: gardencorev1beta1.ConditionTrue}}
-				Expect(p.Update(event.UpdateEvent{ObjectOld: oldGarden, ObjectNew: garden})).To(BeFalse())
+			It("should return false because last operation type is 'Delete' on new garden", func() {
+				garden.Status.LastOperation = &gardencorev1beta1.LastOperation{}
+				garden.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeDelete
+				oldShoot := garden.DeepCopy()
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldShoot, ObjectNew: garden})).To(BeFalse())
 			})
 
-			It("should return true because Reconciled condition did not exist before", func() {
-				garden.Status.Conditions = []gardencorev1beta1.Condition{{Type: operatorv1alpha1.GardenReconciled, Status: gardencorev1beta1.ConditionTrue}}
-				oldGarden := garden.DeepCopy()
-				oldGarden.Status.Conditions = nil
-				Expect(p.Update(event.UpdateEvent{ObjectOld: oldGarden, ObjectNew: garden})).To(BeTrue())
+			It("should return false because last operation type is not 'Processing' on old garden", func() {
+				garden.Status.LastOperation = &gardencorev1beta1.LastOperation{}
+				garden.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeReconcile
+				garden.Status.LastOperation.State = gardencorev1beta1.LastOperationStateSucceeded
+				oldShoot := garden.DeepCopy()
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldShoot, ObjectNew: garden})).To(BeFalse())
 			})
 
-			It("should return true because Reconciled condition was not true before", func() {
-				garden.Status.Conditions = []gardencorev1beta1.Condition{{Type: operatorv1alpha1.GardenReconciled, Status: gardencorev1beta1.ConditionTrue}}
-				oldGarden := garden.DeepCopy()
-				oldGarden.Status.Conditions[0].Status = gardencorev1beta1.ConditionFalse
-				Expect(p.Update(event.UpdateEvent{ObjectOld: oldGarden, ObjectNew: garden})).To(BeTrue())
+			It("should return false because last operation type is not 'Succeeded' on new garden", func() {
+				garden.Status.LastOperation = &gardencorev1beta1.LastOperation{}
+				garden.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeReconcile
+				garden.Status.LastOperation.State = gardencorev1beta1.LastOperationStateProcessing
+				oldShoot := garden.DeepCopy()
+				oldShoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStateProcessing
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldShoot, ObjectNew: garden})).To(BeFalse())
+			})
+
+			It("should return true because last operation type is 'Succeeded' on new garden", func() {
+				garden.Status.LastOperation = &gardencorev1beta1.LastOperation{}
+				garden.Status.LastOperation.Type = gardencorev1beta1.LastOperationTypeReconcile
+				garden.Status.LastOperation.State = gardencorev1beta1.LastOperationStateSucceeded
+				oldShoot := garden.DeepCopy()
+				oldShoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStateProcessing
+				Expect(p.Update(event.UpdateEvent{ObjectOld: oldShoot, ObjectNew: garden})).To(BeTrue())
 			})
 		})
 
