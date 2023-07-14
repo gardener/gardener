@@ -85,7 +85,7 @@ var _ = Describe("Garden Care controller tests", func() {
 						Services: "10.2.0.0/16",
 					},
 					Ingress: gardencorev1beta1.Ingress{
-						Domain: "ingress.dev.garden.example.com",
+						Domain: "ingress.runtime-garden.local.gardener.cloud",
 						Controller: gardencorev1beta1.IngressController{
 							Kind: "nginx",
 						},

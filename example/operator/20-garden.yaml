@@ -11,11 +11,11 @@ stringData:
 apiVersion: operator.gardener.cloud/v1alpha1
 kind: Garden
 metadata:
-  name: garden
+  name: local
 spec:
   runtimeCluster:
     ingress:
-      domain: ingress.dev.garden.example.com
+      domain: ingress.runtime-garden.local.gardener.cloud
       controller:
         kind: nginx
       # providerConfig:

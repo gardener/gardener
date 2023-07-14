@@ -186,7 +186,7 @@ Note that this kubeconfig uses a token that has validity of `12h` only, hence it
 ### Deleting the `Garden`
 
 ```shell
-./hack/usage/delete garden garden
+./hack/usage/delete garden local
 ```
 
 ### Tear Down the Gardener Operator Environment
