@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -41,64 +42,68 @@ func (m MultiError) Error() string {
 	return strings.Join(errMsgs, "\n")
 }
 
-func validateJSONFile(filePath string) ([]error, error) {
-	// Read the JSON file
-	jsonFile, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read JSON file: %v", err)
-	}
+func validateJSONFile(data []byte) (MultiError, error) {
+	errs := make(MultiError, 0)
 
-	//validate the json format
-	decoder := json.NewDecoder(bytes.NewReader(jsonFile))
-	_, err = decoder.Token()
-	if err != nil {
-
-		if parseErr, ok := err.(*json.SyntaxError); ok {
-			line, col := findLineAndColumn(jsonFile, int(parseErr.Offset))
-			errMsg := fmt.Sprintf("invalid JSON format at line %d, column %d: %v", line, col, err)
-			return []error{fmt.Errorf(errMsg)}, nil
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	for {
+		_, err := decoder.Token()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			if parseErr, ok := err.(*json.SyntaxError); ok {
+				line, col := findLineAndColumn(data, int(parseErr.Offset))
+				errMsg := fmt.Sprintf("invalid JSON format at line %d, column %d: %v", line, col, err)
+				errs = append(errs, fmt.Errorf(errMsg))
+				return errs, nil // Return early on syntax error
+			} else {
+				return nil, fmt.Errorf("failed to parse JSON: %v", err)
+			}
 		}
-		return nil, fmt.Errorf("failed to parse JSON: %v", err)
 	}
-	return nil, nil
-}
-
-func validateDashboardFile(filePath string) ([]error, error) {
-	errs, err := validateJSONFile(filePath)
-
-	if err != nil {
-		return nil, err
-	}
-
-	//read the json file
-	jsonFile, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read JSON file: %v", err)
-	}
-
-	// Unmarshal the JSON into a Dashboard struct
-	var dashboard Dashboard
-	err = json.Unmarshal(jsonFile, &dashboard)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON: %v", err)
-	}
-
-	errs = append(errs, validateUniqueUID(filePath, dashboard.Uid)...)
-	errs = append(errs, validateNonEmptyTitle(filePath, dashboard.Title)...)
 
 	return errs, nil
+}
 
+func validateDashboardFile(filePath string) (MultiError, error) {
+	errs := make(MultiError, 0)
+
+	jsonData, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return errs, fmt.Errorf("failed to read JSON file: %v", err)
+	}
+
+	fileErrs, err := validateJSONFile(jsonData)
+	if err != nil {
+		return errs, err
+	}
+
+	errs = append(errs, fileErrs...)
+
+	var dashboard Dashboard
+	err = json.Unmarshal(jsonData, &dashboard)
+	if err != nil {
+		return errs, fmt.Errorf("failed to unmarshal JSON: %v", err)
+	}
+
+	errs = append(errs, validateNonEmptyTitle(filePath, dashboard.Title)...)
+	errs = append(errs, validateUniqueUID(filePath, dashboard.Uid)...)
+
+	return errs, nil
 }
 
 func validateUniqueUID(filePath, uid string) []error {
 	var errs []error
-	err := filepath.Walk(filepath.Dir(filePath), func(path string, info os.FileInfo, err error) error {
+	dir := filepath.Dir(filePath)
+
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		if info.IsDir() {
-			return nil
+		if info.IsDir() && path != dir {
+			return filepath.SkipDir
 		}
 
 		if path != filePath && filepath.Ext(path) == ".json" {
@@ -114,27 +119,30 @@ func validateUniqueUID(filePath, uid string) []error {
 			}
 
 			if dashboard.Uid == uid {
-				errs = append(errs, fmt.Errorf("duplicate UID found in file : %s", path))
+				errs = append(errs, fmt.Errorf("duplicate UID found in file: %s", path))
 			}
 		}
 		return nil
 	})
+
 	if err != nil {
 		errs = append(errs, err)
 	}
 	return errs
 }
 
-func validateNonEmptyTitle(filePath, title string) []error {
-	var errs []error
+func validateNonEmptyTitle(filePath, title string) MultiError {
+	errs := make(MultiError, 0)
+
 	if title == "" {
 		errs = append(errs, fmt.Errorf("empty title found in file: %s", filePath))
 	}
+
 	return errs
 }
 
-func validateDashboardJSONFiles(folderPath string) {
-	errs := make(map[string][]error)
+func validateDashboardJSONFiles(folderPath string) MultiError {
+	errs := make(MultiError, 0)
 
 	err := filepath.Walk(folderPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -142,20 +150,31 @@ func validateDashboardJSONFiles(folderPath string) {
 			return nil
 		}
 
-		if info.Name() != "gardener" && info.Name() != "dashboards" {
-			return filepath.SkipDir
-		}
+		if info.IsDir() && info.Name() == "dashboards" {
+			err := filepath.Walk(path, func(filePath string, fileInfo os.FileInfo, err error) error {
+				if err != nil {
+					log.Printf("error accessing path: %v", err)
+					return nil
+				}
 
-		if info.Name() == "dashboards" && !info.IsDir() && filepath.Ext(path) == ".json" {
-			fileErrors, err := validateDashboardFile(path)
+				if filepath.Ext(filePath) == ".json" {
+					fileErrs, err := validateDashboardFile(filePath)
+					if err != nil {
+						log.Printf("Dashboard validation failed: %v", err)
+						errs = append(errs, err)
+					}
+
+					errs = append(errs, fileErrs...)
+				}
+
+				return nil
+			})
+
 			if err != nil {
-				log.Printf("Dashboard validation failed: %v", err)
-				errs[path] = append(errs[path], err)
+				log.Fatalf("error walking through dashboards folder: %v", err)
 			}
 
-			if len(fileErrors) > 0 {
-				errs[path] = append(errs[path], fileErrors...)
-			}
+			return filepath.SkipDir // Skip further traversal of subdirectories under "dashboards"
 		}
 
 		return nil
@@ -165,18 +184,7 @@ func validateDashboardJSONFiles(folderPath string) {
 		log.Fatalf("error walking through folder: %v", err)
 	}
 
-	if len(errs) > 0 {
-		for filePath, fileErrors := range errs {
-			log.Printf("Validation errors in file: %s", filePath)
-			for _, err := range fileErrors {
-				log.Println(err)
-			}
-			log.Println()
-		}
-	} else {
-		log.Println("All dashboard JSON files are valid.")
-	}
-
+	return errs
 }
 
 // findLineAndColumn returns the line and column number for a given offset in a byte array.
@@ -201,8 +209,24 @@ func findLineAndColumn(data []byte, offset int) (line, col int) {
 }
 
 func main() {
+	//current path is the directory of main.go file
+	currentPath, err := os.Getwd()
 
-	folderPath := "gardener"
-	validateDashboardJSONFiles(folderPath)
+	if err != nil {
+		log.Fatalf("failed to get current working directory: %v", err)
+	}
 
+	// Go levels up to the gardener directory
+	parentPath := filepath.Dir(filepath.Dir(filepath.Dir(currentPath)))
+
+	errs := validateDashboardJSONFiles(parentPath)
+
+	if len(errs) > 0 {
+		log.Println("Validation errors found in dashboards:")
+		for _, err := range errs {
+			log.Println(err)
+		}
+	} else {
+		log.Println("All dashboards are valid.")
+	}
 }

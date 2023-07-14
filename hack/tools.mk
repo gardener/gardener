@@ -207,4 +207,5 @@ $(YQ): $(call tool_version_file,$(YQ),$(YQ_VERSION))
 	chmod +x $(YQ)
 
 $(CHECK_PLUTONO_DASHBOARDS): go.mod
-    go build -o $(CHECK_PLUTONO_DASHBOARDS) github.com/gardener/gardener/hack/tools/plutonodashboardcheck
+	go build -o $(CHECK_PLUTONO_DASHBOARDS) /Users/i312126/Documents/gardener/git/folked/gardener/hack/tools/plutonodashboardcheck
+#    go build -o $(CHECK_PLUTONO_DASHBOARDS) github.com/gardener/gardener/hack/tools/plutonodashboardcheck

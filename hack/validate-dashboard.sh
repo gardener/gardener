@@ -22,7 +22,7 @@ set -o pipefail
 echo "> Validating dashboards"
 
 
-cd "$(dirname "$0")/../tools/plutonodashboardcheck"
+cd "$(dirname "$0")/tools/plutonodashboardcheck"
 
 
 go run . "$@"
