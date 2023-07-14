@@ -37,6 +37,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
+	"github.com/gardener/gardener/pkg/component/monitoring"
 	"github.com/gardener/gardener/pkg/component/plutono"
 	"github.com/gardener/gardener/pkg/component/seedsystem"
 	"github.com/gardener/gardener/pkg/component/shared"
@@ -385,4 +386,21 @@ func defaultPlutono(
 		wildcardCertName,
 		false,
 	)
+}
+
+func defaultMonitoring(
+	c client.Client,
+	namespace string,
+	globalMonitoringSecret *corev1.Secret,
+) (
+	component.Deployer,
+	error,
+) {
+	return monitoring.New(
+		c,
+		namespace,
+		monitoring.Values{
+			GlobalMonitoringSecret: globalMonitoringSecret,
+		},
+	), nil
 }

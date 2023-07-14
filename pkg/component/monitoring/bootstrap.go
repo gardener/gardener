@@ -17,6 +17,7 @@ package monitoring
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/component"
@@ -24,6 +25,8 @@ import (
 
 // Values is a set of configuration values for the monitoring components.
 type Values struct {
+	// GlobalMonitoringSecret is the global monitoring secret for the garden cluster.
+	GlobalMonitoringSecret *corev1.Secret
 }
 
 // New creates a new instance of DeployWaiter for the monitoring components.

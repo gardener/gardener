@@ -354,10 +354,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			images.ImageNameAlertmanager,
 			images.ImageNameAlpine,
 			images.ImageNameConfigmapReloader,
-			images.ImageNameVali,
-			images.ImageNameValiCurator,
-			images.ImageNameTune2fs,
-			images.ImageNamePlutono,
 			images.ImageNamePrometheus,
 		},
 		imagevector.RuntimeVersion(kubernetesVersion.String()),
@@ -759,6 +755,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if err != nil {
 		return err
 	}
+	monitoring, err := defaultMonitoring(seedClient, r.GardenNamespace, globalMonitoringSecretSeed)
+	if err != nil {
+		return err
+	}
 
 	var (
 		g = flow.NewGraph("Seed cluster creation")
@@ -797,6 +797,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 		_ = g.Add(flow.Task{
 			Name: "Deploying VPN authorization server",
 			Fn:   vpnAuthzServer.Deploy,
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying monitoring components",
+			Fn:   monitoring.Deploy,
 		})
 		_ = g.Add(flow.Task{
 			Name: "Renewing garden access secrets",
