@@ -33,7 +33,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
-	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	podsecurityadmissionapi "k8s.io/pod-security-admission/api"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
@@ -429,15 +428,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
-	if hvpaEnabled {
-		if err := kubernetesutils.DeleteObjects(ctx, seedClient,
-			&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-vpa", Namespace: r.GardenNamespace}},
-			&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus-vpa", Namespace: r.GardenNamespace}},
-		); err != nil {
-			return err
-		}
-	}
-
 	// Fetch component-specific aggregate and central monitoring configuration
 	var (
 		aggregateScrapeConfigs                = strings.Builder{}
@@ -659,7 +649,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if err != nil {
 		return err
 	}
-	monitoring, err := defaultMonitoring(seedClient, r.GardenNamespace, globalMonitoringSecretSeed)
+	monitoring, err := defaultMonitoring(seedClient, r.GardenNamespace, globalMonitoringSecretSeed, hvpaEnabled)
 	if err != nil {
 		return err
 	}

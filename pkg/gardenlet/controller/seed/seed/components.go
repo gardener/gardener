@@ -417,6 +417,7 @@ func defaultMonitoring(
 	c client.Client,
 	namespace string,
 	globalMonitoringSecret *corev1.Secret,
+	hvpaEnabled bool,
 ) (
 	component.Deployer,
 	error,
@@ -426,6 +427,7 @@ func defaultMonitoring(
 		namespace,
 		monitoring.Values{
 			GlobalMonitoringSecret: globalMonitoringSecret,
+			HVPAEnabled:            hvpaEnabled,
 		},
 	), nil
 }
