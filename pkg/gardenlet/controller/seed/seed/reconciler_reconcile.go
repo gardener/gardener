@@ -556,11 +556,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		prometheusIngressTLSSecretName = prometheusIngressTLSSecret.Name
 	}
 
-	imageVectorOverwrites := make(map[string]string, len(r.ComponentImageVectors))
-	for name, data := range r.ComponentImageVectors {
-		imageVectorOverwrites[name] = data
-	}
-
 	seedIsOriginOfClusterIdentity, err := clusteridentity.IsClusterIdentityEmptyOrFromOrigin(ctx, seedClient, v1beta1constants.ClusterIdentityOriginSeed)
 	if err != nil {
 		return err
