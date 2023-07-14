@@ -132,11 +132,11 @@ func (a admissioncontroller) deployment(secretServerCert, secretGenericTokenKube
 		}
 	}
 
+	metav1.SetMetaDataLabel(&deployment.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigType, resourcesv1alpha1.HighAvailabilityConfigTypeServer)
+
 	utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, secretGenericTokenKubeconfig, secretVirtualGardenAccess))
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
 	// TODO Add Network Labels
-	// TODO Add controller type for HA webhook
-
 	return deployment
 }
