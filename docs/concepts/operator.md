@@ -256,7 +256,7 @@ The DNS domain is used for the `server` in the kubeconfig, and for configuring t
 It is also mandatory to provide an IPv4 CIDR for the service network of the virtual cluster via `.spec.virtualCluster.networking.services`.
 This range is used by the API server to compute the cluster IPs of `Service`s.
 
-The controller maintains the `Reconciled` condition which indicates the status of an operation.
+The controller maintains the `.status.lastOperation` which indicates the status of an operation.
 
 #### [`Care` Reconciler](../../pkg/operator/controller/garden/care)
 

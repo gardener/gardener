@@ -435,6 +435,11 @@ func (in *GardenStatus) DeepCopyInto(out *GardenStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.LastOperation != nil {
+		in, out := &in.LastOperation, &out.LastOperation
+		*out = new(v1beta1.LastOperation)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Credentials != nil {
 		in, out := &in.Credentials, &out.Credentials
 		*out = new(Credentials)

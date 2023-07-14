@@ -1118,6 +1118,38 @@ spec:
                 - name
                 - version
                 type: object
+              lastOperation:
+                description: LastOperation holds information about the last operation
+                  on the Shoot.
+                properties:
+                  description:
+                    description: A human readable message indicating details about
+                      the last operation.
+                    type: string
+                  lastUpdateTime:
+                    description: Last time the operation state transitioned from one
+                      to another.
+                    format: date-time
+                    type: string
+                  progress:
+                    description: The progress in percentage (0-100) of the last operation.
+                    format: int32
+                    type: integer
+                  state:
+                    description: Status of the last operation, one of Aborted, Processing,
+                      Succeeded, Error, Failed.
+                    type: string
+                  type:
+                    description: Type of the last operation, one of Create, Reconcile,
+                      Delete, Migrate, Restore.
+                    type: string
+                required:
+                - description
+                - lastUpdateTime
+                - progress
+                - state
+                - type
+                type: object
               observedGeneration:
                 description: ObservedGeneration is the most recent generation observed
                   for this resource.
