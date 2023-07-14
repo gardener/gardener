@@ -79,49 +79,6 @@ ENVTEST_TYPE ?= kubernetes
 start-envtest: $(SETUP_ENVTEST)
 	@./hack/start-envtest.sh --environment-type=$(ENVTEST_TYPE)
 
-.PHONY: check-plutono-dashboards
-check-plutono-dashboards:
-	@./hack/validate-dashboard.sh
-
-.PHONY: remote-garden-up
-remote-garden-up: $(HELM)
-	@./hack/local-development/remote-garden/start.sh $(REMOTE_GARDEN_LABEL)
-
-.PHONY: remote-garden-down
-remote-garden-down:
-	@./hack/local-development/remote-garden/stop.sh $(REMOTE_GARDEN_LABEL)
-
-.PHONY: start-apiserver
-start-apiserver:
-	@./hack/local-development/start-apiserver
-
-.PHONY: start-controller-manager
-start-controller-manager:
-	@./hack/local-development/start-controller-manager
-
-.PHONY: start-scheduler
-start-scheduler:
-	@./hack/local-development/start-scheduler
-
-.PHONY: start-admission-controller
-start-admission-controller:
-	@./hack/local-development/start-admission-controller
-
-.PHONY: start-resource-manager
-start-resource-manager:
-	@./hack/local-development/start-resource-manager
-
-.PHONY: start-operator
-start-operator: $(YQ)
-	@./hack/local-development/start-operator
-
-.PHONY: start-gardenlet
-start-gardenlet: $(HELM) $(YAML2JSON) $(YQ)
-	@./hack/local-development/start-gardenlet
-
-.PHONY: start-extension-provider-local
-start-extension-provider-local:
-	@./hack/local-development/start-extension-provider-local
 
 #################################################################
 # Rules related to binary build, Docker image build and release #
@@ -190,6 +147,10 @@ add-license-headers: $(GO_ADD_LICENSE)
 check-generate:
 	@hack/check-generate.sh $(REPO_ROOT)
 
+.PHONY: check-plutono-dashboards
+check-plutono-dashboards:
+	@./hack/validate-dashboard.sh
+
 .PHONY: check
 check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(LOGCHECK) $(GOMEGACHECK) $(YQ) $(CHECK_PLUTONO_DASHBOARDS)
 	@hack/check.sh --golangci-lint-config=./.golangci.yaml ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
@@ -209,11 +170,7 @@ check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(
 	@hack/check-license-header.sh
 	@hack/check-skaffold-deps.sh
 
-<<<<<<< HEAD
-tools-for-generate: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GOIMPORTS) $(GO_TO_PROTOBUF) $(HELM) $(MOCKGEN) $(OPENAPI_GEN) $(PROTOC) $(PROTOC_GEN_GOGO) $(YAML2JSON) $(YQ)
-=======
 tools-for-generate: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GOIMPORTS) $(GO_TO_PROTOBUF) $(HELM) $(MOCKGEN) $(OPENAPI_GEN) $(PROTOC_GEN_GOGO) $(YAML2JSON) $(YQ) $(CHECK_PLUTONO_DASHBOARDS)
->>>>>>> 2a1fc7c67 (add license header and update to validate dashboards folder)
 
 .PHONY: generate
 generate: tools-for-generate
