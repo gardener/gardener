@@ -587,6 +587,12 @@ func (g *garden) cleanupStaleAddonsMR(ctx context.Context, gardenClient, seedCli
 						Namespace: namespace.Name,
 					},
 				}
+				addonsSecret = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "managedresource-addons",
+						Namespace: namespace.Name,
+					},
+				}
 				resourceManagerDeployment = &appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
@@ -616,17 +622,21 @@ func (g *garden) cleanupStaleAddonsMR(ctx context.Context, gardenClient, seedCli
 				}
 			}
 
-			patch := client.MergeFrom(addonsMR.DeepCopy())
-			addonsMR.Finalizers = nil
-			if err := seedClient.Patch(ctx, addonsMR, patch); err != nil {
-				return fmt.Errorf("failed to patch ManagedResource %q: %w", client.ObjectKeyFromObject(addonsMR), err)
+			if err := controllerutils.RemoveAllFinalizers(ctx, seedClient, addonsMR); err != nil {
+				return fmt.Errorf("failed to remove finalizers from the ManagedResource %q: %w", client.ObjectKeyFromObject(addonsMR), err)
 			}
 
-			if err := managedresources.DeleteForShoot(ctx, seedClient, namespace.Name, "addons"); err != nil {
-				return err
+			if err := seedClient.Get(ctx, client.ObjectKeyFromObject(addonsSecret), addonsSecret); err == nil {
+				if err := controllerutils.RemoveAllFinalizers(ctx, seedClient, addonsSecret); err != nil {
+					return fmt.Errorf("failed to remove finalizers from the Secret %q: %w", client.ObjectKeyFromObject(addonsSecret), err)
+				}
+			} else {
+				if !apierrors.IsNotFound(err) {
+					return err
+				}
 			}
 
-			if err := managedresources.WaitUntilDeleted(ctx, seedClient, namespace.Name, "addons"); err != nil {
+			if err := managedresources.DeleteForShoot(ctx, seedClient, namespace.Name, addonsMR.Name); err != nil {
 				return err
 			}
 
