@@ -1,36 +1,31 @@
-apiVersion: {{ include "statefulsetversion" . }}
+apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: seed-prometheus
+  name: prometheus
   namespace: {{ .Release.Namespace }}
   labels:
-    app: seed-prometheus
+    app: prometheus
     role: monitoring
 spec:
   updateStrategy:
     type: RollingUpdate
   selector:
     matchLabels:
-      app: seed-prometheus
+      app: prometheus
       role: monitoring
-  serviceName: seed-prometheus
+  serviceName: prometheus
   template:
     metadata:
       labels:
-        app: seed-prometheus
+        app: prometheus
         role: monitoring
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-runtime-apiserver: allowed
         networking.resources.gardener.cloud/to-all-seed-scrape-targets: allowed
-        networking.resources.gardener.cloud/to-extensions-all-seed-scrape-targets: allowed
-        # TODO: For whatever reasons, the seed-prometheus also scrapes vpa-recommenders in all shoot namespaces.
-        #  Conceptionally, this is wrong and should be improved (seed-prometheus should only scrape vpa-recommenders in
-        #  garden namespace, and prometheis in shoot namespaces should scrape their vpa-recommenders, respectively).
-        networking.resources.gardener.cloud/to-all-shoots-vpa-recommender-tcp-8942: allowed
     spec:
       # used to talk to Seed's API server.
+      serviceAccountName: prometheus
       priorityClassName: gardener-system-600
-      serviceAccountName: seed-prometheus
       containers:
       - name: prometheus
         image: {{ index .Values.global.images "prometheus" }}
@@ -38,9 +33,8 @@ spec:
         args:
           - --config.file=/etc/prometheus/config/prometheus.yaml
           - --storage.tsdb.path=/var/prometheus/data
-          - --storage.tsdb.no-lockfile
-          - --storage.tsdb.retention.size={{ .Values.prometheus.retention.size }}
-          - --web.enable-admin-api
+          - --storage.tsdb.retention.time=1d
+          - --storage.tsdb.retention.size=5GB
           - --web.listen-address=0.0.0.0:{{ .Values.prometheus.port }}
           - --web.enable-lifecycle
         # Since v2.0.0-beta.3 prometheus runs as nobody user (fsGroup 65534/runAsUser 0)
@@ -72,12 +66,12 @@ spec:
         - mountPath: /etc/prometheus/config
           name: config
           readOnly: true
-        - mountPath: /var/prometheus/data
-          name: prometheus-db
-          subPath: prometheus-
         - mountPath: /etc/prometheus/rules
           name: rules
           readOnly: true
+        - mountPath: /var/prometheus/data
+          name: prometheus-db
+          subPath: prometheus-
       - name: prometheus-config-reloader
         image: {{ index .Values.global.images "configmap-reloader" }}
         imagePullPolicy: IfNotPresent
@@ -99,11 +93,11 @@ spec:
       - name: config
         configMap:
           defaultMode: 420
-          name: seed-prometheus-config
+          name: prometheus-config
       - name: rules
         configMap:
           defaultMode: 420
-          name: seed-prometheus-rules
+          name: prometheus-rules
   volumeClaimTemplates:
   - metadata:
       name: prometheus-db

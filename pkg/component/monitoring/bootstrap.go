@@ -16,6 +16,7 @@ package monitoring
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -39,6 +40,12 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+)
+
+var (
+	//go:embed charts/bootstrap
+	chart     embed.FS
+	chartPath = filepath.Join("charts", "bootstrap")
 )
 
 // Values is a set of configuration values for the monitoring components.
@@ -261,7 +268,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		},
 	})
 
-	return b.chartApplier.Apply(ctx, filepath.Join(r.ChartsPath, seedBootstrapChartName), b.namespace, seedBootstrapChartName, values, applierOptions)
+	return b.chartApplier.ApplyFromEmbeddedFS(ctx, chart, chartPath, b.namespace, "monitoring", values, applierOptions)
 }
 
 func (b *bootstrapper) Destroy(ctx context.Context) error {

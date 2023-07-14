@@ -1,34 +1,36 @@
-apiVersion: {{ include "statefulsetversion" . }}
+apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: aggregate-prometheus
+  name: seed-prometheus
   namespace: {{ .Release.Namespace }}
   labels:
-    app: aggregate-prometheus
+    app: seed-prometheus
     role: monitoring
 spec:
   updateStrategy:
     type: RollingUpdate
   selector:
     matchLabels:
-      app: aggregate-prometheus
+      app: seed-prometheus
       role: monitoring
-  serviceName: aggregate-prometheus
+  serviceName: seed-prometheus
   template:
     metadata:
       labels:
-        app: aggregate-prometheus
+        app: seed-prometheus
         role: monitoring
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-runtime-apiserver: allowed
         networking.resources.gardener.cloud/to-all-seed-scrape-targets: allowed
-        networking.resources.gardener.cloud/to-istio-system-all-seed-scrape-targets: allowed
-        networking.resources.gardener.cloud/to-all-istio-ingresses-all-seed-scrape-targets: allowed
-        networking.resources.gardener.cloud/to-all-shoots-prometheus-web-tcp-9090: allowed
+        networking.resources.gardener.cloud/to-extensions-all-seed-scrape-targets: allowed
+        # TODO: For whatever reasons, the seed-prometheus also scrapes vpa-recommenders in all shoot namespaces.
+        #  Conceptionally, this is wrong and should be improved (seed-prometheus should only scrape vpa-recommenders in
+        #  garden namespace, and prometheis in shoot namespaces should scrape their vpa-recommenders, respectively).
+        networking.resources.gardener.cloud/to-all-shoots-vpa-recommender-tcp-8942: allowed
     spec:
       # used to talk to Seed's API server.
-      serviceAccountName: aggregate-prometheus
       priorityClassName: gardener-system-600
+      serviceAccountName: seed-prometheus
       containers:
       - name: prometheus
         image: {{ index .Values.global.images "prometheus" }}
@@ -37,10 +39,9 @@ spec:
           - --config.file=/etc/prometheus/config/prometheus.yaml
           - --storage.tsdb.path=/var/prometheus/data
           - --storage.tsdb.no-lockfile
-          - --storage.tsdb.retention.time=30d
-          - --storage.tsdb.retention.size=15GB
+          - --storage.tsdb.retention.size={{ .Values.prometheus.retention.size }}
           - --web.enable-admin-api
-          - --web.listen-address=0.0.0.0:{{ .Values.aggregatePrometheus.port }}
+          - --web.listen-address=0.0.0.0:{{ .Values.prometheus.port }}
           - --web.enable-lifecycle
         # Since v2.0.0-beta.3 prometheus runs as nobody user (fsGroup 65534/runAsUser 0)
         # data volume needs to be mounted with the same permissions,
@@ -50,7 +51,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /-/healthy
-            port: {{ .Values.aggregatePrometheus.port }}
+            port: {{ .Values.prometheus.port }}
             scheme: HTTP
           failureThreshold: 60
           periodSeconds: 5
@@ -59,14 +60,14 @@ spec:
         readinessProbe:
           httpGet:
             path: /-/ready
-            port: {{ .Values.aggregatePrometheus.port }}
+            port: {{ .Values.prometheus.port }}
             scheme: HTTP
           failureThreshold: 120
           periodSeconds: 5
           successThreshold: 1
           timeoutSeconds: 3
         resources:
-          {{- toYaml .Values.aggregatePrometheus.resources.prometheus | nindent 10 }}
+          {{- toYaml .Values.prometheus.resources.prometheus | nindent 10 }}
         volumeMounts:
         - mountPath: /etc/prometheus/config
           name: config
@@ -81,7 +82,7 @@ spec:
         image: {{ index .Values.global.images "configmap-reloader" }}
         imagePullPolicy: IfNotPresent
         args:
-        - --reload-url=http://localhost:{{ .Values.aggregatePrometheus.port }}/-/reload
+        - --reload-url=http://localhost:{{ .Values.prometheus.port }}/-/reload
         - --watched-dir=/etc/prometheus/config
         - --watched-dir=/etc/prometheus/rules
         resources:
@@ -98,11 +99,11 @@ spec:
       - name: config
         configMap:
           defaultMode: 420
-          name: aggregate-prometheus-config
+          name: seed-prometheus-config
       - name: rules
         configMap:
           defaultMode: 420
-          name: aggregate-prometheus-rules
+          name: seed-prometheus-rules
   volumeClaimTemplates:
   - metadata:
       name: prometheus-db
@@ -111,4 +112,4 @@ spec:
       - ReadWriteOnce
       resources:
         requests:
-          storage: {{ .Values.aggregatePrometheus.storage }}
+          storage: {{ .Values.prometheus.storage }}

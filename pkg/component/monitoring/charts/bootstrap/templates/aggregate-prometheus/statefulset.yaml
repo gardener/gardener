@@ -1,30 +1,33 @@
-apiVersion: {{ include "statefulsetversion" . }}
+apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: prometheus
+  name: aggregate-prometheus
   namespace: {{ .Release.Namespace }}
   labels:
-    app: prometheus
+    app: aggregate-prometheus
     role: monitoring
 spec:
   updateStrategy:
     type: RollingUpdate
   selector:
     matchLabels:
-      app: prometheus
+      app: aggregate-prometheus
       role: monitoring
-  serviceName: prometheus
+  serviceName: aggregate-prometheus
   template:
     metadata:
       labels:
-        app: prometheus
+        app: aggregate-prometheus
         role: monitoring
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-runtime-apiserver: allowed
         networking.resources.gardener.cloud/to-all-seed-scrape-targets: allowed
+        networking.resources.gardener.cloud/to-istio-system-all-seed-scrape-targets: allowed
+        networking.resources.gardener.cloud/to-all-istio-ingresses-all-seed-scrape-targets: allowed
+        networking.resources.gardener.cloud/to-all-shoots-prometheus-web-tcp-9090: allowed
     spec:
       # used to talk to Seed's API server.
-      serviceAccountName: prometheus
+      serviceAccountName: aggregate-prometheus
       priorityClassName: gardener-system-600
       containers:
       - name: prometheus
@@ -33,9 +36,11 @@ spec:
         args:
           - --config.file=/etc/prometheus/config/prometheus.yaml
           - --storage.tsdb.path=/var/prometheus/data
-          - --storage.tsdb.retention.time=1d
-          - --storage.tsdb.retention.size=5GB
-          - --web.listen-address=0.0.0.0:{{ .Values.prometheus.port }}
+          - --storage.tsdb.no-lockfile
+          - --storage.tsdb.retention.time=30d
+          - --storage.tsdb.retention.size=15GB
+          - --web.enable-admin-api
+          - --web.listen-address=0.0.0.0:{{ .Values.aggregatePrometheus.port }}
           - --web.enable-lifecycle
         # Since v2.0.0-beta.3 prometheus runs as nobody user (fsGroup 65534/runAsUser 0)
         # data volume needs to be mounted with the same permissions,
@@ -45,7 +50,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /-/healthy
-            port: {{ .Values.prometheus.port }}
+            port: {{ .Values.aggregatePrometheus.port }}
             scheme: HTTP
           failureThreshold: 60
           periodSeconds: 5
@@ -54,29 +59,29 @@ spec:
         readinessProbe:
           httpGet:
             path: /-/ready
-            port: {{ .Values.prometheus.port }}
+            port: {{ .Values.aggregatePrometheus.port }}
             scheme: HTTP
           failureThreshold: 120
           periodSeconds: 5
           successThreshold: 1
           timeoutSeconds: 3
         resources:
-          {{- toYaml .Values.prometheus.resources.prometheus | nindent 10 }}
+          {{- toYaml .Values.aggregatePrometheus.resources.prometheus | nindent 10 }}
         volumeMounts:
         - mountPath: /etc/prometheus/config
           name: config
           readOnly: true
-        - mountPath: /etc/prometheus/rules
-          name: rules
-          readOnly: true
         - mountPath: /var/prometheus/data
           name: prometheus-db
           subPath: prometheus-
+        - mountPath: /etc/prometheus/rules
+          name: rules
+          readOnly: true
       - name: prometheus-config-reloader
         image: {{ index .Values.global.images "configmap-reloader" }}
         imagePullPolicy: IfNotPresent
         args:
-        - --reload-url=http://localhost:{{ .Values.prometheus.port }}/-/reload
+        - --reload-url=http://localhost:{{ .Values.aggregatePrometheus.port }}/-/reload
         - --watched-dir=/etc/prometheus/config
         - --watched-dir=/etc/prometheus/rules
         resources:
@@ -93,11 +98,11 @@ spec:
       - name: config
         configMap:
           defaultMode: 420
-          name: prometheus-config
+          name: aggregate-prometheus-config
       - name: rules
         configMap:
           defaultMode: 420
-          name: prometheus-rules
+          name: aggregate-prometheus-rules
   volumeClaimTemplates:
   - metadata:
       name: prometheus-db
@@ -106,4 +111,4 @@ spec:
       - ReadWriteOnce
       resources:
         requests:
-          storage: {{ .Values.prometheus.storage }}
+          storage: {{ .Values.aggregatePrometheus.storage }}

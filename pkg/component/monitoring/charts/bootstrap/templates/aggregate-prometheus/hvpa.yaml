@@ -75,7 +75,7 @@ spec:
       startReplicaCount: 1
       lastReplicaCount: 1
   targetRef:
-    apiVersion:  {{ include "statefulsetversion" . }}
+    apiVersion: apps/v1
     kind: StatefulSet
     name: aggregate-prometheus
 {{ end }}
