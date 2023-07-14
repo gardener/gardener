@@ -207,6 +207,21 @@ to the one hereby proposed.
 4. New feature flag promoted and eventually removed.
 5. (Outside the scope of this proposal) Use of HVPA removed for other workloads and the preexisting HVPA flag removed.
 
+During step 2, the following quantities will be used to evaluate the fitness of the new autoscaling method. Unless
+specified otherwise, "resources" refers to memory and CPU:
+- Resource utilisation: how much of the requested resources are actually being used
+- Insufficient resource requests: how often do the resources used by ShootKapi exceed what the autoscaler requested
+- Number of eviction events
+- Number of ShootKapi replicas: lower replica count is preferred, as it promotes object cache reuse
+
+The following quantities are also useful, but their accuracy varies greatly, depending on the influence of uncontrolled
+variables. They are proposed for opportunistic use at the discretion of the persons performing the evaluation.
+- Total resource used by ShootKapi pods
+- Total resource requested by ShootKapi pods
+- API response latency
+- Node count
+- Number of HTTP error 429 events
+
 ## Discussion and Limitations
 Overall, multidimensional autoscaling is a job which cannot be accomplished efficiently with the one-dimensional
 autoscalers currently available in the K8s ecosystem. The proposed approach is a compromise which relies on estimating
