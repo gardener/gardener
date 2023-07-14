@@ -1488,7 +1488,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					Status: unhealthyManagedResourceStatus,
 				})).To(Succeed())
 
-				Expect(deployer.Deploy(ctx)).To(MatchError(ContainSubstring("is not healthy")))
+				Expect(deployer.Deploy(ctx)).To(MatchError(ContainSubstring("is unhealthy")))
 			})
 
 			It("should fail because the virtual ManagedResource doesn't become healthy", func() {
@@ -1695,6 +1695,10 @@ var (
 				Type:   resourcesv1alpha1.ResourcesHealthy,
 				Status: gardencorev1beta1.ConditionTrue,
 			},
+			{
+				Type:   resourcesv1alpha1.ResourcesProgressing,
+				Status: gardencorev1beta1.ConditionFalse,
+			},
 		},
 	}
 	unhealthyManagedResourceStatus = resourcesv1alpha1.ManagedResourceStatus{
@@ -1707,6 +1711,10 @@ var (
 			{
 				Type:   resourcesv1alpha1.ResourcesHealthy,
 				Status: gardencorev1beta1.ConditionFalse,
+			},
+			{
+				Type:   resourcesv1alpha1.ResourcesProgressing,
+				Status: gardencorev1beta1.ConditionTrue,
 			},
 		},
 	}

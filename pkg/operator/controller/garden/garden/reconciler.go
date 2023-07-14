@@ -359,7 +359,7 @@ func nonAutoRotatedCACertConfigurations() []secretsutils.ConfigInterface {
 		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCACluster, CommonName: "kubernetes", CertType: secretsutils.CACert},
 		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAClient, CommonName: "kubernetes-client", CertType: secretsutils.CACert},
 		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAFrontProxy, CommonName: "front-proxy", CertType: secretsutils.CACert},
-		&secretsutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAGardener, CommonName: "gardener", CertType: secretsutils.CACert},
+		&secretsutils.CertificateSecretConfig{Name: operatorv1alpha1.SecretNameCAGardener, CommonName: "gardener", CertType: secretsutils.CACert},
 	}
 }
 

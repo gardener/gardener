@@ -33,13 +33,10 @@ import (
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
-var (
-	apiServerScheme *runtime.Scheme
-	apiServerCodec  runtime.Codec
-)
+var apiServerCodec runtime.Codec
 
 func init() {
-	apiServerScheme = runtime.NewScheme()
+	apiServerScheme := runtime.NewScheme()
 	utilruntime.Must(apiserverv1alpha1.AddToScheme(apiServerScheme))
 
 	var (
@@ -48,9 +45,7 @@ func init() {
 			Pretty: false,
 			Strict: false,
 		})
-		versions = schema.GroupVersions([]schema.GroupVersion{
-			apiserverv1alpha1.SchemeGroupVersion,
-		})
+		versions = schema.GroupVersions([]schema.GroupVersion{apiserverv1alpha1.SchemeGroupVersion})
 	)
 
 	apiServerCodec = serializer.NewCodecFactory(apiServerScheme).CodecForVersions(ser, ser, versions, versions)

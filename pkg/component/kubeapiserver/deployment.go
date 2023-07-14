@@ -49,7 +49,7 @@ import (
 )
 
 const (
-	secretNameServer                 = "kube-apiserver"
+	secretNameServerCert             = "kube-apiserver"
 	secretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"
 	secretNameKubeAggregator         = "kube-aggregator"
 	secretNameHTTPProxy              = "kube-apiserver-http-proxy"

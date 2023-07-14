@@ -37,7 +37,7 @@ const (
 	volumeMountPathServer     = "/srv/kubernetes/apiserver"
 )
 
-// InjectDefaultSettings injects default settings into the deployment.
+// InjectDefaultSettings injects default settings into `gardener-apiserver` and `kube-apiserver` deployments.
 func InjectDefaultSettings(
 	deployment *appsv1.Deployment,
 	namePrefix string,

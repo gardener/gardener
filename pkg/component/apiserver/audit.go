@@ -104,7 +104,7 @@ func ReconcileConfigMapAuditPolicy(ctx context.Context, c client.Client, configM
 	return client.IgnoreAlreadyExists(c.Create(ctx, configMap))
 }
 
-// InjectAuditSettings injects the audit settings into the deployment.
+// InjectAuditSettings injects the audit settings into `gardener-apiserver` and `kube-apiserver` deployments.
 func InjectAuditSettings(deployment *appsv1.Deployment, configMapAuditPolicy *corev1.ConfigMap, secretWebhookKubeconfig *corev1.Secret, auditConfig *AuditConfig) {
 	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--audit-policy-file=%s/%s", volumeMountPathAuditPolicy, configMapAuditPolicyDataKey))
 

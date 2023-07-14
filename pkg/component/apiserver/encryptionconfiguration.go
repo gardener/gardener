@@ -157,7 +157,7 @@ func aesKeyFromSecretData(data map[string][]byte) apiserverconfigv1.Key {
 	}
 }
 
-// InjectEncryptionSettings injects the encryption settings into the deployment.
+// InjectEncryptionSettings injects the encryption settings into `gardener-apiserver` and `kube-apiserver` deployments.
 func InjectEncryptionSettings(deployment *appsv1.Deployment, secretETCDEncryptionConfiguration *corev1.Secret) {
 	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--encryption-provider-config=%s/%s", volumeMountPathEtcdEncryptionConfig, secretETCDEncryptionConfigurationDataKey))
 	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{

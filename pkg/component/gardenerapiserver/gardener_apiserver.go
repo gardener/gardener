@@ -26,6 +26,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
@@ -130,9 +131,9 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	secretCAGardener, found := g.secretsManager.Get(v1beta1constants.SecretNameCAGardener)
+	secretCAGardener, found := g.secretsManager.Get(operatorv1alpha1.SecretNameCAGardener)
 	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAGardener)
+		return fmt.Errorf("secret %q not found", operatorv1alpha1.SecretNameCAGardener)
 	}
 
 	secretCAETCD, found := g.secretsManager.Get(v1beta1constants.SecretNameCAETCD)
@@ -167,7 +168,12 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 	if err := managedresources.CreateForSeed(ctx, g.client, g.namespace, managedResourceNameRuntime, false, runtimeResources); err != nil {
 		return err
 	}
-	if err := managedresources.WaitUntilHealthy(timeoutCtx, g.client, g.namespace, managedResourceNameRuntime); err != nil {
+	// Typically, we use managedresources.WaitUntilHealthy by default everywhere/in all components.
+	// However, here we have to wait for the runtime resources to no longer be progressing before we can update the
+	// virtual resources. This is important for credentials rotation since we want all GAPI pods to run with the new
+	// server certificate before we drop the old CA from the bundle in the APIServices (which get deployed via the
+	// virtual resources).
+	if err := g.waitUntilRuntimeManagedResourceHealthyAndNotProgressing(timeoutCtx); err != nil {
 		return err
 	}
 
@@ -202,26 +208,12 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 }
 
 func (g *gardenerAPIServer) Destroy(ctx context.Context) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
-	defer cancel()
-
 	if err := managedresources.DeleteForShoot(ctx, g.client, g.namespace, managedResourceNameVirtual); err != nil {
 		return err
 	}
-	if err := managedresources.WaitUntilDeleted(timeoutCtx, g.client, g.namespace, managedResourceNameVirtual); err != nil {
-		return err
-	}
-
-	timeoutCtx, cancel = context.WithTimeout(ctx, TimeoutWaitForManagedResource)
-	defer cancel()
-
 	if err := managedresources.DeleteForSeed(ctx, g.client, g.namespace, managedResourceNameRuntime); err != nil {
 		return err
 	}
-	if err := managedresources.WaitUntilDeleted(timeoutCtx, g.client, g.namespace, managedResourceNameRuntime); err != nil {
-		return err
-	}
-
 	return kubernetesutils.DeleteObjects(ctx, g.client, g.newVirtualGardenAccessSecret().Secret)
 }
 
@@ -229,6 +221,11 @@ func (g *gardenerAPIServer) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
+	// Typically, we use managedresources.WaitUntilHealthy by default everywhere/in all components.
+	// However, here we have to wait for the runtime resources to no longer be progressing before we can update the
+	// virtual resources. This is important for credentials rotation since we want all GAPI pods to run with the new
+	// server certificate before we drop the old CA from the bundle in the APIServices (which get deployed via the
+	// virtual resources).
 	if err := g.waitUntilRuntimeManagedResourceHealthyAndNotProgressing(timeoutCtx); err != nil {
 		return err
 	}

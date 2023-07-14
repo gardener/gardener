@@ -205,7 +205,7 @@ func admissionPluginsKubeconfigFilename(name string) string {
 	return strings.ToLower(name) + "-kubeconfig.yaml"
 }
 
-// InjectAdmissionSettings injects the admission settings into the deployment.
+// InjectAdmissionSettings injects the admission settings into `gardener-apiserver` and `kube-apiserver` deployments.
 func InjectAdmissionSettings(deployment *appsv1.Deployment, configMapAdmissionConfigs *corev1.ConfigMap, secretAdmissionKubeconfigs *corev1.Secret, values Values) {
 	if len(values.EnabledAdmissionPlugins) > 0 {
 		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--enable-admission-plugins="+strings.Join(admissionPluginNames(values), ","))

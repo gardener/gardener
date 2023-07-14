@@ -35,8 +35,8 @@ import (
 )
 
 const (
-	secretNameServer = "gardener-apiserver"
-	containerName    = "gardener-apiserver"
+	secretNameServerCert = "gardener-apiserver"
+	containerName        = "gardener-apiserver"
 
 	port = 8443
 )

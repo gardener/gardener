@@ -21,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -55,10 +56,10 @@ func (g *gardenerAPIServer) reconcileSecretETCDEncryptionConfiguration(ctx conte
 
 func (g *gardenerAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.Secret, error) {
 	return g.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:                        secretNameServer,
-		CommonName:                  DeploymentName,
+		Name:                        secretNameServerCert,
+		CommonName:                  serviceName,
 		DNSNames:                    append(kubernetesutils.DNSNamesForService(DeploymentName, g.namespace), kubernetesutils.DNSNamesForService(DeploymentName, metav1.NamespaceSystem)...),
 		CertType:                    secretsutils.ServerCert,
 		SkipPublishingCACertificate: true,
-	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAGardener), secretsmanager.Rotate(secretsmanager.InPlace))
+	}, secretsmanager.SignedByCA(operatorv1alpha1.SecretNameCAGardener), secretsmanager.Rotate(secretsmanager.InPlace))
 }
