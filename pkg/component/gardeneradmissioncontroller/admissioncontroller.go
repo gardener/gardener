@@ -138,7 +138,10 @@ func (a admissioncontroller) Deploy(ctx context.Context) error {
 		virtualRegistry = managedresources.NewRegistry(operatorclient.VirtualScheme, operatorclient.VirtualCodec, operatorclient.VirtualSerializer)
 	)
 
-	virtualResources, err := virtualRegistry.AddAllAndSerialize()
+	virtualResources, err := virtualRegistry.AddAllAndSerialize(
+		a.clusterRole(),
+		a.clusterRoleBinding(virtualGardenAccessSecret.ServiceAccountName),
+	)
 	if err != nil {
 		return err
 	}
