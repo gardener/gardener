@@ -17,7 +17,6 @@ package garden
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -33,7 +32,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -82,9 +80,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	conditionReconciled := v1beta1helper.GetOrInitConditionWithClock(r.Clock, garden.Status.Conditions, operatorv1alpha1.GardenReconciled)
-	if err := r.updateStatusOperationStart(ctx, garden, conditionReconciled); err != nil {
-		return reconcile.Result{}, r.patchConditionToFalse(ctx, log, garden, conditionReconciled, err)
+	operationType := gardencorev1beta1.LastOperationTypeReconcile
+	if garden.DeletionTimestamp != nil {
+		operationType = gardencorev1beta1.LastOperationTypeDelete
+	}
+
+	if err := r.updateStatusOperationStart(ctx, garden, operationType); err != nil {
+		return reconcile.Result{}, r.updateStatusOperationError(ctx, garden, err, operationType)
 	}
 
 	targetVersion, err := semver.NewVersion(garden.Spec.VirtualCluster.Kubernetes.Version)
@@ -105,21 +107,21 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		},
 	)
 	if err != nil {
-		return reconcile.Result{}, r.patchConditionToFalse(ctx, log, garden, conditionReconciled, err)
+		return reconcile.Result{}, r.updateStatusOperationError(ctx, garden, err, operationType)
 	}
 
 	if garden.DeletionTimestamp != nil {
 		if result, err := r.delete(ctx, log, garden, secretsManager, targetVersion); err != nil {
-			return result, r.patchConditionToFalse(ctx, log, garden, conditionReconciled, err)
+			return result, r.updateStatusOperationError(ctx, garden, err, operationType)
 		}
 		return reconcile.Result{}, nil
 	}
 
 	if result, err := r.reconcile(ctx, log, garden, secretsManager, targetVersion); err != nil {
-		return result, r.patchConditionToFalse(ctx, log, garden, conditionReconciled, err)
+		return result, r.updateStatusOperationError(ctx, garden, err, operationType)
 	}
 
-	return reconcile.Result{RequeueAfter: r.Config.Controllers.Garden.SyncPeriod.Duration}, r.updateStatusOperationSuccess(ctx, garden, conditionReconciled)
+	return reconcile.Result{RequeueAfter: r.Config.Controllers.Garden.SyncPeriod.Duration}, r.updateStatusOperationSuccess(ctx, garden, operationType)
 }
 
 func (r *Reconciler) ensureAtMostOneGardenExists(ctx context.Context) error {
@@ -136,48 +138,46 @@ func (r *Reconciler) ensureAtMostOneGardenExists(ctx context.Context) error {
 	return fmt.Errorf("there can be at most one operator.gardener.cloud/v1alpha1.Garden resource in the system at a time")
 }
 
-func (r *Reconciler) patchConditions(ctx context.Context, garden *operatorv1alpha1.Garden, condition gardencorev1beta1.Condition) error {
-	patch := client.MergeFromWithOptions(garden.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	garden.Status.Conditions = v1beta1helper.MergeConditions(garden.Status.Conditions, condition)
-	return r.RuntimeClientSet.Client().Status().Patch(ctx, garden, patch)
-}
-
-func (r *Reconciler) patchConditionToFalse(ctx context.Context, log logr.Logger, garden *operatorv1alpha1.Garden, condition gardencorev1beta1.Condition, err error) error {
-	if patchErr := r.patchConditions(ctx, garden, v1beta1helper.UpdatedConditionWithClock(r.Clock, condition, gardencorev1beta1.ConditionFalse, conditionReasonPrefix(garden)+"Failed", err.Error())); patchErr != nil {
-		log.Error(patchErr, "Could not patch status", "condition", condition)
-	}
-	return err
-}
-
 func (r *Reconciler) reportProgress(log logr.Logger, garden *operatorv1alpha1.Garden) flow.ProgressReporter {
 	return flow.NewImmediateProgressReporter(func(ctx context.Context, stats *flow.Stats) {
-		for i := 0; i < 3; i++ {
-			patch := client.MergeFromWithOptions(garden.DeepCopy(), client.MergeFromWithOptimisticLock{})
-			conditionReconciled := v1beta1helper.GetOrInitConditionWithClock(r.Clock, garden.Status.Conditions, operatorv1alpha1.GardenReconciled)
-			garden.Status.Conditions = v1beta1helper.MergeConditions(garden.Status.Conditions, v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionReconciled, gardencorev1beta1.ConditionProgressing, conditionReasonPrefix(garden)+"Progressing", fmt.Sprintf("Garden operation is currently being processed (%s (%d%%)).", strings.Join(stats.Running.StringList(), ", "), stats.ProgressPercent())))
-			if err := r.RuntimeClientSet.Client().Status().Patch(ctx, garden, patch); err != nil {
-				if apierrors.IsConflict(err) {
-					err = r.RuntimeClientSet.Client().Get(ctx, client.ObjectKeyFromObject(garden), garden)
-					if err == nil {
-						continue
-					}
-				}
-				log.Error(err, "Could not report reconciliation progress")
-			}
-			break
+		patch := client.MergeFrom(garden.DeepCopy())
+
+		if garden.Status.LastOperation == nil {
+			garden.Status.LastOperation = &gardencorev1beta1.LastOperation{}
+		}
+		garden.Status.LastOperation.Description = flow.MakeDescription(stats)
+		garden.Status.LastOperation.Progress = stats.ProgressPercent()
+		garden.Status.LastOperation.LastUpdateTime = metav1.NewTime(r.Clock.Now().UTC())
+
+		if err := r.RuntimeClientSet.Client().Status().Patch(ctx, garden, patch); err != nil {
+			log.Error(err, "Could not report reconciliation progress")
 		}
 	})
 }
 
-func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *operatorv1alpha1.Garden, conditionReconciled gardencorev1beta1.Condition) error {
-	garden.Status.Conditions = v1beta1helper.MergeConditions(garden.Status.Conditions, v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionReconciled, gardencorev1beta1.ConditionProgressing, conditionReasonPrefix(garden)+"Progressing", "Garden operation is currently being processed."))
-	garden.Status.Gardener = r.Identity
-	garden.Status.ObservedGeneration = garden.Generation
-
+func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *operatorv1alpha1.Garden, operationType gardencorev1beta1.LastOperationType) error {
 	var (
 		now                           = metav1.NewTime(r.Clock.Now().UTC())
+		description                   string
 		mustRemoveOperationAnnotation bool
 	)
+
+	switch operationType {
+	case gardencorev1beta1.LastOperationTypeReconcile:
+		description = "Reconciliation of Garden cluster initialized."
+	case gardencorev1beta1.LastOperationTypeDelete:
+		description = "Deletion of Garden cluster in progress."
+	}
+
+	garden.Status.LastOperation = &gardencorev1beta1.LastOperation{
+		Type:           operationType,
+		State:          gardencorev1beta1.LastOperationStateProcessing,
+		Progress:       0,
+		Description:    description,
+		LastUpdateTime: now,
+	}
+	garden.Status.Gardener = r.Identity
+	garden.Status.ObservedGeneration = garden.Generation
 
 	switch garden.Annotations[v1beta1constants.GardenerOperation] {
 	case v1beta1constants.GardenerOperationReconcile:
@@ -229,10 +229,43 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 	return nil
 }
 
-func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *operatorv1alpha1.Garden, conditionReconciled gardencorev1beta1.Condition) error {
-	garden.Status.Conditions = v1beta1helper.MergeConditions(garden.Status.Conditions, v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionReconciled, gardencorev1beta1.ConditionTrue, conditionReasonPrefix(garden)+"Successful", "Garden operation was completed successfully."))
+func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *operatorv1alpha1.Garden, operationType gardencorev1beta1.LastOperationType) error {
+	var (
+		now                        = metav1.NewTime(r.Clock.Now().UTC())
+		description                string
+		setConditionsToProgressing bool
+	)
 
-	now := metav1.NewTime(r.Clock.Now().UTC())
+	switch operationType {
+	case gardencorev1beta1.LastOperationTypeReconcile:
+		description = "Garden cluster has been successfully reconciled."
+		setConditionsToProgressing = true
+	case gardencorev1beta1.LastOperationTypeDelete:
+		description = "Garden cluster has been successfully deleted."
+		setConditionsToProgressing = false
+	}
+
+	if setConditionsToProgressing {
+		for i, cond := range garden.Status.Conditions {
+			switch cond.Type {
+			case operatorv1alpha1.RuntimeComponentsHealthy,
+				operatorv1alpha1.VirtualComponentsHealthy,
+				operatorv1alpha1.VirtualGardenAPIServerAvailable:
+				if cond.Status != gardencorev1beta1.ConditionFalse {
+					garden.Status.Conditions[i].Status = gardencorev1beta1.ConditionProgressing
+					garden.Status.Conditions[i].LastUpdateTime = metav1.Now()
+				}
+			}
+		}
+	}
+
+	garden.Status.LastOperation = &gardencorev1beta1.LastOperation{
+		Type:           operationType,
+		State:          gardencorev1beta1.LastOperationStateSucceeded,
+		Progress:       100,
+		Description:    description,
+		LastUpdateTime: now,
+	}
 
 	switch helper.GetCARotationPhase(garden.Status.Credentials) {
 	case gardencorev1beta1.RotationPreparing:
@@ -283,6 +316,25 @@ func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *o
 	}
 
 	return r.RuntimeClientSet.Client().Status().Update(ctx, garden)
+}
+
+func (r *Reconciler) updateStatusOperationError(ctx context.Context, garden *operatorv1alpha1.Garden, err error, operationType gardencorev1beta1.LastOperationType) error {
+	patch := client.MergeFrom(garden.DeepCopy())
+
+	garden.Status.Gardener = r.Identity
+	if garden.Status.LastOperation == nil {
+		garden.Status.LastOperation = &gardencorev1beta1.LastOperation{}
+	}
+	garden.Status.LastOperation.Type = operationType
+	garden.Status.LastOperation.State = gardencorev1beta1.LastOperationStateError
+	garden.Status.LastOperation.Description = err.Error() + " Operation will be retried."
+	garden.Status.LastOperation.LastUpdateTime = metav1.NewTime(r.Clock.Now().UTC())
+
+	if err2 := r.RuntimeClientSet.Client().Status().Patch(ctx, garden, patch); err != nil {
+		return fmt.Errorf("failed updating last operation to state 'Error' (due to %s): %w", err.Error(), err2)
+	}
+
+	return err
 }
 
 func (r *Reconciler) generateGenericTokenKubeconfig(ctx context.Context, secretsManager secretsmanager.Interface) error {
@@ -396,13 +448,6 @@ func lastSecretRotationStartTimes(garden *operatorv1alpha1.Garden) map[string]ti
 	}
 
 	return rotation
-}
-
-func conditionReasonPrefix(garden *operatorv1alpha1.Garden) string {
-	if garden.DeletionTimestamp != nil {
-		return "Deletion"
-	}
-	return "Reconciliation"
 }
 
 func vpaEnabled(settings *operatorv1alpha1.Settings) bool {
