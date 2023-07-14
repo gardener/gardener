@@ -250,14 +250,14 @@ var _ = Describe("Garden controller tests", func() {
 			return garden.Finalizers
 		}).Should(ConsistOf("gardener.cloud/operator"))
 
-		By("Wait for Reconciled condition to be set to Progressing")
-		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+		By("Wait for last operation state to be set to Progressing")
+		Eventually(func(g Gomega) gardencorev1beta1.LastOperationState {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
-			return garden.Status.Conditions
-		}).Should(ContainCondition(
-			OfType(operatorv1alpha1.GardenReconciled),
-			WithStatus(gardencorev1beta1.ConditionProgressing),
-		))
+			if garden.Status.LastOperation == nil {
+				return ""
+			}
+			return garden.Status.LastOperation.State
+		}).Should(Equal(gardencorev1beta1.LastOperationStateProcessing))
 		Expect(garden.Status.Gardener).NotTo(BeNil())
 
 		By("Verify that the custom resource definitions have been created")
@@ -633,11 +633,14 @@ var _ = Describe("Garden controller tests", func() {
 			g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
 		}).Should(Succeed())
 
-		By("Wait for Reconciled condition to be set to True")
-		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+		By("Wait for last operation state to be set to Succeeded")
+		Eventually(func(g Gomega) gardencorev1beta1.LastOperationState {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
-			return garden.Status.Conditions
-		}).Should(ContainCondition(OfType(operatorv1alpha1.GardenReconciled), WithStatus(gardencorev1beta1.ConditionTrue)))
+			if garden.Status.LastOperation == nil {
+				return ""
+			}
+			return garden.Status.LastOperation.State
+		}).Should(Equal(gardencorev1beta1.LastOperationStateSucceeded))
 
 		By("Delete Garden")
 		Expect(testClient.Delete(ctx, garden)).To(Succeed())
