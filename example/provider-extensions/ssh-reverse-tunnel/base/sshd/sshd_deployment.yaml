@@ -47,8 +47,8 @@ spec:
           name: gardener-apiserver-sshd
           defaultMode: 0700
       - name: gardener-apiserver-sshd-keys
-        configMap:
-          name: gardener-apiserver-sshd-keys
+        secret:
+          secretName: gardener-apiserver-sshd-keys
           defaultMode: 0600
 
 ---

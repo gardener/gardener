@@ -43,6 +43,6 @@ spec:
           name: gardener-apiserver-ssh
           defaultMode: 0700
       - name: gardener-apiserver-ssh-keys
-        configMap:
-          name: gardener-apiserver-ssh-keys
+        secret:
+          secretName: gardener-apiserver-ssh-keys
           defaultMode: 0600

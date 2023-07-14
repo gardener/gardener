@@ -4,7 +4,7 @@ kind: Kustomization
 resources:
 - ../../../base/sshd
 
-configMapGenerator:
+secretGenerator:
 - name: gardener-apiserver-sshd-keys
   namespace: relay
   files:
