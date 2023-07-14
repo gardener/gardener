@@ -33,6 +33,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/component/coredns"
@@ -415,19 +416,56 @@ func defaultPlutono(
 
 func defaultMonitoring(
 	c client.Client,
+	chartApplier kubernetes.ChartApplier,
+	secretsManager secretsmanager.Interface,
+	imageVector imagevector.ImageVector,
 	namespace string,
+	seed *seedpkg.Seed,
+	alertingSMTPSecret *corev1.Secret,
 	globalMonitoringSecret *corev1.Secret,
 	hvpaEnabled bool,
+	ingressHost string,
+	wildcardCertName *string,
 ) (
 	component.Deployer,
 	error,
 ) {
+	imageAlertmanager, err := imageVector.FindImage(images.ImageNameAlertmanager)
+	if err != nil {
+		return nil, err
+	}
+	imageAlpine, err := imageVector.FindImage(images.ImageNameAlpine)
+	if err != nil {
+		return nil, err
+	}
+	imageConfigmapReloader, err := imageVector.FindImage(images.ImageNameConfigmapReloader)
+	if err != nil {
+		return nil, err
+	}
+	imagePrometheus, err := imageVector.FindImage(images.ImageNamePrometheus)
+	if err != nil {
+		return nil, err
+	}
+
 	return monitoring.New(
 		c,
+		chartApplier,
+		secretsManager,
 		namespace,
 		monitoring.Values{
-			GlobalMonitoringSecret: globalMonitoringSecret,
-			HVPAEnabled:            hvpaEnabled,
+			AlertingSMTPSecret:                 alertingSMTPSecret,
+			GlobalMonitoringSecret:             globalMonitoringSecret,
+			HVPAEnabled:                        hvpaEnabled,
+			ImageAlertmanager:                  imageAlertmanager.String(),
+			ImageAlpine:                        imageAlpine.String(),
+			ImageConfigmapReloader:             imageConfigmapReloader.String(),
+			ImagePrometheus:                    imagePrometheus.String(),
+			IngressHost:                        ingressHost,
+			SeedName:                           seed.GetInfo().Name,
+			StorageCapacityAlertmanager:        seed.GetValidVolumeSize("1Gi"),
+			StorageCapacityPrometheus:          seed.GetValidVolumeSize("10Gi"),
+			StorageCapacityAggregatePrometheus: seed.GetValidVolumeSize("20Gi"),
+			WildcardCertName:                   wildcardCertName,
 		},
 	), nil
 }

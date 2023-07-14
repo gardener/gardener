@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -28,7 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
@@ -44,7 +42,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/component/clusteridentity"
@@ -53,7 +50,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/istio"
 	"github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
-	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
@@ -68,7 +64,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
-	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -201,14 +196,6 @@ func (r *Reconciler) checkMinimumK8SVersion(version string) (string, error) {
 	return version, nil
 }
 
-const (
-	seedBootstrapChartName        = "seed-bootstrap"
-	kubeAPIServerPrefix           = "api-seed"
-	plutonoPrefix                 = "g-seed"
-	prometheusPrefix              = "p-seed"
-	ingressTLSCertificateValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
-)
-
 func (r *Reconciler) runReconcileSeedFlow(
 	ctx context.Context,
 	log logr.Logger,
@@ -253,10 +240,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 
 	var (
-		vpaGK    = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}
-		hvpaGK   = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "Hvpa"}
-		issuerGK = schema.GroupKind{Group: "certmanager.k8s.io", Kind: "ClusterIssuer"}
-
 		vpaEnabled     = seed.GetInfo().Spec.Settings == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler.Enabled
 		hvpaEnabled    = features.DefaultFeatureGate.Enabled(features.HVPA)
 		loggingEnabled = gardenlethelper.IsLoggingEnabled(&r.Config)
@@ -264,7 +247,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 	if !vpaEnabled {
 		// VPA is a prerequisite. If it's not enabled via the seed spec it must be provided through some other mechanism.
-		if _, err := seedClient.RESTMapper().RESTMapping(vpaGK); err != nil {
+		if _, err := seedClient.RESTMapper().RESTMapping(schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}); err != nil {
 			return fmt.Errorf("VPA is required for seed cluster: %s", err)
 		}
 	}
@@ -301,14 +284,8 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return errors.New("global monitoring secret not found in seed namespace")
 	}
 
-	globalMonitoringSecretSeed := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "seed-" + globalMonitoringSecretGarden.Name,
-			Namespace: r.GardenNamespace,
-		},
-	}
-
 	log.Info("Replicating global monitoring secret to garden namespace in seed", "secret", client.ObjectKeyFromObject(globalMonitoringSecretGarden))
+	globalMonitoringSecretSeed := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "seed-" + globalMonitoringSecretGarden.Name, Namespace: r.GardenNamespace}}
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient, globalMonitoringSecretSeed, func() error {
 		globalMonitoringSecretSeed.Type = globalMonitoringSecretGarden.Type
 		globalMonitoringSecretSeed.Data = globalMonitoringSecretGarden.Data
@@ -323,19 +300,9 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
-	seedImages, err := imagevector.FindImages(
-		r.ImageVector,
-		[]string{
-			images.ImageNameAlertmanager,
-			images.ImageNameAlpine,
-			images.ImageNameConfigmapReloader,
-			images.ImageNamePrometheus,
-		},
-		imagevector.RuntimeVersion(kubernetesVersion.String()),
-		imagevector.TargetVersion(kubernetesVersion.String()),
-	)
-	if err != nil {
-		return err
+	var alertingSMTPSecret *corev1.Secret
+	if secret, ok := secrets[v1beta1constants.GardenRoleAlerting]; ok && string(secret.Data["auth_type"]) == "smtp" {
+		alertingSMTPSecret = secret
 	}
 
 	// Deploy the CRDs in the seed cluster.
@@ -428,132 +395,14 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
-	// Fetch component-specific aggregate and central monitoring configuration
-	var (
-		aggregateScrapeConfigs                = strings.Builder{}
-		aggregateMonitoringComponentFunctions = []component.AggregateMonitoringConfiguration{
-			istio.AggregateMonitoringConfiguration,
-		}
-
-		centralScrapeConfigs                            = strings.Builder{}
-		centralCAdvisorScrapeConfigMetricRelabelConfigs = strings.Builder{}
-		centralMonitoringComponentFunctions             = []component.CentralMonitoringConfiguration{
-			hvpa.CentralMonitoringConfiguration,
-			kubestatemetrics.CentralMonitoringConfiguration,
-		}
-	)
-
-	for _, componentFn := range aggregateMonitoringComponentFunctions {
-		aggregateMonitoringConfig, err := componentFn()
-		if err != nil {
-			return err
-		}
-
-		for _, config := range aggregateMonitoringConfig.ScrapeConfigs {
-			aggregateScrapeConfigs.WriteString(fmt.Sprintf("- %s\n", utils.Indent(config, 2)))
-		}
-	}
-
-	for _, componentFn := range centralMonitoringComponentFunctions {
-		centralMonitoringConfig, err := componentFn()
-		if err != nil {
-			return err
-		}
-
-		for _, config := range centralMonitoringConfig.ScrapeConfigs {
-			centralScrapeConfigs.WriteString(fmt.Sprintf("- %s\n", utils.Indent(config, 2)))
-		}
-
-		for _, config := range centralMonitoringConfig.CAdvisorScrapeConfigMetricRelabelConfigs {
-			centralCAdvisorScrapeConfigMetricRelabelConfigs.WriteString(fmt.Sprintf("- %s\n", utils.Indent(config, 2)))
-		}
-	}
-
-	// Monitoring resource values
-	monitoringResources := map[string]interface{}{
-		"prometheus":           map[string]interface{}{},
-		"aggregate-prometheus": map[string]interface{}{},
-	}
-
-	if hvpaEnabled {
-		for resource := range monitoringResources {
-			currentResources, err := kubernetesutils.GetContainerResourcesInStatefulSet(ctx, seedClient, kubernetesutils.Key(r.GardenNamespace, resource))
-			if err != nil {
-				return err
-			}
-			if len(currentResources) != 0 && currentResources["prometheus"] != nil {
-				monitoringResources[resource] = map[string]interface{}{
-					"prometheus": currentResources["prometheus"],
-				}
-			}
-		}
-	}
-
-	// AlertManager configuration
-	alertManagerConfig := map[string]interface{}{
-		"storage": seed.GetValidVolumeSize("1Gi"),
-	}
-
-	if alertingSMTPSecret, ok := secrets[v1beta1constants.GardenRoleAlerting]; ok && string(alertingSMTPSecret.Data["auth_type"]) == "smtp" {
-		emailConfig := map[string]interface{}{
-			"to":            string(alertingSMTPSecret.Data["to"]),
-			"from":          string(alertingSMTPSecret.Data["from"]),
-			"smarthost":     string(alertingSMTPSecret.Data["smarthost"]),
-			"auth_username": string(alertingSMTPSecret.Data["auth_username"]),
-			"auth_identity": string(alertingSMTPSecret.Data["auth_identity"]),
-			"auth_password": string(alertingSMTPSecret.Data["auth_password"]),
-		}
-		alertManagerConfig["enabled"] = true
-		alertManagerConfig["emailConfigs"] = []map[string]interface{}{emailConfig}
-	} else {
-		alertManagerConfig["enabled"] = false
-		if err := common.DeleteAlertmanager(ctx, seedClient, r.GardenNamespace); err != nil {
-			return err
-		}
-	}
-
-	var (
-		applierOptions          = kubernetes.CopyApplierOptions(kubernetes.DefaultMergeFuncs)
-		retainStatusInformation = func(new, old *unstructured.Unstructured) {
-			// Apply status from old Object to retain status information
-			new.Object["status"] = old.Object["status"]
-		}
-		plutonoHost    = seed.GetIngressFQDN(plutonoPrefix)
-		prometheusHost = seed.GetIngressFQDN(prometheusPrefix)
-	)
-
-	applierOptions[vpaGK] = retainStatusInformation
-	applierOptions[hvpaGK] = retainStatusInformation
-	applierOptions[issuerGK] = retainStatusInformation
-
 	wildcardCert, err := gardenerutils.GetWildcardCertificate(ctx, seedClient)
 	if err != nil {
 		return err
 	}
 
-	var (
-		plutonoWildCardSecretName      *string
-		prometheusIngressTLSSecretName string
-	)
-
+	var wildCardSecretName *string
 	if wildcardCert != nil {
-		plutonoWildCardSecretName = pointer.String(wildcardCert.GetName())
-		prometheusIngressTLSSecretName = wildcardCert.GetName()
-	} else {
-		prometheusIngressTLSSecret, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-			Name:                        "aggregate-prometheus-tls",
-			CommonName:                  "prometheus",
-			Organization:                []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:                    []string{seed.GetIngressFQDN(prometheusPrefix)},
-			CertType:                    secretsutils.ServerCert,
-			Validity:                    pointer.Duration(ingressTLSCertificateValidity),
-			SkipPublishingCACertificate: true,
-		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCASeed))
-		if err != nil {
-			return err
-		}
-
-		prometheusIngressTLSSecretName = prometheusIngressTLSSecret.Name
+		wildCardSecretName = pointer.String(wildcardCert.GetName())
 	}
 
 	seedIsOriginOfClusterIdentity, err := clusteridentity.IsClusterIdentityEmptyOrFromOrigin(ctx, seedClient, v1beta1constants.ClusterIdentityOriginSeed)
@@ -564,37 +413,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if err := cleanupOrphanExposureClassHandlerResources(ctx, log, seedClient, r.Config.ExposureClassHandlers, seed.GetInfo().Spec.Provider.Zones); err != nil {
 		return err
 	}
-
-	values := kubernetes.Values(map[string]interface{}{
-		"global": map[string]interface{}{
-			"ingressClass": v1beta1constants.SeedNginxIngressClass,
-			"images":       imagevector.ImageMapToValues(seedImages),
-		},
-		"prometheus": map[string]interface{}{
-			"resources":               monitoringResources["prometheus"],
-			"storage":                 seed.GetValidVolumeSize("10Gi"),
-			"additionalScrapeConfigs": centralScrapeConfigs.String(),
-			"additionalCAdvisorScrapeConfigMetricRelabelConfigs": centralCAdvisorScrapeConfigMetricRelabelConfigs.String(),
-		},
-		"aggregatePrometheus": map[string]interface{}{
-			"resources":               monitoringResources["aggregate-prometheus"],
-			"storage":                 seed.GetValidVolumeSize("20Gi"),
-			"seed":                    seed.GetInfo().Name,
-			"hostName":                prometheusHost,
-			"secretName":              prometheusIngressTLSSecretName,
-			"additionalScrapeConfigs": aggregateScrapeConfigs.String(),
-		},
-		"alertmanager": alertManagerConfig,
-		"hvpa": map[string]interface{}{
-			"enabled": hvpaEnabled,
-		},
-		"istio": map[string]interface{}{
-			"enabled": true,
-		},
-		"ingress": map[string]interface{}{
-			"authSecretName": globalMonitoringSecretSeed.Name,
-		},
-	})
 
 	// Delete Grafana artifacts.
 	if err := common.DeleteGrafana(ctx, r.SeedClientSet, r.GardenNamespace); err != nil {
@@ -625,10 +443,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		}
 	}
 
-	if err := chartApplier.Apply(ctx, filepath.Join(r.ChartsPath, seedBootstrapChartName), r.GardenNamespace, seedBootstrapChartName, values, applierOptions); err != nil {
-		return err
-	}
-
 	// setup for flow graph
 	var dnsRecord component.DeployMigrateWaiter
 
@@ -644,7 +458,19 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if err != nil {
 		return err
 	}
-	monitoring, err := defaultMonitoring(seedClient, r.GardenNamespace, globalMonitoringSecretSeed, hvpaEnabled)
+	monitoring, err := defaultMonitoring(
+		seedClient,
+		chartApplier,
+		secretsManager,
+		r.ImageVector,
+		r.GardenNamespace,
+		seed,
+		alertingSMTPSecret,
+		globalMonitoringSecretSeed,
+		hvpaEnabled,
+		seed.GetIngressFQDN("p-seed"),
+		wildCardSecretName,
+	)
 	if err != nil {
 		return err
 	}
@@ -789,9 +615,9 @@ func (r *Reconciler) runReconcileSeedFlow(
 			r.GardenNamespace,
 			r.ImageVector,
 			secretsManager,
-			plutonoHost,
+			seed.GetIngressFQDN("g-seed"),
 			globalMonitoringSecretSeed.Name,
-			plutonoWildCardSecretName,
+			wildCardSecretName,
 		)
 		if err != nil {
 			return err
@@ -861,7 +687,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	kubeAPIServerService := kubeapiserverexposure.NewInternalNameService(seedClient, r.GardenNamespace)
 	if wildcardCert != nil {
 		kubeAPIServerIngress := kubeapiserverexposure.NewIngress(seedClient, r.GardenNamespace, kubeapiserverexposure.IngressValues{
-			Host:             seed.GetIngressFQDN(kubeAPIServerPrefix),
+			Host:             seed.GetIngressFQDN("api-seed"),
 			IngressClassName: pointer.String(v1beta1constants.SeedNginxIngressClass),
 			ServiceName:      v1beta1constants.DeploymentNameKubeAPIServer,
 			TLSSecretName:    &wildcardCert.Name,

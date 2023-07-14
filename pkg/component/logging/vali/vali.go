@@ -20,7 +20,6 @@ import (
 	_ "embed"
 	"fmt"
 	"text/template"
-	"time"
 
 	"github.com/Masterminds/sprig"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -208,7 +207,7 @@ func (v *vali) Deploy(ctx context.Context) error {
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:                    []string{v.values.IngressHost},
 			CertType:                    secrets.ServerCert,
-			Validity:                    pointer.Duration(730 * 24 * time.Hour), // ~2 years, see https://support.apple.com/en-us/HT210176)
+			Validity:                    pointer.Duration(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
 		if err != nil {
