@@ -285,12 +285,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		vpaEnabled     = seed.GetInfo().Spec.Settings == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler.Enabled
 		hvpaEnabled    = features.DefaultFeatureGate.Enabled(features.HVPA)
 		loggingEnabled = gardenlethelper.IsLoggingEnabled(&r.Config)
-
-		gardenNamespace = &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: r.GardenNamespace,
-			},
-		}
 	)
 
 	if !vpaEnabled {
@@ -301,6 +295,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 
 	// create + label garden namespace
+	gardenNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: r.GardenNamespace}}
 	log.Info("Labeling and annotating namespace", "namespaceName", gardenNamespace.Name)
 	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, seedClient, gardenNamespace, func() error {
 		metav1.SetMetaDataLabel(&gardenNamespace.ObjectMeta, "role", v1beta1constants.GardenNamespace)
