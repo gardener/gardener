@@ -16,13 +16,13 @@ package gardeneradmissioncontroller
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
+	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
-
-// TODO Add network labels
 
 func (a admissioncontroller) service() *corev1.Service {
 	svc := &corev1.Service{
@@ -46,6 +46,15 @@ func (a admissioncontroller) service() *corev1.Service {
 			},
 		},
 	}
+
+	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForWebhookTargets(svc, networkingv1.NetworkPolicyPort{
+		Port:     utils.IntStrPtrFromInt(serverPort),
+		Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+	}))
+	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(svc, networkingv1.NetworkPolicyPort{
+		Port:     utils.IntStrPtrFromInt(metricsPort),
+		Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
+	}))
 
 	gardenerutils.ReconcileTopologyAwareRoutingMetadata(svc, a.values.TopologyAwareRoutingEnabled, a.values.RuntimeVersion)
 
