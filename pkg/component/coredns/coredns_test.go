@@ -132,12 +132,14 @@ data:
       rewrite stop {
         name regex ([^\.]+)\.([^\.]+)\.svc\.foo\.bar\.svc\.foo\.bar {1}.{2}.svc.foo.bar
         answer name ([^\.]+)\.([^\.]+)\.svc\.foo\.bar {1}.{2}.svc.foo.bar.svc.foo.bar
+        answer value ([^\.]+)\.([^\.]+)\.svc\.foo\.bar {1}.{2}.svc.foo.bar.svc.foo.bar
       }`
 				for _, suffix := range commonSuffixes {
 					out += `
       rewrite stop {
         name regex (.*)\.` + regexp.QuoteMeta(suffix) + `\.svc\.foo\.bar {1}.` + suffix + `
         answer name (.*)\.` + regexp.QuoteMeta(suffix) + ` {1}.` + suffix + `.svc.foo.bar
+        answer value (.*)\.` + regexp.QuoteMeta(suffix) + ` {1}.` + suffix + `.svc.foo.bar
       }`
 				}
 			}
