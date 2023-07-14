@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
-	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
 	"github.com/go-logr/logr"
 	istiov1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -50,39 +49,16 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/component/clusteridentity"
-	"github.com/gardener/gardener/pkg/component/coredns"
-	"github.com/gardener/gardener/pkg/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/component/etcd"
-	"github.com/gardener/gardener/pkg/component/extensions"
 	extensioncrds "github.com/gardener/gardener/pkg/component/extensions/crds"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/istio"
-	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
-	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
-	"github.com/gardener/gardener/pkg/component/kubeproxy"
-	"github.com/gardener/gardener/pkg/component/kubernetesdashboard"
-	"github.com/gardener/gardener/pkg/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
-	"github.com/gardener/gardener/pkg/component/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
-	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
-	"github.com/gardener/gardener/pkg/component/metricsserver"
-	"github.com/gardener/gardener/pkg/component/monitoring"
-	"github.com/gardener/gardener/pkg/component/nginxingress"
-	"github.com/gardener/gardener/pkg/component/nodeexporter"
-	"github.com/gardener/gardener/pkg/component/nodeproblemdetector"
-	"github.com/gardener/gardener/pkg/component/plutono"
-	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/component/vpa"
-	"github.com/gardener/gardener/pkg/component/vpnseedserver"
-	"github.com/gardener/gardener/pkg/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -503,78 +479,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		}
 	}
 
-	// Logging feature gate
-	var (
-		inputs  []*fluentbitv1alpha2.ClusterInput
-		filters []*fluentbitv1alpha2.ClusterFilter
-		parsers []*fluentbitv1alpha2.ClusterParser
-	)
-
-	if loggingEnabled {
-		componentsFunctions := []component.CentralLoggingConfiguration{
-			// journald components
-			kubelet.CentralLoggingConfiguration,
-			docker.CentralLoggingConfiguration,
-			containerd.CentralLoggingConfiguration,
-			downloader.CentralLoggingConfiguration,
-			// seed system components
-			extensions.CentralLoggingConfiguration,
-			dependencywatchdog.CentralLoggingConfiguration,
-			resourcemanager.CentralLoggingConfiguration,
-			monitoring.CentralLoggingConfiguration,
-			vali.CentralLoggingConfiguration,
-			// shoot control plane components
-			etcd.CentralLoggingConfiguration,
-			clusterautoscaler.CentralLoggingConfiguration,
-			kubeapiserver.CentralLoggingConfiguration,
-			kubescheduler.CentralLoggingConfiguration,
-			kubecontrollermanager.CentralLoggingConfiguration,
-			kubestatemetrics.CentralLoggingConfiguration,
-			hvpa.CentralLoggingConfiguration,
-			plutono.CentralLoggingConfiguration,
-			vpa.CentralLoggingConfiguration,
-			vpnseedserver.CentralLoggingConfiguration,
-			// shoot system components
-			coredns.CentralLoggingConfiguration,
-			kubeproxy.CentralLoggingConfiguration,
-			metricsserver.CentralLoggingConfiguration,
-			nodeexporter.CentralLoggingConfiguration,
-			nodeproblemdetector.CentralLoggingConfiguration,
-			vpnshoot.CentralLoggingConfiguration,
-			// shoot addon components
-			kubernetesdashboard.CentralLoggingConfiguration,
-			nginxingress.CentralLoggingConfiguration,
-		}
-
-		if gardenlethelper.IsEventLoggingEnabled(&r.Config) {
-			componentsFunctions = append(componentsFunctions, eventlogger.CentralLoggingConfiguration)
-		}
-
-		if features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment) {
-			componentsFunctions = append(componentsFunctions, machinecontrollermanager.CentralLoggingConfiguration)
-		}
-
-		// Fetch component specific logging configurations
-		for _, componentFn := range componentsFunctions {
-			loggingConfig, err := componentFn()
-			if err != nil {
-				return err
-			}
-
-			if len(loggingConfig.Inputs) > 0 {
-				inputs = append(inputs, loggingConfig.Inputs...)
-			}
-
-			if len(loggingConfig.Filters) > 0 {
-				filters = append(filters, loggingConfig.Filters...)
-			}
-
-			if len(loggingConfig.Parsers) > 0 {
-				parsers = append(parsers, loggingConfig.Parsers...)
-			}
-		}
-	}
-
 	// Monitoring resource values
 	monitoringResources := map[string]interface{}{
 		"prometheus":           map[string]interface{}{},
@@ -873,15 +777,12 @@ func (r *Reconciler) runReconcileSeedFlow(
 			return err
 		}
 
-		fluentOperatorCustomResources, err := sharedcomponent.NewFluentOperatorCustomResources(
+		fluentOperatorCustomResources, err := defaultFluentOperatorCustomResources(
 			seedClient,
 			r.GardenNamespace,
 			r.ImageVector,
 			loggingEnabled,
-			v1beta1constants.PriorityClassNameSeedSystem600,
-			inputs,
-			filters,
-			parsers,
+			gardenlethelper.IsEventLoggingEnabled(&r.Config),
 		)
 		if err != nil {
 			return err
@@ -890,7 +791,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		fluentOperator, err := sharedcomponent.NewFluentOperator(
 			seedClient,
 			r.GardenNamespace,
-			kubernetesVersion,
 			r.ImageVector,
 			loggingEnabled,
 			v1beta1constants.PriorityClassNameSeedSystem600,

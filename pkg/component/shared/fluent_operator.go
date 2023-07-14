@@ -15,7 +15,6 @@
 package shared
 
 import (
-	"github.com/Masterminds/semver"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/component"
@@ -28,7 +27,6 @@ import (
 func NewFluentOperator(
 	c client.Client,
 	gardenNamespaceName string,
-	runtimeVersion *semver.Version,
 	imageVector imagevector.ImageVector,
 	enabled bool,
 	priorityClassName string,
