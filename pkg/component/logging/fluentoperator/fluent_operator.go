@@ -33,8 +33,10 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -43,11 +45,6 @@ const (
 	OperatorManagedResourceName = "fluent-operator"
 	name                        = "fluent-operator"
 	roleName                    = "gardener.cloud:logging:fluent-operator"
-)
-
-var (
-	protocolTCP = utils.ProtocolPtr(corev1.ProtocolTCP)
-	valiPort    = utils.IntStrPtrFromInt(3100)
 )
 
 // Values keeps values for the Fluent Operator.
@@ -345,7 +342,7 @@ func getFluentBitLabels() map[string]string {
 		v1beta1constants.GardenRole:                                          v1beta1constants.GardenRoleLogging,
 		v1beta1constants.LabelNetworkPolicyToDNS:                             v1beta1constants.LabelNetworkPolicyAllowed,
 		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer:                v1beta1constants.LabelNetworkPolicyAllowed,
-		"networking.resources.gardener.cloud/to-logging-tcp-3100":            v1beta1constants.LabelNetworkPolicyAllowed,
+		gardenerutils.NetworkPolicyLabel(vali.ServiceName, vali.ValiPort):    v1beta1constants.LabelNetworkPolicyAllowed,
 		"networking.resources.gardener.cloud/to-all-shoots-logging-tcp-3100": v1beta1constants.LabelNetworkPolicyAllowed,
 	}
 }

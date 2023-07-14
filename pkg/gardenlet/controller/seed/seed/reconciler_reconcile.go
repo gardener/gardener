@@ -77,6 +77,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/nginxingress"
 	"github.com/gardener/gardener/pkg/component/nodeexporter"
 	"github.com/gardener/gardener/pkg/component/nodeproblemdetector"
+	"github.com/gardener/gardener/pkg/component/plutono"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/component/vpa"
@@ -539,6 +540,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			kubecontrollermanager.CentralLoggingConfiguration,
 			kubestatemetrics.CentralLoggingConfiguration,
 			hvpa.CentralLoggingConfiguration,
+			plutono.CentralLoggingConfiguration,
 			vpa.CentralLoggingConfiguration,
 			vpnseedserver.CentralLoggingConfiguration,
 			// shoot system components
@@ -645,27 +647,14 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 
 	var (
-		plutonoIngressTLSSecretName    string
+		plutonoWildCardSecretName      *string
 		prometheusIngressTLSSecretName string
 	)
 
 	if wildcardCert != nil {
-		plutonoIngressTLSSecretName = wildcardCert.GetName()
+		plutonoWildCardSecretName = pointer.String(wildcardCert.GetName())
 		prometheusIngressTLSSecretName = wildcardCert.GetName()
 	} else {
-		plutonoIngressTLSSecret, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-			Name:                        "plutono-tls",
-			CommonName:                  "plutono",
-			Organization:                []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:                    []string{seed.GetIngressFQDN(plutonoPrefix)},
-			CertType:                    secretsutils.ServerCert,
-			Validity:                    pointer.Duration(ingressTLSCertificateValidity),
-			SkipPublishingCACertificate: true,
-		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCASeed))
-		if err != nil {
-			return err
-		}
-
 		prometheusIngressTLSSecret, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 			Name:                        "aggregate-prometheus-tls",
 			CommonName:                  "prometheus",
@@ -679,7 +668,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			return err
 		}
 
-		plutonoIngressTLSSecretName = plutonoIngressTLSSecret.Name
 		prometheusIngressTLSSecretName = prometheusIngressTLSSecret.Name
 	}
 
@@ -715,10 +703,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			"hostName":                prometheusHost,
 			"secretName":              prometheusIngressTLSSecretName,
 			"additionalScrapeConfigs": aggregateScrapeConfigs.String(),
-		},
-		"plutono": map[string]interface{}{
-			"hostName":   plutonoHost,
-			"secretName": plutonoIngressTLSSecretName,
 		},
 		"alertmanager": alertManagerConfig,
 		"hvpa": map[string]interface{}{
@@ -916,6 +900,19 @@ func (r *Reconciler) runReconcileSeedFlow(
 			return err
 		}
 
+		plutono, err := defaultPlutono(
+			seedClient,
+			r.GardenNamespace,
+			r.ImageVector,
+			secretsManager,
+			plutonoHost,
+			globalMonitoringSecretSeed.Name,
+			plutonoWildCardSecretName,
+		)
+		if err != nil {
+			return err
+		}
+
 		vali, err := defaultVali(
 			ctx,
 			seedClient,
@@ -965,6 +962,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 				Name:         "Deploying Fluent Operator",
 				Fn:           component.OpWait(fluentOperator).Deploy,
 				Dependencies: flow.NewTaskIDs(reconcileFluentOperatorResources),
+			})
+			_ = g.Add(flow.Task{
+				Name: "Deploying Plutono",
+				Fn:   plutono.Deploy,
 			})
 			_ = g.Add(flow.Task{
 				Name: "Deploying Vali",

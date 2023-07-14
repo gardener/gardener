@@ -656,11 +656,10 @@ func ComputeExpectedGardenletConfiguration(
 		five   = 5
 		twenty = 20
 
-		logLevelInfo              = "info"
-		logFormatJson             = "json"
-		lockObjectName            = "gardenlet-leader-election"
-		lockObjectNamespace       = "garden"
-		defaultCentralValiStorage = resource.MustParse("100Gi")
+		logLevelInfo        = "info"
+		logFormatJson       = "json"
+		lockObjectName      = "gardenlet-leader-election"
+		lockObjectNamespace = "garden"
 	)
 
 	config := gardenletv1alpha1.GardenletConfiguration{
@@ -827,7 +826,7 @@ func ComputeExpectedGardenletConfiguration(
 			Vali: &gardenletv1alpha1.Vali{
 				Enabled: pointer.Bool(false),
 				Garden: &gardenletv1alpha1.GardenVali{
-					Storage: &defaultCentralValiStorage,
+					Storage: &gardenletv1alpha1.DefaultCentralValiStorage,
 				},
 			},
 			ShootEventLogging: &gardenletv1alpha1.ShootEventLogging{

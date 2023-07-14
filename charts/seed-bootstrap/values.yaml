@@ -100,10 +100,6 @@ aggregatePrometheus:
         value: 2Gi
         percentage: 80
 
-plutono:
-  hostName: p.seed-1.example.com
-  secretName: plutono-tls
-
 allowedMetrics:
   alertmanager: []
 
@@ -206,7 +202,6 @@ global:
     alertmanager: image-repository:image-tag
     alpine: image-repository:image-tag
     configmap-reloader: image-repository:image-tag
-    plutono: image-repository:image-tag
     prometheus: image-repository:image-tag
 
 alertmanager:

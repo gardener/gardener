@@ -17,7 +17,6 @@ package botanist_test
 import (
 	"context"
 	"net"
-	"path/filepath"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -44,6 +43,7 @@ import (
 	mockkubeproxy "github.com/gardener/gardener/pkg/component/kubeproxy/mock"
 	mockkubescheduler "github.com/gardener/gardener/pkg/component/kubescheduler/mock"
 	mockkubestatemetrics "github.com/gardener/gardener/pkg/component/kubestatemetrics/mock"
+	mockcomponent "github.com/gardener/gardener/pkg/component/mock"
 	mockresourcemanager "github.com/gardener/gardener/pkg/component/resourcemanager/mock"
 	mockvpa "github.com/gardener/gardener/pkg/component/vpa/mock"
 	mockvpnseedserver "github.com/gardener/gardener/pkg/component/vpnseedserver/mock"
@@ -58,7 +58,6 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
-	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -81,6 +80,7 @@ var _ = Describe("Monitoring", func() {
 		mockKubeStateMetrics      *mockkubestatemetrics.MockInterface
 		mockCoreDNS               *mockcoredns.MockInterface
 		mockKubeProxy             *mockkubeproxy.MockInterface
+		mockPlutono               *mockcomponent.MockDeployWaiter
 		mockVPNSeedServer         *mockvpnseedserver.MockInterface
 		mockVPNShoot              *mockvpnshoot.MockInterface
 		mockResourceManager       *mockresourcemanager.MockInterface
@@ -114,6 +114,17 @@ var _ = Describe("Monitoring", func() {
 			Build()
 		sm = fakesecretsmanager.New(seedClient, seedNamespace)
 
+		By("Create secrets managed outside of this function for whose secretsmanager.Get() will be called")
+		Expect(seedClient.Create(ctx, &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "observability-ingress-users",
+				Namespace:   seedNamespace,
+				Labels:      map[string]string{"gardener.cloud/role": "monitoring"},
+				Annotations: map[string]string{"url": "https://gu-foo--bar.example.com"},
+			},
+			Data: map[string][]byte{"username": {}, "password": {}, "auth": {}},
+		})).To(Succeed())
+
 		mockEtcdMain = mocketcd.NewMockInterface(ctrl)
 		mockEtcdEvents = mocketcd.NewMockInterface(ctrl)
 		mockKubeAPIServer = mockkubeapiserver.NewMockInterface(ctrl)
@@ -122,6 +133,7 @@ var _ = Describe("Monitoring", func() {
 		mockKubeStateMetrics = mockkubestatemetrics.NewMockInterface(ctrl)
 		mockCoreDNS = mockcoredns.NewMockInterface(ctrl)
 		mockKubeProxy = mockkubeproxy.NewMockInterface(ctrl)
+		mockPlutono = mockcomponent.NewMockDeployWaiter(ctrl)
 		mockVPNSeedServer = mockvpnseedserver.NewMockInterface(ctrl)
 		mockVPNShoot = mockvpnshoot.NewMockInterface(ctrl)
 		mockResourceManager = mockresourcemanager.NewMockInterface(ctrl)
@@ -152,6 +164,7 @@ var _ = Describe("Monitoring", func() {
 							KubeScheduler:         mockKubeScheduler,
 							KubeControllerManager: mockKubeControllerManager,
 							KubeStateMetrics:      mockKubeStateMetrics,
+							Plutono:               mockPlutono,
 							ResourceManager:       mockResourceManager,
 							VerticalPodAutoscaler: mockVPA,
 							VPNSeedServer:         mockVPNSeedServer,
@@ -198,25 +211,9 @@ var _ = Describe("Monitoring", func() {
 	})
 
 	Describe("#DeploySeedPlutono", func() {
-		It("should generate two ingress secrets", func() {
-			defer test.WithVar(&ChartsPath, filepath.Join("..", "..", "..", "charts"))()
-
-			Expect(botanist.DeploySeedPlutono(ctx)).To(Succeed())
-
-			secretList := &corev1.SecretList{}
-			Expect(seedClient.List(ctx, secretList, client.InNamespace(seedNamespace), client.MatchingLabels{
-				"name":       "observability-ingress-users",
-				"managed-by": "secrets-manager",
-			})).To(Succeed())
-			Expect(secretList.Items).To(HaveLen(1))
-			Expect(secretList.Items[0].Labels).To(HaveKeyWithValue("persist", "true"))
-		})
-
-		It("should sync the ingress credentials for the users observability to the garden project namespace", func() {
-			defer test.WithVar(&ChartsPath, filepath.Join("..", "..", "..", "charts"))()
-
+		It("should successfully deploy plutono sync the ingress credentials for the users observability to the garden project namespace", func() {
 			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(BeNotFoundError())
-
+			mockPlutono.EXPECT().Deploy(ctx)
 			Expect(botanist.DeploySeedPlutono(ctx)).To(Succeed())
 
 			secret := &corev1.Secret{}
@@ -227,15 +224,14 @@ var _ = Describe("Monitoring", func() {
 		})
 
 		It("should cleanup the secrets when shoot purpose is changed", func() {
-			defer test.WithVar(&ChartsPath, filepath.Join("..", "..", "..", "charts"))()
-
 			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(BeNotFoundError())
-
+			mockPlutono.EXPECT().Deploy(ctx)
 			Expect(botanist.DeploySeedPlutono(ctx)).To(Succeed())
 			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(Succeed())
 			Expect(*botanist.Shoot.GetInfo().Spec.Purpose == shootPurposeEvaluation).To(BeTrue())
 
 			botanist.Shoot.Purpose = shootPurposeTesting
+			mockPlutono.EXPECT().Destroy(ctx)
 			Expect(botanist.DeploySeedPlutono(ctx)).To(Succeed())
 
 			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(BeNotFoundError())

@@ -47,6 +47,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/nginxingress"
+	"github.com/gardener/gardener/pkg/component/plutono"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/seedsystem"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
@@ -319,6 +320,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 	// When the seed is the garden cluster then these components are reconciled by the gardener-operator.
 	if !seedIsGarden {
 		var (
+			plutono                       = plutono.New(seedClient, r.GardenNamespace, nil, plutono.Values{})
 			kubeStateMetrics              = kubestatemetrics.New(seedClient, r.GardenNamespace, nil, kubestatemetrics.Values{ClusterType: component.ClusterTypeSeed})
 			etcdCRD                       = etcd.NewCRD(seedClient, r.SeedClientSet.Applier())
 			etcdDruid                     = etcd.NewBootstrapper(seedClient, r.GardenNamespace, nil, r.Config.ETCDConfig, "", nil, "")
@@ -329,6 +331,10 @@ func (r *Reconciler) runDeleteSeedFlow(
 			fluentOperatorCustomResources = fluentoperator.NewCustomResources(seedClient, r.GardenNamespace, fluentoperator.CustomResourcesValues{}, nil, nil, nil)
 			vali                          = vali.New(seedClient, r.GardenNamespace, nil, vali.Values{})
 
+			destroyPlutono = g.Add(flow.Task{
+				Name: "Destroying plutono",
+				Fn:   component.OpDestroyAndWait(plutono).Destroy,
+			})
 			destroyKubeStateMetrics = g.Add(flow.Task{
 				Name: "Destroy kube-state-metrics",
 				Fn:   component.OpDestroyAndWait(kubeStateMetrics).Destroy,
@@ -371,6 +377,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 		)
 
 		syncPointCleanedUp.Insert(
+			destroyPlutono,
 			destroyKubeStateMetrics,
 			destroyEtcdDruid,
 			destroyHVPA,

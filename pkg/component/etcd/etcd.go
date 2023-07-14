@@ -200,8 +200,6 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		replicas = e.computeReplicas(existingEtcd)
 
 		resourcesEtcd, resourcesBackupRestore = e.computeContainerResources(existingSts)
-		quota                                 = resource.MustParse("8Gi")
-		storageCapacity                       = resource.MustParse(e.values.StorageCapacity)
 		garbageCollectionPolicy               = druidv1alpha1.GarbageCollectionPolicy(druidv1alpha1.GarbageCollectionPolicyExponential)
 		garbageCollectionPeriod               = metav1.Duration{Duration: 12 * time.Hour}
 		compressionPolicy                     = druidv1alpha1.GzipCompression
@@ -328,7 +326,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			ClientPort:              pointer.Int32(int32(etcdconstants.PortEtcdClient)),
 			Metrics:                 &metrics,
 			DefragmentationSchedule: e.computeDefragmentationSchedule(existingEtcd),
-			Quota:                   &quota,
+			Quota:                   utils.QuantityPtr(resource.MustParse("8Gi")),
 			ClientService: &druidv1alpha1.ClientService{
 				Annotations: clientService.Annotations,
 				Labels:      clientService.Labels,
@@ -379,9 +377,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 		if e.values.BackupConfig != nil {
 			var (
-				provider                 = druidv1alpha1.StorageProvider(e.values.BackupConfig.Provider)
-				deltaSnapshotPeriod      = metav1.Duration{Duration: 5 * time.Minute}
-				deltaSnapshotMemoryLimit = resource.MustParse("100Mi")
+				provider            = druidv1alpha1.StorageProvider(e.values.BackupConfig.Provider)
+				deltaSnapshotPeriod = metav1.Duration{Duration: 5 * time.Minute}
 			)
 
 			e.etcd.Spec.Backup.Store = &druidv1alpha1.StoreSpec{
@@ -392,7 +389,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			}
 			e.etcd.Spec.Backup.FullSnapshotSchedule = e.computeFullSnapshotSchedule(existingEtcd)
 			e.etcd.Spec.Backup.DeltaSnapshotPeriod = &deltaSnapshotPeriod
-			e.etcd.Spec.Backup.DeltaSnapshotMemoryLimit = &deltaSnapshotMemoryLimit
+			e.etcd.Spec.Backup.DeltaSnapshotMemoryLimit = utils.QuantityPtr(resource.MustParse("100Mi"))
 
 			if e.values.BackupConfig.LeaderElection != nil {
 				e.etcd.Spec.Backup.LeaderElection = &druidv1alpha1.LeaderElectionSpec{
@@ -402,7 +399,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			}
 		}
 
-		e.etcd.Spec.StorageCapacity = &storageCapacity
+		e.etcd.Spec.StorageCapacity = utils.QuantityPtr(resource.MustParse(e.values.StorageCapacity))
 		e.etcd.Spec.StorageClass = e.values.StorageClassName
 		e.etcd.Spec.VolumeClaimTemplate = &volumeClaimTemplate
 		return nil

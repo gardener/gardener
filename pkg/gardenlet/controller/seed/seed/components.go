@@ -37,6 +37,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
+	"github.com/gardener/gardener/pkg/component/plutono"
 	"github.com/gardener/gardener/pkg/component/seedsystem"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/component/vpnauthzserver"
@@ -48,6 +49,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
 
@@ -351,4 +353,36 @@ func defaultVali(
 	}
 
 	return deployer, err
+}
+
+func defaultPlutono(
+	c client.Client,
+	namespace string,
+	imageVector imagevector.ImageVector,
+	secretsManager secretsmanager.Interface,
+	ingressHot string,
+	authSecret string,
+	wildcardCertName *string,
+) (
+	plutono.Interface,
+	error,
+) {
+	return shared.NewPlutono(
+		c,
+		namespace,
+		imageVector,
+		secretsManager,
+		authSecret,
+		component.ClusterTypeSeed,
+		ingressHot,
+		true,
+		false,
+		false,
+		false,
+		false,
+		v1beta1constants.PriorityClassNameSeedSystem600,
+		1,
+		wildcardCertName,
+		false,
+	)
 }

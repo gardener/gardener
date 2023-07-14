@@ -50,6 +50,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/nodeexporter"
 	"github.com/gardener/gardener/pkg/component/nodelocaldns"
+	"github.com/gardener/gardener/pkg/component/plutono"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/component/vpnseedserver"
@@ -134,6 +135,7 @@ type ControlPlane struct {
 	KubeControllerManager    kubecontrollermanager.Interface
 	KubeStateMetrics         kubestatemetrics.Interface
 	MachineControllerManager machinecontrollermanager.Interface
+	Plutono                  plutono.Interface
 	ResourceManager          resourcemanager.Interface
 	VerticalPodAutoscaler    vpa.Interface
 	VPNSeedServer            vpnseedserver.Interface
