@@ -100,10 +100,8 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should not return error during reconciliation if ControllerInstallation resource has deletionTimestamp", func() {
-			now := metav1.Now()
-			controllerInstallation.DeletionTimestamp = &now
-
 			Expect(gardenClient.Create(ctx, controllerInstallation)).To(Succeed())
+			Expect(gardenClient.Delete(ctx, controllerInstallation)).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())

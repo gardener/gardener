@@ -137,14 +137,16 @@ var _ = Describe("Worker Reconcile", func() {
 				actuator: newMockActuator("", nil),
 				ctx:      context.TODO(),
 				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
-					addDeletionTimestampToWorker(
-						addOperationAnnotationToWorker(
-							addLastOperationToWorker(
-								getWorker(),
-								gardencorev1beta1.LastOperationTypeMigrate,
-								gardencorev1beta1.LastOperationStateSucceeded,
-								"Migrate worker"),
-							v1beta1constants.GardenerOperationReconcile)),
+					addFinalizerToWorker(
+						addDeletionTimestampToWorker(
+							addOperationAnnotationToWorker(
+								addLastOperationToWorker(
+									getWorker(),
+									gardencorev1beta1.LastOperationTypeMigrate,
+									gardencorev1beta1.LastOperationStateSucceeded,
+									"Migrate worker"),
+								v1beta1constants.GardenerOperationReconcile)),
+						worker.FinalizerName),
 					getCluster()).Build(),
 			},
 			args:    arguments,

@@ -90,11 +90,10 @@ var _ = Describe("Reconciler", func() {
 
 	Context("when deletion timestamp set", func() {
 		BeforeEach(func() {
-			now := metav1.Now()
-			quota.DeletionTimestamp = &now
 			quota.Finalizers = []string{finalizerName}
 
 			Expect(fakeClient.Create(ctx, quota)).To(Succeed())
+			Expect(fakeClient.Delete(ctx, quota)).To(Succeed())
 		})
 
 		It("should do nothing because finalizer is not present", func() {
