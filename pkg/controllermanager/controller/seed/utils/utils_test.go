@@ -179,7 +179,6 @@ var _ = Describe("Utils", func() {
 		)
 
 		BeforeEach(func() {
-			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 			log = logr.Discard()
 			condition = gardencorev1beta1.Condition{Type: "Foo"}
 			seed = &gardencorev1beta1.Seed{
@@ -187,6 +186,7 @@ var _ = Describe("Utils", func() {
 				Status:     gardencorev1beta1.SeedStatus{Conditions: []gardencorev1beta1.Condition{condition}},
 			}
 
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithStatusSubresource(seed).Build()
 			Expect(fakeClient.Create(ctx, seed)).To(Succeed())
 			DeferCleanup(func() {
 				Expect(fakeClient.Delete(ctx, seed)).To(Succeed())

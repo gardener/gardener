@@ -74,7 +74,6 @@ var _ = Describe("extensions", func() {
 
 		scheme = runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
-		c = fake.NewClientBuilder().WithScheme(scheme).Build()
 
 		defaultInterval = 1 * time.Millisecond
 		defaultTimeout = 1 * time.Millisecond
@@ -93,6 +92,8 @@ var _ = Describe("extensions", func() {
 				Namespace: namespace,
 			},
 		}
+
+		c = fake.NewClientBuilder().WithScheme(scheme).WithStatusSubresource(expected).Build()
 
 		fakeOps = &retryfake.Ops{MaxAttempts: 1}
 		resetVars = test.WithVars(

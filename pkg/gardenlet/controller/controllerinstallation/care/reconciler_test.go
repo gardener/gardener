@@ -77,7 +77,7 @@ var _ = Describe("Reconciler", func() {
 			},
 		}
 
-		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithStatusSubresource(controllerInstallation).Build()
 		seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
 		fakeClock = testclock.NewFakeClock(time.Now())

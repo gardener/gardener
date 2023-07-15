@@ -61,8 +61,6 @@ var _ = Describe("Garden Care Control", func() {
 		ctx = context.Background()
 		logf.IntoContext(ctx, logr.Discard())
 
-		runtimeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
-
 		operatorConfig = config.OperatorConfiguration{
 			Controllers: config.ControllerConfiguration{
 				GardenCare: config.GardenCareControllerConfiguration{
@@ -77,6 +75,7 @@ var _ = Describe("Garden Care Control", func() {
 			},
 		}
 
+		runtimeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).WithStatusSubresource(garden).Build()
 		gardenClientMap = fakeclientmap.NewClientMapBuilder().WithRuntimeClientForKey(keys.ForGarden(garden), runtimeClient).Build()
 
 		fakeClock = testclock.NewFakeClock(time.Now())

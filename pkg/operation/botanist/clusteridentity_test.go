@@ -96,7 +96,7 @@ var _ = Describe("ClusterIdentity", func() {
 			},
 		}
 
-		gardenClient = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(shoot).Build()
+		gardenClient = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(shoot).WithStatusSubresource(shoot).Build()
 		seedClient = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(cluster).Build()
 		seedClientSet = kubernetesfake.NewClientSetBuilder().WithClient(seedClient).Build()
 

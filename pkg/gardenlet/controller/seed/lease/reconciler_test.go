@@ -94,7 +94,7 @@ var _ = Describe("LeaseReconciler", func() {
 			},
 		}
 
-		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(seed).Build()
+		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithObjects(seed).WithStatusSubresource(seed).Build()
 		seedRESTClient = &fakerestclient.RESTClient{
 			NegotiatedSerializer: serializer.NewCodecFactory(kubernetes.GardenScheme).WithoutConversion(),
 			Resp: &http.Response{
