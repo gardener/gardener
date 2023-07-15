@@ -18,6 +18,13 @@ spec:
       - command: ["/gardener_apiserver_ssh/entrypoint.sh"]
         image: alpine:3.17
         name: ssh
+        # apk sometimes just hangs => restart container if there is no connection to target port
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - "-c"
+            - "netstat | grep 6222"
         volumeMounts:
         - name: gardener-apiserver-ssh
           mountPath: /gardener_apiserver_ssh
@@ -36,6 +43,6 @@ spec:
           name: gardener-apiserver-ssh
           defaultMode: 0700
       - name: gardener-apiserver-ssh-keys
-        configMap:
-          name: gardener-apiserver-ssh-keys
+        secret:
+          secretName: gardener-apiserver-ssh-keys
           defaultMode: 0600
