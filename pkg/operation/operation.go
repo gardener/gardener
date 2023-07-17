@@ -438,13 +438,6 @@ func (o *Operation) DeleteClusterResourceFromSeed(ctx context.Context) error {
 	return client.IgnoreNotFound(o.SeedClientSet.Client().Delete(ctx, &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}))
 }
 
-// ComputePrometheusHosts computes the hosts for prometheus.
-func (o *Operation) ComputePrometheusHosts() []string {
-	return []string{
-		o.ComputePrometheusHost(),
-	}
-}
-
 // ComputeAlertManagerHosts computes the host for alert manager.
 func (o *Operation) ComputeAlertManagerHosts() []string {
 	return []string{

@@ -25,7 +25,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
-	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/monitoring"
 	"github.com/gardener/gardener/pkg/features"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
@@ -85,14 +84,21 @@ func (b *Botanist) DefaultMonitoring() (component.Deployer, error) {
 		}
 	}
 
+	var wildcardSecretName *string
+	if b.ControlPlaneWildcardCert != nil {
+		wildcardSecretName = &b.ControlPlaneWildcardCert.Name
+	}
+
 	return monitoring.New(
 		b.SeedClientSet.Client(),
 		b.SeedClientSet.ChartApplier(),
 		b.SecretsManager,
 		b.Shoot.SeedNamespace,
 		monitoring.Values{
-			AlertingSecrets: alertingSecrets,
-			Components:      monitoringComponents,
+			AlertingSecrets:  alertingSecrets,
+			Components:       monitoringComponents,
+			IngressHost:      b.ComputePrometheusHost(),
+			WildcardCertName: wildcardSecretName,
 		},
 	), nil
 }
@@ -106,50 +112,6 @@ func (b *Botanist) DeployMonitoring(ctx context.Context) error {
 
 	if err := b.Shoot.Components.Monitoring.Monitoring.Deploy(ctx); err != nil {
 		return err
-	}
-
-	credentialsSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameObservabilityIngressUsers)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngressUsers)
-	}
-
-	// Create shoot token secret for prometheus component
-	if err := gardenerutils.NewShootAccessSecret(v1beta1constants.StatefulSetNamePrometheus, b.Shoot.SeedNamespace).Reconcile(ctx, b.SeedClientSet.Client()); err != nil {
-		return err
-	}
-
-	var prometheusIngressTLSSecretName string
-	if b.ControlPlaneWildcardCert != nil {
-		prometheusIngressTLSSecretName = b.ControlPlaneWildcardCert.GetName()
-	} else {
-		ingressTLSSecret, err := b.SecretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
-			Name:                        "prometheus-tls",
-			CommonName:                  "prometheus",
-			Organization:                []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:                    b.ComputePrometheusHosts(),
-			CertType:                    secrets.ServerCert,
-			Validity:                    pointer.Duration(v1beta1constants.IngressTLSCertificateValidity),
-			SkipPublishingCACertificate: true,
-		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
-		if err != nil {
-			return err
-		}
-		prometheusIngressTLSSecretName = ingressTLSSecret.Name
-	}
-
-	clusterCASecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
-	}
-
-	etcdCASecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCAETCD)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
-	}
-
-	etcdClientSecret, found := b.SecretsManager.Get(etcd.SecretNameClient)
-	if !found {
-		return fmt.Errorf("secret %q not found", etcd.SecretNameClient)
 	}
 
 	var (

@@ -25,16 +25,19 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -44,6 +47,10 @@ type Values struct {
 	AlertingSecrets []*corev1.Secret
 	// Components is a list of monitoring components.
 	Components []component.MonitoringComponent
+	// IngressHost is the host name of Prometheus.
+	IngressHost string
+	// WildcardCertName is name of wildcard tls certificate which is issued for the seed's ingress domain.
+	WildcardCertName *string
 }
 
 // New creates a new instance of DeployWaiter for the monitoring components.
@@ -72,6 +79,11 @@ type monitoring struct {
 }
 
 func (m *monitoring) Deploy(ctx context.Context) error {
+	credentialsSecret, found := m.secretsManager.Get(v1beta1constants.SecretNameObservabilityIngressUsers)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngressUsers)
+	}
+
 	alerting, err := m.getCustomAlertingConfigs(ctx)
 	if err != nil {
 		return err
@@ -80,6 +92,45 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 	alertingRules, scrapeConfigs, err := m.getAlertingRulesAndScrapeConfigs(ctx)
 	if err != nil {
 		return err
+	}
+
+	// Create shoot token secret for prometheus component
+	if err := m.newShootAccessSecret().Reconcile(ctx, m.client); err != nil {
+		return err
+	}
+
+	var ingressTLSSecretName string
+	if m.values.WildcardCertName != nil {
+		ingressTLSSecretName = *m.values.WildcardCertName
+	} else {
+		ingressTLSSecret, err := m.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
+			Name:                        "prometheus-tls",
+			CommonName:                  "prometheus",
+			Organization:                []string{"gardener.cloud:monitoring:ingress"},
+			DNSNames:                    []string{m.values.IngressHost},
+			CertType:                    secretsutils.ServerCert,
+			Validity:                    pointer.Duration(v1beta1constants.IngressTLSCertificateValidity),
+			SkipPublishingCACertificate: true,
+		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
+		if err != nil {
+			return err
+		}
+		ingressTLSSecretName = ingressTLSSecret.Name
+	}
+
+	clusterCASecret, found := m.secretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+	}
+
+	etcdCASecret, found := m.secretsManager.Get(v1beta1constants.SecretNameCAETCD)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
+	}
+
+	etcdClientSecret, found := m.secretsManager.Get(etcd.SecretNameClient)
+	if !found {
+		return fmt.Errorf("secret %q not found", etcd.SecretNameClient)
 	}
 
 	return nil
@@ -103,7 +154,7 @@ func (m *monitoring) Destroy(ctx context.Context) error {
 				Name:      "allow-prometheus",
 			},
 		},
-		gardenerutils.NewShootAccessSecret(v1beta1constants.StatefulSetNamePrometheus, m.namespace).Secret,
+		m.newShootAccessSecret().Secret,
 		&corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: m.namespace,
@@ -173,6 +224,10 @@ func (m *monitoring) Destroy(ctx context.Context) error {
 	}
 
 	return kubernetesutils.DeleteObjects(ctx, m.client, objects...)
+}
+
+func (m *monitoring) newShootAccessSecret() *gardenerutils.AccessSecret {
+	return gardenerutils.NewShootAccessSecret(v1beta1constants.StatefulSetNamePrometheus, m.namespace)
 }
 
 func (m *monitoring) getCustomAlertingConfigs(ctx context.Context) (map[string]interface{}, error) {
