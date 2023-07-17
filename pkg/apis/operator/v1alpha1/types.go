@@ -435,7 +435,7 @@ type GardenerAPIServerConfig struct {
 	// +optional
 	Requests *gardencorev1beta1.APIServerRequests `json:"requests,omitempty"`
 	// WatchCacheSizes contains configuration of the API server's watch cache sizes.
-	// Configuring these flags might be useful for large-scale Shoot clusters with a lot of parallel update requests
+	// Configuring these flags might be useful for large-scale Garden clusters with a lot of parallel update requests
 	// and a lot of watching controllers (e.g. large ManagedSeed clusters). When the API server's watch cache's
 	// capacity is too small to cope with the amount of update requests and watchers for a particular resource, it
 	// might happen that controller watches are permanently stopped with `too old resource version` errors.

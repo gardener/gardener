@@ -15,6 +15,7 @@
 package pkg
 
 import (
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission/plugin/namespace/lifecycle"
 	"k8s.io/apiserver/pkg/admission/plugin/resourcequota"
 	"k8s.io/apiserver/pkg/admission/plugin/validatingadmissionpolicy"
@@ -107,4 +108,34 @@ func AllPluginNames() []string {
 		// which can only happen reliably if previous plugins permitted the request.
 		resourcequota.PluginName, // ResourceQuota
 	}
+}
+
+// DefaultOnPlugins is the set of admission plugins that are enabled by default.
+func DefaultOnPlugins() sets.String {
+	return sets.NewString(
+		lifecycle.PluginName,                      // NamespaceLifecycle
+		PluginNameResourceReferenceManager,        // ResourceReferenceManager
+		PluginNameExtensionValidator,              // ExtensionValidator
+		PluginNameExtensionLabels,                 // ExtensionLabels
+		PluginNameShootTolerationRestriction,      // ShootTolerationRestriction
+		PluginNameShootExposureClass,              // ShootExposureClass
+		PluginNameShootDNS,                        // ShootDNS
+		PluginNameShootManagedSeed,                // ShootManagedSeed
+		PluginNameShootQuotaValidator,             // ShootQuotaValidator
+		PluginNameShootValidator,                  // ShootValidator
+		PluginNameSeedValidator,                   // SeedValidator
+		PluginNameControllerRegistrationResources, // ControllerRegistrationResources
+		PluginNameProjectValidator,                // ProjectValidator
+		PluginNameDeletionConfirmation,            // DeletionConfirmation
+		PluginNameOpenIDConnectPreset,             // OpenIDConnectPreset
+		PluginNameClusterOpenIDConnectPreset,      // ClusterOpenIDConnectPreset
+		PluginNameCustomVerbAuthorizer,            // CustomVerbAuthorizer
+		PluginNameManagedSeed,                     // ManagedSeed
+		PluginNameManagedSeedShoot,                // ManagedSeedShoot
+		PluginNameBastion,                         // Bastion
+		mutatingwebhook.PluginName,                // MutatingAdmissionWebhook
+		validatingwebhook.PluginName,              // ValidatingAdmissionWebhook
+		validatingadmissionpolicy.PluginName,      // ValidatingAdmissionPolicy
+		resourcequota.PluginName,                  // ResourceQuota
+	)
 }

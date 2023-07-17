@@ -450,7 +450,7 @@ spec:
                           watchCacheSizes:
                             description: WatchCacheSizes contains configuration of
                               the API server's watch cache sizes. Configuring these
-                              flags might be useful for large-scale Shoot clusters
+                              flags might be useful for large-scale Garden clusters
                               with a lot of parallel update requests and a lot of
                               watching controllers (e.g. large ManagedSeed clusters).
                               When the API server's watch cache's capacity is too

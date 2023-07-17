@@ -963,7 +963,7 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes
 <td>
 <em>(Optional)</em>
 <p>WatchCacheSizes contains configuration of the API server&rsquo;s watch cache sizes.
-Configuring these flags might be useful for large-scale Shoot clusters with a lot of parallel update requests
+Configuring these flags might be useful for large-scale Garden clusters with a lot of parallel update requests
 and a lot of watching controllers (e.g. large ManagedSeed clusters). When the API server&rsquo;s watch cache&rsquo;s
 capacity is too small to cope with the amount of update requests and watchers for a particular resource, it
 might happen that controller watches are permanently stopped with <code>too old resource version</code> errors.

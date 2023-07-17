@@ -15,15 +15,9 @@
 package apiserver
 
 import (
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/apiserver/pkg/admission/plugin/namespace/lifecycle"
 	"k8s.io/apiserver/pkg/admission/plugin/resourcequota"
-	"k8s.io/apiserver/pkg/admission/plugin/validatingadmissionpolicy"
-	mutatingwebhook "k8s.io/apiserver/pkg/admission/plugin/webhook/mutating"
-	validatingwebhook "k8s.io/apiserver/pkg/admission/plugin/webhook/validating"
 
-	plugin "github.com/gardener/gardener/plugin/pkg"
 	bastionvalidator "github.com/gardener/gardener/plugin/pkg/bastion/validator"
 	controllerregistrationresources "github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
 	"github.com/gardener/gardener/plugin/pkg/global/customverbauthorizer"
@@ -46,42 +40,6 @@ import (
 	shoottolerationrestriction "github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction"
 	shootvalidator "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 	shootvpa "github.com/gardener/gardener/plugin/pkg/shoot/vpa"
-)
-
-var (
-	// AllOrderedPlugins is the list of all the plugins in order.
-	AllOrderedPlugins = plugin.AllPluginNames()
-
-	// DefaultOnPlugins is the set of admission plugins that are enabled by default.
-	DefaultOnPlugins = sets.NewString(
-		lifecycle.PluginName,                             // NamespaceLifecycle
-		plugin.PluginNameResourceReferenceManager,        // ResourceReferenceManager
-		plugin.PluginNameExtensionValidator,              // ExtensionValidator
-		plugin.PluginNameExtensionLabels,                 // ExtensionLabels
-		plugin.PluginNameShootTolerationRestriction,      // ShootTolerationRestriction
-		plugin.PluginNameShootExposureClass,              // ShootExposureClass
-		plugin.PluginNameShootDNS,                        // ShootDNS
-		plugin.PluginNameShootManagedSeed,                // ShootManagedSeed
-		plugin.PluginNameShootQuotaValidator,             // ShootQuotaValidator
-		plugin.PluginNameShootValidator,                  // ShootValidator
-		plugin.PluginNameSeedValidator,                   // SeedValidator
-		plugin.PluginNameControllerRegistrationResources, // ControllerRegistrationResources
-		plugin.PluginNameProjectValidator,                // ProjectValidator
-		plugin.PluginNameDeletionConfirmation,            // DeletionConfirmation
-		plugin.PluginNameOpenIDConnectPreset,             // OpenIDConnectPreset
-		plugin.PluginNameClusterOpenIDConnectPreset,      // ClusterOpenIDConnectPreset
-		plugin.PluginNameCustomVerbAuthorizer,            // CustomVerbAuthorizer
-		plugin.PluginNameManagedSeed,                     // ManagedSeed
-		plugin.PluginNameManagedSeedShoot,                // ManagedSeedShoot
-		plugin.PluginNameBastion,                         // Bastion
-		mutatingwebhook.PluginName,                       // MutatingAdmissionWebhook
-		validatingwebhook.PluginName,                     // ValidatingAdmissionWebhook
-		validatingadmissionpolicy.PluginName,             // ValidatingAdmissionPolicy
-		resourcequota.PluginName,                         // ResourceQuota
-	)
-
-	// DefaultOffPlugins is the set of admission plugins that are disabled by default.
-	DefaultOffPlugins = sets.NewString(AllOrderedPlugins...).Difference(DefaultOnPlugins)
 )
 
 // RegisterAllAdmissionPlugins registers all admission plugins.

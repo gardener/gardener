@@ -954,23 +954,23 @@ func ValidateAPIServerRequests(requests *core.APIServerRequests, fldPath *field.
 	allErrs := field.ErrorList{}
 
 	if requests != nil {
-		const maxMaxNonMutatingRequestsInflight = 800
+		const maxNonMutatingRequestsInflight = 800
 		if v := requests.MaxNonMutatingInflight; v != nil {
 			path := fldPath.Child("maxNonMutatingInflight")
 
 			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*v), path)...)
-			if *v > maxMaxNonMutatingRequestsInflight {
-				allErrs = append(allErrs, field.Invalid(path, *v, fmt.Sprintf("cannot set higher than %d", maxMaxNonMutatingRequestsInflight)))
+			if *v > maxNonMutatingRequestsInflight {
+				allErrs = append(allErrs, field.Invalid(path, *v, fmt.Sprintf("cannot set higher than %d", maxNonMutatingRequestsInflight)))
 			}
 		}
 
-		const maxMaxMutatingRequestsInflight = 400
+		const maxMutatingRequestsInflight = 400
 		if v := requests.MaxMutatingInflight; v != nil {
 			path := fldPath.Child("maxMutatingInflight")
 
 			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*v), path)...)
-			if *v > maxMaxMutatingRequestsInflight {
-				allErrs = append(allErrs, field.Invalid(path, *v, fmt.Sprintf("cannot set higher than %d", maxMaxMutatingRequestsInflight)))
+			if *v > maxMutatingRequestsInflight {
+				allErrs = append(allErrs, field.Invalid(path, *v, fmt.Sprintf("cannot set higher than %d", maxMutatingRequestsInflight)))
 			}
 		}
 	}
