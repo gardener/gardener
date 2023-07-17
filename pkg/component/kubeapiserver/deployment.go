@@ -31,6 +31,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/constants"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
@@ -48,7 +49,7 @@ import (
 )
 
 const (
-	secretNameServer                 = "kube-apiserver"
+	secretNameServerCert             = "kube-apiserver"
 	secretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"
 	secretNameKubeAggregator         = "kube-aggregator"
 	secretNameHTTPProxy              = "kube-apiserver-http-proxy"
@@ -59,26 +60,18 @@ const (
 	containerNameVPNSeedClient = "vpn-client"
 	containerNameWatchdog      = "watchdog"
 
-	volumeNameAdmissionConfiguration          = "admission-config"
-	volumeNameAdmissionKubeconfigSecrets      = "admission-kubeconfigs"
-	volumeNameAuditPolicy                     = "audit-policy-config"
-	volumeNameAuditWebhookKubeconfig          = "audit-webhook-kubeconfig"
 	volumeNameAuthenticationWebhookKubeconfig = "authentication-webhook-kubeconfig"
 	volumeNameAuthorizationWebhookKubeconfig  = "authorization-webhook-kubeconfig"
 	volumeNameCA                              = "ca"
 	volumeNameCAClient                        = "ca-client"
-	volumeNameCAEtcd                          = "ca-etcd"
 	volumeNameCAFrontProxy                    = "ca-front-proxy"
 	volumeNameCAKubelet                       = "ca-kubelet"
 	volumeNameCAVPN                           = "ca-vpn"
 	volumeNameEgressSelector                  = "egress-selection-config"
-	volumeNameEtcdClient                      = "etcd-client"
-	volumeNameEtcdEncryptionConfig            = "etcd-encryption-secret"
 	volumeNameHTTPProxy                       = "http-proxy"
 	volumeNameKubeAPIServerToKubelet          = "kubelet-client"
 	volumeNameKubeAggregator                  = "kube-aggregator"
 	volumeNameOIDCCABundle                    = "oidc-cabundle"
-	volumeNameServer                          = "kube-apiserver-server"
 	volumeNameServiceAccountKey               = "service-account-key"
 	volumeNameServiceAccountKeyBundle         = "service-account-key-bundle"
 	volumeNameStaticToken                     = "static-token"
@@ -93,26 +86,18 @@ const (
 	volumeNameUsrShareCaCerts                 = "usr-share-cacerts"
 	volumeNameWatchdog                        = "watchdog"
 
-	volumeMountPathAdmissionConfiguration          = "/etc/kubernetes/admission"
-	volumeMountPathAdmissionKubeconfigSecrets      = "/etc/kubernetes/admission-kubeconfigs"
-	volumeMountPathAuditPolicy                     = "/etc/kubernetes/audit"
-	volumeMountPathAuditWebhookKubeconfig          = "/etc/kubernetes/webhook/audit"
 	volumeMountPathAuthenticationWebhookKubeconfig = "/etc/kubernetes/webhook/authentication"
 	volumeMountPathAuthorizationWebhookKubeconfig  = "/etc/kubernetes/webhook/authorization"
 	volumeMountPathCA                              = "/srv/kubernetes/ca"
 	volumeMountPathCAClient                        = "/srv/kubernetes/ca-client"
-	volumeMountPathCAEtcd                          = "/srv/kubernetes/etcd/ca"
 	volumeMountPathCAFrontProxy                    = "/srv/kubernetes/ca-front-proxy"
 	volumeMountPathCAKubelet                       = "/srv/kubernetes/ca-kubelet"
 	volumeMountPathCAVPN                           = "/srv/kubernetes/ca-vpn"
 	volumeMountPathEgressSelector                  = "/etc/kubernetes/egress"
-	volumeMountPathEtcdEncryptionConfig            = "/etc/kubernetes/etcd-encryption-secret"
-	volumeMountPathEtcdClient                      = "/srv/kubernetes/etcd/client"
 	volumeMountPathHTTPProxy                       = "/etc/srv/kubernetes/envoy"
 	volumeMountPathKubeAPIServerToKubelet          = "/srv/kubernetes/apiserver-kubelet"
 	volumeMountPathKubeAggregator                  = "/srv/kubernetes/aggregator"
 	volumeMountPathOIDCCABundle                    = "/srv/kubernetes/oidc"
-	volumeMountPathServer                          = "/srv/kubernetes/apiserver"
 	volumeMountPathServiceAccountKey               = "/srv/kubernetes/service-account-key"
 	volumeMountPathServiceAccountKeyBundle         = "/srv/kubernetes/service-account-key-bundle"
 	volumeMountPathStaticToken                     = "/srv/kubernetes/token"
@@ -248,7 +233,8 @@ func (k *kubeAPIServer) reconcileDeployment(
 						Name:                     ContainerNameKubeAPIServer,
 						Image:                    k.values.Images.KubeAPIServer,
 						ImagePullPolicy:          corev1.PullIfNotPresent,
-						Command:                  k.computeKubeAPIServerCommand(),
+						Command:                  []string{"/usr/local/bin/kube-apiserver"},
+						Args:                     k.computeKubeAPIServerArgs(),
 						TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 						TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 						Ports: []corev1.ContainerPort{{
@@ -295,14 +281,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 						},
 						VolumeMounts: []corev1.VolumeMount{
 							{
-								Name:      volumeNameAdmissionConfiguration,
-								MountPath: volumeMountPathAdmissionConfiguration,
-							},
-							{
-								Name:      volumeNameAdmissionKubeconfigSecrets,
-								MountPath: volumeMountPathAdmissionKubeconfigSecrets,
-							},
-							{
 								Name:      volumeNameCA,
 								MountPath: volumeMountPathCA,
 							},
@@ -311,20 +289,8 @@ func (k *kubeAPIServer) reconcileDeployment(
 								MountPath: volumeMountPathCAClient,
 							},
 							{
-								Name:      volumeNameCAEtcd,
-								MountPath: volumeMountPathCAEtcd,
-							},
-							{
 								Name:      volumeNameCAFrontProxy,
 								MountPath: volumeMountPathCAFrontProxy,
-							},
-							{
-								Name:      volumeNameEtcdClient,
-								MountPath: volumeMountPathEtcdClient,
-							},
-							{
-								Name:      volumeNameServer,
-								MountPath: volumeMountPathServer,
 							},
 							{
 								Name:      volumeNameServiceAccountKey,
@@ -342,32 +308,9 @@ func (k *kubeAPIServer) reconcileDeployment(
 								Name:      volumeNameKubeAggregator,
 								MountPath: volumeMountPathKubeAggregator,
 							},
-							{
-								Name:      volumeNameEtcdEncryptionConfig,
-								MountPath: volumeMountPathEtcdEncryptionConfig,
-								ReadOnly:  true,
-							},
 						},
 					}},
 					Volumes: []corev1.Volume{
-						{
-							Name: volumeNameAdmissionConfiguration,
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: configMapAdmissionConfigs.Name,
-									},
-								},
-							},
-						},
-						{
-							Name: volumeNameAdmissionKubeconfigSecrets,
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: secretAdmissionKubeconfigs.Name,
-								},
-							},
-						},
 						{
 							Name: volumeNameCA,
 							VolumeSource: corev1.VolumeSource{
@@ -385,26 +328,10 @@ func (k *kubeAPIServer) reconcileDeployment(
 							},
 						},
 						{
-							Name: volumeNameCAEtcd,
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: secretCAETCD.Name,
-								},
-							},
-						},
-						{
 							Name: volumeNameCAFrontProxy,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName: secretCAFrontProxy.Name,
-								},
-							},
-						},
-						{
-							Name: volumeNameEtcdClient,
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: secretETCDClient.Name,
 								},
 							},
 						},
@@ -440,34 +367,21 @@ func (k *kubeAPIServer) reconcileDeployment(
 								},
 							},
 						},
-						{
-							Name: volumeNameEtcdEncryptionConfig,
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: secretETCDEncryptionConfiguration.Name,
-								},
-							},
-						},
-						{
-							Name: volumeNameServer,
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: secretServer.Name,
-								},
-							},
-						},
 					},
 				},
 			},
 		}
 
+		apiserver.InjectDefaultSettings(deployment, k.values.NamePrefix, k.values.Values, k.values.Version, secretCAETCD, secretETCDClient, secretServer)
+		apiserver.InjectAuditSettings(deployment, configMapAuditPolicy, secretAuditWebhookKubeconfig, k.values.Audit)
+		apiserver.InjectAdmissionSettings(deployment, configMapAdmissionConfigs, secretAdmissionKubeconfigs, k.values.Values)
+		apiserver.InjectEncryptionSettings(deployment, secretETCDEncryptionConfiguration)
 		k.handleLifecycleSettings(deployment)
 		k.handleHostCertVolumes(deployment)
 		k.handleSNISettings(deployment)
 		k.handleTLSSNISettings(deployment, tlsSNISecrets)
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
 		k.handleServiceAccountSigningKeySettings(deployment)
-		k.handleAuditSettings(deployment, configMapAuditPolicy, secretAuditWebhookKubeconfig)
 		k.handleAuthenticationSettings(deployment, secretAuthenticationWebhookKubeconfig)
 		k.handleAuthorizationSettings(deployment, secretAuthorizationWebhookKubeconfig)
 		if err := k.handleVPNSettings(deployment, serviceAccount, configMapEgressSelector, secretHTTPProxy, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth); err != nil {
@@ -491,19 +405,9 @@ func (k *kubeAPIServer) reconcileDeployment(
 	return err
 }
 
-func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
+func (k *kubeAPIServer) computeKubeAPIServerArgs() []string {
 	var out []string
 
-	out = append(out, "/usr/local/bin/kube-apiserver")
-
-	if len(k.values.EnabledAdmissionPlugins) > 0 {
-		out = append(out, "--enable-admission-plugins="+strings.Join(k.admissionPluginNames(), ","))
-	}
-	if len(k.values.DisabledAdmissionPlugins) > 0 {
-		out = append(out, "--disable-admission-plugins="+strings.Join(k.disabledAdmissionPluginNames(), ","))
-	}
-
-	out = append(out, fmt.Sprintf("--admission-control-config-file=%s/%s", volumeMountPathAdmissionConfiguration, configMapAdmissionDataKey))
 	out = append(out, "--anonymous-auth="+strconv.FormatBool(k.values.AnonymousAuthenticationEnabled))
 
 	if len(k.values.APIAudiences) > 0 {
@@ -513,13 +417,7 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, fmt.Sprintf("--client-ca-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyCertificateBundle))
 	out = append(out, "--enable-aggregator-routing=true")
 	out = append(out, "--enable-bootstrap-token-auth=true")
-	out = append(out, "--http2-max-streams-per-connection=1000")
-	out = append(out, fmt.Sprintf("--etcd-cafile=%s/%s", volumeMountPathCAEtcd, secrets.DataKeyCertificateBundle))
-	out = append(out, fmt.Sprintf("--etcd-certfile=%s/%s", volumeMountPathEtcdClient, secrets.DataKeyCertificate))
-	out = append(out, fmt.Sprintf("--etcd-keyfile=%s/%s", volumeMountPathEtcdClient, secrets.DataKeyPrivateKey))
-	out = append(out, fmt.Sprintf("--etcd-servers=https://%s%s:%d", k.values.NamePrefix, etcdconstants.ServiceName(v1beta1constants.ETCDRoleMain), etcdconstants.PortEtcdClient))
 	out = append(out, "--etcd-servers-overrides="+k.etcdServersOverrides())
-	out = append(out, fmt.Sprintf("--encryption-provider-config=%s/%s", volumeMountPathEtcdEncryptionConfig, secretETCDEncryptionConfigurationDataKey))
 	out = append(out, "--external-hostname="+k.values.ExternalHostname)
 
 	if k.values.DefaultNotReadyTolerationSeconds != nil {
@@ -533,25 +431,10 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 		out = append(out, fmt.Sprintf("--event-ttl=%s", k.values.EventTTL.Duration))
 	}
 
-	if k.values.FeatureGates != nil {
-		out = append(out, kubernetesutils.FeatureGatesToCommandLineParameter(k.values.FeatureGates))
-	}
-
 	if version.ConstraintK8sLess124.Check(k.values.Version) {
 		out = append(out, "--insecure-port=0")
 	}
 
-	if k.values.Requests != nil {
-		if k.values.Requests.MaxNonMutatingInflight != nil {
-			out = append(out, fmt.Sprintf("--max-requests-inflight=%d", *k.values.Requests.MaxNonMutatingInflight))
-		}
-
-		if k.values.Requests.MaxMutatingInflight != nil {
-			out = append(out, fmt.Sprintf("--max-mutating-requests-inflight=%d", *k.values.Requests.MaxMutatingInflight))
-		}
-	}
-
-	out = append(out, "--profiling=false")
 	out = append(out, fmt.Sprintf("--proxy-client-cert-file=%s/%s", volumeMountPathKubeAggregator, secrets.DataKeyCertificate))
 	out = append(out, fmt.Sprintf("--proxy-client-key-file=%s/%s", volumeMountPathKubeAggregator, secrets.DataKeyPrivateKey))
 	out = append(out, fmt.Sprintf("--requestheader-client-ca-file=%s/%s", volumeMountPathCAFrontProxy, secrets.DataKeyCertificateBundle))
@@ -594,40 +477,6 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, fmt.Sprintf("--service-cluster-ip-range=%s", k.values.ServiceNetworkCIDR))
 	out = append(out, fmt.Sprintf("--secure-port=%d", kubeapiserverconstants.Port))
 	out = append(out, fmt.Sprintf("--token-auth-file=%s/%s", volumeMountPathStaticToken, secrets.DataKeyStaticTokenCSV))
-	out = append(out, fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificate))
-	out = append(out, fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.DataKeyPrivateKey))
-	out = append(out, "--tls-cipher-suites="+strings.Join(kubernetesutils.TLSCipherSuites(k.values.Version), ","))
-
-	if k.values.Logging != nil {
-		if k.values.Logging.HTTPAccessVerbosity != nil {
-			out = append(out, fmt.Sprintf("--vmodule=httplog=%d", *k.values.Logging.HTTPAccessVerbosity))
-		}
-		if k.values.Logging.Verbosity != nil {
-			out = append(out, fmt.Sprintf("--v=%d", *k.values.Logging.Verbosity))
-		}
-	}
-
-	if k.values.WatchCacheSizes != nil {
-		if k.values.WatchCacheSizes.Default != nil {
-			out = append(out, fmt.Sprintf("--default-watch-cache-size=%d", *k.values.WatchCacheSizes.Default))
-		}
-
-		if len(k.values.WatchCacheSizes.Resources) > 0 {
-			var sizes []string
-
-			for _, resource := range k.values.WatchCacheSizes.Resources {
-				size := resource.Resource
-				if resource.APIGroup != nil {
-					size += "." + *resource.APIGroup
-				}
-				size += fmt.Sprintf("#%d", resource.CacheSize)
-
-				sizes = append(sizes, size)
-			}
-
-			out = append(out, "--watch-cache-sizes="+strings.Join(sizes, ","))
-		}
-	}
 
 	return out
 }
@@ -647,26 +496,6 @@ func (k *kubeAPIServer) etcdServersOverrides() string {
 		overrides = append(overrides, fmt.Sprintf("%s/%s#https://%s%s:%d", resource.Group, resource.Resource, k.values.NamePrefix, etcdconstants.ServiceName(v1beta1constants.ETCDRoleEvents), etcdconstants.PortEtcdClient))
 	}
 	return strings.Join(overrides, ",")
-}
-
-func (k *kubeAPIServer) admissionPluginNames() []string {
-	var out []string
-
-	for _, plugin := range k.values.EnabledAdmissionPlugins {
-		out = append(out, plugin.Name)
-	}
-
-	return out
-}
-
-func (k *kubeAPIServer) disabledAdmissionPluginNames() []string {
-	var out []string
-
-	for _, plugin := range k.values.DisabledAdmissionPlugins {
-		out = append(out, plugin.Name)
-	}
-
-	return out
 }
 
 func (k *kubeAPIServer) handleHostCertVolumes(deployment *appsv1.Deployment) {
@@ -743,7 +572,7 @@ func (k *kubeAPIServer) handleSNISettings(deployment *appsv1.Deployment) {
 	}
 
 	deployment.Labels[v1beta1constants.LabelAPIServerExposure] = v1beta1constants.LabelAPIServerExposureGardenerManaged
-	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--advertise-address=%s", k.values.SNI.AdvertiseAddress))
+	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--advertise-address=%s", k.values.SNI.AdvertiseAddress))
 }
 
 func (k *kubeAPIServer) handleTLSSNISettings(deployment *appsv1.Deployment, tlsSNISecrets []tlsSNISecret) {
@@ -758,7 +587,7 @@ func (k *kubeAPIServer) handleTLSSNISettings(deployment *appsv1.Deployment, tlsS
 			flag += ":" + strings.Join(sni.domainPatterns, ",")
 		}
 
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, flag)
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, flag)
 		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 			Name:      volumeName,
 			MountPath: volumeMountPath,
@@ -776,8 +605,6 @@ func (k *kubeAPIServer) handleTLSSNISettings(deployment *appsv1.Deployment, tlsS
 }
 
 func (k *kubeAPIServer) handleLifecycleSettings(deployment *appsv1.Deployment) {
-	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--livez-grace-period=1m")
-	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--shutdown-delay-duration=15s")
 	// For kube-apiserver version 1.24 there is a deadlock that can occur during shutdown that prevents the graceful termination
 	// of the kube-apiserver container to complete when the --audit-log-mode setting is set to batch. Open TCP connections to that
 	// kube-apiserver are not terminated and clients will keep receiving an error that the kube-apiserver is shutting down which leads
@@ -786,7 +613,7 @@ func (k *kubeAPIServer) handleLifecycleSettings(deployment *appsv1.Deployment) {
 	// requests will have their connections closed and eventually be reopened to healthy kube-apiservers.
 	// TODO: Once https://github.com/kubernetes/kubernetes/pull/113741 is merged this setting can be removed.
 	if version.ConstraintK8sEqual124.Check(k.values.Version) {
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--shutdown-send-retry-after=true")
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--shutdown-send-retry-after=true")
 	}
 }
 
@@ -825,7 +652,7 @@ func (k *kubeAPIServer) handleVPNSettingsNonHA(
 	deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
 		gardenerutils.NetworkPolicyLabel(vpnseedserver.ServiceName, vpnseedserver.EnvoyPort): v1beta1constants.LabelNetworkPolicyAllowed,
 	})
-	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--egress-selector-config-file=%s/%s", volumeMountPathEgressSelector, configMapEgressSelectorDataKey))
+	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--egress-selector-config-file=%s/%s", volumeMountPathEgressSelector, configMapEgressSelectorDataKey))
 	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
 		{
 			Name:      volumeNameCAVPN,
@@ -1152,7 +979,7 @@ func (k *kubeAPIServer) handleOIDCSettings(deployment *appsv1.Deployment, secret
 	}
 
 	if k.values.OIDC.CABundle != nil {
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--oidc-ca-file=%s/%s", volumeMountPathOIDCCABundle, secretOIDCCABundleDataKeyCaCrt))
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--oidc-ca-file=%s/%s", volumeMountPathOIDCCABundle, secretOIDCCABundleDataKeyCaCrt))
 		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
 			{
 				Name:      volumeNameOIDCCABundle,
@@ -1172,41 +999,41 @@ func (k *kubeAPIServer) handleOIDCSettings(deployment *appsv1.Deployment, secret
 	}
 
 	if v := k.values.OIDC.IssuerURL; v != nil {
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-issuer-url="+*v)
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--oidc-issuer-url="+*v)
 	}
 
 	if v := k.values.OIDC.ClientID; v != nil {
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-client-id="+*v)
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--oidc-client-id="+*v)
 	}
 
 	if v := k.values.OIDC.UsernameClaim; v != nil {
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-username-claim="+*v)
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--oidc-username-claim="+*v)
 	}
 
 	if v := k.values.OIDC.GroupsClaim; v != nil {
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-groups-claim="+*v)
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--oidc-groups-claim="+*v)
 	}
 
 	if v := k.values.OIDC.UsernamePrefix; v != nil {
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-username-prefix="+*v)
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--oidc-username-prefix="+*v)
 	}
 
 	if v := k.values.OIDC.GroupsPrefix; v != nil {
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-groups-prefix="+*v)
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--oidc-groups-prefix="+*v)
 	}
 
 	if k.values.OIDC.SigningAlgs != nil {
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-signing-algs="+strings.Join(k.values.OIDC.SigningAlgs, ","))
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--oidc-signing-algs="+strings.Join(k.values.OIDC.SigningAlgs, ","))
 	}
 
 	for key, value := range k.values.OIDC.RequiredClaims {
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-required-claim="+fmt.Sprintf("%s=%s", key, value))
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--oidc-required-claim="+fmt.Sprintf("%s=%s", key, value))
 	}
 }
 
 func (k *kubeAPIServer) handleServiceAccountSigningKeySettings(deployment *appsv1.Deployment) {
-	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--service-account-signing-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey))
-	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--service-account-key-file=%s/%s", volumeMountPathServiceAccountKeyBundle, secrets.DataKeyPrivateKeyBundle))
+	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--service-account-signing-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey))
+	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--service-account-key-file=%s/%s", volumeMountPathServiceAccountKeyBundle, secrets.DataKeyPrivateKeyBundle))
 }
 
 func (k *kubeAPIServer) handleKubeletSettings(deployment *appsv1.Deployment, secretKubeletClient *corev1.Secret) error {
@@ -1219,7 +1046,7 @@ func (k *kubeAPIServer) handleKubeletSettings(deployment *appsv1.Deployment, sec
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAKubelet)
 	}
 
-	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command,
+	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args,
 		"--allow-privileged=true",
 		"--kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP",
 		fmt.Sprintf("--kubelet-certificate-authority=%s/%s", volumeMountPathCAKubelet, secrets.DataKeyCertificateBundle),
@@ -1294,66 +1121,13 @@ func (k *kubeAPIServer) handleWatchdogSidecar(deployment *appsv1.Deployment, con
 	})
 }
 
-func (k *kubeAPIServer) handleAuditSettings(deployment *appsv1.Deployment, configMapAuditPolicy *corev1.ConfigMap, secretWebhookKubeconfig *corev1.Secret) {
-	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--audit-policy-file=%s/%s", volumeMountPathAuditPolicy, configMapAuditPolicyDataKey))
-
-	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-		Name:      volumeNameAuditPolicy,
-		MountPath: volumeMountPathAuditPolicy,
-	})
-	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-		Name: volumeNameAuditPolicy,
-		VolumeSource: corev1.VolumeSource{
-			ConfigMap: &corev1.ConfigMapVolumeSource{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: configMapAuditPolicy.Name,
-				},
-			},
-		},
-	})
-
-	if k.values.Audit == nil || k.values.Audit.Webhook == nil {
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command,
-			"--audit-log-path=/var/lib/audit.log",
-			"--audit-log-maxsize=100",
-			"--audit-log-maxbackup=5",
-		)
-		return
-	}
-
-	if len(k.values.Audit.Webhook.Kubeconfig) > 0 {
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--audit-webhook-config-file=%s/%s", volumeMountPathAuditWebhookKubeconfig, secretWebhookKubeconfigDataKey))
-		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-			Name:      volumeNameAuditWebhookKubeconfig,
-			MountPath: volumeMountPathAuditWebhookKubeconfig,
-			ReadOnly:  true,
-		})
-		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-			Name: volumeNameAuditWebhookKubeconfig,
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: secretWebhookKubeconfig.Name,
-				},
-			},
-		})
-	}
-
-	if v := k.values.Audit.Webhook.BatchMaxSize; v != nil {
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--audit-webhook-batch-max-size=%d", *v))
-	}
-
-	if v := k.values.Audit.Webhook.Version; v != nil {
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--audit-webhook-version=%s", *v))
-	}
-}
-
 func (k *kubeAPIServer) handleAuthenticationSettings(deployment *appsv1.Deployment, secretWebhookKubeconfig *corev1.Secret) {
 	if k.values.AuthenticationWebhook == nil {
 		return
 	}
 
 	if len(k.values.AuthenticationWebhook.Kubeconfig) > 0 {
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--authentication-token-webhook-config-file=%s/%s", volumeMountPathAuthenticationWebhookKubeconfig, secretWebhookKubeconfigDataKey))
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authentication-token-webhook-config-file=%s/%s", volumeMountPathAuthenticationWebhookKubeconfig, apiserver.SecretWebhookKubeconfigDataKey))
 		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 			Name:      volumeNameAuthenticationWebhookKubeconfig,
 			MountPath: volumeMountPathAuthenticationWebhookKubeconfig,
@@ -1370,11 +1144,11 @@ func (k *kubeAPIServer) handleAuthenticationSettings(deployment *appsv1.Deployme
 	}
 
 	if v := k.values.AuthenticationWebhook.CacheTTL; v != nil {
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--authentication-token-webhook-cache-ttl=%s", v.String()))
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authentication-token-webhook-cache-ttl=%s", v.String()))
 	}
 
 	if v := k.values.AuthenticationWebhook.Version; v != nil {
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--authentication-token-webhook-version=%s", *v))
+		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authentication-token-webhook-version=%s", *v))
 	}
 }
 
@@ -1389,7 +1163,7 @@ func (k *kubeAPIServer) handleAuthorizationSettings(deployment *appsv1.Deploymen
 		authModes = append(authModes, "Webhook")
 
 		if len(k.values.AuthorizationWebhook.Kubeconfig) > 0 {
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--authorization-webhook-config-file=%s/%s", volumeMountPathAuthorizationWebhookKubeconfig, secretWebhookKubeconfigDataKey))
+			deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authorization-webhook-config-file=%s/%s", volumeMountPathAuthorizationWebhookKubeconfig, apiserver.SecretWebhookKubeconfigDataKey))
 			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 				Name:      volumeNameAuthorizationWebhookKubeconfig,
 				MountPath: volumeMountPathAuthorizationWebhookKubeconfig,
@@ -1406,16 +1180,16 @@ func (k *kubeAPIServer) handleAuthorizationSettings(deployment *appsv1.Deploymen
 		}
 
 		if v := k.values.AuthorizationWebhook.CacheAuthorizedTTL; v != nil {
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--authorization-webhook-cache-authorized-ttl=%s", v.String()))
+			deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authorization-webhook-cache-authorized-ttl=%s", v.String()))
 		}
 		if v := k.values.AuthorizationWebhook.CacheUnauthorizedTTL; v != nil {
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--authorization-webhook-cache-unauthorized-ttl=%s", v.String()))
+			deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authorization-webhook-cache-unauthorized-ttl=%s", v.String()))
 		}
 
 		if v := k.values.AuthorizationWebhook.Version; v != nil {
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--authorization-webhook-version=%s", *v))
+			deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authorization-webhook-version=%s", *v))
 		}
 	}
 
-	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--authorization-mode="+strings.Join(authModes, ","))
+	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, "--authorization-mode="+strings.Join(authModes, ","))
 }

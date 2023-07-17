@@ -8,6 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	apiserver "github.com/gardener/gardener/pkg/component/apiserver"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubeapiserver"
 	gomock "github.com/golang/mock/gomock"
 	v1 "k8s.io/api/core/v1"
@@ -147,7 +148,7 @@ func (mr *MockInterfaceMockRecorder) SetAutoscalingReplicas(arg0 interface{}) *g
 }
 
 // SetETCDEncryptionConfig mocks base method.
-func (m *MockInterface) SetETCDEncryptionConfig(arg0 kubeapiserver.ETCDEncryptionConfig) {
+func (m *MockInterface) SetETCDEncryptionConfig(arg0 apiserver.ETCDEncryptionConfig) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetETCDEncryptionConfig", arg0)
 }

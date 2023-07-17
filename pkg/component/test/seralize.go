@@ -23,15 +23,22 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 )
 
 // Serialize serializes and encodes the passed object.
 func Serialize(obj client.Object) string {
-	var (
-		scheme        = kubernetes.SeedScheme
-		groupVersions []schema.GroupVersion
+	testSchemeBuilder := runtime.NewSchemeBuilder(
+		kubernetes.AddGardenSchemeToScheme,
+		kubernetes.AddSeedSchemeToScheme,
+		kubernetes.AddShootSchemeToScheme,
+		operatorclient.AddRuntimeSchemeToScheme,
+		operatorclient.AddVirtualSchemeToScheme,
 	)
+	scheme := runtime.NewScheme()
+	ExpectWithOffset(1, testSchemeBuilder.AddToScheme(scheme)).To(Succeed())
 
+	var groupVersions []schema.GroupVersion
 	for k := range scheme.AllKnownTypes() {
 		groupVersions = append(groupVersions, k.GroupVersion())
 	}
@@ -42,7 +49,7 @@ func Serialize(obj client.Object) string {
 	)
 
 	serializationYAML, err := runtime.Encode(codec, obj)
-	Expect(err).NotTo(HaveOccurred())
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
 	return string(serializationYAML)
 }

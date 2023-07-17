@@ -20,4 +20,7 @@ const (
 
 	// SecretNameCARuntime is a constant for the name of a secret containing the CA for the garden runtime cluster.
 	SecretNameCARuntime = "ca-garden-runtime"
+	// SecretNameCAGardener is a constant for the name of a Kubernetes secret object that contains the CA
+	// certificate of the Gardener control plane.
+	SecretNameCAGardener = "ca-gardener"
 )

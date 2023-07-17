@@ -58,6 +58,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			waitForGardenToBeDeleted(ctx, garden)
 			cleanupVolumes(ctx)
 			Expect(runtimeClient.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(namespace), client.MatchingLabels{"role": "kube-apiserver-etcd-encryption-configuration"})).To(Succeed())
+			Expect(runtimeClient.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(namespace), client.MatchingLabels{"role": "gardener-apiserver-etcd-encryption-configuration"})).To(Succeed())
 		})
 
 		v := rotationutils.Verifiers{

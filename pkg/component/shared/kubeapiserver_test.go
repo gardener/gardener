@@ -41,6 +41,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubeapiserver/mock"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -75,12 +76,12 @@ var _ = Describe("KubeAPIServer", func() {
 			imageVector                  imagevector.ImageVector
 			namePrefix                   string
 			serviceNetworkCIDR           string
-			autoscalingConfig            kubeapiserver.AutoscalingConfig
+			autoscalingConfig            apiserver.AutoscalingConfig
 			vpnConfig                    kubeapiserver.VPNConfig
 			priorityClassName            string
 			isWorkerless                 bool
 			staticTokenKubeconfigEnabled *bool
-			auditWebhookConfig           *kubeapiserver.AuditWebhook
+			auditWebhookConfig           *apiserver.AuditWebhook
 			authenticationWebhookConfig  *kubeapiserver.AuthenticationWebhook
 			authorizationWebhookConfig   *kubeapiserver.AuthorizationWebhook
 			resourcesToStoreInETCDEvents []schema.GroupResource
@@ -98,7 +99,7 @@ var _ = Describe("KubeAPIServer", func() {
 			imageVector = imagevector.ImageVector{{Name: "kube-apiserver"}}
 			namePrefix = ""
 			serviceNetworkCIDR = "10.0.2.0/24"
-			autoscalingConfig = kubeapiserver.AutoscalingConfig{}
+			autoscalingConfig = apiserver.AutoscalingConfig{}
 			vpnConfig = kubeapiserver.VPNConfig{}
 			priorityClassName = "priority-class"
 			isWorkerless = false
@@ -206,7 +207,7 @@ var _ = Describe("KubeAPIServer", func() {
 			})
 
 			DescribeTable("should have the expected admission plugins config",
-				func(configuredPlugins []gardencorev1beta1.AdmissionPlugin, expectedPlugins []kubeapiserver.AdmissionPluginConfig, isWorkerless bool) {
+				func(configuredPlugins []gardencorev1beta1.AdmissionPlugin, expectedPlugins []apiserver.AdmissionPluginConfig, isWorkerless bool) {
 					apiServerConfig.AdmissionPlugins = configuredPlugins
 
 					kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, imageVector, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents)
@@ -216,7 +217,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 				Entry("only default plugins",
 					nil,
-					[]kubeapiserver.AdmissionPluginConfig{
+					[]apiserver.AdmissionPluginConfig{
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
@@ -234,7 +235,7 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("exclude PodSecurityPolicy from default plugins (workerless)",
 					nil,
-					[]kubeapiserver.AdmissionPluginConfig{
+					[]apiserver.AdmissionPluginConfig{
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
@@ -253,7 +254,7 @@ var _ = Describe("KubeAPIServer", func() {
 					[]gardencorev1beta1.AdmissionPlugin{
 						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, KubeconfigSecretName: pointer.String("secret-1")},
 					},
-					[]kubeapiserver.AdmissionPluginConfig{
+					[]apiserver.AdmissionPluginConfig{
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, KubeconfigSecretName: pointer.String("secret-1")}, Kubeconfig: []byte("kubeconfig-data")},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
@@ -276,7 +277,7 @@ var _ = Describe("KubeAPIServer", func() {
 						{Name: "Bar"},
 						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}},
 					},
-					[]kubeapiserver.AdmissionPluginConfig{
+					[]apiserver.AdmissionPluginConfig{
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
@@ -302,7 +303,7 @@ var _ = Describe("KubeAPIServer", func() {
 						{Name: "Bar", Disabled: pointer.Bool(true)},
 						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}, Disabled: pointer.Bool(true)},
 					},
-					[]kubeapiserver.AdmissionPluginConfig{
+					[]apiserver.AdmissionPluginConfig{
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
@@ -329,7 +330,7 @@ var _ = Describe("KubeAPIServer", func() {
 						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}},
 						{Name: "ServiceAccount", Disabled: pointer.Bool(false)},
 					},
-					[]kubeapiserver.AdmissionPluginConfig{
+					[]apiserver.AdmissionPluginConfig{
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
@@ -356,7 +357,7 @@ var _ = Describe("KubeAPIServer", func() {
 						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}},
 						{Name: "ServiceAccount", Disabled: pointer.Bool(false)},
 					},
-					[]kubeapiserver.AdmissionPluginConfig{
+					[]apiserver.AdmissionPluginConfig{
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
@@ -641,7 +642,7 @@ exemptions:
 			})
 
 			DescribeTable("should have the expected audit config",
-				func(prepTest func(), expectedConfig *kubeapiserver.AuditConfig, errMatcher gomegatypes.GomegaMatcher) {
+				func(prepTest func(), expectedConfig *apiserver.AuditConfig, errMatcher gomegatypes.GomegaMatcher) {
 					if prepTest != nil {
 						prepTest()
 					}
@@ -713,7 +714,7 @@ exemptions:
 							},
 						}
 					},
-					&kubeapiserver.AuditConfig{},
+					&apiserver.AuditConfig{},
 					Not(HaveOccurred()),
 				),
 				Entry("ConfigMapRef is provided but configmap does not have correct data field",
@@ -748,7 +749,7 @@ exemptions:
 							},
 						}
 					},
-					&kubeapiserver.AuditConfig{
+					&apiserver.AuditConfig{
 						Policy: &policy,
 					},
 					Not(HaveOccurred()),
@@ -766,11 +767,11 @@ exemptions:
 								},
 							},
 						}
-						auditWebhookConfig = &kubeapiserver.AuditWebhook{Version: pointer.String("audit-version")}
+						auditWebhookConfig = &apiserver.AuditWebhook{Version: pointer.String("audit-version")}
 					},
-					&kubeapiserver.AuditConfig{
+					&apiserver.AuditConfig{
 						Policy:  &policy,
-						Webhook: &kubeapiserver.AuditWebhook{Version: pointer.String("audit-version")},
+						Webhook: &apiserver.AuditWebhook{Version: pointer.String("audit-version")},
 					},
 					Not(HaveOccurred()),
 				),
@@ -1016,12 +1017,16 @@ exemptions:
 		}
 
 		DescribeTable("should correctly set the autoscaling apiserver resources",
-			func(prepTest func(), autoscalingConfig kubeapiserver.AutoscalingConfig, expectedResources *corev1.ResourceRequirements) {
+			func(prepTest func(), autoscalingConfig apiserver.AutoscalingConfig, expectedResources *corev1.ResourceRequirements) {
 				if prepTest != nil {
 					prepTest()
 				}
 
-				kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{Autoscaling: autoscalingConfig})
+				kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{
+					Values: apiserver.Values{
+						Autoscaling: autoscalingConfig,
+					}},
+				)
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 				if expectedResources != nil {
 					kubeAPIServer.EXPECT().SetAutoscalingAPIServerResources(*expectedResources)
@@ -1039,7 +1044,7 @@ exemptions:
 
 			Entry("nothing is set because deployment is not found",
 				nil,
-				kubeapiserver.AutoscalingConfig{},
+				apiserver.AutoscalingConfig{},
 				nil,
 			),
 			Entry("nothing is set because HVPA is disabled",
@@ -1061,7 +1066,7 @@ exemptions:
 						},
 					})).To(Succeed())
 				},
-				kubeapiserver.AutoscalingConfig{HVPAEnabled: false},
+				apiserver.AutoscalingConfig{HVPAEnabled: false},
 				nil,
 			),
 			Entry("set the existing requirements because deployment found and HVPA enabled",
@@ -1083,18 +1088,22 @@ exemptions:
 						},
 					})).To(Succeed())
 				},
-				kubeapiserver.AutoscalingConfig{HVPAEnabled: true},
+				apiserver.AutoscalingConfig{HVPAEnabled: true},
 				&apiServerResources,
 			),
 		)
 
 		DescribeTable("should correctly set the autoscaling replicas",
-			func(prepTest func(), autoscalingConfig kubeapiserver.AutoscalingConfig, expectedReplicas int32) {
+			func(prepTest func(), autoscalingConfig apiserver.AutoscalingConfig, expectedReplicas int32) {
 				if prepTest != nil {
 					prepTest()
 				}
 
-				kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{Autoscaling: autoscalingConfig})
+				kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{
+					Values: apiserver.Values{
+						Autoscaling: autoscalingConfig,
+					},
+				})
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(&expectedReplicas)
 				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
@@ -1109,19 +1118,19 @@ exemptions:
 
 			Entry("no change due to already set",
 				nil,
-				kubeapiserver.AutoscalingConfig{Replicas: pointer.Int32(1)},
+				apiserver.AutoscalingConfig{Replicas: pointer.Int32(1)},
 				int32(1),
 			),
 			Entry("use minReplicas because deployment does not exist",
 				nil,
-				kubeapiserver.AutoscalingConfig{MinReplicas: 2},
+				apiserver.AutoscalingConfig{MinReplicas: 2},
 				int32(2),
 			),
 			Entry("use 0 because shoot is hibernated, even  if deployment does not exist",
 				func() {
 					wantScaleDown = true
 				},
-				kubeapiserver.AutoscalingConfig{MinReplicas: 2},
+				apiserver.AutoscalingConfig{MinReplicas: 2},
 				int32(0),
 			),
 			Entry("use deployment replicas because they are greater than 0",
@@ -1136,7 +1145,7 @@ exemptions:
 						},
 					})).To(Succeed())
 				},
-				kubeapiserver.AutoscalingConfig{},
+				apiserver.AutoscalingConfig{},
 				int32(3),
 			),
 			Entry("use 0 because shoot is hibernated and deployment is already scaled down",
@@ -1152,13 +1161,13 @@ exemptions:
 						},
 					})).To(Succeed())
 				},
-				kubeapiserver.AutoscalingConfig{},
+				apiserver.AutoscalingConfig{},
 				int32(0),
 			),
 		)
 
 		DescribeTable("ETCDEncryptionConfig",
-			func(rotationPhase gardencorev1beta1.CredentialsRotationPhase, prepTest func(), expectedETCDEncryptionConfig kubeapiserver.ETCDEncryptionConfig, finalizeTest func()) {
+			func(rotationPhase gardencorev1beta1.CredentialsRotationPhase, prepTest func(), expectedETCDEncryptionConfig apiserver.ETCDEncryptionConfig, finalizeTest func()) {
 				if len(rotationPhase) > 0 {
 					etcdEncryptionKeyRotationPhase = rotationPhase
 				}
@@ -1187,7 +1196,7 @@ exemptions:
 			Entry("no rotation",
 				gardencorev1beta1.CredentialsRotationPhase(""),
 				nil,
-				kubeapiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: true, Resources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: true, Resources: []string{"secrets"}},
 				nil,
 			),
 			Entry("preparing phase, new key already populated",
@@ -1201,7 +1210,7 @@ exemptions:
 						},
 					})).To(Succeed())
 				},
-				kubeapiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPreparing, EncryptWithCurrentKey: true, Resources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPreparing, EncryptWithCurrentKey: true, Resources: []string{"secrets"}},
 				nil,
 			),
 			Entry("preparing phase, new key not yet populated",
@@ -1216,14 +1225,14 @@ exemptions:
 
 					kubeAPIServer.EXPECT().Wait(ctx)
 
-					kubeAPIServer.EXPECT().SetETCDEncryptionConfig(kubeapiserver.ETCDEncryptionConfig{
+					kubeAPIServer.EXPECT().SetETCDEncryptionConfig(apiserver.ETCDEncryptionConfig{
 						RotationPhase:         gardencorev1beta1.RotationPreparing,
 						EncryptWithCurrentKey: true,
 						Resources:             []string{"secrets"},
 					})
 					kubeAPIServer.EXPECT().Deploy(ctx)
 				},
-				kubeapiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPreparing, EncryptWithCurrentKey: false, Resources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPreparing, EncryptWithCurrentKey: false, Resources: []string{"secrets"}},
 				func() {
 					deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: namespace}}
 					Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
@@ -1233,7 +1242,7 @@ exemptions:
 			Entry("prepared phase",
 				gardencorev1beta1.RotationPrepared,
 				nil,
-				kubeapiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPrepared, EncryptWithCurrentKey: true, Resources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPrepared, EncryptWithCurrentKey: true, Resources: []string{"secrets"}},
 				nil,
 			),
 			Entry("completing phase",
@@ -1247,7 +1256,7 @@ exemptions:
 						},
 					})).To(Succeed())
 				},
-				kubeapiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationCompleting, EncryptWithCurrentKey: true, Resources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationCompleting, EncryptWithCurrentKey: true, Resources: []string{"secrets"}},
 				func() {
 					deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: namespace}}
 					Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
@@ -1257,7 +1266,7 @@ exemptions:
 			Entry("completed phase",
 				gardencorev1beta1.RotationCompleted,
 				nil,
-				kubeapiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationCompleted, EncryptWithCurrentKey: true, Resources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationCompleted, EncryptWithCurrentKey: true, Resources: []string{"secrets"}},
 				nil,
 			),
 		)

@@ -53,6 +53,7 @@ build:
         - pkg/client/kubernetes/clientmap/internal
         - pkg/client/kubernetes/clientmap/keys
         - pkg/component
+        - pkg/component/apiserver
         - pkg/component/apiserverproxy
         - pkg/component/backupentry
         - pkg/component/blackboxexporter

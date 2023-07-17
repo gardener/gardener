@@ -29,6 +29,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
@@ -94,7 +95,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 	)
 }
 
-func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.AutoscalingConfig {
+func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.AutoscalingConfig {
 	var (
 		hvpaEnabled               = features.DefaultFeatureGate.Enabled(features.HVPA)
 		useMemoryMetricForHvpaHPA = false
@@ -157,7 +158,7 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 		}
 	}
 
-	return kubeapiserver.AutoscalingConfig{
+	return apiserver.AutoscalingConfig{
 		APIServerResources:        apiServerResources,
 		HVPAEnabled:               hvpaEnabled,
 		Replicas:                  defaultReplicas,
