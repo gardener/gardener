@@ -33,8 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/etcd"
-	"github.com/gardener/gardener/pkg/component/plutono"
-	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
@@ -47,10 +45,6 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
-const (
-	secretNameIngress = v1beta1constants.SecretNameObservabilityIngressUsers
-)
-
 // DeploySeedMonitoring installs the Helm release "seed-monitoring" in the Seed clusters. It comprises components
 // to monitor the Shoot cluster whose control plane runs in the Seed cluster.
 func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
@@ -58,9 +52,9 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		return b.DeleteSeedMonitoring(ctx)
 	}
 
-	credentialsSecret, found := b.SecretsManager.Get(secretNameIngress)
+	credentialsSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameObservabilityIngressUsers)
 	if !found {
-		return fmt.Errorf("secret %q not found", secretNameIngress)
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngressUsers)
 	}
 
 	var (
@@ -136,7 +130,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		return err
 	}
 
-	// Need stable order before passing the dashboards to Plutono config to avoid unnecessary changes
+	// Need stable order before passing the dashboards to Prometheus config to avoid unnecessary changes
 	kubernetesutils.ByName().Sort(existingConfigMaps)
 
 	// Read extension monitoring configurations
@@ -388,68 +382,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	return common.DeleteAlertmanager(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
 }
 
-// DefaultPlutono returns a deployer for Plutono.
-func (b *Botanist) DefaultPlutono() (plutono.Interface, error) {
-	var wildcardCertName *string
-	if b.ControlPlaneWildcardCert != nil {
-		wildcardCertName = pointer.String(b.ControlPlaneWildcardCert.GetName())
-	}
-
-	return shared.NewPlutono(
-		b.SeedClientSet.Client(),
-		b.Shoot.SeedNamespace,
-		b.ImageVector,
-		b.SecretsManager,
-		"",
-		component.ClusterTypeShoot,
-		b.ComputePlutonoHost(),
-		b.ShootUsesDNS(),
-		features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment),
-		b.Shoot.NodeLocalDNSEnabled,
-		b.Shoot.IsWorkerless,
-		b.Shoot.VPNHighAvailabilityEnabled,
-		v1beta1constants.PriorityClassNameShootControlPlane100,
-		b.Shoot.GetReplicas(1),
-		wildcardCertName,
-		b.Shoot.WantsVerticalPodAutoscaler,
-	)
-}
-
-// DeploySeedPlutono deploys the plutono in the Seed cluster.
-func (b *Botanist) DeploySeedPlutono(ctx context.Context) error {
-	// disable monitoring if shoot has purpose testing or monitoring and vali is disabled
-	if !b.Operation.WantsPlutono() {
-		if err := b.Shoot.Components.ControlPlane.Plutono.Destroy(ctx); err != nil {
-			return err
-		}
-
-		secretName := gardenerutils.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, gardenerutils.ShootProjectSecretSuffixMonitoring)
-		return kubernetesutils.DeleteObject(ctx, b.GardenClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}})
-	}
-
-	// TODO(rickardsjp, istvanballok): Remove in release v1.77 once the Grafana to Plutono migration is complete.
-	if err := b.DeleteGrafana(ctx); err != nil {
-		return err
-	}
-
-	if err := b.Shoot.Components.ControlPlane.Plutono.Deploy(ctx); err != nil {
-		return err
-	}
-
-	credentialsSecret, found := b.SecretsManager.Get(secretNameIngress)
-	if !found {
-		return fmt.Errorf("secret %q not found", secretNameIngress)
-	}
-
-	return b.syncShootCredentialToGarden(
-		ctx,
-		gardenerutils.ShootProjectSecretSuffixMonitoring,
-		map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring},
-		map[string]string{"url": "https://" + b.ComputePlutonoHost()},
-		credentialsSecret.Data,
-	)
-}
-
 func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretKeys []string) (map[string]interface{}, error) {
 	configs := map[string]interface{}{
 		"auth_type": map[string]interface{}{},
@@ -525,11 +457,6 @@ func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretK
 	}
 
 	return configs, nil
-}
-
-// DeleteGrafana will delete all Grafana resources from the seed cluster.
-func (b *Botanist) DeleteGrafana(ctx context.Context) error {
-	return common.DeleteGrafana(ctx, b.SeedClientSet, b.Shoot.SeedNamespace)
 }
 
 // DeleteSeedMonitoring will delete the monitoring stack from the Seed cluster to avoid phantom alerts

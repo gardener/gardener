@@ -1,4 +1,4 @@
-// Copyright 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,33 +21,17 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	mockcoredns "github.com/gardener/gardener/pkg/component/coredns/mock"
-	mocketcd "github.com/gardener/gardener/pkg/component/etcd/mock"
-	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubeapiserver/mock"
-	mockkubecontrollermanager "github.com/gardener/gardener/pkg/component/kubecontrollermanager/mock"
-	mockkubeproxy "github.com/gardener/gardener/pkg/component/kubeproxy/mock"
-	mockkubescheduler "github.com/gardener/gardener/pkg/component/kubescheduler/mock"
-	mockkubestatemetrics "github.com/gardener/gardener/pkg/component/kubestatemetrics/mock"
 	mockcomponent "github.com/gardener/gardener/pkg/component/mock"
-	mockresourcemanager "github.com/gardener/gardener/pkg/component/resourcemanager/mock"
-	mockvpa "github.com/gardener/gardener/pkg/component/vpa/mock"
-	mockvpnseedserver "github.com/gardener/gardener/pkg/component/vpnseedserver/mock"
-	mockvpnshoot "github.com/gardener/gardener/pkg/component/vpnshoot/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
@@ -61,7 +45,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("Monitoring", func() {
+var _ = Describe("Plutono", func() {
 	var (
 		ctrl *gomock.Controller
 
@@ -69,22 +53,9 @@ var _ = Describe("Monitoring", func() {
 		seedClient    client.Client
 		seedClientSet kubernetes.Interface
 
-		chartApplier kubernetes.ChartApplier
-		sm           secretsmanager.Interface
+		sm secretsmanager.Interface
 
-		mockEtcdMain              *mocketcd.MockInterface
-		mockEtcdEvents            *mocketcd.MockInterface
-		mockKubeAPIServer         *mockkubeapiserver.MockInterface
-		mockKubeScheduler         *mockkubescheduler.MockInterface
-		mockKubeControllerManager *mockkubecontrollermanager.MockInterface
-		mockKubeStateMetrics      *mockkubestatemetrics.MockInterface
-		mockCoreDNS               *mockcoredns.MockInterface
-		mockKubeProxy             *mockkubeproxy.MockInterface
-		mockPlutono               *mockcomponent.MockDeployWaiter
-		mockVPNSeedServer         *mockvpnseedserver.MockInterface
-		mockVPNShoot              *mockvpnshoot.MockInterface
-		mockResourceManager       *mockresourcemanager.MockInterface
-		mockVPA                   *mockvpa.MockInterface
+		mockPlutono *mockcomponent.MockDeployWaiter
 
 		botanist *Botanist
 
@@ -103,13 +74,8 @@ var _ = Describe("Monitoring", func() {
 		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
-		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{corev1.SchemeGroupVersion, appsv1.SchemeGroupVersion})
-		renderer := chartrenderer.NewWithServerVersion(&version.Info{GitVersion: "1.2.3"})
-		chartApplier = kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(seedClient, mapper))
-
 		seedClientSet = fake.NewClientSetBuilder().
 			WithClient(seedClient).
-			WithChartApplier(chartApplier).
 			WithRESTConfig(&rest.Config{}).
 			Build()
 		sm = fakesecretsmanager.New(seedClient, seedNamespace)
@@ -125,19 +91,7 @@ var _ = Describe("Monitoring", func() {
 			Data: map[string][]byte{"username": {}, "password": {}, "auth": {}},
 		})).To(Succeed())
 
-		mockEtcdMain = mocketcd.NewMockInterface(ctrl)
-		mockEtcdEvents = mocketcd.NewMockInterface(ctrl)
-		mockKubeAPIServer = mockkubeapiserver.NewMockInterface(ctrl)
-		mockKubeScheduler = mockkubescheduler.NewMockInterface(ctrl)
-		mockKubeControllerManager = mockkubecontrollermanager.NewMockInterface(ctrl)
-		mockKubeStateMetrics = mockkubestatemetrics.NewMockInterface(ctrl)
-		mockCoreDNS = mockcoredns.NewMockInterface(ctrl)
-		mockKubeProxy = mockkubeproxy.NewMockInterface(ctrl)
 		mockPlutono = mockcomponent.NewMockDeployWaiter(ctrl)
-		mockVPNSeedServer = mockvpnseedserver.NewMockInterface(ctrl)
-		mockVPNShoot = mockvpnshoot.NewMockInterface(ctrl)
-		mockResourceManager = mockresourcemanager.NewMockInterface(ctrl)
-		mockVPA = mockvpa.NewMockInterface(ctrl)
 
 		botanist = &Botanist{
 			Operation: &operation.Operation{
@@ -158,30 +112,12 @@ var _ = Describe("Monitoring", func() {
 					},
 					Components: &shootpkg.Components{
 						ControlPlane: &shootpkg.ControlPlane{
-							EtcdMain:              mockEtcdMain,
-							EtcdEvents:            mockEtcdEvents,
-							KubeAPIServer:         mockKubeAPIServer,
-							KubeScheduler:         mockKubeScheduler,
-							KubeControllerManager: mockKubeControllerManager,
-							KubeStateMetrics:      mockKubeStateMetrics,
-							Plutono:               mockPlutono,
-							ResourceManager:       mockResourceManager,
-							VerticalPodAutoscaler: mockVPA,
-							VPNSeedServer:         mockVPNSeedServer,
-						},
-						SystemComponents: &shootpkg.SystemComponents{
-							CoreDNS:   mockCoreDNS,
-							KubeProxy: mockKubeProxy,
-							VPNShoot:  mockVPNShoot,
+							Plutono: mockPlutono,
 						},
 					},
 				},
 				ImageVector: imagevector.ImageVector{
 					{Name: "plutono"},
-					{Name: "prometheus"},
-					{Name: "configmap-reloader"},
-					{Name: "blackbox-exporter"},
-					{Name: "kube-state-metrics"},
 				},
 			},
 		}
@@ -210,11 +146,11 @@ var _ = Describe("Monitoring", func() {
 		ctrl.Finish()
 	})
 
-	Describe("#DeploySeedPlutono", func() {
+	Describe("#DeployPlutono", func() {
 		It("should successfully deploy plutono sync the ingress credentials for the users observability to the garden project namespace", func() {
 			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(BeNotFoundError())
 			mockPlutono.EXPECT().Deploy(ctx)
-			Expect(botanist.DeploySeedPlutono(ctx)).To(Succeed())
+			Expect(botanist.DeployPlutono(ctx)).To(Succeed())
 
 			secret := &corev1.Secret{}
 			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), secret)).To(Succeed())
@@ -226,13 +162,13 @@ var _ = Describe("Monitoring", func() {
 		It("should cleanup the secrets when shoot purpose is changed", func() {
 			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(BeNotFoundError())
 			mockPlutono.EXPECT().Deploy(ctx)
-			Expect(botanist.DeploySeedPlutono(ctx)).To(Succeed())
+			Expect(botanist.DeployPlutono(ctx)).To(Succeed())
 			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(Succeed())
 			Expect(*botanist.Shoot.GetInfo().Spec.Purpose == shootPurposeEvaluation).To(BeTrue())
 
 			botanist.Shoot.Purpose = shootPurposeTesting
 			mockPlutono.EXPECT().Destroy(ctx)
-			Expect(botanist.DeploySeedPlutono(ctx)).To(Succeed())
+			Expect(botanist.DeployPlutono(ctx)).To(Succeed())
 
 			Expect(gardenClient.Get(ctx, kubernetesutils.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(BeNotFoundError())
 		})
