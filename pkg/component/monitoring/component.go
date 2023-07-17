@@ -16,6 +16,8 @@ package monitoring
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -30,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -39,6 +42,8 @@ import (
 type Values struct {
 	// AlertingSecrets is a list of alerting secrets.
 	AlertingSecrets []*corev1.Secret
+	// Components is a list of monitoring components.
+	Components []component.MonitoringComponent
 }
 
 // New creates a new instance of DeployWaiter for the monitoring components.
@@ -68,6 +73,11 @@ type monitoring struct {
 
 func (m *monitoring) Deploy(ctx context.Context) error {
 	alerting, err := m.getCustomAlertingConfigs(ctx)
+	if err != nil {
+		return err
+	}
+
+	alertingRules, scrapeConfigs, err := m.getAlertingRulesAndScrapeConfigs(ctx)
 	if err != nil {
 		return err
 	}
@@ -238,4 +248,43 @@ func (m *monitoring) getCustomAlertingConfigs(ctx context.Context) (map[string]i
 	}
 
 	return configs, nil
+}
+
+func (m *monitoring) getAlertingRulesAndScrapeConfigs(ctx context.Context) (alertingRules, scrapeConfigs strings.Builder, err error) {
+	for _, component := range m.values.Components {
+		componentsScrapeConfigs, err := component.ScrapeConfigs()
+		if err != nil {
+			return alertingRules, scrapeConfigs, err
+		}
+		for _, config := range componentsScrapeConfigs {
+			scrapeConfigs.WriteString(fmt.Sprintf("- %s\n", utils.Indent(config, 2)))
+		}
+
+		componentsAlertingRules, err := component.AlertingRules()
+		if err != nil {
+			return alertingRules, scrapeConfigs, err
+		}
+		for filename, rule := range componentsAlertingRules {
+			alertingRules.WriteString(fmt.Sprintf("%s: |\n  %s\n", filename, utils.Indent(rule, 2)))
+		}
+	}
+
+	// Fetch extensions provider-specific monitoring configuration
+	existingConfigMaps := &corev1.ConfigMapList{}
+	if err := m.client.List(ctx, existingConfigMaps,
+		client.InNamespace(m.namespace),
+		client.MatchingLabels{v1beta1constants.LabelExtensionConfiguration: v1beta1constants.LabelMonitoring}); err != nil {
+		return alertingRules, scrapeConfigs, err
+	}
+
+	// Need stable order before passing the dashboards to Prometheus config to avoid unnecessary changes
+	kubernetesutils.ByName().Sort(existingConfigMaps)
+
+	// Read extension monitoring configurations
+	for _, cm := range existingConfigMaps.Items {
+		alertingRules.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.PrometheusConfigMapAlertingRules]))
+		scrapeConfigs.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.PrometheusConfigMapScrapeConfig]))
+	}
+
+	return
 }

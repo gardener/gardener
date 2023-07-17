@@ -18,11 +18,9 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -32,10 +30,8 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -46,38 +42,6 @@ func (b *Botanist) DefaultMonitoring() (component.Deployer, error) {
 	for _, key := range b.GetSecretKeysOfRole(v1beta1constants.GardenRoleAlerting) {
 		alertingSecrets = append(alertingSecrets, b.LoadSecret(key))
 	}
-
-	return monitoring.New(
-		b.SeedClientSet.Client(),
-		b.SeedClientSet.ChartApplier(),
-		b.SecretsManager,
-		b.Shoot.SeedNamespace,
-		monitoring.Values{
-			AlertingSecrets: alertingSecrets,
-		},
-	), nil
-}
-
-// DeployMonitoring installs the Helm release "seed-monitoring" in the Seed clusters. It comprises components
-// to monitor the Shoot cluster whose control plane runs in the Seed cluster.
-func (b *Botanist) DeployMonitoring(ctx context.Context) error {
-	if !b.IsShootMonitoringEnabled() {
-		return b.Shoot.Components.Monitoring.Monitoring.Destroy(ctx)
-	}
-
-	if err := b.Shoot.Components.Monitoring.Monitoring.Deploy(ctx); err != nil {
-		return err
-	}
-
-	credentialsSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameObservabilityIngressUsers)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngressUsers)
-	}
-
-	var (
-		alertingRules = strings.Builder{}
-		scrapeConfigs = strings.Builder{}
-	)
 
 	// Fetch component-specific monitoring configuration
 	monitoringComponents := []component.MonitoringComponent{
@@ -121,39 +85,32 @@ func (b *Botanist) DeployMonitoring(ctx context.Context) error {
 		}
 	}
 
-	for _, component := range monitoringComponents {
-		componentsScrapeConfigs, err := component.ScrapeConfigs()
-		if err != nil {
-			return err
-		}
-		for _, config := range componentsScrapeConfigs {
-			scrapeConfigs.WriteString(fmt.Sprintf("- %s\n", utils.Indent(config, 2)))
-		}
+	return monitoring.New(
+		b.SeedClientSet.Client(),
+		b.SeedClientSet.ChartApplier(),
+		b.SecretsManager,
+		b.Shoot.SeedNamespace,
+		monitoring.Values{
+			AlertingSecrets: alertingSecrets,
+			Components:      monitoringComponents,
+		},
+	), nil
+}
 
-		componentsAlertingRules, err := component.AlertingRules()
-		if err != nil {
-			return err
-		}
-		for filename, rule := range componentsAlertingRules {
-			alertingRules.WriteString(fmt.Sprintf("%s: |\n  %s\n", filename, utils.Indent(rule, 2)))
-		}
+// DeployMonitoring installs the Helm release "seed-monitoring" in the Seed clusters. It comprises components
+// to monitor the Shoot cluster whose control plane runs in the Seed cluster.
+func (b *Botanist) DeployMonitoring(ctx context.Context) error {
+	if !b.IsShootMonitoringEnabled() {
+		return b.Shoot.Components.Monitoring.Monitoring.Destroy(ctx)
 	}
 
-	// Fetch extensions provider-specific monitoring configuration
-	existingConfigMaps := &corev1.ConfigMapList{}
-	if err := b.SeedClientSet.Client().List(ctx, existingConfigMaps,
-		client.InNamespace(b.Shoot.SeedNamespace),
-		client.MatchingLabels{v1beta1constants.LabelExtensionConfiguration: v1beta1constants.LabelMonitoring}); err != nil {
+	if err := b.Shoot.Components.Monitoring.Monitoring.Deploy(ctx); err != nil {
 		return err
 	}
 
-	// Need stable order before passing the dashboards to Prometheus config to avoid unnecessary changes
-	kubernetesutils.ByName().Sort(existingConfigMaps)
-
-	// Read extension monitoring configurations
-	for _, cm := range existingConfigMaps.Items {
-		alertingRules.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.PrometheusConfigMapAlertingRules]))
-		scrapeConfigs.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.PrometheusConfigMapScrapeConfig]))
+	credentialsSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameObservabilityIngressUsers)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameObservabilityIngressUsers)
 	}
 
 	// Create shoot token secret for prometheus component
