@@ -106,7 +106,7 @@ func (s *Secret) WithKeyValues(keyValues map[string][]byte) *Secret {
 }
 
 // Unique makes the secret unique and immutable. Returns the new and unique name of the secret and the builder object.
-// This function should be called at last place, i.e. after the secret object is constructed.
+// This function should be called after the name and data of the secret were set.
 func (s *Secret) Unique() (string, *Secret) {
 	utilruntime.Must(kubernetesutils.MakeUnique(s.secret))
 	return s.secret.Name, s

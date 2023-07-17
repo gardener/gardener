@@ -332,9 +332,12 @@ var _ = Describe("Resource Manager", func() {
 					SecretRefs: []corev1.LocalObjectReference{
 						{Name: secret1.Name},
 						{Name: secret2.Name},
+						{Name: secret3.Name},
 					},
 				},
 			}
+
+			// Create secrets without GC label
 			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
 			for _, s := range []*corev1.Secret{secret1, secret2, secret3} {
 				Expect(fakeClient.Create(ctx, s)).To(Succeed())
@@ -350,7 +353,8 @@ var _ = Describe("Resource Manager", func() {
 					Reconcile(ctx),
 			).To(Succeed())
 
-			for _, s := range []*corev1.Secret{secret1, secret2} {
+			// Old and new secrets should be marked as garbage-collectable
+			for _, s := range []*corev1.Secret{secret1, secret2, secret3} {
 				secret := &corev1.Secret{}
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(s), secret)).To(Succeed())
 				expected := s.DeepCopy()

@@ -152,6 +152,9 @@ func (m *ManagedResource) Reconcile(ctx context.Context) error {
 	}
 
 	// mark all old secrets as garbage collectable
+	// TODO(dimityrmirchev): We can remove this in a future release since this is migration code
+	// Since the removal of this code can cause leaks of managed resource secrets
+	// we want to give a greater time period than usual, i.e. v1.90 of Gardener
 	excludedNames := map[string]struct{}{}
 	oldSecrets := secretsFromRefs(resource, excludedNames)
 	if err := markSecretsAsGarbageCollectable(ctx, m.client, oldSecrets); err != nil {
@@ -190,10 +193,7 @@ func markSecretsAsGarbageCollectable(ctx context.Context, c client.Client, secre
 			return err
 		}
 		patch := client.StrategicMergeFrom(secret.DeepCopy())
-		if secret.Labels == nil {
-			secret.Labels = map[string]string{}
-		}
-		secret.Labels[references.LabelKeyGarbageCollectable] = references.LabelValueGarbageCollectable
+		metav1.SetMetaDataLabel(&secret.ObjectMeta, references.LabelKeyGarbageCollectable, references.LabelValueGarbageCollectable)
 		if err := c.Patch(ctx, secret, patch); err != nil {
 			return err
 		}
