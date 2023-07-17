@@ -17,10 +17,20 @@ package monitoring
 import (
 	"context"
 
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/operation/common"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -58,5 +68,91 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 }
 
 func (m *monitoring) Destroy(ctx context.Context) error {
-	return nil
+	if err := common.DeleteAlertmanager(ctx, m.client, m.namespace); err != nil {
+		return err
+	}
+
+	objects := []client.Object{
+		&networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: m.namespace,
+				Name:      "allow-from-prometheus",
+			},
+		},
+		&networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: m.namespace,
+				Name:      "allow-prometheus",
+			},
+		},
+		gardenerutils.NewShootAccessSecret(v1beta1constants.StatefulSetNamePrometheus, m.namespace).Secret,
+		&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: m.namespace,
+				Name:      "prometheus-config",
+			},
+		},
+		&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: m.namespace,
+				Name:      "prometheus-rules",
+			},
+		},
+		&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: m.namespace,
+				Name:      "blackbox-exporter-config-prometheus",
+			},
+		},
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: m.namespace,
+				Name:      "prometheus-basic-auth",
+			},
+		},
+		&networkingv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: m.namespace,
+				Name:      "prometheus",
+			},
+		},
+		&vpaautoscalingv1.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: m.namespace,
+				Name:      "prometheus-vpa",
+			},
+		},
+		&corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: m.namespace,
+				Name:      "prometheus",
+			},
+		},
+		&corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: m.namespace,
+				Name:      "prometheus-web",
+			},
+		},
+		&appsv1.StatefulSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: m.namespace,
+				Name:      "prometheus",
+			},
+		},
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: m.namespace,
+				Name:      "prometheus-" + m.namespace,
+			},
+		},
+		&corev1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: m.namespace,
+				Name:      "prometheus-db-prometheus-0",
+			},
+		},
+	}
+
+	return kubernetesutils.DeleteObjects(ctx, m.client, objects...)
 }

@@ -20,12 +20,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -473,97 +469,4 @@ func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretK
 	}
 
 	return configs, nil
-}
-
-// DeleteSeedMonitoring will delete the monitoring stack from the Seed cluster to avoid phantom alerts
-// during the deletion process. More precisely, the Alertmanager and Prometheus StatefulSets will be
-// deleted.
-func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
-	if err := common.DeleteAlertmanager(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace); err != nil {
-		return err
-	}
-
-	objects := []client.Object{
-		&networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: b.Shoot.SeedNamespace,
-				Name:      "allow-from-prometheus",
-			},
-		},
-		&networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: b.Shoot.SeedNamespace,
-				Name:      "allow-prometheus",
-			},
-		},
-		gardenerutils.NewShootAccessSecret(v1beta1constants.StatefulSetNamePrometheus, b.Shoot.SeedNamespace).Secret,
-		&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: b.Shoot.SeedNamespace,
-				Name:      "prometheus-config",
-			},
-		},
-		&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: b.Shoot.SeedNamespace,
-				Name:      "prometheus-rules",
-			},
-		},
-		&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: b.Shoot.SeedNamespace,
-				Name:      "blackbox-exporter-config-prometheus",
-			},
-		},
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: b.Shoot.SeedNamespace,
-				Name:      "prometheus-basic-auth",
-			},
-		},
-		&networkingv1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: b.Shoot.SeedNamespace,
-				Name:      "prometheus",
-			},
-		},
-		&vpaautoscalingv1.VerticalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: b.Shoot.SeedNamespace,
-				Name:      "prometheus-vpa",
-			},
-		},
-		&corev1.ServiceAccount{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: b.Shoot.SeedNamespace,
-				Name:      "prometheus",
-			},
-		},
-		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: b.Shoot.SeedNamespace,
-				Name:      "prometheus-web",
-			},
-		},
-		&appsv1.StatefulSet{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: b.Shoot.SeedNamespace,
-				Name:      "prometheus",
-			},
-		},
-		&rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: b.Shoot.SeedNamespace,
-				Name:      "prometheus-" + b.Shoot.SeedNamespace,
-			},
-		},
-		&corev1.PersistentVolumeClaim{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: b.Shoot.SeedNamespace,
-				Name:      "prometheus-db-prometheus-0",
-			},
-		},
-	}
-
-	return kubernetesutils.DeleteObjects(ctx, b.SeedClientSet.Client(), objects...)
 }
