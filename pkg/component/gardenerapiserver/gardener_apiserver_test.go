@@ -1491,7 +1491,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 				Expect(deployer.Deploy(ctx)).To(MatchError(ContainSubstring("is unhealthy")))
 			})
 
-			It("should fail because the virtual ManagedResource doesn't become healthy", func() {
+			It("should not fail when the virtual ManagedResource doesn't become healthy", func() {
 				fakeOps.MaxAttempts = 2
 
 				Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
@@ -1512,7 +1512,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					Status: unhealthyManagedResourceStatus,
 				})).To(Succeed())
 
-				Expect(deployer.Deploy(ctx)).To(MatchError(ContainSubstring("is not healthy")))
+				Expect(deployer.Deploy(ctx)).To(Succeed())
 			})
 		})
 	})

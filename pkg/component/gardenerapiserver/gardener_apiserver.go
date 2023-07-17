@@ -162,9 +162,6 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
-	defer cancel()
-
 	if err := managedresources.CreateForSeed(ctx, g.client, g.namespace, managedResourceNameRuntime, false, runtimeResources); err != nil {
 		return err
 	}
@@ -173,6 +170,8 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 	// virtual resources. This is important for credentials rotation since we want all GAPI pods to run with the new
 	// server certificate before we drop the old CA from the bundle in the APIServices (which get deployed via the
 	// virtual resources).
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
 	if err := g.waitUntilRuntimeManagedResourceHealthyAndNotProgressing(timeoutCtx); err != nil {
 		return err
 	}
@@ -198,13 +197,7 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	timeoutCtx, cancel = context.WithTimeout(ctx, TimeoutWaitForManagedResource)
-	defer cancel()
-
-	if err := managedresources.CreateForShoot(ctx, g.client, g.namespace, managedResourceNameVirtual, managedresources.LabelValueGardener, false, virtualResources); err != nil {
-		return err
-	}
-	return managedresources.WaitUntilHealthy(timeoutCtx, g.client, g.namespace, managedResourceNameVirtual)
+	return managedresources.CreateForShoot(ctx, g.client, g.namespace, managedResourceNameVirtual, managedresources.LabelValueGardener, false, virtualResources)
 }
 
 func (g *gardenerAPIServer) Destroy(ctx context.Context) error {
