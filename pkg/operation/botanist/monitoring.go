@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -30,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/monitoring"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -44,12 +42,19 @@ import (
 
 // DefaultMonitoring creates a new monitoring component.
 func (b *Botanist) DefaultMonitoring() (component.Deployer, error) {
+	var alertingSecrets []*corev1.Secret
+	for _, key := range b.GetSecretKeysOfRole(v1beta1constants.GardenRoleAlerting) {
+		alertingSecrets = append(alertingSecrets, b.LoadSecret(key))
+	}
+
 	return monitoring.New(
 		b.SeedClientSet.Client(),
 		b.SeedClientSet.ChartApplier(),
 		b.SecretsManager,
 		b.Shoot.SeedNamespace,
-		monitoring.Values{},
+		monitoring.Values{
+			AlertingSecrets: alertingSecrets,
+		},
 	), nil
 }
 
@@ -153,11 +158,6 @@ func (b *Botanist) DeployMonitoring(ctx context.Context) error {
 
 	// Create shoot token secret for prometheus component
 	if err := gardenerutils.NewShootAccessSecret(v1beta1constants.StatefulSetNamePrometheus, b.Shoot.SeedNamespace).Reconcile(ctx, b.SeedClientSet.Client()); err != nil {
-		return err
-	}
-
-	alerting, err := b.getCustomAlertingConfigs(ctx, b.GetSecretKeysOfRole(v1beta1constants.GardenRoleAlerting))
-	if err != nil {
 		return err
 	}
 
@@ -392,81 +392,4 @@ func (b *Botanist) DeployMonitoring(ctx context.Context) error {
 	}
 
 	return common.DeleteAlertmanager(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
-}
-
-func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretKeys []string) (map[string]interface{}, error) {
-	configs := map[string]interface{}{
-		"auth_type": map[string]interface{}{},
-	}
-
-	for _, key := range alertingSecretKeys {
-		secret := b.LoadSecret(key)
-
-		if string(secret.Data["auth_type"]) == "none" {
-
-			if url, ok := secret.Data["url"]; ok {
-				configs["auth_type"] = map[string]interface{}{
-					"none": map[string]interface{}{
-						"url": string(url),
-					},
-				}
-			}
-			break
-		}
-
-		if string(secret.Data["auth_type"]) == "basic" {
-			url, urlOk := secret.Data["url"]
-			username, usernameOk := secret.Data["username"]
-			password, passwordOk := secret.Data["password"]
-
-			if urlOk && usernameOk && passwordOk {
-				configs["auth_type"] = map[string]interface{}{
-					"basic": map[string]interface{}{
-						"url":      string(url),
-						"username": string(username),
-						"password": string(password),
-					},
-				}
-			}
-			break
-		}
-
-		if string(secret.Data["auth_type"]) == "certificate" {
-			data := map[string][]byte{}
-			url, urlOk := secret.Data["url"]
-			ca, caOk := secret.Data["ca.crt"]
-			cert, certOk := secret.Data["tls.crt"]
-			key, keyOk := secret.Data["tls.key"]
-			insecure, insecureOk := secret.Data["insecure_skip_verify"]
-
-			if urlOk && caOk && certOk && keyOk && insecureOk {
-				configs["auth_type"] = map[string]interface{}{
-					"certificate": map[string]interface{}{
-						"url":                  string(url),
-						"insecure_skip_verify": string(insecure),
-					},
-				}
-				data["ca.crt"] = ca
-				data["tls.crt"] = cert
-				data["tls.key"] = key
-				amSecret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "prometheus-remote-am-tls",
-						Namespace: b.Shoot.SeedNamespace,
-					},
-				}
-
-				if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.SeedClientSet.Client(), amSecret, func() error {
-					amSecret.Data = data
-					amSecret.Type = corev1.SecretTypeOpaque
-					return nil
-				}); err != nil {
-					return nil, err
-				}
-			}
-			break
-		}
-	}
-
-	return configs, nil
 }

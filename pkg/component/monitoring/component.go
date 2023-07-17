@@ -28,6 +28,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -36,6 +37,8 @@ import (
 
 // Values is a set of configuration values for the monitoring components.
 type Values struct {
+	// AlertingSecrets is a list of alerting secrets.
+	AlertingSecrets []*corev1.Secret
 }
 
 // New creates a new instance of DeployWaiter for the monitoring components.
@@ -64,6 +67,11 @@ type monitoring struct {
 }
 
 func (m *monitoring) Deploy(ctx context.Context) error {
+	alerting, err := m.getCustomAlertingConfigs(ctx)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -155,4 +163,79 @@ func (m *monitoring) Destroy(ctx context.Context) error {
 	}
 
 	return kubernetesutils.DeleteObjects(ctx, m.client, objects...)
+}
+
+func (m *monitoring) getCustomAlertingConfigs(ctx context.Context) (map[string]interface{}, error) {
+	configs := map[string]interface{}{
+		"auth_type": map[string]interface{}{},
+	}
+
+	for _, secret := range m.values.AlertingSecrets {
+		if string(secret.Data["auth_type"]) == "none" {
+
+			if url, ok := secret.Data["url"]; ok {
+				configs["auth_type"] = map[string]interface{}{
+					"none": map[string]interface{}{
+						"url": string(url),
+					},
+				}
+			}
+			break
+		}
+
+		if string(secret.Data["auth_type"]) == "basic" {
+			url, urlOk := secret.Data["url"]
+			username, usernameOk := secret.Data["username"]
+			password, passwordOk := secret.Data["password"]
+
+			if urlOk && usernameOk && passwordOk {
+				configs["auth_type"] = map[string]interface{}{
+					"basic": map[string]interface{}{
+						"url":      string(url),
+						"username": string(username),
+						"password": string(password),
+					},
+				}
+			}
+			break
+		}
+
+		if string(secret.Data["auth_type"]) == "certificate" {
+			data := map[string][]byte{}
+			url, urlOk := secret.Data["url"]
+			ca, caOk := secret.Data["ca.crt"]
+			cert, certOk := secret.Data["tls.crt"]
+			key, keyOk := secret.Data["tls.key"]
+			insecure, insecureOk := secret.Data["insecure_skip_verify"]
+
+			if urlOk && caOk && certOk && keyOk && insecureOk {
+				configs["auth_type"] = map[string]interface{}{
+					"certificate": map[string]interface{}{
+						"url":                  string(url),
+						"insecure_skip_verify": string(insecure),
+					},
+				}
+				data["ca.crt"] = ca
+				data["tls.crt"] = cert
+				data["tls.key"] = key
+				amSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "prometheus-remote-am-tls",
+						Namespace: m.namespace,
+					},
+				}
+
+				if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, m.client, amSecret, func() error {
+					amSecret.Data = data
+					amSecret.Type = corev1.SecretTypeOpaque
+					return nil
+				}); err != nil {
+					return nil, err
+				}
+			}
+			break
+		}
+	}
+
+	return configs, nil
 }
