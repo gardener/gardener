@@ -252,13 +252,10 @@ type SeedSettings struct {
 	// VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.
 	// +optional
 	VerticalPodAutoscaler *SeedSettingVerticalPodAutoscaler `json:"verticalPodAutoscaler,omitempty" protobuf:"bytes,5,opt,name=verticalPodAutoscaler"`
-	// SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
-	//
-	// Deprecated: This field is deprecated. The "bad-case" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302).
-	// The field is locked to false (i.e. if the field value is true a validation error will be returned). In this way gardenlet will clean up all owner DNSRecords.
-	// Finally, the field will be removed from the API in a future version of Gardener.
-	// +optional
-	OwnerChecks *SeedSettingOwnerChecks `json:"ownerChecks,omitempty" protobuf:"bytes,6,opt,name=ownerChecks"`
+
+	// OwnerChecks is tombstoned to show why 6 is reserved protobuf tag.
+	// OwnerChecks *SeedSettingOwnerChecks `json:"ownerChecks,omitempty" protobuf:"bytes,6,opt,name=ownerChecks"`
+
 	// DependencyWatchdog controls certain settings for the dependency-watchdog components deployed in the seed.
 	// +optional
 	DependencyWatchdog *SeedSettingDependencyWatchdog `json:"dependencyWatchdog,omitempty" protobuf:"bytes,7,opt,name=dependencyWatchdog"`
@@ -319,15 +316,6 @@ type SeedSettingVerticalPodAutoscaler struct {
 	// Enabled controls whether the VPA components shall be deployed into the garden namespace in the seed cluster. It
 	// is enabled by default because Gardener heavily relies on a VPA being deployed. You should only disable this if
 	// your seed cluster already has another, manually/custom managed VPA deployment.
-	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
-}
-
-// SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
-//
-// Deprecated: This field is deprecated. The "bad-case" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302).
-// The field is no-op and will be removed in a future version.
-type SeedSettingOwnerChecks struct {
-	// Enabled controls whether owner checks are enabled for shoots scheduled on this seed.
 	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
 }
 

@@ -167,7 +167,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation":    schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices":         schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServices(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServicesZones":    schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServicesZones(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingOwnerChecks":                  schema_pkg_apis_core_v1beta1_SeedSettingOwnerChecks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling":                   schema_pkg_apis_core_v1beta1_SeedSettingScheduling(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingTopologyAwareRouting":         schema_pkg_apis_core_v1beta1_SeedSettingTopologyAwareRouting(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingVerticalPodAutoscaler":        schema_pkg_apis_core_v1beta1_SeedSettingVerticalPodAutoscaler(ref),
@@ -6701,28 +6700,6 @@ func schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServicesZones(ref commo
 	}
 }
 
-func schema_pkg_apis_core_v1beta1_SeedSettingOwnerChecks(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.\n\nDeprecated: This field is deprecated. The \"bad-case\" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302). The field is no-op and will be removed in a future version.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"enabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Enabled controls whether owner checks are enabled for shoots scheduled on this seed.",
-							Default:     false,
-							Type:        []string{"boolean"},
-							Format:      "",
-						},
-					},
-				},
-				Required: []string{"enabled"},
-			},
-		},
-	}
-}
-
 func schema_pkg_apis_core_v1beta1_SeedSettingScheduling(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -6820,12 +6797,6 @@ func schema_pkg_apis_core_v1beta1_SeedSettings(ref common.ReferenceCallback) com
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingVerticalPodAutoscaler"),
 						},
 					},
-					"ownerChecks": {
-						SchemaProps: spec.SchemaProps{
-							Description: "SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.\n\nDeprecated: This field is deprecated. The \"bad-case\" control plane migration is being removed in favor of the HA Shoot control planes (see https://github.com/gardener/gardener/issues/6302). The field is locked to false (i.e. if the field value is true a validation error will be returned). In this way gardenlet will clean up all owner DNSRecords. Finally, the field will be removed from the API in a future version of Gardener.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingOwnerChecks"),
-						},
-					},
 					"dependencyWatchdog": {
 						SchemaProps: spec.SchemaProps{
 							Description: "DependencyWatchdog controls certain settings for the dependency-watchdog components deployed in the seed.",
@@ -6842,7 +6813,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettings(ref common.ReferenceCallback) com
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdog", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingOwnerChecks", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingTopologyAwareRouting", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingVerticalPodAutoscaler"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdog", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingTopologyAwareRouting", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingVerticalPodAutoscaler"},
 	}
 }
 

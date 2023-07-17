@@ -9239,38 +9239,6 @@ Defaults to &ldquo;Cluster&rdquo;.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1beta1.SeedSettingOwnerChecks">SeedSettingOwnerChecks
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.SeedSettings">SeedSettings</a>)
-</p>
-<p>
-<p>SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.</p>
-<p>Deprecated: This field is deprecated. The &ldquo;bad-case&rdquo; control plane migration is being removed in favor of the HA Shoot control planes (see <a href="https://github.com/gardener/gardener/issues/6302">https://github.com/gardener/gardener/issues/6302</a>).
-The field is no-op and will be removed in a future version.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>enabled</code></br>
-<em>
-bool
-</em>
-</td>
-<td>
-<p>Enabled controls whether owner checks are enabled for shoots scheduled on this seed.</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="core.gardener.cloud/v1beta1.SeedSettingScheduling">SeedSettingScheduling
 </h3>
 <p>
@@ -9438,23 +9406,6 @@ SeedSettingVerticalPodAutoscaler
 <td>
 <em>(Optional)</em>
 <p>VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>ownerChecks</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.SeedSettingOwnerChecks">
-SeedSettingOwnerChecks
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.</p>
-<p>Deprecated: This field is deprecated. The &ldquo;bad-case&rdquo; control plane migration is being removed in favor of the HA Shoot control planes (see <a href="https://github.com/gardener/gardener/issues/6302">https://github.com/gardener/gardener/issues/6302</a>).
-The field is locked to false (i.e. if the field value is true a validation error will be returned). In this way gardenlet will clean up all owner DNSRecords.
-Finally, the field will be removed from the API in a future version of Gardener.</p>
 </td>
 </tr>
 <tr>
