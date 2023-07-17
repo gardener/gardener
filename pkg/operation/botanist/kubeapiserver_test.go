@@ -655,7 +655,3 @@ var _ = Describe("KubeAPIServer", func() {
 		})
 	})
 })
-
-func featureGatePtr(f featuregate.Feature) *featuregate.Feature {
-	return &f
-}

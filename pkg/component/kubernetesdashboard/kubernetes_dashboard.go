@@ -39,11 +39,11 @@ import (
 )
 
 const (
-	name        = "kubernetes-dashboard"
-	scraperName = "dashboard-metrics-scraper"
-	namespace   = "kubernetes-dashboard"
-	labelKey    = "k8s-app"
-	labelValue  = "kubernetes-dashboard"
+	name               = "kubernetes-dashboard"
+	scraperName        = "dashboard-metrics-scraper"
+	dashboardNamespace = "kubernetes-dashboard"
+	labelKey           = "k8s-app"
+	labelValue         = "kubernetes-dashboard"
 	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
 	ManagedResourceName = "shoot-addon-kubernetes-dashboard"
 )
@@ -127,7 +127,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 		updateMode       = vpaautoscalingv1.UpdateModeAuto
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 
-		namespaces = &corev1.Namespace{
+		namespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
 				Labels: map[string]string{
@@ -139,7 +139,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 		role = &rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
-				Namespace: namespace,
+				Namespace: dashboardNamespace,
 				Labels:    map[string]string{labelKey: name},
 			},
 			Rules: []rbacv1.PolicyRule{
@@ -173,7 +173,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 		roleBinding = &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
-				Namespace: namespace,
+				Namespace: dashboardNamespace,
 				Labels:    map[string]string{labelKey: name},
 				Annotations: map[string]string{
 					resourcesv1alpha1.DeleteOnInvalidUpdate: "true",
@@ -188,7 +188,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 				{
 					Kind:      "ServiceAccount",
 					Name:      name,
-					Namespace: namespace,
+					Namespace: dashboardNamespace,
 				},
 			},
 		}
@@ -223,7 +223,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 				{
 					Kind:      "ServiceAccount",
 					Name:      name,
-					Namespace: namespace,
+					Namespace: dashboardNamespace,
 				},
 			},
 		}
@@ -231,7 +231,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
-				Namespace: namespace,
+				Namespace: dashboardNamespace,
 				Labels:    map[string]string{labelKey: name},
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
@@ -240,7 +240,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 		secretCerts = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kubernetes-dashboard-certs",
-				Namespace: namespace,
+				Namespace: dashboardNamespace,
 				Labels:    map[string]string{labelKey: name},
 			},
 			Type: corev1.SecretTypeOpaque,
@@ -249,7 +249,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 		secretCSRF = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kubernetes-dashboard-csrf",
-				Namespace: namespace,
+				Namespace: dashboardNamespace,
 				Labels:    map[string]string{labelKey: name},
 			},
 			Type: corev1.SecretTypeOpaque,
@@ -261,7 +261,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 		secretKeyHolder = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kubernetes-dashboard-key-holder",
-				Namespace: namespace,
+				Namespace: dashboardNamespace,
 				Labels:    map[string]string{labelKey: name},
 			},
 			Type: corev1.SecretTypeOpaque,
@@ -270,7 +270,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 		configMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kubernetes-dashboard-settings",
-				Namespace: namespace,
+				Namespace: dashboardNamespace,
 				Labels:    map[string]string{labelKey: name},
 			},
 		}
@@ -278,7 +278,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 		deploymentDashboard = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      v1beta1constants.DeploymentNameKubernetesDashboard,
-				Namespace: namespace,
+				Namespace: dashboardNamespace,
 				Labels:    getLabels(name),
 			},
 			Spec: appsv1.DeploymentSpec{
@@ -316,7 +316,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 								Args: []string{
 									"--auto-generate-certificates",
 									"--authentication-mode=" + k.values.AuthenticationMode,
-									"--namespace=" + namespace,
+									"--namespace=" + dashboardNamespace,
 								},
 								Ports: []corev1.ContainerPort{
 									{
@@ -385,7 +385,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 		deploymentMetricsScraper = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      v1beta1constants.DeploymentNameDashboardMetricsScraper,
-				Namespace: namespace,
+				Namespace: dashboardNamespace,
 				Labels:    getLabels(scraperName),
 			},
 			Spec: appsv1.DeploymentSpec{
@@ -455,7 +455,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 		serviceDashboard = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
-				Namespace: namespace,
+				Namespace: dashboardNamespace,
 				Labels:    map[string]string{labelKey: name},
 			},
 			Spec: corev1.ServiceSpec{
@@ -472,7 +472,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 		serviceMetricsScraper = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      scraperName,
-				Namespace: namespace,
+				Namespace: dashboardNamespace,
 				Labels:    map[string]string{labelKey: scraperName},
 			},
 			Spec: corev1.ServiceSpec{
@@ -493,7 +493,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
-				Namespace: namespace,
+				Namespace: dashboardNamespace,
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
@@ -532,7 +532,7 @@ func (k *kubernetesDashboard) computeResourcesData() (map[string][]byte, error) 
 	}
 
 	return registry.AddAllAndSerialize(
-		namespaces,
+		namespace,
 		role,
 		roleBinding,
 		clusterRole,
