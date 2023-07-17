@@ -184,6 +184,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		ControlPlane:     &ControlPlane{},
 		SystemComponents: &SystemComponents{},
 		Logging:          &Logging{},
+		Monitoring:       &Monitoring{},
 		Addons:           &Addons{},
 	}
 

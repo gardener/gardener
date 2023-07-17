@@ -35,8 +35,8 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-// DeploySeedLogging will install the logging stack for the Shoot in the Seed clusters.
-func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
+// DeployLogging will install the logging stack for the Shoot in the Seed clusters.
+func (b *Botanist) DeployLogging(ctx context.Context) error {
 	if !b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) {
 		return b.DestroySeedLogging(ctx)
 	}

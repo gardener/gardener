@@ -216,6 +216,12 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	o.Shoot.Components.DependencyWatchdogAccess = b.DefaultDependencyWatchdogAccess()
 	o.Shoot.Components.GardenerAccess = b.DefaultGardenerAccess()
 
+	// Monitoring
+	o.Shoot.Components.Monitoring.Monitoring, err = b.DefaultMonitoring()
+	if err != nil {
+		return nil, err
+	}
+
 	// Logging
 	o.Shoot.Components.Logging.ShootRBACProxy, err = kuberbacproxy.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace)
 	if err != nil {

@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/etcd"
+	"github.com/gardener/gardener/pkg/component/monitoring"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
@@ -45,11 +46,26 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
-// DeploySeedMonitoring installs the Helm release "seed-monitoring" in the Seed clusters. It comprises components
+// DefaultMonitoring creates a new monitoring component.
+func (b *Botanist) DefaultMonitoring() (component.Deployer, error) {
+	return monitoring.New(
+		b.SeedClientSet.Client(),
+		b.SeedClientSet.ChartApplier(),
+		b.SecretsManager,
+		b.Shoot.SeedNamespace,
+		monitoring.Values{},
+	), nil
+}
+
+// DeployMonitoring installs the Helm release "seed-monitoring" in the Seed clusters. It comprises components
 // to monitor the Shoot cluster whose control plane runs in the Seed cluster.
-func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
+func (b *Botanist) DeployMonitoring(ctx context.Context) error {
 	if !b.IsShootMonitoringEnabled() {
-		return b.DeleteSeedMonitoring(ctx)
+		return b.Shoot.Components.Monitoring.Monitoring.Destroy(ctx)
+	}
+
+	if err := b.Shoot.Components.Monitoring.Monitoring.Deploy(ctx); err != nil {
+		return err
 	}
 
 	credentialsSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameObservabilityIngressUsers)

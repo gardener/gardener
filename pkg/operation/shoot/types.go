@@ -116,9 +116,10 @@ type Components struct {
 	Extensions               *Extensions
 	SystemComponents         *SystemComponents
 	Logging                  *Logging
+	Monitoring               *Monitoring
+	Addons                   *Addons
 	GardenerAccess           component.Deployer
 	DependencyWatchdogAccess component.Deployer
-	Addons                   *Addons
 }
 
 // ControlPlane contains references to K8S control plane components.
@@ -172,7 +173,12 @@ type SystemComponents struct {
 	VPNShoot            vpnshoot.Interface
 }
 
-// Logging contains references to logging deployers
+// Monitoring contains references to monitoring deployers.
+type Monitoring struct {
+	Monitoring component.Deployer
+}
+
+// Logging contains references to logging deployers.
 type Logging struct {
 	// TODO(rfranzke): Drop the `ShootRBACProxy` field after gardener/gardener@v1.78 has been released.
 	ShootRBACProxy component.Deployer
