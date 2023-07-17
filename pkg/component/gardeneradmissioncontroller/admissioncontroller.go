@@ -139,7 +139,7 @@ func (a admissioncontroller) Deploy(ctx context.Context) error {
 
 	caSecret, found := a.secretsManager.Get(operatorv1alpha1.SecretNameCAGardener)
 	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
+		return fmt.Errorf("secret %q not found", operatorv1alpha1.SecretNameCAGardener)
 	}
 
 	virtualResources, err := virtualRegistry.AddAllAndSerialize(

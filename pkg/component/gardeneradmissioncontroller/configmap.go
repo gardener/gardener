@@ -15,19 +15,18 @@
 package gardeneradmissioncontroller
 
 import (
-	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-
-	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
-	"github.com/gardener/gardener/pkg/logger"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
+
+	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/logger"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var (
