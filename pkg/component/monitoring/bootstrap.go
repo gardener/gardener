@@ -48,8 +48,8 @@ var (
 	chartPath = filepath.Join("charts", "bootstrap")
 )
 
-// Values is a set of configuration values for the monitoring components.
-type Values struct {
+// ValuesBootstrap is a set of configuration values for the monitoring components.
+type ValuesBootstrap struct {
 	// AlertingSMTPSecret is the alerting SMTP secret..
 	AlertingSMTPSecret *corev1.Secret
 	// GlobalMonitoringSecret is the global monitoring secret for the garden cluster.
@@ -78,13 +78,13 @@ type Values struct {
 	WildcardCertName *string
 }
 
-// New creates a new instance of Deployer for the monitoring components.
-func New(
+// NewBootstrap creates a new instance of Deployer for the monitoring components.
+func NewBootstrap(
 	client client.Client,
 	chartApplier kubernetes.ChartApplier,
 	secretsManager secretsmanager.Interface,
 	namespace string,
-	values Values,
+	values ValuesBootstrap,
 ) component.Deployer {
 	return &bootstrapper{
 		client:         client,
@@ -100,7 +100,7 @@ type bootstrapper struct {
 	chartApplier   kubernetes.ChartApplier
 	namespace      string
 	secretsManager secretsmanager.Interface
-	values         Values
+	values         ValuesBootstrap
 }
 
 func (b *bootstrapper) Deploy(ctx context.Context) error {
