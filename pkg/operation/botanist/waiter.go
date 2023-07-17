@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/operation/common"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
@@ -49,7 +49,7 @@ func (b *Botanist) WaitUntilTunnelConnectionExists(ctx context.Context) error {
 	const timeout = 15 * time.Minute
 
 	return retry.UntilTimeout(ctx, 5*time.Second, timeout, func(ctx context.Context) (bool, error) {
-		return CheckTunnelConnection(ctx, b.Logger, b.ShootClientSet, common.VPNTunnel)
+		return CheckTunnelConnection(ctx, b.Logger, b.ShootClientSet, v1beta1constants.VPNTunnel)
 	})
 }
 

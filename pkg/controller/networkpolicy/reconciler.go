@@ -42,7 +42,6 @@ import (
 	"github.com/gardener/gardener/pkg/controller/networkpolicy/hostnameresolver"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -429,7 +428,7 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToDNS(ctx context.Context, log l
 		return err
 	}
 
-	runtimeDNSServerAddress, err := common.ComputeOffsetIP(runtimeServiceCIDR, 10)
+	runtimeDNSServerAddress, err := utils.ComputeOffsetIP(runtimeServiceCIDR, 10)
 	if err != nil {
 		return fmt.Errorf("cannot calculate CoreDNS ClusterIP: %w", err)
 	}

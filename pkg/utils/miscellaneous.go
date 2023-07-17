@@ -16,6 +16,7 @@ package utils
 
 import (
 	"fmt"
+	"math/big"
 	"net"
 	"regexp"
 	"strings"
@@ -198,4 +199,52 @@ func InterfaceMapToStringMap(in map[string]interface{}) map[string]string {
 		m[k] = fmt.Sprint(v)
 	}
 	return m
+}
+
+// FilterEntriesByPrefix returns a list of strings which begin with the given prefix.
+func FilterEntriesByPrefix(prefix string, entries []string) []string {
+	var result []string
+	for _, entry := range entries {
+		if strings.HasPrefix(entry, prefix) {
+			result = append(result, entry)
+		}
+	}
+	return result
+}
+
+// ComputeOffsetIP parses the provided <subnet> and offsets with the value of <offset>.
+// For example, <subnet> = 100.64.0.0/11 and <offset> = 10 the result would be 100.64.0.10
+// IPv6 and IPv4 is supported.
+func ComputeOffsetIP(subnet *net.IPNet, offset int64) (net.IP, error) {
+	if subnet == nil {
+		return nil, fmt.Errorf("subnet is nil")
+	}
+
+	isIPv6 := false
+
+	bytes := subnet.IP.To4()
+	if bytes == nil {
+		isIPv6 = true
+		bytes = subnet.IP.To16()
+	}
+
+	ip := net.IP(big.NewInt(0).Add(big.NewInt(0).SetBytes(bytes), big.NewInt(offset)).Bytes())
+
+	if !subnet.Contains(ip) {
+		return nil, fmt.Errorf("cannot compute IP with offset %d - subnet %q too small", offset, subnet)
+	}
+
+	// there is no broadcast address on IPv6
+	if isIPv6 {
+		return ip, nil
+	}
+
+	for i := range ip {
+		// IP address is not the same, so it's not the broadcast ip.
+		if ip[i] != ip[i]|^subnet.Mask[i] {
+			return ip.To4(), nil
+		}
+	}
+
+	return nil, fmt.Errorf("computed IPv4 address %q is broadcast for subnet %q", ip, subnet)
 }

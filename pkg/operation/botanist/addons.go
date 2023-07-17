@@ -24,7 +24,6 @@ import (
 
 	"github.com/gardener/gardener/charts"
 	"github.com/gardener/gardener/pkg/chartrenderer"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -41,13 +40,12 @@ func (b *Botanist) DeployManagedResourceForAddons(ctx context.Context) error {
 // generateCoreAddonsChart renders the gardener-resource-manager configuration for the core addons. After that it
 // creates a ManagedResource CRD that references the rendered manifests and creates it.
 func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, error) {
-	podSecurityPolicies := map[string]interface{}{
-		"allowPrivilegedContainers": pointer.BoolDeref(b.Shoot.GetInfo().Spec.Kubernetes.AllowPrivilegedContainers, false),
-	}
-
 	values := map[string]interface{}{
-		"monitoring":          common.GenerateAddonConfig(map[string]interface{}{}, b.Operation.IsShootMonitoringEnabled()),
-		"podsecuritypolicies": common.GenerateAddonConfig(podSecurityPolicies, !b.Shoot.PSPDisabled && !b.Shoot.IsWorkerless),
+		"monitoring": map[string]interface{}{"enabled": b.Operation.IsShootMonitoringEnabled()},
+		"podsecuritypolicies": map[string]interface{}{
+			"enabled":                   !b.Shoot.PSPDisabled && !b.Shoot.IsWorkerless,
+			"allowPrivilegedContainers": pointer.BoolDeref(b.Shoot.GetInfo().Spec.Kubernetes.AllowPrivilegedContainers, false),
+		},
 	}
 
 	return b.ShootClientSet.ChartRenderer().Render(filepath.Join(charts.Path, "shoot-core", "components"), "shoot-core", metav1.NamespaceSystem, values)

@@ -36,10 +36,10 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -366,7 +366,7 @@ func (o *Operation) IsAPIServerRunning(ctx context.Context) (bool, error) {
 // GetSecretKeysOfRole returns a list of keys which are present in the Garden Secrets map and which
 // are prefixed with <kind>.
 func (o *Operation) GetSecretKeysOfRole(kind string) []string {
-	return common.FilterEntriesByPrefix(kind, o.AllSecretKeys())
+	return utils.FilterEntriesByPrefix(kind, o.AllSecretKeys())
 }
 
 // ReportShootProgress will update the last operation object in the Shoot manifest `status` section
@@ -434,27 +434,27 @@ func (o *Operation) WantsPlutono() bool {
 
 // ComputeKubeAPIServerHost computes the host with a TLS certificate from a trusted origin for KubeAPIServer.
 func (o *Operation) ComputeKubeAPIServerHost() string {
-	return o.ComputeIngressHost(common.KubeAPIServerPrefix)
+	return o.ComputeIngressHost("api")
 }
 
 // ComputePlutonoHost computes the host for Plutono.
 func (o *Operation) ComputePlutonoHost() string {
-	return o.ComputeIngressHost(common.PlutonoUsersPrefix)
+	return o.ComputeIngressHost("gu")
 }
 
 // ComputeAlertManagerHost computes the host for alert manager.
 func (o *Operation) ComputeAlertManagerHost() string {
-	return o.ComputeIngressHost(common.AlertManagerPrefix)
+	return o.ComputeIngressHost("au")
 }
 
 // ComputePrometheusHost computes the host for prometheus.
 func (o *Operation) ComputePrometheusHost() string {
-	return o.ComputeIngressHost(common.PrometheusPrefix)
+	return o.ComputeIngressHost("p")
 }
 
 // ComputeValiHost computes the host for vali.
 func (o *Operation) ComputeValiHost() string {
-	return o.ComputeIngressHost(common.ValiPrefix)
+	return o.ComputeIngressHost("v")
 }
 
 // technicalIDPattern addresses the ambiguity that one or two dashes could follow the prefix "shoot" in the technical ID of the shoot.
