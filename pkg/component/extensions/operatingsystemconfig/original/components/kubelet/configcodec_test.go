@@ -144,6 +144,7 @@ clusterDNS:
 clusterDomain: cluster.local
 containerLogMaxFiles: 10
 containerLogMaxSize: 100Mi
+containerRuntimeEndpoint: ""
 cpuCFSQuota: true
 cpuManagerPolicy: none
 cpuManagerReconcilePeriod: 10s
