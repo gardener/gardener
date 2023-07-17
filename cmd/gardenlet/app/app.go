@@ -599,6 +599,8 @@ func (g *garden) cleanupStaleAddonsMR(ctx context.Context, gardenClient, seedCli
 						Namespace: namespace.Name,
 					},
 				}
+				resourceManagerDeploymentFound bool
+				replicas                       int32
 			)
 
 			if err := seedClient.Get(ctx, client.ObjectKeyFromObject(addonsMR), addonsMR); err != nil {
@@ -609,16 +611,20 @@ func (g *garden) cleanupStaleAddonsMR(ctx context.Context, gardenClient, seedCli
 				return err
 			}
 
-			if err := seedClient.Get(ctx, client.ObjectKeyFromObject(resourceManagerDeployment), resourceManagerDeployment); err != nil {
+			if err := seedClient.Get(ctx, client.ObjectKeyFromObject(resourceManagerDeployment), resourceManagerDeployment); err == nil {
+				resourceManagerDeploymentFound = true
+			} else if !apierrors.IsNotFound(err) {
 				return err
 			}
 
-			replicas := pointer.Int32Deref(resourceManagerDeployment.Spec.Replicas, 0)
-			if replicas > 0 {
-				patch := client.MergeFrom(resourceManagerDeployment.DeepCopy())
-				resourceManagerDeployment.Spec.Replicas = pointer.Int32(0)
-				if err := seedClient.Patch(ctx, resourceManagerDeployment, patch); err != nil {
-					return fmt.Errorf("failed to scale gardener-resource-manager deployment to zero %q: %w", client.ObjectKeyFromObject(resourceManagerDeployment), err)
+			if resourceManagerDeploymentFound {
+				replicas = pointer.Int32Deref(resourceManagerDeployment.Spec.Replicas, replicas)
+				if replicas > 0 {
+					patch := client.MergeFrom(resourceManagerDeployment.DeepCopy())
+					resourceManagerDeployment.Spec.Replicas = pointer.Int32(0)
+					if err := seedClient.Patch(ctx, resourceManagerDeployment, patch); err != nil {
+						return fmt.Errorf("failed to scale gardener-resource-manager deployment to zero %q: %w", client.ObjectKeyFromObject(resourceManagerDeployment), err)
+					}
 				}
 			}
 
@@ -630,17 +636,15 @@ func (g *garden) cleanupStaleAddonsMR(ctx context.Context, gardenClient, seedCli
 				if err := controllerutils.RemoveAllFinalizers(ctx, seedClient, addonsSecret); err != nil {
 					return fmt.Errorf("failed to remove finalizers from the Secret %q: %w", client.ObjectKeyFromObject(addonsSecret), err)
 				}
-			} else {
-				if !apierrors.IsNotFound(err) {
-					return err
-				}
+			} else if !apierrors.IsNotFound(err) {
+				return err
 			}
 
 			if err := managedresources.DeleteForShoot(ctx, seedClient, namespace.Name, addonsMR.Name); err != nil {
 				return err
 			}
 
-			if replicas > 0 {
+			if resourceManagerDeploymentFound && replicas > 0 {
 				patch := client.MergeFrom(resourceManagerDeployment.DeepCopy())
 				resourceManagerDeployment.Spec.Replicas = &replicas
 				if err := seedClient.Patch(ctx, resourceManagerDeployment, patch); err != nil {
