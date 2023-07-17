@@ -31,6 +31,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	cmdutils "github.com/gardener/gardener/cmd/utils"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -115,6 +116,7 @@ var _ = BeforeSuite(func() {
 	Expect((&crddeletionprotection.Handler{
 		Logger:       log,
 		SourceReader: mgr.GetAPIReader(),
+		Decoder:      admission.NewDecoder(mgr.GetScheme()),
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("Start manager")
