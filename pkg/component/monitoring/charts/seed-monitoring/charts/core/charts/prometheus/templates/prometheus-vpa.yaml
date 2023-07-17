@@ -5,7 +5,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   targetRef:
-    apiVersion: {{ include "statefulsetversion" . }}
+    apiVersion: apps/v1
     kind: StatefulSet
     name: prometheus
   updatePolicy:

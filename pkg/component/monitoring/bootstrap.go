@@ -44,8 +44,8 @@ import (
 
 var (
 	//go:embed charts/bootstrap
-	chart     embed.FS
-	chartPath = filepath.Join("charts", "bootstrap")
+	chartBootstrap     embed.FS
+	chartPathBootstrap = filepath.Join("charts", "bootstrap")
 )
 
 // ValuesBootstrap is a set of configuration values for the monitoring components.
@@ -268,7 +268,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		},
 	})
 
-	return b.chartApplier.ApplyFromEmbeddedFS(ctx, chart, chartPath, b.namespace, "monitoring", values, applierOptions)
+	return b.chartApplier.ApplyFromEmbeddedFS(ctx, chartBootstrap, chartPathBootstrap, b.namespace, "monitoring", values, applierOptions)
 }
 
 func (b *bootstrapper) Destroy(ctx context.Context) error {

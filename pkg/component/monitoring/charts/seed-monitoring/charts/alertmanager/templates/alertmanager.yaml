@@ -36,7 +36,7 @@ spec:
     component: alertmanager
     role: monitoring
 ---
-apiVersion: {{ include "statefulsetversion" . }}
+apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: alertmanager
@@ -164,7 +164,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   targetRef:
-    apiVersion: {{ include "deploymentversion" . }}
+    apiVersion: apps/v1
     kind: StatefulSet
     name: alertmanager
   updatePolicy:

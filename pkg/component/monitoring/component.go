@@ -16,7 +16,9 @@ package monitoring
 
 import (
 	"context"
+	"embed"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -42,6 +44,16 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+)
+
+var (
+	//go:embed charts/seed-monitoring/charts/alertmanager
+	chartAlertmanager     embed.FS
+	chartPathAlertmanager = filepath.Join("charts", "seed-monitoring", "charts", "alertmanager")
+
+	//go:embed charts/seed-monitoring/charts/core
+	chartCore     embed.FS
+	chartPathCore = filepath.Join("charts", "seed-monitoring", "charts", "core")
 )
 
 // Values is a set of configuration values for the monitoring components.
@@ -311,8 +323,7 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 		"prometheus": prometheusConfig,
 	}
 
-	// TODO: Chart will be embedded in a future commit.
-	if err := m.chartApplier.ApplyFromEmbeddedFS(ctx, chart, chartPath, m.namespace, "core", kubernetes.Values(coreValues)); err != nil {
+	if err := m.chartApplier.ApplyFromEmbeddedFS(ctx, chartCore, chartPathCore, m.namespace, "core", kubernetes.Values(coreValues)); err != nil {
 		return err
 	}
 
@@ -376,8 +387,7 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 			"emailConfigs": emailConfigs,
 		}
 
-		// TODO: Chart will be embedded in a future commit.
-		return m.chartApplier.ApplyFromEmbeddedFS(ctx, chart, chartPath, m.namespace, "alertmanager", kubernetes.Values(alertManagerValues))
+		return m.chartApplier.ApplyFromEmbeddedFS(ctx, chartAlertmanager, chartPathAlertmanager, m.namespace, "alertmanager", kubernetes.Values(alertManagerValues))
 	}
 
 	return common.DeleteAlertmanager(ctx, m.client, m.namespace)

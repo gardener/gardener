@@ -31,7 +31,7 @@ spec:
   sessionAffinity: None
   type: ClusterIP
 ---
-apiVersion: {{include "statefulsetversion" .}}
+apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: prometheus
