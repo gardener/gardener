@@ -38,7 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -390,11 +389,11 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 		return m.chartApplier.ApplyFromEmbeddedFS(ctx, chartAlertmanager, chartPathAlertmanager, m.namespace, "alertmanager", kubernetes.Values(alertManagerValues))
 	}
 
-	return common.DeleteAlertmanager(ctx, m.client, m.namespace)
+	return deleteAlertmanager(ctx, m.client, m.namespace)
 }
 
 func (m *monitoring) Destroy(ctx context.Context) error {
-	if err := common.DeleteAlertmanager(ctx, m.client, m.namespace); err != nil {
+	if err := deleteAlertmanager(ctx, m.client, m.namespace); err != nil {
 		return err
 	}
 

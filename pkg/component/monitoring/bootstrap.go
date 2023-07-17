@@ -35,7 +35,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/istio"
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -192,7 +191,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		alertManagerConfig["emailConfigs"] = []map[string]interface{}{emailConfig}
 	} else {
 		alertManagerConfig["enabled"] = false
-		if err := common.DeleteAlertmanager(ctx, b.client, b.namespace); err != nil {
+		if err := deleteAlertmanager(ctx, b.client, b.namespace); err != nil {
 			return err
 		}
 	}

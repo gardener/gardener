@@ -130,7 +130,7 @@ func DeleteLokiRetainPvc(ctx context.Context, k8sClient client.Client, namespace
 		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-promtail", Namespace: namespace}},
 		// We retain the PVC and reuse it with Vali.
-		//&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "loki-loki-0", Namespace: namespace}},
+		// &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "loki-loki-0", Namespace: namespace}},
 	}
 
 	// Loki currently needs 30s to terminate because after 1s of graceful shutdown preparation it waits for 30s until it is eventually
@@ -509,56 +509,6 @@ func RenameLokiPvcToValiPvc(ctx context.Context, k8sClient client.Client, namesp
 
 	log.Info("Loki2vali: Successfully finished RenameLokiPvcToValiPvc", "lokiNamespace", namespace)
 	return nil
-}
-
-// DeleteAlertmanager deletes all resources of the Alertmanager in a given namespace.
-func DeleteAlertmanager(ctx context.Context, k8sClient client.Client, namespace string) error {
-	objs := []client.Object{
-		&appsv1.StatefulSet{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      v1beta1constants.StatefulSetNameAlertManager,
-				Namespace: namespace,
-			},
-		},
-		&networkingv1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "alertmanager",
-				Namespace: namespace,
-			},
-		},
-		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "alertmanager-client",
-				Namespace: namespace,
-			},
-		},
-		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "alertmanager",
-				Namespace: namespace,
-			},
-		},
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "alertmanager-basic-auth",
-				Namespace: namespace,
-			},
-		},
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "alertmanager-config",
-				Namespace: namespace,
-			},
-		},
-		&corev1.PersistentVolumeClaim{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "alertmanager-db-alertmanager-0",
-				Namespace: namespace,
-			},
-		},
-	}
-
-	return kubernetesutils.DeleteObjects(ctx, k8sClient, objs...)
 }
 
 // DeleteGrafana deletes the Grafana resources that are no longer necessary due to the migration to Plutono.
