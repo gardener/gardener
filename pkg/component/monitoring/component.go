@@ -29,6 +29,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
@@ -65,18 +66,24 @@ type Values struct {
 	GlobalShootRemoteWriteSecret *corev1.Secret
 	// IgnoreAlerts specifies whether alerts should be ignored.
 	IgnoreAlerts bool
+	// ImageAlertmanager is the image of Alertmanager.
+	ImageAlertmanager string
 	// ImageBlackboxExporter is the image of BlackboxExporter.
 	ImageBlackboxExporter string
 	// ImageConfigmapReloader is the image of ConfigmapReloader.
 	ImageConfigmapReloader string
 	// ImagePrometheus is the image of Prometheus.
 	ImagePrometheus string
-	// IngressHost is the host name of Prometheus.
-	IngressHost string
+	// IngressHostAlertmanager is the host name of Alertmanager.
+	IngressHostAlertmanager string
+	// IngressHostPrometheus is the host name of Prometheus.
+	IngressHostPrometheus string
 	// IsWorkerless specifies whether the cluster is workerless.
 	IsWorkerless bool
 	// KubernetesVersion is the Kubernetes version of the target cluster.
 	KubernetesVersion string
+	// MonitoringConfig is the monitoring config.
+	MonitoringConfig *gardencorev1beta1.Monitoring
 	// NamespaceUID is the UID of the namespace in the runtime cluster.
 	NamespaceUID types.UID
 	// NodeLocalDNSEnabled specifies whether node-local-dns is enabled.
@@ -95,6 +102,8 @@ type Values struct {
 	RuntimeProviderType string
 	// RuntimeRegion is the region of the runtime cluster.
 	RuntimeRegion string
+	// StorageCapacityAlertmanager is the storage capacity of Alertmanager.
+	StorageCapacityAlertmanager string
 	// TargetName is the name of the target cluster.
 	TargetName string
 	// TargetProviderType is the provider type of the target cluster.
@@ -157,7 +166,7 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 			Name:                        "prometheus-tls",
 			CommonName:                  "prometheus",
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:                    []string{m.values.IngressHost},
+			DNSNames:                    []string{m.values.IngressHostPrometheus},
 			CertType:                    secretsutils.ServerCert,
 			Validity:                    pointer.Duration(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
@@ -204,7 +213,7 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 				"authSecretName": credentialsSecret.Name,
 				"hosts": []map[string]interface{}{
 					{
-						"hostName":   m.values.IngressHost,
+						"hostName":   m.values.IngressHostPrometheus,
 						"secretName": ingressTLSSecretName,
 					},
 				},
@@ -307,7 +316,71 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return nil
+	// Check if we want to deploy an alertmanager into the shoot namespace.
+	if m.values.AlertmanagerEnabled {
+		var emailConfigs []map[string]interface{}
+		if m.values.MonitoringConfig != nil && m.values.MonitoringConfig.Alerting != nil {
+			for _, email := range m.values.MonitoringConfig.Alerting.EmailReceivers {
+				for _, secret := range m.values.AlertingSecrets {
+					if string(secret.Data["auth_type"]) != "smtp" {
+						continue
+					}
+					emailConfigs = append(emailConfigs, map[string]interface{}{
+						"to":            email,
+						"from":          string(secret.Data["from"]),
+						"smarthost":     string(secret.Data["smarthost"]),
+						"auth_username": string(secret.Data["auth_username"]),
+						"auth_identity": string(secret.Data["auth_identity"]),
+						"auth_password": string(secret.Data["auth_password"]),
+					})
+				}
+			}
+		}
+
+		var alertManagerIngressTLSSecretName string
+		if m.values.WildcardCertName != nil {
+			alertManagerIngressTLSSecretName = *m.values.WildcardCertName
+		} else {
+			ingressTLSSecret, err := m.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
+				Name:                        "alertmanager-tls",
+				CommonName:                  "alertmanager",
+				Organization:                []string{"gardener.cloud:monitoring:ingress"},
+				DNSNames:                    []string{m.values.IngressHostAlertmanager},
+				CertType:                    secretsutils.ServerCert,
+				Validity:                    pointer.Duration(v1beta1constants.IngressTLSCertificateValidity),
+				SkipPublishingCACertificate: true,
+			}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
+			if err != nil {
+				return err
+			}
+			alertManagerIngressTLSSecretName = ingressTLSSecret.Name
+		}
+
+		alertManagerValues := map[string]interface{}{
+			"images": map[string]string{
+				"alertmanager":       m.values.ImageAlertmanager,
+				"configmap-reloader": m.values.ImageConfigmapReloader,
+			},
+			"ingress": map[string]interface{}{
+				"class":          v1beta1constants.SeedNginxIngressClass,
+				"authSecretName": credentialsSecret.Name,
+				"hosts": []map[string]interface{}{
+					{
+						"hostName":   m.values.IngressHostAlertmanager,
+						"secretName": alertManagerIngressTLSSecretName,
+					},
+				},
+			},
+			"replicas":     m.values.Replicas,
+			"storage":      m.values.StorageCapacityAlertmanager,
+			"emailConfigs": emailConfigs,
+		}
+
+		// TODO: Chart will be embedded in a future commit.
+		return m.chartApplier.ApplyFromEmbeddedFS(ctx, chart, chartPath, m.namespace, "alertmanager", kubernetes.Values(alertManagerValues))
+	}
+
+	return common.DeleteAlertmanager(ctx, m.client, m.namespace)
 }
 
 func (m *monitoring) Destroy(ctx context.Context) error {
