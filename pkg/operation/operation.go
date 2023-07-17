@@ -40,7 +40,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -416,21 +415,6 @@ func (o *Operation) SeedVersion() string {
 // ShootVersion is a shorthand for the desired kubernetes version of the operation's shoot.
 func (o *Operation) ShootVersion() string {
 	return o.Shoot.GetInfo().Spec.Kubernetes.Version
-}
-
-// InjectSeedSeedImages injects images that shall run on the Seed and target the Seed's Kubernetes version.
-func (o *Operation) InjectSeedSeedImages(values map[string]interface{}, names ...string) (map[string]interface{}, error) {
-	return chart.InjectImages(values, o.ImageVector, names, imagevector.RuntimeVersion(o.SeedVersion()), imagevector.TargetVersion(o.SeedVersion()))
-}
-
-// InjectSeedShootImages injects images that shall run on the Seed but target the Shoot's Kubernetes version.
-func (o *Operation) InjectSeedShootImages(values map[string]interface{}, names ...string) (map[string]interface{}, error) {
-	return chart.InjectImages(values, o.ImageVector, names, imagevector.RuntimeVersion(o.SeedVersion()), imagevector.TargetVersion(o.ShootVersion()))
-}
-
-// InjectShootShootImages injects images that shall run on the Shoot and target the Shoot's Kubernetes version.
-func (o *Operation) InjectShootShootImages(values map[string]interface{}, names ...string) (map[string]interface{}, error) {
-	return chart.InjectImages(values, o.ImageVector, names, imagevector.RuntimeVersion(o.ShootVersion()), imagevector.TargetVersion(o.ShootVersion()))
 }
 
 // DeleteClusterResourceFromSeed deletes the `Cluster` extension resource for the shoot in the seed cluster.

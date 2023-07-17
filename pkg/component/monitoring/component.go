@@ -24,6 +24,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -45,10 +47,58 @@ import (
 type Values struct {
 	// AlertingSecrets is a list of alerting secrets.
 	AlertingSecrets []*corev1.Secret
+	// AlertmanagerEnabled specifies whether Alertmanager is enabled.
+	AlertmanagerEnabled bool
+	// APIServerDomain is the domain of the API server.
+	APIServerDomain string
+	// APIServerHost is the host of the API server.
+	APIServerHost string
+	// APIServerServiceIP is the service IP of the API server.
+	APIServerServiceIP *string
 	// Components is a list of monitoring components.
 	Components []component.MonitoringComponent
+	// Config is the monitoring config.
+	Config *gardenletconfig.MonitoringConfig
+	// GardenletManagesMCM specifies whether MCM is managed by gardenlet.
+	GardenletManagesMCM bool
+	// GlobalShootRemoteWriteSecret is the global secret for remote write config.
+	GlobalShootRemoteWriteSecret *corev1.Secret
+	// IgnoreAlerts specifies whether alerts should be ignored.
+	IgnoreAlerts bool
+	// ImageBlackboxExporter is the image of BlackboxExporter.
+	ImageBlackboxExporter string
+	// ImageConfigmapReloader is the image of ConfigmapReloader.
+	ImageConfigmapReloader string
+	// ImagePrometheus is the image of Prometheus.
+	ImagePrometheus string
 	// IngressHost is the host name of Prometheus.
 	IngressHost string
+	// IsWorkerless specifies whether the cluster is workerless.
+	IsWorkerless bool
+	// KubernetesVersion is the Kubernetes version of the target cluster.
+	KubernetesVersion string
+	// NamespaceUID is the UID of the namespace in the runtime cluster.
+	NamespaceUID types.UID
+	// NodeLocalDNSEnabled specifies whether node-local-dns is enabled.
+	NodeLocalDNSEnabled bool
+	// ProjectName is the name of the project.
+	ProjectName string
+	// PodNetworkCIDR is the CIDR of the pod network.
+	PodNetworkCIDR *string
+	// ServiceNetworkCIDR is the CIDR of the service network.
+	ServiceNetworkCIDR *string
+	// NodeNetworkCIDR is the CIDR of the node network.
+	NodeNetworkCIDR *string
+	// Replicas is the number of replicas.
+	Replicas int32
+	// RuntimeProviderType is the provider type of the runtime cluster.
+	RuntimeProviderType string
+	// RuntimeRegion is the region of the runtime cluster.
+	RuntimeRegion string
+	// TargetName is the name of the target cluster.
+	TargetName string
+	// TargetProviderType is the provider type of the target cluster.
+	TargetProviderType string
 	// WildcardCertName is name of wildcard tls certificate which is issued for the seed's ingress domain.
 	WildcardCertName *string
 }
@@ -131,6 +181,130 @@ func (m *monitoring) Deploy(ctx context.Context) error {
 	etcdClientSecret, found := m.secretsManager.Get(etcd.SecretNameClient)
 	if !found {
 		return fmt.Errorf("secret %q not found", etcd.SecretNameClient)
+	}
+
+	var (
+		networks         = map[string]interface{}{}
+		prometheusConfig = map[string]interface{}{
+			"images": map[string]string{
+				"blackbox-exporter":  m.values.ImageBlackboxExporter,
+				"configmap-reloader": m.values.ImageConfigmapReloader,
+				"prometheus":         m.values.ImagePrometheus,
+			},
+			"secretNameClusterCA":      clusterCASecret.Name,
+			"secretNameEtcdCA":         etcdCASecret.Name,
+			"secretNameEtcdClientCert": etcdClientSecret.Name,
+			"kubernetesVersion":        m.values.KubernetesVersion,
+			"nodeLocalDNS": map[string]interface{}{
+				"enabled": m.values.NodeLocalDNSEnabled,
+			},
+			"gardenletManagesMCM": m.values.GardenletManagesMCM,
+			"ingress": map[string]interface{}{
+				"class":          v1beta1constants.SeedNginxIngressClass,
+				"authSecretName": credentialsSecret.Name,
+				"hosts": []map[string]interface{}{
+					{
+						"hostName":   m.values.IngressHost,
+						"secretName": ingressTLSSecretName,
+					},
+				},
+			},
+			"namespace": map[string]interface{}{
+				"uid": m.values.NamespaceUID,
+			},
+			"replicas": m.values.Replicas,
+			"seed": map[string]interface{}{
+				"apiserver": m.values.APIServerHost,
+				"region":    m.values.RuntimeRegion,
+				"provider":  m.values.RuntimeProviderType,
+			},
+			"rules": map[string]interface{}{
+				"optional": map[string]interface{}{
+					"alertmanager": map[string]interface{}{
+						"enabled": m.values.AlertmanagerEnabled,
+					},
+				},
+			},
+			"shoot": map[string]interface{}{
+				"apiserver":           fmt.Sprintf("https://%s", m.values.APIServerDomain),
+				"apiserverServerName": m.values.APIServerDomain,
+				"provider":            m.values.TargetProviderType,
+				"name":                m.values.TargetName,
+				"project":             m.values.ProjectName,
+				"workerless":          m.values.IsWorkerless,
+			},
+			"ignoreAlerts":            m.values.IgnoreAlerts,
+			"alerting":                alerting,
+			"additionalRules":         alertingRules.String(),
+			"additionalScrapeConfigs": scrapeConfigs.String(),
+		}
+	)
+
+	if services := m.values.ServiceNetworkCIDR; services != nil {
+		networks["services"] = services
+	}
+	if pods := m.values.PodNetworkCIDR; pods != nil {
+		networks["pods"] = pods
+	}
+	if apiServer := m.values.APIServerServiceIP; apiServer != nil {
+		prometheusConfig["apiserverServiceIP"] = apiServer
+	}
+	if m.values.NodeNetworkCIDR != nil {
+		networks["nodes"] = *m.values.NodeNetworkCIDR
+	}
+
+	prometheusConfig["networks"] = networks
+
+	// Add remotewrite to prometheus when enabled
+	if m.values.Config != nil &&
+		m.values.Config.Shoot != nil &&
+		m.values.Config.Shoot.RemoteWrite != nil &&
+		m.values.Config.Shoot.RemoteWrite.URL != "" {
+		// if remoteWrite Url is set add config into values
+		remoteWriteConfig := map[string]interface{}{
+			"url": m.values.Config.Shoot.RemoteWrite.URL,
+		}
+		// get secret for basic_auth in remote write
+		if remoteWriteBasicAuth := m.values.GlobalShootRemoteWriteSecret; remoteWriteBasicAuth != nil {
+			remoteWriteUsername := string(remoteWriteBasicAuth.Data["username"])
+			remoteWritePassword := string(remoteWriteBasicAuth.Data["password"])
+			if remoteWriteUsername != "" &&
+				remoteWritePassword != "" {
+				remoteWriteConfig["basic_auth"] = map[string]interface{}{
+					"username": remoteWriteUsername,
+					"password": remoteWritePassword,
+				}
+			}
+		}
+		// add list with keep metrics if set
+		if len(m.values.Config.Shoot.RemoteWrite.Keep) != 0 {
+			remoteWriteConfig["keep"] = m.values.Config.Shoot.RemoteWrite.Keep
+		}
+		// add queue_config if set
+		if m.values.Config.Shoot.RemoteWrite.QueueConfig != nil &&
+			len(*m.values.Config.Shoot.RemoteWrite.QueueConfig) != 0 {
+			remoteWriteConfig["queue_config"] = m.values.Config.Shoot.RemoteWrite.QueueConfig
+		}
+		prometheusConfig["remoteWrite"] = remoteWriteConfig
+	}
+
+	// set externalLabels
+	if m.values.Config != nil && m.values.Config.Shoot != nil && len(m.values.Config.Shoot.ExternalLabels) != 0 {
+		prometheusConfig["externalLabels"] = m.values.Config.Shoot.ExternalLabels
+	}
+
+	coreValues := map[string]interface{}{
+		"global": map[string]interface{}{
+			"shootKubeVersion": map[string]interface{}{
+				"gitVersion": m.values.KubernetesVersion,
+			},
+		},
+		"prometheus": prometheusConfig,
+	}
+
+	// TODO: Chart will be embedded in a future commit.
+	if err := m.chartApplier.ApplyFromEmbeddedFS(ctx, chart, chartPath, m.namespace, "core", kubernetes.Values(coreValues)); err != nil {
+		return err
 	}
 
 	return nil

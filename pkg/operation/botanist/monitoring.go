@@ -37,6 +37,19 @@ import (
 
 // DefaultMonitoring creates a new monitoring component.
 func (b *Botanist) DefaultMonitoring() (component.Deployer, error) {
+	imageBlackboxExporter, err := b.ImageVector.FindImage(images.ImageNameBlackboxExporter)
+	if err != nil {
+		return nil, err
+	}
+	imageConfigmapReloader, err := b.ImageVector.FindImage(images.ImageNameConfigmapReloader)
+	if err != nil {
+		return nil, err
+	}
+	imagePrometheus, err := b.ImageVector.FindImage(images.ImageNamePrometheus)
+	if err != nil {
+		return nil, err
+	}
+
 	var alertingSecrets []*corev1.Secret
 	for _, key := range b.GetSecretKeysOfRole(v1beta1constants.GardenRoleAlerting) {
 		alertingSecrets = append(alertingSecrets, b.LoadSecret(key))
@@ -89,17 +102,54 @@ func (b *Botanist) DefaultMonitoring() (component.Deployer, error) {
 		wildcardSecretName = &b.ControlPlaneWildcardCert.Name
 	}
 
+	values := monitoring.Values{
+		AlertingSecrets:              alertingSecrets,
+		AlertmanagerEnabled:          b.Shoot.WantsAlertmanager,
+		APIServerDomain:              gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+		APIServerHost:                b.SeedClientSet.RESTConfig().Host,
+		Components:                   monitoringComponents,
+		Config:                       b.Config.Monitoring,
+		GardenletManagesMCM:          features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment),
+		GlobalShootRemoteWriteSecret: b.LoadSecret(v1beta1constants.GardenRoleGlobalShootRemoteWriteMonitoring),
+		IgnoreAlerts:                 b.Shoot.IgnoreAlerts,
+		ImageBlackboxExporter:        imageBlackboxExporter.String(),
+		ImageConfigmapReloader:       imageConfigmapReloader.String(),
+		ImagePrometheus:              imagePrometheus.String(),
+		IngressHost:                  b.ComputePrometheusHost(),
+		IsWorkerless:                 b.Shoot.IsWorkerless,
+		KubernetesVersion:            b.Shoot.GetInfo().Spec.Kubernetes.Version,
+		NamespaceUID:                 b.SeedNamespaceObject.UID,
+		NodeLocalDNSEnabled:          b.Shoot.NodeLocalDNSEnabled,
+		ProjectName:                  b.Garden.Project.Name,
+		Replicas:                     b.Shoot.GetReplicas(1),
+		RuntimeProviderType:          b.Seed.GetInfo().Spec.Provider.Type,
+		RuntimeRegion:                b.Seed.GetInfo().Spec.Provider.Region,
+		TargetName:                   b.Shoot.GetInfo().Name,
+		TargetProviderType:           b.Shoot.GetInfo().Spec.Provider.Type,
+		WildcardCertName:             wildcardSecretName,
+	}
+
+	if b.Shoot.Networks != nil {
+		if services := b.Shoot.Networks.Services; services != nil {
+			values.ServiceNetworkCIDR = pointer.String(services.String())
+		}
+		if pods := b.Shoot.Networks.Pods; pods != nil {
+			values.PodNetworkCIDR = pointer.String(pods.String())
+		}
+		if apiServer := b.Shoot.Networks.APIServer; apiServer != nil {
+			values.APIServerServiceIP = pointer.String(apiServer.String())
+		}
+	}
+	if b.Shoot.GetInfo().Spec.Networking != nil {
+		values.NodeNetworkCIDR = b.Shoot.GetInfo().Spec.Networking.Nodes
+	}
+
 	return monitoring.New(
 		b.SeedClientSet.Client(),
 		b.SeedClientSet.ChartApplier(),
 		b.SecretsManager,
 		b.Shoot.SeedNamespace,
-		monitoring.Values{
-			AlertingSecrets:  alertingSecrets,
-			Components:       monitoringComponents,
-			IngressHost:      b.ComputePrometheusHost(),
-			WildcardCertName: wildcardSecretName,
-		},
+		values,
 	), nil
 }
 
@@ -111,134 +161,6 @@ func (b *Botanist) DeployMonitoring(ctx context.Context) error {
 	}
 
 	if err := b.Shoot.Components.Monitoring.Monitoring.Deploy(ctx); err != nil {
-		return err
-	}
-
-	var (
-		networks         = map[string]interface{}{}
-		prometheusConfig = map[string]interface{}{
-			"secretNameClusterCA":      clusterCASecret.Name,
-			"secretNameEtcdCA":         etcdCASecret.Name,
-			"secretNameEtcdClientCert": etcdClientSecret.Name,
-			"kubernetesVersion":        b.Shoot.GetInfo().Spec.Kubernetes.Version,
-			"nodeLocalDNS": map[string]interface{}{
-				"enabled": b.Shoot.NodeLocalDNSEnabled,
-			},
-			"gardenletManagesMCM": features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment),
-			"ingress": map[string]interface{}{
-				"class":          v1beta1constants.SeedNginxIngressClass,
-				"authSecretName": credentialsSecret.Name,
-				"hosts": []map[string]interface{}{
-					{
-						"hostName":   b.ComputePrometheusHost(),
-						"secretName": prometheusIngressTLSSecretName,
-					},
-				},
-			},
-			"namespace": map[string]interface{}{
-				"uid": b.SeedNamespaceObject.UID,
-			},
-			"replicas": b.Shoot.GetReplicas(1),
-			"seed": map[string]interface{}{
-				"apiserver": b.SeedClientSet.RESTConfig().Host,
-				"region":    b.Seed.GetInfo().Spec.Provider.Region,
-				"provider":  b.Seed.GetInfo().Spec.Provider.Type,
-			},
-			"rules": map[string]interface{}{
-				"optional": map[string]interface{}{
-					"alertmanager": map[string]interface{}{
-						"enabled": b.Shoot.WantsAlertmanager,
-					},
-				},
-			},
-			"shoot": map[string]interface{}{
-				"apiserver":           fmt.Sprintf("https://%s", gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain)),
-				"apiserverServerName": gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
-				"provider":            b.Shoot.GetInfo().Spec.Provider.Type,
-				"name":                b.Shoot.GetInfo().Name,
-				"project":             b.Garden.Project.Name,
-				"workerless":          b.Shoot.IsWorkerless,
-			},
-			"ignoreAlerts":            b.Shoot.IgnoreAlerts,
-			"alerting":                alerting,
-			"additionalRules":         alertingRules.String(),
-			"additionalScrapeConfigs": scrapeConfigs.String(),
-		}
-	)
-
-	if b.Shoot.Networks != nil {
-		if services := b.Shoot.Networks.Services; services != nil {
-			networks["services"] = services.String()
-		}
-		if pods := b.Shoot.Networks.Pods; pods != nil {
-			networks["pods"] = pods.String()
-		}
-		if apiServer := b.Shoot.Networks.APIServer; apiServer != nil {
-			prometheusConfig["apiserverServiceIP"] = apiServer.String()
-		}
-	}
-	if b.Shoot.GetInfo().Spec.Networking != nil && b.Shoot.GetInfo().Spec.Networking.Nodes != nil {
-		networks["nodes"] = *b.Shoot.GetInfo().Spec.Networking.Nodes
-	}
-
-	prometheusConfig["networks"] = networks
-
-	// Add remotewrite to prometheus when enabled
-	if b.Config.Monitoring != nil &&
-		b.Config.Monitoring.Shoot != nil &&
-		b.Config.Monitoring.Shoot.RemoteWrite != nil &&
-		b.Config.Monitoring.Shoot.RemoteWrite.URL != "" {
-		// if remoteWrite Url is set add config into values
-		remoteWriteConfig := map[string]interface{}{
-			"url": b.Config.Monitoring.Shoot.RemoteWrite.URL,
-		}
-		// get secret for basic_auth in remote write
-		remoteWriteBasicAuth := b.LoadSecret(v1beta1constants.GardenRoleGlobalShootRemoteWriteMonitoring)
-		if remoteWriteBasicAuth != nil {
-			remoteWriteUsername := string(remoteWriteBasicAuth.Data["username"])
-			remoteWritePassword := string(remoteWriteBasicAuth.Data["password"])
-			if remoteWriteUsername != "" &&
-				remoteWritePassword != "" {
-				remoteWriteConfig["basic_auth"] = map[string]interface{}{
-					"username": remoteWriteUsername,
-					"password": remoteWritePassword,
-				}
-			}
-		}
-		// add list with keep metrics if set
-		if len(b.Config.Monitoring.Shoot.RemoteWrite.Keep) != 0 {
-			remoteWriteConfig["keep"] = b.Config.Monitoring.Shoot.RemoteWrite.Keep
-		}
-		// add queue_config if set
-		if b.Config.Monitoring.Shoot.RemoteWrite.QueueConfig != nil &&
-			len(*b.Config.Monitoring.Shoot.RemoteWrite.QueueConfig) != 0 {
-			remoteWriteConfig["queue_config"] = b.Config.Monitoring.Shoot.RemoteWrite.QueueConfig
-		}
-		prometheusConfig["remoteWrite"] = remoteWriteConfig
-	}
-
-	// set externalLabels
-	if b.Config.Monitoring != nil &&
-		b.Config.Monitoring.Shoot != nil &&
-		len(b.Config.Monitoring.Shoot.ExternalLabels) != 0 {
-		prometheusConfig["externalLabels"] = b.Config.Monitoring.Shoot.ExternalLabels
-	}
-
-	prometheus, err := b.InjectSeedShootImages(prometheusConfig, images.ImageNamePrometheus, images.ImageNameConfigmapReloader, images.ImageNameBlackboxExporter)
-	if err != nil {
-		return err
-	}
-
-	coreValues := map[string]interface{}{
-		"global": map[string]interface{}{
-			"shootKubeVersion": map[string]interface{}{
-				"gitVersion": b.Shoot.GetInfo().Spec.Kubernetes.Version,
-			},
-		},
-		"prometheus": prometheus,
-	}
-
-	if err := b.SeedClientSet.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-monitoring", "charts", "core"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(coreValues)); err != nil {
 		return err
 	}
 
