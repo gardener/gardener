@@ -44,6 +44,7 @@ import (
 	. "github.com/gardener/gardener/pkg/component/gardenerapiserver"
 	componenttest "github.com/gardener/gardener/pkg/component/test"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -1384,7 +1385,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					Expect(deployer.Deploy(ctx)).To(Succeed())
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntime), managedResourceRuntime)).To(Succeed())
-					Expect(managedResourceRuntime).To(Equal(&resourcesv1alpha1.ManagedResource{
+					expectedRuntimeMr := &resourcesv1alpha1.ManagedResource{
 						TypeMeta: metav1.TypeMeta{
 							APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "ManagedResource",
@@ -1398,15 +1399,18 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						},
 						Spec: resourcesv1alpha1.ManagedResourceSpec{
 							Class:       pointer.String("seed"),
-							SecretRefs:  []corev1.LocalObjectReference{{Name: managedResourceSecretRuntime.Name}},
+							SecretRefs:  []corev1.LocalObjectReference{{Name: managedResourceRuntime.Spec.SecretRefs[0].Name}},
 							KeepObjects: pointer.Bool(false),
 						},
-					}))
+					}
+					utilruntime.Must(references.InjectAnnotations(expectedRuntimeMr))
+					Expect(managedResourceRuntime).To(Equal(expectedRuntimeMr))
 
+					managedResourceSecretRuntime.Name = managedResourceRuntime.Spec.SecretRefs[0].Name
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretRuntime), managedResourceSecretRuntime)).To(Succeed())
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceVirtual), managedResourceVirtual)).To(Succeed())
-					Expect(managedResourceVirtual).To(Equal(&resourcesv1alpha1.ManagedResource{
+					expectedVirtualMr := &resourcesv1alpha1.ManagedResource{
 						TypeMeta: metav1.TypeMeta{
 							APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "ManagedResource",
@@ -1420,11 +1424,14 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						},
 						Spec: resourcesv1alpha1.ManagedResourceSpec{
 							InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-							SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceSecretVirtual.Name}},
+							SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceVirtual.Spec.SecretRefs[0].Name}},
 							KeepObjects:  pointer.Bool(false),
 						},
-					}))
+					}
+					utilruntime.Must(references.InjectAnnotations(expectedVirtualMr))
+					Expect(managedResourceVirtual).To(Equal(expectedVirtualMr))
 
+					managedResourceSecretVirtual.Name = managedResourceVirtual.Spec.SecretRefs[0].Name
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
 
 					Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
@@ -1432,6 +1439,8 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudget)))
 					Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(serviceRuntime)))
 					Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(deployment)))
+					Expect(managedResourceSecretRuntime.Immutable).To(Equal(pointer.Bool(true)))
+					Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 					Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
 					Expect(managedResourceSecretVirtual.Data).To(HaveLen(10))
@@ -1445,6 +1454,8 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					Expect(string(managedResourceSecretVirtual.Data["clusterrolebinding____gardener.cloud_system_apiserver.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
 					Expect(string(managedResourceSecretVirtual.Data["clusterrolebinding____gardener.cloud_apiserver_auth-delegator.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingAuthDelegation)))
 					Expect(string(managedResourceSecretVirtual.Data["rolebinding__kube-system__gardener.cloud_apiserver_auth-reader.yaml"])).To(Equal(componenttest.Serialize(roleBindingAuthReader)))
+					Expect(managedResourceSecretVirtual.Immutable).To(Equal(pointer.Bool(true)))
+					Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 				})
 
 				Context("when HVPA is disabled", func() {
