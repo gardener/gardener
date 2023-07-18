@@ -1,5 +1,5 @@
 {{- if or .Values.global.apiserver.hvpa.enabled (gt (int .Values.global.apiserver.replicaCount) 1) }}
-apiVersion: {{ include "poddisruptionbudgetversion" .}}
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: gardener-apiserver

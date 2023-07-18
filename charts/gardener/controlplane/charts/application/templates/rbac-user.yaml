@@ -1,6 +1,6 @@
 # Cluster role granting full permissions to all resources in the gardener API group.
 ---
-apiVersion: {{ include "rbacversion" . }}
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: gardener.cloud:admin
@@ -93,7 +93,7 @@ rules: []
 
 # Cluster role granting viewer permissions for the resources in the gardener API group
 ---
-apiVersion: {{ include "rbacversion" . }}
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: gardener.cloud:viewer
@@ -208,7 +208,7 @@ rules: []
 
 # Cluster role with cluster role binding allowing all authenticated users to read some global resources
 ---
-apiVersion: {{ include "rbacversion" . }}
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: gardener.cloud:system:read-global-resources
@@ -229,7 +229,7 @@ rules:
   - list
   - watch
 ---
-apiVersion: {{ include "rbacversion" . }}
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: gardener.cloud:system:read-global-resources
@@ -249,7 +249,7 @@ subjects:
 
 # Cluster role with cluster role binding allowing all authenticated users create tokenreviews and selfsubjectaccessreviews
 ---
-apiVersion: {{ include "rbacversion" . }}
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: gardener.cloud:system:user-auth
@@ -272,7 +272,7 @@ rules:
   verbs:
   - create
 ---
-apiVersion: {{ include "rbacversion" . }}
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: gardener.cloud:system:user-auth
@@ -294,7 +294,7 @@ subjects:
 # IMPORTANT: You need to define a corresponding ClusterRoleBinding binding specific users/
 #            groups/serviceaccounts to this ClusterRole on your own.
 ---
-apiVersion: {{ include "rbacversion" . }}
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: gardener.cloud:system:project-creation
@@ -315,7 +315,7 @@ rules:
 # in a respective project namespace.
 # It aggregates all ClusterRoles labeled with rbac.gardener.cloud/aggregate-to-project-member: "true"
 ---
-apiVersion: {{ include "rbacversion" . }}
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: gardener.cloud:system:project-member
@@ -330,7 +330,7 @@ aggregationRule:
   - matchLabels:
       rbac.gardener.cloud/aggregate-to-project-member: "true"
 ---
-apiVersion: {{ include "rbacversion" . }}
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: gardener.cloud:system:project-member-aggregation
@@ -439,7 +439,7 @@ rules:
 # in a respective project namespace.
 # It aggregates all ClusterRoles labeled with rbac.gardener.cloud/aggregate-to-project-serviceaccountmanager: "true"
 ---
-apiVersion: {{ include "rbacversion" . }}
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: gardener.cloud:system:project-serviceaccountmanager
@@ -454,7 +454,7 @@ aggregationRule:
   - matchLabels:
       rbac.gardener.cloud/aggregate-to-project-serviceaccountmanager: "true"
 ---
-apiVersion: {{ include "rbacversion" . }}
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: gardener.cloud:system:project-serviceaccountmanager-aggregation
@@ -489,7 +489,7 @@ rules:
 # in a respective project namespace.
 # It aggregates all ClusterRoles labeled with rbac.gardener.cloud/aggregate-to-project-viewer: "true"
 ---
-apiVersion: {{ include "rbacversion" . }}
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: gardener.cloud:system:project-viewer
@@ -504,7 +504,7 @@ aggregationRule:
   - matchLabels:
       rbac.gardener.cloud/aggregate-to-project-viewer: "true"
 ---
-apiVersion: {{ include "rbacversion" . }}
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: gardener.cloud:system:project-viewer-aggregation

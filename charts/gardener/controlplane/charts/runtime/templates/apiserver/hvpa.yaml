@@ -89,7 +89,7 @@ spec:
       startReplicaCount: {{ .Values.global.apiserver.hvpa.maxReplicas }}
       lastReplicaCount: {{ .Values.global.apiserver.hvpa.maxReplicas }}
   targetRef:
-    apiVersion: {{ include "deploymentversion" . }}
+    apiVersion: apps/v1
     kind: Deployment
     name: gardener-apiserver
 {{ end }}
