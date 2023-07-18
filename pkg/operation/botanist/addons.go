@@ -16,30 +16,23 @@ package botanist
 
 import (
 	"context"
-	"fmt"
+	"embed"
 	"path/filepath"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
-	"github.com/gardener/gardener/charts"
-	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+)
+
+var (
+	//go:embed charts/shoot-core/components
+	chartPSPs     embed.FS
+	chartPathPSPs = filepath.Join("charts", "shoot-core", "components")
 )
 
 // DeployManagedResourceForAddons deploys all the ManagedResource CRDs for the gardener-resource-manager.
 func (b *Botanist) DeployManagedResourceForAddons(ctx context.Context) error {
-	renderedChart, err := b.generateCoreAddonsChart()
-	if err != nil {
-		return fmt.Errorf("error rendering shoot-core chart: %w", err)
-	}
-
-	return managedresources.CreateForShoot(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, "shoot-core", managedresources.LabelValueGardener, false, renderedChart.AsSecretData())
-}
-
-// generateCoreAddonsChart renders the gardener-resource-manager configuration for the core addons. After that it
-// creates a ManagedResource CRD that references the rendered manifests and creates it.
-func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, error) {
 	values := map[string]interface{}{
 		"podsecuritypolicies": map[string]interface{}{
 			"enabled":                   !b.Shoot.PSPDisabled && !b.Shoot.IsWorkerless,
@@ -47,5 +40,10 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		},
 	}
 
-	return b.ShootClientSet.ChartRenderer().Render(filepath.Join(charts.Path, "shoot-core", "components"), "shoot-core", metav1.NamespaceSystem, values)
+	renderedChart, err := b.ShootClientSet.ChartRenderer().RenderEmbeddedFS(chartPSPs, chartPathPSPs, "shoot-core", metav1.NamespaceSystem, values)
+	if err != nil {
+		return err
+	}
+
+	return managedresources.CreateForShoot(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, "shoot-core", managedresources.LabelValueGardener, false, renderedChart.AsSecretData())
 }
