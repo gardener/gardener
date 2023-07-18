@@ -35,10 +35,8 @@ import (
 )
 
 const (
-	// DeploymentName is the name of the admission controller deployment.
-	DeploymentName = "gardener-admission-controller"
-	// ServiceName is the name of the admission controller service.
-	ServiceName = "gardener-admission-controller"
+	deploymentName = "gardener-admission-controller"
+	serviceName    = deploymentName
 
 	roleName = "admission-controller"
 

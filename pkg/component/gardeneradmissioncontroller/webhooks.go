@@ -50,7 +50,7 @@ func (a admissioncontroller) validatingwebhookconfiguration(caSecret *corev1.Sec
 
 	validatingWebhook := &admissionregistrationv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: DeploymentName,
+			Name: deploymentName,
 		},
 		Webhooks: []admissionregistrationv1.ValidatingWebhook{
 			{
@@ -312,5 +312,5 @@ func buildWebhookConfigRulesForResourceSize(config *admissioncontrollerv1alpha1.
 }
 
 func buildClientConfigURL(webhookPath, namespace string) *string {
-	return pointer.String(fmt.Sprintf("https://%s.%s%s", ServiceName, namespace, webhookPath))
+	return pointer.String(fmt.Sprintf("https://%s.%s%s", serviceName, namespace, webhookPath))
 }

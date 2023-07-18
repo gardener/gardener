@@ -27,7 +27,7 @@ func (a admissioncontroller) podDisruptionBudget() *policyv1.PodDisruptionBudget
 	}
 
 	return &policyv1.PodDisruptionBudget{
-		ObjectMeta: getObjectMeta(DeploymentName, a.namespace),
+		ObjectMeta: getObjectMeta(deploymentName, a.namespace),
 		Spec: policyv1.PodDisruptionBudgetSpec{
 			MaxUnavailable: gardenerutils.IntStrPtrFromInt(1),
 			Selector:       &metav1.LabelSelector{MatchLabels: GetLabels()},

@@ -30,12 +30,12 @@ func (a admissioncontroller) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 	autoUpdateMode := vpaautoscalingv1.UpdateModeAuto
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 
-		ObjectMeta: getObjectMeta(DeploymentName, a.namespace),
+		ObjectMeta: getObjectMeta(deploymentName, a.namespace),
 		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "Deployment",
-				Name:       DeploymentName,
+				Name:       deploymentName,
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 				UpdateMode: &autoUpdateMode,

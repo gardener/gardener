@@ -29,13 +29,9 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-var (
-	admissionServerCodec runtime.Codec
-)
+const dataConfigKey = "config.yaml"
 
-const (
-	dataConfigKey = "config.yaml"
-)
+var admissionServerCodec runtime.Codec
 
 func init() {
 	admissionServerScheme := runtime.NewScheme()
@@ -81,7 +77,7 @@ func (a admissioncontroller) admissionConfigConfigMap() (*corev1.ConfigMap, erro
 	}
 
 	configMap := &corev1.ConfigMap{
-		ObjectMeta: getObjectMeta(DeploymentName, a.namespace),
+		ObjectMeta: getObjectMeta(deploymentName, a.namespace),
 		Data: map[string]string{
 			dataConfigKey: string(data),
 		},

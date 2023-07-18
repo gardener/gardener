@@ -39,7 +39,7 @@ const (
 
 func (a admissioncontroller) deployment(secretServerCert, secretGenericTokenKubeconfig, secretVirtualGardenAccess, configMapAdmissionConfig string) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
-		ObjectMeta: getObjectMeta(DeploymentName, a.namespace),
+		ObjectMeta: getObjectMeta(deploymentName, a.namespace),
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &a.values.ReplicaCount,
 			Selector: &metav1.LabelSelector{
@@ -57,7 +57,7 @@ func (a admissioncontroller) deployment(secretServerCert, secretGenericTokenKube
 					AutomountServiceAccountToken: pointer.Bool(false),
 					Containers: []corev1.Container{
 						{
-							Name:            DeploymentName,
+							Name:            deploymentName,
 							Image:           a.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{
