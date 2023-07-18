@@ -55,6 +55,15 @@ var (
 	chartPathCore = filepath.Join("charts", "seed-monitoring", "charts", "core")
 )
 
+// Interface contains functions for a mointoring deployer.
+type Interface interface {
+	component.Deployer
+	// SetNamespaceUID sets the UID of the namespace into which the monitoring components shall be deployed.
+	SetNamespaceUID(types.UID)
+	// SetComponents sets the monitoring components.
+	SetComponents([]component.MonitoringComponent)
+}
+
 // Values is a set of configuration values for the monitoring components.
 type Values struct {
 	// AlertingSecrets is a list of alerting secrets.
@@ -130,7 +139,7 @@ func New(
 	secretsManager secretsmanager.Interface,
 	namespace string,
 	values Values,
-) component.Deployer {
+) Interface {
 	return &monitoring{
 		client:         client,
 		chartApplier:   chartApplier,
@@ -481,6 +490,9 @@ func (m *monitoring) Destroy(ctx context.Context) error {
 
 	return kubernetesutils.DeleteObjects(ctx, m.client, objects...)
 }
+
+func (m *monitoring) SetNamespaceUID(uid types.UID)                   { m.values.NamespaceUID = uid }
+func (m *monitoring) SetComponents(c []component.MonitoringComponent) { m.values.Components = c }
 
 func (m *monitoring) newShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(v1beta1constants.StatefulSetNamePrometheus, m.namespace)

@@ -48,6 +48,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
+	"github.com/gardener/gardener/pkg/component/monitoring"
 	"github.com/gardener/gardener/pkg/component/nodeexporter"
 	"github.com/gardener/gardener/pkg/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/component/plutono"
@@ -175,7 +176,7 @@ type SystemComponents struct {
 
 // Monitoring contains references to monitoring deployers.
 type Monitoring struct {
-	Monitoring component.Deployer
+	Monitoring monitoring.Interface
 }
 
 // Logging contains references to logging deployers.

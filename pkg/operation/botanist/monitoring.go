@@ -30,7 +30,7 @@ import (
 )
 
 // DefaultMonitoring creates a new monitoring component.
-func (b *Botanist) DefaultMonitoring() (component.Deployer, error) {
+func (b *Botanist) DefaultMonitoring() (monitoring.Interface, error) {
 	imageAlertmanager, err := b.ImageVector.FindImage(images.ImageNameAlertmanager)
 	if err != nil {
 		return nil, err
@@ -53,48 +53,6 @@ func (b *Botanist) DefaultMonitoring() (component.Deployer, error) {
 		alertingSecrets = append(alertingSecrets, b.LoadSecret(key))
 	}
 
-	// Fetch component-specific monitoring configuration
-	monitoringComponents := []component.MonitoringComponent{
-		b.Shoot.Components.ControlPlane.EtcdMain,
-		b.Shoot.Components.ControlPlane.EtcdEvents,
-		b.Shoot.Components.ControlPlane.KubeAPIServer,
-		b.Shoot.Components.ControlPlane.KubeControllerManager,
-		b.Shoot.Components.ControlPlane.KubeStateMetrics,
-		b.Shoot.Components.ControlPlane.ResourceManager,
-	}
-
-	if b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) && gardenlethelper.IsValiEnabled(b.Config) {
-		monitoringComponents = append(monitoringComponents, b.Shoot.Components.Logging.Vali)
-	}
-
-	if !b.Shoot.IsWorkerless {
-		monitoringComponents = append(monitoringComponents,
-			b.Shoot.Components.SystemComponents.BlackboxExporter,
-			b.Shoot.Components.ControlPlane.KubeScheduler,
-			b.Shoot.Components.SystemComponents.CoreDNS,
-			b.Shoot.Components.SystemComponents.KubeProxy,
-			b.Shoot.Components.SystemComponents.NodeExporter,
-			b.Shoot.Components.SystemComponents.VPNShoot,
-			b.Shoot.Components.ControlPlane.VPNSeedServer,
-		)
-
-		if b.ShootUsesDNS() {
-			monitoringComponents = append(monitoringComponents, b.Shoot.Components.SystemComponents.APIServerProxy)
-		}
-
-		if b.Shoot.NodeLocalDNSEnabled {
-			monitoringComponents = append(monitoringComponents, b.Shoot.Components.SystemComponents.NodeLocalDNS)
-		}
-
-		if b.Shoot.WantsClusterAutoscaler {
-			monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.ClusterAutoscaler)
-		}
-
-		if features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment) {
-			monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.MachineControllerManager)
-		}
-	}
-
 	var wildcardSecretName *string
 	if b.ControlPlaneWildcardCert != nil {
 		wildcardSecretName = &b.ControlPlaneWildcardCert.Name
@@ -105,7 +63,6 @@ func (b *Botanist) DefaultMonitoring() (component.Deployer, error) {
 		AlertmanagerEnabled:          b.Shoot.WantsAlertmanager,
 		APIServerDomain:              gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 		APIServerHost:                b.SeedClientSet.RESTConfig().Host,
-		Components:                   monitoringComponents,
 		Config:                       b.Config.Monitoring,
 		GardenletManagesMCM:          features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment),
 		GlobalShootRemoteWriteSecret: b.LoadSecret(v1beta1constants.GardenRoleGlobalShootRemoteWriteMonitoring),
@@ -119,7 +76,6 @@ func (b *Botanist) DefaultMonitoring() (component.Deployer, error) {
 		IsWorkerless:                 b.Shoot.IsWorkerless,
 		KubernetesVersion:            b.Shoot.GetInfo().Spec.Kubernetes.Version,
 		MonitoringConfig:             b.Shoot.GetInfo().Spec.Monitoring,
-		NamespaceUID:                 b.SeedNamespaceObject.UID,
 		NodeLocalDNSEnabled:          b.Shoot.NodeLocalDNSEnabled,
 		ProjectName:                  b.Garden.Project.Name,
 		Replicas:                     b.Shoot.GetReplicas(1),
@@ -162,5 +118,54 @@ func (b *Botanist) DeployMonitoring(ctx context.Context) error {
 	if !b.IsShootMonitoringEnabled() {
 		return b.Shoot.Components.Monitoring.Monitoring.Destroy(ctx)
 	}
+
+	b.Shoot.Components.Monitoring.Monitoring.SetNamespaceUID(b.SeedNamespaceObject.UID)
+	b.Shoot.Components.Monitoring.Monitoring.SetComponents(b.getMonitoringComponents())
 	return b.Shoot.Components.Monitoring.Monitoring.Deploy(ctx)
+}
+
+func (b *Botanist) getMonitoringComponents() []component.MonitoringComponent {
+	// Fetch component-specific monitoring configuration
+	monitoringComponents := []component.MonitoringComponent{
+		b.Shoot.Components.ControlPlane.EtcdMain,
+		b.Shoot.Components.ControlPlane.EtcdEvents,
+		b.Shoot.Components.ControlPlane.KubeAPIServer,
+		b.Shoot.Components.ControlPlane.KubeControllerManager,
+		b.Shoot.Components.ControlPlane.KubeStateMetrics,
+		b.Shoot.Components.ControlPlane.ResourceManager,
+	}
+
+	if b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) && gardenlethelper.IsValiEnabled(b.Config) {
+		monitoringComponents = append(monitoringComponents, b.Shoot.Components.Logging.Vali)
+	}
+
+	if !b.Shoot.IsWorkerless {
+		monitoringComponents = append(monitoringComponents,
+			b.Shoot.Components.SystemComponents.BlackboxExporter,
+			b.Shoot.Components.ControlPlane.KubeScheduler,
+			b.Shoot.Components.SystemComponents.CoreDNS,
+			b.Shoot.Components.SystemComponents.KubeProxy,
+			b.Shoot.Components.SystemComponents.NodeExporter,
+			b.Shoot.Components.SystemComponents.VPNShoot,
+			b.Shoot.Components.ControlPlane.VPNSeedServer,
+		)
+
+		if b.ShootUsesDNS() {
+			monitoringComponents = append(monitoringComponents, b.Shoot.Components.SystemComponents.APIServerProxy)
+		}
+
+		if b.Shoot.NodeLocalDNSEnabled {
+			monitoringComponents = append(monitoringComponents, b.Shoot.Components.SystemComponents.NodeLocalDNS)
+		}
+
+		if b.Shoot.WantsClusterAutoscaler {
+			monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.ClusterAutoscaler)
+		}
+
+		if features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment) {
+			monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.MachineControllerManager)
+		}
+	}
+
+	return monitoringComponents
 }
