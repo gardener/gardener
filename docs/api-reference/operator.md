@@ -784,7 +784,7 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation
 </td>
 <td>
 <em>(Optional)</em>
-<p>LastOperation holds information about the last operation on the Shoot.</p>
+<p>LastOperation holds information about the last operation on the Garden.</p>
 </td>
 </tr>
 <tr>

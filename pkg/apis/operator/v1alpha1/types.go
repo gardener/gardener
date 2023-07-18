@@ -405,7 +405,7 @@ type GardenStatus struct {
 	Gardener *gardencorev1beta1.Gardener `json:"gardener,omitempty"`
 	// Conditions is a list of conditions.
 	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty"`
-	// LastOperation holds information about the last operation on the Shoot.
+	// LastOperation holds information about the last operation on the Garden.
 	// +optional
 	LastOperation *gardencorev1beta1.LastOperation `json:"lastOperation,omitempty"`
 	// ObservedGeneration is the most recent generation observed for this resource.

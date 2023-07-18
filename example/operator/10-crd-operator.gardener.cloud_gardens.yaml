@@ -1120,7 +1120,7 @@ spec:
                 type: object
               lastOperation:
                 description: LastOperation holds information about the last operation
-                  on the Shoot.
+                  on the Garden.
                 properties:
                   description:
                     description: A human readable message indicating details about
