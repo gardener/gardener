@@ -52,11 +52,12 @@ func NewStorage(optsGetter generic.RESTOptionsGetter) BastionStorage {
 // NewREST returns a RESTStorage object that will work against bastions.
 func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 	store := &genericregistry.Store{
-		NewFunc:                  func() runtime.Object { return &operations.Bastion{} },
-		NewListFunc:              func() runtime.Object { return &operations.BastionList{} },
-		DefaultQualifiedResource: operations.Resource("bastions"),
-		EnableGarbageCollection:  true,
-		PredicateFunc:            bastion.MatchBastion,
+		NewFunc:                   func() runtime.Object { return &operations.Bastion{} },
+		NewListFunc:               func() runtime.Object { return &operations.BastionList{} },
+		DefaultQualifiedResource:  operations.Resource("bastions"),
+		SingularQualifiedResource: operations.Resource("bastion"),
+		EnableGarbageCollection:   true,
+		PredicateFunc:             bastion.MatchBastion,
 
 		CreateStrategy: bastion.Strategy,
 		UpdateStrategy: bastion.Strategy,

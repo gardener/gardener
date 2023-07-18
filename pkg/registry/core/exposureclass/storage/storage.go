@@ -45,10 +45,11 @@ func NewStorage(optsGetter generic.RESTOptionsGetter) ExposureClassStorage {
 func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 	expousreClasssStrategy := exposureclass.NewStrategy()
 	store := &genericregistry.Store{
-		NewFunc:                  func() runtime.Object { return &core.ExposureClass{} },
-		NewListFunc:              func() runtime.Object { return &core.ExposureClassList{} },
-		DefaultQualifiedResource: core.Resource("exposureclasses"),
-		EnableGarbageCollection:  true,
+		NewFunc:                   func() runtime.Object { return &core.ExposureClass{} },
+		NewListFunc:               func() runtime.Object { return &core.ExposureClassList{} },
+		DefaultQualifiedResource:  core.Resource("exposureclasses"),
+		SingularQualifiedResource: core.Resource("exposureclass"),
+		EnableGarbageCollection:   true,
 
 		CreateStrategy: expousreClasssStrategy,
 		UpdateStrategy: expousreClasssStrategy,

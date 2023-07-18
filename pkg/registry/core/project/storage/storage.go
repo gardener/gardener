@@ -52,10 +52,11 @@ func NewStorage(optsGetter generic.RESTOptionsGetter) ProjectStorage {
 // NewREST returns a RESTStorage object that will work with Project objects.
 func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 	store := &genericregistry.Store{
-		NewFunc:                  func() runtime.Object { return &core.Project{} },
-		NewListFunc:              func() runtime.Object { return &core.ProjectList{} },
-		DefaultQualifiedResource: core.Resource("projects"),
-		EnableGarbageCollection:  true,
+		NewFunc:                   func() runtime.Object { return &core.Project{} },
+		NewListFunc:               func() runtime.Object { return &core.ProjectList{} },
+		DefaultQualifiedResource:  core.Resource("projects"),
+		SingularQualifiedResource: core.Resource("project"),
+		EnableGarbageCollection:   true,
 
 		CreateStrategy: project.Strategy,
 		UpdateStrategy: project.Strategy,

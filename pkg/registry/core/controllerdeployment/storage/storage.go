@@ -46,10 +46,11 @@ func NewStorage(optsGetter generic.RESTOptionsGetter) ControllerDeploymentStorag
 // NewREST returns a RESTStorage object that will work against controllerDeployments.
 func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 	store := &genericregistry.Store{
-		NewFunc:                  func() runtime.Object { return &core.ControllerDeployment{} },
-		NewListFunc:              func() runtime.Object { return &core.ControllerDeploymentList{} },
-		DefaultQualifiedResource: core.Resource("controllerdeployments"),
-		EnableGarbageCollection:  true,
+		NewFunc:                   func() runtime.Object { return &core.ControllerDeployment{} },
+		NewListFunc:               func() runtime.Object { return &core.ControllerDeploymentList{} },
+		DefaultQualifiedResource:  core.Resource("controllerdeployments"),
+		SingularQualifiedResource: core.Resource("controllerdeployment"),
+		EnableGarbageCollection:   true,
 
 		CreateStrategy: controllerdeployment.Strategy,
 		UpdateStrategy: controllerdeployment.Strategy,

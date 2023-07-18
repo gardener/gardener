@@ -46,10 +46,11 @@ func NewStorage(optsGetter generic.RESTOptionsGetter) QuotaStorage {
 // NewREST returns a RESTStorage object that will work with Quota objects.
 func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 	store := &genericregistry.Store{
-		NewFunc:                  func() runtime.Object { return &core.Quota{} },
-		NewListFunc:              func() runtime.Object { return &core.QuotaList{} },
-		DefaultQualifiedResource: core.Resource("quotas"),
-		EnableGarbageCollection:  true,
+		NewFunc:                   func() runtime.Object { return &core.Quota{} },
+		NewListFunc:               func() runtime.Object { return &core.QuotaList{} },
+		DefaultQualifiedResource:  core.Resource("quotas"),
+		SingularQualifiedResource: core.Resource("quota"),
+		EnableGarbageCollection:   true,
 
 		CreateStrategy: quota.Strategy,
 		UpdateStrategy: quota.Strategy,

@@ -46,10 +46,11 @@ func NewStorage(optsGetter generic.RESTOptionsGetter) SecretBindingStorage {
 // NewREST returns a RESTStorage object that will work with SecretBinding objects.
 func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 	store := &genericregistry.Store{
-		NewFunc:                  func() runtime.Object { return &core.SecretBinding{} },
-		NewListFunc:              func() runtime.Object { return &core.SecretBindingList{} },
-		DefaultQualifiedResource: core.Resource("secretbindings"),
-		EnableGarbageCollection:  true,
+		NewFunc:                   func() runtime.Object { return &core.SecretBinding{} },
+		NewListFunc:               func() runtime.Object { return &core.SecretBindingList{} },
+		DefaultQualifiedResource:  core.Resource("secretbindings"),
+		SingularQualifiedResource: core.Resource("secretbinding"),
+		EnableGarbageCollection:   true,
 
 		CreateStrategy: secretbinding.Strategy,
 		UpdateStrategy: secretbinding.Strategy,

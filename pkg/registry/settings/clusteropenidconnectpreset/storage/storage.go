@@ -49,8 +49,9 @@ func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 		NewFunc:     func() runtime.Object { return &settings.ClusterOpenIDConnectPreset{} },
 		NewListFunc: func() runtime.Object { return &settings.ClusterOpenIDConnectPresetList{} },
 
-		DefaultQualifiedResource: settings.Resource("clusteropenidconnectpresets"),
-		EnableGarbageCollection:  true,
+		DefaultQualifiedResource:  settings.Resource("clusteropenidconnectpresets"),
+		SingularQualifiedResource: settings.Resource("clusteropenidconnectpreset"),
+		EnableGarbageCollection:   true,
 
 		CreateStrategy: clusteropenidconnectpreset.Strategy,
 		UpdateStrategy: clusteropenidconnectpreset.Strategy,

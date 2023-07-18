@@ -46,10 +46,11 @@ func NewStorage(optsGetter generic.RESTOptionsGetter) CloudProfileStorage {
 // NewREST returns a RESTStorage object that will work with CloudProfile objects.
 func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 	store := &genericregistry.Store{
-		NewFunc:                  func() runtime.Object { return &core.CloudProfile{} },
-		NewListFunc:              func() runtime.Object { return &core.CloudProfileList{} },
-		DefaultQualifiedResource: core.Resource("cloudprofiles"),
-		EnableGarbageCollection:  true,
+		NewFunc:                   func() runtime.Object { return &core.CloudProfile{} },
+		NewListFunc:               func() runtime.Object { return &core.CloudProfileList{} },
+		DefaultQualifiedResource:  core.Resource("cloudprofiles"),
+		SingularQualifiedResource: core.Resource("cloudprofile"),
+		EnableGarbageCollection:   true,
 
 		CreateStrategy: cloudprofile.Strategy,
 		UpdateStrategy: cloudprofile.Strategy,

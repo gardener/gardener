@@ -49,8 +49,9 @@ func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 		NewFunc:     func() runtime.Object { return &settings.OpenIDConnectPreset{} },
 		NewListFunc: func() runtime.Object { return &settings.OpenIDConnectPresetList{} },
 
-		DefaultQualifiedResource: settings.Resource("openidconnectpresets"),
-		EnableGarbageCollection:  true,
+		DefaultQualifiedResource:  settings.Resource("openidconnectpresets"),
+		SingularQualifiedResource: settings.Resource("openidconnectpreset"),
+		EnableGarbageCollection:   true,
 
 		CreateStrategy: openidconnectpreset.Strategy,
 		UpdateStrategy: openidconnectpreset.Strategy,

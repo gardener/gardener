@@ -75,11 +75,12 @@ func NewREST(optsGetter generic.RESTOptionsGetter, credentialsRotationInterval t
 	var (
 		shootStrategy = shoot.NewStrategy(credentialsRotationInterval)
 		store         = &genericregistry.Store{
-			NewFunc:                  func() runtime.Object { return &core.Shoot{} },
-			NewListFunc:              func() runtime.Object { return &core.ShootList{} },
-			PredicateFunc:            shoot.MatchShoot,
-			DefaultQualifiedResource: core.Resource("shoots"),
-			EnableGarbageCollection:  true,
+			NewFunc:                   func() runtime.Object { return &core.Shoot{} },
+			NewListFunc:               func() runtime.Object { return &core.ShootList{} },
+			PredicateFunc:             shoot.MatchShoot,
+			DefaultQualifiedResource:  core.Resource("shoots"),
+			SingularQualifiedResource: core.Resource("shoot"),
+			EnableGarbageCollection:   true,
 
 			CreateStrategy: shootStrategy,
 			UpdateStrategy: shootStrategy,

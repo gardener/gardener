@@ -61,10 +61,11 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 	statusStrategy := managedseedset.NewStatusStrategy()
 
 	store := &genericregistry.Store{
-		NewFunc:                  func() runtime.Object { return &seedmanagement.ManagedSeedSet{} },
-		NewListFunc:              func() runtime.Object { return &seedmanagement.ManagedSeedSetList{} },
-		DefaultQualifiedResource: seedmanagement.Resource("managedseedsets"),
-		EnableGarbageCollection:  true,
+		NewFunc:                   func() runtime.Object { return &seedmanagement.ManagedSeedSet{} },
+		NewListFunc:               func() runtime.Object { return &seedmanagement.ManagedSeedSetList{} },
+		DefaultQualifiedResource:  seedmanagement.Resource("managedseedsets"),
+		SingularQualifiedResource: seedmanagement.Resource("managedseedset"),
+		EnableGarbageCollection:   true,
 
 		CreateStrategy: strategy,
 		UpdateStrategy: strategy,
