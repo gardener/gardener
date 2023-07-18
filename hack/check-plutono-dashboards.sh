@@ -19,10 +19,7 @@ set -o nounset
 set -o pipefail
 
 
-echo "> Validating dashboards"
+echo "> Checking Plutono dashboards"
 
 
-cd "$(dirname "$0")/tools/plutonodashboardcheck"
-
-
-go run . "$@"
+go run "$(dirname "$0")/tools/plutonodashboardcheck"

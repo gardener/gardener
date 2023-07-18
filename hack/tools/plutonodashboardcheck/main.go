@@ -1,4 +1,4 @@
-// Copyright 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -212,14 +212,13 @@ func main() {
 	//current path is the directory of main.go file
 	currentPath, err := os.Getwd()
 
+	log.Println(currentPath)
+
 	if err != nil {
 		log.Fatalf("failed to get current working directory: %v", err)
 	}
 
-	// Go levels up to the gardener directory
-	parentPath := filepath.Dir(filepath.Dir(filepath.Dir(currentPath)))
-
-	errs := validateDashboardJSONFiles(parentPath)
+	errs := validateDashboardJSONFiles(currentPath)
 
 	if len(errs) > 0 {
 		log.Println("Validation errors found in dashboards:")
