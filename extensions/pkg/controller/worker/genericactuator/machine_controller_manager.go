@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -139,7 +138,7 @@ func scaleMachineControllerManager(ctx context.Context, logger logr.Logger, cl c
 	return client.IgnoreNotFound(kubernetes.ScaleDeployment(ctx, cl, kubernetesutils.Key(worker.Namespace, McmDeploymentName), replicas))
 }
 
-func (a *genericActuator) applyMachineControllerManagerShootChart(ctx context.Context, logger logr.Logger, workerDelegate WorkerDelegate, workerObj *extensionsv1alpha1.Worker, cluster *controller.Cluster) error {
+func (a *genericActuator) applyMachineControllerManagerShootChart(ctx context.Context, logger logr.Logger, workerDelegate WorkerDelegate, workerObj *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
 	if !a.mcmManaged {
 		logger.Info("Skip machine-controller-manager shoot chart application since gardenlet manages it")
 		return nil
