@@ -231,32 +231,15 @@ func (r *Reconciler) updateStatusOperationStart(ctx context.Context, garden *ope
 
 func (r *Reconciler) updateStatusOperationSuccess(ctx context.Context, garden *operatorv1alpha1.Garden, operationType gardencorev1beta1.LastOperationType) error {
 	var (
-		now                        = metav1.NewTime(r.Clock.Now().UTC())
-		description                string
-		setConditionsToProgressing bool
+		now         = metav1.NewTime(r.Clock.Now().UTC())
+		description string
 	)
 
 	switch operationType {
 	case gardencorev1beta1.LastOperationTypeReconcile:
 		description = "Garden cluster has been successfully reconciled."
-		setConditionsToProgressing = true
 	case gardencorev1beta1.LastOperationTypeDelete:
 		description = "Garden cluster has been successfully deleted."
-		setConditionsToProgressing = false
-	}
-
-	if setConditionsToProgressing {
-		for i, cond := range garden.Status.Conditions {
-			switch cond.Type {
-			case operatorv1alpha1.RuntimeComponentsHealthy,
-				operatorv1alpha1.VirtualComponentsHealthy,
-				operatorv1alpha1.VirtualGardenAPIServerAvailable:
-				if cond.Status != gardencorev1beta1.ConditionFalse {
-					garden.Status.Conditions[i].Status = gardencorev1beta1.ConditionProgressing
-					garden.Status.Conditions[i].LastUpdateTime = metav1.Now()
-				}
-			}
-		}
 	}
 
 	garden.Status.LastOperation = &gardencorev1beta1.LastOperation{

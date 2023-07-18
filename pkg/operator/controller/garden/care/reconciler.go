@@ -87,7 +87,8 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		log.V(1).Info("Could not get garden client", "error", err)
 	}
 
-	updatedConditions := NewHealthCheck(garden, r.RuntimeClient, gardenClientSet, r.Clock, r.GardenNamespace).CheckGarden(ctx, conditions, r.conditionThresholdsToProgressingMapping())
+	updatedConditions := NewHealthCheck(garden, r.RuntimeClient, gardenClientSet, r.Clock, r.GardenNamespace).
+		CheckGarden(ctx, conditions, r.conditionThresholdsToProgressingMapping(), garden.Status.LastOperation)
 
 	// Update Garden status conditions if necessary
 	if v1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) {
