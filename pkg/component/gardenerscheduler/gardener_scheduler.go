@@ -23,11 +23,15 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 const (
+	// DeploymentName is the name of the deployment.
+	DeploymentName = "gardener-scheduler"
+
 	managedResourceNameRuntime = "gardener-scheduler-runtime"
 	managedResourceNameVirtual = "gardener-scheduler-virtual"
 )
@@ -59,8 +63,13 @@ type gardenerScheduler struct {
 
 func (g *gardenerScheduler) Deploy(ctx context.Context) error {
 	var (
-		runtimeRegistry = managedresources.NewRegistry(operatorclient.RuntimeScheme, operatorclient.RuntimeCodec, operatorclient.RuntimeSerializer)
+		runtimeRegistry           = managedresources.NewRegistry(operatorclient.RuntimeScheme, operatorclient.RuntimeCodec, operatorclient.RuntimeSerializer)
+		virtualGardenAccessSecret = g.newVirtualGardenAccessSecret()
 	)
+
+	if err := virtualGardenAccessSecret.Reconcile(ctx, g.client); err != nil {
+		return err
+	}
 
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize()
 	if err != nil {
@@ -102,7 +111,11 @@ func (g *gardenerScheduler) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.DeleteForSeed(ctx, g.client, g.namespace, managedResourceNameRuntime)
+	if err := managedresources.DeleteForSeed(ctx, g.client, g.namespace, managedResourceNameRuntime); err != nil {
+		return err
+	}
+
+	return kubernetesutils.DeleteObjects(ctx, g.client, g.newVirtualGardenAccessSecret().Secret)
 }
 
 func (g *gardenerScheduler) WaitCleanup(ctx context.Context) error {
