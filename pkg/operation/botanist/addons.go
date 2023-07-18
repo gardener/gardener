@@ -41,7 +41,6 @@ func (b *Botanist) DeployManagedResourceForAddons(ctx context.Context) error {
 // creates a ManagedResource CRD that references the rendered manifests and creates it.
 func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, error) {
 	values := map[string]interface{}{
-		"monitoring": map[string]interface{}{"enabled": b.Operation.IsShootMonitoringEnabled()},
 		"podsecuritypolicies": map[string]interface{}{
 			"enabled":                   !b.Shoot.PSPDisabled && !b.Shoot.IsWorkerless,
 			"allowPrivilegedContainers": pointer.BoolDeref(b.Shoot.GetInfo().Spec.Kubernetes.AllowPrivilegedContainers, false),
