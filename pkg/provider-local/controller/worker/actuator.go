@@ -89,6 +89,7 @@ func NewActuator(mgr manager.Manager, gardenletManagesMCM bool) (worker.Actuator
 		mcmChartShoot,
 		imageVector,
 		chartRendererFactory,
+		nil,
 	)
 	if err != nil {
 		return nil, err

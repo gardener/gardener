@@ -32,6 +32,7 @@ import (
 	extensionsworkercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
 	extensionsworkerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -160,6 +161,9 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 			log.Info("Successfully deleted stuck machine-controller-manager pod", "reason", msg)
 		}
 
+		if a.errorCodeCheckFunc != nil {
+			return v1beta1helper.NewErrorWithCodes(fmt.Errorf("failed while waiting for all machine deployments to be ready: %w", err), a.errorCodeCheckFunc(err)...)
+		}
 		return fmt.Errorf("failed while waiting for all machine deployments to be ready: %w", err)
 	}
 
