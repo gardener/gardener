@@ -42,7 +42,6 @@ import (
 
 	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
@@ -66,18 +65,17 @@ const (
 	managedResourceNameVirtual = "gardener-admission-controller-virtual"
 )
 
-var _ = Describe("AdmissionController", func() {
+var _ = Describe("GardenerAdmissionController", func() {
 	var (
 		ctx context.Context
 
-		namespace = "some-namespace"
-
-		fakeOps *retryfake.Ops
-
+		fakeOps           *retryfake.Ops
 		fakeClient        client.Client
 		fakeSecretManager secretsmanager.Interface
 		deployer          component.DeployWaiter
 		testValues        Values
+
+		namespace = "some-namespace"
 	)
 
 	BeforeEach(func() {
@@ -108,7 +106,7 @@ var _ = Describe("AdmissionController", func() {
 					QPS:   10.0,
 					Burst: 50,
 				},
-				ReplicaCount:   3,
+				Replicas:       3,
 				RuntimeVersion: semver.MustParse("v1.27.0"),
 				ResourceAdmissionConfiguration: &admissioncontrollerv1alpha1.ResourceAdmissionConfiguration{
 					Limits: []admissioncontrollerv1alpha1.ResourceLimit{
@@ -133,7 +131,6 @@ var _ = Describe("AdmissionController", func() {
 					OperationMode: &blockMode,
 				},
 				TopologyAwareRoutingEnabled: true,
-				VPAEnabled:                  true,
 			}
 
 			Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-gardener", Namespace: namespace}})).To(Succeed())
@@ -142,17 +139,8 @@ var _ = Describe("AdmissionController", func() {
 
 		Context("with common values", func() {
 			It("should successfully deploy", func() {
-				deployAndVerify(ctx, fakeClient, fakeSecretManager, deployer, namespace, "930189d2", testValues)
-			})
-		})
-
-		Context("when VPA is disabled", func() {
-			BeforeEach(func() {
-				testValues.VPAEnabled = false
-			})
-
-			It("should successfully deploy", func() {
-				deployAndVerify(ctx, fakeClient, fakeSecretManager, deployer, namespace, "930189d2", testValues)
+				Expect(deployer.Deploy(ctx)).To(Succeed())
+				verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, "930189d2", testValues)
 			})
 		})
 
@@ -162,7 +150,8 @@ var _ = Describe("AdmissionController", func() {
 			})
 
 			It("should successfully deploy", func() {
-				deployAndVerify(ctx, fakeClient, fakeSecretManager, deployer, namespace, "930189d2", testValues)
+				Expect(deployer.Deploy(ctx)).To(Succeed())
+				verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, "930189d2", testValues)
 			})
 		})
 
@@ -173,7 +162,8 @@ var _ = Describe("AdmissionController", func() {
 			})
 
 			It("should successfully deploy", func() {
-				deployAndVerify(ctx, fakeClient, fakeSecretManager, deployer, namespace, "930189d2", testValues)
+				Expect(deployer.Deploy(ctx)).To(Succeed())
+				verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, "930189d2", testValues)
 			})
 		})
 
@@ -183,21 +173,8 @@ var _ = Describe("AdmissionController", func() {
 			})
 
 			It("should successfully deploy", func() {
-				deployAndVerify(ctx, fakeClient, fakeSecretManager, deployer, namespace, "dd2b59eb", testValues)
-			})
-		})
-
-		Context("when Runtime ManagedResource doesn't get ready", func() {
-			It("should fail to deploy", func() {
-				Expect(deployer.Deploy(ctx)).To(MatchError("retry failed with max attempts reached, last error: managed resource some-namespace/gardener-admission-controller-runtime is not healthy"))
-
-				runtimeManagedResourceSecret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "managedresource-" + managedResourceNameRuntime,
-						Namespace: namespace,
-					},
-				}
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(runtimeManagedResourceSecret), runtimeManagedResourceSecret)).To(Succeed())
+				Expect(deployer.Deploy(ctx)).To(Succeed())
+				verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, "dd2b59eb", testValues)
 			})
 		})
 	})
@@ -420,41 +397,11 @@ var _ = Describe("AdmissionController", func() {
 })
 
 func verifyResourcesGone(ctx context.Context, fakeClient client.Client, namespace string) {
-	Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "managedresource-" + managedResourceNameRuntime}, &corev1.Secret{})).To(matchers.BeNotFoundError())
-	Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: managedResourceNameRuntime}, &resourcesv1alpha1.ManagedResource{})).To(matchers.BeNotFoundError())
-	Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "managedresource-" + managedResourceNameVirtual}, &corev1.Secret{})).To(matchers.BeNotFoundError())
-	Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: managedResourceNameVirtual}, &resourcesv1alpha1.ManagedResource{})).To(matchers.BeNotFoundError())
-	Expect(fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-access-gardener-admission-controller"}, &corev1.Secret{})).To(matchers.BeNotFoundError())
-}
-
-func deployAndVerify(
-	ctx context.Context,
-	fakeClient client.Client,
-	fakeSecretManager secretsmanager.Interface,
-	deployer component.Deployer,
-	namespace string,
-	configMapChecksum string,
-	testValues Values,
-) {
-	// Create ManagedResource before to maintain successful conditions.
-	runtimeManagedResource := &resourcesv1alpha1.ManagedResource{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      managedResourceNameRuntime,
-			Namespace: namespace,
-		},
-		Status: resourcesv1alpha1.ManagedResourceStatus{
-			Conditions: []gardencorev1beta1.Condition{
-				{Type: resourcesv1alpha1.ResourcesApplied, Status: gardencorev1beta1.ConditionTrue},
-				{Type: resourcesv1alpha1.ResourcesHealthy, Status: gardencorev1beta1.ConditionTrue},
-			},
-		},
-	}
-
-	Expect(fakeClient.Create(ctx, runtimeManagedResource)).To(Succeed())
-
-	Expect(deployer.Deploy(ctx)).To(Succeed())
-
-	verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, configMapChecksum, testValues)
+	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "managedresource-" + managedResourceNameRuntime}, &corev1.Secret{})).To(matchers.BeNotFoundError())
+	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: managedResourceNameRuntime}, &resourcesv1alpha1.ManagedResource{})).To(matchers.BeNotFoundError())
+	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "managedresource-" + managedResourceNameVirtual}, &corev1.Secret{})).To(matchers.BeNotFoundError())
+	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: managedResourceNameVirtual}, &resourcesv1alpha1.ManagedResource{})).To(matchers.BeNotFoundError())
+	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-access-gardener-admission-controller"}, &corev1.Secret{})).To(matchers.BeNotFoundError())
 }
 
 func verifyExpectations(ctx context.Context, fakeClient client.Client, fakeSecretManager secretsmanager.Interface, namespace, configMapChecksum string, testValues Values) {
@@ -499,11 +446,7 @@ func verifyExpectations(ctx context.Context, fakeClient client.Client, fakeSecre
 	Expect(string(runtimeManagedResourceSecret.Data["configmap__some-namespace__gardener-admission-controller-"+configMapChecksum+".yaml"])).To(Equal(configMap(namespace, testValues)))
 	Expect(string(runtimeManagedResourceSecret.Data["deployment__some-namespace__gardener-admission-controller.yaml"])).To(Equal(deployment(namespace, "gardener-admission-controller-"+configMapChecksum, serverCert.Name, testValues)))
 	Expect(string(runtimeManagedResourceSecret.Data["service__some-namespace__gardener-admission-controller.yaml"])).To(Equal(service(namespace, testValues)))
-	if testValues.VPAEnabled {
-		Expect(string(runtimeManagedResourceSecret.Data["verticalpodautoscaler__some-namespace__gardener-admission-controller.yaml"])).To(Equal(vpa(namespace)))
-	} else {
-		Expect(runtimeManagedResourceSecret.Data).ToNot(HaveKey("verticalpodautoscaler__some-namespace__gardener-admission-controller.yaml"))
-	}
+	Expect(string(runtimeManagedResourceSecret.Data["verticalpodautoscaler__some-namespace__gardener-admission-controller.yaml"])).To(Equal(vpa(namespace)))
 
 	By("Check Virtual Cluster Resources")
 	virtualManagedResourceSecret := &corev1.Secret{
@@ -582,7 +525,7 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: &testValues.ReplicaCount,
+			Replicas: &testValues.Replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app":  "gardener",
@@ -599,7 +542,7 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 					}),
 				},
 				Spec: corev1.PodSpec{
-					PriorityClassName:            v1beta1constants.PriorityClassNameGardenSystem500,
+					PriorityClassName:            "gardener-garden-system-400",
 					AutomountServiceAccountToken: pointer.Bool(false),
 					Containers: []corev1.Container{
 						{
@@ -623,11 +566,20 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 										Scheme: corev1.URISchemeHTTP,
 									},
 								},
+								InitialDelaySeconds: 15,
+								TimeoutSeconds:      5,
+							},
+							ReadinessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/readyz",
+										Port:   intstr.FromInt(2722),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
 								InitialDelaySeconds: 10,
 								TimeoutSeconds:      5,
 							},
-							TerminationMessagePath:   "/dev/termination-log",
-							TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "gardener-admission-controller-cert",
@@ -701,27 +653,6 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 		},
 	}
 
-	if testValues.ReplicaCount > 1 {
-		deployment.Spec.Template.Spec.Affinity = &corev1.Affinity{
-			PodAntiAffinity: &corev1.PodAntiAffinity{
-				PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
-					{
-						PodAffinityTerm: corev1.PodAffinityTerm{
-							LabelSelector: &metav1.LabelSelector{
-								MatchExpressions: []metav1.LabelSelectorRequirement{
-									{Key: "app", Operator: metav1.LabelSelectorOpIn, Values: []string{"gardener"}},
-									{Key: "role", Operator: metav1.LabelSelectorOpIn, Values: []string{"admission-controller"}},
-								},
-							},
-							TopologyKey: "kubernetes.io/hostname",
-						},
-						Weight: 1,
-					},
-				},
-			},
-		}
-	}
-
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
 	return componenttest.Serialize(deployment)
@@ -730,16 +661,15 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 func service(namespace string, testValues Values) string {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports":  `[{"protocol":"TCP","port":2723}]`,
-				"networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports": `[{"protocol":"TCP","port":2719}]`,
-			},
+			Name:      "gardener-admission-controller",
+			Namespace: namespace,
 			Labels: map[string]string{
 				"app":  "gardener",
 				"role": "admission-controller",
 			},
-			Name:      "gardener-admission-controller",
-			Namespace: namespace,
+			Annotations: map[string]string{
+				"networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports": `[{"protocol":"TCP","port":2719}]`,
+			},
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeClusterIP,
@@ -781,12 +711,12 @@ func vpa(namespace string) string {
 
 	return componenttest.Serialize(&vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
+			Name:      "gardener-admission-controller",
+			Namespace: namespace,
 			Labels: map[string]string{
 				"app":  "gardener",
 				"role": "admission-controller",
 			},
-			Name:      "gardener-admission-controller",
-			Namespace: namespace,
 		},
 		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{
@@ -885,11 +815,11 @@ func clusterRole() string {
 func clusterRoleBinding() string {
 	return componenttest.Serialize(&rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
+			Name: "gardener.cloud:admission-controller",
 			Labels: map[string]string{
 				"app":  "gardener",
 				"role": "admission-controller",
 			},
-			Name: "gardener.cloud:admission-controller",
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,

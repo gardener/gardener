@@ -64,7 +64,7 @@ type Values struct {
 	apiserver.Values
 	// ClusterIdentity is the identity of the garden cluster.
 	ClusterIdentity string
-	// Image is the container images used for the gardener-apiserver pods.
+	// Image is the container image used for the gardener-apiserver pods.
 	Image string
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel string

@@ -19,18 +19,18 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 )
 
-func (a admissioncontroller) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
-	if !a.values.VPAEnabled {
-		return nil
-	}
-
+func (a *gardeneradmissioncontroller) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 	autoUpdateMode := vpaautoscalingv1.UpdateModeAuto
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
-
-		ObjectMeta: getObjectMeta(deploymentName, a.namespace),
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      deploymentName,
+			Namespace: a.namespace,
+			Labels:    GetLabels(),
+		},
 		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),

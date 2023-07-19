@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
@@ -41,7 +40,7 @@ const (
 	roleName = "admission-controller"
 
 	serverPort  = 2719
-	healthzPort = 2722
+	probePort   = 2722
 	metricsPort = 2723
 
 	managedResourceNameRuntime = "gardener-admission-controller-runtime"
@@ -54,25 +53,33 @@ var TimeoutWaitForManagedResource = 5 * time.Minute
 
 // Values contains configuration values for the gardener-admission-controller resources.
 type Values struct {
-	ClientConnection               ClientConnection
-	LogLevel                       string
-	Image                          string
+	// ClientConnection is the configuration for the client connection.
+	ClientConnection ClientConnection
+	// LogLevel is the configured log level for the gardener-admission-controller.
+	LogLevel string
+	// Image is the container image used for the gardener-admission-controller pods.
+	Image string
+	// ResourceAdmissionConfiguration is the configuration for gardener-admission-controller's resource-size validator.
 	ResourceAdmissionConfiguration *admissioncontrollerv1alpha1.ResourceAdmissionConfiguration
-	ReplicaCount                   int32
-	RuntimeVersion                 *semver.Version
-	TopologyAwareRoutingEnabled    bool
-	VPAEnabled                     bool
+	// Replicas is the number of pod replicas for the gardener-admission-controller.
+	Replicas int32
+	// RuntimeVersion is the Kubernetes version of the runtime cluster.
+	RuntimeVersion *semver.Version
+	// TopologyAwareRoutingEnabled determines whether topology aware hints are intended for the gardener-admission-controller.
+	TopologyAwareRoutingEnabled bool
 }
 
 // ClientConnection holds values for the client connection.
 type ClientConnection struct {
-	QPS   float32
+	// QPS controls the number of queries per second allowed for this connection.
+	QPS float32
+	// Burst allows extra queries to accumulate when a client is exceeding its rate.
 	Burst int32
 }
 
 // New creates a new instance of DeployWaiter for the gardener-admission-controller.
 func New(client client.Client, namespace string, secretsManager secretsmanager.Interface, values Values) component.DeployWaiter {
-	return &admissioncontroller{
+	return &gardeneradmissioncontroller{
 		client:         client,
 		namespace:      namespace,
 		secretsManager: secretsManager,
@@ -80,14 +87,14 @@ func New(client client.Client, namespace string, secretsManager secretsmanager.I
 	}
 }
 
-type admissioncontroller struct {
+type gardeneradmissioncontroller struct {
 	client         client.Client
 	namespace      string
 	secretsManager secretsmanager.Interface
 	values         Values
 }
 
-func (a admissioncontroller) Deploy(ctx context.Context) error {
+func (a gardeneradmissioncontroller) Deploy(ctx context.Context) error {
 	var (
 		runtimeRegistry           = managedresources.NewRegistry(operatorclient.RuntimeScheme, operatorclient.RuntimeCodec, operatorclient.RuntimeSerializer)
 		virtualGardenAccessSecret = a.newVirtualGardenAccessSecret()
@@ -102,7 +109,7 @@ func (a admissioncontroller) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	admissonConfigMap, err := a.admissionConfigConfigMap()
+	admissionConfigConfigMap, err := a.admissionConfigConfigMap()
 	if err != nil {
 		return err
 	}
@@ -112,24 +119,18 @@ func (a admissioncontroller) Deploy(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
 	}
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
-	defer cancel()
-
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
-		a.deployment(secretServerCert.Name, secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, admissonConfigMap.Name),
+		a.deployment(secretServerCert.Name, secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, admissionConfigConfigMap.Name),
 		a.podDisruptionBudget(),
 		a.service(),
 		a.vpa(),
-		admissonConfigMap,
+		admissionConfigConfigMap,
 	)
 	if err != nil {
 		return err
 	}
 
 	if err := managedresources.CreateForSeed(ctx, a.client, a.namespace, managedResourceNameRuntime, false, runtimeResources); err != nil {
-		return err
-	}
-	if err := managedresources.WaitUntilHealthy(timeoutCtx, a.client, a.namespace, managedResourceNameRuntime); err != nil {
 		return err
 	}
 
@@ -143,7 +144,7 @@ func (a admissioncontroller) Deploy(ctx context.Context) error {
 	virtualResources, err := virtualRegistry.AddAllAndSerialize(
 		a.clusterRole(),
 		a.clusterRoleBinding(virtualGardenAccessSecret.ServiceAccountName),
-		a.validatingwebhookconfiguration(caSecret),
+		a.validatingWebhookConfiguration(caSecret),
 	)
 	if err != nil {
 		return err
@@ -152,7 +153,7 @@ func (a admissioncontroller) Deploy(ctx context.Context) error {
 	return managedresources.CreateForShoot(ctx, a.client, a.namespace, managedResourceNameVirtual, managedresources.LabelValueGardener, false, virtualResources)
 }
 
-func (a admissioncontroller) Wait(ctx context.Context) error {
+func (a gardeneradmissioncontroller) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
@@ -166,7 +167,7 @@ func (a admissioncontroller) Wait(ctx context.Context) error {
 	)(timeoutCtx)
 }
 
-func (a admissioncontroller) Destroy(ctx context.Context) error {
+func (a gardeneradmissioncontroller) Destroy(ctx context.Context) error {
 	if err := managedresources.DeleteForShoot(ctx, a.client, a.namespace, managedResourceNameVirtual); err != nil {
 		return err
 	}
@@ -178,7 +179,7 @@ func (a admissioncontroller) Destroy(ctx context.Context) error {
 	return kubernetesutils.DeleteObjects(ctx, a.client, a.newVirtualGardenAccessSecret().Secret)
 }
 
-func (a admissioncontroller) WaitCleanup(ctx context.Context) error {
+func (a gardeneradmissioncontroller) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
@@ -197,13 +198,5 @@ func GetLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.LabelApp:  v1beta1constants.LabelGardener,
 		v1beta1constants.LabelRole: roleName,
-	}
-}
-
-func getObjectMeta(name, namespace string) metav1.ObjectMeta {
-	return metav1.ObjectMeta{
-		Name:      name,
-		Namespace: namespace,
-		Labels:    GetLabels(),
 	}
 }

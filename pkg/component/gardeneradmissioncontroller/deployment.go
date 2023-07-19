@@ -15,6 +15,8 @@
 package gardeneradmissioncontroller
 
 import (
+	"fmt"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -35,13 +37,21 @@ const (
 	secretNameServerCert      = "gardener-admission-controller-cert"
 	volumeMountPathServerCert = "/etc/gardener-admission-controller/srv"
 	volumeMountConfig         = "/etc/gardener-admission-controller/config"
+	volumeNameCerts           = "gardener-admission-controller-cert"
+	volumeNameConfig          = "gardener-admission-controller-config"
 )
 
-func (a admissioncontroller) deployment(secretServerCert, secretGenericTokenKubeconfig, secretVirtualGardenAccess, configMapAdmissionConfig string) *appsv1.Deployment {
+func (a *gardeneradmissioncontroller) deployment(secretServerCert, secretGenericTokenKubeconfig, secretVirtualGardenAccess, configMapAdmissionConfig string) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
-		ObjectMeta: getObjectMeta(deploymentName, a.namespace),
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      deploymentName,
+			Namespace: a.namespace,
+			Labels: utils.MergeStringMaps(GetLabels(), map[string]string{
+				resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
+			}),
+		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: &a.values.ReplicaCount,
+			Replicas: &a.values.Replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: GetLabels(),
 			},
@@ -53,7 +63,7 @@ func (a admissioncontroller) deployment(secretServerCert, secretGenericTokenKube
 					}),
 				},
 				Spec: corev1.PodSpec{
-					PriorityClassName:            v1beta1constants.PriorityClassNameGardenSystem500,
+					PriorityClassName:            v1beta1constants.PriorityClassNameGardenSystem400,
 					AutomountServiceAccountToken: pointer.Bool(false),
 					Containers: []corev1.Container{
 						{
@@ -61,7 +71,7 @@ func (a admissioncontroller) deployment(secretServerCert, secretGenericTokenKube
 							Image:           a.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{
-								"--config=" + volumeMountConfig + "/" + dataConfigKey,
+								fmt.Sprintf("--config=%s/%s", volumeMountConfig, dataConfigKey),
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: map[corev1.ResourceName]resource.Quantity{
@@ -73,23 +83,32 @@ func (a admissioncontroller) deployment(secretServerCert, secretGenericTokenKube
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/healthz",
-										Port:   intstr.FromInt(healthzPort),
+										Port:   intstr.FromInt(probePort),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								InitialDelaySeconds: 15,
+								TimeoutSeconds:      5,
+							},
+							ReadinessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/readyz",
+										Port:   intstr.FromInt(probePort),
 										Scheme: corev1.URISchemeHTTP,
 									},
 								},
 								InitialDelaySeconds: 10,
 								TimeoutSeconds:      5,
 							},
-							TerminationMessagePath:   "/dev/termination-log",
-							TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "gardener-admission-controller-cert",
+									Name:      volumeNameCerts,
 									MountPath: volumeMountPathServerCert,
 									ReadOnly:  true,
 								},
 								{
-									Name:      "gardener-admission-controller-config",
+									Name:      volumeNameConfig,
 									MountPath: volumeMountConfig,
 								},
 							},
@@ -97,13 +116,13 @@ func (a admissioncontroller) deployment(secretServerCert, secretGenericTokenKube
 					},
 					Volumes: []corev1.Volume{
 						{
-							Name: "gardener-admission-controller-cert",
+							Name: volumeNameCerts,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{SecretName: secretServerCert},
 							},
 						},
 						{
-							Name: "gardener-admission-controller-config",
+							Name: volumeNameConfig,
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{Name: configMapAdmissionConfig},
@@ -115,29 +134,6 @@ func (a admissioncontroller) deployment(secretServerCert, secretGenericTokenKube
 			},
 		},
 	}
-
-	if a.values.ReplicaCount > 1 {
-		deployment.Spec.Template.Spec.Affinity = &corev1.Affinity{
-			PodAntiAffinity: &corev1.PodAntiAffinity{
-				PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
-					{
-						PodAffinityTerm: corev1.PodAffinityTerm{
-							LabelSelector: &metav1.LabelSelector{
-								MatchExpressions: []metav1.LabelSelectorRequirement{
-									{Key: v1beta1constants.LabelApp, Operator: metav1.LabelSelectorOpIn, Values: []string{v1beta1constants.LabelGardener}},
-									{Key: v1beta1constants.LabelRole, Operator: metav1.LabelSelectorOpIn, Values: []string{roleName}},
-								},
-							},
-							TopologyKey: corev1.LabelHostname,
-						},
-						Weight: 1,
-					},
-				},
-			},
-		}
-	}
-
-	metav1.SetMetaDataLabel(&deployment.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigType, resourcesv1alpha1.HighAvailabilityConfigTypeServer)
 
 	utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, secretGenericTokenKubeconfig, secretVirtualGardenAccess))
 	utilruntime.Must(references.InjectAnnotations(deployment))

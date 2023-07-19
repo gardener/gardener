@@ -26,9 +26,9 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
-func TestGardenerAPIServer(t *testing.T) {
+func TestGardenerAdmissionController(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Component GardenerAPIServer Suite")
+	RunSpecs(t, "Component GardenerAdmissionController Suite")
 }
 
 var _ = BeforeSuite(func() {

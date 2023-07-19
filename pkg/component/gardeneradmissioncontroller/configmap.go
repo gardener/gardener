@@ -16,6 +16,7 @@ package gardeneradmissioncontroller
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -51,7 +52,7 @@ func init() {
 	admissionServerCodec = serializer.NewCodecFactory(admissionServerScheme).CodecForVersions(ser, ser, versions, versions)
 }
 
-func (a admissioncontroller) admissionConfigConfigMap() (*corev1.ConfigMap, error) {
+func (a *gardeneradmissioncontroller) admissionConfigConfigMap() (*corev1.ConfigMap, error) {
 	admissionConfig := &admissioncontrollerv1alpha1.AdmissionControllerConfiguration{
 		GardenClientConnection: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 			QPS:        a.values.ClientConnection.QPS,
@@ -65,7 +66,7 @@ func (a admissioncontroller) admissionConfigConfigMap() (*corev1.ConfigMap, erro
 				Server: admissioncontrollerv1alpha1.Server{Port: serverPort},
 				TLS:    admissioncontrollerv1alpha1.TLSServer{ServerCertDir: volumeMountPathServerCert},
 			},
-			HealthProbes:                   &admissioncontrollerv1alpha1.Server{Port: healthzPort},
+			HealthProbes:                   &admissioncontrollerv1alpha1.Server{Port: probePort},
 			Metrics:                        &admissioncontrollerv1alpha1.Server{Port: metricsPort},
 			ResourceAdmissionConfiguration: a.values.ResourceAdmissionConfiguration,
 		},
@@ -77,7 +78,11 @@ func (a admissioncontroller) admissionConfigConfigMap() (*corev1.ConfigMap, erro
 	}
 
 	configMap := &corev1.ConfigMap{
-		ObjectMeta: getObjectMeta(deploymentName, a.namespace),
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      deploymentName,
+			Namespace: a.namespace,
+			Labels:    GetLabels(),
+		},
 		Data: map[string]string{
 			dataConfigKey: string(data),
 		},

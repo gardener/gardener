@@ -21,13 +21,13 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 )
 
-func (a admissioncontroller) podDisruptionBudget() *policyv1.PodDisruptionBudget {
-	if a.values.ReplicaCount <= 1 {
-		return nil
-	}
-
+func (a *gardeneradmissioncontroller) podDisruptionBudget() *policyv1.PodDisruptionBudget {
 	return &policyv1.PodDisruptionBudget{
-		ObjectMeta: getObjectMeta(deploymentName, a.namespace),
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      deploymentName,
+			Namespace: a.namespace,
+			Labels:    GetLabels(),
+		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
 			MaxUnavailable: gardenerutils.IntStrPtrFromInt(1),
 			Selector:       &metav1.LabelSelector{MatchLabels: GetLabels()},

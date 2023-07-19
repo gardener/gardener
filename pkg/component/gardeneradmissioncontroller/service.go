@@ -17,6 +17,7 @@ package gardeneradmissioncontroller
 import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
@@ -24,9 +25,13 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-func (a admissioncontroller) service() *corev1.Service {
+func (a *gardeneradmissioncontroller) service() *corev1.Service {
 	svc := &corev1.Service{
-		ObjectMeta: getObjectMeta(serviceName, a.namespace),
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      serviceName,
+			Namespace: a.namespace,
+			Labels:    GetLabels(),
+		},
 		Spec: corev1.ServiceSpec{
 			Type:     corev1.ServiceTypeClusterIP,
 			Selector: GetLabels(),
@@ -49,10 +54,6 @@ func (a admissioncontroller) service() *corev1.Service {
 
 	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForWebhookTargets(svc, networkingv1.NetworkPolicyPort{
 		Port:     utils.IntStrPtrFromInt(serverPort),
-		Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
-	}))
-	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(svc, networkingv1.NetworkPolicyPort{
-		Port:     utils.IntStrPtrFromInt(metricsPort),
 		Protocol: utils.ProtocolPtr(corev1.ProtocolTCP),
 	}))
 
