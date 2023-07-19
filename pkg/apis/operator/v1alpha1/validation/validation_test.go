@@ -23,12 +23,16 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/component-base/featuregate"
 	"k8s.io/utils/pointer"
 
+	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	. "github.com/gardener/gardener/pkg/apis/operator/v1alpha1/validation"
@@ -1119,6 +1123,238 @@ var _ = Describe("Validation Tests", func() {
 								"Type":  Equal(field.ErrorTypeInvalid),
 								"Field": Equal("spec.virtualCluster.gardener.gardenerAPIServer.requests.maxMutatingInflight"),
 							}))))
+						})
+					})
+				})
+
+				Context("AdmissionController", func() {
+					It("should allow the configuration being set to nil", func() {
+						garden.Spec.VirtualCluster.Gardener.AdmissionController = nil
+
+						Expect(ValidateGarden(garden)).To(BeEmpty())
+					})
+
+					It("should allow the configuration being empty", func() {
+						garden.Spec.VirtualCluster.Gardener.AdmissionController = &operatorv1alpha1.GardenerAdmissionControllerConfig{}
+
+						Expect(ValidateGarden(garden)).To(BeEmpty())
+					})
+
+					Context("Resource Admission Configuration", func() {
+						Context("Operation mode", func() {
+							test := func(mode string) field.ErrorList {
+								var (
+									admissionConfig *admissioncontrollerv1alpha1.ResourceAdmissionConfiguration
+									operationMode   = admissioncontrollerv1alpha1.ResourceAdmissionWebhookMode(mode)
+								)
+
+								if mode != "" {
+									admissionConfig = &admissioncontrollerv1alpha1.ResourceAdmissionConfiguration{
+										OperationMode: &operationMode,
+									}
+								}
+
+								garden.Spec.VirtualCluster.Gardener.AdmissionController = &operatorv1alpha1.GardenerAdmissionControllerConfig{
+									ResourceAdmissionConfiguration: admissionConfig,
+								}
+
+								return ValidateGarden(garden)
+							}
+
+							It("should allow no mode", func() {
+								Expect(test("")).To(BeEmpty())
+							})
+
+							It("should allow blocking mode", func() {
+								Expect(test("block")).To(BeEmpty())
+							})
+
+							It("should allow logging mode", func() {
+								Expect(test("log")).To(BeEmpty())
+							})
+
+							It("should deny non existing mode", func() {
+								Expect(test("foo")).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeNotSupported),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.mode"),
+								}))))
+							})
+						})
+
+						Context("Limits validation", func() {
+							var (
+								apiGroups = []string{"core.gardener.cloud"}
+								versions  = []string{"v1beta1", "v1alpha1"}
+								resources = []string{"shoot"}
+								size      = "1Ki"
+
+								test = func(apiGroups []string, versions []string, resources []string, size string) field.ErrorList {
+									s, err := resource.ParseQuantity(size)
+									utilruntime.Must(err)
+
+									garden.Spec.VirtualCluster.Gardener.AdmissionController = &operatorv1alpha1.GardenerAdmissionControllerConfig{
+										ResourceAdmissionConfiguration: &admissioncontrollerv1alpha1.ResourceAdmissionConfiguration{
+											Limits: []admissioncontrollerv1alpha1.ResourceLimit{
+												{
+													APIGroups:   apiGroups,
+													APIVersions: versions,
+													Resources:   resources,
+													Size:        s,
+												},
+											},
+										},
+									}
+
+									return ValidateGarden(garden)
+								}
+							)
+
+							It("should allow request", func() {
+								Expect(test(apiGroups, versions, resources, size)).To(BeEmpty())
+							})
+
+							It("should deny empty apiGroup", func() {
+								Expect(test(nil, versions, resources, size)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeInvalid),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.limits[0].apiGroups"),
+								}))))
+							})
+
+							It("should allow apiGroup w/ zero length", func() {
+								Expect(test([]string{""}, versions, resources, size)).To(BeEmpty())
+							})
+
+							It("should deny empty versions", func() {
+								Expect(test(apiGroups, nil, resources, size)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeInvalid),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.limits[0].versions"),
+								}))))
+							})
+
+							It("should deny versions w/ zero length", func() {
+								Expect(test(apiGroups, []string{""}, resources, size)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeInvalid),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.limits[0].versions[0]"),
+								}))))
+							})
+
+							It("should deny empty resources", func() {
+								Expect(test(apiGroups, versions, nil, size)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeInvalid),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.limits[0].resources"),
+								}))))
+							})
+
+							It("should deny resources w/ zero length", func() {
+								Expect(test(apiGroups, versions, []string{""}, size)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeInvalid),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.limits[0].resources[0]"),
+								}))))
+							})
+
+							It("should deny invalid size", func() {
+								Expect(test(apiGroups, versions, resources, "-1k")).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeInvalid),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.limits[0].size"),
+								}))))
+							})
+
+							It("should deny invalid size and resources w/ zero length", func() {
+								Expect(test(apiGroups, versions, []string{resources[0], ""}, "-1k")).To(ConsistOf(
+									PointTo(MatchFields(IgnoreExtras, Fields{
+										"Type":  Equal(field.ErrorTypeInvalid),
+										"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.limits[0].size"),
+									})),
+									PointTo(MatchFields(IgnoreExtras, Fields{
+										"Type":  Equal(field.ErrorTypeInvalid),
+										"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.limits[0].resources[1]"),
+									}))))
+							})
+						})
+
+						Context("User configuration validation", func() {
+							var (
+								userName       = "admin"
+								namespace      = "default"
+								emptyNamespace = ""
+
+								test = func(kind string, name string, namespace string, apiGroup string) field.ErrorList {
+									garden.Spec.VirtualCluster.Gardener.AdmissionController = &operatorv1alpha1.GardenerAdmissionControllerConfig{
+										ResourceAdmissionConfiguration: &admissioncontrollerv1alpha1.ResourceAdmissionConfiguration{
+											UnrestrictedSubjects: []rbacv1.Subject{
+												{
+													Kind:      kind,
+													Name:      name,
+													Namespace: namespace,
+													APIGroup:  apiGroup,
+												},
+											},
+										},
+									}
+
+									return ValidateGarden(garden)
+								}
+							)
+
+							It("should allow request for user", func() {
+								Expect(test(rbacv1.UserKind, userName, emptyNamespace, rbacv1.GroupName)).To(BeEmpty())
+							})
+
+							It("should allow request for group", func() {
+								Expect(test(rbacv1.GroupKind, userName, emptyNamespace, rbacv1.GroupName)).To(BeEmpty())
+							})
+
+							It("should allow request for service account", func() {
+								Expect(test(rbacv1.ServiceAccountKind, userName, namespace, "")).To(BeEmpty())
+							})
+
+							It("should deny invalid apiGroup for user", func() {
+								Expect(test(rbacv1.UserKind, userName, emptyNamespace, "invalid")).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeNotSupported),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.unrestrictedSubjects[0].apiGroup"),
+								}))))
+							})
+
+							It("should deny invalid apiGroup for group", func() {
+								Expect(test(rbacv1.GroupKind, userName, emptyNamespace, "invalid")).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeNotSupported),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.unrestrictedSubjects[0].apiGroup"),
+								}))))
+							})
+
+							It("should deny invalid apiGroup for service account", func() {
+								Expect(test(rbacv1.ServiceAccountKind, userName, namespace, "invalid")).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeInvalid),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.unrestrictedSubjects[0].apiGroup"),
+								}))))
+							})
+
+							It("should deny invalid namespace setting for user", func() {
+								Expect(test(rbacv1.UserKind, userName, namespace, rbacv1.GroupName)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeInvalid),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.unrestrictedSubjects[0].namespace"),
+								}))))
+							})
+
+							It("should deny invalid namespace setting for group", func() {
+								Expect(test(rbacv1.GroupKind, userName, namespace, rbacv1.GroupName)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeInvalid),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.unrestrictedSubjects[0].namespace"),
+								}))))
+							})
+
+							It("should deny invalid kind", func() {
+								Expect(test("invalidKind", userName, emptyNamespace, rbacv1.GroupName)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":  Equal(field.ErrorTypeNotSupported),
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.unrestrictedSubjects[0].kind"),
+								}))))
+							})
+
+							It("should deny empty name", func() {
+								Expect(test(rbacv1.UserKind, "", emptyNamespace, rbacv1.GroupName)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+									"Field": Equal("spec.virtualCluster.gardener.gardenerAdmissionController.resourceAdmissionConfiguration.unrestrictedSubjects[0].name"),
+								}))))
+							})
 						})
 					})
 				})

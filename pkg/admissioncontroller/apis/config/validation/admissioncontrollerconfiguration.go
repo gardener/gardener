@@ -37,13 +37,13 @@ func ValidateAdmissionControllerConfiguration(config *admissioncontrollerconfig.
 
 	serverPath := field.NewPath("server")
 	if config.Server.ResourceAdmissionConfiguration != nil {
-		allErrs = append(allErrs, validateResourceAdmissionConfiguration(config.Server.ResourceAdmissionConfiguration, serverPath.Child("resourceAdmissionConfiguration"))...)
+		allErrs = append(allErrs, ValidateResourceAdmissionConfiguration(config.Server.ResourceAdmissionConfiguration, serverPath.Child("resourceAdmissionConfiguration"))...)
 	}
 	return allErrs
 }
 
 // ValidateResourceAdmissionConfiguration validates the given `ResourceAdmissionConfiguration`.
-func validateResourceAdmissionConfiguration(config *admissioncontrollerconfig.ResourceAdmissionConfiguration, fldPath *field.Path) field.ErrorList {
+func ValidateResourceAdmissionConfiguration(config *admissioncontrollerconfig.ResourceAdmissionConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	validValues := sets.New(string(admissioncontrollerconfig.AdmissionModeBlock), string(admissioncontrollerconfig.AdmissionModeLog))
 
