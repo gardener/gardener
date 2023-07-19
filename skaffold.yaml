@@ -84,6 +84,7 @@ build:
         - pkg/client/core/listers/core/v1beta1
         - pkg/client/kubernetes
         - pkg/client/kubernetes/cache
+        - pkg/client/seedmanagement/applyconfiguration/seedmanagement/v1alpha1
         - pkg/client/seedmanagement/clientset/versioned
         - pkg/client/seedmanagement/clientset/versioned/scheme
         - pkg/client/seedmanagement/clientset/versioned/typed/seedmanagement/v1alpha1
@@ -92,6 +93,7 @@ build:
         - pkg/client/seedmanagement/informers/externalversions/seedmanagement
         - pkg/client/seedmanagement/informers/externalversions/seedmanagement/v1alpha1
         - pkg/client/seedmanagement/listers/seedmanagement/v1alpha1
+        - pkg/client/settings/applyconfiguration/settings/v1alpha1
         - pkg/client/settings/clientset/versioned
         - pkg/client/settings/clientset/versioned/scheme
         - pkg/client/settings/clientset/versioned/typed/settings/v1alpha1
