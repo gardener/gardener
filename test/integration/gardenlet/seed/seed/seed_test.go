@@ -164,7 +164,6 @@ var _ = Describe("Seed controller tests", func() {
 			Identity:        identity,
 			ImageVector:     imagevector.ImageVector(),
 			GardenNamespace: testNamespace.Name,
-			ChartsPath:      chartsPath,
 		}).AddToManager(mgr, mgr)).To(Succeed())
 
 		By("Start manager")

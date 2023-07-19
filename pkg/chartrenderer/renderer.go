@@ -21,6 +21,7 @@ import (
 )
 
 // Interface is an interface for rendering Helm Charts from path, name, namespace and values.
+// TODO(rfranzke): Drop the deprecated method after Gardener v1.80 has been released.
 type Interface interface {
 	// Deprecated: Use RenderEmbeddedFS for new code!
 	Render(chartPath, releaseName, namespace string, values interface{}) (*RenderedChart, error)

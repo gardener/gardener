@@ -25,6 +25,7 @@ import (
 
 // ChartApplier is an interface that describes needed methods that render and apply
 // Helm charts in Kubernetes clusters.
+// TODO(rfranzke): Drop the deprecated methods after Gardener v1.80 has been released.
 type ChartApplier interface {
 	chartrenderer.Interface
 	// Deprecated: Use ApplyFromEmbeddedFS for new code!

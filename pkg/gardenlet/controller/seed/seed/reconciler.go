@@ -51,7 +51,6 @@ type Reconciler struct {
 	ComponentImageVectors                imagevector.ComponentImageVectors
 	ClientCertificateExpirationTimestamp *metav1.Time
 	GardenNamespace                      string
-	ChartsPath                           string
 }
 
 // Reconcile reconciles Seed resources and provisions or de-provisions the seed system components.
