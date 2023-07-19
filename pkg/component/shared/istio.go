@@ -23,6 +23,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
@@ -31,14 +32,13 @@ import (
 	"github.com/gardener/gardener/pkg/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // NewIstio returns a deployer for Istio.
 func NewIstio(
 	cl client.Client,
-	imageVector imagevector.ImageVector,
+	imageVector imagevectorutils.ImageVector,
 	chartRenderer chartrenderer.Interface,
 	namePrefix string,
 	ingressNamespace string,
@@ -62,12 +62,12 @@ func NewIstio(
 		maxReplicas *int
 	)
 
-	istiodImage, err := imageVector.FindImage(images.ImageNameIstioIstiod)
+	istiodImage, err := imageVector.FindImage(imagevector.ImageNameIstioIstiod)
 	if err != nil {
 		return nil, err
 	}
 
-	igwImage, err := imageVector.FindImage(images.ImageNameIstioProxy)
+	igwImage, err := imageVector.FindImage(imagevector.ImageNameIstioProxy)
 	if err != nil {
 		return nil, err
 	}

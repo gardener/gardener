@@ -17,7 +17,6 @@ package garden_test
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
@@ -38,7 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/gardener/gardener/charts"
+	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -57,7 +56,6 @@ import (
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	gardencontroller "github.com/gardener/gardener/pkg/operator/controller/garden/garden"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -133,10 +131,6 @@ var _ = Describe("Garden controller tests", func() {
 		Expect((&operationannotation.Reconciler{ForObject: func() client.Object { return &druidv1alpha1.Etcd{} }}).AddToManager(mgr)).To(Succeed())
 
 		By("Register controller")
-		chartsPath := filepath.Join("..", "..", "..", "..", "..", charts.Path)
-		imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(chartsPath, "images.yaml"))
-		Expect(err).NotTo(HaveOccurred())
-
 		garden = &operatorv1alpha1.Garden{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   "garden-" + testRunID,
@@ -209,7 +203,7 @@ var _ = Describe("Garden controller tests", func() {
 					},
 				},
 			},
-			ImageVector:     imageVector,
+			ImageVector:     imagevector.ImageVector(),
 			Identity:        &gardencorev1beta1.Gardener{Name: "test-gardener"},
 			GardenClientMap: gardenClientMap,
 			GardenNamespace: testNamespace.Name,

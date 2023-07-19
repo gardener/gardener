@@ -17,15 +17,15 @@ package botanist
 import (
 	"k8s.io/utils/pointer"
 
+	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/metricsserver"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // DefaultMetricsServer returns a deployer for the metrics-server.
 func (b *Botanist) DefaultMetricsServer() (component.DeployWaiter, error) {
-	image, err := b.ImageVector.FindImage(images.ImageNameMetricsServer, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	image, err := b.ImageVector.FindImage(imagevector.ImageNameMetricsServer, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

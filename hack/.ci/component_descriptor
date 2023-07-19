@@ -48,7 +48,14 @@ fi
 
 echo "Enriching component descriptor from ${BASE_DEFINITION_PATH}"
 
+image_vector_path=""
 if [[ -f "$repo_root_dir/charts/images.yaml" ]]; then
+  image_vector_path="$repo_root_dir/charts/images.yaml"
+elif [[ -f "$repo_root_dir/imagevector/images.yaml" ]]; then
+  image_vector_path="$repo_root_dir/imagevector/images.yaml"
+fi
+
+if [[ ! -z "$image_vector_path" ]]; then
   # default environment variables
   if [[ -z "${COMPONENT_PREFIXES}" ]]; then
     COMPONENT_PREFIXES="eu.gcr.io/gardener-project/gardener"
@@ -60,7 +67,7 @@ if [[ -f "$repo_root_dir/charts/images.yaml" ]]; then
   if [[ -z "${COMPONENT_CLI_ARGS}" ]]; then
     COMPONENT_CLI_ARGS="
     --comp-desc ${BASE_DEFINITION_PATH} \
-    --image-vector "$repo_root_dir/charts/images.yaml" \
+    --image-vector "$image_vector_path" \
     --component-prefixes "${COMPONENT_PREFIXES}" \
     --generic-dependencies "${GENERIC_DEPENDENCIES}" \
     "

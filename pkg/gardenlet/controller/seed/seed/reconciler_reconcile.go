@@ -566,7 +566,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		hvpa, err := sharedcomponent.NewHVPA(
 			seedClient,
 			r.GardenNamespace,
-			kubernetesVersion,
 			r.ImageVector,
 			hvpaEnabled,
 			v1beta1constants.PriorityClassNameSeedSystem700,

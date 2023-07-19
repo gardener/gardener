@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -34,8 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/executor"
 	nodelocaldnsconstants "github.com/gardener/gardener/pkg/component/nodelocaldns/constants"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -47,7 +47,7 @@ const SecretLabelKeyManagedResource = "managed-resource"
 
 // DefaultOperatingSystemConfig creates the default deployer for the OperatingSystemConfig custom resource.
 func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interface, error) {
-	oscImages, err := imagevector.FindImages(b.ImageVector, []string{images.ImageNameHyperkube, images.ImageNamePauseContainer, images.ImageNameValitail}, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	oscImages, err := imagevectorutils.FindImages(b.ImageVector, []string{imagevector.ImageNameHyperkube, imagevector.ImageNamePauseContainer, imagevector.ImageNameValitail}, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +183,7 @@ func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Conte
 			return err
 		}
 
-		hyperkubeImage, err := b.ImageVector.FindImage(images.ImageNameHyperkube, imagevector.RuntimeVersion(kubernetesVersion.String()), imagevector.TargetVersion(kubernetesVersion.String()))
+		hyperkubeImage, err := b.ImageVector.FindImage(imagevector.ImageNameHyperkube, imagevectorutils.RuntimeVersion(kubernetesVersion.String()), imagevectorutils.TargetVersion(kubernetesVersion.String()))
 		if err != nil {
 			return err
 		}
@@ -248,7 +248,7 @@ func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Conte
 func (b *Botanist) generateCloudConfigExecutorResourcesForWorker(
 	worker gardencorev1beta1.Worker,
 	oscDataOriginal operatingsystemconfig.Data,
-	hyperkubeImage *imagevector.Image,
+	hyperkubeImage *imagevectorutils.Image,
 ) (
 	string,
 	map[string][]byte,

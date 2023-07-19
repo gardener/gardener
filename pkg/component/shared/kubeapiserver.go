@@ -35,6 +35,7 @@ import (
 	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -42,8 +43,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/version"
@@ -85,7 +85,7 @@ func NewKubeAPIServer(
 	objectMeta metav1.ObjectMeta,
 	runtimeVersion *semver.Version,
 	targetVersion *semver.Version,
-	imageVector imagevector.ImageVector,
+	imageVector imagevectorutils.ImageVector,
 	secretsManager secretsmanager.Interface,
 	namePrefix string,
 	apiServerConfig *gardencorev1beta1.KubeAPIServerConfig,
@@ -259,7 +259,7 @@ func DeployKubeAPIServer(
 }
 
 func computeKubeAPIServerImages(
-	imageVector imagevector.ImageVector,
+	imageVector imagevectorutils.ImageVector,
 	runtimeVersion *semver.Version,
 	targetVersion *semver.Version,
 	vpnConfig kubeapiserver.VPNConfig,
@@ -269,14 +269,14 @@ func computeKubeAPIServerImages(
 ) {
 	var result kubeapiserver.Images
 
-	imageKubeAPIServer, err := imageVector.FindImage(images.ImageNameKubeApiserver, imagevector.RuntimeVersion(runtimeVersion.String()), imagevector.TargetVersion(targetVersion.String()))
+	imageKubeAPIServer, err := imageVector.FindImage(imagevector.ImageNameKubeApiserver, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(targetVersion.String()))
 	if err != nil {
 		return kubeapiserver.Images{}, err
 	}
 	result.KubeAPIServer = imageKubeAPIServer.String()
 
 	if version.ConstraintK8sEqual124.Check(targetVersion) {
-		imageWatchdog, err := imageVector.FindImage(images.ImageNameAlpine, imagevector.RuntimeVersion(runtimeVersion.String()), imagevector.TargetVersion(targetVersion.String()))
+		imageWatchdog, err := imageVector.FindImage(imagevector.ImageNameAlpine, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(targetVersion.String()))
 		if err != nil {
 			return kubeapiserver.Images{}, err
 		}
@@ -284,7 +284,7 @@ func computeKubeAPIServerImages(
 	}
 
 	if vpnConfig.HighAvailabilityEnabled {
-		imageVPNClient, err := imageVector.FindImage(images.ImageNameVpnShootClient, imagevector.RuntimeVersion(runtimeVersion.String()), imagevector.TargetVersion(targetVersion.String()))
+		imageVPNClient, err := imageVector.FindImage(imagevector.ImageNameVpnShootClient, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(targetVersion.String()))
 		if err != nil {
 			return kubeapiserver.Images{}, err
 		}

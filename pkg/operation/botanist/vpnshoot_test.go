@@ -26,7 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
@@ -67,7 +66,7 @@ var _ = Describe("VPNShoot", func() {
 
 		It("should successfully create a vpnShoot interface for ReversedVPN", func() {
 			kubernetesClient.EXPECT().Client()
-			botanist.ImageVector = imagevector.ImageVector{{Name: images.ImageNameVpnShootClient}}
+			botanist.ImageVector = imagevector.ImageVector{{Name: "vpn-shoot-client"}}
 
 			vpnShoot, err := botanist.DefaultVPNShoot()
 			Expect(vpnShoot).NotTo(BeNil())

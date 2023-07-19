@@ -18,10 +18,10 @@ import (
 	"github.com/Masterminds/semver"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // NewKubeStateMetrics instantiates a new `kube-state-metrics` component.
@@ -29,13 +29,13 @@ func NewKubeStateMetrics(
 	c client.Client,
 	gardenNamespaceName string,
 	runtimeVersion *semver.Version,
-	imageVector imagevector.ImageVector,
+	imageVector imagevectorutils.ImageVector,
 	priorityClassName string,
 ) (
 	component.DeployWaiter,
 	error,
 ) {
-	image, err := imageVector.FindImage(images.ImageNameKubeStateMetrics, imagevector.TargetVersion(runtimeVersion.String()))
+	image, err := imageVector.FindImage(imagevector.ImageNameKubeStateMetrics, imagevectorutils.TargetVersion(runtimeVersion.String()))
 	if err != nil {
 		return nil, err
 	}

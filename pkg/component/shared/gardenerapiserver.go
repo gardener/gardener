@@ -23,13 +23,13 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/gardenerapiserver"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -40,7 +40,7 @@ func NewGardenerAPIServer(
 	runtimeNamespace string,
 	objectMeta metav1.ObjectMeta,
 	runtimeVersion *semver.Version,
-	imageVector imagevector.ImageVector,
+	imageVector imagevectorutils.ImageVector,
 	secretsManager secretsmanager.Interface,
 	apiServerConfig *operatorv1alpha1.GardenerAPIServerConfig,
 	autoscalingConfig apiserver.AutoscalingConfig,
@@ -51,7 +51,7 @@ func NewGardenerAPIServer(
 	gardenerapiserver.Interface,
 	error,
 ) {
-	image, err := imageVector.FindImage(images.ImageNameGardenerApiserver)
+	image, err := imageVector.FindImage(imagevector.ImageNameGardenerApiserver)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func NewGardenerAPIServer(
 	if image.Tag != nil {
 		repository, tag = image.Repository, *image.Tag
 	}
-	image = &imagevector.Image{Repository: repository, Tag: &tag}
+	image = &imagevectorutils.Image{Repository: repository, Tag: &tag}
 
 	var (
 		auditConfig              *apiserver.AuditConfig

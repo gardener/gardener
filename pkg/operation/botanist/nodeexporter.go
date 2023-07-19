@@ -17,14 +17,14 @@ package botanist
 import (
 	"context"
 
+	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component/nodeexporter"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // DefaultNodeExporter returns a deployer for the NodeExporter.
 func (b *Botanist) DefaultNodeExporter() (nodeexporter.Interface, error) {
-	image, err := b.ImageVector.FindImage(images.ImageNameNodeExporter, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	image, err := b.ImageVector.FindImage(imagevector.ImageNameNodeExporter, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

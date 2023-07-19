@@ -8,7 +8,6 @@ build:
     ko:
       dependencies:
         paths:
-        - charts
         - cmd/gardener-operator/app
         - cmd/utils
         - extensions/pkg/apis/config
@@ -17,6 +16,7 @@ build:
         - extensions/pkg/webhook
         - extensions/pkg/webhook/certificates
         - extensions/pkg/webhook/shoot
+        - imagevector
         - pkg/api/extensions
         - pkg/apis/core
         - pkg/apis/core/install
@@ -187,7 +187,6 @@ build:
         - pkg/utils/gardener
         - pkg/utils/gardener/secretsrotation
         - pkg/utils/gardener/tokenrequest
-        - pkg/utils/images
         - pkg/utils/imagevector
         - pkg/utils/kubernetes
         - pkg/utils/kubernetes/client

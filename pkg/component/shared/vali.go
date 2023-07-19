@@ -19,10 +19,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -30,7 +30,7 @@ import (
 func NewVali(
 	c client.Client,
 	namespace string,
-	imageVector imagevector.ImageVector,
+	imageVector imagevectorutils.ImageVector,
 	secretsManager secretsmanager.Interface,
 	clusterType component.ClusterType,
 	replicas int32,
@@ -45,32 +45,32 @@ func NewVali(
 	vali.Interface,
 	error,
 ) {
-	valiImage, err := imageVector.FindImage(images.ImageNameVali)
+	valiImage, err := imageVector.FindImage(imagevector.ImageNameVali)
 	if err != nil {
 		return nil, err
 	}
 
-	curatorImage, err := imageVector.FindImage(images.ImageNameValiCurator)
+	curatorImage, err := imageVector.FindImage(imagevector.ImageNameValiCurator)
 	if err != nil {
 		return nil, err
 	}
 
-	tune2fsImage, err := imageVector.FindImage(images.ImageNameTune2fs)
+	tune2fsImage, err := imageVector.FindImage(imagevector.ImageNameTune2fs)
 	if err != nil {
 		return nil, err
 	}
 
-	alpineImage, err := imageVector.FindImage(images.ImageNameAlpine)
+	alpineImage, err := imageVector.FindImage(imagevector.ImageNameAlpine)
 	if err != nil {
 		return nil, err
 	}
 
-	kubeRBACProxyImage, err := imageVector.FindImage(images.ImageNameKubeRbacProxy)
+	kubeRBACProxyImage, err := imageVector.FindImage(imagevector.ImageNameKubeRbacProxy)
 	if err != nil {
 		return nil, err
 	}
 
-	telegrafImage, err := imageVector.FindImage(images.ImageNameTelegraf)
+	telegrafImage, err := imageVector.FindImage(imagevector.ImageNameTelegraf)
 	if err != nil {
 		return nil, err
 	}

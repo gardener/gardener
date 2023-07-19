@@ -30,6 +30,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -39,8 +40,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -53,7 +53,7 @@ func NewRuntimeGardenerResourceManager(
 	c client.Client,
 	gardenNamespaceName string,
 	runtimeVersion *semver.Version,
-	imageVector imagevector.ImageVector,
+	imageVector imagevectorutils.ImageVector,
 	secretsManager secretsmanager.Interface,
 	logLevel, logFormat string,
 	secretNameServerCA string,
@@ -68,7 +68,7 @@ func NewRuntimeGardenerResourceManager(
 	component.DeployWaiter,
 	error,
 ) {
-	image, err := imageVector.FindImage(images.ImageNameGardenerResourceManager)
+	image, err := imageVector.FindImage(imagevector.ImageNameGardenerResourceManager)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func NewRuntimeGardenerResourceManager(
 	if image.Tag != nil {
 		repository, tag = image.Repository, *image.Tag
 	}
-	image = &imagevector.Image{Repository: repository, Tag: &tag}
+	image = &imagevectorutils.Image{Repository: repository, Tag: &tag}
 
 	return resourcemanager.New(c, gardenNamespaceName, secretsManager, resourcemanager.Values{
 		ConcurrentSyncs:                           pointer.Int(20),
@@ -122,7 +122,7 @@ func NewRuntimeGardenerResourceManager(
 func NewTargetGardenerResourceManager(
 	c client.Client,
 	namespaceName string,
-	imageVector imagevector.ImageVector,
+	imageVector imagevectorutils.ImageVector,
 	secretsManager secretsmanager.Interface,
 	clusterIdentity *string,
 	defaultNotReadyTolerationSeconds *int64,
@@ -142,7 +142,7 @@ func NewTargetGardenerResourceManager(
 	resourcemanager.Interface,
 	error,
 ) {
-	image, err := imageVector.FindImage(images.ImageNameGardenerResourceManager)
+	image, err := imageVector.FindImage(imagevector.ImageNameGardenerResourceManager)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +151,7 @@ func NewTargetGardenerResourceManager(
 	if image.Tag != nil {
 		repository, tag = image.Repository, *image.Tag
 	}
-	image = &imagevector.Image{Repository: repository, Tag: &tag}
+	image = &imagevectorutils.Image{Repository: repository, Tag: &tag}
 
 	cfg := resourcemanager.Values{
 		AlwaysUpdate:                         pointer.Bool(true),

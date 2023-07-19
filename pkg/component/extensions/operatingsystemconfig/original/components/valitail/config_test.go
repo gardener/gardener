@@ -22,7 +22,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
@@ -48,7 +47,7 @@ var _ = Describe("Valitail", func() {
 				CABundle:      &cABundle,
 				ClusterDomain: clusterDomain,
 				Images: map[string]*imagevector.Image{
-					images.ImageNameValitail: valitailImage,
+					"valitail": valitailImage,
 				},
 				ValiIngress:     valiIngress,
 				ValitailEnabled: true,
@@ -301,7 +300,7 @@ exit $?
 				CABundle:      &cABundle,
 				ClusterDomain: clusterDomain,
 				Images: map[string]*imagevector.Image{
-					images.ImageNameValitail: valitailImage,
+					"valitail": valitailImage,
 				},
 				ValiIngress:     valiIngress,
 				ValitailEnabled: false,
@@ -366,7 +365,7 @@ ExecStart=/bin/sh -c "rm -f /var/lib/valitail/auth-token; echo service valitail-
 				CABundle:      &cABundle,
 				ClusterDomain: clusterDomain,
 				Images: map[string]*imagevector.Image{
-					images.ImageNameValitail: valitailImage,
+					"valitail": valitailImage,
 				},
 				ValitailEnabled: true,
 				ValiIngress:     "",

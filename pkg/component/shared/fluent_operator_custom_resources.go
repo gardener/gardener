@@ -18,17 +18,17 @@ import (
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // NewFluentOperatorCustomResources instantiates a new `Fluent Operator Custom Resources` component.
 func NewFluentOperatorCustomResources(
 	c client.Client,
 	gardenNamespaceName string,
-	imageVector imagevector.ImageVector,
+	imageVector imagevectorutils.ImageVector,
 	enabled bool,
 	priorityClassName string,
 	additionalInputs []*fluentbitv1alpha2.ClusterInput,
@@ -38,12 +38,12 @@ func NewFluentOperatorCustomResources(
 	deployer component.DeployWaiter,
 	err error,
 ) {
-	fluentBitImage, err := imageVector.FindImage(images.ImageNameFluentBit)
+	fluentBitImage, err := imageVector.FindImage(imagevector.ImageNameFluentBit)
 	if err != nil {
 		return nil, err
 	}
 
-	fluentBitInitImage, err := imageVector.FindImage(images.ImageNameFluentBitPluginInstaller)
+	fluentBitInitImage, err := imageVector.FindImage(imagevector.ImageNameFluentBitPluginInstaller)
 	if err != nil {
 		return nil, err
 	}

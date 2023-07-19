@@ -36,7 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
@@ -87,7 +86,7 @@ var _ = Describe("NodeLocalDNS", func() {
 
 		It("should successfully create a node-local-dns interface", func() {
 			kubernetesClient.EXPECT().Client()
-			botanist.ImageVector = imagevector.ImageVector{{Name: images.ImageNameNodeLocalDns}}
+			botanist.ImageVector = imagevector.ImageVector{{Name: "node-local-dns"}}
 
 			nodeLocalDNS, err := botanist.DefaultNodeLocalDNS()
 			Expect(nodeLocalDNS).NotTo(BeNil())

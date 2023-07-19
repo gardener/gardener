@@ -20,30 +20,30 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 
+	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/monitoring"
 	"github.com/gardener/gardener/pkg/features"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/images"
 )
 
 // DefaultMonitoring creates a new monitoring component.
 func (b *Botanist) DefaultMonitoring() (monitoring.Interface, error) {
-	imageAlertmanager, err := b.ImageVector.FindImage(images.ImageNameAlertmanager)
+	imageAlertmanager, err := b.ImageVector.FindImage(imagevector.ImageNameAlertmanager)
 	if err != nil {
 		return nil, err
 	}
-	imageBlackboxExporter, err := b.ImageVector.FindImage(images.ImageNameBlackboxExporter)
+	imageBlackboxExporter, err := b.ImageVector.FindImage(imagevector.ImageNameBlackboxExporter)
 	if err != nil {
 		return nil, err
 	}
-	imageConfigmapReloader, err := b.ImageVector.FindImage(images.ImageNameConfigmapReloader)
+	imageConfigmapReloader, err := b.ImageVector.FindImage(imagevector.ImageNameConfigmapReloader)
 	if err != nil {
 		return nil, err
 	}
-	imagePrometheus, err := b.ImageVector.FindImage(images.ImageNamePrometheus)
+	imagePrometheus, err := b.ImageVector.FindImage(imagevector.ImageNamePrometheus)
 	if err != nil {
 		return nil, err
 	}

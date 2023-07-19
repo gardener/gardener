@@ -248,7 +248,6 @@ func (r *Reconciler) newHVPA() (component.DeployWaiter, error) {
 	return sharedcomponent.NewHVPA(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
-		r.RuntimeVersion,
 		r.ImageVector,
 		hvpaEnabled(),
 		v1beta1constants.PriorityClassNameGardenSystem200,

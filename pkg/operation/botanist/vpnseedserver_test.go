@@ -40,7 +40,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
@@ -100,7 +99,7 @@ var _ = Describe("VPNSeedServer", func() {
 		It("should successfully create a vpn seed server interface", func() {
 			kubernetesClient.EXPECT().Client()
 			kubernetesClient.EXPECT().Version()
-			botanist.ImageVector = imagevector.ImageVector{{Name: images.ImageNameVpnSeedServer}, {Name: images.ImageNameApiserverProxy}}
+			botanist.ImageVector = imagevector.ImageVector{{Name: "vpn-seed-server"}, {Name: "apiserver-proxy"}}
 
 			vpnSeedServer, err := botanist.DefaultVPNSeedServer()
 			Expect(vpnSeedServer).NotTo(BeNil())
@@ -111,7 +110,7 @@ var _ = Describe("VPNSeedServer", func() {
 			func(hibernated, highAvailable bool, expectedReplicas int) {
 				kubernetesClient.EXPECT().Client()
 				kubernetesClient.EXPECT().Version()
-				botanist.ImageVector = imagevector.ImageVector{{Name: images.ImageNameVpnSeedServer}, {Name: images.ImageNameApiserverProxy}}
+				botanist.ImageVector = imagevector.ImageVector{{Name: "vpn-seed-server"}, {Name: "apiserver-proxy"}}
 				botanist.Shoot.HibernationEnabled = hibernated
 				if highAvailable {
 					botanist.Shoot.VPNHighAvailabilityEnabled = highAvailable

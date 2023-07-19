@@ -3,6 +3,7 @@ rules:
   # avoid pulling in the entire gardener packages, most of which should be of no interest to extensions
   allowedPrefixes:
   - github.com/gardener/gardener/extensions
+  - github.com/gardener/gardener/imagevector
   - github.com/gardener/gardener/pkg/api
   - github.com/gardener/gardener/pkg/apis
   - github.com/gardener/gardener/pkg/chartrenderer

@@ -17,24 +17,24 @@ package shared
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // NewFluentOperator instantiates a new `Fluent Operator` component.
 func NewFluentOperator(
 	c client.Client,
 	gardenNamespaceName string,
-	imageVector imagevector.ImageVector,
+	imageVector imagevectorutils.ImageVector,
 	enabled bool,
 	priorityClassName string,
 ) (
 	deployer component.DeployWaiter,
 	err error,
 ) {
-	operatorImage, err := imageVector.FindImage(images.ImageNameFluentOperator)
+	operatorImage, err := imageVector.FindImage(imagevector.ImageNameFluentOperator)
 	if err != nil {
 		return nil, err
 	}

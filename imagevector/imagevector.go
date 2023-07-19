@@ -12,7 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate ../../../hack/generate-imagename-constants.sh images ../../../charts/images.yaml
+//go:generate ../hack/generate-imagename-constants.sh
+package imagevector
 
-// Package images contains constants for image names in the image vector.
-package images
+import (
+	_ "embed"
+
+	"k8s.io/apimachinery/pkg/util/runtime"
+
+	"github.com/gardener/gardener/pkg/utils/imagevector"
+)
+
+var (
+	//go:embed images.yaml
+	imagesYAML  string
+	imageVector imagevector.ImageVector
+)
+
+func init() {
+	var err error
+
+	imageVector, err = imagevector.Read([]byte(imagesYAML))
+	runtime.Must(err)
+
+	imageVector, err = imagevector.WithEnvOverride(imageVector)
+	runtime.Must(err)
+}
+
+// ImageVector is the image vector that contains all the needed images.
+func ImageVector() imagevector.ImageVector {
+	return imageVector
+}
