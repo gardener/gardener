@@ -3709,6 +3709,19 @@ in the .spec.reloadConfigFilePath field.</p>
 restarted when a new version has been downloaded.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>files</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Files is a list of file paths that are part of the generated Cloud Config and shall be
+written to the host&rsquo;s file system.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="extensions.gardener.cloud/v1alpha1.Purpose">Purpose
