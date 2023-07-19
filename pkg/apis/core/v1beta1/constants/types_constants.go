@@ -14,6 +14,10 @@
 
 package constants
 
+import (
+	"time"
+)
+
 const (
 	// SecretManagerIdentityControllerManager is the identity for the secret manager used inside controller-manager.
 	SecretManagerIdentityControllerManager = "controller-manager"
@@ -743,6 +747,9 @@ const (
 	// EnvSeedName is a constant for the environment variable which holds the name of the Seed that the extension
 	// controller is running on.
 	EnvSeedName = "SEED_NAME"
+
+	// IngressTLSCertificateValidity is the default validity for ingress TLS certificates.
+	IngressTLSCertificateValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
 )
 
 var (

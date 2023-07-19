@@ -41,8 +41,6 @@ const DefaultInterval = 5 * time.Second
 var (
 	// ChartsPath is an alias for charts.Path. Exposed for testing.
 	ChartsPath = charts.Path
-
-	ingressTLSCertificateValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
 )
 
 // New takes an operation object <o> and creates a new Botanist object. It checks whether the given Shoot DNS

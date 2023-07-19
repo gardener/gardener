@@ -18,23 +18,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/Masterminds/semver"
-	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
 	"github.com/go-logr/logr"
 	istiov1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
-	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	podsecurityadmissionapi "k8s.io/pod-security-admission/api"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
@@ -46,43 +42,18 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/component/clusteridentity"
-	"github.com/gardener/gardener/pkg/component/coredns"
-	"github.com/gardener/gardener/pkg/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/component/etcd"
-	"github.com/gardener/gardener/pkg/component/extensions"
 	extensioncrds "github.com/gardener/gardener/pkg/component/extensions/crds"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/istio"
-	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
-	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
-	"github.com/gardener/gardener/pkg/component/kubeproxy"
-	"github.com/gardener/gardener/pkg/component/kubernetesdashboard"
-	"github.com/gardener/gardener/pkg/component/kubescheduler"
-	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
-	"github.com/gardener/gardener/pkg/component/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
-	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
-	"github.com/gardener/gardener/pkg/component/metricsserver"
-	"github.com/gardener/gardener/pkg/component/monitoring"
-	"github.com/gardener/gardener/pkg/component/nginxingress"
-	"github.com/gardener/gardener/pkg/component/nodeexporter"
-	"github.com/gardener/gardener/pkg/component/nodeproblemdetector"
-	"github.com/gardener/gardener/pkg/component/plutono"
-	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/component/vpa"
-	"github.com/gardener/gardener/pkg/component/vpnseedserver"
-	"github.com/gardener/gardener/pkg/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -93,7 +64,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
-	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -226,14 +196,6 @@ func (r *Reconciler) checkMinimumK8SVersion(version string) (string, error) {
 	return version, nil
 }
 
-const (
-	seedBootstrapChartName        = "seed-bootstrap"
-	kubeAPIServerPrefix           = "api-seed"
-	plutonoPrefix                 = "g-seed"
-	prometheusPrefix              = "p-seed"
-	ingressTLSCertificateValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
-)
-
 func (r *Reconciler) runReconcileSeedFlow(
 	ctx context.Context,
 	log logr.Logger,
@@ -278,29 +240,20 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 
 	var (
-		vpaGK    = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}
-		hvpaGK   = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "Hvpa"}
-		issuerGK = schema.GroupKind{Group: "certmanager.k8s.io", Kind: "ClusterIssuer"}
-
 		vpaEnabled     = seed.GetInfo().Spec.Settings == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler.Enabled
 		hvpaEnabled    = features.DefaultFeatureGate.Enabled(features.HVPA)
 		loggingEnabled = gardenlethelper.IsLoggingEnabled(&r.Config)
-
-		gardenNamespace = &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: r.GardenNamespace,
-			},
-		}
 	)
 
 	if !vpaEnabled {
 		// VPA is a prerequisite. If it's not enabled via the seed spec it must be provided through some other mechanism.
-		if _, err := seedClient.RESTMapper().RESTMapping(vpaGK); err != nil {
+		if _, err := seedClient.RESTMapper().RESTMapping(schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}); err != nil {
 			return fmt.Errorf("VPA is required for seed cluster: %s", err)
 		}
 	}
 
 	// create + label garden namespace
+	gardenNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: r.GardenNamespace}}
 	log.Info("Labeling and annotating namespace", "namespaceName", gardenNamespace.Name)
 	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, seedClient, gardenNamespace, func() error {
 		metav1.SetMetaDataLabel(&gardenNamespace.ObjectMeta, "role", v1beta1constants.GardenNamespace)
@@ -331,14 +284,8 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return errors.New("global monitoring secret not found in seed namespace")
 	}
 
-	globalMonitoringSecretSeed := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "seed-" + globalMonitoringSecretGarden.Name,
-			Namespace: r.GardenNamespace,
-		},
-	}
-
 	log.Info("Replicating global monitoring secret to garden namespace in seed", "secret", client.ObjectKeyFromObject(globalMonitoringSecretGarden))
+	globalMonitoringSecretSeed := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "seed-" + globalMonitoringSecretGarden.Name, Namespace: r.GardenNamespace}}
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient, globalMonitoringSecretSeed, func() error {
 		globalMonitoringSecretSeed.Type = globalMonitoringSecretGarden.Type
 		globalMonitoringSecretSeed.Data = globalMonitoringSecretGarden.Data
@@ -353,23 +300,9 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
-	seedImages, err := imagevector.FindImages(
-		r.ImageVector,
-		[]string{
-			images.ImageNameAlertmanager,
-			images.ImageNameAlpine,
-			images.ImageNameConfigmapReloader,
-			images.ImageNameVali,
-			images.ImageNameValiCurator,
-			images.ImageNameTune2fs,
-			images.ImageNamePlutono,
-			images.ImageNamePrometheus,
-		},
-		imagevector.RuntimeVersion(kubernetesVersion.String()),
-		imagevector.TargetVersion(kubernetesVersion.String()),
-	)
-	if err != nil {
-		return err
+	var alertingSMTPSecret *corev1.Secret
+	if secret, ok := secrets[v1beta1constants.GardenRoleAlerting]; ok && string(secret.Data["auth_type"]) == "smtp" {
+		alertingSMTPSecret = secret
 	}
 
 	// Deploy the CRDs in the seed cluster.
@@ -462,218 +395,14 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
-	if hvpaEnabled {
-		if err := kubernetesutils.DeleteObjects(ctx, seedClient,
-			&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-vpa", Namespace: r.GardenNamespace}},
-			&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus-vpa", Namespace: r.GardenNamespace}},
-		); err != nil {
-			return err
-		}
-	}
-
-	// Fetch component-specific aggregate and central monitoring configuration
-	var (
-		aggregateScrapeConfigs                = strings.Builder{}
-		aggregateMonitoringComponentFunctions = []component.AggregateMonitoringConfiguration{
-			istio.AggregateMonitoringConfiguration,
-		}
-
-		centralScrapeConfigs                            = strings.Builder{}
-		centralCAdvisorScrapeConfigMetricRelabelConfigs = strings.Builder{}
-		centralMonitoringComponentFunctions             = []component.CentralMonitoringConfiguration{
-			hvpa.CentralMonitoringConfiguration,
-			kubestatemetrics.CentralMonitoringConfiguration,
-		}
-	)
-
-	for _, componentFn := range aggregateMonitoringComponentFunctions {
-		aggregateMonitoringConfig, err := componentFn()
-		if err != nil {
-			return err
-		}
-
-		for _, config := range aggregateMonitoringConfig.ScrapeConfigs {
-			aggregateScrapeConfigs.WriteString(fmt.Sprintf("- %s\n", utils.Indent(config, 2)))
-		}
-	}
-
-	for _, componentFn := range centralMonitoringComponentFunctions {
-		centralMonitoringConfig, err := componentFn()
-		if err != nil {
-			return err
-		}
-
-		for _, config := range centralMonitoringConfig.ScrapeConfigs {
-			centralScrapeConfigs.WriteString(fmt.Sprintf("- %s\n", utils.Indent(config, 2)))
-		}
-
-		for _, config := range centralMonitoringConfig.CAdvisorScrapeConfigMetricRelabelConfigs {
-			centralCAdvisorScrapeConfigMetricRelabelConfigs.WriteString(fmt.Sprintf("- %s\n", utils.Indent(config, 2)))
-		}
-	}
-
-	// Logging feature gate
-	var (
-		inputs  []*fluentbitv1alpha2.ClusterInput
-		filters []*fluentbitv1alpha2.ClusterFilter
-		parsers []*fluentbitv1alpha2.ClusterParser
-	)
-
-	if loggingEnabled {
-		componentsFunctions := []component.CentralLoggingConfiguration{
-			// journald components
-			kubelet.CentralLoggingConfiguration,
-			docker.CentralLoggingConfiguration,
-			containerd.CentralLoggingConfiguration,
-			downloader.CentralLoggingConfiguration,
-			// seed system components
-			extensions.CentralLoggingConfiguration,
-			dependencywatchdog.CentralLoggingConfiguration,
-			resourcemanager.CentralLoggingConfiguration,
-			monitoring.CentralLoggingConfiguration,
-			vali.CentralLoggingConfiguration,
-			// shoot control plane components
-			etcd.CentralLoggingConfiguration,
-			clusterautoscaler.CentralLoggingConfiguration,
-			kubeapiserver.CentralLoggingConfiguration,
-			kubescheduler.CentralLoggingConfiguration,
-			kubecontrollermanager.CentralLoggingConfiguration,
-			kubestatemetrics.CentralLoggingConfiguration,
-			hvpa.CentralLoggingConfiguration,
-			plutono.CentralLoggingConfiguration,
-			vpa.CentralLoggingConfiguration,
-			vpnseedserver.CentralLoggingConfiguration,
-			// shoot system components
-			coredns.CentralLoggingConfiguration,
-			kubeproxy.CentralLoggingConfiguration,
-			metricsserver.CentralLoggingConfiguration,
-			nodeexporter.CentralLoggingConfiguration,
-			nodeproblemdetector.CentralLoggingConfiguration,
-			vpnshoot.CentralLoggingConfiguration,
-			// shoot addon components
-			kubernetesdashboard.CentralLoggingConfiguration,
-			nginxingress.CentralLoggingConfiguration,
-		}
-
-		if gardenlethelper.IsEventLoggingEnabled(&r.Config) {
-			componentsFunctions = append(componentsFunctions, eventlogger.CentralLoggingConfiguration)
-		}
-
-		if features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment) {
-			componentsFunctions = append(componentsFunctions, machinecontrollermanager.CentralLoggingConfiguration)
-		}
-
-		// Fetch component specific logging configurations
-		for _, componentFn := range componentsFunctions {
-			loggingConfig, err := componentFn()
-			if err != nil {
-				return err
-			}
-
-			if len(loggingConfig.Inputs) > 0 {
-				inputs = append(inputs, loggingConfig.Inputs...)
-			}
-
-			if len(loggingConfig.Filters) > 0 {
-				filters = append(filters, loggingConfig.Filters...)
-			}
-
-			if len(loggingConfig.Parsers) > 0 {
-				parsers = append(parsers, loggingConfig.Parsers...)
-			}
-		}
-	}
-
-	// Monitoring resource values
-	monitoringResources := map[string]interface{}{
-		"prometheus":           map[string]interface{}{},
-		"aggregate-prometheus": map[string]interface{}{},
-	}
-
-	if hvpaEnabled {
-		for resource := range monitoringResources {
-			currentResources, err := kubernetesutils.GetContainerResourcesInStatefulSet(ctx, seedClient, kubernetesutils.Key(r.GardenNamespace, resource))
-			if err != nil {
-				return err
-			}
-			if len(currentResources) != 0 && currentResources["prometheus"] != nil {
-				monitoringResources[resource] = map[string]interface{}{
-					"prometheus": currentResources["prometheus"],
-				}
-			}
-		}
-	}
-
-	// AlertManager configuration
-	alertManagerConfig := map[string]interface{}{
-		"storage": seed.GetValidVolumeSize("1Gi"),
-	}
-
-	if alertingSMTPSecret, ok := secrets[v1beta1constants.GardenRoleAlerting]; ok && string(alertingSMTPSecret.Data["auth_type"]) == "smtp" {
-		emailConfig := map[string]interface{}{
-			"to":            string(alertingSMTPSecret.Data["to"]),
-			"from":          string(alertingSMTPSecret.Data["from"]),
-			"smarthost":     string(alertingSMTPSecret.Data["smarthost"]),
-			"auth_username": string(alertingSMTPSecret.Data["auth_username"]),
-			"auth_identity": string(alertingSMTPSecret.Data["auth_identity"]),
-			"auth_password": string(alertingSMTPSecret.Data["auth_password"]),
-		}
-		alertManagerConfig["enabled"] = true
-		alertManagerConfig["emailConfigs"] = []map[string]interface{}{emailConfig}
-	} else {
-		alertManagerConfig["enabled"] = false
-		if err := common.DeleteAlertmanager(ctx, seedClient, r.GardenNamespace); err != nil {
-			return err
-		}
-	}
-
-	var (
-		applierOptions          = kubernetes.CopyApplierOptions(kubernetes.DefaultMergeFuncs)
-		retainStatusInformation = func(new, old *unstructured.Unstructured) {
-			// Apply status from old Object to retain status information
-			new.Object["status"] = old.Object["status"]
-		}
-		plutonoHost    = seed.GetIngressFQDN(plutonoPrefix)
-		prometheusHost = seed.GetIngressFQDN(prometheusPrefix)
-	)
-
-	applierOptions[vpaGK] = retainStatusInformation
-	applierOptions[hvpaGK] = retainStatusInformation
-	applierOptions[issuerGK] = retainStatusInformation
-
 	wildcardCert, err := gardenerutils.GetWildcardCertificate(ctx, seedClient)
 	if err != nil {
 		return err
 	}
 
-	var (
-		plutonoWildCardSecretName      *string
-		prometheusIngressTLSSecretName string
-	)
-
+	var wildCardSecretName *string
 	if wildcardCert != nil {
-		plutonoWildCardSecretName = pointer.String(wildcardCert.GetName())
-		prometheusIngressTLSSecretName = wildcardCert.GetName()
-	} else {
-		prometheusIngressTLSSecret, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-			Name:                        "aggregate-prometheus-tls",
-			CommonName:                  "prometheus",
-			Organization:                []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:                    []string{seed.GetIngressFQDN(prometheusPrefix)},
-			CertType:                    secretsutils.ServerCert,
-			Validity:                    pointer.Duration(ingressTLSCertificateValidity),
-			SkipPublishingCACertificate: true,
-		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCASeed))
-		if err != nil {
-			return err
-		}
-
-		prometheusIngressTLSSecretName = prometheusIngressTLSSecret.Name
-	}
-
-	imageVectorOverwrites := make(map[string]string, len(r.ComponentImageVectors))
-	for name, data := range r.ComponentImageVectors {
-		imageVectorOverwrites[name] = data
+		wildCardSecretName = pointer.String(wildcardCert.GetName())
 	}
 
 	seedIsOriginOfClusterIdentity, err := clusteridentity.IsClusterIdentityEmptyOrFromOrigin(ctx, seedClient, v1beta1constants.ClusterIdentityOriginSeed)
@@ -684,37 +413,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 	if err := cleanupOrphanExposureClassHandlerResources(ctx, log, seedClient, r.Config.ExposureClassHandlers, seed.GetInfo().Spec.Provider.Zones); err != nil {
 		return err
 	}
-
-	values := kubernetes.Values(map[string]interface{}{
-		"global": map[string]interface{}{
-			"ingressClass": v1beta1constants.SeedNginxIngressClass,
-			"images":       imagevector.ImageMapToValues(seedImages),
-		},
-		"prometheus": map[string]interface{}{
-			"resources":               monitoringResources["prometheus"],
-			"storage":                 seed.GetValidVolumeSize("10Gi"),
-			"additionalScrapeConfigs": centralScrapeConfigs.String(),
-			"additionalCAdvisorScrapeConfigMetricRelabelConfigs": centralCAdvisorScrapeConfigMetricRelabelConfigs.String(),
-		},
-		"aggregatePrometheus": map[string]interface{}{
-			"resources":               monitoringResources["aggregate-prometheus"],
-			"storage":                 seed.GetValidVolumeSize("20Gi"),
-			"seed":                    seed.GetInfo().Name,
-			"hostName":                prometheusHost,
-			"secretName":              prometheusIngressTLSSecretName,
-			"additionalScrapeConfigs": aggregateScrapeConfigs.String(),
-		},
-		"alertmanager": alertManagerConfig,
-		"hvpa": map[string]interface{}{
-			"enabled": hvpaEnabled,
-		},
-		"istio": map[string]interface{}{
-			"enabled": true,
-		},
-		"ingress": map[string]interface{}{
-			"authSecretName": globalMonitoringSecretSeed.Name,
-		},
-	})
 
 	// Delete Grafana artifacts.
 	if err := common.DeleteGrafana(ctx, r.SeedClientSet, r.GardenNamespace); err != nil {
@@ -745,10 +443,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		}
 	}
 
-	if err := chartApplier.Apply(ctx, filepath.Join(r.ChartsPath, seedBootstrapChartName), r.GardenNamespace, seedBootstrapChartName, values, applierOptions); err != nil {
-		return err
-	}
-
 	// setup for flow graph
 	var dnsRecord component.DeployMigrateWaiter
 
@@ -761,6 +455,22 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 	vpnAuthzServer, err := defaultVPNAuthzServer(seedClient, kubernetesVersion, r.ImageVector, r.GardenNamespace)
+	if err != nil {
+		return err
+	}
+	monitoring, err := defaultMonitoring(
+		seedClient,
+		chartApplier,
+		secretsManager,
+		r.ImageVector,
+		r.GardenNamespace,
+		seed,
+		alertingSMTPSecret,
+		globalMonitoringSecretSeed,
+		hvpaEnabled,
+		seed.GetIngressFQDN("p-seed"),
+		wildCardSecretName,
+	)
 	if err != nil {
 		return err
 	}
@@ -802,6 +512,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 		_ = g.Add(flow.Task{
 			Name: "Deploying VPN authorization server",
 			Fn:   vpnAuthzServer.Deploy,
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying monitoring components",
+			Fn:   monitoring.Deploy,
 		})
 		_ = g.Add(flow.Task{
 			Name: "Renewing garden access secrets",
@@ -874,15 +588,12 @@ func (r *Reconciler) runReconcileSeedFlow(
 			return err
 		}
 
-		fluentOperatorCustomResources, err := sharedcomponent.NewFluentOperatorCustomResources(
+		fluentOperatorCustomResources, err := defaultFluentOperatorCustomResources(
 			seedClient,
 			r.GardenNamespace,
 			r.ImageVector,
 			loggingEnabled,
-			v1beta1constants.PriorityClassNameSeedSystem600,
-			inputs,
-			filters,
-			parsers,
+			gardenlethelper.IsEventLoggingEnabled(&r.Config),
 		)
 		if err != nil {
 			return err
@@ -891,7 +602,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		fluentOperator, err := sharedcomponent.NewFluentOperator(
 			seedClient,
 			r.GardenNamespace,
-			kubernetesVersion,
 			r.ImageVector,
 			loggingEnabled,
 			v1beta1constants.PriorityClassNameSeedSystem600,
@@ -905,9 +615,9 @@ func (r *Reconciler) runReconcileSeedFlow(
 			r.GardenNamespace,
 			r.ImageVector,
 			secretsManager,
-			plutonoHost,
+			seed.GetIngressFQDN("g-seed"),
 			globalMonitoringSecretSeed.Name,
-			plutonoWildCardSecretName,
+			wildCardSecretName,
 		)
 		if err != nil {
 			return err
@@ -977,7 +687,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	kubeAPIServerService := kubeapiserverexposure.NewInternalNameService(seedClient, r.GardenNamespace)
 	if wildcardCert != nil {
 		kubeAPIServerIngress := kubeapiserverexposure.NewIngress(seedClient, r.GardenNamespace, kubeapiserverexposure.IngressValues{
-			Host:             seed.GetIngressFQDN(kubeAPIServerPrefix),
+			Host:             seed.GetIngressFQDN("api-seed"),
 			IngressClassName: pointer.String(v1beta1constants.SeedNginxIngressClass),
 			ServiceName:      v1beta1constants.DeploymentNameKubeAPIServer,
 			TLSSecretName:    &wildcardCert.Name,

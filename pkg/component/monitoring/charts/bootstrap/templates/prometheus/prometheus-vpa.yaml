@@ -2,13 +2,13 @@
 apiVersion: "autoscaling.k8s.io/v1"
 kind: VerticalPodAutoscaler
 metadata:
-  name: aggregate-prometheus-vpa
+  name: prometheus-vpa
   namespace: {{ .Release.Namespace }}
 spec:
   targetRef:
-    apiVersion: {{ include "statefulsetversion" . }}
+    apiVersion: apps/v1
     kind: StatefulSet
-    name: aggregate-prometheus
+    name: prometheus
   updatePolicy:
     updateMode: "Auto"
 {{ end }}

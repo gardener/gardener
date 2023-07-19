@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/Masterminds/semver"
+	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
 	proberapi "github.com/gardener/dependency-watchdog/api/prober"
 	weederapi "github.com/gardener/dependency-watchdog/api/weeder"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -32,16 +33,42 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/component/coredns"
 	"github.com/gardener/gardener/pkg/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/component/etcd"
+	"github.com/gardener/gardener/pkg/component/extensions"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/downloader"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
+	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
+	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
+	"github.com/gardener/gardener/pkg/component/kubeproxy"
+	"github.com/gardener/gardener/pkg/component/kubernetesdashboard"
+	"github.com/gardener/gardener/pkg/component/kubescheduler"
+	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
+	"github.com/gardener/gardener/pkg/component/logging/eventlogger"
+	"github.com/gardener/gardener/pkg/component/logging/vali"
+	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
+	"github.com/gardener/gardener/pkg/component/metricsserver"
+	"github.com/gardener/gardener/pkg/component/monitoring"
+	"github.com/gardener/gardener/pkg/component/nginxingress"
+	"github.com/gardener/gardener/pkg/component/nodeexporter"
+	"github.com/gardener/gardener/pkg/component/nodeproblemdetector"
 	"github.com/gardener/gardener/pkg/component/plutono"
+	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/seedsystem"
 	"github.com/gardener/gardener/pkg/component/shared"
+	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/component/vpnseedserver"
+	"github.com/gardener/gardener/pkg/component/vpnshoot"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
@@ -384,5 +411,154 @@ func defaultPlutono(
 		1,
 		wildcardCertName,
 		false,
+	)
+}
+
+func defaultMonitoring(
+	c client.Client,
+	chartApplier kubernetes.ChartApplier,
+	secretsManager secretsmanager.Interface,
+	imageVector imagevector.ImageVector,
+	namespace string,
+	seed *seedpkg.Seed,
+	alertingSMTPSecret *corev1.Secret,
+	globalMonitoringSecret *corev1.Secret,
+	hvpaEnabled bool,
+	ingressHost string,
+	wildcardCertName *string,
+) (
+	component.Deployer,
+	error,
+) {
+	imageAlertmanager, err := imageVector.FindImage(images.ImageNameAlertmanager)
+	if err != nil {
+		return nil, err
+	}
+	imageAlpine, err := imageVector.FindImage(images.ImageNameAlpine)
+	if err != nil {
+		return nil, err
+	}
+	imageConfigmapReloader, err := imageVector.FindImage(images.ImageNameConfigmapReloader)
+	if err != nil {
+		return nil, err
+	}
+	imagePrometheus, err := imageVector.FindImage(images.ImageNamePrometheus)
+	if err != nil {
+		return nil, err
+	}
+
+	return monitoring.New(
+		c,
+		chartApplier,
+		secretsManager,
+		namespace,
+		monitoring.Values{
+			AlertingSMTPSecret:                 alertingSMTPSecret,
+			GlobalMonitoringSecret:             globalMonitoringSecret,
+			HVPAEnabled:                        hvpaEnabled,
+			ImageAlertmanager:                  imageAlertmanager.String(),
+			ImageAlpine:                        imageAlpine.String(),
+			ImageConfigmapReloader:             imageConfigmapReloader.String(),
+			ImagePrometheus:                    imagePrometheus.String(),
+			IngressHost:                        ingressHost,
+			SeedName:                           seed.GetInfo().Name,
+			StorageCapacityAlertmanager:        seed.GetValidVolumeSize("1Gi"),
+			StorageCapacityPrometheus:          seed.GetValidVolumeSize("10Gi"),
+			StorageCapacityAggregatePrometheus: seed.GetValidVolumeSize("20Gi"),
+			WildcardCertName:                   wildcardCertName,
+		},
+	), nil
+}
+
+func defaultFluentOperatorCustomResources(
+	c client.Client,
+	namespace string,
+	imageVector imagevector.ImageVector,
+	loggingEnabled bool,
+	eventLoggingEnabled bool,
+) (
+	deployer component.DeployWaiter,
+	err error,
+) {
+	var (
+		inputs  []*fluentbitv1alpha2.ClusterInput
+		filters []*fluentbitv1alpha2.ClusterFilter
+		parsers []*fluentbitv1alpha2.ClusterParser
+	)
+
+	if loggingEnabled {
+		componentsFunctions := []component.CentralLoggingConfiguration{
+			// journald components
+			kubelet.CentralLoggingConfiguration,
+			docker.CentralLoggingConfiguration,
+			containerd.CentralLoggingConfiguration,
+			downloader.CentralLoggingConfiguration,
+			// seed system components
+			extensions.CentralLoggingConfiguration,
+			dependencywatchdog.CentralLoggingConfiguration,
+			resourcemanager.CentralLoggingConfiguration,
+			monitoring.CentralLoggingConfiguration,
+			vali.CentralLoggingConfiguration,
+			// shoot control plane components
+			etcd.CentralLoggingConfiguration,
+			clusterautoscaler.CentralLoggingConfiguration,
+			kubeapiserver.CentralLoggingConfiguration,
+			kubescheduler.CentralLoggingConfiguration,
+			kubecontrollermanager.CentralLoggingConfiguration,
+			kubestatemetrics.CentralLoggingConfiguration,
+			hvpa.CentralLoggingConfiguration,
+			plutono.CentralLoggingConfiguration,
+			vpa.CentralLoggingConfiguration,
+			vpnseedserver.CentralLoggingConfiguration,
+			// shoot system components
+			coredns.CentralLoggingConfiguration,
+			kubeproxy.CentralLoggingConfiguration,
+			metricsserver.CentralLoggingConfiguration,
+			nodeexporter.CentralLoggingConfiguration,
+			nodeproblemdetector.CentralLoggingConfiguration,
+			vpnshoot.CentralLoggingConfiguration,
+			// shoot addon components
+			kubernetesdashboard.CentralLoggingConfiguration,
+			nginxingress.CentralLoggingConfiguration,
+		}
+
+		if eventLoggingEnabled {
+			componentsFunctions = append(componentsFunctions, eventlogger.CentralLoggingConfiguration)
+		}
+
+		if features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment) {
+			componentsFunctions = append(componentsFunctions, machinecontrollermanager.CentralLoggingConfiguration)
+		}
+
+		// Fetch component specific logging configurations
+		for _, componentFn := range componentsFunctions {
+			loggingConfig, err := componentFn()
+			if err != nil {
+				return nil, err
+			}
+
+			if len(loggingConfig.Inputs) > 0 {
+				inputs = append(inputs, loggingConfig.Inputs...)
+			}
+
+			if len(loggingConfig.Filters) > 0 {
+				filters = append(filters, loggingConfig.Filters...)
+			}
+
+			if len(loggingConfig.Parsers) > 0 {
+				parsers = append(parsers, loggingConfig.Parsers...)
+			}
+		}
+	}
+
+	return shared.NewFluentOperatorCustomResources(
+		c,
+		namespace,
+		imageVector,
+		loggingEnabled,
+		v1beta1constants.PriorityClassNameSeedSystem600,
+		inputs,
+		filters,
+		parsers,
 	)
 }

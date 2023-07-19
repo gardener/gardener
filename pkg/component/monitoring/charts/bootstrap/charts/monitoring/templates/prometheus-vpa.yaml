@@ -11,7 +11,7 @@ spec:
       minAllowed:
         memory: 400Mi
   targetRef:
-    apiVersion: {{ include "statefulsetversion" . }}
+    apiVersion: apps/v1
     kind: StatefulSet
     name: seed-prometheus
   updatePolicy:

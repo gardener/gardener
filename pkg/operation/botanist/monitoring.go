@@ -165,7 +165,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			Organization:                []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:                    b.ComputePrometheusHosts(),
 			CertType:                    secrets.ServerCert,
-			Validity:                    &ingressTLSCertificateValidity,
+			Validity:                    pointer.Duration(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
 		if err != nil {
@@ -354,7 +354,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 				Organization:                []string{"gardener.cloud:monitoring:ingress"},
 				DNSNames:                    b.ComputeAlertManagerHosts(),
 				CertType:                    secrets.ServerCert,
-				Validity:                    &ingressTLSCertificateValidity,
+				Validity:                    pointer.Duration(v1beta1constants.IngressTLSCertificateValidity),
 				SkipPublishingCACertificate: true,
 			}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
 			if err != nil {
