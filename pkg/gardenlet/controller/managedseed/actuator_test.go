@@ -16,7 +16,6 @@ package managedseed
 
 import (
 	"context"
-	"path/filepath"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -117,7 +116,7 @@ var _ = Describe("Actuator", func() {
 		shootClientSet.EXPECT().ChartApplier().Return(shootChartApplier).AnyTimes()
 
 		log = logr.Discard()
-		actuator = newActuator(&rest.Config{}, gardenAPIReader, gardenClient, seedClient, shootClientMap, clock.RealClock{}, vh, recorder, charts.Path, namespace)
+		actuator = newActuator(&rest.Config{}, gardenAPIReader, gardenClient, seedClient, shootClientMap, clock.RealClock{}, vh, recorder, namespace)
 
 		ctx = context.TODO()
 
@@ -546,11 +545,11 @@ var _ = Describe("Actuator", func() {
 		}
 
 		expectApplyGardenletChart = func() {
-			shootChartApplier.EXPECT().Apply(ctx, filepath.Join(charts.Path, "gardener", "gardenlet"), v1beta1constants.GardenNamespace, "gardenlet", kubernetes.Values(gardenletChartValues)).Return(nil)
+			shootChartApplier.EXPECT().ApplyFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, v1beta1constants.GardenNamespace, "gardenlet", kubernetes.Values(gardenletChartValues)).Return(nil)
 		}
 
 		expectDeleteGardenletChart = func() {
-			shootChartApplier.EXPECT().Delete(ctx, filepath.Join(charts.Path, "gardener", "gardenlet"), v1beta1constants.GardenNamespace, "gardenlet", kubernetes.Values(gardenletChartValues)).Return(nil)
+			shootChartApplier.EXPECT().DeleteFromEmbeddedFS(ctx, charts.ChartGardenlet, charts.ChartPathGardenlet, v1beta1constants.GardenNamespace, "gardenlet", kubernetes.Values(gardenletChartValues)).Return(nil)
 		}
 
 		expectGetGardenletDeployment = func(exists bool) {

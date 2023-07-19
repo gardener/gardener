@@ -43,7 +43,6 @@ type Reconciler struct {
 	Clock                 clock.Clock
 	ShootClientMap        clientmap.ClientMap
 	ImageVector           imagevector.ImageVector
-	ChartsPath            string
 	GardenNamespaceGarden string
 	GardenNamespaceShoot  string
 }

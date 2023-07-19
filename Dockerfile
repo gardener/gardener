@@ -1,88 +1,61 @@
-#############      builder       #############
+# builder
 FROM golang:1.20.6 AS builder
-
 WORKDIR /go/src/github.com/gardener/gardener
 COPY . .
-
 ARG EFFECTIVE_VERSION
-
+RUN cat Makefile
+RUN cat pkg/.import-restrictions
+RUN cat imagevector/images.yaml
 RUN make install EFFECTIVE_VERSION=$EFFECTIVE_VERSION
 
-############# distroless-static
+# distroless-static
 FROM gcr.io/distroless/static-debian11:nonroot as distroless-static
 
-#############      apiserver     #############
+# apiserver
 FROM distroless-static AS apiserver
-
 COPY --from=builder /go/bin/gardener-apiserver /gardener-apiserver
-
 WORKDIR /
-
 ENTRYPOINT ["/gardener-apiserver"]
 
-############# controller-manager #############
+# controller-manager
 FROM distroless-static AS controller-manager
-
 COPY --from=builder /go/bin/gardener-controller-manager /gardener-controller-manager
-COPY charts /charts
-
 WORKDIR /
-
 ENTRYPOINT ["/gardener-controller-manager"]
 
-############# scheduler #############
+# scheduler
 FROM distroless-static AS scheduler
-
 COPY --from=builder /go/bin/gardener-scheduler /gardener-scheduler
-
 WORKDIR /
-
 ENTRYPOINT ["/gardener-scheduler"]
 
-############# gardenlet #############
+# gardenlet
 FROM distroless-static AS gardenlet
-
 COPY --from=builder /go/bin/gardenlet /gardenlet
-COPY charts /charts
-
 USER nonroot
 WORKDIR /
-
 ENTRYPOINT ["/gardenlet"]
 
-############# admission-controller #############
+# admission-controller
 FROM distroless-static AS admission-controller
-
 COPY --from=builder /go/bin/gardener-admission-controller /gardener-admission-controller
-
 WORKDIR /
-
 ENTRYPOINT ["/gardener-admission-controller"]
 
-############# resource-manager #############
+# resource-manager
 FROM distroless-static AS resource-manager
-
 COPY --from=builder /go/bin/gardener-resource-manager /gardener-resource-manager
-
 WORKDIR /
-
 ENTRYPOINT ["/gardener-resource-manager"]
 
-############# operator #############
+# operator
 FROM distroless-static AS operator
-
 COPY --from=builder /go/bin/gardener-operator /gardener-operator
-COPY charts /charts
-
 WORKDIR /
-
 ENTRYPOINT ["/gardener-operator"]
 
-############# gardener-extension-provider-local #############
+# gardener-extension-provider-local
 FROM distroless-static AS gardener-extension-provider-local
-
 COPY --from=builder /go/bin/gardener-extension-provider-local /gardener-extension-provider-local
-
 WORKDIR /
-
 ENTRYPOINT ["/gardener-extension-provider-local"]

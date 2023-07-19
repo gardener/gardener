@@ -15,15 +15,14 @@
 package charts
 
 import (
-	"os"
+	"embed"
 	"path/filepath"
 )
 
-// Path is the path to the charts directory.
-var Path = "charts"
-
-func init() {
-	if koPath := os.Getenv("KO_DATA_PATH"); koPath != "" {
-		Path = filepath.Join(koPath, "charts")
-	}
-}
+var (
+	// ChartGardenlet is the Helm chart for the gardener/gardenlet chart.
+	//go:embed gardener/gardenlet
+	ChartGardenlet embed.FS
+	// ChartPathGardenlet is the path to the gardener/gardenlet chart.
+	ChartPathGardenlet = filepath.Join("gardener", "gardenlet")
+)
