@@ -161,10 +161,11 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 			log.Info("Successfully deleted stuck machine-controller-manager pod", "reason", msg)
 		}
 
+		newError := fmt.Errorf("failed while waiting for all machine deployments to be ready: %w", err)
 		if a.errorCodeCheckFunc != nil {
-			return v1beta1helper.NewErrorWithCodes(fmt.Errorf("failed while waiting for all machine deployments to be ready: %w", err), a.errorCodeCheckFunc(err)...)
+			return v1beta1helper.NewErrorWithCodes(newError, a.errorCodeCheckFunc(err)...)
 		}
-		return fmt.Errorf("failed while waiting for all machine deployments to be ready: %w", err)
+		return newError
 	}
 
 	// Delete all old machine deployments (i.e. those which were not previously computed but exist in the cluster).

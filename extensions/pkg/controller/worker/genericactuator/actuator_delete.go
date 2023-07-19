@@ -102,10 +102,11 @@ func (a *genericActuator) Delete(ctx context.Context, log logr.Logger, worker *e
 
 	// Wait until all machine resources have been properly deleted.
 	if err := a.waitUntilMachineResourcesDeleted(ctx, log, worker, workerDelegate); err != nil {
+		newError := fmt.Errorf("failed while waiting for all machine resources to be deleted: %w", err)
 		if a.errorCodeCheckFunc != nil {
-			return v1beta1helper.NewErrorWithCodes(fmt.Errorf("failed while waiting for all machine resources to be deleted: %w", err), a.errorCodeCheckFunc(err)...)
+			return v1beta1helper.NewErrorWithCodes(newError, a.errorCodeCheckFunc(err)...)
 		}
-		return fmt.Errorf("failed while waiting for all machine resources to be deleted: %w", err)
+		return newError
 	}
 
 	// Wait until the machine class credentials secret has been released.
