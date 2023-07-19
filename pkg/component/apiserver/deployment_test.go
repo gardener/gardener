@@ -41,11 +41,11 @@ var _ = Describe("Deployment", func() {
 				secretServer     = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "server"}}
 				values           = Values{
 					FeatureGates: map[string]bool{"Foo": true, "Bar": false},
-					Requests: &gardencorev1beta1.KubeAPIServerRequests{
+					Requests: &gardencorev1beta1.APIServerRequests{
 						MaxMutatingInflight:    pointer.Int32(1),
 						MaxNonMutatingInflight: pointer.Int32(2),
 					},
-					Logging: &gardencorev1beta1.KubeAPIServerLogging{
+					Logging: &gardencorev1beta1.APIServerLogging{
 						Verbosity:           pointer.Int32(3),
 						HTTPAccessVerbosity: pointer.Int32(4),
 					},

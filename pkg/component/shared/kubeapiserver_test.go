@@ -880,7 +880,7 @@ exemptions:
 			})
 
 			It("should set the field to the configured values", func() {
-				requests := &gardencorev1beta1.KubeAPIServerRequests{
+				requests := &gardencorev1beta1.APIServerRequests{
 					MaxMutatingInflight:    pointer.Int32(1),
 					MaxNonMutatingInflight: pointer.Int32(2),
 				}

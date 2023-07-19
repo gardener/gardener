@@ -26,16 +26,12 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-)
-
-const (
-	// PluginName is the name of this admission plugin.
-	PluginName = "ProjectValidator"
+	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register(PluginName, func(config io.Reader) (admission.Interface, error) {
+	plugins.Register(plugin.PluginNameProjectValidator, func(config io.Reader) (admission.Interface, error) {
 		return New()
 	})
 }

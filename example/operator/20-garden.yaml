@@ -146,6 +146,56 @@ spec:
     #   featureGates:
     #     SomeKubernetesFeature: true
     #   certificateSigningDuration: 48h
+    gardener:
+      clusterIdentity: local
+    # gardenerAPIServer:
+    #   admissionPlugins:
+    #   - name: ShootDNSRewriting
+    #     disabled: false
+    #     config:
+    #       apiVersion: shootdnsrewriting.admission.gardener.cloud
+    #       kind: Configuration
+    #       commonSuffixes:
+    #       - foo
+    #     kubeconfigSecretName: name-of-secret-containing-kubeconfig-for-admission-plugin
+    #   auditConfig:
+    #     auditPolicy:
+    #       configMapRef:
+    #         name: auditpolicy
+    #   auditWebhook:
+    #     kubeconfigSecretName: name-of-secret-containing-kubeconfig-for-audit-webhook
+    #     batchMaxSize: 1337
+    #     version: audit.k8s.io/v1
+    #   featureGates:
+    #     SomeGardenerFeature: true
+    #   logging:
+    #     verbosity: 2
+    #     httpAccessVerbosity: 3
+    #   requests:
+    #     maxNonMutatingInflight: 400
+    #     maxMutatingInflight: 200
+    #   watchCacheSizes: # See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+    #     default: 100
+    #     resources:
+    #     - apiGroup: core.gardener.cloud
+    #       resource: shoots
+    #       size: 500
+    # gardenerControllerManager:
+    #   defaultProjectQuotas:
+    #   - config:
+    #       apiVersion: v1
+    #       kind: ResourceQuota
+    #       spec:
+    #         hard:
+    #           count/shoots.core.gardener.cloud: "100"
+    #           count/secretbindings.core.gardener.cloud: "10"
+    #           count/secrets: "400"
+    #     projectSelector: {}
+    #   featureGates:
+    #     SomeGardenerFeature: true
+    # gardenerScheduler:
+    #   featureGates:
+    #     SomeGardenerFeature: true
     maintenance:
       timeWindow:
         begin: 220000+0100

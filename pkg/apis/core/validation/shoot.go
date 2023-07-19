@@ -935,8 +935,8 @@ func ValidateWatchCacheSizes(sizes *core.WatchCacheSizes, fldPath *field.Path) f
 	return allErrs
 }
 
-// ValidateKubeAPIServerLogging validates the given KubeAPIServer Logging fields.
-func ValidateKubeAPIServerLogging(loggingConfig *core.KubeAPIServerLogging, fldPath *field.Path) field.ErrorList {
+// ValidateAPIServerLogging validates the given KubeAPIServer Logging fields.
+func ValidateAPIServerLogging(loggingConfig *core.APIServerLogging, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if loggingConfig != nil {
 		if verbosity := loggingConfig.Verbosity; verbosity != nil {
@@ -946,6 +946,35 @@ func ValidateKubeAPIServerLogging(loggingConfig *core.KubeAPIServerLogging, fldP
 			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*httpAccessVerbosity), fldPath.Child("httpAccessVerbosity"))...)
 		}
 	}
+	return allErrs
+}
+
+// ValidateAPIServerRequests validates the given KubeAPIServer request fields.
+func ValidateAPIServerRequests(requests *core.APIServerRequests, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if requests != nil {
+		const maxNonMutatingRequestsInflight = 800
+		if v := requests.MaxNonMutatingInflight; v != nil {
+			path := fldPath.Child("maxNonMutatingInflight")
+
+			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*v), path)...)
+			if *v > maxNonMutatingRequestsInflight {
+				allErrs = append(allErrs, field.Invalid(path, *v, fmt.Sprintf("cannot set higher than %d", maxNonMutatingRequestsInflight)))
+			}
+		}
+
+		const maxMutatingRequestsInflight = 400
+		if v := requests.MaxMutatingInflight; v != nil {
+			path := fldPath.Child("maxMutatingInflight")
+
+			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*v), path)...)
+			if *v > maxMutatingRequestsInflight {
+				allErrs = append(allErrs, field.Invalid(path, *v, fmt.Sprintf("cannot set higher than %d", maxMutatingRequestsInflight)))
+			}
+		}
+	}
+
 	return allErrs
 }
 
@@ -1121,13 +1150,13 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 	if auditConfig := kubeAPIServer.AuditConfig; auditConfig != nil {
 		auditPath := fldPath.Child("auditConfig")
 		if auditPolicy := auditConfig.AuditPolicy; auditPolicy != nil && auditConfig.AuditPolicy.ConfigMapRef != nil {
-			allErrs = append(allErrs, validateAuditPolicyConfigMapReference(auditPolicy.ConfigMapRef, auditPath.Child("auditPolicy", "configMapRef"))...)
+			allErrs = append(allErrs, ValidateAuditPolicyConfigMapReference(auditPolicy.ConfigMapRef, auditPath.Child("auditPolicy", "configMapRef"))...)
 		}
 	}
 
 	allErrs = append(allErrs, ValidateWatchCacheSizes(kubeAPIServer.WatchCacheSizes, fldPath.Child("watchCacheSizes"))...)
 
-	allErrs = append(allErrs, ValidateKubeAPIServerLogging(kubeAPIServer.Logging, fldPath.Child("logging"))...)
+	allErrs = append(allErrs, ValidateAPIServerLogging(kubeAPIServer.Logging, fldPath.Child("logging"))...)
 
 	if defaultNotReadyTolerationSeconds := kubeAPIServer.DefaultNotReadyTolerationSeconds; defaultNotReadyTolerationSeconds != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*defaultNotReadyTolerationSeconds), fldPath.Child("defaultNotReadyTolerationSeconds"))...)
@@ -1136,27 +1165,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*defaultUnreachableTolerationSeconds), fldPath.Child("defaultUnreachableTolerationSeconds"))...)
 	}
 
-	if kubeAPIServer.Requests != nil {
-		const maxMaxNonMutatingRequestsInflight = 800
-		if v := kubeAPIServer.Requests.MaxNonMutatingInflight; v != nil {
-			path := fldPath.Child("requests", "maxNonMutatingInflight")
-
-			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*v), path)...)
-			if *v > maxMaxNonMutatingRequestsInflight {
-				allErrs = append(allErrs, field.Invalid(path, *v, fmt.Sprintf("cannot set higher than %d", maxMaxNonMutatingRequestsInflight)))
-			}
-		}
-
-		const maxMaxMutatingRequestsInflight = 400
-		if v := kubeAPIServer.Requests.MaxMutatingInflight; v != nil {
-			path := fldPath.Child("requests", "maxMutatingInflight")
-
-			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*v), path)...)
-			if *v > maxMaxMutatingRequestsInflight {
-				allErrs = append(allErrs, field.Invalid(path, *v, fmt.Sprintf("cannot set higher than %d", maxMaxMutatingRequestsInflight)))
-			}
-		}
-	}
+	allErrs = append(allErrs, ValidateAPIServerRequests(kubeAPIServer.Requests, fldPath.Child("requests"))...)
 
 	if kubeAPIServer.ServiceAccountConfig != nil {
 		if kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration != nil {

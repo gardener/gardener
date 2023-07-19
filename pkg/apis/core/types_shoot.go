@@ -556,7 +556,7 @@ type KubeAPIServerConfig struct {
 	// cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).
 	WatchCacheSizes *WatchCacheSizes
 	// Requests contains configuration for request-specific settings for the kube-apiserver.
-	Requests *KubeAPIServerRequests
+	Requests *APIServerRequests
 	// EnableAnonymousAuthentication defines whether anonymous requests to the secure port
 	// of the API server should be allowed (flag `--anonymous-auth`).
 	// See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
@@ -564,7 +564,7 @@ type KubeAPIServerConfig struct {
 	// EventTTL controls the amount of time to retain events.
 	EventTTL *metav1.Duration
 	// Logging contains configuration settings for the log verbosity and access logging
-	Logging *KubeAPIServerLogging
+	Logging *APIServerLogging
 	// DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute
 	// that is added by default to every pod that does not already have such a toleration (flag `--default-not-ready-toleration-seconds`).
 	// The field has effect only when the `DefaultTolerationSeconds` admission plugin is enabled.
@@ -575,16 +575,16 @@ type KubeAPIServerConfig struct {
 	DefaultUnreachableTolerationSeconds *int64
 }
 
-// KubeAPIServerLogging contains configuration for the logs level and http access logs
-type KubeAPIServerLogging struct {
+// APIServerLogging contains configuration for the logs level and http access logs
+type APIServerLogging struct {
 	// Verbosity is the kube-apiserver log verbosity level
 	Verbosity *int32
 	// HTTPAccessVerbosity is the kube-apiserver access logs level
 	HTTPAccessVerbosity *int32
 }
 
-// KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.
-type KubeAPIServerRequests struct {
+// APIServerRequests contains configuration for request-specific settings for the kube-apiserver.
+type APIServerRequests struct {
 	// MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server
 	// exceeds this, it rejects requests.
 	MaxNonMutatingInflight *int32

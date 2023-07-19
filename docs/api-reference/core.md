@@ -1968,6 +1968,95 @@ ShootStateSpec
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.APIServerLogging">APIServerLogging
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+</p>
+<p>
+<p>APIServerLogging contains configuration for the logs level and http access logs</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>verbosity</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Verbosity is the kube-apiserver log verbosity level
+Defaults to 2.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>httpAccessVerbosity</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>HTTPAccessVerbosity is the kube-apiserver access logs level</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.APIServerRequests">APIServerRequests
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+</p>
+<p>
+<p>APIServerRequests contains configuration for request-specific settings for the kube-apiserver.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>maxNonMutatingInflight</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server
+exceeds this, it rejects requests.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maxMutatingInflight</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server
+exceeds this, it rejects requests.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.Addon">Addon
 </h3>
 <p>
@@ -5038,8 +5127,8 @@ cache size flags will have no effect, except when setting it to 0 (which disable
 <td>
 <code>requests</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.KubeAPIServerRequests">
-KubeAPIServerRequests
+<a href="#core.gardener.cloud/v1beta1.APIServerRequests">
+APIServerRequests
 </a>
 </em>
 </td>
@@ -5081,8 +5170,8 @@ Defaults to 1h.</p>
 <td>
 <code>logging</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.KubeAPIServerLogging">
-KubeAPIServerLogging
+<a href="#core.gardener.cloud/v1beta1.APIServerLogging">
+APIServerLogging
 </a>
 </em>
 </td>
@@ -5119,95 +5208,6 @@ int64
 that is added by default to every pod that does not already have such a toleration (flag <code>--default-unreachable-toleration-seconds</code>).
 The field has effect only when the <code>DefaultTolerationSeconds</code> admission plugin is enabled.
 Defaults to 300.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="core.gardener.cloud/v1beta1.KubeAPIServerLogging">KubeAPIServerLogging
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
-</p>
-<p>
-<p>KubeAPIServerLogging contains configuration for the logs level and http access logs</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>verbosity</code></br>
-<em>
-int32
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Verbosity is the kube-apiserver log verbosity level
-Defaults to 2.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>httpAccessVerbosity</code></br>
-<em>
-int32
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>HTTPAccessVerbosity is the kube-apiserver access logs level</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="core.gardener.cloud/v1beta1.KubeAPIServerRequests">KubeAPIServerRequests
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
-</p>
-<p>
-<p>KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>maxNonMutatingInflight</code></br>
-<em>
-int32
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server
-exceeds this, it rejects requests.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>maxMutatingInflight</code></br>
-<em>
-int32
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server
-exceeds this, it rejects requests.</p>
 </td>
 </tr>
 </tbody>
