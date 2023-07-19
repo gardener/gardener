@@ -98,6 +98,7 @@ func (h *GardenHealth) CheckGarden(
 	ctx context.Context,
 	conditions []gardencorev1beta1.Condition,
 	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
+	lastOperation *gardencorev1beta1.LastOperation,
 ) []gardencorev1beta1.Condition {
 	var (
 		apiServerAvailability      gardencorev1beta1.Condition
@@ -115,7 +116,7 @@ func (h *GardenHealth) CheckGarden(
 		}
 	}
 
-	checker := NewHealthChecker(h.runtimeClient, h.clock, thresholdMappings, nil, nil, nil, nil, nil)
+	checker := NewHealthChecker(h.runtimeClient, h.clock, thresholdMappings, nil, nil, lastOperation, nil, nil)
 
 	taskFns := []flow.TaskFn{
 		func(ctx context.Context) error {

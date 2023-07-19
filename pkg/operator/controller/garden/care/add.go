@@ -35,7 +35,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
@@ -87,8 +86,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		Watches(
 			source.NewKindWithCache(&operatorv1alpha1.Garden{}, mgr.GetCache()),
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(
-				r.GardenPredicate()),
+			builder.WithPredicates(r.GardenPredicate()),
 		).Build(r)
 	if err != nil {
 		return err
@@ -119,6 +117,7 @@ func (r *Reconciler) GardenPredicate() predicate.Predicate {
 				return false
 			}
 
+			// re-evaluate health status right after a reconciliation operation has succeeded
 			return gardenReconciledSuccessfully(oldGarden, garden)
 		},
 		DeleteFunc:  func(event.DeleteEvent) bool { return false },
@@ -126,13 +125,13 @@ func (r *Reconciler) GardenPredicate() predicate.Predicate {
 	}
 }
 
-func gardenReconciledSuccessfully(oldSeed, newSeed *operatorv1alpha1.Garden) bool {
-	oldReconcileCondition := v1beta1helper.GetCondition(oldSeed.Status.Conditions, operatorv1alpha1.GardenReconciled)
-	newReconcileCondition := v1beta1helper.GetCondition(newSeed.Status.Conditions, operatorv1alpha1.GardenReconciled)
-
-	return newReconcileCondition != nil &&
-		newReconcileCondition.Status == gardencorev1beta1.ConditionTrue &&
-		(oldReconcileCondition == nil || oldReconcileCondition.Status != gardencorev1beta1.ConditionTrue)
+func gardenReconciledSuccessfully(oldGarden, newGarden *operatorv1alpha1.Garden) bool {
+	return oldGarden.Status.LastOperation != nil &&
+		oldGarden.Status.LastOperation.Type != gardencorev1beta1.LastOperationTypeDelete &&
+		oldGarden.Status.LastOperation.State == gardencorev1beta1.LastOperationStateProcessing &&
+		newGarden.Status.LastOperation != nil &&
+		newGarden.Status.LastOperation.Type != gardencorev1beta1.LastOperationTypeDelete &&
+		newGarden.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded
 }
 
 // MapManagedResourceToGarden is a mapper.MapFunc for mapping a ManagedResource to the owning Garden.

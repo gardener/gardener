@@ -777,6 +777,18 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener
 </tr>
 <tr>
 <td>
+<code>lastOperation</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastOperation holds information about the last operation on the Garden.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>observedGeneration</code></br>
 <em>
 int64

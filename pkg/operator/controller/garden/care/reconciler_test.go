@@ -214,8 +214,11 @@ func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
 	}
 }
 
-func (c resultingConditionFunc) CheckGarden(_ context.Context,
+func (c resultingConditionFunc) CheckGarden(
+	_ context.Context,
 	conditions []gardencorev1beta1.Condition,
-	_ map[gardencorev1beta1.ConditionType]time.Duration) []gardencorev1beta1.Condition {
+	_ map[gardencorev1beta1.ConditionType]time.Duration,
+	_ *gardencorev1beta1.LastOperation,
+) []gardencorev1beta1.Condition {
 	return c(conditions)
 }

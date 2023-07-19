@@ -405,6 +405,9 @@ type GardenStatus struct {
 	Gardener *gardencorev1beta1.Gardener `json:"gardener,omitempty"`
 	// Conditions is a list of conditions.
 	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty"`
+	// LastOperation holds information about the last operation on the Garden.
+	// +optional
+	LastOperation *gardencorev1beta1.LastOperation `json:"lastOperation,omitempty"`
 	// ObservedGeneration is the most recent generation observed for this resource.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// Credentials contains information about the virtual garden cluster credentials.
@@ -433,8 +436,6 @@ type CredentialsRotation struct {
 }
 
 const (
-	// GardenReconciled is a constant for a condition type indicating that the garden has been reconciled.
-	GardenReconciled gardencorev1beta1.ConditionType = "Reconciled"
 	// RuntimeComponentsHealthy is a constant for a condition type indicating the runtime components health.
 	RuntimeComponentsHealthy gardencorev1beta1.ConditionType = "RuntimeComponentsHealthy"
 	// VirtualComponentsHealthy is a constant for a condition type indicating the virtual garden components health.

@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"strings"
 
 	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
@@ -371,21 +370,11 @@ func (o *Operation) GetSecretKeysOfRole(kind string) []string {
 	return common.FilterEntriesByPrefix(kind, o.AllSecretKeys())
 }
 
-func makeDescription(stats *flow.Stats) string {
-	if stats.ProgressPercent() == 0 {
-		return "Starting " + stats.FlowName
-	}
-	if stats.ProgressPercent() == 100 {
-		return stats.FlowName + " finished"
-	}
-	return strings.Join(stats.Running.StringList(), ", ")
-}
-
 // ReportShootProgress will update the last operation object in the Shoot manifest `status` section
 // by the current progress of the Flow execution.
 func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) {
 	var (
-		description    = makeDescription(stats)
+		description    = flow.MakeDescription(stats)
 		progress       = stats.ProgressPercent()
 		lastUpdateTime = metav1.Now()
 	)

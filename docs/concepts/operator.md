@@ -186,7 +186,7 @@ Note that this kubeconfig uses a token that has validity of `12h` only, hence it
 ### Deleting the `Garden`
 
 ```shell
-./hack/usage/delete garden garden
+./hack/usage/delete garden local
 ```
 
 ### Tear Down the Gardener Operator Environment
@@ -256,7 +256,7 @@ The DNS domain is used for the `server` in the kubeconfig, and for configuring t
 It is also mandatory to provide an IPv4 CIDR for the service network of the virtual cluster via `.spec.virtualCluster.networking.services`.
 This range is used by the API server to compute the cluster IPs of `Service`s.
 
-The controller maintains the `Reconciled` condition which indicates the status of an operation.
+The controller maintains the `.status.lastOperation` which indicates the status of an operation.
 
 #### [`Care` Reconciler](../../pkg/operator/controller/garden/care)
 
