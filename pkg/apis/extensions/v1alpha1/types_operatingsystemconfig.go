@@ -191,7 +191,7 @@ type OperatingSystemConfigStatus struct {
 	// restarted when a new version has been downloaded.
 	// +optional
 	Units []string `json:"units,omitempty"`
-	// Files is a list of file path that are part of the generated Cloud Config and shall be
+	// Files is a list of file paths that are part of the generated Cloud Config and shall be
 	// written to the host's file system.
 	// +optional
 	Files []string `json:"files,omitempty"`

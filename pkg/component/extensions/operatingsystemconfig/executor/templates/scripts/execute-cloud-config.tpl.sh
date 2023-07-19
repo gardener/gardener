@@ -19,14 +19,17 @@ PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBECTL="{{ .pathHyperKubeImageUsedForLa
 
 mkdir -p "{{ .pathKubeletDirectory }}" "$PATH_HYPERKUBE_DOWNLOADS"
 
-deleteOrphan() {
+delete_orphan_files() {
   if [[ ! -f "$PATH_CLOUDCONFIG_FILES_OLD" ]]; then
     touch "$PATH_CLOUDCONFIG_FILES_OLD"
   fi
+  cat << 'EOF' > "$PATH_CLOUDCONFIG_FILES"
+{{ .cloudConfigFiles }}
+EOF
   # sort for join to work
   sort -o "$PATH_CLOUDCONFIG_FILES" "$PATH_CLOUDCONFIG_FILES"
   # calculates old_files - new_files and deletes them
-  join -t $'\n' -v 1 "$PATH_CLOUDCONFIG_FILES_OLD" "$PATH_CLOUDCONFIG_FILES" | xargs -L1 rm -f
+  join -t $'\n' -v 1 "$PATH_CLOUDCONFIG_FILES_OLD" "$PATH_CLOUDCONFIG_FILES" | xargs -L1 rm -vf
   mv "$PATH_CLOUDCONFIG_FILES" "$PATH_CLOUDCONFIG_FILES_OLD"
 }
 
@@ -238,12 +241,6 @@ if [[ -f "{{ .pathKubeletKubeconfigReal }}" ]]; then
   fi
 fi
 
-cat << 'EOF' > "$PATH_CLOUDCONFIG_FILES"
-{{ .cloudConfigFiles }}
-EOF
-
-deleteOrphan
-
 # Apply most recent cloud-config user-data, reload the systemd daemon and restart the units to make the changes
 # effective.
 if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null || \
@@ -267,6 +264,7 @@ if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null || \
     echo "failed to apply the cloud config."
     exit 1
   fi
+  delete_orphan_files
 fi
 
 echo "Cloud config is up to date."

@@ -3718,7 +3718,7 @@ restarted when a new version has been downloaded.</p>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Files is a list of file path that are part of the generated Cloud Config and shall be
+<p>Files is a list of file paths that are part of the generated Cloud Config and shall be
 written to the host&rsquo;s file system.</p>
 </td>
 </tr>
