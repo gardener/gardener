@@ -159,9 +159,12 @@ via creation of a new replica after the existing one fails.
 
 For a seed in high availability mode, gardener-custom-metrics is deployed in a multi-replica active/passive arrangement,
 based on the well established controller leader election mechanism used by other Gardener components.
-Passive replicas do not respond to metrics requests. Readiness probes report "ready" status on the active replica,
-and "not ready" on passive ones. All metrics requests are routed to the one active replica, by means of a K8s service
-acting on the readiness probes.
+Passive replicas do not respond to metrics requests. Consumers access gardener-custom-metrics through a
+"headless" K8s service, which routes all metrics requests to the one active replica.
+K8s does not manage the endpoints of that service, and at any time there is at most one endpoint.
+When a gardener-custom-metrics replica acquires leadership, as part of the transition from passive to active
+state, the replica configures the service with a single endpoint object which points to its own metrics server IP
+endpoint. 
 
 Since gardener-custom-metrics replicas do not interfere with each other, an active/passive arrangement is not
 necessitated by functional requirements. A simpler active/active is technically possible, but pragmatically undesirable
