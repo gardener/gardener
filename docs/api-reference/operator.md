@@ -858,6 +858,20 @@ GardenerAPIServerConfig
 </tr>
 <tr>
 <td>
+<code>gardenerAdmissionController</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerAdmissionControllerConfig">
+GardenerAdmissionControllerConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AdmissionController contains configuration settings for the gardener-admission-controller.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>gardenerControllerManager</code></br>
 <em>
 <a href="#operator.gardener.cloud/v1alpha1.GardenerControllerManagerConfig">
@@ -981,6 +995,50 @@ capacity is too small to cope with the amount of update requests and watchers fo
 might happen that controller watches are permanently stopped with <code>too old resource version</code> errors.
 Starting from kubernetes v1.19, the API server&rsquo;s watch cache size is adapted dynamically and setting the watch
 cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.GardenerAdmissionControllerConfig">GardenerAdmissionControllerConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.Gardener">Gardener</a>)
+</p>
+<p>
+<p>GardenerAdmissionControllerConfig contains configuration settings for the gardener-admission-controller.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>logLevel</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LogLevel is the configured log level for the gardener-admission-controller. Must be one of [info,debug,error].
+Defaults to info.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resourceAdmissionConfiguration</code></br>
+<em>
+github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1.ResourceAdmissionConfiguration
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ResourceAdmissionConfiguration is the configuration for resource size restrictions for arbitrary Group-Version-Kinds.</p>
 </td>
 </tr>
 </tbody>

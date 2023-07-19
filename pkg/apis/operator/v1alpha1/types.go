@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 
+	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
@@ -410,6 +411,9 @@ type Gardener struct {
 	// APIServer contains configuration settings for the gardener-apiserver.
 	// +optional
 	APIServer *GardenerAPIServerConfig `json:"gardenerAPIServer,omitempty"`
+	// AdmissionController contains configuration settings for the gardener-admission-controller.
+	// +optional
+	AdmissionController *GardenerAdmissionControllerConfig `json:"gardenerAdmissionController,omitempty"`
 	// ControllerManager contains configuration settings for the gardener-controller-manager.
 	// +optional
 	ControllerManager *GardenerControllerManagerConfig `json:"gardenerControllerManager,omitempty"`
@@ -443,6 +447,19 @@ type GardenerAPIServerConfig struct {
 	// cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).
 	// +optional
 	WatchCacheSizes *gardencorev1beta1.WatchCacheSizes `json:"watchCacheSizes,omitempty"`
+}
+
+// GardenerAdmissionControllerConfig contains configuration settings for the gardener-admission-controller.
+type GardenerAdmissionControllerConfig struct {
+	// LogLevel is the configured log level for the gardener-admission-controller. Must be one of [info,debug,error].
+	// Defaults to info.
+	// +kubebuilder:validation:Enum=info;debug;error
+	// +kubebuilder:default=info
+	// +optional
+	LogLevel *string `json:"logLevel,omitempty"`
+	// ResourceAdmissionConfiguration is the configuration for resource size restrictions for arbitrary Group-Version-Kinds.
+	// +optional
+	ResourceAdmissionConfiguration *admissioncontrollerv1alpha1.ResourceAdmissionConfiguration `json:"resourceAdmissionConfiguration,omitempty"`
 }
 
 // GardenerControllerManagerConfig contains configuration settings for the gardener-controller-manager.

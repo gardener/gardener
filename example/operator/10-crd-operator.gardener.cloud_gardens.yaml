@@ -502,6 +502,112 @@ spec:
                                 type: array
                             type: object
                         type: object
+                      gardenerAdmissionController:
+                        description: AdmissionController contains configuration settings
+                          for the gardener-admission-controller.
+                        properties:
+                          logLevel:
+                            default: info
+                            description: LogLevel is the configured log level for
+                              the gardener-admission-controller. Must be one of [info,debug,error].
+                              Defaults to info.
+                            enum:
+                            - info
+                            - debug
+                            - error
+                            type: string
+                          resourceAdmissionConfiguration:
+                            description: ResourceAdmissionConfiguration is the configuration
+                              for resource size restrictions for arbitrary Group-Version-Kinds.
+                            properties:
+                              limits:
+                                description: Limits contains configuration for resources
+                                  which are subjected to size limitations.
+                                items:
+                                  description: ResourceLimit contains settings about
+                                    a kind and the size each resource should have
+                                    at most.
+                                  properties:
+                                    apiGroups:
+                                      description: APIGroups is the name of the APIGroup
+                                        that contains the limited resource. WildcardAll
+                                        represents all groups.
+                                      items:
+                                        type: string
+                                      type: array
+                                    apiVersions:
+                                      description: APIVersions is the version of the
+                                        resource. WildcardAll represents all versions.
+                                      items:
+                                        type: string
+                                      type: array
+                                    resources:
+                                      description: Resources is the name of the resource
+                                        this rule applies to. WildcardAll represents
+                                        all resources.
+                                      items:
+                                        type: string
+                                      type: array
+                                    size:
+                                      anyOf:
+                                      - type: integer
+                                      - type: string
+                                      description: Size specifies the imposed limit.
+                                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                      x-kubernetes-int-or-string: true
+                                  required:
+                                  - resources
+                                  - size
+                                  type: object
+                                type: array
+                              operationMode:
+                                description: OperationMode specifies the mode the
+                                  webhooks operates in. Allowed values are "block"
+                                  and "log". Defaults to "block".
+                                type: string
+                              unrestrictedSubjects:
+                                description: UnrestrictedSubjects contains references
+                                  to users, groups, or service accounts which aren't
+                                  subjected to any resource size limit.
+                                items:
+                                  description: Subject contains a reference to the
+                                    object or user identities a role binding applies
+                                    to.  This can either hold a direct API object
+                                    reference, or a value for non-objects such as
+                                    user and group names.
+                                  properties:
+                                    apiGroup:
+                                      description: APIGroup holds the API group of
+                                        the referenced subject. Defaults to "" for
+                                        ServiceAccount subjects. Defaults to "rbac.authorization.k8s.io"
+                                        for User and Group subjects.
+                                      type: string
+                                    kind:
+                                      description: Kind of object being referenced.
+                                        Values defined by this API group are "User",
+                                        "Group", and "ServiceAccount". If the Authorizer
+                                        does not recognized the kind value, the Authorizer
+                                        should report an error.
+                                      type: string
+                                    name:
+                                      description: Name of the object being referenced.
+                                      type: string
+                                    namespace:
+                                      description: Namespace of the referenced object.  If
+                                        the object kind is non-namespace, such as
+                                        "User" or "Group", and this value is not empty
+                                        the Authorizer should report an error.
+                                      type: string
+                                  required:
+                                  - kind
+                                  - name
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                                type: array
+                            required:
+                            - limits
+                            type: object
+                        type: object
                       gardenerControllerManager:
                         description: ControllerManager contains configuration settings
                           for the gardener-controller-manager.

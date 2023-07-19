@@ -180,6 +180,18 @@ spec:
     #     - apiGroup: core.gardener.cloud
     #       resource: shoots
     #       size: 500
+    # gardenerAdmissionController:
+    #   logLevel: info
+    #   resourceAdmissionConfiguration:
+    #    limits:
+    #    - apiGroups: ["core.gardener.cloud"]
+    #      apiVersions: ["*"]
+    #      resources: ["shoots"]
+    #      size: 100k
+    #    unrestrictedSubjects:
+    #    - kind: Group
+    #      name: gardener.cloud:system:seeds
+    #      apiGroup: rbac.authorization.k8s.io
     # gardenerControllerManager:
     #   defaultProjectQuotas:
     #   - config:
