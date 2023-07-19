@@ -82,7 +82,6 @@ ENTRYPOINT ["/gardener-operator"]
 FROM distroless-static AS gardener-extension-provider-local
 
 COPY --from=builder /go/bin/gardener-extension-provider-local /gardener-extension-provider-local
-COPY charts/gardener/provider-local /charts/gardener/provider-local
 
 WORKDIR /
 

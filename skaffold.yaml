@@ -525,7 +525,6 @@ build:
     ko:
       dependencies:
         paths:
-        - charts
         - cmd/gardener-extension-provider-local/app
         - cmd/utils
         - extensions/pkg/apis/config
@@ -615,6 +614,7 @@ build:
         - pkg/provider-local/apis/local/helper
         - pkg/provider-local/apis/local/install
         - pkg/provider-local/apis/local/v1alpha1
+        - pkg/provider-local/charts
         - pkg/provider-local/controller/backupbucket
         - pkg/provider-local/controller/backupentry
         - pkg/provider-local/controller/backupoptions
