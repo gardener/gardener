@@ -268,14 +268,21 @@ func (g *garden) Start(ctx context.Context) error {
 				},
 			}
 
+			ns := gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.SeedTemplate.Name)
 			return kubernetes.AggregatorCacheFunc(
 				kubernetes.NewRuntimeCache,
 				map[client.Object]cache.NewCacheFunc{
 					// Gardenlet should watch secrets only in the seed namespace of the seed it is responsible for. We
 					// don't use any selector mechanism here since we want to still fall back to reading secrets with
 					// the API reader (i.e., not from cache) in case the respective secret is not found in the cache.
-					&corev1.Secret{}:         cache.MultiNamespacedCacheBuilder([]string{gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.SeedTemplate.Name)}),
-					&corev1.ServiceAccount{}: cache.MultiNamespacedCacheBuilder([]string{gardenerutils.ComputeGardenNamespace(g.config.SeedConfig.SeedTemplate.Name)}),
+					&corev1.Secret{}: func(c *rest.Config, o cache.Options) (cache.Cache, error) {
+						o.Namespaces = []string{ns, ns}
+						return cache.New(c, o)
+					},
+					&corev1.ServiceAccount{}: func(c *rest.Config, o cache.Options) (cache.Cache, error) {
+						o.Namespaces = []string{ns, ns}
+						return cache.New(c, o)
+					},
 					// Gardenlet does not have the required RBAC permissions for listing/watching the following
 					// resources on cluster level. Hence, we need to watch them individually with the help of a
 					// SingleObject cache.
