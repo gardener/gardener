@@ -165,16 +165,6 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 	if err := managedresources.CreateForSeed(ctx, g.client, g.namespace, managedResourceNameRuntime, false, runtimeResources); err != nil {
 		return err
 	}
-	// Typically, we use managedresources.WaitUntilHealthy by default everywhere/in all components.
-	// However, here we have to wait for the runtime resources to no longer be progressing before we can update the
-	// virtual resources. This is important for credentials rotation since we want all GAPI pods to run with the new
-	// server certificate before we drop the old CA from the bundle in the APIServices (which get deployed via the
-	// virtual resources).
-	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
-	defer cancel()
-	if err := g.waitUntilRuntimeManagedResourceHealthyAndNotProgressing(timeoutCtx); err != nil {
-		return err
-	}
 
 	serviceRuntime := &corev1.Service{}
 	if err := g.client.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: g.namespace}, serviceRuntime); err != nil {
