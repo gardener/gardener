@@ -56,8 +56,8 @@ const (
 	ManagedResourceControlName = "vali"
 
 	valiName                = "vali"
-	valiServiceName         = "vali"
 	valiPort                = 3100
+	valiServiceName         = "logging"
 	valiMetricsPortName     = "metrics"
 	valiUserAndGroupId      = 10001
 	valiConfigMapVolumeName = "config"
