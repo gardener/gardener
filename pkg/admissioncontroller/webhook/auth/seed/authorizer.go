@@ -90,7 +90,7 @@ var (
 // With `DecisionNoOpinion`, RBAC will be respected in the authorization chain afterwards.
 
 func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.Decision, string, error) {
-	seedName, isSeed := seedidentity.FromUserInfoInterface(attrs.GetUser())
+	seedName, isSeed, _ := seedidentity.FromUserInfoInterface(attrs.GetUser())
 	if !isSeed {
 		return auth.DecisionNoOpinion, "", nil
 	}

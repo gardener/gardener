@@ -79,7 +79,7 @@ func (h *Handler) InjectDecoder(d *admission.Decoder) error {
 
 // Handle restricts requests made by gardenlets.
 func (h *Handler) Handle(ctx context.Context, request admission.Request) admission.Response {
-	seedName, isSeed := seedidentity.FromAuthenticationV1UserInfo(request.UserInfo)
+	seedName, isSeed, _ := seedidentity.FromAuthenticationV1UserInfo(request.UserInfo)
 	if !isSeed {
 		return admissionwebhook.Allowed("")
 	}
@@ -230,7 +230,7 @@ func (h *Handler) admitCertificateSigningRequest(seedName string, request admiss
 		return admission.Errored(http.StatusForbidden, fmt.Errorf("can only create CSRs for seed clusters: %s", reason))
 	}
 
-	seedNameInCSR, _ := seedidentity.FromCertificateSigningRequest(x509cr)
+	seedNameInCSR, _, _ := seedidentity.FromCertificateSigningRequest(x509cr)
 	return h.admit(seedName, &seedNameInCSR)
 }
 
