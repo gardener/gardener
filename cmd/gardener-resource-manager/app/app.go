@@ -211,7 +211,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 				)
 			}
 
-			opts.Namespace = *cfg.TargetClientConnection.Namespace
+			opts.Cache.Namespaces = []string{*cfg.TargetClientConnection.Namespace}
 			opts.SyncPeriod = &cfg.TargetClientConnection.CacheResyncPeriod.Duration
 
 			if *cfg.TargetClientConnection.DisableCachedClient {
@@ -220,10 +220,12 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 				}
 			}
 
-			opts.ClientDisableCacheFor = []client.Object{
-				&corev1.Event{},
-				&eventsv1beta1.Event{},
-				&eventsv1.Event{},
+			opts.Client.Cache = &client.CacheOptions{
+				DisableFor: []client.Object{
+					&corev1.Event{},
+					&eventsv1beta1.Event{},
+					&eventsv1.Event{},
+				},
 			}
 		})
 		if err != nil {

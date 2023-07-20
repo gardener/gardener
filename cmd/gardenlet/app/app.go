@@ -162,9 +162,13 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 			RecoverPanic: pointer.Bool(true),
 		},
 
-		ClientDisableCacheFor: []client.Object{
-			&corev1.Event{},
-			&eventsv1.Event{},
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				DisableFor: []client.Object{
+					&corev1.Event{},
+					&eventsv1.Event{},
+				},
+			},
 		},
 	})
 	if err != nil {
@@ -252,9 +256,11 @@ func (g *garden) Start(ctx context.Context) error {
 		opts.Scheme = kubernetes.GardenScheme
 		opts.Logger = log
 
-		opts.ClientDisableCacheFor = []client.Object{
-			&corev1.Event{},
-			&eventsv1.Event{},
+		opts.Client.Cache = &client.CacheOptions{
+			DisableFor: []client.Object{
+				&corev1.Event{},
+				&eventsv1.Event{},
+			},
 		}
 
 		opts.NewCache = func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
