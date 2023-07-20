@@ -90,12 +90,12 @@ var (
 // With `DecisionNoOpinion`, RBAC will be respected in the authorization chain afterwards.
 
 func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.Decision, string, error) {
-	seedName, isSeed, _ := seedidentity.FromUserInfoInterface(attrs.GetUser())
+	seedName, isSeed, userType := seedidentity.FromUserInfoInterface(attrs.GetUser())
 	if !isSeed {
 		return auth.DecisionNoOpinion, "", nil
 	}
 
-	requestLog := a.logger.WithValues("seedName", seedName, "attributes", fmt.Sprintf("%#v", attrs))
+	requestLog := a.logger.WithValues("seedName", seedName, "attributes", fmt.Sprintf("%#v", attrs), "userType", userType)
 
 	if attrs.IsResourceRequest() {
 		requestResource := schema.GroupResource{Group: attrs.GetAPIGroup(), Resource: attrs.GetResource()}
@@ -119,6 +119,10 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				[]string{"status"},
 			)
 		case certificateSigningRequestResource:
+			if userType == seedidentity.UserTypeExtension {
+				return a.authorizeRead(requestLog, seedName, graph.VertexTypeCertificateSigningRequest, attrs)
+			}
+
 			return a.authorize(requestLog, seedName, graph.VertexTypeCertificateSigningRequest, attrs,
 				[]string{"get", "list", "watch"},
 				[]string{"create"},
@@ -127,6 +131,14 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 		case cloudProfileResource:
 			return a.authorizeRead(requestLog, seedName, graph.VertexTypeCloudProfile, attrs)
 		case clusterRoleBindingResource:
+			if userType == seedidentity.UserTypeExtension {
+				return a.authorize(requestLog, seedName, graph.VertexTypeClusterRoleBinding, attrs,
+					[]string{"get"},
+					nil,
+					nil,
+				)
+			}
+
 			return a.authorizeClusterRoleBinding(requestLog, seedName, attrs)
 		case configMapResource:
 			return a.authorizeRead(requestLog, seedName, graph.VertexTypeConfigMap, attrs)
@@ -177,6 +189,14 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				[]string{"status"},
 			)
 		case serviceAccountResource:
+			if userType == seedidentity.UserTypeExtension {
+				return a.authorize(requestLog, seedName, graph.VertexTypeServiceAccount, attrs,
+					[]string{"get"},
+					nil,
+					nil,
+				)
+			}
+
 			return a.authorizeServiceAccount(requestLog, seedName, attrs)
 		case shootResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeShoot, attrs,
