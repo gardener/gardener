@@ -16,20 +16,27 @@ package gardenerscheduler_test
 
 import (
 	"context"
+	"encoding/json"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/yaml"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/gardenerscheduler"
+	componenttest "github.com/gardener/gardener/pkg/component/test"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
+	schedulerv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -105,6 +112,15 @@ var _ = Describe("GardenerScheduler", func() {
 	Describe("#Deploy", func() {
 		Context("resources generation", func() {
 			BeforeEach(func() {
+				// test with typical values
+				values = Values{
+					ClientConnection: ClientConnection{
+						QPS:   100,
+						Burst: 130,
+					},
+					LogLevel: "info",
+				}
+
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntime), managedResourceRuntime)).To(BeNotFoundError())
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceVirtual), managedResourceVirtual)).To(BeNotFoundError())
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretRuntime), managedResourceSecretRuntime)).To(BeNotFoundError())
@@ -179,7 +195,8 @@ var _ = Describe("GardenerScheduler", func() {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
 
 				Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretRuntime.Data).To(HaveLen(0))
+				Expect(managedResourceSecretRuntime.Data).To(HaveLen(1))
+				Expect(string(managedResourceSecretRuntime.Data["configmap__some-namespace__gardener-scheduler-config-169df746.yaml"])).To(Equal(configMap(namespace, values)))
 
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecretVirtual.Data).To(HaveLen(0))
@@ -484,3 +501,57 @@ var (
 		},
 	}
 )
+
+func configMap(namespace string, testValues Values) string {
+	schedulerConfig := &schedulerv1alpha1.SchedulerConfiguration{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "scheduler.config.gardener.cloud/v1alpha1",
+			Kind:       "SchedulerConfiguration",
+		},
+		ClientConnection: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+			QPS:        testValues.ClientConnection.QPS,
+			Burst:      testValues.ClientConnection.Burst,
+			Kubeconfig: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+		},
+		LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
+			LeaderElect:       pointer.Bool(true),
+			ResourceName:      "gardener-scheduler-leader-election",
+			ResourceNamespace: "kube-system",
+		},
+		LogLevel:  testValues.LogLevel,
+		LogFormat: "json",
+		Server: schedulerv1alpha1.ServerConfiguration{
+			HealthProbes: &schedulerv1alpha1.Server{
+				Port: 10251,
+			},
+			Metrics: &schedulerv1alpha1.Server{
+				Port: 19251,
+			},
+		},
+		Schedulers:   testValues.Schedulers,
+		FeatureGates: testValues.FeatureGates,
+	}
+
+	data, err := json.Marshal(schedulerConfig)
+	utilruntime.Must(err)
+	data, err = yaml.JSONToYAML(data)
+	utilruntime.Must(err)
+
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{},
+			Labels: map[string]string{
+				"app":  "gardener",
+				"role": "scheduler",
+			},
+			Name:      "gardener-scheduler-config",
+			Namespace: namespace,
+		},
+		Data: map[string]string{
+			"schedulerconfiguration.yaml": string(data),
+		},
+	}
+	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
+
+	return componenttest.Serialize(configMap)
+}

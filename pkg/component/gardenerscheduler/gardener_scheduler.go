@@ -20,8 +20,10 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
+	schedulerv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -32,8 +34,13 @@ const (
 	// DeploymentName is the name of the deployment.
 	DeploymentName = "gardener-scheduler"
 
+	probePort   = 10251
+	metricsPort = 19251
+
 	managedResourceNameRuntime = "gardener-scheduler-runtime"
 	managedResourceNameVirtual = "gardener-scheduler-virtual"
+
+	roleName = "scheduler"
 )
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy or
@@ -42,6 +49,22 @@ var TimeoutWaitForManagedResource = 5 * time.Minute
 
 // Values contains configuration values for the gardener-scheduler resources.
 type Values struct {
+	// ClientConnection holds values for the client connection.
+	ClientConnection ClientConnection
+	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
+	LogLevel string
+	// SchedulerConfiguration provides the configuration for the SeedManager admission plugin.
+	Schedulers schedulerv1alpha1.SchedulerControllerConfiguration
+	// FeatureGates is the set of feature gates.
+	FeatureGates map[string]bool
+}
+
+// ClientConnection holds values for the client connection.
+type ClientConnection struct {
+	// QPS controls the number of queries per second allowed for this connection.
+	QPS float32
+	// Burst allows extra queries to accumulate when a client is exceeding its rate.
+	Burst int32
 }
 
 // New creates a new instance of DeployWaiter for the gardener-scheduler.
@@ -71,7 +94,14 @@ func (g *gardenerScheduler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	runtimeResources, err := runtimeRegistry.AddAllAndSerialize()
+	schedulerConfigConfigMap, err := g.configMapSchedulerConfig()
+	if err != nil {
+		return err
+	}
+
+	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
+		schedulerConfigConfigMap,
+	)
 	if err != nil {
 		return err
 	}
@@ -130,4 +160,12 @@ func (g *gardenerScheduler) WaitCleanup(ctx context.Context) error {
 			return managedresources.WaitUntilDeleted(ctx, g.client, g.namespace, managedResourceNameVirtual)
 		},
 	)(timeoutCtx)
+}
+
+// GetLabels returns the labels for the gardener-scheduler.
+func GetLabels() map[string]string {
+	return map[string]string{
+		v1beta1constants.LabelApp:  v1beta1constants.LabelGardener,
+		v1beta1constants.LabelRole: roleName,
+	}
 }
