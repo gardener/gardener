@@ -20,11 +20,14 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -70,6 +73,7 @@ var _ = Describe("GardenerScheduler", func() {
 
 		podDisruptionBudget *policyv1.PodDisruptionBudget
 		serviceRuntime      *corev1.Service
+		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
 	)
 
 	BeforeEach(func() {
@@ -147,6 +151,37 @@ var _ = Describe("GardenerScheduler", func() {
 					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(19251),
 				}},
+			},
+		}
+		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
+		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-scheduler-vpa",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "scheduler",
+				},
+			},
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+					Name:       "gardener-scheduler",
+				},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+					UpdateMode: &vpaUpdateMode,
+				},
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName: "*",
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceMemory: resource.MustParse("25Mi"),
+							},
+						},
+					},
+				},
 			},
 		}
 	})
@@ -241,10 +276,11 @@ var _ = Describe("GardenerScheduler", func() {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
 
 				Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretRuntime.Data).To(HaveLen(3))
+				Expect(managedResourceSecretRuntime.Data).To(HaveLen(4))
 				Expect(string(managedResourceSecretRuntime.Data["configmap__some-namespace__gardener-scheduler-config-169df746.yaml"])).To(Equal(configMap(namespace, values)))
 				Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-scheduler.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudget)))
 				Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-scheduler.yaml"])).To(Equal(componenttest.Serialize(serviceRuntime)))
+				Expect(string(managedResourceSecretRuntime.Data["verticalpodautoscaler__some-namespace__gardener-scheduler-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
 
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecretVirtual.Data).To(HaveLen(0))

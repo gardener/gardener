@@ -103,6 +103,7 @@ func (g *gardenerScheduler) Deploy(ctx context.Context) error {
 		schedulerConfigConfigMap,
 		g.podDisruptionBudget(),
 		g.service(),
+		g.verticalPodAutoscaler(),
 	)
 	if err != nil {
 		return err
