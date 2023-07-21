@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
@@ -36,6 +37,7 @@ import (
 	componenttest "github.com/gardener/gardener/pkg/component/test"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	schedulerv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
+	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -64,6 +66,8 @@ var _ = Describe("GardenerScheduler", func() {
 		managedResourceVirtual       *resourcesv1alpha1.ManagedResource
 		managedResourceSecretRuntime *corev1.Secret
 		managedResourceSecretVirtual *corev1.Secret
+
+		podDisruptionBudget *policyv1.PodDisruptionBudget
 	)
 
 	BeforeEach(func() {
@@ -101,6 +105,23 @@ var _ = Describe("GardenerScheduler", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "managedresource-" + managedResourceVirtual.Name,
 				Namespace: namespace,
+			},
+		}
+		podDisruptionBudget = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-scheduler",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "scheduler",
+				},
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: gardenerutils.IntStrPtrFromInt(1),
+				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
+					"app":  "gardener",
+					"role": "scheduler",
+				}},
 			},
 		}
 	})
@@ -195,8 +216,9 @@ var _ = Describe("GardenerScheduler", func() {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
 
 				Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretRuntime.Data).To(HaveLen(1))
+				Expect(managedResourceSecretRuntime.Data).To(HaveLen(2))
 				Expect(string(managedResourceSecretRuntime.Data["configmap__some-namespace__gardener-scheduler-config-169df746.yaml"])).To(Equal(configMap(namespace, values)))
+				Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-scheduler.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudget)))
 
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecretVirtual.Data).To(HaveLen(0))
