@@ -2,6 +2,7 @@ groups:
 - name: metering.rules
   rules:
 
+# - _node_instance_type
 # - _namespace_to_shoot_uid
 # - _year_month
 # - _namespace_to_shoot_uid_and_date
@@ -12,6 +13,20 @@ groups:
 # - _pod_to_deployment
 # - _pod_to_other
 # - _pod_to_owner
+
+  - record: _node_instance_type
+    expr: |2
+        sum by (node, instance_type) (
+          label_replace(
+            kube_node_labels,
+            "instance_type",
+            "$1",
+            "label_node_kubernetes_io_instance_type",
+            "(.*)"
+          )
+        )
+      *
+        0
 
   - record: _namespace_to_shoot_uid
     expr: |2
@@ -83,6 +98,18 @@ groups:
         )
       *
         0
+
+# - metering  :node_capacity             :sum_by_instance_type
+
+  - record: metering:node_capacity:sum_by_instance_type
+    expr: |2
+        sum by (instance_type, resource, unit) (
+            kube_node_status_capacity{resource=~"memory|cpu"}
+          + on (node) group_left (instance_type)
+            _node_instance_type
+        )
+      + on () group_left (year, month)
+        _year_month
 
 # - metering  :cpu_usage                 :sum_by_namespace
 # - metering  :cpu_requests              :sum_by_namespace
