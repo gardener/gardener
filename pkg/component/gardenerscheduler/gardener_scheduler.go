@@ -102,6 +102,7 @@ func (g *gardenerScheduler) Deploy(ctx context.Context) error {
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
 		schedulerConfigConfigMap,
 		g.podDisruptionBudget(),
+		g.service(),
 	)
 	if err != nil {
 		return err
