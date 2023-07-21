@@ -409,7 +409,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        n.getName("ClusterRole", false),
+				Name:        n.getName("ClusterRoleBinding", false),
 				Labels:      n.getLabels("", false),
 				Annotations: roleBindingAnnotations,
 			},
@@ -812,7 +812,7 @@ func (n *nginxIngress) getName(kind string, backend bool) string {
 			return containerNameBackend
 		}
 		return containerNameController
-	case "ClusterRole", "Role", "RoleBinding":
+	case "ClusterRole", "ClusterRoleBinding", "Role", "RoleBinding":
 		if n.values.ClusterType == component.ClusterTypeShoot {
 			return addonName
 		}
