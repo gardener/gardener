@@ -456,7 +456,8 @@ func (k *kubeAPIServer) computeKubeAPIServerArgs() []string {
 			disableAPIs["policy/v1beta1/podsecuritypolicies"] = false
 		}
 
-		k.values.RuntimeConfig = utils.MergeStringMaps(k.values.RuntimeConfig, disableAPIs)
+		// Allow users to explicitly enable disabled APIs via RuntimeConfig.
+		k.values.RuntimeConfig = utils.MergeStringMaps(disableAPIs, k.values.RuntimeConfig)
 	}
 
 	if k.values.RuntimeConfig != nil {
