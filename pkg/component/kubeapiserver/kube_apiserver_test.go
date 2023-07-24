@@ -3117,7 +3117,7 @@ rules:
 					Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElement(ContainSubstring("--runtime-config=")))
 				})
 
-				It("should disable apis in case of workerless shoot with k8s version < 1.25", func() {
+				It("should allow to enable apis via 'RuntimeConfig' in case of workerless shoot with k8s version < 1.25", func() {
 					runtimeConfig := map[string]bool{"apps/v1": true, "bar": false}
 
 					kapi = New(kubernetesInterface, namespace, sm, Values{
@@ -3132,11 +3132,11 @@ rules:
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
-						"--runtime-config=apps/v1=false,autoscaling/v2=false,bar=false,batch/v1=false,policy/v1/poddisruptionbudgets=false,policy/v1beta1/podsecuritypolicies=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
+						"--runtime-config=apps/v1=true,autoscaling/v2=false,bar=false,batch/v1=false,policy/v1/poddisruptionbudgets=false,policy/v1beta1/podsecuritypolicies=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
 					))
 				})
 
-				It("should disable apis in case of workerless shoot with k8s version >= 1.25", func() {
+				It("should allow to enable apis via 'RuntimeConfig' in case of workerless shoot with k8s version >= 1.25", func() {
 					runtimeConfig := map[string]bool{"apps/v1": true, "bar": false}
 					version = semver.MustParse("v1.26.0")
 
@@ -3152,7 +3152,8 @@ rules:
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
-						"--runtime-config=apps/v1=false,autoscaling/v2=false,bar=false,batch/v1=false,policy/v1/poddisruptionbudgets=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
+						"--runtime-config=apps/v1=true" +
+							",autoscaling/v2=false,bar=false,batch/v1=false,policy/v1/poddisruptionbudgets=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
 					))
 				})
 
