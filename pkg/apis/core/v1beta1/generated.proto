@@ -2741,6 +2741,12 @@ message ShootSpec {
   // ControlPlane contains general settings for the control plane of the shoot.
   // +optional
   optional ControlPlane controlPlane = 20;
+
+  // SchedulerName is the name of the responsible scheduler which schedules the shoot.
+  // If not specified, the default scheduler takes over.
+  // This field is immutable.
+  // +optional
+  optional string schedulerName = 21;
 }
 
 // ShootState contains a snapshot of the Shoot's state required to migrate the Shoot's control plane to a new Seed.

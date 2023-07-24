@@ -258,6 +258,10 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode = CoreDNSAutoscalingModeHorizontal
 		}
 	}
+
+	if obj.Spec.SchedulerName == nil {
+		obj.Spec.SchedulerName = pointer.String(v1beta1constants.DefaultSchedulerName)
+	}
 }
 
 // SetDefaults_KubeAPIServerConfig sets default values for KubeAPIServerConfig objects.

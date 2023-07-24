@@ -25,11 +25,13 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
@@ -67,6 +69,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	if shoot.DeletionTimestamp != nil {
 		log.Info("Ignoring shoot because it has been marked for deletion")
+		return reconcile.Result{}, nil
+	}
+
+	if pointer.StringDeref(shoot.Spec.SchedulerName, v1beta1constants.DefaultSchedulerName) != v1beta1constants.DefaultSchedulerName {
+		log.Info("Ignoring shoot because it requests a different scheduler")
 		return reconcile.Result{}, nil
 	}
 

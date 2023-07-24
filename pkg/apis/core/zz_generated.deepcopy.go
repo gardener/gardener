@@ -4650,6 +4650,11 @@ func (in *ShootSpec) DeepCopyInto(out *ShootSpec) {
 		*out = new(ControlPlane)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.SchedulerName != nil {
+		in, out := &in.SchedulerName, &out.SchedulerName
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

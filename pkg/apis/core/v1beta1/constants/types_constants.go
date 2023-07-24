@@ -565,6 +565,9 @@ const (
 	// DefaultIngressGatewayAppLabelValue is the ingress gateway value for the app label.
 	DefaultIngressGatewayAppLabelValue = "istio-ingressgateway"
 
+	// DefaultSchedulerName is the name of the default scheduler.
+	DefaultSchedulerName = "default-scheduler"
+
 	// AnnotationManagedSeedAPIServer is a constant for an annotation on a Shoot resource containing the API server settings for a managed seed.
 	AnnotationManagedSeedAPIServer = "shoot.gardener.cloud/managed-seed-api-server"
 	// AnnotationShootIgnoreAlerts is the key for an annotation of a Shoot cluster whose value indicates

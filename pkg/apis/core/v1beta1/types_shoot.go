@@ -130,6 +130,11 @@ type ShootSpec struct {
 	// ControlPlane contains general settings for the control plane of the shoot.
 	// +optional
 	ControlPlane *ControlPlane `json:"controlPlane,omitempty" protobuf:"bytes,20,opt,name=controlPlane"`
+	// SchedulerName is the name of the responsible scheduler which schedules the shoot.
+	// If not specified, the default scheduler takes over.
+	// This field is immutable.
+	// +optional
+	SchedulerName *string `json:"schedulerName,omitempty" protobuf:"bytes,21,opt,name=schedulerName"`
 }
 
 // GetProviderType gets the type of the provider.

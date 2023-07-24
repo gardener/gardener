@@ -313,6 +313,22 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Kubernetes.Kubelet.SerializeImagePulls).To(PointTo(BeFalse()))
 		})
 
+		It("should default schedulerName", func() {
+			obj.Spec.SchedulerName = nil
+
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.SchedulerName).To(PointTo(Equal("default-scheduler")))
+		})
+
+		It("should default schedulerName", func() {
+			obj.Spec.SchedulerName = pointer.String("foo-scheduler")
+
+			SetObjectDefaults_Shoot(obj)
+
+			Expect(obj.Spec.SchedulerName).To(PointTo(Equal("foo-scheduler")))
+		})
+
 		Context("default kubeReserved", func() {
 			var (
 				defaultKubeReservedMemory = resource.MustParse("1Gi")

@@ -15,6 +15,7 @@
 package shoot
 
 import (
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -22,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
@@ -54,7 +56,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 func (r *Reconciler) ShootPredicate() predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if shoot, ok := obj.(*gardencorev1beta1.Shoot); ok {
-			return shoot.Spec.SeedName == nil
+			return shoot.Spec.SeedName == nil &&
+				pointer.StringDeref(shoot.Spec.SchedulerName, v1beta1constants.DefaultSchedulerName) == v1beta1constants.DefaultSchedulerName
 		}
 		return false
 	})
