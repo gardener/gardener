@@ -22,8 +22,10 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	coordinationv1beta1 "k8s.io/api/coordination/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -76,6 +78,9 @@ var _ = Describe("GardenerScheduler", func() {
 		podDisruptionBudget *policyv1.PodDisruptionBudget
 		serviceRuntime      *corev1.Service
 		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
+
+		clusterRole        *rbacv1.ClusterRole
+		clusterRoleBinding *rbacv1.ClusterRoleBinding
 	)
 
 	BeforeEach(func() {
@@ -186,6 +191,75 @@ var _ = Describe("GardenerScheduler", func() {
 				},
 			},
 		}
+		clusterRole = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:scheduler",
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "scheduler",
+				},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{gardencorev1beta1.GroupName},
+					Resources: []string{
+						"cloudprofiles",
+						"seeds",
+					},
+					Verbs: []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{gardencorev1beta1.GroupName},
+					Resources: []string{
+						"shoots",
+					},
+					Verbs: []string{"get", "list", "watch", "patch", "update"},
+				},
+				{
+					APIGroups: []string{gardencorev1beta1.GroupName},
+					Resources: []string{
+						"shoots/binding",
+					},
+					Verbs: []string{"update"},
+				},
+				{
+					APIGroups: []string{coordinationv1beta1.GroupName},
+					Resources: []string{
+						"leases",
+					},
+					Verbs: []string{"create"},
+				},
+				{
+					APIGroups: []string{coordinationv1beta1.GroupName},
+					Resources: []string{
+						"leases",
+					},
+					ResourceNames: []string{
+						"gardener-scheduler-leader-election",
+					},
+					Verbs: []string{"get", "watch", "update"},
+				},
+			},
+		}
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:scheduler",
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "scheduler",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     "gardener.cloud:system:scheduler",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "gardener-scheduler",
+				Namespace: "kube-system",
+			}},
+		}
 
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 	})
@@ -288,7 +362,9 @@ var _ = Describe("GardenerScheduler", func() {
 				Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-scheduler.yaml"])).To(Equal(deployment(namespace, "gardener-scheduler-config-169df746", values)))
 
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretVirtual.Data).To(HaveLen(0))
+				Expect(managedResourceSecretVirtual.Data).To(HaveLen(2))
+				Expect(string(managedResourceSecretVirtual.Data["clusterrole____gardener.cloud_system_scheduler.yaml"])).To(Equal(componenttest.Serialize(clusterRole)))
+				Expect(string(managedResourceSecretVirtual.Data["clusterrolebinding____gardener.cloud_system_scheduler.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
 			})
 		})
 
