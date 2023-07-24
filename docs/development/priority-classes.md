@@ -23,7 +23,7 @@ When using the `gardener-operator` for managing the garden runtime and virtual c
 |---------------------------------- |-----------|----------------------------------------------------------------------------------------------------------------|
 | `gardener-garden-system-critical` | 999999550 | `gardener-operator`, `gardener-resource-manager`, `istio`                                                      |
 | `gardener-garden-system-500`      | 999999500 | `virtual-garden-etcd-events`, `virtual-garden-etcd-main`, `virtual-garden-kube-apiserver`, `gardener-apiserver`|
-| `gardener-garden-system-400`      | 999999400 | `virtual-garden-gardener-resource-manager`, `gardener-admission-controller`                                    |
+| `gardener-garden-system-400`      | 999999400 | `virtual-garden-gardener-resource-manager`, `gardener-admission-controller`, `gardener-scheduler`              |
 | `gardener-garden-system-300`      | 999999300 | `virtual-garden-kube-controller-manager`, `vpa-admission-controller`, `etcd-druid`, `nginx-ingress-controller` |
 | `gardener-garden-system-200`      | 999999200 | `vpa-recommender`, `vpa-updater`, `hvpa-controller`                                                            |
 | `gardener-garden-system-100`      | 999999100 | `kube-state-metrics`                                                                                           |
@@ -46,7 +46,7 @@ When using the `gardener-operator` for managing the garden runtime and virtual c
 | Name                  | Priority  | Associated Components (Examples)                                                                                                                                                       |
 |-----------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `gardener-system-500` | 999998500 | `etcd-events`, `etcd-main`, `kube-apiserver`                                                                                                                                           |
-| `gardener-system-400` | 999998400 | `gardener-resource-manager`                                                                                                                                                            |
+| `gardener-system-400` | 999998400 | `gardener-resource-manager`,                                                                                                                                                            |
 | `gardener-system-300` | 999998300 | `cloud-controller-manager`, `cluster-autoscaler`, `csi-driver-controller`, `kube-controller-manager`, `kube-scheduler`, `machine-controller-manager`, `terraformer`, `vpn-seed-server` |
 | `gardener-system-200` | 999998200 | `csi-snapshot-controller`, `csi-snapshot-validation`, `cert-controller-manager`, `shoot-dns-service`, `vpa-admission-controller`, `vpa-recommender`, `vpa-updater`                     |
 | `gardener-system-100` | 999998100 | `alertmanager`, `plutono`, `kube-state-metrics`, `prometheus`, `vali`, `event-logger`                                                                       |

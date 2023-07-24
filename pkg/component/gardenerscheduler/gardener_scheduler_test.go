@@ -20,6 +20,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -40,6 +41,7 @@ import (
 	. "github.com/gardener/gardener/pkg/component/gardenerscheduler"
 	componenttest "github.com/gardener/gardener/pkg/component/test"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	schedulerv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -184,6 +186,8 @@ var _ = Describe("GardenerScheduler", func() {
 				},
 			},
 		}
+
+		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 	})
 
 	JustBeforeEach(func() {
@@ -276,11 +280,12 @@ var _ = Describe("GardenerScheduler", func() {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
 
 				Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretRuntime.Data).To(HaveLen(4))
+				Expect(managedResourceSecretRuntime.Data).To(HaveLen(5))
 				Expect(string(managedResourceSecretRuntime.Data["configmap__some-namespace__gardener-scheduler-config-169df746.yaml"])).To(Equal(configMap(namespace, values)))
 				Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-scheduler.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudget)))
 				Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-scheduler.yaml"])).To(Equal(componenttest.Serialize(serviceRuntime)))
 				Expect(string(managedResourceSecretRuntime.Data["verticalpodautoscaler__some-namespace__gardener-scheduler-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
+				Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-scheduler.yaml"])).To(Equal(deployment(namespace, "gardener-scheduler-config-169df746", values)))
 
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecretVirtual.Data).To(HaveLen(0))
@@ -638,4 +643,138 @@ func configMap(namespace string, testValues Values) string {
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
 	return componenttest.Serialize(configMap)
+}
+
+func deployment(namespace, configSecretName string, testValues Values) string {
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "gardener-scheduler",
+			Namespace: namespace,
+			Labels: map[string]string{
+				"app":  "gardener",
+				"role": "scheduler",
+				"high-availability-config.resources.gardener.cloud/type": "controller",
+			},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &testValues.Replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app":  "gardener",
+					"role": "scheduler",
+				},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: gardenerutils.MergeStringMaps(GetLabels(), map[string]string{
+						"app":                              "gardener",
+						"role":                             "scheduler",
+						"networking.gardener.cloud/to-dns": "allowed",
+						"networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443": "allowed",
+					}),
+				},
+				Spec: corev1.PodSpec{
+					PriorityClassName:            "gardener-garden-system-400",
+					AutomountServiceAccountToken: pointer.Bool(false),
+					Containers: []corev1.Container{
+						{
+							Name:            "gardener-scheduler",
+							Image:           testValues.Image,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Args: []string{
+								"--config=/etc/gardener-scheduler/config/schedulerconfiguration.yaml",
+							},
+							Resources: corev1.ResourceRequirements{
+								Requests: map[corev1.ResourceName]resource.Quantity{
+									corev1.ResourceCPU:    resource.MustParse("50m"),
+									corev1.ResourceMemory: resource.MustParse("50Mi"),
+								},
+							},
+							LivenessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/healthz",
+										Port:   intstr.FromInt(10251),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								InitialDelaySeconds: 15,
+								TimeoutSeconds:      5,
+							},
+							ReadinessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/readyz",
+										Port:   intstr.FromInt(10251),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								InitialDelaySeconds: 10,
+								TimeoutSeconds:      5,
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "gardener-scheduler-config",
+									MountPath: "/etc/gardener-scheduler/config",
+								},
+								{
+									Name:      "kubeconfig",
+									MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
+									ReadOnly:  true,
+								},
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "gardener-scheduler-config",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{Name: configSecretName},
+								},
+							},
+						},
+						{
+							Name: "kubeconfig",
+							VolumeSource: corev1.VolumeSource{
+								Projected: &corev1.ProjectedVolumeSource{
+									DefaultMode: pointer.Int32(420),
+									Sources: []corev1.VolumeProjection{
+										{
+											Secret: &corev1.SecretProjection{
+												LocalObjectReference: corev1.LocalObjectReference{
+													Name: "generic-token-kubeconfig",
+												},
+												Items: []corev1.KeyToPath{{
+													Key:  "kubeconfig",
+													Path: "kubeconfig",
+												}},
+												Optional: pointer.Bool(false),
+											},
+										},
+										{
+											Secret: &corev1.SecretProjection{
+												LocalObjectReference: corev1.LocalObjectReference{
+													Name: "shoot-access-gardener-scheduler",
+												},
+												Items: []corev1.KeyToPath{{
+													Key:  "token",
+													Path: "token",
+												}},
+												Optional: pointer.Bool(false),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	utilruntime.Must(references.InjectAnnotations(deployment))
+
+	return componenttest.Serialize(deployment)
 }

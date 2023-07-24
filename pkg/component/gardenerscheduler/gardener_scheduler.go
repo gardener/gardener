@@ -16,6 +16,7 @@ package gardenerscheduler
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -51,8 +52,12 @@ var TimeoutWaitForManagedResource = 5 * time.Minute
 type Values struct {
 	// ClientConnection holds values for the client connection.
 	ClientConnection ClientConnection
+	// Image defines the container image of gardener-scheduler
+	Image string
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel string
+	// Replicas defines the number of replicas for the deployment
+	Replicas int32
 	// SchedulerConfiguration provides the configuration for the SeedManager admission plugin.
 	Schedulers schedulerv1alpha1.SchedulerControllerConfiguration
 	// FeatureGates is the set of feature gates.
@@ -99,11 +104,17 @@ func (g *gardenerScheduler) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	secretGenericTokenKubeconfig, found := g.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
+	}
+
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
 		schedulerConfigConfigMap,
 		g.podDisruptionBudget(),
 		g.service(),
 		g.verticalPodAutoscaler(),
+		g.deployment(secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, schedulerConfigConfigMap.Name),
 	)
 	if err != nil {
 		return err
