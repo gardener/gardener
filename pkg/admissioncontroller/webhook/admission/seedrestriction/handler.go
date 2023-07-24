@@ -99,7 +99,7 @@ func (h *Handler) Handle(ctx context.Context, request admission.Request) admissi
 	case internalSecretResource:
 		return h.admitInternalSecret(ctx, seedName, request)
 	case leaseResource:
-		return h.admitLease(seedName, request)
+		return h.admitLease(seedName, userType, request)
 	case secretResource:
 		return h.admitSecret(ctx, seedName, request)
 	case seedResource:
@@ -290,9 +290,17 @@ func (h *Handler) admitInternalSecret(ctx context.Context, seedName string, requ
 	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to seed %q", seedName))
 }
 
-func (h *Handler) admitLease(seedName string, request admission.Request) admission.Response {
+func (h *Handler) admitLease(seedName string, userType seedidentity.UserType, request admission.Request) admission.Response {
 	if request.Operation != admissionv1.Create {
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	// extension clients may only work with leases in the seed namespace
+	if userType == seedidentity.UserTypeExtension {
+		if request.Namespace == gardenerutils.ComputeGardenNamespace(seedName) {
+			return admission.Allowed("")
+		}
+		return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to namespace for seed %q", seedName))
 	}
 
 	// This allows the gardenlet to create a Lease for leader election (if the garden cluster is a seed as well).

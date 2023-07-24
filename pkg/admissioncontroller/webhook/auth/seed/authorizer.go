@@ -167,7 +167,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				nil,
 			)
 		case leaseResource:
-			return a.authorizeLease(requestLog, seedName, attrs)
+			return a.authorizeLease(requestLog, seedName, userType, attrs)
 		case managedSeedResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeManagedSeed, attrs,
 				[]string{"update", "patch"},
@@ -256,7 +256,19 @@ func (a *authorizer) authorizeEvent(log logr.Logger, attrs auth.Attributes) (aut
 	return auth.DecisionAllow, "", nil
 }
 
-func (a *authorizer) authorizeLease(log logr.Logger, seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+func (a *authorizer) authorizeLease(log logr.Logger, seedName string, userType seedidentity.UserType, attrs auth.Attributes) (auth.Decision, string, error) {
+	// extension clients may only work with leases in the seed namespace
+	if userType == seedidentity.UserTypeExtension {
+		if attrs.GetNamespace() == gardenerutils.ComputeGardenNamespace(seedName) {
+			if ok, reason := a.checkVerb(log, attrs, "create", "get", "list", "watch", "update", "patch", "delete", "deletecollection"); !ok {
+				return auth.DecisionNoOpinion, reason, nil
+			}
+
+			return auth.DecisionAllow, "", nil
+		}
+		return auth.DecisionNoOpinion, "lease object is not in seed namespace", nil
+	}
+
 	// This is needed if the seed cluster is a garden cluster at the same time.
 	if attrs.GetName() == "gardenlet-leader-election" &&
 		utils.ValueExists(attrs.GetVerb(), []string{"create", "get", "list", "watch", "update"}) {

@@ -73,8 +73,10 @@ Today, the following rules are implemented:
 
 ### Rule Exceptions for Extension Clients
 
-Extension clients are allowed to perform the same operations as gardenlet clients.
-To prevent privilege escalation though, they are granted the read-only subset of verbs for `CertificateSigningRequests`, `ClusterRoleBindings`, and `ServiceAccounts`.
+Extension clients are allowed to perform the same operations as gardenlet clients with the following exceptions:
+
+- Extension clients are granted the read-only subset of verbs for `CertificateSigningRequests`, `ClusterRoleBindings`, and `ServiceAccounts` (to prevent privilege escalation).
+- Extension clients are granted full access to `Lease` objects but only in the seed-specific namespace.
 
 ## `SeedAuthorizer` Authorization Webhook Enablement
 

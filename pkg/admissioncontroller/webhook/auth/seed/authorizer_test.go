@@ -1317,86 +1317,6 @@ var _ = Describe("Seed", func() {
 				})
 			})
 
-			Context("when requested for Leases", func() {
-				var (
-					name, namespace string
-					attrs           *auth.AttributesRecord
-				)
-
-				BeforeEach(func() {
-					name, namespace = "foo", "bar"
-					attrs = &auth.AttributesRecord{
-						User:            seedUser,
-						Name:            name,
-						Namespace:       namespace,
-						APIGroup:        coordinationv1.SchemeGroupVersion.Group,
-						Resource:        "leases",
-						ResourceRequest: true,
-						Verb:            "get",
-					}
-				})
-
-				DescribeTable("should allow without consulting the graph because verb is create",
-					func(verb string) {
-						attrs.Verb = verb
-
-						decision, reason, err := authorizer.Authorize(ctx, attrs)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(decision).To(Equal(auth.DecisionAllow))
-						Expect(reason).To(BeEmpty())
-					},
-
-					Entry("create", "create"),
-				)
-
-				DescribeTable("should return correct result if path exists",
-					func(verb string) {
-						attrs.Verb = verb
-
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeLease, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
-						decision, reason, err := authorizer.Authorize(ctx, attrs)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(decision).To(Equal(auth.DecisionAllow))
-						Expect(reason).To(BeEmpty())
-
-						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeLease, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
-						decision, reason, err = authorizer.Authorize(ctx, attrs)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(decision).To(Equal(auth.DecisionNoOpinion))
-						Expect(reason).To(ContainSubstring("no relationship found"))
-					},
-
-					Entry("get", "get"),
-					Entry("list", "list"),
-					Entry("watch", "watch"),
-					Entry("update", "update"),
-					Entry("patch", "patch"),
-				)
-
-				DescribeTable("should have no opinion because verb is not allowed",
-					func(verb string) {
-						attrs.Verb = verb
-
-						decision, reason, err := authorizer.Authorize(ctx, attrs)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(decision).To(Equal(auth.DecisionNoOpinion))
-						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create get update patch list watch]"))
-
-					},
-					Entry("delete", "delete"),
-					Entry("deletecollection", "deletecollection"),
-				)
-
-				It("should have no opinion because no allowed subresource", func() {
-					attrs.Subresource = "foo"
-
-					decision, reason, err := authorizer.Authorize(ctx, attrs)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
-				})
-			})
-
 			Context("when requested for Shoots", func() {
 				var (
 					name, namespace string
@@ -2076,6 +1996,86 @@ var _ = Describe("Seed", func() {
 				})
 			})
 
+			Context("when requested for Leases", func() {
+				var (
+					name, namespace string
+					attrs           *auth.AttributesRecord
+				)
+
+				BeforeEach(func() {
+					name, namespace = "foo", "bar"
+					attrs = &auth.AttributesRecord{
+						User:            seedUser,
+						Name:            name,
+						Namespace:       namespace,
+						APIGroup:        coordinationv1.SchemeGroupVersion.Group,
+						Resource:        "leases",
+						ResourceRequest: true,
+						Verb:            "get",
+					}
+				})
+
+				DescribeTable("should allow without consulting the graph because verb is create",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					},
+
+					Entry("create", "create"),
+				)
+
+				DescribeTable("should return correct result if path exists",
+					func(verb string) {
+						attrs.Verb = verb
+
+						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeLease, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+
+						graph.EXPECT().HasPathFrom(graphpkg.VertexTypeLease, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+						decision, reason, err = authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("no relationship found"))
+					},
+
+					Entry("get", "get"),
+					Entry("list", "list"),
+					Entry("watch", "watch"),
+					Entry("update", "update"),
+					Entry("patch", "patch"),
+				)
+
+				DescribeTable("should have no opinion because verb is not allowed",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create get update patch list watch]"))
+
+					},
+					Entry("delete", "delete"),
+					Entry("deletecollection", "deletecollection"),
+				)
+
+				It("should have no opinion because no allowed subresource", func() {
+					attrs.Subresource = "foo"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
+				})
+			})
+
 			Context("when requested for ServiceAccounts", func() {
 				var (
 					name, namespace string
@@ -2356,6 +2356,82 @@ var _ = Describe("Seed", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
 					Expect(reason).To(ContainSubstring("No Object name found"))
+				})
+			})
+
+			Context("when requested for Leases", func() {
+				var (
+					name, namespace string
+					attrs           *auth.AttributesRecord
+				)
+
+				BeforeEach(func() {
+					name, namespace = "foo", "seed-"+seedName
+					attrs = &auth.AttributesRecord{
+						User:            seedUser,
+						Name:            name,
+						Namespace:       namespace,
+						APIGroup:        coordinationv1.SchemeGroupVersion.Group,
+						Resource:        "leases",
+						ResourceRequest: true,
+						Verb:            "get",
+					}
+				})
+
+				XDescribeTable("should allow without consulting the graph because verb is create",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					},
+
+					Entry("create", "create"),
+				)
+
+				DescribeTable("should allow because lease is in seed namespace",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionAllow))
+						Expect(reason).To(BeEmpty())
+					},
+
+					Entry("create", "create"),
+					Entry("get", "get"),
+					Entry("list", "list"),
+					Entry("watch", "watch"),
+					Entry("update", "update"),
+					Entry("patch", "patch"),
+					Entry("delete", "delete"),
+					Entry("deletecollection", "deletecollection"),
+				)
+
+				DescribeTable("should have no opinion because verb is not allowed",
+					func(verb string) {
+						attrs.Verb = verb
+
+						decision, reason, err := authorizer.Authorize(ctx, attrs)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(decision).To(Equal(auth.DecisionNoOpinion))
+						Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create get list watch update patch delete deletecollection]"))
+					},
+					Entry("foo", "foo"),
+				)
+
+				It("should have no opinion because lease is not in seed namespace", func() {
+					attrs.Verb = "create"
+					attrs.Name = seedName
+					attrs.Namespace = "gardener-system-seed-lease"
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("lease object is not in seed namespace"))
 				})
 			})
 
