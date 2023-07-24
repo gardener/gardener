@@ -1,8 +1,8 @@
 ---
-title: gardenlet API Access
+title: Scoped API Access for gardenlets and Extensions
 ---
 
-# Scoped API Access for gardenlets
+# Scoped API Access for gardenlets and Extensions
 
 By default, `gardenlet`s have administrative access in the garden cluster.
 They are able to execute any API request on any object independent of whether the object is related to the seed cluster the `gardenlet` is responsible for.
@@ -17,6 +17,14 @@ It is a special-purpose admission plugin that specifically limits the Kubernetes
 📚 You might be interested to look into the [design proposal for scoped Kubelet API access](https://github.com/kubernetes/design-proposals-archive/blob/main/node/kubelet-authorizer.md) from the Kubernetes community.
 It can be translated to Gardener and Gardenlets with their `Seed` and `Shoot` resources.
 
+Historically, `gardenlet` has been the only component running in the seed cluster that has access to both the seed cluster and the garden cluster.
+Starting from Gardener [`v1.74.0`](https://github.com/gardener/gardener/releases/v1.74.0), extensions running on seed clusters can also get [access to the garden cluster](../extensions/garden-api-access.md) using a token for a dedicated ServiceAccount.
+Extensions using this mechanism only get permission to read global resources like `CloudProfiles` (this is granted to all authenticated users) unless the plugins described in this document are enabled.
+
+Generally, the plugins handle extension clients exactly like gardenlet clients with some minor [exceptions](#rule-exceptions-for-extension-clients).
+Extension clients in the sense of the plugins are clients authenticated as a `ServiceAccount` with the `extension-` name prefix in a `seed-` namespace of the garden cluster.
+Other `ServiceAccounts` are not considered as seed clients, not handled by the plugins, and only get the described read access to global resources.
+
 ## Flow Diagram
 
 The following diagram shows how the two plugins are included in the request flow of a `gardenlet`.
@@ -29,6 +37,8 @@ When enabling the plugins, there is one additional step for each before the `gar
 Please note that the example shows a request to an object (`Shoot`) residing in one of the API groups served by `gardener-apiserver`.
 However, the `gardenlet` is also interacting with objects in API groups served by the `kube-apiserver` (e.g., `Secret`,`ConfigMap`).
 In this case, the consultation of the `SeedRestriction` admission plugin is performed by the `kube-apiserver` itself before it forwards the request to the `gardener-apiserver`.
+
+## Implemented Rules
 
 Today, the following rules are implemented:
 
@@ -60,6 +70,11 @@ Today, the following rules are implemented:
 > [1] If you use `ManagedSeed` resources then the `gardenlet` reconciling them ("parent `gardenlet`") may be allowed to submit certain requests for the `Seed` resources resulting out of such `ManagedSeed` reconciliations (even if the "parent `gardenlet`" is not responsible for them):
 
 ℹ️ It is allowed to delete the `Seed` resources if the corresponding `ManagedSeed` objects already have a `deletionTimestamp` (this is secure as `gardenlet`s themselves don't have permissions for deleting `ManagedSeed`s).
+
+### Rule Exceptions for Extension Clients
+
+Extension clients are allowed to perform the same operations as gardenlet clients.
+To prevent privilege escalation though, they are granted the read-only subset of verbs for `CertificateSigningRequests`, `ClusterRoleBindings`, and `ServiceAccounts`.
 
 ## `SeedAuthorizer` Authorization Webhook Enablement
 
@@ -118,15 +133,23 @@ As mentioned earlier, it's the authorizer's job to evaluate API requests and ret
 For backwards compatibility, no requests are denied at the moment, so that they are still deferred to a subsequent authorizer like RBAC.
 Though, this might change in the future.
 
-First, the `SeedAuthorizer` extracts the `Seed` name from the API request. This requires a proper TLS certificate that the `gardenlet` uses to contact the API server and is automatically given if [TLS bootstrapping](../concepts/gardenlet.md#TLS-Bootstrapping) is used.
-Concretely, the authorizer checks the certificate for name `gardener.cloud:system:seed:<seed-name>` and group `gardener.cloud:system:seeds`.
-In cases where this information is missing e.g., when a custom Kubeconfig is used, the authorizer cannot make any decision. Thus, RBAC is still a considerable option to restrict the `gardenlet`'s access permission if the above explained preconditions are not given.
+First, the `SeedAuthorizer` extracts the `Seed` name from the API request.
+This step considers the following two cases:
 
-With the `Seed` name at hand, the authorizer checks for an **existing path** from the resource that a request is being made for to the `Seed` belonging to the `gardenlet`. Take a look at the [Implementation Details](#implementation-details) section for more information.
+1. If the authenticated user belongs to the `gardener.cloud:system:seeds` group, it is considered a gardenlet client.
+   - This requires a proper TLS certificate that the `gardenlet` uses to contact the API server and is automatically given if [TLS bootstrapping](../concepts/gardenlet.md#TLS-Bootstrapping) is used.
+   - The authorizer extracts the seed name from the username by stripping the `gardener.cloud:system:seed:` prefix.
+   - In cases where this information is missing e.g., when a custom Kubeconfig is used, the authorizer cannot make any decision. Thus, RBAC is still a considerable option to restrict the `gardenlet`'s access permission if the above explained preconditions are not given.
+2. If the authenticated user belongs to the `system:serviceaccounts` group, it is considered an extension client under the following conditions:
+   - The `ServiceAccount` must be located in a `seed-` namespace. I.e., the user has to belong to a group with the `system:serviceaccounts:seed-` prefix. The seed name is extracted from this group by stripping the prefix.
+   - The `ServiceAccount` must have the `extension-` prefix. I.e., the username must have the `system:serviceaccount:seed-<seed-name>:extension-` prefix.
+
+With the `Seed` name at hand, the authorizer checks for an **existing path** from the resource that a request is being made for to the `Seed` belonging to the `gardenlet`/extension.
+Take a look at the [Implementation Details](#implementation-details) section for more information.
 
 ### Implementation Details
 
-Internally, the `SeedAuthorizer` uses a directed, acyclic graph data structure in order to efficiently respond to authorization requests for `gardenlet`s:
+Internally, the `SeedAuthorizer` uses a directed, acyclic graph data structure in order to efficiently respond to authorization requests for `gardenlet`s/extensions:
 
 * A vertex in this graph represents a Kubernetes resource with its kind, namespace, and name (e.g., `Shoot:garden-my-project/my-shoot`).
 * An edge from vertex `u` to vertex `v` in this graph exists when
@@ -143,10 +166,10 @@ In the above picture, the resources that are actively watched are shaded.
 Gardener resources are green, while Kubernetes resources are blue.
 It shows the dependencies between the resources and how the graph is built based on the above rules.
 
-ℹ️ The above picture shows all resources that may be accessed by `gardenlet`s, except for the `Quota` resource which is only included for completeness.
+ℹ️ The above picture shows all resources that may be accessed by `gardenlet`s/extensions, except for the `Quota` resource which is only included for completeness.
 
-Now, when a `gardenlet` wants to access certain resources, then the `SeedAuthorizer` uses a Depth-First traversal starting from the vertex representing the resource in question, e.g., from a `Project` vertex.
-If there is a path from the `Project` vertex to the vertex representing the `Seed` the `gardenlet` is responsible for. then it allows the request.
+Now, when a `gardenlet`/extension wants to access certain resources, then the `SeedAuthorizer` uses a Depth-First traversal starting from the vertex representing the resource in question, e.g., from a `Project` vertex.
+If there is a path from the `Project` vertex to the vertex representing the `Seed` the `gardenlet`/extension is responsible for. then it allows the request.
 
 #### Metrics
 
@@ -230,6 +253,6 @@ Please note that it should only be activated when the `SeedAuthorizer` is active
 ### Admission Decisions
 
 The admission's purpose is to perform extended validation on requests which require the body of the object in question.
-Additionally, it handles `CREATE` requests of `gardenlet`s (the above discussed resource dependency graph cannot be used in such cases because there won't be any vertex/edge for non-existing resources).
+Additionally, it handles `CREATE` requests of `gardenlet`s/extensions (the above discussed resource dependency graph cannot be used in such cases because there won't be any vertex/edge for non-existing resources).
 
-Gardenlets are restricted to only create new resources which are somehow related to the seed clusters they are responsible for.
+Gardenlets/extensions are restricted to only create new resources which are somehow related to the seed clusters they are responsible for.
