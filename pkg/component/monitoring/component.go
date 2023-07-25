@@ -59,7 +59,7 @@ var (
 	managedResourceNamePrometheus = "shoot-core-prometheus"
 )
 
-// Interface contains functions for a mointoring deployer.
+// Interface contains functions for a monitoring deployer.
 type Interface interface {
 	component.Deployer
 	// SetNamespaceUID sets the UID of the namespace into which the monitoring components shall be deployed.
