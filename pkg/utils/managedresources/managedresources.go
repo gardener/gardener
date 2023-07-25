@@ -195,7 +195,7 @@ func deployManagedResource(ctx context.Context, secret *builder.Secret, managedR
 
 // Delete deletes the managed resource and its secrets with the given name in the given namespace.
 func Delete(ctx context.Context, c client.Client, namespace string, name string, secretNameWithPrefix bool) error {
-	// TODO(dimityrmirchev): This can be dropped once old secrets are marked as garbage collectable
+	// TODO(dimityrmirchev): This can be dropped once old secrets are marked as garbage collectable, after Gardener v1.90
 	secretName := secretName(name, secretNameWithPrefix)
 
 	mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}

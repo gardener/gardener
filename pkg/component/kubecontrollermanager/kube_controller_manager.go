@@ -598,7 +598,7 @@ func (k *kubeControllerManager) emptyManagedResource() *resourcesv1alpha1.Manage
 }
 
 func (k *kubeControllerManager) emptyManagedResourceSecret() *corev1.Secret {
-	// TODO(dimityrmirchev): Remove this once mr secrets are turned into garbage-collectable, immutable secrets
+	// TODO(dimityrmirchev): Remove this once mr secrets are turned into garbage-collectable, immutable secrets, after Gardener v1.90
 	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "managedresource-" + ManagedResourceName, Namespace: k.namespace}}
 }
 

@@ -152,9 +152,7 @@ func (m *ManagedResource) Reconcile(ctx context.Context) error {
 	}
 
 	// mark all old secrets as garbage collectable
-	// TODO(dimityrmirchev): We can remove this in a future release since this is migration code
-	// Since the removal of this code can cause leaks of managed resource secrets
-	// we want to give a greater time period than usual, i.e. v1.90 of Gardener
+	// TODO(dimityrmirchev): Cleanup after Gardener v1.90
 	excludedNames := map[string]struct{}{}
 	oldSecrets := secretsFromRefs(resource, excludedNames)
 	if err := markSecretsAsGarbageCollectable(ctx, m.client, oldSecrets); err != nil {
