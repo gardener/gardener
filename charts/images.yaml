@@ -5,6 +5,9 @@
 # Masterminds/semver package: https://github.com/Masterminds/semver#hyphen-range-comparisons.
 images:
 # Gardener components
+- name: gardener-apiserver
+  sourceRepository: github.com/gardener/gardener
+  repository: eu.gcr.io/gardener-project/gardener/apiserver
 - name: gardenlet
   sourceRepository: github.com/gardener/gardener
   repository: eu.gcr.io/gardener-project/gardener/gardenlet
