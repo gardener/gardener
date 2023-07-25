@@ -52,8 +52,6 @@ func (remoteExtractor) ExtractFromLayer(image, pathSuffix, dest string) error {
 		return fmt.Errorf("unable retrieve image layers: %w", err)
 	}
 
-	success := false
-
 	for _, layer := range layers {
 		buffer, err := layer.Uncompressed()
 		if err != nil {
@@ -67,15 +65,10 @@ func (remoteExtractor) ExtractFromLayer(image, pathSuffix, dest string) error {
 			return fmt.Errorf("unable to extract tarball to file system: %w", err)
 		}
 
-		success = true
-		break
+		return nil
 	}
 
-	if !success {
-		return fmt.Errorf("did not find file %q in layer", pathSuffix)
-	}
-
-	return nil
+	return fmt.Errorf("did not find file %q in layer", pathSuffix)
 }
 
 var notFound = errors.New("file not contained in tar")

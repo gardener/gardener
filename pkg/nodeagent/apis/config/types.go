@@ -28,17 +28,17 @@ type NodeAgentConfiguration struct {
 	// access the shoot api server.
 	APIServer APIServer
 
-	// SecretName defines the name of the secret in the shoot cluster, which contains
+	// SecretName defines the name of the secret in the shoot cluster control plane, which contains
 	// the OSC for the gardener-node-agent.
 	OSCSecretName string
 
-	// TokenSecretName defines the name of the secret in the shoot cluster, which contains
+	// TokenSecretName defines the name of the secret in the shoot cluster control plane, which contains
 	// the projected shoot access token for the gardener-node-agent.
 	TokenSecretName string
 
-	// Image is the docker image reference to the gardener-node-agent.
+	// Image is the container image reference to the gardener-node-agent.
 	Image string
-	// HyperkubeImage is the docker image reference to the hyperkube containing kubelet.
+	// HyperkubeImage is the container image reference to the hyperkube containing kubelet.
 	HyperkubeImage string
 
 	// KubernetesVersion contains the kubernetes version of the kubelet, used for annotating
@@ -46,7 +46,7 @@ type NodeAgentConfiguration struct {
 	KubernetesVersion string
 
 	// KubeletDataVolumeSize sets the data volume size of an unformatted disk on the worker node,
-	// which is the be used for /var/lib on the worker.
+	// which is used for /var/lib on the worker.
 	KubeletDataVolumeSize *int64
 }
 

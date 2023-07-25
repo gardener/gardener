@@ -80,8 +80,7 @@ func (*db) Stop(ctx context.Context, recorder record.EventRecorder, node *corev1
 		return fmt.Errorf("unable to stop unit %s: %w", unitName, err)
 	}
 
-	job := <-c
-	if job != done {
+	if job := <-c; job != done {
 		err = fmt.Errorf("stop failed for %s", job)
 	}
 
