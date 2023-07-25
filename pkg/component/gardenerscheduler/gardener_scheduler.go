@@ -52,11 +52,11 @@ var TimeoutWaitForManagedResource = 5 * time.Minute
 type Values struct {
 	// ClientConnection holds values for the client connection.
 	ClientConnection ClientConnection
-	// Image defines the container image of gardener-scheduler
+	// Image defines the container image of gardener-scheduler.
 	Image string
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel string
-	// Replicas defines the number of replicas for the deployment
+	// Replicas defines the number of replicas for the deployment.
 	Replicas int32
 	// SchedulerConfiguration provides the configuration for the SeedManager admission plugin.
 	Schedulers schedulerv1alpha1.SchedulerControllerConfiguration

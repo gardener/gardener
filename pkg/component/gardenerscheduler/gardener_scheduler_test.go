@@ -201,6 +201,16 @@ var _ = Describe("GardenerScheduler", func() {
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
+					APIGroups: []string{""},
+					Resources: []string{"events"},
+					Verbs:     []string{"create", "patch", "update"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"configmaps"},
+					Verbs:     []string{"create", "delete", "get", "patch", "update"},
+				},
+				{
 					APIGroups: []string{gardencorev1beta1.GroupName},
 					Resources: []string{
 						"cloudprofiles",
@@ -611,7 +621,23 @@ var _ = Describe("GardenerScheduler", func() {
 						Namespace:  namespace,
 						Generation: 1,
 					},
-					Status: healthyManagedResourceStatus,
+					Status: resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 1,
+						Conditions: []gardencorev1beta1.Condition{
+							{
+								Type:   resourcesv1alpha1.ResourcesApplied,
+								Status: gardencorev1beta1.ConditionTrue,
+							},
+							{
+								Type:   resourcesv1alpha1.ResourcesHealthy,
+								Status: gardencorev1beta1.ConditionTrue,
+							},
+							{
+								Type:   resourcesv1alpha1.ResourcesProgressing,
+								Status: gardencorev1beta1.ConditionFalse,
+							},
+						},
+					},
 				})).To(Succeed())
 
 				Expect(deployer.Wait(ctx)).To(Succeed())

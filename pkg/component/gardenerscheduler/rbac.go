@@ -36,6 +36,16 @@ func (g *gardenerScheduler) clusterRole() *rbacv1.ClusterRole {
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
+				APIGroups: []string{""},
+				Resources: []string{"events"},
+				Verbs:     []string{"create", "patch", "update"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"configmaps"},
+				Verbs:     []string{"create", "delete", "get", "patch", "update"},
+			},
+			{
 				APIGroups: []string{gardencorev1beta1.GroupName},
 				Resources: []string{
 					"cloudprofiles",
