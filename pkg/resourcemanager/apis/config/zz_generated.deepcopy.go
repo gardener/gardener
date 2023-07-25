@@ -84,8 +84,8 @@ func (in *GarbageCollectorControllerConfig) DeepCopyInto(out *GarbageCollectorCo
 		*out = new(v1.Duration)
 		**out = **in
 	}
-	if in.ConsiderManagedResourceSecrets != nil {
-		in, out := &in.ConsiderManagedResourceSecrets, &out.ConsiderManagedResourceSecrets
+	if in.ConsiderManagedResources != nil {
+		in, out := &in.ConsiderManagedResources, &out.ConsiderManagedResources
 		*out = new(bool)
 		**out = **in
 	}

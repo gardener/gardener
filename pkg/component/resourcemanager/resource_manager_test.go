@@ -359,7 +359,7 @@ var _ = Describe("ResourceManager", func() {
 			AutomountServiceAccountToken: pointer.Bool(false),
 		}
 
-		configMapFor = func(watchedNamespace *string, targetKubeconfig *string, isWorkerless, considerMRSecretsForGC bool) *corev1.ConfigMap {
+		configMapFor = func(watchedNamespace *string, targetKubeconfig *string, isWorkerless, considerManagedResources bool) *corev1.ConfigMap {
 			configMap := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gardener-resource-manager",
@@ -398,9 +398,9 @@ var _ = Describe("ResourceManager", func() {
 					ClusterID:     &clusterIdentity,
 					ResourceClass: &resourceClass,
 					GarbageCollector: resourcemanagerv1alpha1.GarbageCollectorControllerConfig{
-						Enabled:                        true,
-						SyncPeriod:                     &metav1.Duration{Duration: 12 * time.Hour},
-						ConsiderManagedResourceSecrets: &considerMRSecretsForGC,
+						Enabled:                  true,
+						SyncPeriod:               &metav1.Duration{Duration: 12 * time.Hour},
+						ConsiderManagedResources: &considerManagedResources,
 					},
 					Health: resourcemanagerv1alpha1.HealthControllerConfig{
 						ConcurrentSyncs: &maxConcurrentHealthWorkers,

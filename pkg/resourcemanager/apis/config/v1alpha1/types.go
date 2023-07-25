@@ -158,10 +158,10 @@ type GarbageCollectorControllerConfig struct {
 	// SyncPeriod is the duration how often the controller performs its reconciliation.
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
-	// ConsiderManagedResourceSecrets specifies if managed resources should be considered
+	// ConsiderManagedResources specifies if managed resources should be considered
 	// as owners of a garbage collectable secret.
 	// +optional
-	ConsiderManagedResourceSecrets *bool `json:"considerManagedResourceSecrets,omitempty"`
+	ConsiderManagedResources *bool `json:"considerManagedResources,omitempty"`
 }
 
 // HealthControllerConfig is the configuration for the health controller.

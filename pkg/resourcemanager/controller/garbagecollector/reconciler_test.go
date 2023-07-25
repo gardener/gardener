@@ -57,7 +57,7 @@ var _ = Describe("Collector", func() {
 		gc = &Reconciler{
 			TargetReader:            c,
 			TargetWriter:            c,
-			Config:                  config.GarbageCollectorControllerConfig{SyncPeriod: &metav1.Duration{}, ConsiderManagedResourceSecrets: pointer.Bool(true)},
+			Config:                  config.GarbageCollectorControllerConfig{SyncPeriod: &metav1.Duration{}, ConsiderManagedResources: pointer.Bool(true)},
 			Clock:                   fakeClock,
 			MinimumObjectLifetime:   &minimumObjectLifetime,
 			TargetKubernetesVersion: semver.MustParse("1.24.0"),

@@ -257,6 +257,8 @@ The following algorithm is implemented in the GC controller:
         - If the annotation key follows the `reference.resources.gardener.cloud/{configmap,secret}-<hash>` scheme and the value equals `<name>`, then consider it as "in-use".
 1. Delete all `ConfigMap`s and `Secret`s not considered as "in-use".
 
+Note: Managed resource secrets are garbage collected only if the GC controller is configured to do so. This is the case when the GC controller acts on a seed cluster. 
+
 Consequently, clients need to:
 
 1. Create immutable `ConfigMap`s/`Secret`s with unique names (e.g., a checksum suffix based on the `.data`).

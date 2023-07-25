@@ -100,7 +100,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 		}
 	)
 
-	if r.Config.ConsiderManagedResourceSecrets != nil && *r.Config.ConsiderManagedResourceSecrets {
+	if r.Config.ConsiderManagedResources != nil && *r.Config.ConsiderManagedResources {
 		groupVersionKinds = append(groupVersionKinds, resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResourceList"))
 	}
 

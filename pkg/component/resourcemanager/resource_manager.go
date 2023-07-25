@@ -545,9 +545,9 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			ClusterID:     r.values.ClusterIdentity,
 			ResourceClass: r.values.ResourceClass,
 			GarbageCollector: resourcemanagerv1alpha1.GarbageCollectorControllerConfig{
-				Enabled:                        true,
-				SyncPeriod:                     &metav1.Duration{Duration: 12 * time.Hour},
-				ConsiderManagedResourceSecrets: &considerManagedResourceSecretsForGC,
+				Enabled:                  true,
+				SyncPeriod:               &metav1.Duration{Duration: 12 * time.Hour},
+				ConsiderManagedResources: &considerManagedResourceSecretsForGC,
 			},
 			Health: resourcemanagerv1alpha1.HealthControllerConfig{
 				ConcurrentSyncs: r.values.MaxConcurrentHealthWorkers,
