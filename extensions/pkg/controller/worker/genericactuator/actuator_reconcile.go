@@ -28,11 +28,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionsworkercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
 	extensionsworkerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -42,7 +42,7 @@ import (
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
 
-func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, cluster *controller.Cluster) error {
+func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
 	log = log.WithValues("operation", "reconcile")
 
 	workerDelegate, err := a.delegateFactory.WorkerDelegate(ctx, worker, cluster)
@@ -99,7 +99,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 	// TODO(rfranzke): Remove this code after v1.77 was released.
 	// When the Shoot is hibernated we want to remove the cluster autoscaler so that it does not interfer
 	// with Gardeners modifications on the machine deployment's replicas fields.
-	isHibernationEnabled := controller.IsHibernationEnabled(cluster)
+	isHibernationEnabled := extensionscontroller.IsHibernationEnabled(cluster)
 	if clusterAutoscalerUsed && isHibernationEnabled {
 		if err = a.scaleClusterAutoscaler(ctx, log, worker, 0); err != nil {
 			return err
@@ -161,7 +161,11 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 			log.Info("Successfully deleted stuck machine-controller-manager pod", "reason", msg)
 		}
 
-		return fmt.Errorf("Failed while waiting for all machine deployments to be ready: %w", err)
+		newError := fmt.Errorf("failed while waiting for all machine deployments to be ready: %w", err)
+		if a.errorCodeCheckFunc != nil {
+			return v1beta1helper.NewErrorWithCodes(newError, a.errorCodeCheckFunc(err)...)
+		}
+		return newError
 	}
 
 	// Delete all old machine deployments (i.e. those which were not previously computed but exist in the cluster).
@@ -241,7 +245,7 @@ func deployMachineDeployments(
 		switch {
 		// If the Shoot is hibernated then the machine deployment's replicas should be zero.
 		// Also mark all machines for forceful deletion to avoid respecting of PDBs/SLAs in case of cluster hibernation.
-		case controller.IsHibernationEnabled(cluster):
+		case extensionscontroller.IsHibernationEnabled(cluster):
 			replicas = 0
 			if err := markAllMachinesForcefulDeletion(ctx, log, cl, worker.Namespace); err != nil {
 				return fmt.Errorf("marking all machines for forceful deletion failed: %w", err)
@@ -262,7 +266,7 @@ func deployMachineDeployments(
 			}
 		// If the Shoot was hibernated and is now woken up we set replicas to min so that the cluster
 		// autoscaler can scale them as required.
-		case shootIsAwake(controller.IsHibernationEnabled(cluster), existingMachineDeployments):
+		case shootIsAwake(extensionscontroller.IsHibernationEnabled(cluster), existingMachineDeployments):
 			replicas = deployment.Minimum
 		// If the shoot worker pool minimum was updated and if the current machine deployment replica
 		// count is less than minimum, we update the machine deployment replica count to updated minimum.
@@ -377,7 +381,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 			numberOfAwakeMachines += deployment.Status.Replicas
 
 			// Skip further checks if cluster is hibernated because machine-controller-manager is usually scaled down during hibernation.
-			if controller.IsHibernationEnabled(cluster) {
+			if extensionscontroller.IsHibernationEnabled(cluster) {
 				continue
 			}
 
@@ -417,7 +421,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 
 		var msg string
 		switch {
-		case !controller.IsHibernationEnabled(cluster):
+		case !extensionscontroller.IsHibernationEnabled(cluster):
 			// numUpdated == numberOfAwakeMachines waits until the old machine is deleted in the case of a rolling update with maxUnavailability = 0
 			// numUnavailable == 0 makes sure that every machine joined the cluster (during creation & in the case of a rolling update with maxUnavailability > 0)
 			if numUnavailable == 0 && numUpdated == numberOfAwakeMachines && int(numHealthyDeployments) == len(wantedMachineDeployments) {

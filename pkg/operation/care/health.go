@@ -478,11 +478,11 @@ func (h *Health) checkClusterNodes(
 	condition gardencorev1beta1.Condition,
 	extensionConditions []ExtensionCondition,
 ) (*gardencorev1beta1.Condition, error) {
-	if exitCondition, err := checker.CheckClusterNodes(ctx, shootClient, seedNamespace, h.shoot.GetInfo().Spec.Provider.Workers, condition); err != nil || exitCondition != nil {
-		return exitCondition, err
-	}
 	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions); exitCondition != nil {
 		return exitCondition, nil
+	}
+	if exitCondition, err := checker.CheckClusterNodes(ctx, shootClient, seedNamespace, h.shoot.GetInfo().Spec.Provider.Workers, condition); err != nil || exitCondition != nil {
+		return exitCondition, err
 	}
 
 	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "EveryNodeReady", "All nodes are ready.")
