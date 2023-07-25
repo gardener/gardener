@@ -78,6 +78,10 @@ Extension clients are allowed to perform the same operations as gardenlet client
 - Extension clients are granted the read-only subset of verbs for `CertificateSigningRequests`, `ClusterRoleBindings`, and `ServiceAccounts` (to prevent privilege escalation).
 - Extension clients are granted full access to `Lease` objects but only in the seed-specific namespace.
 
+When the need arises, more exceptions might be added to the access rules for resources that are already handled by the plugins.
+E.g., if an extension needs to populate additional shoot-specific `InternalSecrets`, according handling can be introduced.
+Permissions for resources that are not handled by the plugins can be granted using additional RBAC rules (independent of the plugins).
+
 ## `SeedAuthorizer` Authorization Webhook Enablement
 
 The `SeedAuthorizer` is implemented as a [Kubernetes authorization webhook](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) and part of the [`gardener-admission-controller`](../concepts/admission-controller.md) component running in the garden cluster.
