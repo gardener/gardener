@@ -318,7 +318,6 @@ var _ = Describe("operatingsystemconfig", func() {
 
 					// managed resource secret reconciliation for executor scripts for worker pools
 					// worker pool 1
-
 					worker1ExecutorScript, _ := ExecutorScriptFn([]byte(worker1OriginalContent), cloudConfigExecutionMaxDelaySeconds, hyperkubeImage.ToImage(&kubernetesVersion), kubernetesVersion, nil, worker1OriginalCommand, worker1OriginalUnits, worker1OriginalFiles)
 					mrSecretPool1 := &corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
