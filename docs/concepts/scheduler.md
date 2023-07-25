@@ -88,10 +88,13 @@ The `shoots/binding` subresource is used to bind a `Shoot` to a `Seed`. On creat
 Only an operator with the necessary RBAC can update this binding manually. This can be done by changing the `.spec.seedName` of the shoot. However, if a different seed is already assigned to the shoot, this will trigger a control-plane migration. For required steps, please see [Triggering the Migration](../operations/control_plane_migration.md#triggering-the-migration).
 
 ## `spec.schedulerName` Field in the `Shoot` Specification
-Similar to the `spec.defaultScheduler` field in `Pod`s, the `Shoot` specification has an optional `.spec.schedulerName` field. If this field is set on creation, only the scheduler which relates to the configured name is responsible for scheduling the shoot.
+
+Similar to the `spec.schedulerName` field in `Pod`s, the `Shoot` specification has an optional `.spec.schedulerName` field. If this field is set on creation, only the scheduler which relates to the configured name is responsible for scheduling the shoot.
 The `default-scheduler` name is reserved for the default scheduler of Gardener.
+Affected Shoots will remain in `Pending` state if the mentioned scheduler is not present in the landscape.
 
 ## `spec.seedName` Field in the `Shoot` Specification
+
 Similar to the `.spec.nodeName` field in `Pod`s, the `Shoot` specification has an optional `.spec.seedName` field. If this field is set on creation, the shoot will be scheduled to this seed. However, this field can only be set by users having RBAC for the `shoots/binding` subresource. If this field is not set, the `scheduler` will assign a suitable seed automatically and populate this field with the seed name.
 
 ## `seedSelector` Field in the `Shoot` Specification

@@ -4,8 +4,6 @@ metadata:
   name: local-wl
   namespace: garden-local
 spec:
-  #schedulerName: foo
-  #seedName: local
   cloudProfileName: local
   region: local
   provider:

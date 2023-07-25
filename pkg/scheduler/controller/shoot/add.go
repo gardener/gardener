@@ -52,7 +52,8 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		Complete(r)
 }
 
-// ShootPredicate is a predicate that returns true if a shoot is not assigned to a seed.
+// ShootPredicate is a predicate that returns true if a shoot is not assigned to a seed
+// and the default scheduler is configured.
 func (r *Reconciler) ShootPredicate() predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if shoot, ok := obj.(*gardencorev1beta1.Shoot); ok {

@@ -90,7 +90,7 @@ var _ = Describe("Add", func() {
 					shoot.Spec.SchedulerName = pointer.String("default-scheduler")
 				})
 
-				It("should be false", func() {
+				It("should be true", func() {
 					Expect(predicate.Create(createEvent)).To(BeTrue())
 					Expect(predicate.Update(updateEvent)).To(BeTrue())
 					Expect(predicate.Delete(deleteEvent)).To(BeTrue())

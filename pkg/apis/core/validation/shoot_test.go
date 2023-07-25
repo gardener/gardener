@@ -4529,7 +4529,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("scheduler name", func() {
-			It("allow setting the default scheduler name", func() {
+			It("allow setting the default scheduler name when name was 'nil'", func() {
 				shoot.Spec.SchedulerName = nil
 				oldShoot := shoot.DeepCopy()
 				shoot.Spec.SchedulerName = pointer.String("default-scheduler")
@@ -4539,10 +4539,23 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 
-			It("forbid changing the scheduler name", func() {
+			It("forbid changing the scheduler name when name was 'nil'", func() {
 				shoot.Spec.SchedulerName = nil
 				oldShoot := shoot.DeepCopy()
 				oldShoot.Spec.SchedulerName = pointer.String("foo-scheduler")
+
+				errorList := ValidateShootSpecUpdate(&shoot.Spec, &oldShoot.Spec, metav1.ObjectMeta{}, field.NewPath("spec"))
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.schedulerName"),
+				}))))
+			})
+
+			It("forbid changing the scheduler name when configured before", func() {
+				shoot.Spec.SchedulerName = pointer.String("foo-scheduler")
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.SchedulerName = pointer.String("bar-scheduler")
 
 				errorList := ValidateShootSpecUpdate(&shoot.Spec, &oldShoot.Spec, metav1.ObjectMeta{}, field.NewPath("spec"))
 
