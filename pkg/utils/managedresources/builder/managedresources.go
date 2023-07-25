@@ -169,7 +169,7 @@ func (m *ManagedResource) Reconcile(ctx context.Context) error {
 
 	// exclude all already patched secrets
 	for _, s := range oldSecrets {
-		excludedNames[s.Name] = struct{}{}
+		excludedNames.Insert(s.Name)
 	}
 
 	// mark new secrets (if any) as garbage collectable
@@ -200,10 +200,10 @@ func markSecretsAsGarbageCollectable(ctx context.Context, c client.Client, secre
 	return nil
 }
 
-func secretsFromRefs[S sets.Set[string]](obj *resourcesv1alpha1.ManagedResource, excludedNames S) []*corev1.Secret {
+func secretsFromRefs(obj *resourcesv1alpha1.ManagedResource, excludedNames sets.Set[string]) []*corev1.Secret {
 	secrets := make([]*corev1.Secret, 0, len(obj.Spec.SecretRefs))
 	for _, secretRef := range obj.Spec.SecretRefs {
-		if _, ok := excludedNames[secretRef.Name]; !ok {
+		if !excludedNames.Has(secretRef.Name) {
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      secretRef.Name,
