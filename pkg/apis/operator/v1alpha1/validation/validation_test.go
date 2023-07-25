@@ -33,6 +33,7 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	. "github.com/gardener/gardener/pkg/apis/operator/v1alpha1/validation"
 	"github.com/gardener/gardener/pkg/features"
+	schedulerv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 )
 
 var _ = Describe("Validation Tests", func() {
@@ -1203,6 +1204,23 @@ var _ = Describe("Validation Tests", func() {
 							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeForbidden),
 								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.featureGates.Foo"),
+							}))))
+						})
+					})
+
+					Context("Scheduler controller config", func() {
+						It("should complain when non-existing schedulers are configured", func() {
+							garden.Spec.VirtualCluster.Gardener.Scheduler = &operatorv1alpha1.GardenerSchedulerConfig{
+								SchedulerControllerConfiguration: &schedulerv1alpha1.SchedulerControllerConfiguration{
+									Shoot: &schedulerv1alpha1.ShootSchedulerConfiguration{
+										Strategy: "foobar",
+									},
+								},
+							}
+
+							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+								"Type":  Equal(field.ErrorTypeNotSupported),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.schedulerControllerConfiguration.shoot.strategy"),
 							}))))
 						})
 					})
