@@ -1062,6 +1062,31 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesConfig
 </p>
 </td>
 </tr>
+<tr>
+<td>
+<code>logLevel</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LogLevel is the configured log level for the gardener-admission-controller. Must be one of [info,debug,error].
+Defaults to info.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>schedulerControllerConfiguration</code></br>
+<em>
+github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1.SchedulerControllerConfiguration
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SchedulerControllerConfiguration is the configuration for resource size restrictions for arbitrary Group-Version-Kinds.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.GroupResource">GroupResource
