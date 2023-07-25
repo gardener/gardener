@@ -71,6 +71,39 @@ var _ = Describe("managedresources", func() {
 		c = mockclient.NewMockClient(ctrl)
 	})
 
+	Describe("#NewForShoot", func() {
+		It("should create a managed resource builder", func() {
+			var (
+				fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+
+				origin      = "foo-origin"
+				keepObjects = true
+			)
+
+			managedResource := NewForShoot(fakeClient, namespace, name, origin, keepObjects)
+			Expect(managedResource.Reconcile(ctx)).To(Succeed())
+
+			actual := &resourcesv1alpha1.ManagedResource{}
+			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), actual)).To(Succeed())
+			Expect(actual).To(Equal(&resourcesv1alpha1.ManagedResource{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "resources.gardener.cloud/v1alpha1",
+					Kind:       "ManagedResource",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            name,
+					Namespace:       namespace,
+					Labels:          map[string]string{"origin": origin},
+					ResourceVersion: "1",
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+					KeepObjects:  pointer.Bool(keepObjects),
+				},
+			}))
+		})
+	})
+
 	Describe("#CreateForShoot", func() {
 		It("should return the error of the secret reconciliation", func() {
 			gomock.InOrder(

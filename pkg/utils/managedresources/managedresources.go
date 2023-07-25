@@ -83,7 +83,7 @@ func New(client client.Client, namespace, name, class string, keepObjects *bool,
 func NewForShoot(c client.Client, namespace, name, origin string, keepObjects bool) *builder.ManagedResource {
 	var (
 		injectedLabels = map[string]string{v1beta1constants.ShootNoCleanup: "true"}
-		labels         = map[string]string{LabelKeyOrigin: LabelValueGardener}
+		labels         = map[string]string{LabelKeyOrigin: origin}
 	)
 
 	return New(c, namespace, name, "", &keepObjects, labels, injectedLabels, nil)
