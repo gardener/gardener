@@ -22,6 +22,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -142,7 +143,7 @@ func (m *ManagedResource) Reconcile(ctx context.Context) error {
 			mutateFn(resource)
 
 			// only mark the new secrets
-			if err := markSecretsAsGarbageCollectable(ctx, m.client, secretsFromRefs(resource, map[string]struct{}{})); err != nil {
+			if err := markSecretsAsGarbageCollectable(ctx, m.client, secretsFromRefs(resource, sets.New[string]())); err != nil {
 				return err
 			}
 
@@ -153,7 +154,7 @@ func (m *ManagedResource) Reconcile(ctx context.Context) error {
 
 	// mark all old secrets as garbage collectable
 	// TODO(dimityrmirchev): Cleanup after Gardener v1.90
-	excludedNames := map[string]struct{}{}
+	excludedNames := sets.New[string]()
 	oldSecrets := secretsFromRefs(resource, excludedNames)
 	if err := markSecretsAsGarbageCollectable(ctx, m.client, oldSecrets); err != nil {
 		return err
@@ -199,7 +200,7 @@ func markSecretsAsGarbageCollectable(ctx context.Context, c client.Client, secre
 	return nil
 }
 
-func secretsFromRefs(obj *resourcesv1alpha1.ManagedResource, excludedNames map[string]struct{}) []*corev1.Secret {
+func secretsFromRefs[S sets.Set[string]](obj *resourcesv1alpha1.ManagedResource, excludedNames S) []*corev1.Secret {
 	secrets := make([]*corev1.Secret, 0, len(obj.Spec.SecretRefs))
 	for _, secretRef := range obj.Spec.SecretRefs {
 		if _, ok := excludedNames[secretRef.Name]; !ok {
