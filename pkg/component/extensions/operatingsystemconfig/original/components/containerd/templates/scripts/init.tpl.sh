@@ -30,7 +30,7 @@ else
     echo "CRI registry section is already gardener managed. Nothing to do."
   else
     echo "CRI registry section is not gardener managed. Setting config_path = \"$CONFIG_PATH\" in $FILE."
-    sed --null-data --in-place 's/\(\[plugins\."io\.containerd\.grpc\.v1\.cri"\.registry\]\)\n\(\s*config_path = \)""\n/\1 \# gardener-managed\n\2"\/etc\/containerd\/certs.d"\n/' "$FILE"
+    sed --null-data --in-place 's/\(\[plugins\."io\.containerd\.grpc\.v1\.cri"\.registry\]\)\n\(\s*config_path\s*=\s*\)""\n/\1 \# gardener-managed\n\2"\/etc\/containerd\/certs.d"\n/' "$FILE"
   fi
 fi
 {{- else }}

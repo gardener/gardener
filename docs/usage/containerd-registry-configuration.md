@@ -4,7 +4,7 @@ title: containerd Registry Configuration
 
 # `containerd` Registry Configuration
 
-containerd supports configuring registries and mirrors. Using this native containerd feature end users can configure containerd to use public or private mirrors for a given upstream registry. More details about the registry configuration can be found in the [corresponding upstream documentation](https://github.com/containerd/containerd/blob/main/docs/hosts.md).
+containerd supports configuring registries and mirrors. Using this native containerd feature Shoot owners can configure containerd to use public or private mirrors for a given upstream registry. More details about the registry configuration can be found in the [corresponding upstream documentation](https://github.com/containerd/containerd/blob/main/docs/hosts.md).
 
 ### `containerd` Registry Configuration Patterns
 
@@ -67,7 +67,7 @@ Gardener supports configuring `containerd` registries on a Shoot using the new [
    config_path = "/etc/containerd/certs.d"
 ```
 
-In this way, end users can use the [hosts directory pattern](https://github.com/containerd/containerd/blob/main/docs/hosts.md) to configure registries for containerd.
+This allows Shoot owners to use the [hosts directory pattern](https://github.com/containerd/containerd/blob/main/docs/hosts.md) to configure registries for containerd. To do this, the Shoot owners need to create a directory under `/etc/containerd/certs.d` that is named with the upstream registry host name. In the newly created directory, a `hosts.toml` file needs to be created. For more details, see the [hosts directory pattern section](#hosts-directory-pattern) and the [upstream documentation](https://github.com/containerd/containerd/blob/main/docs/hosts.md).
 
 ### The registry-cache Extension
 
