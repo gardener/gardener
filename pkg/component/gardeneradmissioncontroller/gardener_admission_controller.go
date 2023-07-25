@@ -79,7 +79,7 @@ type ClientConnection struct {
 
 // New creates a new instance of DeployWaiter for the gardener-admission-controller.
 func New(client client.Client, namespace string, secretsManager secretsmanager.Interface, values Values) component.DeployWaiter {
-	return &gardeneradmissioncontroller{
+	return &gardenerAdmissionController{
 		client:         client,
 		namespace:      namespace,
 		secretsManager: secretsManager,
@@ -87,14 +87,14 @@ func New(client client.Client, namespace string, secretsManager secretsmanager.I
 	}
 }
 
-type gardeneradmissioncontroller struct {
+type gardenerAdmissionController struct {
 	client         client.Client
 	namespace      string
 	secretsManager secretsmanager.Interface
 	values         Values
 }
 
-func (a *gardeneradmissioncontroller) Deploy(ctx context.Context) error {
+func (a *gardenerAdmissionController) Deploy(ctx context.Context) error {
 	var (
 		runtimeRegistry           = managedresources.NewRegistry(operatorclient.RuntimeScheme, operatorclient.RuntimeCodec, operatorclient.RuntimeSerializer)
 		virtualGardenAccessSecret = a.newVirtualGardenAccessSecret()
@@ -153,7 +153,7 @@ func (a *gardeneradmissioncontroller) Deploy(ctx context.Context) error {
 	return managedresources.CreateForShoot(ctx, a.client, a.namespace, managedResourceNameVirtual, managedresources.LabelValueGardener, false, virtualResources)
 }
 
-func (a *gardeneradmissioncontroller) Wait(ctx context.Context) error {
+func (a *gardenerAdmissionController) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
@@ -167,7 +167,7 @@ func (a *gardeneradmissioncontroller) Wait(ctx context.Context) error {
 	)(timeoutCtx)
 }
 
-func (a *gardeneradmissioncontroller) Destroy(ctx context.Context) error {
+func (a *gardenerAdmissionController) Destroy(ctx context.Context) error {
 	if err := managedresources.DeleteForShoot(ctx, a.client, a.namespace, managedResourceNameVirtual); err != nil {
 		return err
 	}
@@ -179,7 +179,7 @@ func (a *gardeneradmissioncontroller) Destroy(ctx context.Context) error {
 	return kubernetesutils.DeleteObjects(ctx, a.client, a.newVirtualGardenAccessSecret().Secret)
 }
 
-func (a *gardeneradmissioncontroller) WaitCleanup(ctx context.Context) error {
+func (a *gardenerAdmissionController) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 

@@ -21,7 +21,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 )
 
-func (a *gardeneradmissioncontroller) podDisruptionBudget() *policyv1.PodDisruptionBudget {
+func (a *gardenerAdmissionController) podDisruptionBudget() *policyv1.PodDisruptionBudget {
 	return &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      deploymentName,

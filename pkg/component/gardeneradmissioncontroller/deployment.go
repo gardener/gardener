@@ -41,7 +41,7 @@ const (
 	volumeNameConfig          = "gardener-admission-controller-config"
 )
 
-func (a *gardeneradmissioncontroller) deployment(secretServerCert, secretGenericTokenKubeconfig, secretVirtualGardenAccess, configMapAdmissionConfig string) *appsv1.Deployment {
+func (a *gardenerAdmissionController) deployment(secretServerCert, secretGenericTokenKubeconfig, secretVirtualGardenAccess, configMapAdmissionConfig string) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      deploymentName,

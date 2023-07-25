@@ -26,7 +26,7 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
-func (a *gardeneradmissioncontroller) reconcileSecretServerCert(ctx context.Context) (*corev1.Secret, error) {
+func (a *gardenerAdmissionController) reconcileSecretServerCert(ctx context.Context) (*corev1.Secret, error) {
 	return a.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 		Name:                        secretNameServerCert,
 		CommonName:                  serviceName,
@@ -36,6 +36,6 @@ func (a *gardeneradmissioncontroller) reconcileSecretServerCert(ctx context.Cont
 	}, secretsmanager.SignedByCA(operatorv1alpha1.SecretNameCAGardener, secretsmanager.UseCurrentCA), secretsmanager.Rotate(secretsmanager.InPlace))
 }
 
-func (a *gardeneradmissioncontroller) newVirtualGardenAccessSecret() *gardenerutils.AccessSecret {
+func (a *gardenerAdmissionController) newVirtualGardenAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(deploymentName, a.namespace)
 }

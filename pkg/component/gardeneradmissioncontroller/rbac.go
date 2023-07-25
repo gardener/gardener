@@ -31,7 +31,7 @@ const (
 	clusterRoleBindingName = "gardener.cloud:admission-controller"
 )
 
-func (a *gardeneradmissioncontroller) clusterRole() *rbacv1.ClusterRole {
+func (a *gardenerAdmissionController) clusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   clusterRoleName,
@@ -99,7 +99,7 @@ func (a *gardeneradmissioncontroller) clusterRole() *rbacv1.ClusterRole {
 	}
 }
 
-func (a *gardeneradmissioncontroller) clusterRoleBinding(serviceAccountName string) *rbacv1.ClusterRoleBinding {
+func (a *gardenerAdmissionController) clusterRoleBinding(serviceAccountName string) *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   clusterRoleBindingName,

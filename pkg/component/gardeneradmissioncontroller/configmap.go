@@ -52,7 +52,7 @@ func init() {
 	admissionServerCodec = serializer.NewCodecFactory(admissionServerScheme).CodecForVersions(ser, ser, versions, versions)
 }
 
-func (a *gardeneradmissioncontroller) admissionConfigConfigMap() (*corev1.ConfigMap, error) {
+func (a *gardenerAdmissionController) admissionConfigConfigMap() (*corev1.ConfigMap, error) {
 	admissionConfig := &admissioncontrollerv1alpha1.AdmissionControllerConfiguration{
 		GardenClientConnection: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 			QPS:        a.values.ClientConnection.QPS,

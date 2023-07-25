@@ -23,7 +23,7 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 )
 
-func (a *gardeneradmissioncontroller) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
+func (a *gardenerAdmissionController) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 	autoUpdateMode := vpaautoscalingv1.UpdateModeAuto
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{

@@ -39,7 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
-func (a *gardeneradmissioncontroller) validatingWebhookConfiguration(caSecret *corev1.Secret) *admissionregistrationv1.ValidatingWebhookConfiguration {
+func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *corev1.Secret) *admissionregistrationv1.ValidatingWebhookConfiguration {
 	var (
 		failurePolicyFail     = admissionregistrationv1.Fail
 		sideEffectsNone       = admissionregistrationv1.SideEffectClassNone

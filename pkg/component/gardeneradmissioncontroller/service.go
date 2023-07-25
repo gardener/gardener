@@ -25,7 +25,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-func (a *gardeneradmissioncontroller) service() *corev1.Service {
+func (a *gardenerAdmissionController) service() *corev1.Service {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceName,
