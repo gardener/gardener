@@ -65,6 +65,7 @@ type ShootCreationConfig struct {
 	workersConfig                 string
 	shootYamlPath                 string
 	shootAnnotations              string
+	failureToleranceType          string
 }
 
 // ShootCreationFramework represents the shoot test framework that includes
@@ -181,6 +182,12 @@ func validateShootCreationConfig(cfg *ShootCreationConfig) {
 			ginkgo.Fail(fmt.Sprintf("path to the worker config of the Shoot is invalid: %s", cfg.workersConfig))
 		}
 	}
+
+	if StringSet(cfg.failureToleranceType) {
+		if cfg.failureToleranceType != "node" && cfg.failureToleranceType != "zone" {
+			ginkgo.Fail("failureToleranceType must be 'node' or 'zone'")
+		}
+	}
 }
 
 func mergeShootCreationConfig(base, overwrite *ShootCreationConfig) *ShootCreationConfig {
@@ -225,6 +232,10 @@ func mergeShootCreationConfig(base, overwrite *ShootCreationConfig) *ShootCreati
 
 	if StringSet(overwrite.shootMachineImageVersion) {
 		base.shootMachineImageVersion = overwrite.shootMachineImageVersion
+	}
+
+	if StringSet(overwrite.failureToleranceType) {
+		base.failureToleranceType = overwrite.failureToleranceType
 	}
 
 	if StringSet(overwrite.cloudProfile) {
@@ -342,6 +353,7 @@ func RegisterShootCreationFrameworkFlags() *ShootCreationConfig {
 	flag.StringVar(&newCfg.networkingNodes, "networking-nodes", "", "the spec.networking.nodes to use for this shoot. Optional.")
 	flag.StringVar(&newCfg.startHibernatedFlag, "start-hibernated", "", "the spec.hibernation.enabled to use for this shoot. Optional.")
 	flag.StringVar(&newCfg.allowPrivilegedContainersFlag, "allow-privileged-containers", "", "the spec.kubernetes.allowPrivilegedContainers to use for this shoot. Optional, defaults to true.")
+	flag.StringVar(&newCfg.failureToleranceType, "failure-tolerance-type", "", "the spec.controlPlane.highAvailability.failureTolerance.type to use for this shoot. Optional.")
 
 	if newCfg.networkingType == "" {
 		newCfg.networkingType = "calico"

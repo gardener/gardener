@@ -163,6 +163,8 @@ func CreateShootTestArtifacts(cfg *ShootCreationConfig, projectNamespace string,
 
 	setShootGeneralSettings(shoot, cfg, clearExtensions)
 
+	setShootHighAvailabilitySettings(shoot, cfg)
+
 	setShootNetworkingSettings(shoot, cfg, clearDNS)
 
 	setShootTolerations(shoot)
@@ -274,6 +276,14 @@ func setShootGeneralSettings(shoot *gardencorev1beta1.Shoot, cfg *ShootCreationC
 	if clearExtensions {
 		shoot.Spec.Extensions = nil
 	}
+}
+
+// setShootHighAvailabilitySettings sets the Shoot's HighAvailability settings from the given config
+func setShootHighAvailabilitySettings(shoot *gardencorev1beta1.Shoot, cfg *ShootCreationConfig) {
+	if StringSet(cfg.failureToleranceType) {
+		shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type = cfg.failureToleranceType
+	}
+
 }
 
 // setShootNetworkingSettings sets the Shoot's networking settings from the given config
