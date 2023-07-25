@@ -65,9 +65,15 @@ import (
 
 const finalizerName = "core.gardener.cloud/controllerinstallation"
 
-// RequeueDurationWhenResourceDeletionStillPresent is the duration used for requeueing when owned resources are still in
-// the process of being deleted when deleting a ControllerInstallation.
-var RequeueDurationWhenResourceDeletionStillPresent = 30 * time.Second
+var (
+	// WaitManagedResourceDeletedDurationTimeout is the duration used for waiting a managed resource and its secrets to be deleted
+	// from the seed before requeuing the request.
+	WaitManagedResourceDeletedDurationTimeout = 5 * time.Second
+
+	// RequeueDurationWhenResourceDeletionStillPresent is the duration used for requeueing when owned resources are still in
+	// the process of being deleted when deleting a ControllerInstallation.
+	RequeueDurationWhenResourceDeletionStillPresent = 30 * time.Second
+)
 
 // Reconciler reconciles ControllerInstallations and deploys them into the seed cluster.
 type Reconciler struct {
@@ -334,8 +340,7 @@ func (r *Reconciler) delete(
 		return reconcile.Result{}, err
 	}
 
-	fiveSecond := time.Second * 5
-	timeoutSeedCtx, cancelCtx := context.WithTimeout(seedCtx, fiveSecond)
+	timeoutSeedCtx, cancelCtx := context.WithTimeout(seedCtx, WaitManagedResourceDeletedDurationTimeout)
 	defer cancelCtx()
 	if err := managedresources.WaitUntilDeleted(timeoutSeedCtx, r.SeedClientSet.Client(), mr.Namespace, mr.Name); err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {

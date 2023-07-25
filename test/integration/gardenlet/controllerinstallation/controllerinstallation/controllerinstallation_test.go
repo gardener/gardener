@@ -148,6 +148,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 	Context("responsible", func() {
 		BeforeEach(func() {
 			DeferCleanup(test.WithVar(&controllerinstallation.RequeueDurationWhenResourceDeletionStillPresent, 500*time.Millisecond))
+			DeferCleanup(test.WithVar(&controllerinstallation.WaitManagedResourceDeletedDurationTimeout, time.Second*2))
 		})
 
 		JustBeforeEach(func() {
