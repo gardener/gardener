@@ -321,7 +321,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.SchedulerName).To(PointTo(Equal("default-scheduler")))
 		})
 
-		It("should default schedulerName", func() {
+		It("should not default schedulerName", func() {
 			obj.Spec.SchedulerName = pointer.String("foo-scheduler")
 
 			SetObjectDefaults_Shoot(obj)
