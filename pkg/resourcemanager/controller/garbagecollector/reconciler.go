@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -100,7 +101,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 		}
 	)
 
-	if r.Config.ConsiderManagedResources != nil && *r.Config.ConsiderManagedResources {
+	if pointer.BoolDeref(r.Config.ConsiderManagedResources, false) {
 		groupVersionKinds = append(groupVersionKinds, resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResourceList"))
 	}
 
