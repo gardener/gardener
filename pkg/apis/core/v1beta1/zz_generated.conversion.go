@@ -5839,6 +5839,7 @@ func autoConvert_v1beta1_ShootSpec_To_core_ShootSpec(in *ShootSpec, out *core.Sh
 	out.ExposureClassName = (*string)(unsafe.Pointer(in.ExposureClassName))
 	out.SystemComponents = (*core.SystemComponents)(unsafe.Pointer(in.SystemComponents))
 	out.ControlPlane = (*core.ControlPlane)(unsafe.Pointer(in.ControlPlane))
+	out.SchedulerName = (*string)(unsafe.Pointer(in.SchedulerName))
 	return nil
 }
 
@@ -5872,6 +5873,7 @@ func autoConvert_core_ShootSpec_To_v1beta1_ShootSpec(in *core.ShootSpec, out *Sh
 	out.ExposureClassName = (*string)(unsafe.Pointer(in.ExposureClassName))
 	out.SystemComponents = (*SystemComponents)(unsafe.Pointer(in.SystemComponents))
 	out.ControlPlane = (*ControlPlane)(unsafe.Pointer(in.ControlPlane))
+	out.SchedulerName = (*string)(unsafe.Pointer(in.SchedulerName))
 	return nil
 }
 

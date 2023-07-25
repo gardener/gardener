@@ -8,6 +8,7 @@ spec:
   cloudProfileName: cloudprofile1
   region: europe-central-1
   purpose: evaluation # {testing,development,production,infrastructure}, "infrastructure" purpose only usable for shoots in garden namespace
+# schedulerName: default-scheduler
   provider:
     type: <some-provider-name> # {aws,azure,gcp,...}
     infrastructureConfig:

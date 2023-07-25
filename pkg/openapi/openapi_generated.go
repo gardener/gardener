@@ -7738,6 +7738,13 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlane"),
 						},
 					},
+					"schedulerName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SchedulerName is the name of the responsible scheduler which schedules the shoot. If not specified, the default scheduler takes over. This field is immutable.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"cloudProfileName", "kubernetes", "provider", "region"},
 			},

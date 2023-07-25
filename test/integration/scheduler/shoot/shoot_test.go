@@ -43,7 +43,18 @@ var _ = Describe("Scheduler tests", func() {
 		It("should fail because no Seed in same region exist", func() {
 			cloudProfile := createCloudProfile(providerType, "other-region")
 			createSeed(providerType, "some-region", nil)
-			shoot := createShoot(providerType, cloudProfile.Name, "other-region", pointer.String("somedns.example.com"), nil)
+			shoot := createShoot(providerType, cloudProfile.Name, "other-region", nil, pointer.String("somedns.example.com"), nil)
+
+			Consistently(func() *string {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Spec.SeedName
+			}).Should(BeNil())
+		})
+
+		It("should fail because shoot doesn't configure the default scheduler", func() {
+			cloudProfile := createCloudProfile(providerType, "some-region")
+			_ = createSeed(providerType, "some-region", nil)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("foo-scheduler"), pointer.String("somedns.example.com"), nil)
 
 			Consistently(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -54,7 +65,7 @@ var _ = Describe("Scheduler tests", func() {
 		It("should pass because Seed and Shoot in the same region", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			seed := createSeed(providerType, "some-region", nil)
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), nil)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", nil, pointer.String("somedns.example.com"), nil)
 
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -65,7 +76,7 @@ var _ = Describe("Scheduler tests", func() {
 		It("should pass because there is a seed with < 3 zones for non-HA shoot", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			seed := createSeed(providerType, "some-region", []string{"1"})
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), nil)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", nil, pointer.String("somedns.example.com"), nil)
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName
@@ -75,7 +86,7 @@ var _ = Describe("Scheduler tests", func() {
 		It("should pass because there is a seed with >= 3 zones for non-HA shoot", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			seed := createSeed(providerType, "some-region", []string{"1", "2", "3"})
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), nil)
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", nil, pointer.String("somedns.example.com"), nil)
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName
@@ -85,7 +96,7 @@ var _ = Describe("Scheduler tests", func() {
 		It("should pass because there is a seed with < 3 zones for shoot with failure tolerance type 'node'", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			seed := createSeed(providerType, "some-region", []string{"1", "2"})
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneWithType("node"))
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", nil, pointer.String("somedns.example.com"), getControlPlaneWithType("node"))
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName
@@ -95,7 +106,7 @@ var _ = Describe("Scheduler tests", func() {
 		It("should pass because there is a seed with >= 3 zones for shoot with failure tolerance type 'node'", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			seed := createSeed(providerType, "some-region", []string{"1", "2", "3"})
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneWithType("node"))
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", nil, pointer.String("somedns.example.com"), getControlPlaneWithType("node"))
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName
@@ -105,7 +116,7 @@ var _ = Describe("Scheduler tests", func() {
 		It("should fail because there is no seed with >= 3 zones for shoot with failure tolerance type 'zone'", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			_ = createSeed(providerType, "some-region", []string{"1", "2"})
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneWithType("zone"))
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", nil, pointer.String("somedns.example.com"), getControlPlaneWithType("zone"))
 			Consistently(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName
@@ -115,7 +126,7 @@ var _ = Describe("Scheduler tests", func() {
 		It("should pass because there is a seed with >= 3 zones for shoot with failure tolerance type 'zone'", func() {
 			cloudProfile := createCloudProfile(providerType, "some-region")
 			seed := createSeed(providerType, "some-region", []string{"1", "2", "3"})
-			shoot := createShoot(providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"), getControlPlaneWithType("zone"))
+			shoot := createShoot(providerType, cloudProfile.Name, "some-region", nil, pointer.String("somedns.example.com"), getControlPlaneWithType("zone"))
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName
@@ -137,7 +148,7 @@ var _ = Describe("Scheduler tests", func() {
 			createSeed(providerType, "ap-west-1", nil)
 			createSeed(providerType, "us-central-2", nil)
 
-			shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", pointer.String("somedns.example.com"), nil)
+			shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, pointer.String("somedns.example.com"), nil)
 
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -154,7 +165,7 @@ var _ = Describe("Scheduler tests", func() {
 			createSeed(providerType, "ap-west-1", nil)
 			createSeed(providerType, "us-central-2", nil)
 
-			shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", pointer.String("somedns.example.com"), nil)
+			shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, pointer.String("somedns.example.com"), nil)
 
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -171,7 +182,7 @@ var _ = Describe("Scheduler tests", func() {
 			createSeed(providerType, "ap-west-1", nil)
 			createSeed(providerType, "us-central-2", nil)
 
-			shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", pointer.String("somedns.example.com"), nil)
+			shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, pointer.String("somedns.example.com"), nil)
 
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -188,7 +199,7 @@ var _ = Describe("Scheduler tests", func() {
 			createSeed(providerType, "ap-south-2", nil)
 			seed5 := createSeed(providerType, "eu-central-1", nil)
 
-			shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", pointer.String("somedns.example.com"), nil)
+			shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, pointer.String("somedns.example.com"), nil)
 
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -205,7 +216,7 @@ var _ = Describe("Scheduler tests", func() {
 			createSeed(providerType, "eu-central-2", nil)
 			createSeed(providerType, "sa-east-1", nil)
 
-			shoot := createShoot(providerType, cloudProfile.Name, "us-east-2", pointer.String("somedns.example.com"), nil)
+			shoot := createShoot(providerType, cloudProfile.Name, "us-east-2", nil, pointer.String("somedns.example.com"), nil)
 
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -222,7 +233,7 @@ var _ = Describe("Scheduler tests", func() {
 			createSeed(providerType, "ap-west-1", []string{"1", "2", "3"})
 			createSeed(providerType, "us-central-2", nil)
 
-			shoot := createShoot(providerType, cloudProfile.Name, "eu-east-1", pointer.String("somedns.example.com"), getControlPlaneWithType("zone"))
+			shoot := createShoot(providerType, cloudProfile.Name, "eu-east-1", nil, pointer.String("somedns.example.com"), getControlPlaneWithType("zone"))
 
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -368,7 +379,7 @@ func createCloudProfile(providerType, region string) *gardencorev1beta1.CloudPro
 	return cloudProfile
 }
 
-func createShoot(providerType, cloudProfile, region string, dnsDomain *string, controlPlane *gardencorev1beta1.ControlPlane) *gardencorev1beta1.Shoot {
+func createShoot(providerType, cloudProfile, region string, schedulerName, dnsDomain *string, controlPlane *gardencorev1beta1.ControlPlane) *gardencorev1beta1.Shoot {
 	By("Create Shoot")
 	shoot := &gardencorev1beta1.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
@@ -402,6 +413,7 @@ func createShoot(providerType, cloudProfile, region string, dnsDomain *string, c
 			},
 			Kubernetes:        gardencorev1beta1.Kubernetes{Version: "1.25.1"},
 			SecretBindingName: pointer.String(testSecretBinding.Name),
+			SchedulerName:     schedulerName,
 			DNS:               &gardencorev1beta1.DNS{Domain: dnsDomain},
 		},
 	}

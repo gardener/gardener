@@ -106,6 +106,10 @@ type ShootSpec struct {
 	SystemComponents *SystemComponents
 	// ControlPlane contains general settings for the control plane of the shoot.
 	ControlPlane *ControlPlane
+	// SchedulerName is the name of the responsible scheduler which schedules the shoot.
+	// If not specified, the default scheduler takes over.
+	// This field is immutable.
+	SchedulerName *string
 }
 
 // GetProviderType gets the type of the provider.

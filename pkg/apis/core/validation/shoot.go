@@ -19,6 +19,7 @@ import (
 	"math/big"
 	"net"
 	"net/url"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -326,6 +327,13 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	}
 
 	allErrs = append(allErrs, validateNetworkingUpdate(newSpec.Networking, oldSpec.Networking, fldPath.Child("networking"))...)
+
+	if !reflect.DeepEqual(oldSpec.SchedulerName, newSpec.SchedulerName) {
+		// only allow to set an empty scheduler name to the default scheduler
+		if oldSpec.SchedulerName != nil || pointer.StringDeref(newSpec.SchedulerName, "") != v1beta1constants.DefaultSchedulerName {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("schedulerName"), newSpec.SchedulerName, "field is immutable"))
+		}
+	}
 
 	return allErrs
 }

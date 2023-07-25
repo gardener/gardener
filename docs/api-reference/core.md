@@ -1841,6 +1841,20 @@ ControlPlane
 <p>ControlPlane contains general settings for the control plane of the shoot.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>schedulerName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SchedulerName is the name of the responsible scheduler which schedules the shoot.
+If not specified, the default scheduler takes over.
+This field is immutable.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -10909,6 +10923,20 @@ ControlPlane
 <p>ControlPlane contains general settings for the control plane of the shoot.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>schedulerName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SchedulerName is the name of the responsible scheduler which schedules the shoot.
+If not specified, the default scheduler takes over.
+This field is immutable.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ShootStateSpec">ShootStateSpec
@@ -11533,6 +11561,20 @@ ControlPlane
 <td>
 <em>(Optional)</em>
 <p>ControlPlane contains general settings for the control plane of the shoot.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>schedulerName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SchedulerName is the name of the responsible scheduler which schedules the shoot.
+If not specified, the default scheduler takes over.
+This field is immutable.</p>
 </td>
 </tr>
 </table>
