@@ -402,7 +402,7 @@ func (e *etcd) ScrapeConfigs() ([]string, error) {
 	}
 
 	// Add scrape config for druid metrics only if the role 'main' exist
-	if e.values.Role == "main" {
+	if e.values.Role == v1beta1constants.ETCDRoleMain {
 		var scrapeConfigDruid bytes.Buffer
 		if err := monitoringScrapeConfigDruidTemplate.Execute(&scrapeConfigDruid, values); err != nil {
 			return nil, err

@@ -15,11 +15,7 @@
 package etcd
 
 import (
-	"bytes"
-	"text/template"
-
-	"github.com/Masterminds/sprig"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"strings"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
@@ -48,7 +44,7 @@ var (
 		monitoringMetricNumDeltaEvents,
 	}
 
-	monitoringScrapeConfigTmpl = `job_name: ` + monitoringPrometheusJobName + `
+	monitoringScrapeConfig = `job_name: ` + monitoringPrometheusJobName + `
 kubernetes_sd_configs:
 - role: endpoints
   namespaces:
@@ -62,30 +58,11 @@ relabel_configs:
 metric_relabel_configs:
 - source_labels: [ __name__ ]
   action: keep
-  regex: ^({{ join "|" .allowedMetrics }})$
+  regex: ^(` + strings.Join(monitoringAllowedMetrics, "|") + `)$
 `
-	monitoringScrapeConfigTemplate *template.Template
 )
-
-func init() {
-	var err error
-
-	monitoringScrapeConfigTemplate, err = template.
-		New("monitoring-scrape-config").
-		Funcs(sprig.TxtFuncMap()).
-		Parse(monitoringScrapeConfigTmpl)
-	utilruntime.Must(err)
-}
 
 // CentralMonitoringConfiguration returns scrape configs for the central Prometheus.
 func CentralMonitoringConfiguration() (component.CentralMonitoringConfig, error) {
-	var scrapeConfig bytes.Buffer
-
-	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]interface{}{
-		"allowedMetrics": monitoringAllowedMetrics,
-	}); err != nil {
-		return component.CentralMonitoringConfig{}, err
-	}
-
-	return component.CentralMonitoringConfig{ScrapeConfigs: []string{scrapeConfig.String()}}, nil
+	return component.CentralMonitoringConfig{ScrapeConfigs: []string{monitoringScrapeConfig}}, nil
 }
