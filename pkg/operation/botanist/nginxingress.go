@@ -27,7 +27,6 @@ import (
 	extensionsdnsrecord "github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -99,7 +98,7 @@ func (b *Botanist) NeedsIngressDNS() bool {
 // DefaultIngressDNSRecord creates the default deployer for the ingress DNSRecord resource.
 func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
-		Name:              b.Shoot.GetInfo().Name + "-" + common.ShootDNSIngressName,
+		Name:              b.Shoot.GetInfo().Name + "-ingress",
 		SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
 		Namespace:         b.Shoot.SeedNamespace,
 		TTL:               b.Config.Controllers.Shoot.DNSEntryTTLSeconds,

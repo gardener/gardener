@@ -71,7 +71,7 @@ spec:
           type: RuntimeDefault
       containers:
       - name: gardener-operator
-        image: {{ include "utils-templates.image" .Values.image }}
+        image: {{ include "image" .Values.image }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         args:
         - --config=/etc/gardener-operator/config/config.yaml

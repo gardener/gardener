@@ -36,11 +36,10 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/chart"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -367,7 +366,7 @@ func (o *Operation) IsAPIServerRunning(ctx context.Context) (bool, error) {
 // GetSecretKeysOfRole returns a list of keys which are present in the Garden Secrets map and which
 // are prefixed with <kind>.
 func (o *Operation) GetSecretKeysOfRole(kind string) []string {
-	return common.FilterEntriesByPrefix(kind, o.AllSecretKeys())
+	return utils.FilterEntriesByPrefix(kind, o.AllSecretKeys())
 }
 
 // ReportShootProgress will update the last operation object in the Shoot manifest `status` section
@@ -418,38 +417,9 @@ func (o *Operation) ShootVersion() string {
 	return o.Shoot.GetInfo().Spec.Kubernetes.Version
 }
 
-// InjectSeedSeedImages injects images that shall run on the Seed and target the Seed's Kubernetes version.
-func (o *Operation) InjectSeedSeedImages(values map[string]interface{}, names ...string) (map[string]interface{}, error) {
-	return chart.InjectImages(values, o.ImageVector, names, imagevector.RuntimeVersion(o.SeedVersion()), imagevector.TargetVersion(o.SeedVersion()))
-}
-
-// InjectSeedShootImages injects images that shall run on the Seed but target the Shoot's Kubernetes version.
-func (o *Operation) InjectSeedShootImages(values map[string]interface{}, names ...string) (map[string]interface{}, error) {
-	return chart.InjectImages(values, o.ImageVector, names, imagevector.RuntimeVersion(o.SeedVersion()), imagevector.TargetVersion(o.ShootVersion()))
-}
-
-// InjectShootShootImages injects images that shall run on the Shoot and target the Shoot's Kubernetes version.
-func (o *Operation) InjectShootShootImages(values map[string]interface{}, names ...string) (map[string]interface{}, error) {
-	return chart.InjectImages(values, o.ImageVector, names, imagevector.RuntimeVersion(o.ShootVersion()), imagevector.TargetVersion(o.ShootVersion()))
-}
-
 // DeleteClusterResourceFromSeed deletes the `Cluster` extension resource for the shoot in the seed cluster.
 func (o *Operation) DeleteClusterResourceFromSeed(ctx context.Context) error {
 	return client.IgnoreNotFound(o.SeedClientSet.Client().Delete(ctx, &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}))
-}
-
-// ComputePrometheusHosts computes the hosts for prometheus.
-func (o *Operation) ComputePrometheusHosts() []string {
-	return []string{
-		o.ComputePrometheusHost(),
-	}
-}
-
-// ComputeAlertManagerHosts computes the host for alert manager.
-func (o *Operation) ComputeAlertManagerHosts() []string {
-	return []string{
-		o.ComputeAlertManagerHost(),
-	}
 }
 
 // IsShootMonitoringEnabled returns true if shoot monitoring is enabled and shoot is not of purpose testing.
@@ -464,27 +434,27 @@ func (o *Operation) WantsPlutono() bool {
 
 // ComputeKubeAPIServerHost computes the host with a TLS certificate from a trusted origin for KubeAPIServer.
 func (o *Operation) ComputeKubeAPIServerHost() string {
-	return o.ComputeIngressHost(common.KubeAPIServerPrefix)
+	return o.ComputeIngressHost("api")
 }
 
 // ComputePlutonoHost computes the host for Plutono.
 func (o *Operation) ComputePlutonoHost() string {
-	return o.ComputeIngressHost(common.PlutonoUsersPrefix)
+	return o.ComputeIngressHost("gu")
 }
 
 // ComputeAlertManagerHost computes the host for alert manager.
 func (o *Operation) ComputeAlertManagerHost() string {
-	return o.ComputeIngressHost(common.AlertManagerPrefix)
+	return o.ComputeIngressHost("au")
 }
 
 // ComputePrometheusHost computes the host for prometheus.
 func (o *Operation) ComputePrometheusHost() string {
-	return o.ComputeIngressHost(common.PrometheusPrefix)
+	return o.ComputeIngressHost("p")
 }
 
 // ComputeValiHost computes the host for vali.
 func (o *Operation) ComputeValiHost() string {
-	return o.ComputeIngressHost(common.ValiPrefix)
+	return o.ComputeIngressHost("v")
 }
 
 // technicalIDPattern addresses the ambiguity that one or two dashes could follow the prefix "shoot" in the technical ID of the shoot.

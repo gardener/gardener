@@ -159,7 +159,7 @@ var _ = Describe("Logging", func() {
 		ctrl.Finish()
 	})
 
-	Describe("#DeploySeedLogging", func() {
+	Describe("#DeployLogging", func() {
 		It("should successfully delete the logging stack when shoot is with testing purpose", func() {
 			botanist.Shoot.Purpose = shootPurposeTesting
 			gomock.InOrder(
@@ -171,7 +171,7 @@ var _ = Describe("Logging", func() {
 				valiDeployer.EXPECT().Destroy(ctx),
 			)
 
-			Expect(botanist.DeploySeedLogging(ctx)).To(Succeed())
+			Expect(botanist.DeployLogging(ctx)).To(Succeed())
 		})
 
 		It("should successfully delete the logging stack when it is disabled", func() {
@@ -185,7 +185,7 @@ var _ = Describe("Logging", func() {
 				valiDeployer.EXPECT().Destroy(ctx),
 			)
 
-			Expect(botanist.DeploySeedLogging(ctx)).To(Succeed())
+			Expect(botanist.DeployLogging(ctx)).To(Succeed())
 		})
 
 		It("should successfully clean up the existing Loki based deployment and deploy all of the components in the logging stack when it is enabled", func() {
@@ -276,7 +276,7 @@ var _ = Describe("Logging", func() {
 				valiDeployer.EXPECT().Deploy(ctx),
 			)
 
-			Expect(botanist.DeploySeedLogging(ctx)).To(Succeed())
+			Expect(botanist.DeployLogging(ctx)).To(Succeed())
 		})
 
 		It("should successfully deploy all of the components in the logging stack when it is enabled", func() {
@@ -289,7 +289,7 @@ var _ = Describe("Logging", func() {
 				valiDeployer.EXPECT().Deploy(ctx),
 			)
 
-			Expect(botanist.DeploySeedLogging(ctx)).To(Succeed())
+			Expect(botanist.DeployLogging(ctx)).To(Succeed())
 		})
 
 		It("should not deploy event logger when it is disabled", func() {
@@ -304,7 +304,7 @@ var _ = Describe("Logging", func() {
 				valiDeployer.EXPECT().Deploy(ctx),
 			)
 
-			Expect(botanist.DeploySeedLogging(ctx)).To(Succeed())
+			Expect(botanist.DeployLogging(ctx)).To(Succeed())
 		})
 
 		It("should not deploy shoot node logging for workerless shoot", func() {
@@ -319,7 +319,7 @@ var _ = Describe("Logging", func() {
 				valiDeployer.EXPECT().Deploy(ctx),
 			)
 
-			Expect(botanist.DeploySeedLogging(ctx)).To(Succeed())
+			Expect(botanist.DeployLogging(ctx)).To(Succeed())
 		})
 
 		It("should not deploy shoot node logging when it is disabled", func() {
@@ -334,7 +334,7 @@ var _ = Describe("Logging", func() {
 				valiDeployer.EXPECT().Deploy(ctx),
 			)
 
-			Expect(botanist.DeploySeedLogging(ctx)).To(Succeed())
+			Expect(botanist.DeployLogging(ctx)).To(Succeed())
 		})
 
 		It("should not deploy shoot node logging and Vali when Vali is disabled", func() {
@@ -349,14 +349,14 @@ var _ = Describe("Logging", func() {
 				valiDeployer.EXPECT().Destroy(ctx),
 			)
 
-			Expect(botanist.DeploySeedLogging(ctx)).To(Succeed())
+			Expect(botanist.DeployLogging(ctx)).To(Succeed())
 		})
 
 		Context("Tests expecting a failure", func() {
 			It("should fail to delete the logging stack when ShootRBACProxyDeployer Destroy returns error", func() {
 				*botanist.Config.Logging.Enabled = false
 				shootRBACProxyDeployer.EXPECT().Destroy(ctx).Return(fakeErr)
-				Expect(botanist.DeploySeedLogging(ctx)).ToNot(Succeed())
+				Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
 			})
 
 			It("should fail to delete the logging stack when ShootEventLoggerDeployer Destroy return error", func() {
@@ -368,7 +368,7 @@ var _ = Describe("Logging", func() {
 					eventLoggerDeployer.EXPECT().Destroy(ctx).Return(fakeErr),
 				)
 
-				Expect(botanist.DeploySeedLogging(ctx)).ToNot(Succeed())
+				Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
 			})
 
 			It("should fail to delete the logging stack when logging is disbaled and ShootValiDeployer Destroy return error", func() {
@@ -382,7 +382,7 @@ var _ = Describe("Logging", func() {
 					valiDeployer.EXPECT().Destroy(ctx).Return(fakeErr),
 				)
 
-				Expect(botanist.DeploySeedLogging(ctx)).ToNot(Succeed())
+				Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
 			})
 
 			It("should fail to deploy the logging stack when ShootEventLoggerDeployer Deploy returns an error", func() {
@@ -391,7 +391,7 @@ var _ = Describe("Logging", func() {
 					eventLoggerDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
 				)
 
-				Expect(botanist.DeploySeedLogging(ctx)).ToNot(Succeed())
+				Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
 			})
 
 			It("should fail to deploy the logging stack when deploying of the shoot event logging fails", func() {
@@ -401,7 +401,7 @@ var _ = Describe("Logging", func() {
 					eventLoggerDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
 				)
 
-				Expect(botanist.DeploySeedLogging(ctx)).ToNot(Succeed())
+				Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
 			})
 
 			It("should fail to deploy the logging stack when KubeRBACProxyDeployer Deploy returns an error", func() {
@@ -411,7 +411,7 @@ var _ = Describe("Logging", func() {
 					shootRBACProxyDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
 				)
 
-				Expect(botanist.DeploySeedLogging(ctx)).ToNot(Succeed())
+				Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
 			})
 
 			It("should fail to deploy the logging stack when ValiDeployer Deploy returns error", func() {
@@ -422,7 +422,7 @@ var _ = Describe("Logging", func() {
 					valiDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
 				)
 
-				Expect(botanist.DeploySeedLogging(ctx)).ToNot(Succeed())
+				Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
 			})
 		})
 	})

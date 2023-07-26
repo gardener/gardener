@@ -107,6 +107,7 @@ build:
         - pkg/component/logging/kuberbacproxy
         - pkg/component/machinecontrollermanager
         - pkg/component/metricsserver
+        - pkg/component/monitoring
         - pkg/component/namespaces
         - pkg/component/nginxingress
         - pkg/component/nodeexporter

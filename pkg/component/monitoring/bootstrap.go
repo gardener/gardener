@@ -35,7 +35,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/istio"
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -44,12 +43,12 @@ import (
 
 var (
 	//go:embed charts/bootstrap
-	chart     embed.FS
-	chartPath = filepath.Join("charts", "bootstrap")
+	chartBootstrap     embed.FS
+	chartPathBootstrap = filepath.Join("charts", "bootstrap")
 )
 
-// Values is a set of configuration values for the monitoring components.
-type Values struct {
+// ValuesBootstrap is a set of configuration values for the monitoring components.
+type ValuesBootstrap struct {
 	// AlertingSMTPSecret is the alerting SMTP secret..
 	AlertingSMTPSecret *corev1.Secret
 	// GlobalMonitoringSecret is the global monitoring secret for the garden cluster.
@@ -78,13 +77,13 @@ type Values struct {
 	WildcardCertName *string
 }
 
-// New creates a new instance of Deployer for the monitoring components.
-func New(
+// NewBootstrap creates a new instance of Deployer for the monitoring components.
+func NewBootstrap(
 	client client.Client,
 	chartApplier kubernetes.ChartApplier,
 	secretsManager secretsmanager.Interface,
 	namespace string,
-	values Values,
+	values ValuesBootstrap,
 ) component.Deployer {
 	return &bootstrapper{
 		client:         client,
@@ -100,7 +99,7 @@ type bootstrapper struct {
 	chartApplier   kubernetes.ChartApplier
 	namespace      string
 	secretsManager secretsmanager.Interface
-	values         Values
+	values         ValuesBootstrap
 }
 
 func (b *bootstrapper) Deploy(ctx context.Context) error {
@@ -192,7 +191,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		alertManagerConfig["emailConfigs"] = []map[string]interface{}{emailConfig}
 	} else {
 		alertManagerConfig["enabled"] = false
-		if err := common.DeleteAlertmanager(ctx, b.client, b.namespace); err != nil {
+		if err := deleteAlertmanager(ctx, b.client, b.namespace); err != nil {
 			return err
 		}
 	}
@@ -268,7 +267,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		},
 	})
 
-	return b.chartApplier.ApplyFromEmbeddedFS(ctx, chart, chartPath, b.namespace, "monitoring", values, applierOptions)
+	return b.chartApplier.ApplyFromEmbeddedFS(ctx, chartBootstrap, chartPathBootstrap, b.namespace, "monitoring", values, applierOptions)
 }
 
 func (b *bootstrapper) Destroy(ctx context.Context) error {

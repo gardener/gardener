@@ -17,9 +17,6 @@ package common
 import (
 	"context"
 	"fmt"
-	"math/big"
-	"net"
-	"strings"
 	"time"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -37,67 +34,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-// FilterEntriesByPrefix returns a list of strings which begin with the given prefix.
-func FilterEntriesByPrefix(prefix string, entries []string) []string {
-	var result []string
-	for _, entry := range entries {
-		if strings.HasPrefix(entry, prefix) {
-			result = append(result, entry)
-		}
-	}
-	return result
-}
-
-// ComputeOffsetIP parses the provided <subnet> and offsets with the value of <offset>.
-// For example, <subnet> = 100.64.0.0/11 and <offset> = 10 the result would be 100.64.0.10
-// IPv6 and IPv4 is supported.
-func ComputeOffsetIP(subnet *net.IPNet, offset int64) (net.IP, error) {
-	if subnet == nil {
-		return nil, fmt.Errorf("subnet is nil")
-	}
-
-	isIPv6 := false
-
-	bytes := subnet.IP.To4()
-	if bytes == nil {
-		isIPv6 = true
-		bytes = subnet.IP.To16()
-	}
-
-	ip := net.IP(big.NewInt(0).Add(big.NewInt(0).SetBytes(bytes), big.NewInt(offset)).Bytes())
-
-	if !subnet.Contains(ip) {
-		return nil, fmt.Errorf("cannot compute IP with offset %d - subnet %q too small", offset, subnet)
-	}
-
-	// there is no broadcast address on IPv6
-	if isIPv6 {
-		return ip, nil
-	}
-
-	for i := range ip {
-		// IP address is not the same, so it's not the broadcast ip.
-		if ip[i] != ip[i]|^subnet.Mask[i] {
-			return ip.To4(), nil
-		}
-	}
-
-	return nil, fmt.Errorf("computed IPv4 address %q is broadcast for subnet %q", ip, subnet)
-}
-
-// GenerateAddonConfig returns the provided <values> in case <enabled> is true. Otherwise, nil is
-// being returned.
-func GenerateAddonConfig(values map[string]interface{}, enabled bool) map[string]interface{} {
-	v := map[string]interface{}{
-		"enabled": enabled,
-	}
-	if enabled {
-		for key, value := range values {
-			v[key] = value
-		}
-	}
-	return v
-}
+// TODO(rickardsjp, istvanballok): remove this package in release v1.77
 
 // LokiPvcExists checks if the loki-loki-0 PVC exists in the given namespace.
 func LokiPvcExists(ctx context.Context, k8sClient client.Client, namespace string, log logr.Logger) (bool, error) {
@@ -130,7 +67,7 @@ func DeleteLokiRetainPvc(ctx context.Context, k8sClient client.Client, namespace
 		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-promtail", Namespace: namespace}},
 		// We retain the PVC and reuse it with Vali.
-		//&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "loki-loki-0", Namespace: namespace}},
+		// &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "loki-loki-0", Namespace: namespace}},
 	}
 
 	// Loki currently needs 30s to terminate because after 1s of graceful shutdown preparation it waits for 30s until it is eventually
@@ -509,56 +446,6 @@ func RenameLokiPvcToValiPvc(ctx context.Context, k8sClient client.Client, namesp
 
 	log.Info("Loki2vali: Successfully finished RenameLokiPvcToValiPvc", "lokiNamespace", namespace)
 	return nil
-}
-
-// DeleteAlertmanager deletes all resources of the Alertmanager in a given namespace.
-func DeleteAlertmanager(ctx context.Context, k8sClient client.Client, namespace string) error {
-	objs := []client.Object{
-		&appsv1.StatefulSet{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      v1beta1constants.StatefulSetNameAlertManager,
-				Namespace: namespace,
-			},
-		},
-		&networkingv1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "alertmanager",
-				Namespace: namespace,
-			},
-		},
-		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "alertmanager-client",
-				Namespace: namespace,
-			},
-		},
-		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "alertmanager",
-				Namespace: namespace,
-			},
-		},
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "alertmanager-basic-auth",
-				Namespace: namespace,
-			},
-		},
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "alertmanager-config",
-				Namespace: namespace,
-			},
-		},
-		&corev1.PersistentVolumeClaim{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "alertmanager-db-alertmanager-0",
-				Namespace: namespace,
-			},
-		},
-	}
-
-	return kubernetesutils.DeleteObjects(ctx, k8sClient, objs...)
 }
 
 // DeleteGrafana deletes the Grafana resources that are no longer necessary due to the migration to Plutono.

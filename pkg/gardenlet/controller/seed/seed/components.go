@@ -447,12 +447,12 @@ func defaultMonitoring(
 		return nil, err
 	}
 
-	return monitoring.New(
+	return monitoring.NewBootstrap(
 		c,
 		chartApplier,
 		secretsManager,
 		namespace,
-		monitoring.Values{
+		monitoring.ValuesBootstrap{
 			AlertingSMTPSecret:                 alertingSMTPSecret,
 			GlobalMonitoringSecret:             globalMonitoringSecret,
 			HVPAEnabled:                        hvpaEnabled,

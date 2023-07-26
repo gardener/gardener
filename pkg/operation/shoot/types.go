@@ -48,6 +48,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/component/machinecontrollermanager"
+	"github.com/gardener/gardener/pkg/component/monitoring"
 	"github.com/gardener/gardener/pkg/component/nodeexporter"
 	"github.com/gardener/gardener/pkg/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/component/plutono"
@@ -116,9 +117,10 @@ type Components struct {
 	Extensions               *Extensions
 	SystemComponents         *SystemComponents
 	Logging                  *Logging
+	Monitoring               *Monitoring
+	Addons                   *Addons
 	GardenerAccess           component.Deployer
 	DependencyWatchdogAccess component.Deployer
-	Addons                   *Addons
 }
 
 // ControlPlane contains references to K8S control plane components.
@@ -172,7 +174,12 @@ type SystemComponents struct {
 	VPNShoot            vpnshoot.Interface
 }
 
-// Logging contains references to logging deployers
+// Monitoring contains references to monitoring deployers.
+type Monitoring struct {
+	Monitoring monitoring.Interface
+}
+
+// Logging contains references to logging deployers.
 type Logging struct {
 	// TODO(rfranzke): Drop the `ShootRBACProxy` field after gardener/gardener@v1.78 has been released.
 	ShootRBACProxy component.Deployer

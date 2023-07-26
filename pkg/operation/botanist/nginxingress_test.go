@@ -47,7 +47,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -241,7 +240,7 @@ var _ = Describe("NginxIngress", func() {
 
 			actual := c.GetValues()
 			Expect(actual).To(DeepEqual(&dnsrecord.Values{
-				Name:       b.Shoot.GetInfo().Name + "-" + common.ShootDNSIngressName,
+				Name:       b.Shoot.GetInfo().Name + "-ingress",
 				SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
 				Namespace:  seedNamespace,
 				TTL:        pointer.Int64(ttl),
@@ -287,7 +286,7 @@ var _ = Describe("NginxIngress", func() {
 
 			actual := c.GetValues()
 			Expect(actual).To(DeepEqual(&dnsrecord.Values{
-				Name:       b.Shoot.GetInfo().Name + "-" + common.ShootDNSIngressName,
+				Name:       b.Shoot.GetInfo().Name + "-ingress",
 				SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
 				Namespace:  seedNamespace,
 				TTL:        pointer.Int64(ttl),
@@ -315,7 +314,7 @@ var _ = Describe("NginxIngress", func() {
 			Expect(c.Deploy(ctx)).ToNot(HaveOccurred())
 
 			dnsRecord := &extensionsv1alpha1.DNSRecord{}
-			err := client.Get(ctx, types.NamespacedName{Name: shootName + "-" + common.ShootDNSIngressName, Namespace: seedNamespace}, dnsRecord)
+			err := client.Get(ctx, types.NamespacedName{Name: shootName + "-ingress", Namespace: seedNamespace}, dnsRecord)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dnsRecord).To(DeepDerivativeEqual(&extensionsv1alpha1.DNSRecord{
 				TypeMeta: metav1.TypeMeta{
@@ -323,7 +322,7 @@ var _ = Describe("NginxIngress", func() {
 					APIVersion: "extensions.gardener.cloud/v1alpha1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            shootName + "-" + common.ShootDNSIngressName,
+					Name:            shootName + "-ingress",
 					Namespace:       seedNamespace,
 					ResourceVersion: "1",
 					Annotations: map[string]string{

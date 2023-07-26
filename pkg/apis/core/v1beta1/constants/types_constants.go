@@ -753,6 +753,8 @@ const (
 
 	// IngressTLSCertificateValidity is the default validity for ingress TLS certificates.
 	IngressTLSCertificateValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
+	// VPNTunnel dictates that VPN is used as a tunnel between seed and shoot networks.
+	VPNTunnel string = "vpn-shoot"
 )
 
 var (

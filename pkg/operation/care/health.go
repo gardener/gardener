@@ -33,6 +33,7 @@ import (
 	apiextensions "github.com/gardener/gardener/pkg/api/extensions"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -42,7 +43,6 @@ import (
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -454,7 +454,7 @@ func (h *Health) checkSystemComponents(
 			return &c, nil
 		}
 
-		if established, err := botanist.CheckTunnelConnection(ctx, logr.Discard(), h.shootClient, common.VPNTunnel); err != nil || !established {
+		if established, err := botanist.CheckTunnelConnection(ctx, logr.Discard(), h.shootClient, v1beta1constants.VPNTunnel); err != nil || !established {
 			msg := "Tunnel connection has not been established"
 			if err != nil {
 				msg += fmt.Sprintf(" (%+v)", err)
