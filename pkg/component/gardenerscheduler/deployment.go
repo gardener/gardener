@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gardeneradmissioncontroller
+package gardenerscheduler
 
 import (
 	"fmt"
@@ -34,20 +34,17 @@ import (
 )
 
 const (
-	secretNameServerCert      = "gardener-admission-controller-cert"
-	volumeMountPathServerCert = "/etc/gardener-admission-controller/srv"
-	volumeMountConfig         = "/etc/gardener-admission-controller/config"
-	volumeNameCerts           = "gardener-admission-controller-cert"
-	volumeNameConfig          = "gardener-admission-controller-config"
+	volumeMountConfig = "/etc/gardener-scheduler/config"
+	volumeNameConfig  = "gardener-scheduler-config"
 )
 
-func (a *gardenerAdmissionController) deployment(secretServerCert, secretGenericTokenKubeconfig, secretVirtualGardenAccess, configMapAdmissionConfig string) *appsv1.Deployment {
+func (g *gardenerScheduler) deployment(secretGenericTokenKubeconfig, secretVirtualGardenAccess, configMapSchedulerConfig string) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      deploymentName,
-			Namespace: a.namespace,
+			Name:      DeploymentName,
+			Namespace: g.namespace,
 			Labels: utils.MergeStringMaps(GetLabels(), map[string]string{
-				resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
+				resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
 			}),
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -63,20 +60,20 @@ func (a *gardenerAdmissionController) deployment(secretServerCert, secretGeneric
 					}),
 				},
 				Spec: corev1.PodSpec{
-					PriorityClassName:            v1beta1constants.PriorityClassNameGardenSystem400,
+					PriorityClassName:            v1beta1constants.PriorityClassNameGardenSystem200,
 					AutomountServiceAccountToken: pointer.Bool(false),
 					Containers: []corev1.Container{
 						{
-							Name:            deploymentName,
-							Image:           a.values.Image,
+							Name:            DeploymentName,
+							Image:           g.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{
 								fmt.Sprintf("--config=%s/%s", volumeMountConfig, dataConfigKey),
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: map[corev1.ResourceName]resource.Quantity{
-									corev1.ResourceCPU:    resource.MustParse("100m"),
-									corev1.ResourceMemory: resource.MustParse("200Mi"),
+									corev1.ResourceCPU:    resource.MustParse("50m"),
+									corev1.ResourceMemory: resource.MustParse("50Mi"),
 								},
 							},
 							LivenessProbe: &corev1.Probe{
@@ -103,11 +100,6 @@ func (a *gardenerAdmissionController) deployment(secretServerCert, secretGeneric
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      volumeNameCerts,
-									MountPath: volumeMountPathServerCert,
-									ReadOnly:  true,
-								},
-								{
 									Name:      volumeNameConfig,
 									MountPath: volumeMountConfig,
 								},
@@ -116,16 +108,10 @@ func (a *gardenerAdmissionController) deployment(secretServerCert, secretGeneric
 					},
 					Volumes: []corev1.Volume{
 						{
-							Name: volumeNameCerts,
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{SecretName: secretServerCert},
-							},
-						},
-						{
 							Name: volumeNameConfig,
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{Name: configMapAdmissionConfig},
+									LocalObjectReference: corev1.LocalObjectReference{Name: configMapSchedulerConfig},
 								},
 							},
 						},
