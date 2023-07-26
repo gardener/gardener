@@ -19,7 +19,7 @@
     "panels": [
       {
         "datasource": null,
-        "description": "Number of succeeded compaction jobs initiated by compaction controller in the selected time range",
+        "description": "Number of succeeded compaction jobs initiated by compaction controller in the selected time range.",
         "fieldConfig": {
           "defaults": {
             "color": {
