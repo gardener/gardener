@@ -283,10 +283,6 @@ var _ = Describe("GardenerScheduler", func() {
 			BeforeEach(func() {
 				// test with typical values
 				values = Values{
-					ClientConnection: ClientConnection{
-						QPS:   100,
-						Burst: 130,
-					},
 					LogLevel: "info",
 				}
 
@@ -365,11 +361,11 @@ var _ = Describe("GardenerScheduler", func() {
 
 				Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecretRuntime.Data).To(HaveLen(5))
-				Expect(string(managedResourceSecretRuntime.Data["configmap__some-namespace__gardener-scheduler-config-169df746.yaml"])).To(Equal(configMap(namespace, values)))
+				Expect(string(managedResourceSecretRuntime.Data["configmap__some-namespace__gardener-scheduler-config-3cf6616e.yaml"])).To(Equal(configMap(namespace, values)))
 				Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-scheduler.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudget)))
 				Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-scheduler.yaml"])).To(Equal(componenttest.Serialize(serviceRuntime)))
 				Expect(string(managedResourceSecretRuntime.Data["verticalpodautoscaler__some-namespace__gardener-scheduler-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
-				Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-scheduler.yaml"])).To(Equal(deployment(namespace, "gardener-scheduler-config-169df746", values)))
+				Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-scheduler.yaml"])).To(Equal(deployment(namespace, "gardener-scheduler-config-3cf6616e", values)))
 
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecretVirtual.Data).To(HaveLen(2))
@@ -700,8 +696,8 @@ func configMap(namespace string, testValues Values) string {
 			Kind:       "SchedulerConfiguration",
 		},
 		ClientConnection: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
-			QPS:        testValues.ClientConnection.QPS,
-			Burst:      testValues.ClientConnection.Burst,
+			QPS:        100,
+			Burst:      130,
 			Kubeconfig: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 		},
 		LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
@@ -719,7 +715,11 @@ func configMap(namespace string, testValues Values) string {
 				Port: 19251,
 			},
 		},
-		Schedulers:   testValues.Schedulers,
+		Schedulers: schedulerv1alpha1.SchedulerControllerConfiguration{
+			Shoot: &schedulerv1alpha1.ShootSchedulerConfiguration{
+				Strategy: "MinimalDistance",
+			},
+		},
 		FeatureGates: testValues.FeatureGates,
 	}
 
@@ -759,7 +759,7 @@ func deployment(namespace, configSecretName string, testValues Values) string {
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: &testValues.Replicas,
+			Replicas: pointer.Int32(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app":  "gardener",
@@ -776,7 +776,7 @@ func deployment(namespace, configSecretName string, testValues Values) string {
 					}),
 				},
 				Spec: corev1.PodSpec{
-					PriorityClassName:            "gardener-garden-system-400",
+					PriorityClassName:            "gardener-garden-system-200",
 					AutomountServiceAccountToken: pointer.Bool(false),
 					Containers: []corev1.Container{
 						{

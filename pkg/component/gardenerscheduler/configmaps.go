@@ -59,8 +59,8 @@ func init() {
 func (g *gardenerScheduler) configMapSchedulerConfig() (*corev1.ConfigMap, error) {
 	schedulerConfig := &schedulerv1alpha1.SchedulerConfiguration{
 		ClientConnection: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
-			QPS:        g.values.ClientConnection.QPS,
-			Burst:      g.values.ClientConnection.Burst,
+			QPS:        100,
+			Burst:      130,
 			Kubeconfig: gardenerutils.PathGenericKubeconfig,
 		},
 		LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
@@ -74,7 +74,11 @@ func (g *gardenerScheduler) configMapSchedulerConfig() (*corev1.ConfigMap, error
 			HealthProbes: &schedulerv1alpha1.Server{Port: probePort},
 			Metrics:      &schedulerv1alpha1.Server{Port: metricsPort},
 		},
-		Schedulers:   g.values.Schedulers,
+		Schedulers: schedulerv1alpha1.SchedulerControllerConfiguration{
+			Shoot: &schedulerv1alpha1.ShootSchedulerConfiguration{
+				Strategy: schedulerv1alpha1.MinimalDistance,
+			},
+		},
 		FeatureGates: g.values.FeatureGates,
 	}
 

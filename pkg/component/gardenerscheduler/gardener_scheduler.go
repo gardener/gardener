@@ -24,7 +24,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
-	schedulerv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -50,26 +49,12 @@ var TimeoutWaitForManagedResource = 5 * time.Minute
 
 // Values contains configuration values for the gardener-scheduler resources.
 type Values struct {
-	// ClientConnection holds values for the client connection.
-	ClientConnection ClientConnection
 	// Image defines the container image of gardener-scheduler.
 	Image string
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel string
-	// Replicas defines the number of replicas for the deployment.
-	Replicas int32
-	// SchedulerConfiguration provides the configuration for the SeedManager admission plugin.
-	Schedulers schedulerv1alpha1.SchedulerControllerConfiguration
 	// FeatureGates is the set of feature gates.
 	FeatureGates map[string]bool
-}
-
-// ClientConnection holds values for the client connection.
-type ClientConnection struct {
-	// QPS controls the number of queries per second allowed for this connection.
-	QPS float32
-	// Burst allows extra queries to accumulate when a client is exceeding its rate.
-	Burst int32
 }
 
 // New creates a new instance of DeployWaiter for the gardener-scheduler.

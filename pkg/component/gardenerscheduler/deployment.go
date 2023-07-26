@@ -48,7 +48,7 @@ func (g *gardenerScheduler) deployment(secretGenericTokenKubeconfig, secretVirtu
 			}),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: &g.values.Replicas,
+			Replicas: pointer.Int32(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: GetLabels(),
 			},
@@ -60,7 +60,7 @@ func (g *gardenerScheduler) deployment(secretGenericTokenKubeconfig, secretVirtu
 					}),
 				},
 				Spec: corev1.PodSpec{
-					PriorityClassName:            v1beta1constants.PriorityClassNameGardenSystem400,
+					PriorityClassName:            v1beta1constants.PriorityClassNameGardenSystem200,
 					AutomountServiceAccountToken: pointer.Bool(false),
 					Containers: []corev1.Container{
 						{
