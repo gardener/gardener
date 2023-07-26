@@ -214,7 +214,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			IngressGateway: istioIngressGateway,
 		})
 		mcmCRDs                       = machinecontrollermanager.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
-		fluentOperatorCustomResources = fluentoperator.NewCustomResources(seedClient, r.GardenNamespace, fluentoperator.CustomResourcesValues{Prefix: "seed"})
+		fluentOperatorCustomResources = fluentoperator.NewCustomResources(seedClient, r.GardenNamespace, fluentoperator.CustomResourcesValues{})
 	)
 
 	var (

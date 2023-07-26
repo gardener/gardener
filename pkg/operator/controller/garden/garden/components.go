@@ -201,7 +201,7 @@ func (r *Reconciler) instantiateComponents(
 		r.GardenNamespace,
 		r.ImageVector,
 		true,
-		v1beta1constants.PriorityClassNameGardenSystem200,
+		v1beta1constants.PriorityClassNameGardenSystem100,
 	)
 	if err != nil {
 		return
@@ -212,7 +212,7 @@ func (r *Reconciler) instantiateComponents(
 		r.GardenNamespace,
 		r.ImageVector,
 		true,
-		v1beta1constants.PriorityClassNameGardenSystem200,
+		v1beta1constants.PriorityClassNameGardenSystem100,
 	)
 	if err != nil {
 		return
@@ -231,7 +231,7 @@ func (r *Reconciler) instantiateComponents(
 		component.ClusterTypeSeed,
 		1,
 		false,
-		v1beta1constants.PriorityClassNameGardenSystem200,
+		v1beta1constants.PriorityClassNameGardenSystem100,
 		nil,
 		"",
 		false,

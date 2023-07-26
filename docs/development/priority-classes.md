@@ -19,15 +19,14 @@ When using the `gardener-operator` for managing the garden runtime and virtual c
 
 ### `PriorityClass`es for Garden Control Plane Components
 
-| Name                              | Priority  | Associated Components (Examples)                                                                               |
-|---------------------------------- |-----------|----------------------------------------------------------------------------------------------------------------|
-| `gardener-garden-system-critical` | 999999550 | `gardener-operator`, `gardener-resource-manager`, `istio`                                                      |
-| `gardener-garden-system-500`      | 999999500 | `virtual-garden-etcd-events`, `virtual-garden-etcd-main`, `virtual-garden-kube-apiserver`, `gardener-apiserver`|
-| `gardener-garden-system-400`      | 999999400 | `virtual-garden-gardener-resource-manager`, `gardener-admission-controller`                                    |
-| `gardener-garden-system-300`      | 999999300 | `virtual-garden-kube-controller-manager`, `vpa-admission-controller`, `etcd-druid`, `nginx-ingress-controller` |
-| `gardener-garden-system-200`      | 999999200 | `vpa-recommender`, `vpa-updater`, `hvpa-controller`, `gardener-scheduler`                                      |
-| `gardener-garden-system-100`      | 999999100 | `kube-state-metrics`                                                                                           |
-
+| Name                              | Priority  | Associated Components (Examples)                                                                                |
+|-----------------------------------|-----------|-----------------------------------------------------------------------------------------------------------------|
+| `gardener-garden-system-critical` | 999999550 | `gardener-operator`, `gardener-resource-manager`, `istio`                                                       |
+| `gardener-garden-system-500`      | 999999500 | `virtual-garden-etcd-events`, `virtual-garden-etcd-main`, `virtual-garden-kube-apiserver`, `gardener-apiserver` |
+| `gardener-garden-system-400`      | 999999400 | `virtual-garden-gardener-resource-manager`, `gardener-admission-controller`                                     |
+| `gardener-garden-system-300`      | 999999300 | `virtual-garden-kube-controller-manager`, `vpa-admission-controller`, `etcd-druid`, `nginx-ingress-controller`  |
+| `gardener-garden-system-200`      | 999999200 | `vpa-recommender`, `vpa-updater`, `hvpa-controller`,                                                            |
+| `gardener-garden-system-100`      | 999999100 | `kube-state-metrics`, `fluent-operator`, `fluent-bit`, `vali`                                                   |
 ## Seed Clusters
 
 ### `PriorityClass`es for Seed System Components

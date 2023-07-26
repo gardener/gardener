@@ -97,7 +97,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				healthyManagedResource("nginx-ingress"),
 				healthyManagedResource("fluent-bit"),
 				healthyManagedResource("fluent-operator"),
-				healthyManagedResource("garden-flb-custom-resources"),
+				healthyManagedResource("fluent-operator-custom-resources-garden"),
 				healthyManagedResource("vali"),
 			))
 

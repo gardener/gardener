@@ -559,7 +559,7 @@ func getFluentOperatorCustomResources(
 		c,
 		namespace,
 		loggingEnabled,
-		"seed",
+		"",
 		inputs,
 		filters,
 		parsers,

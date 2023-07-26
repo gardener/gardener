@@ -50,7 +50,7 @@ var _ = Describe("Fluent Operator Custom Resources", func() {
 
 		namespace = "some-namespace"
 		values    = CustomResourcesValues{
-			Prefix: "seed",
+			Suffix: "garden",
 			Inputs: []*fluentbitv1alpha2.ClusterInput{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -149,7 +149,7 @@ var _ = Describe("Fluent Operator Custom Resources", func() {
 		c         client.Client
 		component component.DeployWaiter
 
-		customResourcesManagedResourceName   = "seed-flb-custom-resources"
+		customResourcesManagedResourceName   = "fluent-operator-custom-resources-garden"
 		customResourcesManagedResource       *resourcesv1alpha1.ManagedResource
 		customResourcesManagedResourceSecret *corev1.Secret
 	)

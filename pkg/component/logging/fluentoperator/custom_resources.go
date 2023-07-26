@@ -28,12 +28,12 @@ import (
 
 const (
 	// CustomResourcesManagedResourceName is the name of the managed resource which deploys the custom resources of the operator.
-	CustomResourcesManagedResourceName = "flb-custom-resources"
+	CustomResourcesManagedResourceName = OperatorManagedResourceName + "-custom-resources"
 )
 
 // CustomResourcesValues are the values for the custom resources.
 type CustomResourcesValues struct {
-	Prefix  string
+	Suffix  string
 	Inputs  []*fluentbitv1alpha2.ClusterInput
 	Filters []*fluentbitv1alpha2.ClusterFilter
 	Parsers []*fluentbitv1alpha2.ClusterParser
@@ -108,7 +108,10 @@ func (c *customResources) WaitCleanup(ctx context.Context) error {
 }
 
 func (c *customResources) getManagedResourceName() string {
-	return c.values.Prefix + "-" + CustomResourcesManagedResourceName
+	if len(c.values.Suffix) > 0 {
+		return CustomResourcesManagedResourceName + "-" + c.values.Suffix
+	}
+	return CustomResourcesManagedResourceName
 }
 
 func getCustomResourcesLabels() map[string]string {

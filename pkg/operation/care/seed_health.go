@@ -125,7 +125,7 @@ func (h *SeedHealth) checkSeedSystemComponents(
 	}
 	if h.loggingEnabled {
 		managedResources = append(managedResources, fluentoperator.OperatorManagedResourceName)
-		managedResources = append(managedResources, "seed-"+fluentoperator.CustomResourcesManagedResourceName)
+		managedResources = append(managedResources, fluentoperator.CustomResourcesManagedResourceName)
 		managedResources = append(managedResources, fluentoperator.FluentBitManagedResourceName)
 		managedResources = append(managedResources, vali.ManagedResourceNameRuntime)
 	}

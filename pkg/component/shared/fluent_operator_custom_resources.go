@@ -27,7 +27,7 @@ func NewFluentOperatorCustomResources(
 	c client.Client,
 	gardenNamespaceName string,
 	enabled bool,
-	prefix string,
+	suffix string,
 	inputs []*fluentbitv1alpha2.ClusterInput,
 	filters []*fluentbitv1alpha2.ClusterFilter,
 	parsers []*fluentbitv1alpha2.ClusterParser,
@@ -40,7 +40,7 @@ func NewFluentOperatorCustomResources(
 		c,
 		gardenNamespaceName,
 		fluentoperator.CustomResourcesValues{
-			Prefix:  prefix,
+			Suffix:  suffix,
 			Inputs:  inputs,
 			Filters: filters,
 			Parsers: parsers,

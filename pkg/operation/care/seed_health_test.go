@@ -65,7 +65,7 @@ var (
 		dependencywatchdog.ManagedResourceDependencyWatchdogProber,
 		hvpa.ManagedResourceName,
 		"istio-system",
-		"seed-" + fluentoperator.CustomResourcesManagedResourceName,
+		fluentoperator.CustomResourcesManagedResourceName,
 		fluentoperator.OperatorManagedResourceName,
 		fluentoperator.FluentBitManagedResourceName,
 		vali.ManagedResourceNameRuntime,
