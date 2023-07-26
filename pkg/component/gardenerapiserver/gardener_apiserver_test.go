@@ -753,7 +753,6 @@ var _ = Describe("GardenerAPIServer", func() {
 						Namespace:  namespace,
 						Generation: 1,
 					},
-					Status: healthyManagedResourceStatus,
 				})).To(Succeed())
 
 				Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
@@ -762,7 +761,6 @@ var _ = Describe("GardenerAPIServer", func() {
 						Namespace:  namespace,
 						Generation: 1,
 					},
-					Status: healthyManagedResourceStatus,
 				})).To(Succeed())
 			})
 
@@ -1403,7 +1401,6 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 							SecretRefs:  []corev1.LocalObjectReference{{Name: managedResourceSecretRuntime.Name}},
 							KeepObjects: pointer.Bool(false),
 						},
-						Status: healthyManagedResourceStatus,
 					}))
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretRuntime), managedResourceSecretRuntime)).To(Succeed())
@@ -1426,7 +1423,6 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 							SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceSecretVirtual.Name}},
 							KeepObjects:  pointer.Bool(false),
 						},
-						Status: healthyManagedResourceStatus,
 					}))
 
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
@@ -1472,47 +1468,6 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 						Expect(string(managedResourceSecretRuntime.Data["hvpa__some-namespace__gardener-apiserver-hvpa.yaml"])).To(Equal(componenttest.Serialize(hvpa)))
 					})
 				})
-			})
-		})
-
-		Context("waiting logic", func() {
-			It("should fail because the runtime ManagedResource doesn't become healthy", func() {
-				fakeOps.MaxAttempts = 2
-
-				Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       managedResourceNameRuntime,
-						Namespace:  namespace,
-						Generation: 1,
-					},
-					Status: unhealthyManagedResourceStatus,
-				})).To(Succeed())
-
-				Expect(deployer.Deploy(ctx)).To(MatchError(ContainSubstring("is unhealthy")))
-			})
-
-			It("should not fail when the virtual ManagedResource doesn't become healthy", func() {
-				fakeOps.MaxAttempts = 2
-
-				Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       managedResourceNameRuntime,
-						Namespace:  namespace,
-						Generation: 1,
-					},
-					Status: healthyManagedResourceStatus,
-				})).To(Succeed())
-
-				Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       managedResourceNameVirtual,
-						Namespace:  namespace,
-						Generation: 1,
-					},
-					Status: unhealthyManagedResourceStatus,
-				})).To(Succeed())
-
-				Expect(deployer.Deploy(ctx)).To(Succeed())
 			})
 		})
 	})
