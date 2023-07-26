@@ -27,7 +27,7 @@ import (
 func ValidateConfiguration(config *schedulerconfig.SchedulerConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, ValidateSchedulerControllerConfiguration(config.Schedulers, field.NewPath("schedulers"))...)
+	allErrs = append(allErrs, validateSchedulerControllerConfiguration(config.Schedulers, field.NewPath("schedulers"))...)
 
 	if config.LogLevel != "" {
 		if !sets.New(logger.AllLogLevels...).Has(config.LogLevel) {
@@ -44,8 +44,8 @@ func ValidateConfiguration(config *schedulerconfig.SchedulerConfiguration) field
 	return allErrs
 }
 
-// ValidateSchedulerControllerConfiguration validates the scheduler controller configuration.
-func ValidateSchedulerControllerConfiguration(schedulers schedulerconfig.SchedulerControllerConfiguration, fldPath *field.Path) field.ErrorList {
+// validateSchedulerControllerConfiguration validates the scheduler controller configuration.
+func validateSchedulerControllerConfiguration(schedulers schedulerconfig.SchedulerControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs = field.ErrorList{}
 	)

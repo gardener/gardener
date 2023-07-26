@@ -21,5 +21,4 @@ rules:
   - github.com/gardener/gardener/pkg/logger
   - github.com/gardener/gardener/pkg/mock
   - github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references
-  - github.com/gardener/gardener/pkg/scheduler/apis/config
   - github.com/gardener/gardener/pkg/utils

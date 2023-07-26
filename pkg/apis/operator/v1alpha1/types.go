@@ -23,7 +23,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	schedulerv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -475,9 +474,6 @@ type GardenerSchedulerConfig struct {
 	// +kubebuilder:default=info
 	// +optional
 	LogLevel *string `json:"logLevel,omitempty"`
-	// SchedulerControllerConfiguration is the configuration for resource size restrictions for arbitrary Group-Version-Kinds.
-	// +optional
-	SchedulerControllerConfiguration *schedulerv1alpha1.SchedulerControllerConfiguration `json:"schedulerControllerConfiguration,omitempty"`
 }
 
 // GardenStatus is the status of a garden environment.

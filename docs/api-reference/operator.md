@@ -1075,18 +1075,6 @@ string
 Defaults to info.</p>
 </td>
 </tr>
-<tr>
-<td>
-<code>schedulerControllerConfiguration</code></br>
-<em>
-github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1.SchedulerControllerConfiguration
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SchedulerControllerConfiguration is the configuration for resource size restrictions for arbitrary Group-Version-Kinds.</p>
-</td>
-</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.GroupResource">GroupResource

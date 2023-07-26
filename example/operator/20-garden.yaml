@@ -196,12 +196,7 @@ spec:
     # gardenerScheduler:
     #   featureGates:
     #     SomeGardenerFeature: true
-    #   schedulerControllerConfiguration:
-    #     backupBucket:
-    #       concurrentSyncs: 5
-    #     shoot:
-    #       concurrentSyncs: 5
-    #       candidateDeterminationStrategy: SameRegion # either {SameRegion,MinimalDistance}
+    #   logLevel: info  # either {debug,info,error}
     maintenance:
       timeWindow:
         begin: 220000+0100

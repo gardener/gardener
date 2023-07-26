@@ -6,11 +6,9 @@ rules:
   - k8s.io/klog
   - k8s.io/utils/clock
   - k8s.io/utils/pointer
-  - k8s.io/component-base/config/v1alpha1
 - selectorRegexp: github[.]com/gardener
   allowedPrefixes:
   - github.com/gardener/gardener/pkg/apis
-  - github.com/gardener/gardener/pkg/scheduler/apis/config
   # imports brought in by defaulting, helpers and validation
   - github.com/gardener/gardener/pkg/utils/errors
   - github.com/gardener/gardener/pkg/utils/timewindow

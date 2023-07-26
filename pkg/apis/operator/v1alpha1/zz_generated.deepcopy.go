@@ -23,7 +23,6 @@ package v1alpha1
 
 import (
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	configv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -566,11 +565,6 @@ func (in *GardenerSchedulerConfig) DeepCopyInto(out *GardenerSchedulerConfig) {
 		in, out := &in.LogLevel, &out.LogLevel
 		*out = new(string)
 		**out = **in
-	}
-	if in.SchedulerControllerConfiguration != nil {
-		in, out := &in.SchedulerControllerConfiguration, &out.SchedulerControllerConfiguration
-		*out = new(configv1alpha1.SchedulerControllerConfiguration)
-		(*in).DeepCopyInto(*out)
 	}
 	return
 }

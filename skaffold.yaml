@@ -151,8 +151,6 @@ build:
         - pkg/registry/settings/openidconnectpreset/storage
         - pkg/registry/settings/rest
         - pkg/resourcemanager/controller/garbagecollector/references
-        - pkg/scheduler/apis/config
-        - pkg/scheduler/apis/config/v1alpha1
         - pkg/utils
         - pkg/utils/context
         - pkg/utils/errors
@@ -288,8 +286,6 @@ build:
         - pkg/healthz
         - pkg/logger
         - pkg/resourcemanager/controller/garbagecollector/references
-        - pkg/scheduler/apis/config
-        - pkg/scheduler/apis/config/v1alpha1
         - pkg/utils
         - pkg/utils/chart
         - pkg/utils/context
@@ -433,8 +429,6 @@ build:
         - pkg/healthz
         - pkg/logger
         - pkg/resourcemanager/controller/garbagecollector/references
-        - pkg/scheduler/apis/config
-        - pkg/scheduler/apis/config/v1alpha1
         - pkg/utils
         - pkg/utils/context
         - pkg/utils/errors
@@ -643,8 +637,6 @@ build:
         - pkg/provider-local/webhook/node
         - pkg/provider-local/webhook/shoot
         - pkg/resourcemanager/controller/garbagecollector/references
-        - pkg/scheduler/apis/config
-        - pkg/scheduler/apis/config/v1alpha1
         - pkg/utils
         - pkg/utils/chart
         - pkg/utils/context
@@ -940,8 +932,6 @@ build:
         - pkg/resourcemanager/webhook/seccompprofile
         - pkg/resourcemanager/webhook/systemcomponentsconfig
         - pkg/resourcemanager/webhook/tokeninvalidator
-        - pkg/scheduler/apis/config
-        - pkg/scheduler/apis/config/v1alpha1
         - pkg/utils
         - pkg/utils/chart
         - pkg/utils/context
@@ -1055,8 +1045,6 @@ build:
         - pkg/resourcemanager/webhook/seccompprofile
         - pkg/resourcemanager/webhook/systemcomponentsconfig
         - pkg/resourcemanager/webhook/tokeninvalidator
-        - pkg/scheduler/apis/config
-        - pkg/scheduler/apis/config/v1alpha1
         - pkg/utils
         - pkg/utils/context
         - pkg/utils/errors

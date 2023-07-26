@@ -605,39 +605,6 @@ spec:
                             - debug
                             - error
                             type: string
-                          schedulerControllerConfiguration:
-                            description: SchedulerControllerConfiguration is the configuration
-                              for resource size restrictions for arbitrary Group-Version-Kinds.
-                            properties:
-                              backupBucket:
-                                description: BackupBucket defines the configuration
-                                  of the BackupBucket controller.
-                                properties:
-                                  concurrentSyncs:
-                                    description: ConcurrentSyncs is the number of
-                                      workers used for the controller to work on events.
-                                    type: integer
-                                required:
-                                - concurrentSyncs
-                                type: object
-                              shoot:
-                                description: Shoot defines the configuration of the
-                                  Shoot controller.
-                                properties:
-                                  candidateDeterminationStrategy:
-                                    description: Strategy defines how seeds for shoots,
-                                      that do not specify a seed explicitly, are being
-                                      determined
-                                    type: string
-                                  concurrentSyncs:
-                                    description: ConcurrentSyncs is the number of
-                                      workers used for the controller to work on events.
-                                    type: integer
-                                required:
-                                - candidateDeterminationStrategy
-                                - concurrentSyncs
-                                type: object
-                            type: object
                         type: object
                     required:
                     - clusterIdentity

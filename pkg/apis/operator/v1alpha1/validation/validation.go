@@ -35,9 +35,6 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/features"
-	schedulerconfig "github.com/gardener/gardener/pkg/scheduler/apis/config"
-	schedulerv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
-	schedulervalidation "github.com/gardener/gardener/pkg/scheduler/apis/config/validation"
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	"github.com/gardener/gardener/pkg/utils/validation/kubernetesversion"
@@ -49,7 +46,6 @@ var gardenCoreScheme *runtime.Scheme
 func init() {
 	gardenCoreScheme = runtime.NewScheme()
 	utilruntime.Must(gardencoreinstall.AddToScheme(gardenCoreScheme))
-	utilruntime.Must(schedulerv1alpha1.AddToScheme(gardenCoreScheme))
 }
 
 // ValidateGarden contains functionality for performing extended validation of a Garden object which is not possible
@@ -289,14 +285,6 @@ func validateGardenerSchedulerConfig(config *operatorv1alpha1.GardenerSchedulerC
 	}
 
 	allErrs = append(allErrs, validateGardenerFeatureGates(config.FeatureGates, fldPath.Child("featureGates"))...)
-
-	if config.SchedulerControllerConfiguration != nil {
-		schedulerControllerConfiguration := &schedulerconfig.SchedulerControllerConfiguration{}
-		if err := gardenCoreScheme.Convert(config.SchedulerControllerConfiguration, schedulerControllerConfiguration, nil); err != nil {
-			allErrs = append(allErrs, field.InternalError(fldPath.Child("schedulerControllerConfiguration"), err))
-		}
-		allErrs = append(allErrs, schedulervalidation.ValidateSchedulerControllerConfiguration(*schedulerControllerConfiguration, fldPath.Child("schedulerControllerConfiguration"))...)
-	}
 
 	return allErrs
 }
