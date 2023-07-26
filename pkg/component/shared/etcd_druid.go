@@ -30,7 +30,6 @@ func NewEtcdDruid(
 	c client.Client,
 	gardenNamespaceName string,
 	runtimeVersion *semver.Version,
-	imageVector imagevectorutils.ImageVector,
 	imageVectorOverwrites map[string]string,
 	etcdConfig *config.ETCDConfig,
 	priorityClassName string,
@@ -38,7 +37,7 @@ func NewEtcdDruid(
 	component.DeployWaiter,
 	error,
 ) {
-	image, err := imageVector.FindImage(imagevector.ImageNameEtcdDruid, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(runtimeVersion.String()))
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameEtcdDruid, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(runtimeVersion.String()))
 	if err != nil {
 		return nil, err
 	}

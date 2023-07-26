@@ -31,19 +31,19 @@ import (
 
 // DefaultMonitoring creates a new monitoring component.
 func (b *Botanist) DefaultMonitoring() (monitoring.Interface, error) {
-	imageAlertmanager, err := b.ImageVector.FindImage(imagevector.ImageNameAlertmanager)
+	imageAlertmanager, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlertmanager)
 	if err != nil {
 		return nil, err
 	}
-	imageBlackboxExporter, err := b.ImageVector.FindImage(imagevector.ImageNameBlackboxExporter)
+	imageBlackboxExporter, err := imagevector.ImageVector().FindImage(imagevector.ImageNameBlackboxExporter)
 	if err != nil {
 		return nil, err
 	}
-	imageConfigmapReloader, err := b.ImageVector.FindImage(imagevector.ImageNameConfigmapReloader)
+	imageConfigmapReloader, err := imagevector.ImageVector().FindImage(imagevector.ImageNameConfigmapReloader)
 	if err != nil {
 		return nil, err
 	}
-	imagePrometheus, err := b.ImageVector.FindImage(imagevector.ImageNamePrometheus)
+	imagePrometheus, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePrometheus)
 	if err != nil {
 		return nil, err
 	}

@@ -42,7 +42,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
@@ -61,9 +60,6 @@ func NewBuilder() *Builder {
 		},
 		gardenClusterIdentityFunc: func() (string, error) {
 			return "", fmt.Errorf("garden cluster identity is required but not set")
-		},
-		imageVectorFunc: func() (imagevector.ImageVector, error) {
-			return nil, fmt.Errorf("image vector is required but not set")
 		},
 		loggerFunc: func() (logr.Logger, error) {
 			return logr.Discard(), fmt.Errorf("logger is required but not set")
@@ -114,12 +110,6 @@ func (b *Builder) WithGardenerInfo(gardenerInfo *gardencorev1beta1.Gardener) *Bu
 // WithGardenClusterIdentity sets the identity of the Garden cluster as attribute at the Builder.
 func (b *Builder) WithGardenClusterIdentity(gardenClusterIdentity string) *Builder {
 	b.gardenClusterIdentityFunc = func() (string, error) { return gardenClusterIdentity, nil }
-	return b
-}
-
-// WithImageVector sets the imageVectorFunc attribute at the Builder.
-func (b *Builder) WithImageVector(imageVector imagevector.ImageVector) *Builder {
-	b.imageVectorFunc = func() (imagevector.ImageVector, error) { return imageVector, nil }
 	return b
 }
 
@@ -236,12 +226,6 @@ func (b *Builder) Build(
 		return nil, err
 	}
 	operation.GardenClusterIdentity = gardenClusterIdentity
-
-	imageVector, err := b.imageVectorFunc()
-	if err != nil {
-		return nil, err
-	}
-	operation.ImageVector = imageVector
 
 	logger, err := b.loggerFunc()
 	if err != nil {

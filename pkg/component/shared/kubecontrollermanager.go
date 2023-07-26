@@ -36,7 +36,6 @@ func NewKubeControllerManager(
 	runtimeNamespace string,
 	runtimeVersion *semver.Version,
 	targetVersion *semver.Version,
-	imageVector imagevectorutils.ImageVector,
 	secretsManager secretsmanager.Interface,
 	namePrefix string,
 	config *gardencorev1beta1.KubeControllerManagerConfig,
@@ -52,7 +51,7 @@ func NewKubeControllerManager(
 	kubecontrollermanager.Interface,
 	error,
 ) {
-	image, err := imageVector.FindImage(imagevector.ImageNameKubeControllerManager, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(targetVersion.String()))
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameKubeControllerManager, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(targetVersion.String()))
 	if err != nil {
 		return nil, err
 	}

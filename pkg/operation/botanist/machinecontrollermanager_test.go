@@ -40,7 +40,6 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 )
@@ -92,18 +91,9 @@ var _ = Describe("MachineControllerManager", func() {
 			Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 		})
 
-		It("should return an error because the image cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{}
-
-			machineControllerManager, err := botanist.DefaultMachineControllerManager(ctx)
-			Expect(machineControllerManager).To(BeNil())
-			Expect(err).To(HaveOccurred())
-		})
-
 		DescribeTable("it should successfully create a machine-controller-manager interface",
 			func(expectedReplicas int, prepTest func()) {
 				kubernetesClient.EXPECT().Client().Return(fakeClient).Times(2)
-				botanist.ImageVector = imagevector.ImageVector{{Name: "machine-controller-manager"}}
 
 				if prepTest != nil {
 					prepTest()

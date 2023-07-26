@@ -36,7 +36,7 @@ import (
 
 // DefaultKubeProxy returns a deployer for the kube-proxy.
 func (b *Botanist) DefaultKubeProxy() (kubeproxy.Interface, error) {
-	imageAlpine, err := b.ImageVector.FindImage(imagevector.ImageNameAlpine, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	imageAlpine, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (b *Botanist) computeWorkerPoolsForKubeProxy(ctx context.Context) ([]kubepr
 			return nil, err
 		}
 
-		image, err := b.ImageVector.FindImage(imagevector.ImageNameKubeProxy, imagevectorutils.RuntimeVersion(kubernetesVersion.String()), imagevectorutils.TargetVersion(kubernetesVersion.String()))
+		image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameKubeProxy, imagevectorutils.RuntimeVersion(kubernetesVersion.String()), imagevectorutils.TargetVersion(kubernetesVersion.String()))
 		if err != nil {
 			return nil, err
 		}
@@ -128,7 +128,7 @@ func (b *Botanist) computeWorkerPoolsForKubeProxy(ctx context.Context) ([]kubepr
 			return nil, err
 		}
 
-		image, err := b.ImageVector.FindImage(imagevector.ImageNameKubeProxy, imagevectorutils.RuntimeVersion(kubernetesVersionString), imagevectorutils.TargetVersion(kubernetesVersionString))
+		image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameKubeProxy, imagevectorutils.RuntimeVersion(kubernetesVersionString), imagevectorutils.TargetVersion(kubernetesVersionString))
 		if err != nil {
 			return nil, err
 		}

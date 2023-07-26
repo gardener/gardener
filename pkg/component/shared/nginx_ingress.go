@@ -30,7 +30,6 @@ func NewNginxIngress(
 	c client.Client,
 	namespaceName string,
 	targetNamespace string,
-	imageVector imagevectorutils.ImageVector,
 	kubernetesVersion *semver.Version,
 	config map[string]string,
 	loadBalancerAnnotations map[string]string,
@@ -45,11 +44,11 @@ func NewNginxIngress(
 	component.DeployWaiter,
 	error,
 ) {
-	imageController, err := imageVector.FindImage(imagevector.ImageNameNginxIngressController, imagevectorutils.TargetVersion(kubernetesVersion.String()))
+	imageController, err := imagevector.ImageVector().FindImage(imagevector.ImageNameNginxIngressController, imagevectorutils.TargetVersion(kubernetesVersion.String()))
 	if err != nil {
 		return nil, err
 	}
-	imageDefaultBackend, err := imageVector.FindImage(imagevector.ImageNameIngressDefaultBackend, imagevectorutils.TargetVersion(kubernetesVersion.String()))
+	imageDefaultBackend, err := imagevector.ImageVector().FindImage(imagevector.ImageNameIngressDefaultBackend, imagevectorutils.TargetVersion(kubernetesVersion.String()))
 	if err != nil {
 		return nil, err
 	}

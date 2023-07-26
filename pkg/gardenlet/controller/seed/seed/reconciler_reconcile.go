@@ -64,7 +64,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -358,7 +357,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			seedClient,
 			r.GardenNamespace,
 			kubernetesVersion,
-			r.ImageVector,
 			secretsManager,
 			r.Config.LogLevel, r.Config.LogFormat,
 			v1beta1constants.SecretNameCASeed,
@@ -381,7 +379,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 
 	// Deploy System Resources
-	systemResources, err := defaultSystem(seedClient, seed, r.ImageVector, seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled, r.GardenNamespace)
+	systemResources, err := defaultSystem(seedClient, seed, seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled, r.GardenNamespace)
 	if err != nil {
 		return err
 	}
@@ -446,15 +444,15 @@ func (r *Reconciler) runReconcileSeedFlow(
 	// setup for flow graph
 	var dnsRecord component.DeployMigrateWaiter
 
-	istio, err := defaultIstio(seedClient, r.ImageVector, chartRenderer, seed, &r.Config, seedIsGarden)
+	istio, err := defaultIstio(seedClient, chartRenderer, seed, &r.Config, seedIsGarden)
 	if err != nil {
 		return err
 	}
-	dwdWeeder, dwdProber, err := defaultDependencyWatchdogs(seedClient, kubernetesVersion, r.ImageVector, seed.GetInfo().Spec.Settings, r.GardenNamespace)
+	dwdWeeder, dwdProber, err := defaultDependencyWatchdogs(seedClient, kubernetesVersion, seed.GetInfo().Spec.Settings, r.GardenNamespace)
 	if err != nil {
 		return err
 	}
-	vpnAuthzServer, err := defaultVPNAuthzServer(seedClient, kubernetesVersion, r.ImageVector, r.GardenNamespace)
+	vpnAuthzServer, err := defaultVPNAuthzServer(seedClient, kubernetesVersion, r.GardenNamespace)
 	if err != nil {
 		return err
 	}
@@ -462,7 +460,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		seedClient,
 		chartApplier,
 		secretsManager,
-		r.ImageVector,
 		r.GardenNamespace,
 		seed,
 		alertingSMTPSecret,
@@ -484,7 +481,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		nginxLBReady = g.Add(flow.Task{
 			Name: "Waiting until nginx ingress LoadBalancer is ready",
 			Fn: func(ctx context.Context) error {
-				dnsRecord, err = waitForNginxIngressServiceAndGetDNSComponent(ctx, log, seed, r.GardenClient, seedClient, r.ImageVector, kubernetesVersion, r.GardenNamespace, seedIsGarden)
+				dnsRecord, err = waitForNginxIngressServiceAndGetDNSComponent(ctx, log, seed, r.GardenClient, seedClient, kubernetesVersion, r.GardenNamespace, seedIsGarden)
 				return err
 			},
 		})
@@ -551,7 +548,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			seedClient,
 			r.GardenNamespace,
 			kubernetesVersion,
-			r.ImageVector,
 			secretsManager,
 			vpaEnabled,
 			v1beta1constants.SecretNameCASeed,
@@ -566,7 +562,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		hvpa, err := sharedcomponent.NewHVPA(
 			seedClient,
 			r.GardenNamespace,
-			r.ImageVector,
 			hvpaEnabled,
 			v1beta1constants.PriorityClassNameSeedSystem700,
 		)
@@ -578,7 +573,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			seedClient,
 			r.GardenNamespace,
 			kubernetesVersion,
-			r.ImageVector,
 			r.ComponentImageVectors,
 			r.Config.ETCDConfig,
 			v1beta1constants.PriorityClassNameSeedSystem800,
@@ -590,7 +584,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		fluentOperatorCustomResources, err := defaultFluentOperatorCustomResources(
 			seedClient,
 			r.GardenNamespace,
-			r.ImageVector,
 			loggingEnabled,
 			gardenlethelper.IsEventLoggingEnabled(&r.Config),
 		)
@@ -601,7 +594,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		fluentOperator, err := sharedcomponent.NewFluentOperator(
 			seedClient,
 			r.GardenNamespace,
-			r.ImageVector,
 			loggingEnabled,
 			v1beta1constants.PriorityClassNameSeedSystem600,
 		)
@@ -612,7 +604,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		plutono, err := defaultPlutono(
 			seedClient,
 			r.GardenNamespace,
-			r.ImageVector,
 			secretsManager,
 			seed.GetIngressFQDN("g-seed"),
 			globalMonitoringSecretSeed.Name,
@@ -625,7 +616,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 		vali, err := defaultVali(
 			ctx,
 			seedClient,
-			r.ImageVector,
 			r.Config.Logging,
 			r.GardenNamespace,
 			loggingEnabled && gardenlethelper.IsValiEnabled(&r.Config),
@@ -639,7 +629,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			seedClient,
 			r.GardenNamespace,
 			kubernetesVersion,
-			r.ImageVector,
 			v1beta1constants.PriorityClassNameSeedSystem600,
 		)
 		if err != nil {
@@ -895,7 +884,6 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 	log logr.Logger,
 	seed *seedpkg.Seed,
 	gardenClient, seedClient client.Client,
-	imageVector imagevector.ImageVector,
 	kubernetesVersion *semver.Version,
 	gardenNamespaceName string,
 	seedIsGarden bool,
@@ -919,7 +907,6 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 			seedClient,
 			gardenNamespaceName,
 			gardenNamespaceName,
-			imageVector,
 			kubernetesVersion,
 			providerConfig,
 			seed.GetLoadBalancerServiceAnnotations(),

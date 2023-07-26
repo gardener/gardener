@@ -38,7 +38,6 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 var _ = Describe("ClusterAutoscaler", func() {
@@ -58,6 +57,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		botanist.Seed = &seedpkg.Seed{
 			KubernetesVersion: semver.MustParse("1.25.0"),
 		}
+		botanist.Shoot = &shootpkg.Shoot{}
 		botanist.SeedClientSet = kubernetesClient
 	})
 
@@ -67,27 +67,15 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 	Describe("#DefaultClusterAutoscaler", func() {
 		BeforeEach(func() {
-			kubernetesClient.EXPECT().Version()
-
-			botanist.Shoot = &shootpkg.Shoot{}
-			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
+			kubernetesClient.EXPECT().Client()
+			kubernetesClient.EXPECT().Version().Return("1.25.0")
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Kubernetes: gardencorev1beta1.Kubernetes{Version: "1.25.0"}}})
 		})
 
 		It("should successfully create a cluster-autoscaler interface", func() {
-			kubernetesClient.EXPECT().Client()
-			botanist.ImageVector = imagevector.ImageVector{{Name: "cluster-autoscaler"}}
-
 			clusterAutoscaler, err := botanist.DefaultClusterAutoscaler()
-			Expect(clusterAutoscaler).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should return an error because the image cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{}
-
-			clusterAutoscaler, err := botanist.DefaultClusterAutoscaler()
-			Expect(clusterAutoscaler).To(BeNil())
-			Expect(err).To(HaveOccurred())
+			Expect(clusterAutoscaler).NotTo(BeNil())
 		})
 	})
 

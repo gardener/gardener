@@ -50,7 +50,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -99,29 +98,10 @@ var _ = Describe("NginxIngress", func() {
 
 		It("should successfully create a nginxingress interface", func() {
 			kubernetesClient.EXPECT().Client()
-			botanist.ImageVector = imagevector.ImageVector{{Name: "nginx-ingress-controller"}, {Name: "ingress-default-backend"}}
 
 			nginxIngress, err := botanist.DefaultNginxIngress()
 			Expect(nginxIngress).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should return an error because the controller image cannot be found", func() {
-			kubernetesClient.EXPECT().Client()
-			botanist.ImageVector = imagevector.ImageVector{}
-
-			nginxIngress, err := botanist.DefaultNginxIngress()
-			Expect(nginxIngress).To(BeNil())
-			Expect(err).To(HaveOccurred())
-		})
-
-		It("should return an error because the default backend image cannot be found", func() {
-			kubernetesClient.EXPECT().Client()
-			botanist.ImageVector = imagevector.ImageVector{{Name: "nginx-ingress-controller"}}
-
-			nginxIngress, err := botanist.DefaultNginxIngress()
-			Expect(nginxIngress).To(BeNil())
-			Expect(err).To(HaveOccurred())
 		})
 	})
 

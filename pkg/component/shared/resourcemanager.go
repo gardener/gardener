@@ -53,7 +53,6 @@ func NewRuntimeGardenerResourceManager(
 	c client.Client,
 	gardenNamespaceName string,
 	runtimeVersion *semver.Version,
-	imageVector imagevectorutils.ImageVector,
 	secretsManager secretsmanager.Interface,
 	logLevel, logFormat string,
 	secretNameServerCA string,
@@ -68,7 +67,7 @@ func NewRuntimeGardenerResourceManager(
 	component.DeployWaiter,
 	error,
 ) {
-	image, err := imageVector.FindImage(imagevector.ImageNameGardenerResourceManager)
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerResourceManager)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +121,6 @@ func NewRuntimeGardenerResourceManager(
 func NewTargetGardenerResourceManager(
 	c client.Client,
 	namespaceName string,
-	imageVector imagevectorutils.ImageVector,
 	secretsManager secretsmanager.Interface,
 	clusterIdentity *string,
 	defaultNotReadyTolerationSeconds *int64,
@@ -142,7 +140,7 @@ func NewTargetGardenerResourceManager(
 	resourcemanager.Interface,
 	error,
 ) {
-	image, err := imageVector.FindImage(imagevector.ImageNameGardenerResourceManager)
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerResourceManager)
 	if err != nil {
 		return nil, err
 	}

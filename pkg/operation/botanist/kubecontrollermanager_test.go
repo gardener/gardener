@@ -38,7 +38,6 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -80,19 +79,9 @@ var _ = Describe("KubeControllerManager", func() {
 		})
 
 		It("should successfully create a kube-controller-manager interface", func() {
-			botanist.ImageVector = imagevector.ImageVector{{Name: "kube-controller-manager"}}
-
 			kubeControllerManager, err := botanist.DefaultKubeControllerManager()
 			Expect(kubeControllerManager).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should return an error because the image cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{}
-
-			kubeControllerManager, err := botanist.DefaultKubeControllerManager()
-			Expect(kubeControllerManager).To(BeNil())
-			Expect(err).To(HaveOccurred())
 		})
 	})
 

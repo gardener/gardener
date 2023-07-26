@@ -78,7 +78,6 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		b.Shoot.GetInfo().ObjectMeta,
 		b.Seed.KubernetesVersion,
 		b.Shoot.KubernetesVersion,
-		b.ImageVector,
 		b.SecretsManager,
 		"",
 		b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer,

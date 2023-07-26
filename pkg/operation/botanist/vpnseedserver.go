@@ -62,12 +62,12 @@ func (b *Botanist) getDiffieHellmanSecret() component.Secret {
 
 // DefaultVPNSeedServer returns a deployer for the vpn-seed-server.
 func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
-	imageAPIServerProxy, err := b.ImageVector.FindImage(imagevector.ImageNameApiserverProxy, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	imageAPIServerProxy, err := imagevector.ImageVector().FindImage(imagevector.ImageNameApiserverProxy, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
 
-	imageVPNSeedServer, err := b.ImageVector.FindImage(imagevector.ImageNameVpnSeedServer, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	imageVPNSeedServer, err := imagevector.ImageVector().FindImage(imagevector.ImageNameVpnSeedServer, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

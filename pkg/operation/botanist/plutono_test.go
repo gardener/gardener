@@ -38,7 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
@@ -115,9 +114,6 @@ var _ = Describe("Plutono", func() {
 							Plutono: mockPlutono,
 						},
 					},
-				},
-				ImageVector: imagevector.ImageVector{
-					{Name: "plutono"},
 				},
 			},
 		}

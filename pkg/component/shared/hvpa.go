@@ -20,21 +20,19 @@ import (
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/hvpa"
-	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // NewHVPA instantiates a new `hvpa-controller` component.
 func NewHVPA(
 	c client.Client,
 	gardenNamespaceName string,
-	imageVector imagevectorutils.ImageVector,
 	enabled bool,
 	priorityClassName string,
 ) (
 	deployer component.DeployWaiter,
 	err error,
 ) {
-	image, err := imageVector.FindImage(imagevector.ImageNameHvpaController)
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameHvpaController)
 	if err != nil {
 		return nil, err
 	}

@@ -31,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -42,7 +41,6 @@ type Reconciler struct {
 	Config                config.GardenletConfiguration
 	Clock                 clock.Clock
 	ShootClientMap        clientmap.ClientMap
-	ImageVector           imagevector.ImageVector
 	GardenNamespaceGarden string
 	GardenNamespaceShoot  string
 }

@@ -37,7 +37,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -203,7 +202,6 @@ var _ = Describe("Garden controller tests", func() {
 					},
 				},
 			},
-			ImageVector:     imagevector.ImageVector(),
 			Identity:        &gardencorev1beta1.Gardener{Name: "test-gardener"},
 			GardenClientMap: gardenClientMap,
 			GardenNamespace: testNamespace.Name,

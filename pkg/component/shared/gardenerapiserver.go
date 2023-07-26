@@ -40,7 +40,6 @@ func NewGardenerAPIServer(
 	runtimeNamespace string,
 	objectMeta metav1.ObjectMeta,
 	runtimeVersion *semver.Version,
-	imageVector imagevectorutils.ImageVector,
 	secretsManager secretsmanager.Interface,
 	apiServerConfig *operatorv1alpha1.GardenerAPIServerConfig,
 	autoscalingConfig apiserver.AutoscalingConfig,
@@ -51,7 +50,7 @@ func NewGardenerAPIServer(
 	gardenerapiserver.Interface,
 	error,
 ) {
-	image, err := imageVector.FindImage(imagevector.ImageNameGardenerApiserver)
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerApiserver)
 	if err != nil {
 		return nil, err
 	}

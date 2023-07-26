@@ -20,21 +20,19 @@ import (
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
-	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // NewFluentOperator instantiates a new `Fluent Operator` component.
 func NewFluentOperator(
 	c client.Client,
 	gardenNamespaceName string,
-	imageVector imagevectorutils.ImageVector,
 	enabled bool,
 	priorityClassName string,
 ) (
 	deployer component.DeployWaiter,
 	err error,
 ) {
-	operatorImage, err := imageVector.FindImage(imagevector.ImageNameFluentOperator)
+	operatorImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNameFluentOperator)
 	if err != nil {
 		return nil, err
 	}

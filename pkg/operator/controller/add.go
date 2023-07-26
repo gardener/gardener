@@ -23,7 +23,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controller/service"
@@ -31,29 +30,16 @@ import (
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
 	"github.com/gardener/gardener/pkg/operator/controller/networkpolicyregistrar"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // AddToManager adds all controllers to the given manager.
 func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.OperatorConfiguration) error {
-	var (
-		componentImageVectors imagevectorutils.ComponentImageVectors
-		err                   error
-	)
-
-	if path := os.Getenv(imagevectorutils.ComponentOverrideEnv); path != "" {
-		componentImageVectors, err = imagevectorutils.ReadComponentOverwriteFile(path)
-		if err != nil {
-			return fmt.Errorf("failed reading component-specific image vector override: %w", err)
-		}
-	}
-
 	identity, err := gardenerutils.DetermineIdentity()
 	if err != nil {
 		return err
 	}
 
-	if err := garden.AddToManager(ctx, mgr, cfg, identity, imagevector.ImageVector(), componentImageVectors); err != nil {
+	if err := garden.AddToManager(ctx, mgr, cfg, identity); err != nil {
 		return err
 	}
 

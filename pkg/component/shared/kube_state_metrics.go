@@ -29,13 +29,12 @@ func NewKubeStateMetrics(
 	c client.Client,
 	gardenNamespaceName string,
 	runtimeVersion *semver.Version,
-	imageVector imagevectorutils.ImageVector,
 	priorityClassName string,
 ) (
 	component.DeployWaiter,
 	error,
 ) {
-	image, err := imageVector.FindImage(imagevector.ImageNameKubeStateMetrics, imagevectorutils.TargetVersion(runtimeVersion.String()))
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameKubeStateMetrics, imagevectorutils.TargetVersion(runtimeVersion.String()))
 	if err != nil {
 		return nil, err
 	}

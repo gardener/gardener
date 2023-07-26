@@ -82,7 +82,6 @@ import (
 
 func defaultIstio(
 	seedClient client.Client,
-	imageVector imagevectorutils.ImageVector,
 	chartRenderer chartrenderer.Interface,
 	seed *seedpkg.Seed,
 	conf *config.GardenletConfiguration,
@@ -98,7 +97,6 @@ func defaultIstio(
 
 	istioDeployer, err := shared.NewIstio(
 		seedClient,
-		imageVector,
 		chartRenderer,
 		"",
 		*conf.SNI.Ingress.Namespace,
@@ -179,7 +177,6 @@ func defaultIstio(
 func defaultDependencyWatchdogs(
 	c client.Client,
 	seedVersion *semver.Version,
-	imageVector imagevectorutils.ImageVector,
 	seedSettings *gardencorev1beta1.SeedSettings,
 	gardenNamespaceName string,
 ) (
@@ -187,7 +184,7 @@ func defaultDependencyWatchdogs(
 	dwdProber component.DeployWaiter,
 	err error,
 ) {
-	image, err := imageVector.FindImage(imagevector.ImageNameDependencyWatchdog, imagevectorutils.RuntimeVersion(seedVersion.String()), imagevectorutils.TargetVersion(seedVersion.String()))
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameDependencyWatchdog, imagevectorutils.RuntimeVersion(seedVersion.String()), imagevectorutils.TargetVersion(seedVersion.String()))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -261,13 +258,12 @@ func defaultDependencyWatchdogs(
 func defaultVPNAuthzServer(
 	c client.Client,
 	seedVersion *semver.Version,
-	imageVector imagevectorutils.ImageVector,
 	gardenNamespaceName string,
 ) (
 	component.DeployWaiter,
 	error,
 ) {
-	image, err := imageVector.FindImage(imagevector.ImageNameExtAuthzServer, imagevectorutils.RuntimeVersion(seedVersion.String()), imagevectorutils.TargetVersion(seedVersion.String()))
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameExtAuthzServer, imagevectorutils.RuntimeVersion(seedVersion.String()), imagevectorutils.TargetVersion(seedVersion.String()))
 	if err != nil {
 		return nil, err
 	}
@@ -282,14 +278,13 @@ func defaultVPNAuthzServer(
 func defaultSystem(
 	c client.Client,
 	seed *seedpkg.Seed,
-	imageVector imagevectorutils.ImageVector,
 	reserveExcessCapacity bool,
 	gardenNamespaceName string,
 ) (
 	component.DeployWaiter,
 	error,
 ) {
-	image, err := imageVector.FindImage(imagevector.ImageNamePauseContainer)
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePauseContainer)
 	if err != nil {
 		return nil, err
 	}
@@ -315,7 +310,6 @@ func defaultSystem(
 func defaultVali(
 	ctx context.Context,
 	c client.Client,
-	imageVector imagevectorutils.ImageVector,
 	loggingConfig *config.Logging,
 	gardenNamespaceName string,
 	isLoggingEnabled bool,
@@ -356,7 +350,6 @@ func defaultVali(
 	deployer, err := shared.NewVali(
 		c,
 		gardenNamespaceName,
-		imageVector,
 		nil,
 		component.ClusterTypeSeed,
 		1,
@@ -385,7 +378,6 @@ func defaultVali(
 func defaultPlutono(
 	c client.Client,
 	namespace string,
-	imageVector imagevectorutils.ImageVector,
 	secretsManager secretsmanager.Interface,
 	ingressHot string,
 	authSecret string,
@@ -397,7 +389,6 @@ func defaultPlutono(
 	return shared.NewPlutono(
 		c,
 		namespace,
-		imageVector,
 		secretsManager,
 		authSecret,
 		component.ClusterTypeSeed,
@@ -418,7 +409,6 @@ func defaultMonitoring(
 	c client.Client,
 	chartApplier kubernetes.ChartApplier,
 	secretsManager secretsmanager.Interface,
-	imageVector imagevectorutils.ImageVector,
 	namespace string,
 	seed *seedpkg.Seed,
 	alertingSMTPSecret *corev1.Secret,
@@ -430,19 +420,19 @@ func defaultMonitoring(
 	component.Deployer,
 	error,
 ) {
-	imageAlertmanager, err := imageVector.FindImage(imagevector.ImageNameAlertmanager)
+	imageAlertmanager, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlertmanager)
 	if err != nil {
 		return nil, err
 	}
-	imageAlpine, err := imageVector.FindImage(imagevector.ImageNameAlpine)
+	imageAlpine, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine)
 	if err != nil {
 		return nil, err
 	}
-	imageConfigmapReloader, err := imageVector.FindImage(imagevector.ImageNameConfigmapReloader)
+	imageConfigmapReloader, err := imagevector.ImageVector().FindImage(imagevector.ImageNameConfigmapReloader)
 	if err != nil {
 		return nil, err
 	}
-	imagePrometheus, err := imageVector.FindImage(imagevector.ImageNamePrometheus)
+	imagePrometheus, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePrometheus)
 	if err != nil {
 		return nil, err
 	}
@@ -473,7 +463,6 @@ func defaultMonitoring(
 func defaultFluentOperatorCustomResources(
 	c client.Client,
 	namespace string,
-	imageVector imagevectorutils.ImageVector,
 	loggingEnabled bool,
 	eventLoggingEnabled bool,
 ) (
@@ -554,7 +543,6 @@ func defaultFluentOperatorCustomResources(
 	return shared.NewFluentOperatorCustomResources(
 		c,
 		namespace,
-		imageVector,
 		loggingEnabled,
 		v1beta1constants.PriorityClassNameSeedSystem600,
 		inputs,

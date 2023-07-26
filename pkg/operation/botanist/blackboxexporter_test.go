@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 var _ = Describe("BlackboxExporter", func() {
@@ -70,19 +69,10 @@ var _ = Describe("BlackboxExporter", func() {
 
 		It("should successfully create a blackbox-exporter interface", func() {
 			kubernetesClient.EXPECT().Client()
-			botanist.ImageVector = imagevector.ImageVector{{Name: "blackbox-exporter"}}
 
 			blackboxExporter, err := botanist.DefaultBlackboxExporter()
 			Expect(blackboxExporter).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should return an error because the image cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{}
-
-			blackboxExporter, err := botanist.DefaultBlackboxExporter()
-			Expect(blackboxExporter).To(BeNil())
-			Expect(err).To(HaveOccurred())
 		})
 	})
 

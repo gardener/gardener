@@ -29,7 +29,6 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 var _ = Describe("Kubernetes Dashboard", func() {
@@ -75,34 +74,9 @@ var _ = Describe("Kubernetes Dashboard", func() {
 		})
 
 		It("should successfully create a Kubernetes Dashboard interface", func() {
-			botanist.ImageVector = imagevector.ImageVector{
-				{Name: "kubernetes-dashboard"},
-				{Name: "kubernetes-dashboard-metrics-scraper"},
-			}
-
 			kubernetesDashboard, err := botanist.DefaultKubernetesDashboard()
 			Expect(kubernetesDashboard).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should return an error because the kubernetes-dashboard image cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{
-				{Name: "kubernetes-dashboard-metrics-scraper"},
-			}
-
-			kubernetesDashboard, err := botanist.DefaultKubernetesDashboard()
-			Expect(kubernetesDashboard).To(BeNil())
-			Expect(err).To(HaveOccurred())
-		})
-
-		It("should return an error because the kubernetes-dashboard-metrics-scraper image cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{
-				{Name: "kubernetes-dashboard"},
-			}
-
-			kubernetesDashboard, err := botanist.DefaultKubernetesDashboard()
-			Expect(kubernetesDashboard).To(BeNil())
-			Expect(err).To(HaveOccurred())
 		})
 	})
 

@@ -21,13 +21,14 @@ import (
 	"k8s.io/component-base/version"
 	"k8s.io/utils/pointer"
 
+	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	gardenletv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
@@ -44,15 +45,13 @@ type ValuesHelper interface {
 
 // valuesHelper is a concrete implementation of ValuesHelper
 type valuesHelper struct {
-	config      *config.GardenletConfiguration
-	imageVector imagevector.ImageVector
+	config *config.GardenletConfiguration
 }
 
 // NewValuesHelper creates a new ValuesHelper with the given parent GardenletConfiguration and image vector.
-func NewValuesHelper(config *config.GardenletConfiguration, imageVector imagevector.ImageVector) ValuesHelper {
+func NewValuesHelper(config *config.GardenletConfiguration) ValuesHelper {
 	return &valuesHelper{
-		config:      config,
-		imageVector: imageVector,
+		config: config,
 	}
 }
 
@@ -65,7 +64,7 @@ func (vp *valuesHelper) MergeGardenletDeployment(deployment *seedmanagementv1alp
 	}
 
 	// Get parent deployment values
-	parentDeployment, err := getParentGardenletDeployment(vp.imageVector)
+	parentDeployment, err := getParentGardenletDeployment()
 	if err != nil {
 		return nil, err
 	}
@@ -286,10 +285,10 @@ func (vp *valuesHelper) getGardenletConfigurationValues(config *gardenletv1alpha
 	return configValues, nil
 }
 
-func getParentGardenletDeployment(imageVector imagevector.ImageVector) (*seedmanagementv1alpha1.GardenletDeployment, error) {
+func getParentGardenletDeployment() (*seedmanagementv1alpha1.GardenletDeployment, error) {
 	// Get image repository and tag
 	var imageRepository, imageTag string
-	gardenletImage, err := imageVector.FindImage("gardenlet")
+	gardenletImage, err := imagevector.ImageVector().FindImage("gardenlet")
 	if err != nil {
 		return nil, err
 	}
@@ -312,7 +311,7 @@ func getParentGardenletDeployment(imageVector imagevector.ImageVector) (*seedman
 
 func getParentImageVectorOverwrite() (*string, error) {
 	var imageVectorOverwrite *string
-	if overWritePath := os.Getenv(imagevector.OverrideEnv); len(overWritePath) > 0 {
+	if overWritePath := os.Getenv(imagevectorutils.OverrideEnv); len(overWritePath) > 0 {
 		data, err := os.ReadFile(overWritePath)
 		if err != nil {
 			return nil, err
@@ -324,7 +323,7 @@ func getParentImageVectorOverwrite() (*string, error) {
 
 func getParentComponentImageVectorOverwrites() (*string, error) {
 	var componentImageVectorOverwrites *string
-	if overWritePath := os.Getenv(imagevector.ComponentOverrideEnv); len(overWritePath) > 0 {
+	if overWritePath := os.Getenv(imagevectorutils.ComponentOverrideEnv); len(overWritePath) > 0 {
 		data, err := os.ReadFile(overWritePath)
 		if err != nil {
 			return nil, err

@@ -85,7 +85,6 @@ func NewKubeAPIServer(
 	objectMeta metav1.ObjectMeta,
 	runtimeVersion *semver.Version,
 	targetVersion *semver.Version,
-	imageVector imagevectorutils.ImageVector,
 	secretsManager secretsmanager.Interface,
 	namePrefix string,
 	apiServerConfig *gardencorev1beta1.KubeAPIServerConfig,
@@ -103,7 +102,7 @@ func NewKubeAPIServer(
 	kubeapiserver.Interface,
 	error,
 ) {
-	images, err := computeKubeAPIServerImages(imageVector, runtimeVersion, targetVersion, vpnConfig)
+	images, err := computeKubeAPIServerImages(runtimeVersion, targetVersion, vpnConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +258,6 @@ func DeployKubeAPIServer(
 }
 
 func computeKubeAPIServerImages(
-	imageVector imagevectorutils.ImageVector,
 	runtimeVersion *semver.Version,
 	targetVersion *semver.Version,
 	vpnConfig kubeapiserver.VPNConfig,
@@ -269,14 +267,14 @@ func computeKubeAPIServerImages(
 ) {
 	var result kubeapiserver.Images
 
-	imageKubeAPIServer, err := imageVector.FindImage(imagevector.ImageNameKubeApiserver, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(targetVersion.String()))
+	imageKubeAPIServer, err := imagevector.ImageVector().FindImage(imagevector.ImageNameKubeApiserver, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(targetVersion.String()))
 	if err != nil {
 		return kubeapiserver.Images{}, err
 	}
 	result.KubeAPIServer = imageKubeAPIServer.String()
 
 	if version.ConstraintK8sEqual124.Check(targetVersion) {
-		imageWatchdog, err := imageVector.FindImage(imagevector.ImageNameAlpine, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(targetVersion.String()))
+		imageWatchdog, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(targetVersion.String()))
 		if err != nil {
 			return kubeapiserver.Images{}, err
 		}
@@ -284,7 +282,7 @@ func computeKubeAPIServerImages(
 	}
 
 	if vpnConfig.HighAvailabilityEnabled {
-		imageVPNClient, err := imageVector.FindImage(imagevector.ImageNameVpnShootClient, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(targetVersion.String()))
+		imageVPNClient, err := imagevector.ImageVector().FindImage(imagevector.ImageNameVpnShootClient, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(targetVersion.String()))
 		if err != nil {
 			return kubeapiserver.Images{}, err
 		}

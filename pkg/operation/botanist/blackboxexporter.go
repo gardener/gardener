@@ -24,7 +24,7 @@ import (
 
 // DefaultBlackboxExporter returns a deployer for the blackbox-exporter.
 func (b *Botanist) DefaultBlackboxExporter() (blackboxexporter.Interface, error) {
-	image, err := b.ImageVector.FindImage(imagevector.ImageNameBlackboxExporter, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameBlackboxExporter, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

@@ -47,7 +47,6 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 )
@@ -123,14 +122,6 @@ var _ = Describe("Logging", func() {
 						},
 					},
 					IsWorkerless: false,
-				},
-				ImageVector: imagevector.ImageVector{
-					{Name: "alpine"},
-					{Name: "vali"},
-					{Name: "vali-curator"},
-					{Name: "kube-rbac-proxy"},
-					{Name: "telegraf"},
-					{Name: "tune2fs"},
 				},
 			},
 		}

@@ -32,13 +32,14 @@ import (
 	"github.com/gardener/gardener/pkg/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
+
+// ImageVector is an alias for imagevector.ImageVector(). Exposed for testing.
+var ImageVector = imagevector.ImageVector()
 
 // NewIstio returns a deployer for Istio.
 func NewIstio(
 	cl client.Client,
-	imageVector imagevectorutils.ImageVector,
 	chartRenderer chartrenderer.Interface,
 	namePrefix string,
 	ingressNamespace string,
@@ -62,12 +63,12 @@ func NewIstio(
 		maxReplicas *int
 	)
 
-	istiodImage, err := imageVector.FindImage(imagevector.ImageNameIstioIstiod)
+	istiodImage, err := ImageVector.FindImage(imagevector.ImageNameIstioIstiod)
 	if err != nil {
 		return nil, err
 	}
 
-	igwImage, err := imageVector.FindImage(imagevector.ImageNameIstioProxy)
+	igwImage, err := ImageVector.FindImage(imagevector.ImageNameIstioProxy)
 	if err != nil {
 		return nil, err
 	}

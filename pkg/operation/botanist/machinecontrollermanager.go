@@ -31,7 +31,7 @@ import (
 
 // DefaultMachineControllerManager returns a deployer for the machine-controller-manager.
 func (b *Botanist) DefaultMachineControllerManager(ctx context.Context) (machinecontrollermanager.Interface, error) {
-	image, err := b.ImageVector.FindImage(imagevector.ImageNameMachineControllerManager, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameMachineControllerManager, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

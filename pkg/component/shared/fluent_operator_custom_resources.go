@@ -21,14 +21,12 @@ import (
 	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
-	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // NewFluentOperatorCustomResources instantiates a new `Fluent Operator Custom Resources` component.
 func NewFluentOperatorCustomResources(
 	c client.Client,
 	gardenNamespaceName string,
-	imageVector imagevectorutils.ImageVector,
 	enabled bool,
 	priorityClassName string,
 	additionalInputs []*fluentbitv1alpha2.ClusterInput,
@@ -38,12 +36,12 @@ func NewFluentOperatorCustomResources(
 	deployer component.DeployWaiter,
 	err error,
 ) {
-	fluentBitImage, err := imageVector.FindImage(imagevector.ImageNameFluentBit)
+	fluentBitImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNameFluentBit)
 	if err != nil {
 		return nil, err
 	}
 
-	fluentBitInitImage, err := imageVector.FindImage(imagevector.ImageNameFluentBitPluginInstaller)
+	fluentBitInitImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNameFluentBitPluginInstaller)
 	if err != nil {
 		return nil, err
 	}

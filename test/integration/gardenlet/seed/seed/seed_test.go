@@ -34,7 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -162,7 +161,6 @@ var _ = Describe("Seed controller tests", func() {
 				},
 			},
 			Identity:        identity,
-			ImageVector:     imagevector.ImageVector(),
 			GardenNamespace: testNamespace.Name,
 		}).AddToManager(mgr, mgr)).To(Succeed())
 

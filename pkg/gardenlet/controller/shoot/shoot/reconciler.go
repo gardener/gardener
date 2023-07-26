@@ -57,7 +57,6 @@ import (
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
@@ -72,7 +71,6 @@ type Reconciler struct {
 	ShootClientMap              clientmap.ClientMap
 	Config                      config.GardenletConfiguration
 	Recorder                    record.EventRecorder
-	ImageVector                 imagevector.ImageVector
 	Identity                    *gardencorev1beta1.Gardener
 	GardenClusterIdentity       string
 	Clock                       clock.Clock
@@ -361,7 +359,6 @@ func (r *Reconciler) initializeOperation(
 		WithGardenerInfo(r.Identity).
 		WithGardenClusterIdentity(r.GardenClusterIdentity).
 		WithSecrets(gardenSecrets).
-		WithImageVector(r.ImageVector).
 		WithGarden(gardenObj).
 		WithSeed(seedObj).
 		WithShoot(shootObj).

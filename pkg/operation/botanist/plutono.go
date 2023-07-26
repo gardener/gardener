@@ -42,7 +42,6 @@ func (b *Botanist) DefaultPlutono() (plutono.Interface, error) {
 	return shared.NewPlutono(
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
-		b.ImageVector,
 		b.SecretsManager,
 		"",
 		component.ClusterTypeShoot,

@@ -47,7 +47,6 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 	return shared.NewTargetGardenerResourceManager(
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
-		b.ImageVector,
 		b.SecretsManager,
 		b.Seed.GetInfo().Status.ClusterIdentity,
 		defaultNotReadyTolerationSeconds,

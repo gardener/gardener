@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -78,7 +77,6 @@ func New(
 	image string,
 	replicas int32,
 	config *gardencorev1beta1.ClusterAutoscaler,
-	runtimeKubernetesVersion *semver.Version,
 ) Interface {
 	return &clusterAutoscaler{
 		client:         client,

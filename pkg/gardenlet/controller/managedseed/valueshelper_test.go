@@ -43,7 +43,6 @@ var _ = Describe("ValuesHelper", func() {
 		cleanupFuncs []func()
 
 		parentConfig *config.GardenletConfiguration
-		imageVector  imagevector.ImageVector
 
 		vh ValuesHelper
 
@@ -117,15 +116,8 @@ var _ = Describe("ValuesHelper", func() {
 				},
 			},
 		}
-		imageVector = []*imagevector.ImageSource{
-			{
-				Name:       "gardenlet",
-				Repository: "test-repository",
-				Tag:        pointer.String("test-tag"),
-			},
-		}
 
-		vh = NewValuesHelper(parentConfig, imageVector)
+		vh = NewValuesHelper(parentConfig)
 
 		deployment = &seedmanagementv1alpha1.GardenletDeployment{
 			ReplicaCount:         pointer.Int32(1),
@@ -163,8 +155,8 @@ var _ = Describe("ValuesHelper", func() {
 			ReplicaCount:         pointer.Int32(1),
 			RevisionHistoryLimit: pointer.Int32(1),
 			Image: &seedmanagementv1alpha1.Image{
-				Repository: pointer.String("test-repository"),
-				Tag:        pointer.String("test-tag"),
+				Repository: pointer.String("eu.gcr.io/gardener-project/gardener/gardenlet"),
+				Tag:        pointer.String("v0.0.0-master+$Format:%H$"),
 				PullPolicy: pullPolicyPtr(corev1.PullIfNotPresent),
 			},
 			PodAnnotations: map[string]string{
@@ -241,8 +233,8 @@ var _ = Describe("ValuesHelper", func() {
 				"replicaCount":         float64(replicaCount),
 				"revisionHistoryLimit": float64(1),
 				"image": map[string]interface{}{
-					"repository": "test-repository",
-					"tag":        "test-tag",
+					"repository": "eu.gcr.io/gardener-project/gardener/gardenlet",
+					"tag":        "v0.0.0-master+$Format:%H$",
 					"pullPolicy": "IfNotPresent",
 				},
 				"podAnnotations": map[string]interface{}{

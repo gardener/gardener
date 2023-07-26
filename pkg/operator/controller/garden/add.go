@@ -17,6 +17,7 @@ package garden
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -25,7 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	"github.com/gardener/gardener/pkg/operator/controller/garden/care"
 	"github.com/gardener/gardener/pkg/operator/controller/garden/garden"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // AddToManager adds all Garden controllers to the given manager.
@@ -34,9 +35,19 @@ func AddToManager(
 	mgr manager.Manager,
 	cfg *config.OperatorConfiguration,
 	identity *gardencorev1beta1.Gardener,
-	imageVector imagevector.ImageVector,
-	componentImageVectors imagevector.ComponentImageVectors,
 ) error {
+	var (
+		componentImageVectors imagevectorutils.ComponentImageVectors
+		err                   error
+	)
+
+	if path := os.Getenv(imagevectorutils.ComponentOverrideEnv); path != "" {
+		componentImageVectors, err = imagevectorutils.ReadComponentOverwriteFile(path)
+		if err != nil {
+			return fmt.Errorf("failed reading component-specific image vector override: %w", err)
+		}
+	}
+
 	gardenClientMap, err := clientmapbuilder.
 		NewGardenClientMapBuilder().
 		WithRuntimeClient(mgr.GetClient()).
@@ -52,7 +63,6 @@ func AddToManager(
 	if err := (&garden.Reconciler{
 		Config:                *cfg,
 		Identity:              identity,
-		ImageVector:           imageVector,
 		ComponentImageVectors: componentImageVectors,
 		GardenClientMap:       gardenClientMap,
 	}).AddToManager(mgr); err != nil {

@@ -25,7 +25,8 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/component/istio"
 	. "github.com/gardener/gardener/pkg/component/shared"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 type istioTestValues struct {
@@ -48,12 +49,16 @@ type istioTestValues struct {
 }
 
 func createIstio(testValues istioTestValues) istio.Interface {
-	istio, err := NewIstio(
-		testValues.client,
-		imagevector.ImageVector{
+	DeferCleanup(test.WithVars(
+		&ImageVector,
+		imagevectorutils.ImageVector{
 			{Name: "istio-istiod", Repository: testValues.istiodImageName},
 			{Name: "istio-proxy", Repository: testValues.ingressImageName},
 		},
+	))
+
+	istio, err := NewIstio(
+		testValues.client,
 		testValues.chartRenderer,
 		testValues.prefix,
 		testValues.ingressNamespace,

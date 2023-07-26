@@ -82,7 +82,7 @@ func (r *Reconciler) AddToManager(
 			seedCluster.GetClient(),
 			r.ShootClientMap,
 			r.Clock,
-			NewValuesHelper(&r.Config, r.ImageVector),
+			NewValuesHelper(&r.Config),
 			gardenCluster.GetEventRecorderFor(ControllerName+"-controller"),
 			r.GardenNamespaceShoot,
 		)

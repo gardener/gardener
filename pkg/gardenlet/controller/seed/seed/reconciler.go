@@ -47,7 +47,6 @@ type Reconciler struct {
 	Clock                                clock.Clock
 	Recorder                             record.EventRecorder
 	Identity                             *gardencorev1beta1.Gardener
-	ImageVector                          imagevector.ImageVector
 	ComponentImageVectors                imagevector.ComponentImageVectors
 	ClientCertificateExpirationTimestamp *metav1.Time
 	GardenNamespace                      string

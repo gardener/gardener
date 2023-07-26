@@ -36,7 +36,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/gardener/gardener/imagevector"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -231,7 +230,6 @@ var _ = BeforeSuite(func() {
 		Config:                cfg,
 		GardenNamespaceGarden: gardenNamespaceGarden.Name,
 		GardenNamespaceShoot:  gardenNamespaceShoot,
-		ImageVector:           imagevector.ImageVector(),
 		ShootClientMap:        shootClientMap,
 	}).AddToManager(ctx, mgr, mgr, mgr)).To(Succeed())
 
