@@ -29,7 +29,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | WorkerlessShoots                    | `false` | `Alpha` | `1.70` |        |
 | MachineControllerManagerDeployment  | `false` | `Alpha` | `1.73` |        |
 | DisableScalingClassesForShoots      | `false` | `Alpha` | `1.73` |        |
-| ContainerdRegistryHostsDir          | `false` | `Alpha` | `1.76` |        |
+| ContainerdRegistryHostsDir          | `false` | `Alpha` | `1.77` |        |
 
 ## Feature Gates for Graduated or Deprecated Features
 

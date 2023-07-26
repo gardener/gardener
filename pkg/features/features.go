@@ -89,7 +89,7 @@ const (
 	// /etc/containerd/certs.d directory.
 	//
 	// owner: @ialidzhikov, @dimitar-kostadinov
-	// alpha: v1.76.0
+	// alpha: v1.77.0
 	ContainerdRegistryHostsDir featuregate.Feature = "ContainerdRegistryHostsDir"
 )
 

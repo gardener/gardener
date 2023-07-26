@@ -14,7 +14,7 @@
 # limitations under the License.
 
 # TODO(alidzhikov): The following code is migration code to ensure graceful enablement of the ContainerdRegistryHostsDir feature 
-# for existing Shoots with provider-local. Remove this script and the related units/files in v1.78.
+# for existing Shoots with provider-local. Remove this script and the related units/files in v1.79.
 FILENAME=/etc/containerd/config.toml
 if grep --quiet --fixed-strings '[plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5001"]' "$FILENAME"; then
   sed -i -E '/\[plugins\."io\.containerd\.grpc\.v1\.cri"\.registry\.mirrors\."localhost:5001"\]/,+11d' $FILENAME
