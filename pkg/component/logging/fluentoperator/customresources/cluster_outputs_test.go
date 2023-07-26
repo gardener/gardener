@@ -84,7 +84,7 @@ NumberOfBatchIDs 5
 			Expect(fluentBitClusterOutputs).To(Equal(
 				&fluentbitv1alpha2.ClusterOutput{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "dynamic-vali",
+						Name:   "gardener-vali",
 						Labels: labels,
 					},
 					Spec: fluentbitv1alpha2.OutputSpec{

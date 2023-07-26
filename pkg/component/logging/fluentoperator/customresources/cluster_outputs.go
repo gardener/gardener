@@ -74,7 +74,7 @@ QueueName seed-journald
 func GetDynamicClusterOutput(labels map[string]string) *fluentbitv1alpha2.ClusterOutput {
 	return &fluentbitv1alpha2.ClusterOutput{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   "dynamic-vali",
+			Name:   "gardener-vali",
 			Labels: labels,
 		},
 		Spec: fluentbitv1alpha2.OutputSpec{

@@ -441,7 +441,7 @@ images:
 - name: vali-curator
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/vali-curator
-  tag: "v0.55.3"
+  tag: "v0.55.4"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -496,7 +496,7 @@ images:
     name: telegraf-iptables
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/telegraf-iptables
-  tag: "v0.55.3"
+  tag: "v0.55.4"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -516,7 +516,7 @@ images:
 - name: event-logger
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/event-logger
-  tag: "v0.55.3"
+  tag: "v0.55.4"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -533,7 +533,7 @@ images:
 - name: tune2fs
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/tune2fs
-  tag: "v0.55.3"
+  tag: "v0.55.4"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:

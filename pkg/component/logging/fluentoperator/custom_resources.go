@@ -18,9 +18,12 @@ import (
 	"context"
 
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -86,6 +89,10 @@ func (c *customResources) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if err := c.deleteOldManagedResource(ctx); err != nil {
+		return err
+	}
+
 	return managedresources.CreateForSeed(ctx, c.client, c.namespace, c.getManagedResourceName(), false, serializedResources)
 }
 
@@ -112,6 +119,41 @@ func (c *customResources) getManagedResourceName() string {
 		return CustomResourcesManagedResourceName + "-" + c.values.Suffix
 	}
 	return CustomResourcesManagedResourceName
+}
+
+// TODO: remove this in next release.
+func (c *customResources) deleteOldManagedResource(ctx context.Context) error {
+	mr := &resourcesv1alpha1.ManagedResource{}
+
+	if err := c.client.Get(ctx, client.ObjectKey{Namespace: c.namespace, Name: CustomResourcesManagedResourceName}, mr); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+
+	// Check if the ManagedResource is responsible for FluentBit.
+	// If not nothing has to be done.
+	var foundFluentBit bool
+	for _, resource := range mr.Status.Resources {
+		if resource.Kind == "FluentBit" {
+			foundFluentBit = true
+		}
+	}
+
+	if !foundFluentBit {
+		return nil
+	}
+
+	// Remove the finalizers from the managed resource to delete it
+	beforePatch := mr.DeepCopyObject().(client.Object)
+	metav1.SetMetaDataAnnotation(&mr.ObjectMeta, resourcesv1alpha1.Ignore, "true")
+	mr.SetFinalizers([]string{})
+	if err := c.client.Patch(ctx, mr, client.MergeFromWithOptions(beforePatch, client.MergeFromWithOptimisticLock{})); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+
+	return client.IgnoreNotFound(c.client.Delete(ctx, mr))
 }
 
 func getCustomResourcesLabels() map[string]string {

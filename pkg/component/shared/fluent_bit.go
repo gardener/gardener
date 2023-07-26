@@ -17,29 +17,27 @@ package shared
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // NewFluentBit instantiates a new `Fluent-bit` component.
 func NewFluentBit(
 	c client.Client,
 	gardenNamespaceName string,
-	imageVector imagevector.ImageVector,
 	enabled bool,
 	priorityClassName string,
 ) (
 	deployer component.DeployWaiter,
 	err error,
 ) {
-	fluentBitImage, err := imageVector.FindImage(images.ImageNameFluentBit)
+	fluentBitImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNameFluentBit)
 	if err != nil {
 		return nil, err
 	}
 
-	fluentBitInitImage, err := imageVector.FindImage(images.ImageNameFluentBitPluginInstaller)
+	fluentBitInitImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNameFluentBitPluginInstaller)
 	if err != nil {
 		return nil, err
 	}

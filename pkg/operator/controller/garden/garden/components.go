@@ -199,7 +199,6 @@ func (r *Reconciler) instantiateComponents(
 	c.fluentOperator, err = sharedcomponent.NewFluentOperator(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
-		r.ImageVector,
 		true,
 		v1beta1constants.PriorityClassNameGardenSystem100,
 	)
@@ -210,7 +209,6 @@ func (r *Reconciler) instantiateComponents(
 	c.fluentBit, err = sharedcomponent.NewFluentBit(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
-		r.ImageVector,
 		true,
 		v1beta1constants.PriorityClassNameGardenSystem100,
 	)
@@ -226,7 +224,6 @@ func (r *Reconciler) instantiateComponents(
 	c.vali, err = sharedcomponent.NewVali(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
-		r.ImageVector,
 		nil,
 		component.ClusterTypeSeed,
 		1,
@@ -808,14 +805,11 @@ func (r *Reconciler) newFluentCustomResources(ctx context.Context) (component.De
 	)
 
 	componentsFunctions := []component.CentralLoggingConfiguration{
-		// journald components
 		kubelet.CentralLoggingConfiguration,
 		docker.CentralLoggingConfiguration,
 		containerd.CentralLoggingConfiguration,
-		// seed system components
 		resourcemanager.CentralLoggingConfiguration,
 		vali.CentralLoggingConfiguration,
-		// shoot control plane components
 		etcd.CentralLoggingConfiguration,
 		kubeapiserver.CentralLoggingConfiguration,
 		kubescheduler.CentralLoggingConfiguration,
@@ -823,11 +817,9 @@ func (r *Reconciler) newFluentCustomResources(ctx context.Context) (component.De
 		kubestatemetrics.CentralLoggingConfiguration,
 		hvpa.CentralLoggingConfiguration,
 		vpa.CentralLoggingConfiguration,
-		// shoot system components
 		coredns.CentralLoggingConfiguration,
 		kubeproxy.CentralLoggingConfiguration,
 		metricsserver.CentralLoggingConfiguration,
-		// shoot addon components
 		nginxingress.CentralLoggingConfiguration,
 	}
 
