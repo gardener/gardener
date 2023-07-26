@@ -136,7 +136,7 @@ type Values struct {
 	WildcardCertName *string
 }
 
-// New creates a new instance of DeployWaiter for the monitoring components.
+// New creates a new instance of Interface for the monitoring components.
 func New(
 	client client.Client,
 	chartApplier kubernetes.ChartApplier,
