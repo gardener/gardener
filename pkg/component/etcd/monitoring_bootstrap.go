@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	monitoringPrometheusJobName              = "etcddruid"
+	monitoringPrometheusJobName              = "etcd-druid"
 	monitoringMetricJobsTotal                = "etcddruid_compaction_jobs_total"
 	monitoringMetricJobsCurrent              = "etcddruid_compaction_jobs_current"
 	monitoringMetricJobDurationSecondsBucket = "etcddruid_compaction_job_duration_seconds_bucket"

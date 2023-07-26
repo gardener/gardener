@@ -34,7 +34,7 @@ var _ = Describe("Monitoring", func() {
 })
 
 const (
-	expectedCentralScrapeConfig = `job_name: etcddruid
+	expectedCentralScrapeConfig = `job_name: etcd-druid
 kubernetes_sd_configs:
 - role: endpoints
   namespaces:
