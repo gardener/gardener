@@ -53,28 +53,16 @@ var TimeoutWaitForManagedResource = 5 * time.Minute
 
 // Values contains configuration values for the gardener-admission-controller resources.
 type Values struct {
-	// ClientConnection is the configuration for the client connection.
-	ClientConnection ClientConnection
 	// LogLevel is the configured log level for the gardener-admission-controller.
 	LogLevel string
 	// Image is the container image used for the gardener-admission-controller pods.
 	Image string
 	// ResourceAdmissionConfiguration is the configuration for gardener-admission-controller's resource-size validator.
 	ResourceAdmissionConfiguration *admissioncontrollerv1alpha1.ResourceAdmissionConfiguration
-	// Replicas is the number of pod replicas for the gardener-admission-controller.
-	Replicas int32
 	// RuntimeVersion is the Kubernetes version of the runtime cluster.
 	RuntimeVersion *semver.Version
 	// TopologyAwareRoutingEnabled determines whether topology aware hints are intended for the gardener-admission-controller.
 	TopologyAwareRoutingEnabled bool
-}
-
-// ClientConnection holds values for the client connection.
-type ClientConnection struct {
-	// QPS controls the number of queries per second allowed for this connection.
-	QPS float32
-	// Burst allows extra queries to accumulate when a client is exceeding its rate.
-	Burst int32
 }
 
 // New creates a new instance of DeployWaiter for the gardener-admission-controller.

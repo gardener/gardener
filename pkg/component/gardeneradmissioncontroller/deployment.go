@@ -51,7 +51,7 @@ func (a *gardenerAdmissionController) deployment(secretServerCert, secretGeneric
 			}),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: &a.values.Replicas,
+			Replicas: pointer.Int32(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: GetLabels(),
 			},

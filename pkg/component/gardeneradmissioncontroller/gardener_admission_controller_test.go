@@ -102,11 +102,6 @@ var _ = Describe("GardenerAdmissionController", func() {
 
 			// These are typical configuration values set for the admission controller and serves as the base for the following tests.
 			testValues = Values{
-				ClientConnection: ClientConnection{
-					QPS:   10.0,
-					Burst: 50,
-				},
-				Replicas:       3,
 				RuntimeVersion: semver.MustParse("v1.27.0"),
 				ResourceAdmissionConfiguration: &admissioncontrollerv1alpha1.ResourceAdmissionConfiguration{
 					Limits: []admissioncontrollerv1alpha1.ResourceLimit{
@@ -140,7 +135,7 @@ var _ = Describe("GardenerAdmissionController", func() {
 		Context("with common values", func() {
 			It("should successfully deploy", func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
-				verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, "930189d2", testValues)
+				verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, "4ef77c17", testValues)
 			})
 		})
 
@@ -151,7 +146,7 @@ var _ = Describe("GardenerAdmissionController", func() {
 
 			It("should successfully deploy", func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
-				verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, "930189d2", testValues)
+				verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, "4ef77c17", testValues)
 			})
 		})
 
@@ -163,7 +158,7 @@ var _ = Describe("GardenerAdmissionController", func() {
 
 			It("should successfully deploy", func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
-				verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, "930189d2", testValues)
+				verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, "4ef77c17", testValues)
 			})
 		})
 
@@ -174,7 +169,7 @@ var _ = Describe("GardenerAdmissionController", func() {
 
 			It("should successfully deploy", func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
-				verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, "dd2b59eb", testValues)
+				verifyExpectations(ctx, fakeClient, fakeSecretManager, namespace, "6d282905", testValues)
 			})
 		})
 	})
@@ -472,8 +467,8 @@ func configMap(namespace string, testValues Values) string {
 			Kind:       "AdmissionControllerConfiguration",
 		},
 		GardenClientConnection: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
-			QPS:        testValues.ClientConnection.QPS,
-			Burst:      testValues.ClientConnection.Burst,
+			QPS:        100,
+			Burst:      130,
 			Kubeconfig: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 		},
 		LogLevel:  testValues.LogLevel,
@@ -525,7 +520,7 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: &testValues.Replicas,
+			Replicas: pointer.Int32(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app":  "gardener",

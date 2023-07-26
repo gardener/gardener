@@ -55,8 +55,8 @@ func init() {
 func (a *gardenerAdmissionController) admissionConfigConfigMap() (*corev1.ConfigMap, error) {
 	admissionConfig := &admissioncontrollerv1alpha1.AdmissionControllerConfiguration{
 		GardenClientConnection: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
-			QPS:        a.values.ClientConnection.QPS,
-			Burst:      a.values.ClientConnection.Burst,
+			QPS:        100,
+			Burst:      130,
 			Kubeconfig: gardenerutils.PathGenericKubeconfig,
 		},
 		LogLevel:  a.values.LogLevel,
