@@ -468,6 +468,12 @@ type ProjectQuotaConfiguration struct {
 // GardenerSchedulerConfig contains configuration settings for the gardener-scheduler.
 type GardenerSchedulerConfig struct {
 	gardencorev1beta1.KubernetesConfig `json:",inline"`
+	// LogLevel is the configured log level for the gardener-admission-controller. Must be one of [info,debug,error].
+	// Defaults to info.
+	// +kubebuilder:validation:Enum=info;debug;error
+	// +kubebuilder:default=info
+	// +optional
+	LogLevel *string `json:"logLevel,omitempty"`
 }
 
 // GardenStatus is the status of a garden environment.

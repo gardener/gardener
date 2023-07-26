@@ -196,6 +196,7 @@ spec:
     # gardenerScheduler:
     #   featureGates:
     #     SomeGardenerFeature: true
+    #   logLevel: info  # either {debug,info,error}
     maintenance:
       timeWindow:
         begin: 220000+0100
