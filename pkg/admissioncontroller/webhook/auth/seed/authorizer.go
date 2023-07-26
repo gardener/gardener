@@ -132,6 +132,8 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorizeRead(requestLog, seedName, graph.VertexTypeCloudProfile, attrs)
 		case clusterRoleBindingResource:
 			if userType == seedidentity.UserTypeExtension {
+				// We don't use authorizeRead here, as it would also grant list and watch permissions, which gardenlet doesn't
+				// have. We want to grant the read-only subset of gardenlet's permissions.
 				return a.authorize(requestLog, seedName, graph.VertexTypeClusterRoleBinding, attrs,
 					[]string{"get"},
 					nil,
@@ -190,6 +192,8 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			)
 		case serviceAccountResource:
 			if userType == seedidentity.UserTypeExtension {
+				// We don't use authorizeRead here, as it would also grant list and watch permissions, which gardenlet doesn't
+				// have. We want to grant the read-only subset of gardenlet's permissions.
 				return a.authorize(requestLog, seedName, graph.VertexTypeServiceAccount, attrs,
 					[]string{"get"},
 					nil,

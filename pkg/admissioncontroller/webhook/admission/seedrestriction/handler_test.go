@@ -2654,7 +2654,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 								Allowed: false,
 								Result: &metav1.Status{
 									Code:    int32(http.StatusForbidden),
-									Message: fmt.Sprintf("object does not belong to namespace for seed %q", seedName),
+									Message: fmt.Sprintf("extension client can only create leases in the namespace for seed %q", seedName),
 								},
 							},
 						}))
@@ -2669,7 +2669,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 								Allowed: false,
 								Result: &metav1.Status{
 									Code:    int32(http.StatusForbidden),
-									Message: fmt.Sprintf("object does not belong to namespace for seed %q", seedName),
+									Message: fmt.Sprintf("extension client can only create leases in the namespace for seed %q", seedName),
 								},
 							},
 						}))

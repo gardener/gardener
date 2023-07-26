@@ -300,7 +300,7 @@ func (h *Handler) admitLease(seedName string, userType seedidentity.UserType, re
 		if request.Namespace == gardenerutils.ComputeGardenNamespace(seedName) {
 			return admission.Allowed("")
 		}
-		return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to namespace for seed %q", seedName))
+		return admission.Errored(http.StatusForbidden, fmt.Errorf("extension client can only create leases in the namespace for seed %q", seedName))
 	}
 
 	// This allows the gardenlet to create a Lease for leader election (if the garden cluster is a seed as well).
