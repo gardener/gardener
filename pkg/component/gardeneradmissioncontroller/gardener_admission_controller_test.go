@@ -430,9 +430,15 @@ func verifyExpectations(ctx context.Context, fakeClient client.Client, fakeSecre
 	serverCert, ok := fakeSecretManager.Get("gardener-admission-controller-cert")
 	Expect(ok).To(BeTrue())
 
+	runtimeMr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{
+		Name:      managedResourceNameRuntime,
+		Namespace: namespace,
+	}}
+	Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(runtimeMr), runtimeMr)).To(Succeed())
+
 	runtimeManagedResourceSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "managedresource-" + managedResourceNameRuntime,
+			Name:      runtimeMr.Spec.SecretRefs[0].Name,
 			Namespace: namespace,
 		},
 	}
@@ -442,11 +448,18 @@ func verifyExpectations(ctx context.Context, fakeClient client.Client, fakeSecre
 	Expect(string(runtimeManagedResourceSecret.Data["deployment__some-namespace__gardener-admission-controller.yaml"])).To(Equal(deployment(namespace, "gardener-admission-controller-"+configMapChecksum, serverCert.Name, testValues)))
 	Expect(string(runtimeManagedResourceSecret.Data["service__some-namespace__gardener-admission-controller.yaml"])).To(Equal(service(namespace, testValues)))
 	Expect(string(runtimeManagedResourceSecret.Data["verticalpodautoscaler__some-namespace__gardener-admission-controller.yaml"])).To(Equal(vpa(namespace)))
+	Expect(runtimeManagedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+	Expect(runtimeManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 	By("Check Virtual Cluster Resources")
+	virtualMr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{
+		Name:      managedResourceNameVirtual,
+		Namespace: namespace,
+	}}
+	Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(virtualMr), virtualMr)).To(Succeed())
 	virtualManagedResourceSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "managedresource-" + managedResourceNameVirtual,
+			Name:      virtualMr.Spec.SecretRefs[0].Name,
 			Namespace: namespace,
 		},
 	}
@@ -458,6 +471,8 @@ func verifyExpectations(ctx context.Context, fakeClient client.Client, fakeSecre
 	Expect(string(virtualManagedResourceSecret.Data["clusterrole____gardener.cloud_system_admission-controller.yaml"])).To(Equal(clusterRole()))
 	Expect(string(virtualManagedResourceSecret.Data["clusterrolebinding____gardener.cloud_admission-controller.yaml"])).To(Equal(clusterRoleBinding()))
 	Expect(string(virtualManagedResourceSecret.Data["validatingwebhookconfiguration____gardener-admission-controller.yaml"])).To(Equal(validatingWebhookConfiguration(namespace, caGardener.Data["bundle.crt"], testValues)))
+	Expect(virtualManagedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+	Expect(virtualManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 }
 
 func configMap(namespace string, testValues Values) string {
