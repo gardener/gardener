@@ -183,8 +183,7 @@ Requires=` + unitNameInitializer,
 			Permissions: pointer.Int32(0644),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
-					Encoding: "",
-					Data:     mirror.HostsTOML(),
+					Data: mirror.HostsTOML(),
 				},
 			},
 		})

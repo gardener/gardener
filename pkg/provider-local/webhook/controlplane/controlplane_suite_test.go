@@ -23,5 +23,5 @@ import (
 
 func TestControlPlaneWebhook(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControlPlane Webhook Suite")
+	RunSpecs(t, "Provider-Local Webhook ControlPlane Suite")
 }
