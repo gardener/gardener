@@ -26,7 +26,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -57,7 +56,6 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
@@ -76,7 +74,6 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -368,14 +365,6 @@ func (g *garden) Start(ctx context.Context) error {
 		}
 	}
 
-	// TODO(shafeeqes): Remove this code in v1.77
-	{
-		log.Info("Cleaning up stale 'addons' ManagedResource from shoot namespaces in the seed cluster")
-		if err := g.cleanupStaleAddonsMR(ctx, gardenCluster.GetClient(), g.mgr.GetClient()); err != nil {
-			return err
-		}
-	}
-
 	log.Info("Setting up shoot client map")
 	shootClientMap, err := clientmapbuilder.
 		NewShootClientMapBuilder().
@@ -562,97 +551,6 @@ func (g *garden) cleanupStaleShootStates(ctx context.Context, gardenClient clien
 
 		taskFns = append(taskFns, func(ctx context.Context) error {
 			return shootstate.Delete(ctx, gardenClient, &shoot)
-		})
-	}
-
-	return flow.Parallel(taskFns...)(ctx)
-}
-
-func (g *garden) cleanupStaleAddonsMR(ctx context.Context, gardenClient, seedClient client.Client) error {
-	shootNamespaceList := &corev1.NamespaceList{}
-	if err := seedClient.List(ctx, shootNamespaceList, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}); err != nil {
-		return err
-	}
-
-	var taskFns []flow.TaskFn
-
-	for _, ns := range shootNamespaceList.Items {
-		namespace := ns
-
-		taskFns = append(taskFns, func(ctx context.Context) error {
-			var (
-				addonsMR = &resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "addons",
-						Namespace: namespace.Name,
-					},
-				}
-				addonsSecret = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "managedresource-addons",
-						Namespace: namespace.Name,
-					},
-				}
-				resourceManagerDeployment = &appsv1.Deployment{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-						Namespace: namespace.Name,
-					},
-				}
-				resourceManagerDeploymentFound bool
-				replicas                       int32
-			)
-
-			if err := seedClient.Get(ctx, client.ObjectKeyFromObject(addonsMR), addonsMR); err != nil {
-				// If the MR is already gone, then nothing to do here
-				if apierrors.IsNotFound(err) {
-					return nil
-				}
-				return err
-			}
-
-			if err := seedClient.Get(ctx, client.ObjectKeyFromObject(resourceManagerDeployment), resourceManagerDeployment); err == nil {
-				resourceManagerDeploymentFound = true
-			} else if !apierrors.IsNotFound(err) {
-				return err
-			}
-
-			if resourceManagerDeploymentFound {
-				replicas = pointer.Int32Deref(resourceManagerDeployment.Spec.Replicas, replicas)
-				if replicas > 0 {
-					patch := client.MergeFrom(resourceManagerDeployment.DeepCopy())
-					resourceManagerDeployment.Spec.Replicas = pointer.Int32(0)
-					if err := seedClient.Patch(ctx, resourceManagerDeployment, patch); err != nil {
-						return fmt.Errorf("failed to scale gardener-resource-manager deployment to zero %q: %w", client.ObjectKeyFromObject(resourceManagerDeployment), err)
-					}
-				}
-			}
-
-			if err := controllerutils.RemoveAllFinalizers(ctx, seedClient, addonsMR); err != nil {
-				return fmt.Errorf("failed to remove finalizers from the ManagedResource %q: %w", client.ObjectKeyFromObject(addonsMR), err)
-			}
-
-			if err := seedClient.Get(ctx, client.ObjectKeyFromObject(addonsSecret), addonsSecret); err == nil {
-				if err := controllerutils.RemoveAllFinalizers(ctx, seedClient, addonsSecret); err != nil {
-					return fmt.Errorf("failed to remove finalizers from the Secret %q: %w", client.ObjectKeyFromObject(addonsSecret), err)
-				}
-			} else if !apierrors.IsNotFound(err) {
-				return err
-			}
-
-			if err := managedresources.DeleteForShoot(ctx, seedClient, namespace.Name, addonsMR.Name); err != nil {
-				return err
-			}
-
-			if resourceManagerDeploymentFound && replicas > 0 {
-				patch := client.MergeFrom(resourceManagerDeployment.DeepCopy())
-				resourceManagerDeployment.Spec.Replicas = &replicas
-				if err := seedClient.Patch(ctx, resourceManagerDeployment, patch); err != nil {
-					return fmt.Errorf("failed to scale gardener-resource-manager deployment back from zero %q: %w", client.ObjectKeyFromObject(resourceManagerDeployment), err)
-				}
-			}
-
-			return nil
 		})
 	}
 
