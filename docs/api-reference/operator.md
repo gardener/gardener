@@ -1033,7 +1033,9 @@ Defaults to info.</p>
 <td>
 <code>resourceAdmissionConfiguration</code></br>
 <em>
-github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1.ResourceAdmissionConfiguration
+<a href="#operator.gardener.cloud/v1alpha1.ResourceAdmissionConfiguration">
+ResourceAdmissionConfiguration
+</a>
 </em>
 </td>
 <td>
@@ -1532,6 +1534,140 @@ Defaults to empty LabelSelector, which matches all projects.</p>
 <td>
 <em>(Optional)</em>
 <p>Zones is the list of availability zones the cluster is deployed to.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.ResourceAdmissionConfiguration">ResourceAdmissionConfiguration
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerAdmissionControllerConfig">GardenerAdmissionControllerConfig</a>)
+</p>
+<p>
+<p>ResourceAdmissionConfiguration contains settings about arbitrary kinds and the size each resource should have at most.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>limits</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.ResourceLimit">
+[]ResourceLimit
+</a>
+</em>
+</td>
+<td>
+<p>Limits contains configuration for resources which are subjected to size limitations.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>unrestrictedSubjects</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#subject-v1-rbac">
+[]Kubernetes rbac/v1.Subject
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>UnrestrictedSubjects contains references to users, groups, or service accounts which aren&rsquo;t subjected to any resource size limit.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>operationMode</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.ResourceAdmissionWebhookMode">
+ResourceAdmissionWebhookMode
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>OperationMode specifies the mode the webhooks operates in. Allowed values are &ldquo;block&rdquo; and &ldquo;log&rdquo;. Defaults to &ldquo;block&rdquo;.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.gardener.cloud/v1alpha1.ResourceAdmissionWebhookMode">ResourceAdmissionWebhookMode
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.ResourceAdmissionConfiguration">ResourceAdmissionConfiguration</a>)
+</p>
+<p>
+<p>ResourceAdmissionWebhookMode is an alias type for the resource admission webhook mode.</p>
+</p>
+<h3 id="operator.gardener.cloud/v1alpha1.ResourceLimit">ResourceLimit
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.ResourceAdmissionConfiguration">ResourceAdmissionConfiguration</a>)
+</p>
+<p>
+<p>ResourceLimit contains settings about a kind and the size each resource should have at most.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiGroups</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>APIGroups is the name of the APIGroup that contains the limited resource. WildcardAll represents all groups.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>apiVersions</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>APIVersions is the version of the resource. WildcardAll represents all versions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>Resources is the name of the resource this rule applies to. WildcardAll represents all resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>size</code></br>
+<em>
+k8s.io/apimachinery/pkg/api/resource.Quantity
+</em>
+</td>
+<td>
+<p>Size specifies the imposed limit.</p>
 </td>
 </tr>
 </tbody>

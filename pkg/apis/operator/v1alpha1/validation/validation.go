@@ -36,6 +36,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	operatorv1alpha1conversion "github.com/gardener/gardener/pkg/apis/operator/v1alpha1/conversion"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
@@ -274,11 +275,12 @@ func validateGardenerAdmissionController(config *operatorv1alpha1.GardenerAdmiss
 	}
 
 	if config.ResourceAdmissionConfiguration != nil {
-		resourceAdmissionConfiguration := &admissioncontrollerconfig.ResourceAdmissionConfiguration{}
-		if err := gardenCoreScheme.Convert(config.ResourceAdmissionConfiguration, resourceAdmissionConfiguration, nil); err != nil {
+		externalAdmissionConfiguration := operatorv1alpha1conversion.ConvertToAdmissionControllerResourceAdmissionConfiguration(config.ResourceAdmissionConfiguration)
+		internalAdmissionConfiguration := &admissioncontrollerconfig.ResourceAdmissionConfiguration{}
+		if err := gardenCoreScheme.Convert(externalAdmissionConfiguration, internalAdmissionConfiguration, nil); err != nil {
 			allErrs = append(allErrs, field.InternalError(fldPath.Child("resourceAdmissionConfiguration"), err))
 		}
-		allErrs = append(allErrs, admissioncontrollervalidation.ValidateResourceAdmissionConfiguration(resourceAdmissionConfiguration, fldPath.Child("resourceAdmissionConfiguration"))...)
+		allErrs = append(allErrs, admissioncontrollervalidation.ValidateResourceAdmissionConfiguration(internalAdmissionConfiguration, fldPath.Child("resourceAdmissionConfiguration"))...)
 	}
 
 	return allErrs

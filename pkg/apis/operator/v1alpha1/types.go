@@ -16,12 +16,12 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 
-	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
@@ -459,7 +459,36 @@ type GardenerAdmissionControllerConfig struct {
 	LogLevel *string `json:"logLevel,omitempty"`
 	// ResourceAdmissionConfiguration is the configuration for resource size restrictions for arbitrary Group-Version-Kinds.
 	// +optional
-	ResourceAdmissionConfiguration *admissioncontrollerv1alpha1.ResourceAdmissionConfiguration `json:"resourceAdmissionConfiguration,omitempty"`
+	ResourceAdmissionConfiguration *ResourceAdmissionConfiguration `json:"resourceAdmissionConfiguration,omitempty"`
+}
+
+// ResourceAdmissionConfiguration contains settings about arbitrary kinds and the size each resource should have at most.
+type ResourceAdmissionConfiguration struct {
+	// Limits contains configuration for resources which are subjected to size limitations.
+	Limits []ResourceLimit `json:"limits"`
+	// UnrestrictedSubjects contains references to users, groups, or service accounts which aren't subjected to any resource size limit.
+	// +optional
+	UnrestrictedSubjects []rbacv1.Subject `json:"unrestrictedSubjects,omitempty"`
+	// OperationMode specifies the mode the webhooks operates in. Allowed values are "block" and "log". Defaults to "block".
+	// +optional
+	OperationMode *ResourceAdmissionWebhookMode `json:"operationMode,omitempty"`
+}
+
+// ResourceAdmissionWebhookMode is an alias type for the resource admission webhook mode.
+type ResourceAdmissionWebhookMode string
+
+// ResourceLimit contains settings about a kind and the size each resource should have at most.
+type ResourceLimit struct {
+	// APIGroups is the name of the APIGroup that contains the limited resource. WildcardAll represents all groups.
+	// +optional
+	APIGroups []string `json:"apiGroups,omitempty"`
+	// APIVersions is the version of the resource. WildcardAll represents all versions.
+	// +optional
+	APIVersions []string `json:"apiVersions,omitempty"`
+	// Resources is the name of the resource this rule applies to. WildcardAll represents all resources.
+	Resources []string `json:"resources"`
+	// Size specifies the imposed limit.
+	Size resource.Quantity `json:"size"`
 }
 
 // GardenerControllerManagerConfig contains configuration settings for the gardener-controller-manager.

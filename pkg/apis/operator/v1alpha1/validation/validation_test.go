@@ -32,7 +32,6 @@ import (
 	"k8s.io/component-base/featuregate"
 	"k8s.io/utils/pointer"
 
-	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	. "github.com/gardener/gardener/pkg/apis/operator/v1alpha1/validation"
@@ -1144,12 +1143,12 @@ var _ = Describe("Validation Tests", func() {
 						Context("Operation mode", func() {
 							test := func(mode string) field.ErrorList {
 								var (
-									admissionConfig *admissioncontrollerv1alpha1.ResourceAdmissionConfiguration
-									operationMode   = admissioncontrollerv1alpha1.ResourceAdmissionWebhookMode(mode)
+									admissionConfig *operatorv1alpha1.ResourceAdmissionConfiguration
+									operationMode   = operatorv1alpha1.ResourceAdmissionWebhookMode(mode)
 								)
 
 								if mode != "" {
-									admissionConfig = &admissioncontrollerv1alpha1.ResourceAdmissionConfiguration{
+									admissionConfig = &operatorv1alpha1.ResourceAdmissionConfiguration{
 										OperationMode: &operationMode,
 									}
 								}
@@ -1193,8 +1192,8 @@ var _ = Describe("Validation Tests", func() {
 									utilruntime.Must(err)
 
 									garden.Spec.VirtualCluster.Gardener.AdmissionController = &operatorv1alpha1.GardenerAdmissionControllerConfig{
-										ResourceAdmissionConfiguration: &admissioncontrollerv1alpha1.ResourceAdmissionConfiguration{
-											Limits: []admissioncontrollerv1alpha1.ResourceLimit{
+										ResourceAdmissionConfiguration: &operatorv1alpha1.ResourceAdmissionConfiguration{
+											Limits: []operatorv1alpha1.ResourceLimit{
 												{
 													APIGroups:   apiGroups,
 													APIVersions: versions,
@@ -1280,7 +1279,7 @@ var _ = Describe("Validation Tests", func() {
 
 								test = func(kind string, name string, namespace string, apiGroup string) field.ErrorList {
 									garden.Spec.VirtualCluster.Gardener.AdmissionController = &operatorv1alpha1.GardenerAdmissionControllerConfig{
-										ResourceAdmissionConfiguration: &admissioncontrollerv1alpha1.ResourceAdmissionConfiguration{
+										ResourceAdmissionConfiguration: &operatorv1alpha1.ResourceAdmissionConfiguration{
 											UnrestrictedSubjects: []rbacv1.Subject{
 												{
 													Kind:      kind,
