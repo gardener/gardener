@@ -93,7 +93,7 @@ rules:
 					Labels: map[string]string{
 						"resources.gardener.cloud/garbage-collectable-reference": "true",
 					},
-					ResourceVersion: "2",
+					ResourceVersion: "1",
 				},
 				Type: corev1.SecretTypeOpaque,
 				Data: map[string][]byte{

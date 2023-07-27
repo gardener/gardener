@@ -800,7 +800,7 @@ subjects:
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            managedResourceSecret.Name,
 						Namespace:       managedResourceSecret.Namespace,
-						ResourceVersion: "2",
+						ResourceVersion: "1",
 						Labels: map[string]string{
 							"resources.gardener.cloud/garbage-collectable-reference": "true",
 						},

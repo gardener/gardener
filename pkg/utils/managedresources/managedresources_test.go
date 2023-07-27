@@ -200,7 +200,7 @@ var _ = Describe("managedresources", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            secretName,
 					Namespace:       namespace,
-					ResourceVersion: "2",
+					ResourceVersion: "1",
 					Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 				},
 				Data:      data,
@@ -295,7 +295,7 @@ var _ = Describe("managedresources", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            secretName,
 					Namespace:       namespace,
-					ResourceVersion: "2",
+					ResourceVersion: "1",
 					Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 				},
 				Data:      data,
@@ -329,7 +329,7 @@ var _ = Describe("managedresources", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            secretName,
 					Namespace:       namespace,
-					ResourceVersion: "2",
+					ResourceVersion: "1",
 					Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 				},
 				Data:      data,

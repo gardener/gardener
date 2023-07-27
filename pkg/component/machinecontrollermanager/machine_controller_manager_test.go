@@ -544,7 +544,7 @@ subjects:
 			actualManagedResourceSecret := &corev1.Secret{}
 			managedResourceSecret.Name = actualManagedResource.Spec.SecretRefs[0].Name
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), actualManagedResourceSecret)).To(Succeed())
-			managedResourceSecret.ResourceVersion = "2"
+			managedResourceSecret.ResourceVersion = "1"
 			Expect(actualManagedResourceSecret).To(Equal(managedResourceSecret))
 		})
 	})

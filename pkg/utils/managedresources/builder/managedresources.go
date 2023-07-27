@@ -191,6 +191,12 @@ func markSecretsAsGarbageCollectable(ctx context.Context, c client.Client, secre
 		if err := c.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
 			return err
 		}
+
+		// if the GC label is already set then skip sending an empty patch
+		if secret.Labels[references.LabelKeyGarbageCollectable] == references.LabelValueGarbageCollectable {
+			return nil
+		}
+
 		patch := client.StrategicMergeFrom(secret.DeepCopy())
 		metav1.SetMetaDataLabel(&secret.ObjectMeta, references.LabelKeyGarbageCollectable, references.LabelValueGarbageCollectable)
 		if err := c.Patch(ctx, secret, patch); err != nil {

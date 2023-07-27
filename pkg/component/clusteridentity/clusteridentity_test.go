@@ -79,7 +79,7 @@ metadata:
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            managedResourceSecretName,
 				Namespace:       namespace,
-				ResourceVersion: "2",
+				ResourceVersion: "1",
 				Labels: map[string]string{
 					"resources.gardener.cloud/garbage-collectable-reference": "true",
 				},
