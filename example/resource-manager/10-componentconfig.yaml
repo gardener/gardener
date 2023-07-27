@@ -40,6 +40,7 @@ controllers:
   garbageCollector:
     enabled: true
     syncPeriod: 1h
+    # considerManagedResources: true
   health:
     concurrentSyncs: 5
     syncPeriod: 1m
