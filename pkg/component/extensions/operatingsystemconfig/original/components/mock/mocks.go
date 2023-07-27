@@ -9,7 +9,7 @@ import (
 
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	components "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockComponent is a mock of Component interface.

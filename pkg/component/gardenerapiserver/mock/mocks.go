@@ -10,7 +10,7 @@ import (
 
 	apiserver "github.com/gardener/gardener/pkg/component/apiserver"
 	gardenerapiserver "github.com/gardener/gardener/pkg/component/gardenerapiserver"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	v1 "k8s.io/api/core/v1"
 )
 

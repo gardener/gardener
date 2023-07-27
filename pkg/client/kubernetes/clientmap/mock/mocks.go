@@ -10,7 +10,7 @@ import (
 
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	clientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockClientMap is a mock of ClientMap interface.

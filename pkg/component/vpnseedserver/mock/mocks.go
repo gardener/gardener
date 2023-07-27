@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	vpnseedserver "github.com/gardener/gardener/pkg/component/vpnseedserver"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	types "k8s.io/apimachinery/pkg/types"
 )
 

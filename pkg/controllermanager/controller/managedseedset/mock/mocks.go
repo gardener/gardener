@@ -13,7 +13,7 @@ import (
 	managedseedset "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	gardener "github.com/gardener/gardener/pkg/utils/gardener"
 	logr "github.com/go-logr/logr"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	types "k8s.io/apimachinery/pkg/types"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )

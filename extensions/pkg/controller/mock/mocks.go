@@ -8,7 +8,7 @@ import (
 	reflect "reflect"
 
 	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockChartRendererFactory is a mock of ChartRendererFactory interface.

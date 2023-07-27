@@ -13,7 +13,7 @@ import (
 	v1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	context0 "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	v1alpha10 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	v1 "k8s.io/api/apps/v1"
 	v10 "k8s.io/api/core/v1"
 	v11 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"

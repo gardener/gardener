@@ -12,7 +12,7 @@ import (
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	v1alpha10 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	logr "github.com/go-logr/logr"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockActuator is a mock of Actuator interface.

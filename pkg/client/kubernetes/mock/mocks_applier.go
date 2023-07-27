@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockApplier is a mock of Applier interface.
