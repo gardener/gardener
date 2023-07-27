@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gardensystem
+package runtime
 
 import (
 	"context"
@@ -31,7 +31,7 @@ import (
 // ManagedResourceName is the name of the ManagedResource containing the resource specifications.
 const ManagedResourceName = "garden-system"
 
-// New creates a new instance of DeployWaiter for garden system resources.
+// New creates a new instance of DeployWaiter for runtime garden system resources.
 func New(client client.Client, namespace string) component.DeployWaiter {
 	return &gardenSystem{
 		client:    client,

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gardensystem_test
+package runtime_test
 
 import (
 	"testing"
@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestGardenSystem(t *testing.T) {
+func TestRuntime(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Component GardenSystem Suite")
+	RunSpecs(t, "Component GardenSystem Runtime Suite")
 }

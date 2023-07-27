@@ -42,7 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/gardeneraccess"
-	"github.com/gardener/gardener/pkg/component/gardensystem"
+	runtimegardensystem "github.com/gardener/gardener/pkg/component/gardensystem/runtime"
 	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/istio"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
@@ -288,7 +288,7 @@ func (r *Reconciler) newEtcdDruid() (component.DeployWaiter, error) {
 }
 
 func (r *Reconciler) newSystem() component.DeployWaiter {
-	return gardensystem.New(r.RuntimeClientSet.Client(), r.GardenNamespace)
+	return runtimegardensystem.New(r.RuntimeClientSet.Client(), r.GardenNamespace)
 }
 
 func (r *Reconciler) newEtcd(

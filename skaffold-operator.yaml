@@ -96,7 +96,7 @@ build:
         - pkg/component/extensions/worker
         - pkg/component/gardeneraccess
         - pkg/component/gardenerapiserver
-        - pkg/component/gardensystem
+        - pkg/component/gardensystem/runtime
         - pkg/component/hvpa
         - pkg/component/istio
         - pkg/component/kubeapiserver
