@@ -16,7 +16,6 @@ package controlplane
 
 import (
 	"context"
-	"path/filepath"
 	"time"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -24,6 +23,7 @@ import (
 	extensionssecretsmanager "github.com/gardener/gardener/extensions/pkg/util/secret/manager"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/provider-local/charts"
 	localimagevector "github.com/gardener/gardener/pkg/provider-local/imagevector"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 	"github.com/gardener/gardener/pkg/utils/chart"
@@ -85,8 +85,9 @@ func getSecretConfigs(namespace string) []extensionssecretsmanager.SecretConfigW
 
 var (
 	controlPlaneShootChart = &chart.Chart{
-		Name: "shoot-system-components",
-		Path: filepath.Join(local.InternalChartsPath, "shoot-system-components"),
+		Name:       "shoot-system-components",
+		EmbeddedFS: &charts.ChartShootSystemComponents,
+		Path:       charts.ChartPathShootSystemComponents,
 		SubCharts: []*chart.Chart{
 			{
 				Name: "local-path-provisioner",
@@ -99,17 +100,18 @@ var (
 	}
 
 	storageClassChart = &chart.Chart{
-		Name: "shoot-storageclasses",
-		Path: filepath.Join(local.InternalChartsPath, "shoot-storageclasses"),
+		Name:       "shoot-storageclasses",
+		EmbeddedFS: &charts.ChartShootStorageClasses,
+		Path:       charts.ChartPathShootStorageClasses,
 	}
 )
 
 // GetControlPlaneShootChartValues returns the values for the control plane shoot chart applied by the generic actuator.
 func (vp *valuesProvider) GetControlPlaneShootChartValues(
 	_ context.Context,
-	cp *extensionsv1alpha1.ControlPlane,
+	_ *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
-	secretsReader secretsmanager.Reader,
+	_ secretsmanager.Reader,
 	_ map[string]string,
 ) (map[string]interface{}, error) {
 	return map[string]interface{}{

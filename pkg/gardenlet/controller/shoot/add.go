@@ -33,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/state"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // AddToManager adds all Shoot controllers to the given manager.
@@ -47,7 +46,6 @@ func AddToManager(
 	cfg config.GardenletConfiguration,
 	identity *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
-	imageVector imagevector.ImageVector,
 ) error {
 	var responsibleForUnmanagedSeed bool
 	if err := gardenCluster.GetAPIReader().Get(ctx, client.ObjectKey{Name: cfg.SeedConfig.Name, Namespace: v1beta1constants.GardenNamespace}, &seedmanagementv1alpha1.ManagedSeed{}); err != nil {
@@ -63,7 +61,6 @@ func AddToManager(
 		SeedClientSet:               seedClientSet,
 		ShootClientMap:              shootClientMap,
 		Config:                      cfg,
-		ImageVector:                 imageVector,
 		Identity:                    identity,
 		GardenClusterIdentity:       gardenClusterIdentity,
 		ShootStateControllerEnabled: shootStateControllerEnabled,
@@ -75,7 +72,6 @@ func AddToManager(
 		SeedClientSet:         seedClientSet,
 		ShootClientMap:        shootClientMap,
 		Config:                cfg,
-		ImageVector:           imageVector,
 		Identity:              identity,
 		GardenClusterIdentity: gardenClusterIdentity,
 		SeedName:              cfg.SeedConfig.Name,

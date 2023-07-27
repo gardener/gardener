@@ -25,18 +25,18 @@ import (
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/utils/pointer"
 
+	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component/kubeproxy"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 // DefaultKubeProxy returns a deployer for the kube-proxy.
 func (b *Botanist) DefaultKubeProxy() (kubeproxy.Interface, error) {
-	imageAlpine, err := b.ImageVector.FindImage(images.ImageNameAlpine, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	imageAlpine, err := imagevector.ImageVector().FindImage(imagevector.ImageNameAlpine, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (b *Botanist) computeWorkerPoolsForKubeProxy(ctx context.Context) ([]kubepr
 			return nil, err
 		}
 
-		image, err := b.ImageVector.FindImage(images.ImageNameKubeProxy, imagevector.RuntimeVersion(kubernetesVersion.String()), imagevector.TargetVersion(kubernetesVersion.String()))
+		image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameKubeProxy, imagevectorutils.RuntimeVersion(kubernetesVersion.String()), imagevectorutils.TargetVersion(kubernetesVersion.String()))
 		if err != nil {
 			return nil, err
 		}
@@ -128,7 +128,7 @@ func (b *Botanist) computeWorkerPoolsForKubeProxy(ctx context.Context) ([]kubepr
 			return nil, err
 		}
 
-		image, err := b.ImageVector.FindImage(images.ImageNameKubeProxy, imagevector.RuntimeVersion(kubernetesVersionString), imagevector.TargetVersion(kubernetesVersionString))
+		image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameKubeProxy, imagevectorutils.RuntimeVersion(kubernetesVersionString), imagevectorutils.TargetVersion(kubernetesVersionString))
 		if err != nil {
 			return nil, err
 		}

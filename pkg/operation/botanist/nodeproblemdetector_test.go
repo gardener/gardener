@@ -25,7 +25,6 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 var _ = Describe("NodeProblemDetector", func() {
@@ -63,19 +62,10 @@ var _ = Describe("NodeProblemDetector", func() {
 
 		It("should successfully create a nodeproblemdetector interface", func() {
 			kubernetesClient.EXPECT().Client()
-			botanist.ImageVector = imagevector.ImageVector{{Name: "node-problem-detector"}}
 
 			nodeProblemDetector, err := botanist.DefaultNodeProblemDetector()
 			Expect(nodeProblemDetector).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should return an error because the image cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{}
-
-			nodeProblemDetector, err := botanist.DefaultNodeProblemDetector()
-			Expect(nodeProblemDetector).To(BeNil())
-			Expect(err).To(HaveOccurred())
 		})
 	})
 })

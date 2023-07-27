@@ -16,6 +16,7 @@ package chart
 
 import (
 	"context"
+	"embed"
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -41,11 +42,12 @@ type Interface interface {
 
 // Chart represents a Helm chart (and its sub-charts) that can be applied and deleted.
 type Chart struct {
-	Name      string
-	Path      string
-	Images    []string
-	Objects   []*Object
-	SubCharts []*Chart
+	Name       string
+	Path       string
+	EmbeddedFS *embed.FS
+	Images     []string
+	Objects    []*Object
+	SubCharts  []*Chart
 }
 
 // Object represents an object deployed by a Chart.
@@ -72,10 +74,16 @@ func (c *Chart) Apply(
 	}
 
 	// Apply chart
-	err = chartApplier.Apply(ctx, c.Path, namespace, c.Name, kubernetesclient.Values(utils.MergeMaps(values, additionalValues)))
-	if err != nil {
-		return fmt.Errorf("could not apply chart '%s' in namespace '%s': %w", c.Name, namespace, err)
+	if c.EmbeddedFS != nil {
+		if err := chartApplier.ApplyFromEmbeddedFS(ctx, *c.EmbeddedFS, c.Path, namespace, c.Name, kubernetesclient.Values(utils.MergeMaps(values, additionalValues))); err != nil {
+			return fmt.Errorf("could not apply embedded chart '%s' in namespace '%s': %w", c.Name, namespace, err)
+		}
+	} else {
+		if err := chartApplier.Apply(ctx, c.Path, namespace, c.Name, kubernetesclient.Values(utils.MergeMaps(values, additionalValues))); err != nil {
+			return fmt.Errorf("could not apply chart '%s' in namespace '%s': %w", c.Name, namespace, err)
+		}
 	}
+
 	return nil
 }
 
@@ -88,18 +96,26 @@ func (c *Chart) Render(
 	runtimeVersion, targetVersion string,
 	additionalValues map[string]interface{},
 ) (string, []byte, error) {
-
 	// Get values with injected images
 	values, err := c.injectImages(imageVector, runtimeVersion, targetVersion)
 	if err != nil {
 		return "", nil, err
 	}
 
-	// Apply chart
-	rc, err := chartRenderer.Render(c.Path, c.Name, namespace, utils.MergeMaps(values, additionalValues))
-	if err != nil {
-		return "", nil, fmt.Errorf("could not render chart '%s' in namespace '%s': %w", c.Name, namespace, err)
+	// Render chart
+	var rc *chartrenderer.RenderedChart
+	if c.EmbeddedFS != nil {
+		rc, err = chartRenderer.RenderEmbeddedFS(*c.EmbeddedFS, c.Path, c.Name, namespace, utils.MergeMaps(values, additionalValues))
+		if err != nil {
+			return "", nil, fmt.Errorf("could not render chart '%s' in namespace '%s': %w", c.Name, namespace, err)
+		}
+	} else {
+		rc, err = chartRenderer.Render(c.Path, c.Name, namespace, utils.MergeMaps(values, additionalValues))
+		if err != nil {
+			return "", nil, fmt.Errorf("could not render chart '%s' in namespace '%s': %w", c.Name, namespace, err)
+		}
 	}
+
 	return rc.ChartName, rc.Manifest(), nil
 }
 

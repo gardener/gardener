@@ -30,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/care"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // HealthCheck is an interface used to perform health checks.
@@ -96,7 +95,6 @@ type NewOperationFunc func(
 	gardenerInfo *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
 	secrets map[string]*corev1.Secret,
-	imageVector imagevector.ImageVector,
 	shoot *gardencorev1beta1.Shoot,
 ) (
 	*operation.Operation,
@@ -113,7 +111,6 @@ var defaultNewOperationFunc = func(
 	gardenerInfo *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
 	secrets map[string]*corev1.Secret,
-	imageVector imagevector.ImageVector,
 	shoot *gardencorev1beta1.Shoot,
 ) (
 	*operation.Operation,
@@ -126,7 +123,6 @@ var defaultNewOperationFunc = func(
 		WithGardenerInfo(gardenerInfo).
 		WithGardenClusterIdentity(gardenClusterIdentity).
 		WithSecrets(secrets).
-		WithImageVector(imageVector).
 		WithGardenFrom(gardenClient, shoot.Namespace).
 		WithSeedFrom(gardenClient, *shoot.Spec.SeedName).
 		WithShootFromCluster(gardenClient, seedClientSet, shoot).

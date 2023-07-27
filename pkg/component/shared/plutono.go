@@ -17,10 +17,9 @@ package shared
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/plutono"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -28,7 +27,6 @@ import (
 func NewPlutono(
 	c client.Client,
 	namespace string,
-	imageVector imagevector.ImageVector,
 	secretsManager secretsmanager.Interface,
 	authSecretName string,
 	clusterType component.ClusterType,
@@ -39,7 +37,7 @@ func NewPlutono(
 	wildcardCertName *string,
 	vpaEnabled bool,
 ) (plutono.Interface, error) {
-	plutonoImage, err := imageVector.FindImage(images.ImageNamePlutono)
+	plutonoImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePlutono)
 	if err != nil {
 		return nil, err
 	}

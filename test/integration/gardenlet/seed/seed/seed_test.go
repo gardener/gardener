@@ -16,7 +16,6 @@ package seed_test
 
 import (
 	"context"
-	"path/filepath"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -35,7 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/gardener/gardener/charts"
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -53,7 +51,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -128,10 +125,6 @@ var _ = Describe("Seed controller tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Register controller")
-		chartsPath := filepath.Join("..", "..", "..", "..", "..", charts.Path)
-		imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(chartsPath, "images.yaml"))
-		Expect(err).NotTo(HaveOccurred())
-
 		Expect((&seedcontroller.Reconciler{
 			SeedClientSet: testClientSet,
 			Config: config.GardenletConfiguration{
@@ -168,9 +161,7 @@ var _ = Describe("Seed controller tests", func() {
 				},
 			},
 			Identity:        identity,
-			ImageVector:     imageVector,
 			GardenNamespace: testNamespace.Name,
-			ChartsPath:      chartsPath,
 		}).AddToManager(mgr, mgr)).To(Succeed())
 
 		By("Start manager")

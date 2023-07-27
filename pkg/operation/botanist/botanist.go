@@ -23,7 +23,6 @@ import (
 
 	"k8s.io/utils/clock"
 
-	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -37,11 +36,6 @@ import (
 
 // DefaultInterval is the default interval for retry operations.
 const DefaultInterval = 5 * time.Second
-
-var (
-	// ChartsPath is an alias for charts.Path. Exposed for testing.
-	ChartsPath = charts.Path
-)
 
 // New takes an operation object <o> and creates a new Botanist object. It checks whether the given Shoot DNS
 // domain is covered by a default domain, and if so, it sets the <DefaultDomainSecret> attribute on the Botanist

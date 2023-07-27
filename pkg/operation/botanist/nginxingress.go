@@ -53,7 +53,6 @@ func (b *Botanist) DefaultNginxIngress() (component.DeployWaiter, error) {
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
 		metav1.NamespaceSystem,
-		b.ImageVector,
 		b.Shoot.KubernetesVersion,
 		configData,
 		nil,

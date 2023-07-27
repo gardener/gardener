@@ -47,7 +47,6 @@ import (
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
@@ -128,11 +127,6 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					PSPDisabled:       false,
 					KubernetesVersion: semver.MustParse("1.22.1"),
-				},
-				ImageVector: imagevector.ImageVector{
-					{Name: "kube-apiserver"},
-					{Name: "vpn-shoot-client"},
-					{Name: "alpine"},
 				},
 				APIServerAddress:   apiServerAddress,
 				APIServerClusterIP: apiServerClusterIP,

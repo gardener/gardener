@@ -15,28 +15,24 @@
 package shared
 
 import (
-	"github.com/Masterminds/semver"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/hvpa"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // NewHVPA instantiates a new `hvpa-controller` component.
 func NewHVPA(
 	c client.Client,
 	gardenNamespaceName string,
-	runtimeVersion *semver.Version,
-	imageVector imagevector.ImageVector,
 	enabled bool,
 	priorityClassName string,
 ) (
 	deployer component.DeployWaiter,
 	err error,
 ) {
-	image, err := imageVector.FindImage(images.ImageNameHvpaController)
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameHvpaController)
 	if err != nil {
 		return nil, err
 	}

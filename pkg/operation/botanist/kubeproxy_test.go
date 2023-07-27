@@ -38,7 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 )
@@ -57,7 +56,7 @@ var _ = Describe("KubeProxy", func() {
 		apiServerAddress      = "1.2.3.4"
 		internalClusterDomain = "example.com"
 
-		repositoryKubeProxyImage = "foo.bar.com/kube-proxy"
+		repositoryKubeProxyImage = "registry.k8s.io/kube-proxy"
 
 		poolName1                     = "pool1"
 		poolName2                     = "pool2"
@@ -81,29 +80,9 @@ var _ = Describe("KubeProxy", func() {
 		botanist = &Botanist{
 			Operation: &operation.Operation{
 				APIServerAddress: apiServerAddress,
-				ImageVector: imagevector.ImageVector{
-					{
-						Name: "alpine",
-					},
-					{
-						Name:          "kube-proxy",
-						Repository:    repositoryKubeProxyImage,
-						TargetVersion: pointer.String("1.24.x"),
-					},
-					{
-						Name:          "kube-proxy",
-						Repository:    repositoryKubeProxyImage,
-						TargetVersion: pointer.String("1.23.x"),
-					},
-					{
-						Name:          "kube-proxy",
-						Repository:    repositoryKubeProxyImage,
-						TargetVersion: pointer.String("1.22.x"),
-					},
-				},
-				SeedClientSet:  fakeSeedKubernetesInterface,
-				ShootClientSet: fakeShootKubernetesInterface,
-				SecretsManager: sm,
+				SeedClientSet:    fakeSeedKubernetesInterface,
+				ShootClientSet:   fakeShootKubernetesInterface,
+				SecretsManager:   sm,
 				Shoot: &shootpkg.Shoot{
 					InternalClusterDomain: internalClusterDomain,
 					KubernetesVersion:     kubernetesVersionControlPlane,
@@ -154,14 +133,6 @@ var _ = Describe("KubeProxy", func() {
 			kubeProxy, err := botanist.DefaultKubeProxy()
 			Expect(kubeProxy).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should return an error because the image cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{}
-
-			kubeProxy, err := botanist.DefaultKubeProxy()
-			Expect(kubeProxy).To(BeNil())
-			Expect(err).To(HaveOccurred())
 		})
 	})
 

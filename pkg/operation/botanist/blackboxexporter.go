@@ -17,14 +17,14 @@ package botanist
 import (
 	"context"
 
+	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component/blackboxexporter"
-	"github.com/gardener/gardener/pkg/utils/images"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // DefaultBlackboxExporter returns a deployer for the blackbox-exporter.
 func (b *Botanist) DefaultBlackboxExporter() (blackboxexporter.Interface, error) {
-	image, err := b.ImageVector.FindImage(images.ImageNameBlackboxExporter, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameBlackboxExporter, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

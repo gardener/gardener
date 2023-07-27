@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -59,13 +58,12 @@ var _ = Describe("ClusterAutoscaler", func() {
 		sm                secretsmanager.Interface
 		clusterAutoscaler Interface
 
-		ctx                            = context.TODO()
-		fakeErr                        = fmt.Errorf("fake error")
-		namespace                      = "shoot--foo--bar"
-		namespaceUID                   = types.UID("1234567890")
-		image                          = "registry.k8s.io/cluster-autoscaler:v1.2.3"
-		replicas                 int32 = 1
-		runtimeKubernetesVersion       = semver.MustParse("1.25.0")
+		ctx                = context.TODO()
+		fakeErr            = fmt.Errorf("fake error")
+		namespace          = "shoot--foo--bar"
+		namespaceUID       = types.UID("1234567890")
+		image              = "registry.k8s.io/cluster-autoscaler:v1.2.3"
+		replicas     int32 = 1
 
 		machineDeployment1Name       = "pool1"
 		machineDeployment1Min  int32 = 2
@@ -571,7 +569,7 @@ subjects:
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 
-		clusterAutoscaler = New(c, namespace, sm, image, replicas, nil, runtimeKubernetesVersion)
+		clusterAutoscaler = New(c, namespace, sm, image, replicas, nil)
 		clusterAutoscaler.SetNamespaceUID(namespaceUID)
 		clusterAutoscaler.SetMachineDeployments(machineDeployments)
 	})
@@ -759,7 +757,7 @@ subjects:
 					config = configFull
 				}
 
-				clusterAutoscaler = New(c, namespace, sm, image, replicas, config, runtimeKubernetesVersion)
+				clusterAutoscaler = New(c, namespace, sm, image, replicas, config)
 				clusterAutoscaler.SetNamespaceUID(namespaceUID)
 				clusterAutoscaler.SetMachineDeployments(machineDeployments)
 

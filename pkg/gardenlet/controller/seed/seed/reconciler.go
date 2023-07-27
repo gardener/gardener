@@ -47,11 +47,9 @@ type Reconciler struct {
 	Clock                                clock.Clock
 	Recorder                             record.EventRecorder
 	Identity                             *gardencorev1beta1.Gardener
-	ImageVector                          imagevector.ImageVector
 	ComponentImageVectors                imagevector.ComponentImageVectors
 	ClientCertificateExpirationTimestamp *metav1.Time
 	GardenNamespace                      string
-	ChartsPath                           string
 }
 
 // Reconcile reconciles Seed resources and provisions or de-provisions the seed system components.

@@ -31,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -41,7 +40,6 @@ type Builder struct {
 	gardenFunc                func(context.Context, map[string]*corev1.Secret) (*garden.Garden, error)
 	gardenerInfoFunc          func() (*gardencorev1beta1.Gardener, error)
 	gardenClusterIdentityFunc func() (string, error)
-	imageVectorFunc           func() (imagevector.ImageVector, error)
 	loggerFunc                func() (logr.Logger, error)
 	secretsFunc               func() (map[string]*corev1.Secret, error)
 	seedFunc                  func(context.Context) (*seed.Seed, error)
@@ -58,7 +56,6 @@ type Operation struct {
 	Logger                logr.Logger
 	GardenerInfo          *gardencorev1beta1.Gardener
 	GardenClusterIdentity string
-	ImageVector           imagevector.ImageVector
 	Garden                *garden.Garden
 	Seed                  *seed.Seed
 	Shoot                 *shoot.Shoot

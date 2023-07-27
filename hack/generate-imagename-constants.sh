@@ -22,7 +22,7 @@ function camelCase {
   sed -r 's/(.)-+(.)/\1\U\2/g;s/^[a-z]/\U&/' <<< "$1"
 }
 
-package_name="${1:-charts}"
+package_name="${1:-imagevector}"
 images_yaml="${2:-images.yaml}"
 
 out="

@@ -525,7 +525,6 @@ build:
     ko:
       dependencies:
         paths:
-        - charts
         - cmd/gardener-extension-provider-local/app
         - cmd/utils
         - extensions/pkg/apis/config
@@ -562,6 +561,7 @@ build:
         - extensions/pkg/webhook/controlplane
         - extensions/pkg/webhook/controlplane/genericmutator
         - extensions/pkg/webhook/shoot
+        - imagevector
         - pkg/api/core
         - pkg/api/extensions
         - pkg/apis/core
@@ -615,6 +615,7 @@ build:
         - pkg/provider-local/apis/local/helper
         - pkg/provider-local/apis/local/install
         - pkg/provider-local/apis/local/v1alpha1
+        - pkg/provider-local/charts
         - pkg/provider-local/controller/backupbucket
         - pkg/provider-local/controller/backupentry
         - pkg/provider-local/controller/backupoptions
@@ -644,7 +645,6 @@ build:
         - pkg/utils/errors
         - pkg/utils/flow
         - pkg/utils/gardener
-        - pkg/utils/images
         - pkg/utils/imagevector
         - pkg/utils/kubernetes
         - pkg/utils/kubernetes/health
@@ -755,6 +755,7 @@ build:
         - cmd/gardenlet/app
         - cmd/gardenlet/app/bootstrappers
         - cmd/utils
+        - imagevector
         - pkg/api/extensions
         - pkg/api/indexer
         - pkg/apis/core
@@ -944,7 +945,6 @@ build:
         - pkg/utils/gardener/secretsrotation
         - pkg/utils/gardener/shootstate
         - pkg/utils/gardener/tokenrequest
-        - pkg/utils/images
         - pkg/utils/imagevector
         - pkg/utils/kubernetes
         - pkg/utils/kubernetes/bootstraptoken

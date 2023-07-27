@@ -202,8 +202,7 @@ var _ = Describe("operatingsystemconfig", func() {
 			kubernetesClientShoot    *mockclient.MockClient
 
 			namespace      = "shoot--foo--bar"
-			hyperkubeImage = &imagevector.ImageSource{Name: "hyperkube", Tag: pointer.String("v")}
-			imageVec       = imagevector.ImageVector{hyperkubeImage}
+			hyperkubeImage = &imagevector.ImageSource{Name: "hyperkube", Repository: "eu.gcr.io/gardener-project/hyperkube"}
 
 			worker1Name            = "worker1"
 			worker1OriginalContent = "w1content"
@@ -285,7 +284,6 @@ var _ = Describe("operatingsystemconfig", func() {
 			downloaderGenerateRBACResourcesFnError error
 			executorScriptFnError                  error
 
-			imageVector                           imagevector.ImageVector
 			workerNameToOperatingSystemConfigMaps map[string]*operatingsystemconfig.OperatingSystemConfigs
 
 			managedResourceSecretReconciliationError error
@@ -313,26 +311,22 @@ var _ = Describe("operatingsystemconfig", func() {
 				// operating system config maps retrieval for the worker pools
 				operatingSystemConfig.EXPECT().WorkerNameToOperatingSystemConfigsMap().Return(params.workerNameToOperatingSystemConfigMaps)
 
-				// image vector for retrieval of required images
-				botanist.ImageVector = params.imageVector
+				if params.downloaderGenerateRBACResourcesFnError == nil &&
+					params.executorScriptFnError == nil &&
+					params.workerNameToOperatingSystemConfigMaps != nil {
 
-				if params.imageVector != nil {
-					if params.downloaderGenerateRBACResourcesFnError == nil &&
-						params.executorScriptFnError == nil &&
-						params.workerNameToOperatingSystemConfigMaps != nil {
-
-						// managed resource secret reconciliation for executor scripts for worker pools
-						// worker pool 1
-						worker1ExecutorScript, _ := ExecutorScriptFn([]byte(worker1OriginalContent), cloudConfigExecutionMaxDelaySeconds, hyperkubeImage.ToImage(&kubernetesVersion), kubernetesVersion, nil, worker1OriginalCommand, worker1OriginalUnits, worker1OriginalFiles)
-						kubernetesClientSeed.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-shoot-cloud-config-execution-"+worker1Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
-						kubernetesClientSeed.EXPECT().Update(ctx, &corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "managedresource-shoot-cloud-config-execution-" + worker1Name,
-								Namespace: namespace,
-								Labels:    map[string]string{"managed-resource": "shoot-cloud-config-execution"},
-							},
-							Type: corev1.SecretTypeOpaque,
-							Data: map[string][]byte{"secret__kube-system__" + worker1Key + ".yaml": []byte(`apiVersion: v1
+					// managed resource secret reconciliation for executor scripts for worker pools
+					// worker pool 1
+					worker1ExecutorScript, _ := ExecutorScriptFn([]byte(worker1OriginalContent), cloudConfigExecutionMaxDelaySeconds, hyperkubeImage.ToImage(&kubernetesVersion), kubernetesVersion, nil, worker1OriginalCommand, worker1OriginalUnits, worker1OriginalFiles)
+					kubernetesClientSeed.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-shoot-cloud-config-execution-"+worker1Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
+					kubernetesClientSeed.EXPECT().Update(ctx, &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "managedresource-shoot-cloud-config-execution-" + worker1Name,
+							Namespace: namespace,
+							Labels:    map[string]string{"managed-resource": "shoot-cloud-config-execution"},
+						},
+						Type: corev1.SecretTypeOpaque,
+						Data: map[string][]byte{"secret__kube-system__" + worker1Key + ".yaml": []byte(`apiVersion: v1
 data:
   script: ` + utils.EncodeBase64(worker1ExecutorScript) + `
 kind: Secret
@@ -346,19 +340,19 @@ metadata:
   name: ` + worker1Key + `
   namespace: kube-system
 `)},
-						})
+					})
 
-						// worker pool 2
-						worker2ExecutorScript, _ := ExecutorScriptFn([]byte(worker2OriginalContent), cloudConfigExecutionMaxDelaySeconds, hyperkubeImage.ToImage(&worker2KubernetesVersion), worker2KubernetesVersion, &gardencorev1beta1.DataVolume{Name: worker2KubeletDataVolumeName}, worker2OriginalCommand, worker2OriginalUnits, worker2OriginalFiles)
-						kubernetesClientSeed.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-shoot-cloud-config-execution-"+worker2Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
-						kubernetesClientSeed.EXPECT().Update(ctx, &corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "managedresource-shoot-cloud-config-execution-" + worker2Name,
-								Namespace: namespace,
-								Labels:    map[string]string{"managed-resource": "shoot-cloud-config-execution"},
-							},
-							Type: corev1.SecretTypeOpaque,
-							Data: map[string][]byte{"secret__kube-system__" + worker2Key + ".yaml": []byte(`apiVersion: v1
+					// worker pool 2
+					worker2ExecutorScript, _ := ExecutorScriptFn([]byte(worker2OriginalContent), cloudConfigExecutionMaxDelaySeconds, hyperkubeImage.ToImage(&worker2KubernetesVersion), worker2KubernetesVersion, &gardencorev1beta1.DataVolume{Name: worker2KubeletDataVolumeName}, worker2OriginalCommand, worker2OriginalUnits, worker2OriginalFiles)
+					kubernetesClientSeed.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-shoot-cloud-config-execution-"+worker2Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
+					kubernetesClientSeed.EXPECT().Update(ctx, &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "managedresource-shoot-cloud-config-execution-" + worker2Name,
+							Namespace: namespace,
+							Labels:    map[string]string{"managed-resource": "shoot-cloud-config-execution"},
+						},
+						Type: corev1.SecretTypeOpaque,
+						Data: map[string][]byte{"secret__kube-system__" + worker2Key + ".yaml": []byte(`apiVersion: v1
 data:
   script: ` + utils.EncodeBase64(worker2ExecutorScript) + `
 kind: Secret
@@ -372,78 +366,65 @@ metadata:
   name: ` + worker2Key + `
   namespace: kube-system
 `)},
-						})
+					})
 
-						// managed resource secret reconciliation for RBAC resources
-						downloaderRBACResourcesData, _ := DownloaderGenerateRBACResourcesDataFn([]string{worker1Key, worker2Key})
-						kubernetesClientSeed.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-shoot-cloud-config-rbac"), gomock.AssignableToTypeOf(&corev1.Secret{}))
-						kubernetesClientSeed.EXPECT().Update(ctx, &corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "managedresource-shoot-cloud-config-rbac",
-								Namespace: namespace,
-								Labels:    map[string]string{"managed-resource": "shoot-cloud-config-execution"},
-							},
-							Type: corev1.SecretTypeOpaque,
-							Data: downloaderRBACResourcesData,
-						}).Return(params.managedResourceSecretReconciliationError)
+					// managed resource secret reconciliation for RBAC resources
+					downloaderRBACResourcesData, _ := DownloaderGenerateRBACResourcesDataFn([]string{worker1Key, worker2Key})
+					kubernetesClientSeed.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "managedresource-shoot-cloud-config-rbac"), gomock.AssignableToTypeOf(&corev1.Secret{}))
+					kubernetesClientSeed.EXPECT().Update(ctx, &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "managedresource-shoot-cloud-config-rbac",
+							Namespace: namespace,
+							Labels:    map[string]string{"managed-resource": "shoot-cloud-config-execution"},
+						},
+						Type: corev1.SecretTypeOpaque,
+						Data: downloaderRBACResourcesData,
+					}).Return(params.managedResourceSecretReconciliationError)
 
-						if params.managedResourceSecretReconciliationError == nil {
-							// managed resource reconciliation
-							kubernetesClientSeed.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "shoot-cloud-config-execution"), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(params.managedResourceReadError)
+					if params.managedResourceSecretReconciliationError == nil {
+						// managed resource reconciliation
+						kubernetesClientSeed.EXPECT().Get(ctx, kubernetesutils.Key(namespace, "shoot-cloud-config-execution"), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(params.managedResourceReadError)
 
-							if params.managedResourceReadError == nil {
-								kubernetesClientSeed.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(func(_ context.Context, obj *resourcesv1alpha1.ManagedResource, _ ...client.UpdateOption) error {
-									Expect(obj.ObjectMeta).To(Equal(metav1.ObjectMeta{
-										Name:      "shoot-cloud-config-execution",
-										Namespace: namespace,
-										Labels:    map[string]string{"origin": "gardener"},
-									}))
-									Expect(obj.Spec.SecretRefs).To(ConsistOf(
-										corev1.LocalObjectReference{Name: "managedresource-shoot-cloud-config-execution-" + worker1Name},
-										corev1.LocalObjectReference{Name: "managedresource-shoot-cloud-config-execution-" + worker2Name},
-										corev1.LocalObjectReference{Name: "managedresource-shoot-cloud-config-rbac"},
-									))
-									Expect(obj.Spec.InjectLabels).To(Equal(map[string]string{"shoot.gardener.cloud/no-cleanup": "true"}))
-									Expect(obj.Spec.KeepObjects).To(Equal(pointer.Bool(false)))
-									return nil
-								})
+						if params.managedResourceReadError == nil {
+							kubernetesClientSeed.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(func(_ context.Context, obj *resourcesv1alpha1.ManagedResource, _ ...client.UpdateOption) error {
+								Expect(obj.ObjectMeta).To(Equal(metav1.ObjectMeta{
+									Name:      "shoot-cloud-config-execution",
+									Namespace: namespace,
+									Labels:    map[string]string{"origin": "gardener"},
+								}))
+								Expect(obj.Spec.SecretRefs).To(ConsistOf(
+									corev1.LocalObjectReference{Name: "managedresource-shoot-cloud-config-execution-" + worker1Name},
+									corev1.LocalObjectReference{Name: "managedresource-shoot-cloud-config-execution-" + worker2Name},
+									corev1.LocalObjectReference{Name: "managedresource-shoot-cloud-config-rbac"},
+								))
+								Expect(obj.Spec.InjectLabels).To(Equal(map[string]string{"shoot.gardener.cloud/no-cleanup": "true"}))
+								Expect(obj.Spec.KeepObjects).To(Equal(pointer.Bool(false)))
+								return nil
+							})
 
-								// listing/finding of no longer required managed resource secrets
-								kubernetesClientSeed.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespace), client.MatchingLabels(map[string]string{"managed-resource": "shoot-cloud-config-execution"})).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
-									*list = corev1.SecretList{Items: []corev1.Secret{
-										{ObjectMeta: metav1.ObjectMeta{Name: oldSecret1Name, Namespace: namespace}},
-										{ObjectMeta: metav1.ObjectMeta{Name: oldSecret2Name, Namespace: namespace}},
-									}}
-									return nil
-								}).Return(params.staleSecretListingError)
+							// listing/finding of no longer required managed resource secrets
+							kubernetesClientSeed.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespace), client.MatchingLabels(map[string]string{"managed-resource": "shoot-cloud-config-execution"})).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
+								*list = corev1.SecretList{Items: []corev1.Secret{
+									{ObjectMeta: metav1.ObjectMeta{Name: oldSecret1Name, Namespace: namespace}},
+									{ObjectMeta: metav1.ObjectMeta{Name: oldSecret2Name, Namespace: namespace}},
+								}}
+								return nil
+							}).Return(params.staleSecretListingError)
 
-								if params.staleSecretListingError == nil {
-									// cleanup of no longer required managed resource secrets
-									kubernetesClientSeed.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: oldSecret1Name, Namespace: namespace}}).Return(params.staleSecretDeletionError)
-									kubernetesClientSeed.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: oldSecret2Name, Namespace: namespace}})
-								}
+							if params.staleSecretListingError == nil {
+								// cleanup of no longer required managed resource secrets
+								kubernetesClientSeed.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: oldSecret1Name, Namespace: namespace}}).Return(params.staleSecretDeletionError)
+								kubernetesClientSeed.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: oldSecret2Name, Namespace: namespace}})
 							}
 						}
-
 					}
 				}
 
 				matcherFn(botanist.DeployManagedResourceForCloudConfigExecutor(ctx))
 			},
 
-			Entry("should fail because the images cannot be found",
-				tableTestParams{
-					imageVector:                           nil,
-					workerNameToOperatingSystemConfigMaps: workerNameToOperatingSystemConfigMaps,
-				},
-				func(err error) {
-					Expect(err).To(MatchError(ContainSubstring("could not find image")))
-				},
-			),
-
 			Entry("should fail because the operating system config maps for a worker pool are not available",
 				tableTestParams{
-					imageVector:                           imageVec,
 					workerNameToOperatingSystemConfigMaps: nil,
 				},
 				func(err error) {
@@ -453,7 +434,6 @@ metadata:
 
 			Entry("should fail because the executor script generation fails",
 				tableTestParams{
-					imageVector:                           imageVec,
 					workerNameToOperatingSystemConfigMaps: workerNameToOperatingSystemConfigMaps,
 					executorScriptFnError:                 fakeErr,
 				},
@@ -464,7 +444,6 @@ metadata:
 
 			Entry("should fail because the downloader RBAC resources generation fails",
 				tableTestParams{
-					imageVector:                            imageVec,
 					workerNameToOperatingSystemConfigMaps:  workerNameToOperatingSystemConfigMaps,
 					downloaderGenerateRBACResourcesFnError: fakeErr,
 				},
@@ -475,7 +454,6 @@ metadata:
 
 			Entry("should fail because the managed resource secret reconciliation fails",
 				tableTestParams{
-					imageVector:                              imageVec,
 					workerNameToOperatingSystemConfigMaps:    workerNameToOperatingSystemConfigMaps,
 					managedResourceSecretReconciliationError: fakeErr,
 				},
@@ -487,7 +465,6 @@ metadata:
 
 			Entry("should fail because the managed resource reconciliation fails",
 				tableTestParams{
-					imageVector:                           imageVec,
 					workerNameToOperatingSystemConfigMaps: workerNameToOperatingSystemConfigMaps,
 					managedResourceReadError:              fakeErr,
 				},
@@ -498,7 +475,6 @@ metadata:
 
 			Entry("should fail because the stale secret listing fails",
 				tableTestParams{
-					imageVector:                           imageVec,
 					workerNameToOperatingSystemConfigMaps: workerNameToOperatingSystemConfigMaps,
 					staleSecretListingError:               fakeErr,
 				},
@@ -509,7 +485,6 @@ metadata:
 
 			Entry("should fail because the stale secret deletion fails",
 				tableTestParams{
-					imageVector:                           imageVec,
 					workerNameToOperatingSystemConfigMaps: workerNameToOperatingSystemConfigMaps,
 					staleSecretDeletionError:              fakeErr,
 				},
@@ -521,7 +496,6 @@ metadata:
 
 			Entry("should successfully compute the resources",
 				tableTestParams{
-					imageVector:                           imageVec,
 					workerNameToOperatingSystemConfigMaps: workerNameToOperatingSystemConfigMaps,
 				},
 				func(err error) {
