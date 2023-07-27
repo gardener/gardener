@@ -699,6 +699,62 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(shoot.Spec.Kubernetes.Version).To(Equal("1.1.2"))
 		})
 	})
+
+	Describe("#UpdateToContainerd", func() {
+		var (
+			shoot *gardencorev1beta1.Shoot
+		)
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "shoot",
+				},
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						Version: "1.23.16",
+					},
+					Maintenance: &gardencorev1beta1.Maintenance{
+						AutoUpdate: &gardencorev1beta1.MaintenanceAutoUpdate{
+							MachineImageVersion: pointer.Bool(true),
+						},
+					},
+					Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
+						{
+							Name: "cpu-worker",
+						},
+						{
+							Name: "cpu-worker2",
+						},
+					},
+					},
+				},
+			}
+		})
+
+		It("should not change anything if CRI is not set", func() {
+			_, err := updateToContainerd(log, shoot, "foobar")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shoot.Spec.Provider.Workers[0].CRI).To(BeNil())
+			Expect(shoot.Spec.Provider.Workers[1].CRI).To(BeNil())
+		})
+
+		It("should change docker to containerd", func() {
+			shoot.Spec.Provider.Workers[1].CRI = &gardencorev1beta1.CRI{Name: "docker"}
+			_, err := updateToContainerd(log, shoot, "foobar")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shoot.Spec.Provider.Workers[1].CRI.Name).To(Equal(gardencorev1beta1.CRINameContainerD))
+			Expect(shoot.Spec.Provider.Workers[0].CRI).To(BeNil())
+		})
+
+		It("should keep containerd if it is already set", func() {
+			shoot.Spec.Provider.Workers[0].CRI = &gardencorev1beta1.CRI{Name: "containerd"}
+			_, err := updateToContainerd(log, shoot, "foobar")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shoot.Spec.Provider.Workers[0].CRI.Name).To(Equal(gardencorev1beta1.CRINameContainerD))
+			Expect(shoot.Spec.Provider.Workers[1].CRI).To(BeNil())
+		})
+	})
 })
 
 func assertWorkerMachineImageVersion(worker *gardencorev1beta1.Worker, imageName string, imageVersion string) {
