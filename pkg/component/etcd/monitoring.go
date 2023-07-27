@@ -30,6 +30,7 @@ import (
 const (
 	monitoringPrometheusJobEtcdNamePrefix          = "kube-etcd3"
 	monitoringPrometheusJobBackupRestoreNamePrefix = "kube-etcd3-backup-restore"
+	monitoringPrometheusJobDruidName               = "etcd-druid"
 
 	monitoringMetricEtcdDiskBackendCommitDurationSecondsBucket = "etcd_disk_backend_commit_duration_seconds_bucket"
 	monitoringMetricEtcdDiskWalFsyncDurationSecondsBucket      = "etcd_disk_wal_fsync_duration_seconds_bucket"
@@ -346,12 +347,23 @@ metric_relabel_configs:
 - source_labels: [ __name__ ]
   action: keep
   regex: ^(` + strings.Join(monitoringAllowedMetricsBackupRestore, "|") + `)$`
+
+	monitoringScrapeConfigDruidTmpl = `job_name: ` + monitoringPrometheusJobDruidName + `
+honor_timestamps: false
+metrics_path: /federate
+params:
+  'match[]':
+  - '{job="` + monitoringPrometheusJobDruidName + `",etcd_namespace="{{ .namespace }}"}'
+static_configs:
+- targets:
+  - prometheus-web.garden.svc`
 )
 
 var (
 	monitoringAlertingRulesTemplate             *template.Template
 	monitoringScrapeConfigEtcdTemplate          *template.Template
 	monitoringScrapeConfigBackupRestoreTemplate *template.Template
+	monitoringScrapeConfigDruidTemplate         *template.Template
 )
 
 func init() {
@@ -362,6 +374,8 @@ func init() {
 	monitoringScrapeConfigEtcdTemplate, err = template.New("monitoring-scrape-config-etcd").Parse(monitoringScrapeConfigEtcdTmpl)
 	utilruntime.Must(err)
 	monitoringScrapeConfigBackupRestoreTemplate, err = template.New("monitoring-scrape-config-backup-restore").Parse(monitoringScrapeConfigBackupRestoreTmpl)
+	utilruntime.Must(err)
+	monitoringScrapeConfigDruidTemplate, err = template.New("monitoring-scrape-config-druid").Parse(monitoringScrapeConfigDruidTmpl)
 	utilruntime.Must(err)
 }
 
@@ -382,10 +396,22 @@ func (e *etcd) ScrapeConfigs() ([]string, error) {
 		return nil, err
 	}
 
-	return []string{
+	cfgs := []string{
 		scrapeConfigEtcd.String(),
 		scrapeConfigBackupRestore.String(),
-	}, nil
+	}
+
+	// Add scrape config for druid metrics only if the role 'main' exist
+	if e.values.Role == v1beta1constants.ETCDRoleMain {
+		var scrapeConfigDruid bytes.Buffer
+		if err := monitoringScrapeConfigDruidTemplate.Execute(&scrapeConfigDruid, values); err != nil {
+			return nil, err
+		}
+
+		cfgs = append(cfgs, scrapeConfigDruid.String())
+	}
+
+	return cfgs, nil
 }
 
 // AlertingRules returns the alerting rules for AlertManager.

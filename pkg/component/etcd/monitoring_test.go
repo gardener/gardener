@@ -34,7 +34,7 @@ var _ = Describe("Monitoring", func() {
 				Class:    ClassNormal,
 				Replicas: pointer.Int32(1),
 			})
-			test.ScrapeConfigs(etcd, expectedScrapeConfigEtcd, expectedScrapeConfigBackupRestore)
+			test.ScrapeConfigs(etcd, expectedScrapeConfigEtcd, expectedScrapeConfigBackupRestore, expectedScrapeConfigDruid)
 		})
 	})
 
@@ -219,6 +219,16 @@ metric_relabel_configs:
 - source_labels: [ __name__ ]
   action: keep
   regex: ^(etcdbr_defragmentation_duration_seconds_bucket|etcdbr_defragmentation_duration_seconds_count|etcdbr_defragmentation_duration_seconds_sum|etcdbr_network_received_bytes|etcdbr_network_transmitted_bytes|etcdbr_restoration_duration_seconds_bucket|etcdbr_restoration_duration_seconds_count|etcdbr_restoration_duration_seconds_sum|etcdbr_snapshot_duration_seconds_bucket|etcdbr_snapshot_duration_seconds_count|etcdbr_snapshot_duration_seconds_sum|etcdbr_snapshot_gc_total|etcdbr_snapshot_latest_revision|etcdbr_snapshot_latest_timestamp|etcdbr_snapshot_required|etcdbr_validation_duration_seconds_bucket|etcdbr_validation_duration_seconds_count|etcdbr_validation_duration_seconds_sum|etcdbr_snapshotter_failure|etcdbr_cluster_size|etcdbr_is_learner|etcdbr_is_learner_count_total|etcdbr_add_learner_duration_seconds_bucket|etcdbr_add_learner_duration_seconds_sum|etcdbr_member_remove_duration_seconds_bucket|etcdbr_member_remove_duration_seconds_sum|etcdbr_member_promote_duration_seconds_bucket|etcdbr_member_promote_duration_seconds_sum|process_resident_memory_bytes|process_cpu_seconds_total)$`
+
+	expectedScrapeConfigDruid = `job_name: etcd-druid` + `
+honor_timestamps: false
+metrics_path: /federate
+params:
+  'match[]':
+  - '{job="etcd-druid",etcd_namespace="` + testNamespace + `"}'
+static_configs:
+- targets:
+  - prometheus-web.garden.svc`
 
 	alertingRulesNormalSingleNode = `groups:
 - name: kube-etcd3-` + testRole + `.rules

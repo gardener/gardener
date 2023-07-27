@@ -32,6 +32,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/istio"
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
@@ -122,6 +123,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		centralScrapeConfigs                            = strings.Builder{}
 		centralCAdvisorScrapeConfigMetricRelabelConfigs = strings.Builder{}
 		centralMonitoringComponentFunctions             = []component.CentralMonitoringConfiguration{
+			etcd.CentralMonitoringConfiguration,
 			hvpa.CentralMonitoringConfiguration,
 			kubestatemetrics.CentralMonitoringConfiguration,
 		}
