@@ -6,8 +6,7 @@ title: Access to the Garden Cluster for Extensions
 
 Extensions that are installed on seed clusters via a `ControllerInstallation` can simply read the kubeconfig file specified by the `GARDEN_KUBECONFIG` environment variable to create a garden cluster client.
 With this, they use a short-lived token (valid for `12h`) associated with a dedicated `ServiceAccount` in the `seed-<seed-name>` namespace to securely access the garden cluster.
-
-> ⚠️ This feature is under development. The managed `ServiceAccounts` in the garden cluster don't have any API permissions as of now. They will be handled by the `SeedAuthorizer` in the future and equipped with permissions similar to the gardenlets' credentials. See [gardener/gardener#8001](https://github.com/gardener/gardener/issues/8001) for more information.
+The used `ServiceAccounts` are granted permissions in the garden cluster similar to gardenlet clients.
 
 ## Background
 
@@ -120,6 +119,16 @@ users:
   user:
     tokenFile: /var/run/secrets/gardener.cloud/garden/generic-kubeconfig/token
 ```
+
+## Permissions in the Garden Cluster
+
+Both the [`SeedAuthorizer` and the `SeedRestriction` plugin](../deployment/gardenlet_api_access.md) handle extensions clients and generally grant the same permissions in the garden cluster to them as to gardenlet clients.
+With this, extensions are restricted to work with objects in the garden cluster that are related to seed they are running one just like gardenlet.
+Note that if the plugins are not enabled, extension clients are only granted read access to global resources like `CloudProfiles` (this is granted to all authenticated users).
+There are a few exceptions to the granted permissions as documented [here](../deployment/gardenlet_api_access.md#rule-exceptions-for-extension-clients).
+
+If an extension needs access to additional resources in the garden cluster (e.g., extension-specific custom resources), permissions need to be granted via the usual RBAC means.
+Note that this is done outside of Gardener and might require an additional controller that manages RBAC for extension clients in the garden cluster.
 
 ## Renewing All Garden Access Secrets
 

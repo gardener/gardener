@@ -322,17 +322,24 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 // verifyGardenAccess uses the extension's access to the garden cluster to request objects related to the seed it is
 // running on, but doesn't do anything useful with the objects. We do this for verifying the extension's garden access
 // in e2e tests. If something fails in this runnable, the extension will crash loop.
-func verifyGardenAccess(ctx context.Context, log logr.Logger, c client.Reader, seedName string) error {
-	log = log.WithName("garden-reader").WithValues("seedName", seedName)
+func verifyGardenAccess(ctx context.Context, log logr.Logger, c client.Client, seedName string) error {
+	log = log.WithName("garden-access").WithValues("seedName", seedName)
 
-	log.Info("Getting Seed")
+	log.Info("Reading Seed")
+	// NB: reading seeds is allowed by gardener.cloud:system:read-global-resources (bound to all authenticated users)
 	seed := &gardencorev1beta1.Seed{}
 	if err := c.Get(ctx, client.ObjectKey{Name: seedName}, seed); err != nil {
 		return fmt.Errorf("failed reading seed %s: %w", seedName, err)
 	}
 
-	log.Info("Garden access successfully verified")
+	log.Info("Annotating Seed")
+	patch := client.MergeFrom(seed.DeepCopy())
+	metav1.SetMetaDataAnnotation(&seed.ObjectMeta, "provider-local-e2e-test-garden-access", time.Now().UTC().Format(time.RFC3339))
+	if err := c.Patch(ctx, seed, patch); err != nil {
+		return fmt.Errorf("failed annotating seed %s: %w", seedName, err)
+	}
 
+	log.Info("Garden access successfully verified")
 	return nil
 }
 
