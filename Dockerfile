@@ -3,9 +3,6 @@ FROM golang:1.20.6 AS builder
 WORKDIR /go/src/github.com/gardener/gardener
 COPY . .
 ARG EFFECTIVE_VERSION
-RUN cat Makefile
-RUN cat pkg/.import-restrictions
-RUN cat imagevector/images.yaml
 RUN make install EFFECTIVE_VERSION=$EFFECTIVE_VERSION
 
 # distroless-static
