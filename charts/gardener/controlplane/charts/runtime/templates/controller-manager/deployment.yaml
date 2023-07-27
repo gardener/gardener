@@ -21,10 +21,6 @@ spec:
       annotations:
         checksum/configmap-gardener-controller-manager-config: {{ include (print $.Template.BasePath "/controller-manager/configmap-componentconfig.yaml") . | sha256sum }}
         checksum/secret-gardener-controller-manager-kubeconfig: {{ include (print $.Template.BasePath "/controller-manager/secret-kubeconfig.yaml") . | sha256sum }}
-        checksum/secret-default-domain: {{ include "gardener.secret-default-domain" . | sha256sum }}
-        checksum/secret-internal-domain: {{ include "gardener.secret-internal-domain" . | sha256sum }}
-        checksum/secret-alerting: {{ include "gardener.secret-alerting" . | sha256sum }}
-        checksum/secret-openvpn-diffie-hellman: {{ include "gardener.secret-openvpn-diffie-hellman" . | sha256sum }}
         {{- if .Values.global.controller.podAnnotations }}
 {{ toYaml .Values.global.controller.podAnnotations | indent 8 }}
         {{- end }}
