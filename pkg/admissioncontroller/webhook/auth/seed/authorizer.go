@@ -270,6 +270,7 @@ func (a *authorizer) authorizeLease(log logr.Logger, seedName string, userType s
 
 			return auth.DecisionAllow, "", nil
 		}
+
 		return auth.DecisionNoOpinion, "lease object is not in seed namespace", nil
 	}
 

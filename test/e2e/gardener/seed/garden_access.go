@@ -141,7 +141,7 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 		})
 
 		Describe("usage in provider-local", func() {
-			It("should be able to annotate its own seed", func() {
+			It("should be allowed via seed authorizer to annotate its own seed", func() {
 				const testAnnotation = "provider-local-e2e-test-garden-access"
 
 				Eventually(func(g Gomega) {

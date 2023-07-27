@@ -128,7 +128,7 @@ Note that if the plugins are not enabled, extension clients are only granted rea
 There are a few exceptions to the granted permissions as documented [here](../deployment/gardenlet_api_access.md#rule-exceptions-for-extension-clients).
 
 If an extension needs access to additional resources in the garden cluster (e.g., extension-specific custom resources), permissions need to be granted via the usual RBAC means.
-Note that this is done outside of gardener and might require an additional controller that manages RBAC for extension clients in the garden cluster.
+Note that this is done outside of Gardener and might require an additional controller that manages RBAC for extension clients in the garden cluster.
 
 ## Renewing All Garden Access Secrets
 
