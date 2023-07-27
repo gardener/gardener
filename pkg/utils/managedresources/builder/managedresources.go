@@ -152,8 +152,11 @@ func (m *ManagedResource) Reconcile(ctx context.Context) error {
 		return err
 	}
 
-	// mark all old secrets as garbage collectable
-	// TODO(dimityrmirchev): Cleanup after Gardener v1.90
+	// Always mark all old secrets as garbage collectable.
+	// This is done in order to guarantee backwards compatibility with previous versions of this library
+	// when the underlying mananaged resource secrets were not immutable and not garbage collectable.
+	// This guarantees that "old" secrets are always taken care of.
+	// For more details, please see https://github.com/gardener/gardener/pull/8116
 	excludedNames := sets.New[string]()
 	oldSecrets := secretsFromRefs(resource, excludedNames)
 	if err := markSecretsAsGarbageCollectable(ctx, m.client, oldSecrets); err != nil {
