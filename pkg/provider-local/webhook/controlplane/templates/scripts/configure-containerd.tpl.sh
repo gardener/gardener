@@ -13,26 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-hostname=garden.local.gardener.cloud
-
+# TODO(alidzhikov): The following code is migration code to ensure graceful enablement of the ContainerdRegistryHostsDir feature 
+# for existing Shoots with provider-local. Remove this script and the related units/files in v1.79.
 FILENAME=/etc/containerd/config.toml
-if ! grep -q plugins.\"io.containerd.grpc.v1.cri\".registry.mirrors.\"localhost:5001\" "$FILENAME"; then
-  cat <<EOF >> $FILENAME
-[plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5001"]
-  endpoint = ["http://$hostname:5001"]
-[plugins."io.containerd.grpc.v1.cri".registry.mirrors."gcr.io"]
-  endpoint = ["http://$hostname:5003"]
-[plugins."io.containerd.grpc.v1.cri".registry.mirrors."eu.gcr.io"]
-  endpoint = ["http://$hostname:5004"]
-[plugins."io.containerd.grpc.v1.cri".registry.mirrors."ghcr.io"]
-  endpoint = ["http://$hostname:5005"]
-[plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry.k8s.io"]
-  endpoint = ["http://$hostname:5006"]
-[plugins."io.containerd.grpc.v1.cri".registry.mirrors."quay.io"]
-  endpoint = ["http://$hostname:5007"]
-EOF
-  echo "Configured containerd with registry mirrors for local-setup."
-else
-  echo "Containerd already configured with registry mirrors."
+if grep --quiet --fixed-strings '[plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5001"]' "$FILENAME"; then
+  sed -i -E '/\[plugins\."io\.containerd\.grpc\.v1\.cri"\.registry\.mirrors\."localhost:5001"\]/,+11d' $FILENAME
+  echo "Cleaned up old registry mirrors configuration for local-setup."
 fi

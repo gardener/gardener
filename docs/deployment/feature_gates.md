@@ -29,6 +29,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | WorkerlessShoots                    | `false` | `Alpha` | `1.70` |        |
 | MachineControllerManagerDeployment  | `false` | `Alpha` | `1.73` |        |
 | DisableScalingClassesForShoots      | `false` | `Alpha` | `1.73` |        |
+| ContainerdRegistryHostsDir          | `false` | `Alpha` | `1.77` |        |
 
 ## Feature Gates for Graduated or Deprecated Features
 
@@ -177,3 +178,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | WorkerlessShoots                           | `gardener-apiserver`              | WorkerlessShoots allows creation of Shoot clusters with no worker pools.                                                                                                                                                                                                                                                                                                           |
 | MachineControllerManagerDeployment         | `gardenlet`                       | Enables Gardener to take over the deployment of the machine-controller-manager. If enabled, all registered provider extensions must support injecting the provider-specific MCM sidecar container into the deployment via the `controlplane` webhook.                                                                                                                              |
 | DisableScalingClassesForShoots             | `gardenlet`                       | Disables assigning a ScalingClass to Shoots based on their maximum Node count. All Shoot kube-apiservers will get the same initial resource requests for CPU and memory instead of making this depend on the ScalingClass.                                                                                                                                                         |
+| ContainerdRegistryHostsDir                 | `gardenlet`                       | Enables registry configuration in containerd based on the hosts directory pattern. The hosts directory pattern is the new way of configuring registries/mirrors in containerd. Ref https://github.com/containerd/containerd/blob/main/docs/hosts.md.                                                                                                                               |

@@ -1,4 +1,4 @@
-// Copyright 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2023 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,19 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package containerd_test
+package controlplane_test
 
 import (
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	"github.com/gardener/gardener/pkg/gardenlet/features"
 )
 
-func TestContainerD(t *testing.T) {
-	features.RegisterFeatureGates()
+func TestControlPlaneWebhook(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Component Extensions OperatingSystemConfig Original Components ContainerD Suite")
+	RunSpecs(t, "Provider-Local Webhook ControlPlane Suite")
 }

@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
+	"path/filepath"
 	"text/template"
 
 	"github.com/Masterminds/semver"
@@ -163,6 +164,31 @@ Requires=` + unitNameInitializer,
 		},
 	})
 
+	mirrors := []RegistryMirror{
+		{UpstreamHost: "localhost:5001", UpstreamServer: "http://localhost:5001", MirrorHost: "http://garden.local.gardener.cloud:5001"},
+		{UpstreamHost: "gcr.io", UpstreamServer: "https://gcr.io", MirrorHost: "http://garden.local.gardener.cloud:5003"},
+		{UpstreamHost: "eu.gcr.io", UpstreamServer: "https://eu.gcr.io", MirrorHost: "http://garden.local.gardener.cloud:5004"},
+		{UpstreamHost: "ghcr.io", UpstreamServer: "https://ghcr.io", MirrorHost: "http://garden.local.gardener.cloud:5005"},
+		{UpstreamHost: "registry.k8s.io", UpstreamServer: "https://registry.k8s.io", MirrorHost: "http://garden.local.gardener.cloud:5006"},
+		{UpstreamHost: "quay.io", UpstreamServer: "https://quay.io", MirrorHost: "http://garden.local.gardener.cloud:5007"},
+	}
+
+	for _, mirror := range mirrors {
+		// appendFileIfNotPresent in used instead of appendUniqueFile intentionally to allow enabling and testing the registry-cache extension in local setup.
+		// A file appended by the registry-cache extension is always picked up because:
+		// - if a file is already appended by the registry-cache extension, provider-local won't overwrite it (appendFileIfNotPresent)
+		// - if a file is already appended by provider-local, the registry-cache extension will overwrite it (appendUniqueFile)
+		appendFileIfNotPresent(new, extensionsv1alpha1.File{
+			Path:        filepath.Join("/etc/containerd/certs.d", mirror.UpstreamHost, "hosts.toml"),
+			Permissions: pointer.Int32(0644),
+			Content: extensionsv1alpha1.FileContent{
+				Inline: &extensionsv1alpha1.FileContentInline{
+					Data: mirror.HostsTOML(),
+				},
+			},
+		})
+	}
+
 	return nil
 }
 
@@ -204,6 +230,12 @@ func appendUniqueFile(files *[]extensionsv1alpha1.File, file extensionsv1alpha1.
 	*files = append(resFiles, file)
 }
 
+func appendFileIfNotPresent(files *[]extensionsv1alpha1.File, file extensionsv1alpha1.File) {
+	if !containsFilePath(files, file.Path) {
+		*files = append(*files, file)
+	}
+}
+
 // appendUniqueUnit appends a unit only if it does not exist, otherwise overwrite content of previous unit
 func appendUniqueUnit(units *[]extensionsv1alpha1.Unit, unit extensionsv1alpha1.Unit) {
 	resFiles := make([]extensionsv1alpha1.Unit, 0, len(*units))
@@ -215,4 +247,14 @@ func appendUniqueUnit(units *[]extensionsv1alpha1.Unit, unit extensionsv1alpha1.
 	}
 
 	*units = append(resFiles, unit)
+}
+
+func containsFilePath(files *[]extensionsv1alpha1.File, filePath string) bool {
+	for _, f := range *files {
+		if f.Path == filePath {
+			return true
+		}
+	}
+
+	return false
 }

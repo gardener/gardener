@@ -10,7 +10,13 @@ rules:
   - github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/docker
   - github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/logrotate
   - github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/utils
-# allow the transitive import of  github.com/gardener/gardener/pkg/component
+# allow the transitive import of github.com/gardener/gardener/pkg/component
+# which is imported by github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/{containerd,kubelet,docker}
 - selectorRegexp: github[.]com/gardener/gardener/pkg/component
   allowedPrefixes:
   - github.com/gardener/gardener/pkg/component
+# allow the transitive import of github.com/gardener/gardener/pkg/features
+# which is imported by github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/containerd
+- selectorRegexp: github[.]com/gardener/gardener/pkg/features
+  allowedPrefixes:
+  - github.com/gardener/gardener/pkg/features
