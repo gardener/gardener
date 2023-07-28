@@ -59,6 +59,8 @@ var _ = Describe("Virtual", func() {
 		clusterRoleBindingSeedBootstrapper *rbacv1.ClusterRoleBinding
 		clusterRoleSeeds                   *rbacv1.ClusterRole
 		clusterRoleBindingSeeds            *rbacv1.ClusterRoleBinding
+		clusterRoleGardenerAdmin           *rbacv1.ClusterRole
+		clusterRoleBindingGardenerAdmin    *rbacv1.ClusterRoleBinding
 	)
 
 	BeforeEach(func() {
@@ -142,6 +144,80 @@ var _ = Describe("Virtual", func() {
 				Name:     "gardener.cloud:system:seeds",
 			}},
 		}
+		clusterRoleGardenerAdmin = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "gardener.cloud:admin",
+				Labels: map[string]string{"gardener.cloud/role": "admin"},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{
+						"core.gardener.cloud",
+						"seedmanagement.gardener.cloud",
+						"dashboard.gardener.cloud",
+						"settings.gardener.cloud",
+						"operations.gardener.cloud",
+					},
+					Resources: []string{"*"},
+					Verbs:     []string{"*"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"events", "namespaces", "resourcequotas"},
+					Verbs:     []string{"*"},
+				},
+				{
+					APIGroups: []string{"events.k8s.io"},
+					Resources: []string{"events"},
+					Verbs:     []string{"*"},
+				},
+				{
+					APIGroups: []string{"rbac.authorization.k8s.io"},
+					Resources: []string{"clusterroles", "clusterrolebindings", "roles", "rolebindings"},
+					Verbs:     []string{"*"},
+				},
+				{
+					APIGroups: []string{"admissionregistration.k8s.io"},
+					Resources: []string{"mutatingwebhookconfigurations", "validatingwebhookconfigurations"},
+					Verbs:     []string{"*"},
+				},
+				{
+					APIGroups: []string{"apiregistration.k8s.io"},
+					Resources: []string{"apiservices"},
+					Verbs:     []string{"*"},
+				},
+				{
+					APIGroups: []string{"apiextensions.k8s.io"},
+					Resources: []string{"customresourcedefinitions"},
+					Verbs:     []string{"*"},
+				},
+				{
+					APIGroups: []string{"coordination.k8s.io"},
+					Resources: []string{"leases"},
+					Verbs:     []string{"*"},
+				},
+				{
+					APIGroups: []string{"certificates.k8s.io"},
+					Resources: []string{"certificatesigningrequests"},
+					Verbs:     []string{"*"},
+				},
+			},
+		}
+		clusterRoleBindingGardenerAdmin = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:admin",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "gardener.cloud:admin",
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "User",
+				Name:     "system:kube-aggregator",
+			}},
+		}
 	})
 
 	Describe("#Deploy", func() {
@@ -181,12 +257,14 @@ var _ = Describe("Virtual", func() {
 		})
 
 		It("should successfully deploy the resources when seed authorizer is disabled", func() {
-			Expect(managedResourceSecret.Data).To(HaveLen(5))
+			Expect(managedResourceSecret.Data).To(HaveLen(7))
 			Expect(string(managedResourceSecret.Data["namespace____garden.yaml"])).To(Equal(componenttest.Serialize(namespaceGarden)))
 			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_seed-bootstrapper.yaml"])).To(Equal(componenttest.Serialize(clusterRoleSeedBootstrapper)))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_system_seed-bootstrapper.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingSeedBootstrapper)))
 			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_seeds.yaml"])).To(Equal(componenttest.Serialize(clusterRoleSeeds)))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_system_seeds.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingSeeds)))
+			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_admin.yaml"])).To(Equal(componenttest.Serialize(clusterRoleGardenerAdmin)))
+			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_admin.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingGardenerAdmin)))
 		})
 
 		Context("when seed authorizer is enabled", func() {

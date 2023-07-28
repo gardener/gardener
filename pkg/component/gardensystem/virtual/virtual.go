@@ -18,14 +18,23 @@ import (
 	"context"
 	"time"
 
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	eventsv1 "k8s.io/api/events/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
+	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -128,12 +137,88 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 				Name:     bootstraptokenapi.BootstrapDefaultGroup,
 			}},
 		}
+		clusterRoleGardenerAdmin = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "gardener.cloud:admin",
+				Labels: map[string]string{v1beta1constants.GardenRole: "admin"},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{
+						gardencorev1beta1.GroupName,
+						seedmanagementv1alpha1.GroupName,
+						"dashboard.gardener.cloud",
+						settingsv1alpha1.GroupName,
+						operationsv1alpha1.GroupName,
+					},
+					Resources: []string{"*"},
+					Verbs:     []string{"*"},
+				},
+				{
+					APIGroups: []string{corev1.GroupName},
+					Resources: []string{"events", "namespaces", "resourcequotas"},
+					Verbs:     []string{"*"},
+				},
+				{
+					APIGroups: []string{eventsv1.GroupName},
+					Resources: []string{"events"},
+					Verbs:     []string{"*"},
+				},
+				{
+					APIGroups: []string{rbacv1.GroupName},
+					Resources: []string{"clusterroles", "clusterrolebindings", "roles", "rolebindings"},
+					Verbs:     []string{"*"},
+				},
+				{
+					APIGroups: []string{admissionregistrationv1.GroupName},
+					Resources: []string{"mutatingwebhookconfigurations", "validatingwebhookconfigurations"},
+					Verbs:     []string{"*"},
+				},
+				{
+					APIGroups: []string{apiregistrationv1.GroupName},
+					Resources: []string{"apiservices"},
+					Verbs:     []string{"*"},
+				},
+				{
+					APIGroups: []string{apiextensionsv1.GroupName},
+					Resources: []string{"customresourcedefinitions"},
+					Verbs:     []string{"*"},
+				},
+				{
+					APIGroups: []string{coordinationv1.GroupName},
+					Resources: []string{"leases"},
+					Verbs:     []string{"*"},
+				},
+				{
+					APIGroups: []string{certificatesv1.GroupName},
+					Resources: []string{"certificatesigningrequests"},
+					Verbs:     []string{"*"},
+				},
+			},
+		}
+		clusterRoleBindingGardenerAdmin = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: clusterRoleGardenerAdmin.Name,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     clusterRoleGardenerAdmin.Name,
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "User",
+				Name:     "system:kube-aggregator",
+			}},
+		}
 	)
 
 	if err := registry.Add(
 		namespaceGarden,
 		clusterRoleSeedBootstrapper,
 		clusterRoleBindingSeedBootstrapper,
+		clusterRoleGardenerAdmin,
+		clusterRoleBindingGardenerAdmin,
 	); err != nil {
 		return nil, err
 	}
