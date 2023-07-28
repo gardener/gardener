@@ -22,28 +22,26 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("Scheduler_Control", func() {
 	var (
-		ctx    = context.TODO()
-		ctrl   *gomock.Controller
-		reader *mockclient.MockReader
+		ctx              = context.Background()
+		ctrl             *gomock.Controller
+		fakeGardenClient client.Client
 
-		cloudProfile gardencorev1beta1.CloudProfile
-		seed         gardencorev1beta1.Seed
-		shoot        gardencorev1beta1.Shoot
+		cloudProfile *gardencorev1beta1.CloudProfile
+		seed         *gardencorev1beta1.Seed
+		shoot        *gardencorev1beta1.Shoot
 
 		schedulerConfiguration config.SchedulerConfiguration
 
@@ -130,7 +128,7 @@ var _ = Describe("Scheduler_Control", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		reader = mockclient.NewMockReader(ctrl)
+		fakeGardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 	})
 
 	AfterEach(func() {
@@ -139,9 +137,9 @@ var _ = Describe("Scheduler_Control", func() {
 
 	Context("SEED DETERMINATION - Shoot does not reference a Seed - find an adequate one using 'Same Region' seed determination strategy", func() {
 		BeforeEach(func() {
-			cloudProfile = *cloudProfileBase.DeepCopy()
-			seed = *seedBase.DeepCopy()
-			shoot = *shootBase.DeepCopy()
+			cloudProfile = cloudProfileBase.DeepCopy()
+			seed = seedBase.DeepCopy()
+			shoot = shootBase.DeepCopy()
 			schedulerConfiguration = *schedulerConfigurationBase.DeepCopy()
 			// no seed referenced
 			shoot.Spec.SeedName = nil
@@ -150,17 +148,10 @@ var _ = Describe("Scheduler_Control", func() {
 		// PASS
 
 		It("should find a seed cluster 1) 'Same Region' seed determination strategy 2) referencing the same profile 3) same region 4) indicating availability", func() {
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(seed.Name))
 		})
@@ -174,20 +165,13 @@ var _ = Describe("Scheduler_Control", func() {
 			// first seed references more shoots then seed-2 -> expect seed-2 to be selected
 			secondShoot.Spec.SeedName = &seed.Name
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed, secondSeed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{shoot, secondShoot}}
-				return nil
-			})
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, &secondSeed)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, shoot)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, &secondShoot)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(secondSeed.Name))
 		})
@@ -199,40 +183,25 @@ var _ = Describe("Scheduler_Control", func() {
 
 			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed, secondSeed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{shoot}}
-				return nil
-			})
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, &secondSeed)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, shoot)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(secondSeed.Name))
 		})
 
-		// FAIL
+		//// FAIL
 
 		It("should fail because it cannot find a seed cluster 1) 'Same Region' seed determination strategy 2) region that no seed supports", func() {
 			shoot.Spec.Region = "another-region"
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -246,20 +215,11 @@ var _ = Describe("Scheduler_Control", func() {
 				},
 			}
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{shoot}}
-				return nil
-			})
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, shoot)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).To(MatchError("none of the 1 seeds has at least 3 zones for hosting a shoot control plane with failure tolerance type 'zone'"))
 			Expect(bestSeed).To(BeNil())
 		})
@@ -275,20 +235,11 @@ var _ = Describe("Scheduler_Control", func() {
 				},
 			}
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{shoot}}
-				return nil
-			})
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, shoot)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).To(MatchError("none of the 1 seeds has at least 3 zones for hosting a shoot control plane with failure tolerance type 'zone'"))
 			Expect(bestSeed).To(BeNil())
 		})
@@ -300,20 +251,11 @@ var _ = Describe("Scheduler_Control", func() {
 
 			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}}}
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{multiZonalSeed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{shoot}}
-				return nil
-			})
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, &multiZonalSeed)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, shoot)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).To(BeNil())
 			Expect(bestSeed.Name).To(Equal(multiZonalSeed.Name))
 		})
@@ -323,20 +265,11 @@ var _ = Describe("Scheduler_Control", func() {
 			multiZonalSeed.Name = "seed-multi-zonal"
 			multiZonalSeed.Spec.Provider.Zones = []string{"1", "2"}
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{multiZonalSeed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{shoot}}
-				return nil
-			})
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, &multiZonalSeed)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, shoot)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).To(BeNil())
 			Expect(bestSeed.Name).To(Equal(multiZonalSeed.Name))
 		})
@@ -347,10 +280,10 @@ var _ = Describe("Scheduler_Control", func() {
 		var anotherRegion = "another-region"
 
 		BeforeEach(func() {
-			seed = *seedBase.DeepCopy()
-			shoot = *shootBase.DeepCopy()
+			seed = seedBase.DeepCopy()
+			shoot = shootBase.DeepCopy()
 			shoot.Spec.Provider.Type = anotherType
-			cloudProfile = *cloudProfileBase.DeepCopy()
+			cloudProfile = cloudProfileBase.DeepCopy()
 			cloudProfile.Spec.Type = anotherType
 			schedulerConfiguration = *schedulerConfigurationBase.DeepCopy()
 			schedulerConfiguration.Schedulers.Shoot.Strategy = config.MinimalDistance
@@ -362,17 +295,10 @@ var _ = Describe("Scheduler_Control", func() {
 			seed.Spec.Provider.Type = anotherType
 			shoot.Spec.Region = anotherRegion
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed).NotTo(BeNil())
 		})
@@ -383,17 +309,10 @@ var _ = Describe("Scheduler_Control", func() {
 			}
 			shoot.Spec.Region = anotherRegion
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed).NotTo(BeNil())
 		})
@@ -404,17 +323,10 @@ var _ = Describe("Scheduler_Control", func() {
 			}
 			shoot.Spec.Region = anotherRegion
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed).NotTo(BeNil())
 		})
@@ -431,17 +343,10 @@ var _ = Describe("Scheduler_Control", func() {
 			seed.Labels = map[string]string{"select": "true"}
 			shoot.Spec.Region = anotherRegion
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed).NotTo(BeNil())
 		})
@@ -449,17 +354,10 @@ var _ = Describe("Scheduler_Control", func() {
 		// FAIL
 
 		It("should fail because it cannot find a seed cluster 1) 'MinimalDistance' seed determination strategy 2) no matching provider", func() {
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -473,17 +371,10 @@ var _ = Describe("Scheduler_Control", func() {
 				},
 				ProviderTypes: []string{providerType},
 			}
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -498,17 +389,10 @@ var _ = Describe("Scheduler_Control", func() {
 			}
 			seed.Labels = map[string]string{"select": "true"}
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -516,9 +400,9 @@ var _ = Describe("Scheduler_Control", func() {
 
 	Context("SEED DETERMINATION - Shoot does not reference a Seed - find an adequate one using 'Minimal Distance' seed determination strategy", func() {
 		BeforeEach(func() {
-			cloudProfile = *cloudProfileBase.DeepCopy()
-			seed = *seedBase.DeepCopy()
-			shoot = *shootBase.DeepCopy()
+			cloudProfile = cloudProfileBase.DeepCopy()
+			seed = seedBase.DeepCopy()
+			shoot = shootBase.DeepCopy()
 			schedulerConfiguration = *schedulerConfigurationBase.DeepCopy()
 			// no seed referenced
 			shoot.Spec.SeedName = nil
@@ -526,17 +410,10 @@ var _ = Describe("Scheduler_Control", func() {
 		})
 
 		It("should find a seed cluster 1) referencing the same profile 2) same region 3) indicating availability", func() {
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(seedName))
 		})
@@ -545,17 +422,10 @@ var _ = Describe("Scheduler_Control", func() {
 			anotherRegion := "another-region"
 			shoot.Spec.Region = anotherRegion
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(seedName))
 			// verify that shoot is in another region than the seed
@@ -578,17 +448,12 @@ var _ = Describe("Scheduler_Control", func() {
 			anotherRegion := "europe-west3"
 			shoot.Spec.Region = anotherRegion
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed, secondSeed, thirdSeed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, &secondSeed)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, &thirdSeed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(secondSeed.Name))
 			// verify that shoot is in another region than the chosen seed
@@ -604,26 +469,19 @@ var _ = Describe("Scheduler_Control", func() {
 			// first seed references more shoots then seed-2 -> expect seed-2 to be selected
 			secondShoot.Spec.SeedName = &seed.Name
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed, secondSeed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{shoot, secondShoot}}
-				return nil
-			})
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, &secondSeed)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, shoot)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, &secondShoot)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(secondSeed.Name))
 		})
 
 		It("should find seed cluster that matches the seed selector of the CloudProfile and is from another region", func() {
-			newCloudProfile := cloudProfile
+			newCloudProfile := cloudProfile.DeepCopy()
 			newCloudProfile.Name = "cloudprofile2"
 			newCloudProfile.Spec.SeedSelector = &gardencorev1beta1.SeedSelector{
 				LabelSelector: metav1.LabelSelector{
@@ -635,13 +493,13 @@ var _ = Describe("Scheduler_Control", func() {
 			newCloudProfile.Spec.Regions = []gardencorev1beta1.Region{{Name: "name: eu-nl-1"}}
 
 			// seeds
-			oldSeedEnvironment1 := seed
+			oldSeedEnvironment1 := seed.DeepCopy()
 			oldSeedEnvironment1.Spec.Provider.Type = "some-type"
 			oldSeedEnvironment1.Spec.Provider.Region = "eu-de-200"
 			oldSeedEnvironment1.Name = "seed1"
 			oldSeedEnvironment1.Labels = map[string]string{"environment": "one"}
 
-			newSeedEnvironment2 := seed
+			newSeedEnvironment2 := seed.DeepCopy()
 			newSeedEnvironment2.Spec.Provider.Type = "some-type"
 			newSeedEnvironment2.Spec.Provider.Region = "eu-nl-1"
 			newSeedEnvironment2.Name = "seed2"
@@ -653,17 +511,11 @@ var _ = Describe("Scheduler_Control", func() {
 			testShoot.Spec.CloudProfileName = "cloudprofile2"
 			testShoot.Spec.Provider.Type = "some-type"
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(newCloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = newCloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{oldSeedEnvironment1, newSeedEnvironment2}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, newCloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, oldSeedEnvironment1)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, newSeedEnvironment2)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &testShoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, testShoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(newSeedEnvironment2.Name))
 		})
@@ -681,26 +533,26 @@ var _ = Describe("Scheduler_Control", func() {
 			newCloudProfile.Spec.Regions = []gardencorev1beta1.Region{{Name: "name: eu-nl-1"}}
 
 			// seeds
-			oldSeedEnvironment1 := seed
+			oldSeedEnvironment1 := seed.DeepCopy()
 			oldSeedEnvironment1.Spec.Provider.Type = "some-type"
 			oldSeedEnvironment1.Spec.Provider.Region = "eu-de-200"
 			oldSeedEnvironment1.Name = "seed1"
 			oldSeedEnvironment1.Labels = map[string]string{"environment": "one"}
 
-			newSeedEnvironment2 := seed
+			newSeedEnvironment2 := seed.DeepCopy()
 			newSeedEnvironment2.Spec.Provider.Type = "some-type"
 			newSeedEnvironment2.Spec.Provider.Region = "eu-nl-1"
 			newSeedEnvironment2.Name = "seed2"
 			newSeedEnvironment2.Labels = map[string]string{"environment": "two"}
 
-			newSeedEnvironment3 := seed
+			newSeedEnvironment3 := seed.DeepCopy()
 			newSeedEnvironment3.Spec.Provider.Type = "some-type"
 			newSeedEnvironment3.Spec.Provider.Region = "eu-nl-4"
 			newSeedEnvironment3.Name = "seed3"
 			newSeedEnvironment3.Labels = map[string]string{"environment": "two", "my-preferred": "seed"}
 
 			// shoot
-			testShoot := shoot
+			testShoot := shoot.DeepCopy()
 			testShoot.Spec.Region = "eu-de-2"
 			testShoot.Spec.CloudProfileName = "cloudprofile2"
 			testShoot.Spec.Provider.Type = "some-type"
@@ -708,17 +560,12 @@ var _ = Describe("Scheduler_Control", func() {
 				LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"my-preferred": "seed"}},
 			}
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(newCloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = newCloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{oldSeedEnvironment1, newSeedEnvironment2, newSeedEnvironment3}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, newCloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, oldSeedEnvironment1)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, newSeedEnvironment2)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, newSeedEnvironment3)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &testShoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, testShoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(newSeedEnvironment3.Name))
 		})
@@ -742,20 +589,14 @@ var _ = Describe("Scheduler_Control", func() {
 			thirdShoot.Name = "shoot-3"
 			thirdShoot.Spec.SeedName = &secondSeed.Name
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed, secondSeed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{shoot, secondShoot, thirdShoot}}
-				return nil
-			})
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, &secondSeed)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, shoot)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, &secondShoot)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, &thirdShoot)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(secondSeed.Name))
 		})
@@ -763,9 +604,9 @@ var _ = Describe("Scheduler_Control", func() {
 
 	Context("SEED DETERMINATION - Shoot does not reference a Seed - find an adequate one using default seed determination strategy", func() {
 		BeforeEach(func() {
-			cloudProfile = *cloudProfileBase.DeepCopy()
-			seed = *seedBase.DeepCopy()
-			shoot = *shootBase.DeepCopy()
+			cloudProfile = cloudProfileBase.DeepCopy()
+			seed = seedBase.DeepCopy()
+			shoot = shootBase.DeepCopy()
 			schedulerConfiguration = *schedulerConfigurationBase.DeepCopy()
 			// no seed referenced
 			shoot.Spec.SeedName = nil
@@ -773,17 +614,10 @@ var _ = Describe("Scheduler_Control", func() {
 		})
 
 		It("should find a seed cluster 1) referencing the same profile 2) same region 3) indicating availability", func() {
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(seedName))
 		})
@@ -796,17 +630,10 @@ var _ = Describe("Scheduler_Control", func() {
 			shoot.Spec.Networking.Pods = nil
 			shoot.Spec.Networking.Services = nil
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(seedName))
 		})
@@ -819,20 +646,13 @@ var _ = Describe("Scheduler_Control", func() {
 			secondShoot.Name = "shoot-2"
 			secondShoot.Spec.SeedName = &seed.Name
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed, secondSeed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{shoot, secondShoot}}
-				return nil
-			})
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, &secondSeed)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, shoot)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, &secondShoot)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(secondSeed.Name))
 		})
@@ -846,17 +666,10 @@ var _ = Describe("Scheduler_Control", func() {
 				Nodes:    seed.Spec.Networks.Nodes,
 			}
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -865,17 +678,10 @@ var _ = Describe("Scheduler_Control", func() {
 			seed.Spec.Taints = []gardencorev1beta1.SeedTaint{{Key: "foo"}}
 			shoot.Spec.Tolerations = nil
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -888,20 +694,11 @@ var _ = Describe("Scheduler_Control", func() {
 			secondShoot.Name = "shoot-2"
 			secondShoot.Spec.SeedName = &seed.Name
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{shoot, secondShoot}}
-				return nil
-			})
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, shoot)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, &secondShoot)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -910,17 +707,10 @@ var _ = Describe("Scheduler_Control", func() {
 			seed.Spec.Networks.ShootDefaults = nil
 			shoot.Spec.Networking = &gardencorev1beta1.Networking{}
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -928,17 +718,10 @@ var _ = Describe("Scheduler_Control", func() {
 		It("should fail because it cannot find a seed cluster due to region that no seed supports", func() {
 			shoot.Spec.Region = "another-region"
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -951,17 +734,10 @@ var _ = Describe("Scheduler_Control", func() {
 					},
 				},
 			}
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -975,17 +751,10 @@ var _ = Describe("Scheduler_Control", func() {
 				},
 			}
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -993,14 +762,9 @@ var _ = Describe("Scheduler_Control", func() {
 		It("should fail because it cannot find a seed cluster due to invalid profile", func() {
 			shoot.Spec.CloudProfileName = "another-profile"
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key("another-profile"), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -1017,17 +781,10 @@ var _ = Describe("Scheduler_Control", func() {
 				},
 			}
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -1044,17 +801,10 @@ var _ = Describe("Scheduler_Control", func() {
 				},
 			}
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -1066,17 +816,10 @@ var _ = Describe("Scheduler_Control", func() {
 				},
 			}
 
-			reader.EXPECT().Get(ctx, kubernetesutils.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -1084,8 +827,8 @@ var _ = Describe("Scheduler_Control", func() {
 
 	Context("#DetermineBestSeedCandidate", func() {
 		BeforeEach(func() {
-			seed = *seedBase.DeepCopy()
-			shoot = *shootBase.DeepCopy()
+			seed = seedBase.DeepCopy()
+			shoot = shootBase.DeepCopy()
 			schedulerConfiguration = *schedulerConfigurationBase.DeepCopy()
 			// no seed referenced
 			shoot.Spec.SeedName = nil
@@ -1093,17 +836,17 @@ var _ = Describe("Scheduler_Control", func() {
 		})
 
 		It("should find two seeds candidates having the same amount of matching characters", func() {
-			oldSeedEnvironment1 := seed
+			oldSeedEnvironment1 := *seed
 			oldSeedEnvironment1.Spec.Provider.Type = "some-type"
 			oldSeedEnvironment1.Spec.Provider.Region = "eu-de-200"
 			oldSeedEnvironment1.Name = "seed1"
 
-			newSeedEnvironment2 := seed
+			newSeedEnvironment2 := *seed
 			newSeedEnvironment2.Spec.Provider.Type = "some-type"
 			newSeedEnvironment2.Spec.Provider.Region = "eu-de-2111"
 			newSeedEnvironment2.Name = "seed2"
 
-			otherSeedEnvironment2 := seed
+			otherSeedEnvironment2 := *seed
 			otherSeedEnvironment2.Spec.Provider.Type = "some-type"
 			otherSeedEnvironment2.Spec.Provider.Region = "eu-nl-1"
 			otherSeedEnvironment2.Name = "xyz"
@@ -1114,7 +857,7 @@ var _ = Describe("Scheduler_Control", func() {
 			testShoot.Spec.CloudProfileName = "cloudprofile2"
 			testShoot.Spec.Provider.Type = "some-type"
 
-			candidates, err := applyStrategy(&testShoot, []gardencorev1beta1.Seed{newSeedEnvironment2, oldSeedEnvironment1, otherSeedEnvironment2}, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			candidates, err := applyStrategy(testShoot, []gardencorev1beta1.Seed{newSeedEnvironment2, oldSeedEnvironment1, otherSeedEnvironment2}, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(candidates)).To(Equal(2))
 			Expect(candidates[0].Name).To(Equal(newSeedEnvironment2.Name))
@@ -1122,17 +865,17 @@ var _ = Describe("Scheduler_Control", func() {
 		})
 
 		It("should find single seed candidate", func() {
-			oldSeedEnvironment1 := seed
+			oldSeedEnvironment1 := *seed
 			oldSeedEnvironment1.Spec.Provider.Type = "some-type"
 			oldSeedEnvironment1.Spec.Provider.Region = "eu-de-200"
 			oldSeedEnvironment1.Name = "seed1"
 
-			newSeedEnvironment2 := seed
+			newSeedEnvironment2 := *seed
 			newSeedEnvironment2.Spec.Provider.Type = "some-type"
 			newSeedEnvironment2.Spec.Provider.Region = "eu-de-2111"
 			newSeedEnvironment2.Name = "seed2"
 
-			otherSeedEnvironment2 := seed
+			otherSeedEnvironment2 := *seed
 			otherSeedEnvironment2.Spec.Provider.Type = "some-type"
 			otherSeedEnvironment2.Spec.Provider.Region = "eu-nl-1"
 			otherSeedEnvironment2.Name = "xyz"
@@ -1143,7 +886,7 @@ var _ = Describe("Scheduler_Control", func() {
 			testShoot.Spec.CloudProfileName = "cloudprofile2"
 			testShoot.Spec.Provider.Type = "some-type"
 
-			candidates, err := applyStrategy(&testShoot, []gardencorev1beta1.Seed{newSeedEnvironment2, oldSeedEnvironment1, otherSeedEnvironment2}, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			candidates, err := applyStrategy(testShoot, []gardencorev1beta1.Seed{newSeedEnvironment2, oldSeedEnvironment1, otherSeedEnvironment2}, schedulerConfiguration.Schedulers.Shoot.Strategy)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(candidates)).To(Equal(1))
 			Expect(candidates[0].Name).To(Equal(oldSeedEnvironment1.Name))
