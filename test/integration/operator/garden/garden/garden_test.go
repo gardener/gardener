@@ -55,6 +55,7 @@ import (
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	gardencontroller "github.com/gardener/gardener/pkg/operator/controller/garden/garden"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -89,6 +90,7 @@ var _ = Describe("Garden controller tests", func() {
 			&resourcemanager.TimeoutWaitForDeployment, 500*time.Millisecond,
 			&resourcemanager.Until, untilInTest,
 			&shared.IntervalWaitForGardenerResourceManagerBootstrapping, 500*time.Millisecond,
+			&managedresources.IntervalWait, 100*time.Millisecond,
 		))
 
 		By("Create test Namespace")
