@@ -27,10 +27,10 @@ type RegistryMirror struct {
 
 // HostsTOML returns hosts.toml configuration.
 func (r *RegistryMirror) HostsTOML() string {
-	const hostsTOMLYAMLTemplate = `server = "%s"
+	const hostsTOMLTemplate = `server = "%s"
 
 [host."%s"]
   capabilities = ["pull", "resolve"]
 `
-	return fmt.Sprintf(hostsTOMLYAMLTemplate, r.UpstreamServer, r.MirrorHost)
+	return fmt.Sprintf(hostsTOMLTemplate, r.UpstreamServer, r.MirrorHost)
 }
