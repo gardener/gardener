@@ -19,6 +19,7 @@ import (
 	"time"
 
 	certificatesv1 "k8s.io/api/certificates/v1"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
@@ -89,6 +90,12 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
+		namespaceGarden = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   v1beta1constants.GardenNamespace,
+				Labels: map[string]string{v1beta1constants.LabelApp: v1beta1constants.LabelGardener},
+			},
+		}
 		clusterRoleSeedBootstrapper = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:system:seed-bootstrapper",
@@ -124,6 +131,7 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 	)
 
 	if err := registry.Add(
+		namespaceGarden,
 		clusterRoleSeedBootstrapper,
 		clusterRoleBindingSeedBootstrapper,
 	); err != nil {

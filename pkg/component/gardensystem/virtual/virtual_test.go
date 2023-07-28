@@ -54,6 +54,7 @@ var _ = Describe("Virtual", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
+		namespaceGarden                    *corev1.Namespace
 		clusterRoleSeedBootstrapper        *rbacv1.ClusterRole
 		clusterRoleBindingSeedBootstrapper *rbacv1.ClusterRoleBinding
 		clusterRoleSeeds                   *rbacv1.ClusterRole
@@ -78,6 +79,12 @@ var _ = Describe("Virtual", func() {
 			},
 		}
 
+		namespaceGarden = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "garden",
+				Labels: map[string]string{"app": "gardener"},
+			},
+		}
 		clusterRoleSeedBootstrapper = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:system:seed-bootstrapper",
@@ -174,7 +181,8 @@ var _ = Describe("Virtual", func() {
 		})
 
 		It("should successfully deploy the resources when seed authorizer is disabled", func() {
-			Expect(managedResourceSecret.Data).To(HaveLen(4))
+			Expect(managedResourceSecret.Data).To(HaveLen(5))
+			Expect(string(managedResourceSecret.Data["namespace____garden.yaml"])).To(Equal(componenttest.Serialize(namespaceGarden)))
 			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_seed-bootstrapper.yaml"])).To(Equal(componenttest.Serialize(clusterRoleSeedBootstrapper)))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_system_seed-bootstrapper.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingSeedBootstrapper)))
 			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_seeds.yaml"])).To(Equal(componenttest.Serialize(clusterRoleSeeds)))
