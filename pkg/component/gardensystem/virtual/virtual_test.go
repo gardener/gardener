@@ -49,17 +49,21 @@ var _ = Describe("Virtual", func() {
 
 		c         client.Client
 		component component.DeployWaiter
+		values    Values
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
 		clusterRoleSeedBootstrapper        *rbacv1.ClusterRole
 		clusterRoleBindingSeedBootstrapper *rbacv1.ClusterRoleBinding
+		clusterRoleSeeds                   *rbacv1.ClusterRole
+		clusterRoleBindingSeeds            *rbacv1.ClusterRoleBinding
 	)
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
-		component = New(c, namespace)
+		values = Values{}
+		component = New(c, namespace, values)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -106,6 +110,31 @@ var _ = Describe("Virtual", func() {
 				Name:     "system:bootstrappers",
 			}},
 		}
+		clusterRoleSeeds = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:seeds",
+			},
+			Rules: []rbacv1.PolicyRule{{
+				APIGroups: []string{"*"},
+				Resources: []string{"*"},
+				Verbs:     []string{"*"},
+			}},
+		}
+		clusterRoleBindingSeeds = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:seeds",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "gardener.cloud:system:seeds",
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Group",
+				Name:     "gardener.cloud:system:seeds",
+			}},
+		}
 	})
 
 	Describe("#Deploy", func() {
@@ -144,10 +173,24 @@ var _ = Describe("Virtual", func() {
 			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 		})
 
-		It("should successfully deploy the resources", func() {
-			Expect(managedResourceSecret.Data).To(HaveLen(2))
+		It("should successfully deploy the resources when seed authorizer is disabled", func() {
+			Expect(managedResourceSecret.Data).To(HaveLen(4))
 			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_seed-bootstrapper.yaml"])).To(Equal(componenttest.Serialize(clusterRoleSeedBootstrapper)))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_system_seed-bootstrapper.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingSeedBootstrapper)))
+			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_seeds.yaml"])).To(Equal(componenttest.Serialize(clusterRoleSeeds)))
+			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_system_seeds.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingSeeds)))
+		})
+
+		Context("when seed authorizer is enabled", func() {
+			BeforeEach(func() {
+				values.SeedAuthorizerEnabled = true
+				component = New(c, namespace, values)
+			})
+
+			It("should successfully deploy the resources when seed authorizer is enabled", func() {
+				Expect(managedResourceSecret.Data).NotTo(HaveKey("clusterrole____gardener.cloud_system_seeds.yaml"))
+				Expect(managedResourceSecret.Data).NotTo(HaveKey("clusterrolebinding____gardener.cloud_system_seeds.yaml"))
+			})
 		})
 	})
 

@@ -24,6 +24,7 @@ import (
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -33,16 +34,24 @@ import (
 const ManagedResourceName = "garden-system-virtual"
 
 // New creates a new instance of DeployWaiter for virtual garden system resources.
-func New(client client.Client, namespace string) component.DeployWaiter {
+func New(client client.Client, namespace string, values Values) component.DeployWaiter {
 	return &gardenSystem{
 		client:    client,
 		namespace: namespace,
+		values:    values,
 	}
 }
 
 type gardenSystem struct {
 	client    client.Client
 	namespace string
+	values    Values
+}
+
+// Values contains values for the system resources.
+type Values struct {
+	// SeedAuthorizerEnabled determines whether the seed authorizer is enabled.
+	SeedAuthorizerEnabled bool
 }
 
 func (g *gardenSystem) Deploy(ctx context.Context) error {
@@ -119,6 +128,43 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 		clusterRoleBindingSeedBootstrapper,
 	); err != nil {
 		return nil, err
+	}
+
+	if !g.values.SeedAuthorizerEnabled {
+		var (
+			clusterRoleSeeds = &rbacv1.ClusterRole{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "gardener.cloud:system:seeds",
+				},
+				Rules: []rbacv1.PolicyRule{{
+					APIGroups: []string{"*"},
+					Resources: []string{"*"},
+					Verbs:     []string{"*"},
+				}},
+			}
+			clusterRoleBindingSeeds = &rbacv1.ClusterRoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: clusterRoleSeeds.Name,
+				},
+				RoleRef: rbacv1.RoleRef{
+					APIGroup: rbacv1.GroupName,
+					Kind:     "ClusterRole",
+					Name:     clusterRoleSeeds.Name,
+				},
+				Subjects: []rbacv1.Subject{{
+					APIGroup: rbacv1.GroupName,
+					Kind:     "Group",
+					Name:     v1beta1constants.SeedsGroup,
+				}},
+			}
+		)
+
+		if err := registry.Add(
+			clusterRoleSeeds,
+			clusterRoleBindingSeeds,
+		); err != nil {
+			return nil, err
+		}
 	}
 
 	return registry.SerializedObjects(), nil
