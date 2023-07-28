@@ -54,13 +54,27 @@ var _ = Describe("Virtual", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		namespaceGarden                    *corev1.Namespace
-		clusterRoleSeedBootstrapper        *rbacv1.ClusterRole
-		clusterRoleBindingSeedBootstrapper *rbacv1.ClusterRoleBinding
-		clusterRoleSeeds                   *rbacv1.ClusterRole
-		clusterRoleBindingSeeds            *rbacv1.ClusterRoleBinding
-		clusterRoleGardenerAdmin           *rbacv1.ClusterRole
-		clusterRoleBindingGardenerAdmin    *rbacv1.ClusterRoleBinding
+		namespaceGarden                                   *corev1.Namespace
+		clusterRoleSeedBootstrapper                       *rbacv1.ClusterRole
+		clusterRoleBindingSeedBootstrapper                *rbacv1.ClusterRoleBinding
+		clusterRoleSeeds                                  *rbacv1.ClusterRole
+		clusterRoleBindingSeeds                           *rbacv1.ClusterRoleBinding
+		clusterRoleGardenerAdmin                          *rbacv1.ClusterRole
+		clusterRoleBindingGardenerAdmin                   *rbacv1.ClusterRoleBinding
+		clusterRoleGardenerAdminAggregated                *rbacv1.ClusterRole
+		clusterRoleGardenerViewer                         *rbacv1.ClusterRole
+		clusterRoleGardenerViewerAggregated               *rbacv1.ClusterRole
+		clusterRoleReadGlobalResources                    *rbacv1.ClusterRole
+		clusterRoleBindingReadGlobalResources             *rbacv1.ClusterRoleBinding
+		clusterRoleUserAuth                               *rbacv1.ClusterRole
+		clusterRoleBindingUserAuth                        *rbacv1.ClusterRoleBinding
+		clusterRoleProjectCreation                        *rbacv1.ClusterRole
+		clusterRoleProjectMember                          *rbacv1.ClusterRole
+		clusterRoleProjectMemberAggregated                *rbacv1.ClusterRole
+		clusterRoleProjectServiceAccountManager           *rbacv1.ClusterRole
+		clusterRoleProjectServiceAccountManagerAggregated *rbacv1.ClusterRole
+		clusterRoleProjectViewer                          *rbacv1.ClusterRole
+		clusterRoleProjectViewerAggregated                *rbacv1.ClusterRole
 	)
 
 	BeforeEach(func() {
@@ -218,6 +232,330 @@ var _ = Describe("Virtual", func() {
 				Name:     "system:kube-aggregator",
 			}},
 		}
+		clusterRoleGardenerAdminAggregated = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:administrators",
+			},
+			AggregationRule: &rbacv1.AggregationRule{
+				ClusterRoleSelectors: []metav1.LabelSelector{
+					{MatchLabels: map[string]string{"gardener.cloud/role": "admin"}},
+					{MatchLabels: map[string]string{"gardener.cloud/role": "project-member"}},
+					{MatchLabels: map[string]string{"gardener.cloud/role": "project-serviceaccountmanager"}},
+				},
+			},
+		}
+		clusterRoleGardenerViewer = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "gardener.cloud:viewer",
+				Labels: map[string]string{"gardener.cloud/role": "viewer"},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"core.gardener.cloud"},
+					Resources: []string{
+						"backupbuckets",
+						"backupentries",
+						"cloudprofiles",
+						"controllerinstallations",
+						"quotas",
+						"projects",
+						"seeds",
+						"shoots",
+					},
+					Verbs: []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{
+						"seedmanagement.gardener.cloud",
+						"dashboard.gardener.cloud",
+						"settings.gardener.cloud",
+						"operations.gardener.cloud",
+					},
+					Resources: []string{"*"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"events", "namespaces", "resourcequotas"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"events.k8s.io"},
+					Resources: []string{"events"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"rbac.authorization.k8s.io"},
+					Resources: []string{"clusterroles", "clusterrolebindings", "roles", "rolebindings"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"admissionregistration.k8s.io"},
+					Resources: []string{"mutatingwebhookconfigurations", "validatingwebhookconfigurations"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"apiregistration.k8s.io"},
+					Resources: []string{"apiservices"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"apiextensions.k8s.io"},
+					Resources: []string{"customresourcedefinitions"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"coordination.k8s.io"},
+					Resources: []string{"leases"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+			},
+		}
+		clusterRoleGardenerViewerAggregated = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:viewers",
+			},
+			AggregationRule: &rbacv1.AggregationRule{
+				ClusterRoleSelectors: []metav1.LabelSelector{
+					{MatchLabels: map[string]string{"gardener.cloud/role": "viewer"}},
+					{MatchLabels: map[string]string{"gardener.cloud/role": "project-viewer"}},
+				},
+			},
+		}
+		clusterRoleReadGlobalResources = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:read-global-resources",
+			},
+			Rules: []rbacv1.PolicyRule{{
+				APIGroups: []string{"core.gardener.cloud"},
+				Resources: []string{
+					"cloudprofiles",
+					"exposureclasses",
+					"seeds",
+				},
+				Verbs: []string{"get", "list", "watch"},
+			}},
+		}
+		clusterRoleBindingReadGlobalResources = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:read-global-resources",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "gardener.cloud:system:read-global-resources",
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Group",
+				Name:     "system:authenticated",
+			}},
+		}
+		clusterRoleUserAuth = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:user-auth",
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"authentication.k8s.io"},
+					Resources: []string{"tokenreviews"},
+					Verbs:     []string{"create"},
+				},
+				{
+					APIGroups: []string{"authorization.k8s.io"},
+					Resources: []string{"selfsubjectaccessreviews"},
+					Verbs:     []string{"create"},
+				},
+			},
+		}
+		clusterRoleBindingUserAuth = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:user-auth",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "gardener.cloud:system:user-auth",
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Group",
+				Name:     "system:authenticated",
+			}},
+		}
+		clusterRoleProjectCreation = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:project-creation",
+			},
+			Rules: []rbacv1.PolicyRule{{
+				APIGroups: []string{"core.gardener.cloud"},
+				Resources: []string{"projects"},
+				Verbs:     []string{"create"},
+			}},
+		}
+		clusterRoleProjectMember = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "gardener.cloud:system:project-member-aggregation",
+				Labels: map[string]string{"rbac.gardener.cloud/aggregate-to-project-member": "true"},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{
+						"secrets",
+						"configmaps",
+					},
+					Verbs: []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{
+						"events",
+						"resourcequotas",
+						"serviceaccounts",
+					},
+					Verbs: []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"events.k8s.io"},
+					Resources: []string{"events"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"core.gardener.cloud"},
+					Resources: []string{
+						"shoots",
+						"secretbindings",
+						"quotas",
+					},
+					Verbs: []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+				},
+				{
+					APIGroups: []string{"settings.gardener.cloud"},
+					Resources: []string{"openidconnectpresets"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+				},
+				{
+					APIGroups: []string{"operations.gardener.cloud"},
+					Resources: []string{"bastions"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+				},
+				{
+					APIGroups: []string{"rbac.authorization.k8s.io"},
+					Resources: []string{
+						"roles",
+						"rolebindings",
+					},
+					Verbs: []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+				},
+				{
+					APIGroups: []string{"core.gardener.cloud"},
+					Resources: []string{"shoots/adminkubeconfig"},
+					Verbs:     []string{"create"},
+				},
+			},
+		}
+		clusterRoleProjectMemberAggregated = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "gardener.cloud:system:project-member",
+				Labels: map[string]string{"gardener.cloud/role": "project-member"},
+			},
+			AggregationRule: &rbacv1.AggregationRule{
+				ClusterRoleSelectors: []metav1.LabelSelector{
+					{MatchLabels: map[string]string{"rbac.gardener.cloud/aggregate-to-project-member": "true"}},
+				},
+			},
+		}
+		clusterRoleProjectServiceAccountManager = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "gardener.cloud:system:project-serviceaccountmanager-aggregation",
+				Labels: map[string]string{"rbac.gardener.cloud/aggregate-to-project-serviceaccountmanager": "true"},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"serviceaccounts"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"serviceaccounts/token"},
+					Verbs:     []string{"create"},
+				},
+			},
+		}
+		clusterRoleProjectServiceAccountManagerAggregated = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "gardener.cloud:system:project-serviceaccountmanager",
+				Labels: map[string]string{"gardener.cloud/role": "project-serviceaccountmanager"},
+			},
+			AggregationRule: &rbacv1.AggregationRule{
+				ClusterRoleSelectors: []metav1.LabelSelector{
+					{MatchLabels: map[string]string{"rbac.gardener.cloud/aggregate-to-project-serviceaccountmanager": "true"}},
+				},
+			},
+		}
+		clusterRoleProjectViewer = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "gardener.cloud:system:project-viewer-aggregation",
+				Labels: map[string]string{"rbac.gardener.cloud/aggregate-to-project-viewer": "true"},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{
+						"events",
+						"configmaps",
+						"resourcequotas",
+						"serviceaccounts",
+					},
+					Verbs: []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"events.k8s.io"},
+					Resources: []string{"events"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"core.gardener.cloud"},
+					Resources: []string{
+						"shoots",
+						"secretbindings",
+						"quotas",
+					},
+					Verbs: []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"settings.gardener.cloud"},
+					Resources: []string{"openidconnectpresets"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"operations.gardener.cloud"},
+					Resources: []string{"bastions"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"rbac.authorization.k8s.io"},
+					Resources: []string{
+						"roles",
+						"rolebindings",
+					},
+					Verbs: []string{"get", "list", "watch"},
+				},
+			},
+		}
+		clusterRoleProjectViewerAggregated = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "gardener.cloud:system:project-viewer",
+				Labels: map[string]string{"gardener.cloud/role": "project-viewer"},
+			},
+			AggregationRule: &rbacv1.AggregationRule{
+				ClusterRoleSelectors: []metav1.LabelSelector{
+					{MatchLabels: map[string]string{"rbac.gardener.cloud/aggregate-to-project-viewer": "true"}},
+				},
+			},
+		}
 	})
 
 	Describe("#Deploy", func() {
@@ -257,7 +595,7 @@ var _ = Describe("Virtual", func() {
 		})
 
 		It("should successfully deploy the resources when seed authorizer is disabled", func() {
-			Expect(managedResourceSecret.Data).To(HaveLen(7))
+			Expect(managedResourceSecret.Data).To(HaveLen(21))
 			Expect(string(managedResourceSecret.Data["namespace____garden.yaml"])).To(Equal(componenttest.Serialize(namespaceGarden)))
 			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_seed-bootstrapper.yaml"])).To(Equal(componenttest.Serialize(clusterRoleSeedBootstrapper)))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_system_seed-bootstrapper.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingSeedBootstrapper)))
@@ -265,6 +603,20 @@ var _ = Describe("Virtual", func() {
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_system_seeds.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingSeeds)))
 			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_admin.yaml"])).To(Equal(componenttest.Serialize(clusterRoleGardenerAdmin)))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_admin.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingGardenerAdmin)))
+			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_administrators.yaml"])).To(Equal(componenttest.Serialize(clusterRoleGardenerAdminAggregated)))
+			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_viewer.yaml"])).To(Equal(componenttest.Serialize(clusterRoleGardenerViewer)))
+			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_viewers.yaml"])).To(Equal(componenttest.Serialize(clusterRoleGardenerViewerAggregated)))
+			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_read-global-resources.yaml"])).To(Equal(componenttest.Serialize(clusterRoleReadGlobalResources)))
+			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_system_read-global-resources.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingReadGlobalResources)))
+			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_user-auth.yaml"])).To(Equal(componenttest.Serialize(clusterRoleUserAuth)))
+			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_system_user-auth.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingUserAuth)))
+			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_project-creation.yaml"])).To(Equal(componenttest.Serialize(clusterRoleProjectCreation)))
+			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_project-member.yaml"])).To(Equal(componenttest.Serialize(clusterRoleProjectMemberAggregated)))
+			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_project-member-aggregation.yaml"])).To(Equal(componenttest.Serialize(clusterRoleProjectMember)))
+			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_project-serviceaccountmanager.yaml"])).To(Equal(componenttest.Serialize(clusterRoleProjectServiceAccountManagerAggregated)))
+			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_project-serviceaccountmanager-aggregation.yaml"])).To(Equal(componenttest.Serialize(clusterRoleProjectServiceAccountManager)))
+			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_project-viewer.yaml"])).To(Equal(componenttest.Serialize(clusterRoleProjectViewerAggregated)))
+			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_project-viewer-aggregation.yaml"])).To(Equal(componenttest.Serialize(clusterRoleProjectViewer)))
 		})
 
 		Context("when seed authorizer is enabled", func() {
