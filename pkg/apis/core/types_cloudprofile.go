@@ -96,6 +96,11 @@ type KubernetesSettings struct {
 type MachineImage struct {
 	// Name is the name of the image.
 	Name string
+	// UpdateStrategy is the update strategy to use {patch, minor, major} for the machine image
+	//  - patch: update to the latest patch version of the current minor version. (default)
+	//  - minor: update to the latest minor and patch version.
+	//  - major: always update to the overall latest version.
+	UpdateStrategy *MachineImageUpdateStrategy
 	// Versions contains versions, expiration dates and container runtimes of the machine image
 	Versions []MachineImageVersion
 }
@@ -211,4 +216,18 @@ const (
 	// ClassificationDeprecated indicates that a patch version should not be used anymore, should be updated to a new version
 	// and will eventually expire.
 	ClassificationDeprecated VersionClassification = "deprecated"
+)
+
+// MachineImageUpdateStrategy is the update strategy to use for a machine image
+type MachineImageUpdateStrategy string
+
+const (
+	// UpdateStrategyPatch indicates that auto-updates are performed to the latest patch version of the current minor version.
+	// When using an expired version during the maintenance window, force updates to the latest patch of the next (not necessarily consecutive) minor when using an expired version.
+	UpdateStrategyPatch MachineImageUpdateStrategy = "patch"
+	// UpdateStrategyMinor indicates that auto-updates are performed to the latest patch and minor version of the current major version.
+	// When using an expired version during the maintenance window, force updates to the latest minor and patch of the next (not necessarily consecutive) major version.
+	UpdateStrategyMinor MachineImageUpdateStrategy = "minor"
+	// UpdateStrategyMajor indicates that auto-updates are performed always to the overall latest version.
+	UpdateStrategyMajor MachineImageUpdateStrategy = "major"
 )
