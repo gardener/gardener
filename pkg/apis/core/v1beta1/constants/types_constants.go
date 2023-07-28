@@ -567,6 +567,9 @@ const (
 
 	// DefaultSchedulerName is the name of the default scheduler.
 	DefaultSchedulerName = "default-scheduler"
+	// LabelSchedulingCloudProfile is a constant for a label key on a configmap which denotes
+	// the linked cloudprofile containing the region ordering.
+	LabelSchedulingCloudProfile = "scheduling.gardener.cloud/cloudprofile"
 
 	// AnnotationManagedSeedAPIServer is a constant for an annotation on a Shoot resource containing the API server settings for a managed seed.
 	AnnotationManagedSeedAPIServer = "shoot.gardener.cloud/managed-seed-api-server"

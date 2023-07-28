@@ -17,6 +17,7 @@ package shoot
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
@@ -36,9 +37,11 @@ import (
 var _ = Describe("Scheduler_Control", func() {
 	var (
 		ctx              = context.Background()
+		log              logr.Logger
 		ctrl             *gomock.Controller
 		fakeGardenClient client.Client
 
+		reconciler   *Reconciler
 		cloudProfile *gardencorev1beta1.CloudProfile
 		seed         *gardencorev1beta1.Seed
 		shoot        *gardencorev1beta1.Shoot
@@ -128,7 +131,15 @@ var _ = Describe("Scheduler_Control", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
+		log = logr.Discard()
 		fakeGardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+	})
+
+	JustBeforeEach(func() {
+		reconciler = &Reconciler{
+			Client: fakeGardenClient,
+			Config: schedulerConfiguration.Schedulers.Shoot,
+		}
 	})
 
 	AfterEach(func() {
@@ -151,7 +162,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(seed.Name))
 		})
@@ -171,7 +182,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, shoot)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, &secondShoot)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(secondSeed.Name))
 		})
@@ -188,7 +199,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, &secondSeed)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, shoot)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(secondSeed.Name))
 		})
@@ -201,7 +212,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -219,7 +230,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, shoot)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).To(MatchError("none of the 1 seeds has at least 3 zones for hosting a shoot control plane with failure tolerance type 'zone'"))
 			Expect(bestSeed).To(BeNil())
 		})
@@ -239,7 +250,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, shoot)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).To(MatchError("none of the 1 seeds has at least 3 zones for hosting a shoot control plane with failure tolerance type 'zone'"))
 			Expect(bestSeed).To(BeNil())
 		})
@@ -255,7 +266,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, &multiZonalSeed)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, shoot)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).To(BeNil())
 			Expect(bestSeed.Name).To(Equal(multiZonalSeed.Name))
 		})
@@ -269,7 +280,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, &multiZonalSeed)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, shoot)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).To(BeNil())
 			Expect(bestSeed.Name).To(Equal(multiZonalSeed.Name))
 		})
@@ -298,7 +309,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed).NotTo(BeNil())
 		})
@@ -312,7 +323,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed).NotTo(BeNil())
 		})
@@ -326,7 +337,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed).NotTo(BeNil())
 		})
@@ -346,7 +357,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed).NotTo(BeNil())
 		})
@@ -357,7 +368,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -374,7 +385,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -392,7 +403,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -413,7 +424,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(seedName))
 		})
@@ -425,7 +436,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(seedName))
 			// verify that shoot is in another region than the seed
@@ -453,7 +464,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, &secondSeed)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, &thirdSeed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(secondSeed.Name))
 			// verify that shoot is in another region than the chosen seed
@@ -475,7 +486,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, shoot)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, &secondShoot)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(secondSeed.Name))
 		})
@@ -515,7 +526,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, oldSeedEnvironment1)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, newSeedEnvironment2)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, testShoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, testShoot)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(newSeedEnvironment2.Name))
 		})
@@ -565,7 +576,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, newSeedEnvironment2)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, newSeedEnvironment3)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, testShoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, testShoot)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(newSeedEnvironment3.Name))
 		})
@@ -596,7 +607,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, &secondShoot)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, &thirdShoot)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(secondSeed.Name))
 		})
@@ -617,7 +628,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(seedName))
 		})
@@ -633,7 +644,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(seedName))
 		})
@@ -652,7 +663,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, shoot)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, &secondShoot)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(secondSeed.Name))
 		})
@@ -669,7 +680,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -681,7 +692,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -698,7 +709,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, shoot)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, &secondShoot)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -710,7 +721,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -721,7 +732,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -737,7 +748,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -754,7 +765,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -764,7 +775,7 @@ var _ = Describe("Scheduler_Control", func() {
 
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -784,7 +795,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -804,7 +815,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -819,7 +830,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
 
-			bestSeed, err := determineSeed(ctx, fakeGardenClient, shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			bestSeed, err := reconciler.determineSeed(ctx, log, shoot)
 			Expect(err).To(HaveOccurred())
 			Expect(bestSeed).To(BeNil())
 		})
@@ -857,7 +868,7 @@ var _ = Describe("Scheduler_Control", func() {
 			testShoot.Spec.CloudProfileName = "cloudprofile2"
 			testShoot.Spec.Provider.Type = "some-type"
 
-			candidates, err := applyStrategy(testShoot, []gardencorev1beta1.Seed{newSeedEnvironment2, oldSeedEnvironment1, otherSeedEnvironment2}, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			candidates, err := applyStrategy(log, testShoot, []gardencorev1beta1.Seed{newSeedEnvironment2, oldSeedEnvironment1, otherSeedEnvironment2}, schedulerConfiguration.Schedulers.Shoot.Strategy, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(candidates)).To(Equal(2))
 			Expect(candidates[0].Name).To(Equal(newSeedEnvironment2.Name))
@@ -886,7 +897,7 @@ var _ = Describe("Scheduler_Control", func() {
 			testShoot.Spec.CloudProfileName = "cloudprofile2"
 			testShoot.Spec.Provider.Type = "some-type"
 
-			candidates, err := applyStrategy(testShoot, []gardencorev1beta1.Seed{newSeedEnvironment2, oldSeedEnvironment1, otherSeedEnvironment2}, schedulerConfiguration.Schedulers.Shoot.Strategy)
+			candidates, err := applyStrategy(log, testShoot, []gardencorev1beta1.Seed{newSeedEnvironment2, oldSeedEnvironment1, otherSeedEnvironment2}, schedulerConfiguration.Schedulers.Shoot.Strategy, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(candidates)).To(Equal(1))
 			Expect(candidates[0].Name).To(Equal(oldSeedEnvironment1.Name))

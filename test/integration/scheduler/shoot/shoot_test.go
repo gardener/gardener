@@ -139,6 +139,173 @@ var _ = Describe("Scheduler tests", func() {
 			createAndStartManager(&config.ShootSchedulerConfiguration{ConcurrentSyncs: 1, Strategy: config.MinimalDistance})
 		})
 
+		Context("with region config", func() {
+			It("should successfully schedule to closest seed", func() {
+				cloudProfile := createCloudProfile(providerType, "eu-west-1")
+
+				seed1 := createSeed(providerType, "us-east-1", nil)
+				createSeed(providerType, "eu-west-1", nil)
+				createSeed(providerType, "eu-east-1", nil)
+				createSeed(providerType, "ap-west-1", nil)
+				createSeed(providerType, "us-central-2", nil)
+
+				regionConfig := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      cloudProfile.Name,
+						Namespace: testNamespace.Name,
+						Labels: map[string]string{
+							"scheduling.gardener.cloud/cloudprofile": cloudProfile.Name,
+						},
+					},
+					// Choose a better value for 'us-east-1' than for 'eu-west-1' to test that the minimal configured distance is really used, not Levenshtein's algorithm.
+					Data: map[string]string{
+						"eu-west-1": `
+eu-west-1: 30
+us-east-1: 20
+eu-east-1: 50
+ap-west-1: 300
+us-central-2: 220`,
+					},
+				}
+				Expect(testClient.Create(ctx, regionConfig)).To(Succeed())
+
+				By("Wait until manager has observed region config")
+				// Use the manager's cache to ensure it has observed the configMap.
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(regionConfig), &corev1.ConfigMap{})
+				}).Should(Succeed())
+
+				shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, pointer.String("somedns.example.com"), nil)
+
+				Eventually(func() *string {
+					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+					return shoot.Spec.SeedName
+				}).Should(PointTo(Equal(seed1.Name)))
+			})
+
+			It("should fall back to Levenshtein minimal distance if shoot region is not configured", func() {
+				cloudProfile := createCloudProfile(providerType, "eu-west-1")
+
+				createSeed(providerType, "us-east-1", nil)
+				seed2 := createSeed(providerType, "eu-west-1", nil)
+				createSeed(providerType, "eu-east-1", nil)
+				createSeed(providerType, "ap-west-1", nil)
+				createSeed(providerType, "us-central-2", nil)
+
+				regionConfig := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      cloudProfile.Name,
+						Namespace: testNamespace.Name,
+						Labels: map[string]string{
+							"scheduling.gardener.cloud/cloudprofile": cloudProfile.Name,
+						},
+					},
+					Data: map[string]string{
+						"us-east-1": `
+eu-west-1: 30
+us-east-1: 1
+eu-east-1: 50
+ap-west-1: 300
+us-central-2: 220`,
+					},
+				}
+				Expect(testClient.Create(ctx, regionConfig)).To(Succeed())
+
+				By("Wait until manager has observed region config")
+				// Use the manager's cache to ensure it has observed the configMap.
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(regionConfig), &corev1.ConfigMap{})
+				}).Should(Succeed())
+
+				shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, pointer.String("somedns.example.com"), nil)
+
+				Eventually(func() *string {
+					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+					return shoot.Spec.SeedName
+				}).Should(PointTo(Equal(seed2.Name)))
+			})
+
+			It("should fall back to Levenshtein minimal distance if seed regions are missing", func() {
+				cloudProfile := createCloudProfile(providerType, "eu-west-1")
+
+				createSeed(providerType, "us-east-1", nil)
+				seed2 := createSeed(providerType, "eu-west-1", nil)
+				createSeed(providerType, "eu-east-1", nil)
+				createSeed(providerType, "ap-west-1", nil)
+				createSeed(providerType, "us-central-2", nil)
+
+				regionConfig := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      cloudProfile.Name,
+						Namespace: testNamespace.Name,
+						Labels: map[string]string{
+							"scheduling.gardener.cloud/cloudprofile": cloudProfile.Name,
+						},
+					},
+					Data: map[string]string{
+						"eu-west-1": `
+eu-west-2: 30
+us-east-2: 1
+eu-east-2: 50
+ap-west-2: 300
+us-central-3: 220`,
+					},
+				}
+				Expect(testClient.Create(ctx, regionConfig)).To(Succeed())
+
+				By("Wait until manager has observed region config")
+				// Use the manager's cache to ensure it has observed the configMap.
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(regionConfig), &corev1.ConfigMap{})
+				}).Should(Succeed())
+
+				shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, pointer.String("somedns.example.com"), nil)
+
+				Eventually(func() *string {
+					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+					return shoot.Spec.SeedName
+				}).Should(PointTo(Equal(seed2.Name)))
+			})
+
+			It("should fail to schedule to Seed if region config is not parseable", func() {
+				cloudProfile := createCloudProfile(providerType, "eu-west-1")
+
+				createSeed(providerType, "us-east-1", nil)
+				createSeed(providerType, "eu-west-1", nil)
+				createSeed(providerType, "eu-east-1", nil)
+				createSeed(providerType, "ap-west-1", nil)
+				createSeed(providerType, "us-central-2", nil)
+
+				regionConfig := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      cloudProfile.Name,
+						Namespace: testNamespace.Name,
+						Labels: map[string]string{
+							"scheduling.gardener.cloud/cloudprofile": cloudProfile.Name,
+						},
+					},
+					Data: map[string]string{
+						"eu-west-1": `
+{`,
+					},
+				}
+				Expect(testClient.Create(ctx, regionConfig)).To(Succeed())
+
+				By("Wait until manager has observed region config")
+				// Use the manager's cache to ensure it has observed the configMap.
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(regionConfig), &corev1.ConfigMap{})
+				}).Should(Succeed())
+
+				shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, pointer.String("somedns.example.com"), nil)
+
+				Consistently(func() *string {
+					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+					return shoot.Spec.SeedName
+				}).Should(BeNil())
+			})
+		})
+
 		It("should successfully schedule to Seed in region with minimal distance (prefer own region)", func() {
 			cloudProfile := createCloudProfile(providerType, "eu-west-1")
 
@@ -254,7 +421,8 @@ func createAndStartManager(config *config.ShootSchedulerConfiguration) {
 
 	By("Register controller")
 	Expect((&shootcontroller.Reconciler{
-		Config: config,
+		Config:          config,
+		GardenNamespace: testNamespace.Name,
 	}).AddToManager(mgr)).To(Succeed())
 
 	By("Start manager")
