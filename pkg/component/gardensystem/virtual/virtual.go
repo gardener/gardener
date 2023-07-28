@@ -18,6 +18,10 @@ import (
 	"context"
 	"time"
 
+	certificatesv1 "k8s.io/api/certificates/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -75,7 +79,47 @@ func (g *gardenSystem) WaitCleanup(ctx context.Context) error {
 func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+
+		clusterRoleSeedBootstrapper = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:seed-bootstrapper",
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{certificatesv1.GroupName},
+					Resources: []string{"certificatesigningrequests"},
+					Verbs:     []string{"create", "get"},
+				},
+				{
+					APIGroups: []string{certificatesv1.GroupName},
+					Resources: []string{"certificatesigningrequests/seedclient"},
+					Verbs:     []string{"create"},
+				},
+			},
+		}
+		clusterRoleBindingSeedBootstrapper = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: clusterRoleSeedBootstrapper.Name,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     clusterRoleSeedBootstrapper.Name,
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Group",
+				Name:     bootstraptokenapi.BootstrapDefaultGroup,
+			}},
+		}
 	)
+
+	if err := registry.Add(
+		clusterRoleSeedBootstrapper,
+		clusterRoleBindingSeedBootstrapper,
+	); err != nil {
+		return nil, err
+	}
 
 	return registry.SerializedObjects(), nil
 }

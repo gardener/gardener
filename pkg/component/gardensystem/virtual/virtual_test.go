@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
@@ -30,6 +31,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/gardensystem/virtual"
+	componenttest "github.com/gardener/gardener/pkg/component/test"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -50,6 +52,9 @@ var _ = Describe("Virtual", func() {
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
+
+		clusterRoleSeedBootstrapper        *rbacv1.ClusterRole
+		clusterRoleBindingSeedBootstrapper *rbacv1.ClusterRoleBinding
 	)
 
 	BeforeEach(func() {
@@ -67,6 +72,39 @@ var _ = Describe("Virtual", func() {
 				Name:      "managedresource-" + managedResource.Name,
 				Namespace: namespace,
 			},
+		}
+
+		clusterRoleSeedBootstrapper = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:seed-bootstrapper",
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"certificates.k8s.io"},
+					Resources: []string{"certificatesigningrequests"},
+					Verbs:     []string{"create", "get"},
+				},
+				{
+					APIGroups: []string{"certificates.k8s.io"},
+					Resources: []string{"certificatesigningrequests/seedclient"},
+					Verbs:     []string{"create"},
+				},
+			},
+		}
+		clusterRoleBindingSeedBootstrapper = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:seed-bootstrapper",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "gardener.cloud:system:seed-bootstrapper",
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Group",
+				Name:     "system:bootstrappers",
+			}},
 		}
 	})
 
@@ -107,7 +145,9 @@ var _ = Describe("Virtual", func() {
 		})
 
 		It("should successfully deploy the resources", func() {
-			Expect(managedResourceSecret.Data).To(HaveLen(0))
+			Expect(managedResourceSecret.Data).To(HaveLen(2))
+			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_system_seed-bootstrapper.yaml"])).To(Equal(componenttest.Serialize(clusterRoleSeedBootstrapper)))
+			Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_system_seed-bootstrapper.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBindingSeedBootstrapper)))
 		})
 	})
 
