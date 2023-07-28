@@ -11,7 +11,7 @@ import (
 	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	imagevector "github.com/gardener/gardener/pkg/utils/imagevector"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 

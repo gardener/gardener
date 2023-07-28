@@ -7,8 +7,8 @@ package mock
 import (
 	reflect "reflect"
 
-	gomock "github.com/golang/mock/gomock"
 	pflag "github.com/spf13/pflag"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockCompleter is a mock of Completer interface.

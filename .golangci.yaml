@@ -95,7 +95,7 @@ linters-settings:
         alias: logzap
       - pkg: sigs.k8s.io/controller-runtime/pkg/log
         alias: logf
-      - pkg: github.com/golang/mock/gomock
+      - pkg: go.uber.org/mock/gomock
         alias: gmock
       - pkg: github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2
         alias: fluentbitv1alpha2

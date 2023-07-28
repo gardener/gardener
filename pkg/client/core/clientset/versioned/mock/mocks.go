@@ -8,7 +8,7 @@ import (
 	reflect "reflect"
 
 	v1beta1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	discovery "k8s.io/client-go/discovery"
 )
 

@@ -18,10 +18,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 	errorsmock "github.com/gardener/gardener/pkg/utils/errors/mock"

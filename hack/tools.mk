@@ -169,7 +169,7 @@ $(LOGCHECK): go.mod
 endif
 
 $(MOCKGEN): go.mod
-	go build -o $(MOCKGEN) github.com/golang/mock/mockgen
+	go build -o $(MOCKGEN) go.uber.org/mock/mockgen
 
 $(OPENAPI_GEN): go.mod
 	go build -o $(OPENAPI_GEN) k8s.io/kube-openapi/cmd/openapi-gen

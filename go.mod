@@ -16,7 +16,6 @@ require (
 	github.com/go-logr/logr v1.2.4
 	github.com/go-test/deep v1.1.0
 	github.com/gogo/protobuf v1.3.2
-	github.com/golang/mock v1.6.0
 	github.com/google/gnostic v0.5.7-v3refs
 	github.com/google/go-cmp v0.5.9
 	github.com/hashicorp/go-multierror v1.1.1
@@ -157,6 +156,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.10.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.19.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
+	go.uber.org/mock v0.2.0
 	go.uber.org/multierr v1.7.0 // indirect
 	golang.org/x/mod v0.9.0 // indirect
 	golang.org/x/net v0.8.0 // indirect

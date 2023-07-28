@@ -19,10 +19,10 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/goleak"
+	"go.uber.org/mock/gomock"
 
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"

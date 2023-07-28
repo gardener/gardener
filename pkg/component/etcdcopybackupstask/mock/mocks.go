@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	v1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockInterface is a mock of Interface interface.

@@ -18,9 +18,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"

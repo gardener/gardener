@@ -10,7 +10,7 @@ import (
 
 	v1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	etcd "github.com/gardener/gardener/pkg/component/etcd"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	rest "k8s.io/client-go/rest"
 )
 

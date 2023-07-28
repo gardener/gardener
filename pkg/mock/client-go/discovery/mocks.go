@@ -7,8 +7,8 @@ package discovery
 import (
 	reflect "reflect"
 
-	gomock "github.com/golang/mock/gomock"
 	openapi_v2 "github.com/google/gnostic/openapiv2"
+	gomock "go.uber.org/mock/gomock"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	version "k8s.io/apimachinery/pkg/version"
 	discovery "k8s.io/client-go/discovery"

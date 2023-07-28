@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	rest "k8s.io/client-go/rest"
 )
 
