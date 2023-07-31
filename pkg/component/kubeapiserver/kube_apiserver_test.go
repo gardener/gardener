@@ -31,7 +31,6 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -113,20 +112,18 @@ var _ = Describe("KubeAPIServer", func() {
 		configMapNameEgressPolicy       = "kube-apiserver-egress-selector-config-53d92abc"
 		configMapNameTerminationHandler = "kube-apiserver-watchdog-f4f4b3d5"
 
-		deployment                           *appsv1.Deployment
-		horizontalPodAutoscalerV2beta1       *autoscalingv2beta1.HorizontalPodAutoscaler
-		horizontalPodAutoscalerV2            *autoscalingv2.HorizontalPodAutoscaler
-		verticalPodAutoscaler                *vpaautoscalingv1.VerticalPodAutoscaler
-		hvpa                                 *hvpav1alpha1.Hvpa
-		podDisruptionBudget                  *policyv1.PodDisruptionBudget
-		networkPolicyAllowFromShootAPIServer *networkingv1.NetworkPolicy
-		networkPolicyAllowToShootAPIServer   *networkingv1.NetworkPolicy
-		configMapAdmission                   *corev1.ConfigMap
-		secretAdmissionKubeconfigs           *corev1.Secret
-		configMapAuditPolicy                 *corev1.ConfigMap
-		configMapEgressSelector              *corev1.ConfigMap
-		managedResource                      *resourcesv1alpha1.ManagedResource
-		managedResourceSecret                *corev1.Secret
+		deployment                     *appsv1.Deployment
+		horizontalPodAutoscalerV2beta1 *autoscalingv2beta1.HorizontalPodAutoscaler
+		horizontalPodAutoscalerV2      *autoscalingv2.HorizontalPodAutoscaler
+		verticalPodAutoscaler          *vpaautoscalingv1.VerticalPodAutoscaler
+		hvpa                           *hvpav1alpha1.Hvpa
+		podDisruptionBudget            *policyv1.PodDisruptionBudget
+		configMapAdmission             *corev1.ConfigMap
+		secretAdmissionKubeconfigs     *corev1.Secret
+		configMapAuditPolicy           *corev1.ConfigMap
+		configMapEgressSelector        *corev1.ConfigMap
+		managedResource                *resourcesv1alpha1.ManagedResource
+		managedResourceSecret          *corev1.Secret
 
 		values Values
 	)
@@ -196,18 +193,6 @@ var _ = Describe("KubeAPIServer", func() {
 		podDisruptionBudget = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kube-apiserver",
-				Namespace: namespace,
-			},
-		}
-		networkPolicyAllowFromShootAPIServer = &networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "allow-from-shoot-apiserver",
-				Namespace: namespace,
-			},
-		}
-		networkPolicyAllowToShootAPIServer = &networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "allow-to-shoot-apiserver",
 				Namespace: namespace,
 			},
 		}
@@ -1877,14 +1862,12 @@ rules:
 						"app":                              "kubernetes",
 						"role":                             "apiserver",
 						"networking.gardener.cloud/to-dns": "allowed",
-						"networking.gardener.cloud/to-private-networks":                              "allowed",
-						"networking.gardener.cloud/to-public-networks":                               "allowed",
-						"networking.resources.gardener.cloud/to-all-webhook-targets":                 "allowed",
-						"networking.resources.gardener.cloud/to-extensions-all-webhook-targets":      "allowed",
-						"networking.resources.gardener.cloud/to-etcd-main-client-tcp-2379":           "allowed",
-						"networking.resources.gardener.cloud/to-etcd-events-client-tcp-2379":         "allowed",
-						"networking.resources.gardener.cloud/to-gardener-resource-manager-tcp-10250": "allowed",
-						"networking.resources.gardener.cloud/to-vpa-webhook-tcp-10250":               "allowed",
+						"networking.gardener.cloud/to-private-networks":                         "allowed",
+						"networking.gardener.cloud/to-public-networks":                          "allowed",
+						"networking.resources.gardener.cloud/to-all-webhook-targets":            "allowed",
+						"networking.resources.gardener.cloud/to-extensions-all-webhook-targets": "allowed",
+						"networking.resources.gardener.cloud/to-etcd-main-client-tcp-2379":      "allowed",
+						"networking.resources.gardener.cloud/to-etcd-events-client-tcp-2379":    "allowed",
 					}
 				})
 
@@ -3713,16 +3696,12 @@ rules:
 			Expect(c.Create(ctx, deployment)).To(Succeed())
 			Expect(c.Create(ctx, verticalPodAutoscaler)).To(Succeed())
 			Expect(c.Create(ctx, hvpa)).To(Succeed())
-			Expect(c.Create(ctx, networkPolicyAllowFromShootAPIServer)).To(Succeed())
-			Expect(c.Create(ctx, networkPolicyAllowToShootAPIServer)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
 			Expect(c.Create(ctx, managedResource)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowFromShootAPIServer), networkPolicyAllowFromShootAPIServer)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowToShootAPIServer), networkPolicyAllowToShootAPIServer)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 		})
@@ -3731,8 +3710,6 @@ rules:
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: appsv1.SchemeGroupVersion.Group, Resource: "deployments"}, deployment.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: vpaautoscalingv1.SchemeGroupVersion.Group, Resource: "verticalpodautoscalers"}, verticalPodAutoscaler.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: hvpav1alpha1.SchemeGroupVersionHvpa.Group, Resource: "hvpas"}, hvpa.Name)))
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowFromShootAPIServer), networkPolicyAllowFromShootAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowFromShootAPIServer.Name)))
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowToShootAPIServer), networkPolicyAllowToShootAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowToShootAPIServer.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 		})

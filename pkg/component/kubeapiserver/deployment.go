@@ -35,8 +35,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/etcd"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/constants"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
-	resourcemanagerconstants "github.com/gardener/gardener/pkg/component/resourcemanager/constants"
-	vpaconstants "github.com/gardener/gardener/pkg/component/vpa/constants"
 	"github.com/gardener/gardener/pkg/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -217,9 +215,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 						"networking.resources.gardener.cloud/to-" + v1beta1constants.LabelNetworkPolicyExtensionsNamespaceAlias + "-" + v1beta1constants.LabelNetworkPolicyWebhookTargets: v1beta1constants.LabelNetworkPolicyAllowed,
 						gardenerutils.NetworkPolicyLabel(k.values.NamePrefix+etcdconstants.ServiceName(v1beta1constants.ETCDRoleMain), etcdconstants.PortEtcdClient):                      v1beta1constants.LabelNetworkPolicyAllowed,
 						gardenerutils.NetworkPolicyLabel(k.values.NamePrefix+etcdconstants.ServiceName(v1beta1constants.ETCDRoleEvents), etcdconstants.PortEtcdClient):                    v1beta1constants.LabelNetworkPolicyAllowed,
-						// TODO(rfranzke): Remove these labels after v1.74 has been released.
-						gardenerutils.NetworkPolicyLabel(k.values.NamePrefix+resourcemanagerconstants.ServiceName, resourcemanagerconstants.ServerPort): v1beta1constants.LabelNetworkPolicyAllowed,
-						gardenerutils.NetworkPolicyLabel(vpaconstants.AdmissionControllerServiceName, vpaconstants.AdmissionControllerPort):             v1beta1constants.LabelNetworkPolicyAllowed,
 					}),
 				},
 				Spec: corev1.PodSpec{
