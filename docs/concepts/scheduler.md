@@ -69,7 +69,7 @@ The configuration is structured like this:
 - It refers to one or multiple `CloudProfile`s via annotation `scheduling.gardener.cloud/cloudprofiles`.
 - It contains the declaration as `region-config` via label `scheduling.gardener.cloud/purpose`.
 - If a `CloudProfile` is referred by multiple `ConfigMap`s, only the first one is considered.
-- The `data` fields configure actual distances, where _key_ relates to the `Shoot` region and _value_ contains distances to `Seed` regions. The region distance to itself needs to be specified as well.
+- The `data` fields configure actual distances, where _key_ relates to the `Shoot` region and _value_ contains distances to `Seed` regions.
 
 ```yaml
 apiVersion: v1
@@ -83,12 +83,10 @@ metadata:
     scheduling.gardener.cloud/purpose: region-config
 data:
   region-1: |
-    region-1: 0
     region-2: 10
     region-3: 20
     ...
   region-2: |
-    region-2: 0
     region-1: 10
     region-3: 10
     ...

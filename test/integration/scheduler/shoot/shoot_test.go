@@ -158,7 +158,46 @@ var _ = Describe("Scheduler tests", func() {
 				}
 			})
 
-			It("should successfully schedule to closest seed", func() {
+			It("should successfully schedule to closest seed in the same region", func() {
+				cloudProfile := createCloudProfile(providerType, "eu-west-1")
+
+				regionConfig := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      cloudProfile.Name,
+						Namespace: testNamespace.Name,
+						Labels: map[string]string{
+							"scheduling.gardener.cloud/purpose": "region-config",
+						},
+						Annotations: map[string]string{
+							"scheduling.gardener.cloud/cloudprofiles": cloudProfile.Name,
+						},
+					},
+
+					Data: map[string]string{
+						"eu-west-1": `
+us-east-1: 20
+eu-east-1: 50
+ap-west-1: 300
+us-central-2: 220`,
+					},
+				}
+				Expect(testClient.Create(ctx, regionConfig)).To(Succeed())
+
+				By("Wait until manager has observed region config")
+				// Use the manager's cache to ensure it has observed the configMap.
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(regionConfig), &corev1.ConfigMap{})
+				}).Should(Succeed())
+
+				shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, pointer.String("somedns.example.com"), nil)
+
+				Eventually(func() *string {
+					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+					return shoot.Spec.SeedName
+				}).Should(PointTo(Equal(seedEUWest1.Name)))
+			})
+
+			It("should successfully schedule to closest seed in a different region", func() {
 				cloudProfile := createCloudProfile(providerType, "eu-west-1")
 
 				regionConfig := &corev1.ConfigMap{
@@ -173,6 +212,7 @@ var _ = Describe("Scheduler tests", func() {
 						},
 					},
 					// Choose a better value for 'us-east-1' than for 'eu-west-1' to test that the minimal configured distance is really used, not Levenshtein's algorithm.
+					// Also, the distance to itself is higher than other values, so that the logic prefers other regions.
 					Data: map[string]string{
 						"eu-west-1": `
 eu-west-1: 30
@@ -212,10 +252,9 @@ us-central-2: 220`,
 							"scheduling.gardener.cloud/cloudprofiles": "foo-cloudprofile," + cloudProfile.Name,
 						},
 					},
-					// Choose a better value for 'us-east-1' than for 'eu-west-1' to test that the minimal configured distance is really used, not Levenshtein's algorithm.
+
 					Data: map[string]string{
 						"eu-west-1": `
-eu-west-1: 30
 us-east-1: 20
 eu-east-1: 50
 ap-west-1: 300
@@ -234,7 +273,7 @@ us-central-2: 220`,
 							"scheduling.gardener.cloud/cloudprofiles": cloudProfile.Name,
 						},
 					},
-					// Choose a better value for 'us-east-1' than for 'eu-west-1' to test that the minimal configured distance is really used, not Levenshtein's algorithm.
+
 					Data: map[string]string{
 						"eu-west-1": `
 eu-west-1: 30
@@ -262,7 +301,7 @@ us-central-2: 220`,
 				Eventually(func() *string {
 					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 					return shoot.Spec.SeedName
-				}).Should(PointTo(Or(Equal(seedUSEast1.Name), Equal(seedEUEast1.Name))))
+				}).Should(PointTo(Or(Equal(seedEUWest1.Name), Equal(seedEUEast1.Name))))
 			})
 
 			It("should fall back to Levenshtein minimal distance if shoot region is not configured", func() {
@@ -282,7 +321,6 @@ us-central-2: 220`,
 					Data: map[string]string{
 						"us-east-1": `
 eu-west-1: 30
-us-east-1: 1
 eu-east-1: 50
 ap-west-1: 300
 us-central-2: 220`,
@@ -305,6 +343,8 @@ us-central-2: 220`,
 			})
 
 			It("should fall back to Levenshtein minimal distance if seed regions are missing", func() {
+				Expect(testClient.Delete(ctx, seedEUWest1)).To(Succeed())
+
 				cloudProfile := createCloudProfile(providerType, "eu-west-1")
 
 				regionConfig := &corev1.ConfigMap{
@@ -340,7 +380,7 @@ us-central-3: 220`,
 				Eventually(func() *string {
 					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 					return shoot.Spec.SeedName
-				}).Should(PointTo(Equal(seedEUWest1.Name)))
+				}).Should(PointTo(Equal(seedEUEast1.Name)))
 			})
 
 			It("should fail to schedule to Seed if region config is not parseable", func() {

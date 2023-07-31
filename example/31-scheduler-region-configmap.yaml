@@ -9,7 +9,6 @@ metadata:
     scheduling.gardener.cloud/purpose: region-config
 data:
   europe-west-1: |
-    europe-west-1: 0
     europe-central-1: 50
     europe-north-1: 60
     europe-south-1: 70

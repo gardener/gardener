@@ -410,6 +410,11 @@ func regionConfigMinimalDistance(log logr.Logger, seeds []gardencorev1beta1.Seed
 		return nil, fmt.Errorf("failed to determine seed candidates. Wrong format in ConfigMap %s/%s, Region %s: %w", regionConfig.Namespace, regionConfig.Name, shoot.Spec.Region, err)
 	}
 
+	// If not configured otherwise, assume that a region has the smallest possible distance to itself.
+	if _, ok := regionConfigData[shoot.Spec.Region]; !ok {
+		regionConfigData[shoot.Spec.Region] = 0
+	}
+
 	minDistance := math.MaxInt32
 	for _, seed := range seeds {
 		dist, ok := regionConfigData[seed.Spec.Provider.Region]
