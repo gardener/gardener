@@ -394,32 +394,6 @@ var _ = Describe("Garden controller tests", func() {
 			g.Expect(testClient.Status().Patch(ctx, mr, patch)).To(Succeed(), "for "+mr.Name)
 		}).Should(Succeed())
 
-		// The garden controller waits for the fluent-operator ManagedResources to be healthy, but fluent-operator is not really running in
-		// this test, so let's fake this here.
-		By("Patch fluent-operator ManagedResources to report healthiness")
-		Eventually(func(g Gomega) {
-			mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "fluent-operator", Namespace: testNamespace.Name}}
-			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed(), "for "+mr.Name)
-
-			patch := client.MergeFrom(mr.DeepCopy())
-			mr.Status.ObservedGeneration = mr.Generation
-			mr.Status.Conditions = []gardencorev1beta1.Condition{
-				{
-					Type:               "ResourcesHealthy",
-					Status:             "True",
-					LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
-					LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
-				},
-				{
-					Type:               "ResourcesApplied",
-					Status:             "True",
-					LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
-					LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
-				},
-			}
-			g.Expect(testClient.Status().Patch(ctx, mr, patch)).To(Succeed(), "for "+mr.Name)
-		}).Should(Succeed())
-
 		By("Verify that the virtual garden control plane components have been deployed")
 		Eventually(func(g Gomega) []druidv1alpha1.Etcd {
 			etcdList := &druidv1alpha1.EtcdList{}

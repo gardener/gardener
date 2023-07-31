@@ -143,7 +143,7 @@ kubectl apply -f example/operator/20-garden.yaml
 You can wait for the `Garden` to be ready by running:
 
 ```shell
-./hack/usage/wait-for.sh garden garden Reconciled
+./hack/usage/wait-for.sh garden local Reconciled
 ```
 
 Alternatively, you can run `kubectl get garden` and wait for the `RECONCILED` status to reach `True`:
@@ -214,13 +214,13 @@ Other system components are:
 
 - garden system resources ([`PriorityClass`es](../development/priority-classes.md) for the workload resources)
 - Vertical Pod Autoscaler (if enabled via `.spec.runtimeCluster.settings.verticalPodAutoscaler.enabled=true` in the `Garden`)
-- HVPA controller (when `HVPA` feature gate is enabled)
+- HVPA Controller (when `HVPA` feature gate is enabled)
 - ETCD Druid
 - Istio
 
-Few observability components are also managed by the gardener-operator:
+The reconciler also manages a few observability-related components (more planned as part of [GEP-19](../proposals/19-migrating-observability-stack-to-operators.md)):
 
-- Fluent-operator
+- Fluent Operator
 - Vali
 
 As soon as all system components are up, the reconciler deploys the virtual garden cluster.

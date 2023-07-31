@@ -18,7 +18,6 @@ import (
 	"context"
 
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -68,6 +67,25 @@ func (c *customResources) Deploy(ctx context.Context) error {
 		resources []client.Object
 	)
 
+	// TODO(rfranzke): Remove this block after v1.77 has been released.
+	{
+		resources = append(resources,
+			&fluentbitv1alpha2.ClusterFluentBitConfig{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit-config", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
+
+			&fluentbitv1alpha2.ClusterFilter{ObjectMeta: metav1.ObjectMeta{Name: "01-docker", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
+			&fluentbitv1alpha2.ClusterFilter{ObjectMeta: metav1.ObjectMeta{Name: "02-containerd", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
+			&fluentbitv1alpha2.ClusterFilter{ObjectMeta: metav1.ObjectMeta{Name: "03-add-tag-to-record", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
+			&fluentbitv1alpha2.ClusterFilter{ObjectMeta: metav1.ObjectMeta{Name: "zz-modify-severity", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
+
+			&fluentbitv1alpha2.ClusterParser{ObjectMeta: metav1.ObjectMeta{Name: "docker-parser", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
+			&fluentbitv1alpha2.ClusterParser{ObjectMeta: metav1.ObjectMeta{Name: "containerd-parser", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
+
+			&fluentbitv1alpha2.ClusterInput{ObjectMeta: metav1.ObjectMeta{Name: "tail-kubernetes", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
+
+			&fluentbitv1alpha2.ClusterOutput{ObjectMeta: metav1.ObjectMeta{Name: "journald", Annotations: map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore}}},
+		)
+	}
+
 	for _, clusterInput := range c.values.Inputs {
 		resources = append(resources, clusterInput)
 	}
@@ -86,10 +104,6 @@ func (c *customResources) Deploy(ctx context.Context) error {
 
 	serializedResources, err := registry.AddAllAndSerialize(resources...)
 	if err != nil {
-		return err
-	}
-
-	if err := c.deleteOldManagedResource(ctx); err != nil {
 		return err
 	}
 
@@ -115,45 +129,7 @@ func (c *customResources) WaitCleanup(ctx context.Context) error {
 }
 
 func (c *customResources) getManagedResourceName() string {
-	if len(c.values.Suffix) > 0 {
-		return CustomResourcesManagedResourceName + "-" + c.values.Suffix
-	}
-	return CustomResourcesManagedResourceName
-}
-
-// TODO: remove this in next release.
-func (c *customResources) deleteOldManagedResource(ctx context.Context) error {
-	mr := &resourcesv1alpha1.ManagedResource{}
-
-	if err := c.client.Get(ctx, client.ObjectKey{Namespace: c.namespace, Name: CustomResourcesManagedResourceName}, mr); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-
-	// Check if the ManagedResource is responsible for FluentBit.
-	// If not nothing has to be done.
-	var foundFluentBit bool
-	for _, resource := range mr.Status.Resources {
-		if resource.Kind == "FluentBit" {
-			foundFluentBit = true
-		}
-	}
-
-	if !foundFluentBit {
-		return nil
-	}
-
-	// Remove the finalizers from the managed resource to delete it
-	beforePatch := mr.DeepCopyObject().(client.Object)
-	metav1.SetMetaDataAnnotation(&mr.ObjectMeta, resourcesv1alpha1.Ignore, "true")
-	mr.SetFinalizers([]string{})
-	if err := c.client.Patch(ctx, mr, client.MergeFromWithOptions(beforePatch, client.MergeFromWithOptimisticLock{})); client.IgnoreNotFound(err) != nil {
-		return err
-	}
-
-	return client.IgnoreNotFound(c.client.Delete(ctx, mr))
+	return CustomResourcesManagedResourceName + c.values.Suffix
 }
 
 func getCustomResourcesLabels() map[string]string {

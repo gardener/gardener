@@ -49,7 +49,7 @@ var _ = Describe("Logging", func() {
 			Expect(fluentBitCustomResource).To(Equal(
 				&fluentbitv1alpha2.FluentBit{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      fmt.Sprintf("%v-%v", name, utils.ComputeSHA256Hex([]byte(fmt.Sprintf("%v%v", labels, annotations)))[:6]),
+						Name:      fmt.Sprintf("%v-%v", name, utils.ComputeSHA256Hex([]byte(fmt.Sprintf("%v%v", labels, annotations)))[:5]),
 						Namespace: namespace,
 						Labels:    labels,
 					},

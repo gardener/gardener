@@ -28,14 +28,38 @@ func NewFluentOperatorCustomResources(
 	gardenNamespaceName string,
 	enabled bool,
 	suffix string,
-	inputs []*fluentbitv1alpha2.ClusterInput,
-	filters []*fluentbitv1alpha2.ClusterFilter,
-	parsers []*fluentbitv1alpha2.ClusterParser,
-	outputs []*fluentbitv1alpha2.ClusterOutput,
+	centralLoggingConfigurations []component.CentralLoggingConfiguration,
+	output *fluentbitv1alpha2.ClusterOutput,
 ) (
 	deployer component.DeployWaiter,
 	err error,
 ) {
+	var (
+		inputs  []*fluentbitv1alpha2.ClusterInput
+		filters []*fluentbitv1alpha2.ClusterFilter
+		parsers []*fluentbitv1alpha2.ClusterParser
+	)
+
+	// Fetch component specific logging configurations
+	for _, componentFn := range centralLoggingConfigurations {
+		loggingConfig, err := componentFn()
+		if err != nil {
+			return nil, err
+		}
+
+		if len(loggingConfig.Inputs) > 0 {
+			inputs = append(inputs, loggingConfig.Inputs...)
+		}
+
+		if len(loggingConfig.Filters) > 0 {
+			filters = append(filters, loggingConfig.Filters...)
+		}
+
+		if len(loggingConfig.Parsers) > 0 {
+			parsers = append(parsers, loggingConfig.Parsers...)
+		}
+	}
+
 	deployer = fluentoperator.NewCustomResources(
 		c,
 		gardenNamespaceName,
@@ -44,7 +68,7 @@ func NewFluentOperatorCustomResources(
 			Inputs:  inputs,
 			Filters: filters,
 			Parsers: parsers,
-			Outputs: outputs,
+			Outputs: []*fluentbitv1alpha2.ClusterOutput{output},
 		},
 	)
 

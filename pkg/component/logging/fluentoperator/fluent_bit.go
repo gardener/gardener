@@ -124,20 +124,20 @@ end`,
 function add_tag_to_record(tag, timestamp, record)
   record["tag"] = tag
   return 1, timestamp, record
-end`,
+end
+`,
 			},
 		}
 	)
 
 	utilruntime.Must(kubernetesutils.MakeUnique(configMap))
 
-	resources := []client.Object{configMap}
-
-	fluentBit := customresources.GetFluentBit(getFluentBitLabels(), v1beta1constants.DaemonSetNameFluentBit, f.namespace, f.values.Image, f.values.InitContainerImage, f.values.PriorityClass)
-	resources = append(resources, fluentBit)
-
-	clusterFluentBitConfig := customresources.GetClusterFluentBitConfig(v1beta1constants.DaemonSetNameFluentBit, getCustomResourcesLabels())
-	resources = append(resources, clusterFluentBitConfig)
+	resources := []client.Object{
+		configMap,
+		customresources.GetFluentBit(getFluentBitLabels(), v1beta1constants.DaemonSetNameFluentBit, f.namespace, f.values.Image, f.values.InitContainerImage, f.values.PriorityClass),
+		customresources.GetClusterFluentBitConfig(v1beta1constants.DaemonSetNameFluentBit, getCustomResourcesLabels()),
+		customresources.GetDefaultClusterOutput(getCustomResourcesLabels()),
+	}
 
 	for _, clusterInput := range customresources.GetClusterInputs(getCustomResourcesLabels()) {
 		resources = append(resources, clusterInput)
@@ -150,8 +150,6 @@ end`,
 	for _, clusterParser := range customresources.GetClusterParsers(getCustomResourcesLabels()) {
 		resources = append(resources, clusterParser)
 	}
-
-	resources = append(resources, customresources.GetDefaultClusterOutput(getCustomResourcesLabels()))
 
 	serializedResources, err := registry.AddAllAndSerialize(resources...)
 	if err != nil {

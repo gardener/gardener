@@ -44,13 +44,13 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("Fluent Operator Custom Resources", func() {
+var _ = Describe("Custom Resources", func() {
 	var (
 		ctx = context.TODO()
 
 		namespace = "some-namespace"
 		values    = CustomResourcesValues{
-			Suffix: "garden",
+			Suffix: "-garden",
 			Inputs: []*fluentbitv1alpha2.ClusterInput{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -128,7 +128,7 @@ var _ = Describe("Fluent Operator Custom Resources", func() {
 			Outputs: []*fluentbitv1alpha2.ClusterOutput{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "journald",
+						Name:   "journald2",
 						Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
 					},
 					Spec: fluentbitv1alpha2.OutputSpec{
@@ -203,12 +203,22 @@ var _ = Describe("Fluent Operator Custom Resources", func() {
 			}))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(Succeed())
 			Expect(customResourcesManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(customResourcesManagedResourceSecret.Data).To(HaveLen(5))
+			Expect(customResourcesManagedResourceSecret.Data).To(HaveLen(14))
+			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterfluentbitconfig____fluent-bit-config.yaml"))
+			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterfilter____01-docker.yaml"))
+			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterfilter____02-containerd.yaml"))
+			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterfilter____03-add-tag-to-record.yaml"))
+			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterfilter____zz-modify-severity.yaml"))
+			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterparser____docker-parser.yaml"))
+			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterparser____containerd-parser.yaml"))
+			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterinput____tail-kubernetes.yaml"))
+			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusteroutput____journald.yaml"))
+
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterinput____journald-kubelet.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterinput____journald-kubelet-monitor.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterfilter____gardener-extension.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterparser____extensions-parser.yaml"))
-			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusteroutput____journald.yaml"))
+			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusteroutput____journald2.yaml"))
 		})
 	})
 

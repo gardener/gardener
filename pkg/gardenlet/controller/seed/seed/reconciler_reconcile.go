@@ -581,6 +581,16 @@ func (r *Reconciler) runReconcileSeedFlow(
 			return err
 		}
 
+		fluentOperator, err := sharedcomponent.NewFluentOperator(
+			seedClient,
+			r.GardenNamespace,
+			loggingEnabled,
+			v1beta1constants.PriorityClassNameSeedSystem600,
+		)
+		if err != nil {
+			return err
+		}
+
 		fluentBit, err := sharedcomponent.NewFluentBit(
 			seedClient,
 			r.GardenNamespace,
@@ -591,11 +601,13 @@ func (r *Reconciler) runReconcileSeedFlow(
 			return err
 		}
 
-		fluentOperator, err := sharedcomponent.NewFluentOperator(
+		fluentOperatorCustomResources, err := getFluentOperatorCustomResources(
 			seedClient,
 			r.GardenNamespace,
 			loggingEnabled,
-			v1beta1constants.PriorityClassNameSeedSystem600,
+			seedIsGarden,
+			gardenlethelper.IsEventLoggingEnabled(&r.Config),
+			features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment),
 		)
 		if err != nil {
 			return err
@@ -662,6 +674,11 @@ func (r *Reconciler) runReconcileSeedFlow(
 				Dependencies: flow.NewTaskIDs(deployFluentOperator),
 			})
 			_ = g.Add(flow.Task{
+				Name:         "Deploying Fluent Operator custom resources",
+				Fn:           component.OpWait(fluentOperatorCustomResources).Deploy,
+				Dependencies: flow.NewTaskIDs(deployFluentOperator),
+			})
+			_ = g.Add(flow.Task{
 				Name: "Deploying Plutono",
 				Fn:   plutono.Deploy,
 			})
@@ -703,25 +720,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			})
 		)
 	}
-
-	fluentOperatorCustomResources, err := getFluentOperatorCustomResources(
-		seedClient,
-		r.GardenNamespace,
-		loggingEnabled,
-		seedIsGarden,
-		gardenlethelper.IsEventLoggingEnabled(&r.Config),
-		features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment),
-	)
-	if err != nil {
-		return err
-	}
-
-	var (
-		_ = g.Add(flow.Task{
-			Name: "Deploying Fluent Operator custom resources",
-			Fn:   fluentOperatorCustomResources.Deploy,
-		})
-	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{Log: log}); err != nil {
 		return flow.Errors(err)

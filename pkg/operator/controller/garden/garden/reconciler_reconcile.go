@@ -118,19 +118,19 @@ func (r *Reconciler) reconcile(
 			Fn:   c.etcdCRD.Deploy,
 		})
 		deployVPACRD = g.Add(flow.Task{
-			Name: "Deploying custom resource definition for VPA",
+			Name: "Deploying custom resource definitions for VPA",
 			Fn:   flow.TaskFn(c.vpaCRD.Deploy).DoIf(vpaEnabled(garden.Spec.RuntimeCluster.Settings)),
 		})
 		reconcileHVPACRD = g.Add(flow.Task{
-			Name: "Reconciling custom resource definition for HVPA",
+			Name: "Reconciling custom resource definitions for HVPA",
 			Fn:   c.hvpaCRD.Deploy,
 		})
 		deployIstioCRD = g.Add(flow.Task{
-			Name: "Deploying custom resource definition for Istio",
+			Name: "Deploying custom resource definitions for Istio",
 			Fn:   c.istioCRD.Deploy,
 		})
 		deployFluentCRD = g.Add(flow.Task{
-			Name: "Deploying custom resource definition for Fluent-bit Operator",
+			Name: "Deploying custom resource definitions for fluent-operator",
 			Fn:   c.fluentCRD.Deploy,
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
@@ -168,18 +168,18 @@ func (r *Reconciler) reconcile(
 			Fn:           component.OpWait(c.istio).Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
+		deployFluentOperator = g.Add(flow.Task{
+			Name:         "Deploying fluent-operator",
+			Fn:           c.fluentOperator.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployFluentCRD),
+		})
 		deployFluentOperatorCustomResources = g.Add(flow.Task{
-			Name:         "Deploying Fluent operator CustomResources",
+			Name:         "Deploying fluent-operator CustomResources",
 			Fn:           c.fluentOperatorCustomResources.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployFluentCRD),
 		})
-		deployFluentOperator = g.Add(flow.Task{
-			Name:         "Deploying Fluent Operator",
-			Fn:           component.OpWait(c.fluentOperator).Deploy,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployFluentCRD),
-		})
 		deployFluentBit = g.Add(flow.Task{
-			Name:         "Deploying Fluent Bit",
+			Name:         "Deploying fluent-bit",
 			Fn:           c.fluentBit.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployFluentCRD),
 		})
@@ -192,13 +192,13 @@ func (r *Reconciler) reconcile(
 			generateGenericTokenKubeconfig,
 			deploySystemResources,
 			deployFluentCRD,
-			deployFluentOperatorCustomResources,
 			deployVPA,
 			deployHVPA,
 			deployEtcdDruid,
 			deployIstio,
 			deployNginxIngressController,
 			deployFluentOperator,
+			deployFluentOperatorCustomResources,
 			deployFluentBit,
 			deployVali,
 		)
