@@ -36,6 +36,8 @@ import (
 	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
+	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
+	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/features"
@@ -47,11 +49,15 @@ import (
 var (
 	gardenManagedResources = []string{
 		etcd.Druid,
-		kubestatemetrics.ManagedResourceName,
 		gardensystem.ManagedResourceName,
 		hvpa.ManagedResourceName,
 		"istio-system",
 		"virtual-garden-istio",
+		kubestatemetrics.ManagedResourceName,
+		fluentoperator.OperatorManagedResourceName,
+		fluentoperator.CustomResourcesManagedResourceName + "-garden",
+		fluentoperator.FluentBitManagedResourceName,
+		vali.ManagedResourceNameRuntime,
 	}
 
 	virtualGardenManagedResources = []string{

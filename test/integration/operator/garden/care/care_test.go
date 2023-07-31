@@ -35,6 +35,8 @@ import (
 	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
+	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
+	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/vpa"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -46,10 +48,14 @@ var _ = Describe("Garden Care controller tests", func() {
 			etcd.Druid,
 			gardensystem.ManagedResourceName,
 			hvpa.ManagedResourceName,
-			kubestatemetrics.ManagedResourceName,
 			vpa.ManagedResourceControlName,
 			"istio-system",
 			"virtual-garden-istio",
+			kubestatemetrics.ManagedResourceName,
+			fluentoperator.OperatorManagedResourceName,
+			fluentoperator.CustomResourcesManagedResourceName + "-garden",
+			fluentoperator.FluentBitManagedResourceName,
+			vali.ManagedResourceNameRuntime,
 		}
 
 		requiredVirtualGardenManagedResources = []string{
