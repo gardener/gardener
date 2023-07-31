@@ -22,7 +22,6 @@ import (
 	_ "github.com/ahmetb/gen-crd-api-reference-docs"
 	_ "github.com/bronze1man/yaml2json"
 	_ "github.com/onsi/ginkgo/v2/ginkgo"
-	_ "go.uber.org/mock/gomock"
 	_ "go.uber.org/mock/mockgen"
 	_ "golang.org/x/tools/cmd/goimports"
 	_ "k8s.io/code-generator"
