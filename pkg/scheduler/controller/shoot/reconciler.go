@@ -130,7 +130,7 @@ func (r *Reconciler) determineSeed(
 	if err := r.Client.Get(ctx, kubernetesutils.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
 		return nil, err
 	}
-	schedulerRegionConfig, err := r.getSchedulerRegionConfigMap(ctx, log, cloudProfile)
+	regionConfig, err := r.getRegionConfigMap(ctx, log, cloudProfile)
 	if err != nil {
 		return nil, err
 	}
@@ -159,41 +159,38 @@ func (r *Reconciler) determineSeed(
 	if err != nil {
 		return nil, err
 	}
-	filteredSeeds, err = applyStrategy(log, shoot, filteredSeeds, r.Config.Strategy, schedulerRegionConfig)
+	filteredSeeds, err = applyStrategy(log, shoot, filteredSeeds, r.Config.Strategy, regionConfig)
 	if err != nil {
 		return nil, err
 	}
 	return getSeedWithLeastShootsDeployed(filteredSeeds, shootList.Items)
 }
 
-func (r *Reconciler) getSchedulerRegionConfigMap(ctx context.Context, log logr.Logger, cloudProfile *gardencorev1beta1.CloudProfile) (*corev1.ConfigMap, error) {
-	var (
-		regionConfig     *corev1.ConfigMap
-		regionConfigList = &corev1.ConfigMapList{}
-	)
-
+func (r *Reconciler) getRegionConfigMap(ctx context.Context, log logr.Logger, cloudProfile *gardencorev1beta1.CloudProfile) (*corev1.ConfigMap, error) {
+	regionConfigList := &corev1.ConfigMapList{}
 	if err := r.Client.List(ctx, regionConfigList, client.InNamespace(r.GardenNamespace), client.MatchingLabels{v1beta1constants.SchedulerPurpose: v1beta1constants.SchedulerPurposeRegionConfig}); err != nil {
 		return nil, err
 	}
 
-	for _, config := range regionConfigList.Items {
-		profileNames := strings.Split(config.Annotations[v1beta1constants.AnnotationSchedulingCloudProfiles], ",")
+	var regionConfig *corev1.ConfigMap
+	for _, regionConf := range regionConfigList.Items {
+		profileNames := strings.Split(regionConf.Annotations[v1beta1constants.AnnotationSchedulingCloudProfiles], ",")
 		for _, name := range profileNames {
 			if name != cloudProfile.Name {
 				continue
 			}
 			if regionConfig == nil {
-				conf := config
+				conf := regionConf
 				regionConfig = &conf
 			} else {
-				log.Info("Duplicate scheduler region config found", "configMap", client.ObjectKeyFromObject(&config), "cloudProfileName", cloudProfile.Name, "chosenConfigMap", client.ObjectKeyFromObject(regionConfig))
+				log.Info("Duplicate scheduler region config found", "configMap", client.ObjectKeyFromObject(&regionConf), "cloudProfileName", cloudProfile.Name, "chosenConfigMap", client.ObjectKeyFromObject(regionConfig))
 			}
 			break
 		}
 	}
 
 	if regionConfig == nil {
-		log.Info("No region config found for scheduler", "namespaceName", r.GardenNamespace)
+		log.Info("No region config found for scheduler")
 	}
 	return regionConfig, nil
 }
@@ -276,7 +273,7 @@ func filterSeedsForZonalShootControlPlanes(seedList []gardencorev1beta1.Seed, sh
 	return seedList, nil
 }
 
-func applyStrategy(log logr.Logger, shoot *gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed, strategy config.CandidateDeterminationStrategy, schedulerRegionConfig *corev1.ConfigMap) ([]gardencorev1beta1.Seed, error) {
+func applyStrategy(log logr.Logger, shoot *gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed, strategy config.CandidateDeterminationStrategy, regionConfig *corev1.ConfigMap) ([]gardencorev1beta1.Seed, error) {
 	var candidates []gardencorev1beta1.Seed
 
 	switch {
@@ -286,7 +283,7 @@ func applyStrategy(log logr.Logger, shoot *gardencorev1beta1.Shoot, seedList []g
 		candidates = determineCandidatesWithSameRegionStrategy(seedList, shoot)
 	case strategy == config.MinimalDistance:
 		var err error
-		candidates, err = determineCandidatesWithMinimalDistanceStrategy(log, shoot, seedList, schedulerRegionConfig)
+		candidates, err = determineCandidatesWithMinimalDistanceStrategy(log, shoot, seedList, regionConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -386,8 +383,8 @@ func determineCandidatesWithSameRegionStrategy(seedList []gardencorev1beta1.Seed
 	return candidates
 }
 
-func determineCandidatesWithMinimalDistanceStrategy(log logr.Logger, shoot *gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed, schedulerRegionConfig *corev1.ConfigMap) ([]gardencorev1beta1.Seed, error) {
-	candidates, err := regionConfigMinimalDistance(log, seedList, shoot, schedulerRegionConfig)
+func determineCandidatesWithMinimalDistanceStrategy(log logr.Logger, shoot *gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed, regionConfig *corev1.ConfigMap) ([]gardencorev1beta1.Seed, error) {
+	candidates, err := regionConfigMinimalDistance(log, seedList, shoot, regionConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -400,33 +397,32 @@ func determineCandidatesWithMinimalDistanceStrategy(log logr.Logger, shoot *gard
 	return candidates, nil
 }
 
-func regionConfigMinimalDistance(log logr.Logger, seeds []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, schedulerRegionConfig *corev1.ConfigMap) ([]gardencorev1beta1.Seed, error) {
+func regionConfigMinimalDistance(log logr.Logger, seeds []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, regionConfig *corev1.ConfigMap) ([]gardencorev1beta1.Seed, error) {
 	var candidates []gardencorev1beta1.Seed
 
-	if schedulerRegionConfig == nil || schedulerRegionConfig.Data[shoot.Spec.Region] == "" {
-		log.Info("Shoot region not available in configmap", "shootRegion", shoot.Spec.Region)
+	if regionConfig == nil || regionConfig.Data[shoot.Spec.Region] == "" {
+		log.Info("Shoot region not available in scheduler region ConfigMap", "region", shoot.Spec.Region)
 		return candidates, nil
 	}
 
-	regionConfig := make(map[string]int)
-	if err := yaml.Unmarshal([]byte(schedulerRegionConfig.Data[shoot.Spec.Region]), &regionConfig); err != nil {
-		return nil, fmt.Errorf("failed to determine seed candidates. Wrong format in ConfigMap %s/%s, Region %s: %w", schedulerRegionConfig.Namespace, schedulerRegionConfig.Name, shoot.Spec.Region, err)
+	regionConfigData := make(map[string]int)
+	if err := yaml.Unmarshal([]byte(regionConfig.Data[shoot.Spec.Region]), &regionConfigData); err != nil {
+		return nil, fmt.Errorf("failed to determine seed candidates. Wrong format in ConfigMap %s/%s, Region %s: %w", regionConfig.Namespace, regionConfig.Name, shoot.Spec.Region, err)
 	}
 
 	minDistance := math.MaxInt32
 	for _, seed := range seeds {
-		dist, ok := regionConfig[seed.Spec.Provider.Region]
+		dist, ok := regionConfigData[seed.Spec.Provider.Region]
 		if !ok {
-			log.Info("Seed region not found in config", "seedRegion", seed.Spec.Provider.Region)
+			log.Info("Seed region not available in scheduler region ConfigMap for shoot region", "shootRegion", shoot.Spec.Region, "seedRegion", seed.Spec.Provider.Region)
 			continue
 		}
 
-		// append
 		if dist == minDistance {
 			candidates = append(candidates, seed)
 			continue
 		}
-		// replace
+
 		if dist < minDistance {
 			minDistance = dist
 			candidates = []gardencorev1beta1.Seed{seed}
@@ -451,12 +447,12 @@ func levenshteinMinimalDistance(seeds []gardencorev1beta1.Seed, shoot *gardencor
 		if shootProvider != seed.Spec.Provider.Type {
 			dist = dist + 2
 		}
-		// append
+
 		if dist == minDistance {
 			candidates = append(candidates, seed)
 			continue
 		}
-		// replace
+
 		if dist < minDistance {
 			minDistance = dist
 			candidates = []gardencorev1beta1.Seed{seed}
