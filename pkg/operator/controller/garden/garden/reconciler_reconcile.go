@@ -149,8 +149,8 @@ func (r *Reconciler) reconcile(
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		deploySystemResources = g.Add(flow.Task{
-			Name:         "Deploying system resources",
-			Fn:           c.system.Deploy,
+			Name:         "Deploying runtime system resources",
+			Fn:           c.runtimeSystem.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		deployVPA = g.Add(flow.Task{

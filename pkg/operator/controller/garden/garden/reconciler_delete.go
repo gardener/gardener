@@ -185,8 +185,8 @@ func (r *Reconciler) delete(
 		)
 
 		destroySystemResources = g.Add(flow.Task{
-			Name:         "Destroying system resources",
-			Fn:           component.OpDestroyAndWait(c.system).Destroy,
+			Name:         "Destroying runtime system resources",
+			Fn:           component.OpDestroyAndWait(c.runtimeSystem).Destroy,
 			Dependencies: flow.NewTaskIDs(syncPointCleanedUp),
 		})
 		ensureNoManagedResourcesExistAnymore = g.Add(flow.Task{

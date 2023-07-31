@@ -30,19 +30,27 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/component-base/version"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	operatorv1alpha1conversion "github.com/gardener/gardener/pkg/apis/operator/v1alpha1/conversion"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/gardeneraccess"
+	"github.com/gardener/gardener/pkg/component/gardeneradmissioncontroller"
+	"github.com/gardener/gardener/pkg/component/gardenerapiserver"
+	"github.com/gardener/gardener/pkg/component/gardenercontrollermanager"
+	"github.com/gardener/gardener/pkg/component/gardenerscheduler"
 	runtimegardensystem "github.com/gardener/gardener/pkg/component/gardensystem/runtime"
+	virtualgardensystem "github.com/gardener/gardener/pkg/component/gardensystem/virtual"
 	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/istio"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
@@ -57,9 +65,12 @@ import (
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/component/vpa"
+	controllermanagerv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
@@ -72,7 +83,7 @@ type components struct {
 	fluentCRD component.DeployWaiter
 
 	gardenerResourceManager component.DeployWaiter
-	system                  component.DeployWaiter
+	runtimeSystem           component.DeployWaiter
 	verticalPodAutoscaler   component.DeployWaiter
 	hvpaController          component.DeployWaiter
 	etcdDruid               component.DeployWaiter
@@ -87,6 +98,12 @@ type components struct {
 	kubeControllerManager                kubecontrollermanager.Interface
 	virtualGardenGardenerResourceManager resourcemanager.Interface
 	virtualGardenGardenerAccess          component.DeployWaiter
+	virtualSystem                        component.DeployWaiter
+
+	gardenerAPIServer           gardenerapiserver.Interface
+	gardenerAdmissionController component.DeployWaiter
+	gardenerControllerManager   component.DeployWaiter
+	gardenerScheduler           component.DeployWaiter
 
 	kubeStateMetrics              component.DeployWaiter
 	fluentOperator                component.DeployWaiter
@@ -123,7 +140,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.system = r.newSystem()
+	c.runtimeSystem = r.newRuntimeSystem()
 	c.verticalPodAutoscaler, err = r.newVerticalPodAutoscaler(garden, secretsManager)
 	if err != nil {
 		return
@@ -174,14 +191,26 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
+	c.virtualSystem = r.newVirtualSystem()
+	c.virtualGardenGardenerAccess = r.newGardenerAccess(garden, secretsManager)
 
-	var accessDomain string
-	if domains := garden.Spec.VirtualCluster.DNS.Domains; len(domains) > 0 {
-		accessDomain = domains[0]
-	} else {
-		accessDomain = *garden.Spec.VirtualCluster.DNS.Domain
+	// gardener control plane components
+	c.gardenerAPIServer, err = r.newGardenerAPIServer(ctx, garden, secretsManager)
+	if err != nil {
+		return
 	}
-	c.virtualGardenGardenerAccess = r.newGardenerAccess(secretsManager, accessDomain)
+	c.gardenerAdmissionController, err = r.newGardenerAdmissionController(garden, secretsManager)
+	if err != nil {
+		return
+	}
+	c.gardenerControllerManager, err = r.newGardenerControllerManager(garden, secretsManager)
+	if err != nil {
+		return
+	}
+	c.gardenerScheduler, err = r.newGardenerScheduler(garden, secretsManager)
+	if err != nil {
+		return
+	}
 
 	// observability components
 	c.kubeStateMetrics, err = r.newKubeStateMetrics()
@@ -295,7 +324,7 @@ func (r *Reconciler) newEtcdDruid() (component.DeployWaiter, error) {
 	)
 }
 
-func (r *Reconciler) newSystem() component.DeployWaiter {
+func (r *Reconciler) newRuntimeSystem() component.DeployWaiter {
 	return runtimegardensystem.New(r.RuntimeClientSet.Client(), r.GardenNamespace)
 }
 
@@ -436,17 +465,12 @@ func (r *Reconciler) newKubeAPIServer(
 		auditWebhookConfig           *apiserver.AuditWebhook
 		authenticationWebhookConfig  *kubeapiserver.AuthenticationWebhook
 		resourcesToStoreInETCDEvents []schema.GroupResource
-		minReplicas                  int32 = 2
 	)
-
-	if garden.Spec.VirtualCluster.ControlPlane != nil && garden.Spec.VirtualCluster.ControlPlane.HighAvailability != nil {
-		minReplicas = 3
-	}
 
 	if apiServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; apiServer != nil {
 		apiServerConfig = apiServer.KubeAPIServerConfig
 
-		auditWebhookConfig, err = r.computeKubeAPIServerAuditWebhookConfig(ctx, apiServer.AuditWebhook)
+		auditWebhookConfig, err = r.computeAPIServerAuditWebhookConfig(ctx, apiServer.AuditWebhook)
 		if err != nil {
 			return nil, err
 		}
@@ -472,19 +496,7 @@ func (r *Reconciler) newKubeAPIServer(
 		secretsManager,
 		namePrefix,
 		apiServerConfig,
-		apiserver.AutoscalingConfig{
-			APIServerResources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("600m"),
-					corev1.ResourceMemory: resource.MustParse("512Mi"),
-				},
-			},
-			HVPAEnabled:               hvpaEnabled(),
-			MinReplicas:               minReplicas,
-			MaxReplicas:               6,
-			UseMemoryMetricForHvpaHPA: true,
-			ScaleDownDisabledForHvpa:  false,
-		},
+		defaultAPIServerAutoscalingConfig(garden),
 		garden.Spec.VirtualCluster.Networking.Services,
 		kubeapiserver.VPNConfig{Enabled: false},
 		v1beta1constants.PriorityClassNameGardenSystem500,
@@ -497,7 +509,28 @@ func (r *Reconciler) newKubeAPIServer(
 	)
 }
 
-func (r *Reconciler) computeKubeAPIServerAuditWebhookConfig(ctx context.Context, config *operatorv1alpha1.AuditWebhook) (*apiserver.AuditWebhook, error) {
+func defaultAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) apiserver.AutoscalingConfig {
+	minReplicas := int32(2)
+	if garden.Spec.VirtualCluster.ControlPlane != nil && garden.Spec.VirtualCluster.ControlPlane.HighAvailability != nil {
+		minReplicas = 3
+	}
+
+	return apiserver.AutoscalingConfig{
+		APIServerResources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("600m"),
+				corev1.ResourceMemory: resource.MustParse("512Mi"),
+			},
+		},
+		HVPAEnabled:               hvpaEnabled(),
+		MinReplicas:               minReplicas,
+		MaxReplicas:               6,
+		UseMemoryMetricForHvpaHPA: true,
+		ScaleDownDisabledForHvpa:  false,
+	}
+}
+
+func (r *Reconciler) computeAPIServerAuditWebhookConfig(ctx context.Context, config *operatorv1alpha1.AuditWebhook) (*apiserver.AuditWebhook, error) {
 	if config == nil {
 		return nil, nil
 	}
@@ -653,14 +686,21 @@ func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValue
 	), nil
 }
 
-func (r *Reconciler) newGardenerAccess(secretsManager secretsmanager.Interface, domain string) component.DeployWaiter {
+func (r *Reconciler) newGardenerAccess(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) component.DeployWaiter {
+	var accessDomain string
+	if domains := garden.Spec.VirtualCluster.DNS.Domains; len(domains) > 0 {
+		accessDomain = domains[0]
+	} else {
+		accessDomain = *garden.Spec.VirtualCluster.DNS.Domain
+	}
+
 	return gardeneraccess.New(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		secretsManager,
 		gardeneraccess.Values{
 			ServerInCluster:    fmt.Sprintf("%s%s.%s.svc.cluster.local", namePrefix, v1beta1constants.DeploymentNameKubeAPIServer, r.GardenNamespace),
-			ServerOutOfCluster: gardenerutils.GetAPIServerDomain(domain),
+			ServerOutOfCluster: gardenerutils.GetAPIServerDomain(accessDomain),
 		},
 	)
 }
@@ -751,6 +791,131 @@ func getLoadBalancerServiceAnnotations(garden *operatorv1alpha1.Garden) map[stri
 		return utils.MergeStringMaps(garden.Spec.RuntimeCluster.Settings.LoadBalancerServices.Annotations)
 	}
 	return nil
+}
+
+func (r *Reconciler) newVirtualSystem() component.DeployWaiter {
+	return virtualgardensystem.New(r.RuntimeClientSet.Client(), r.GardenNamespace, virtualgardensystem.Values{})
+}
+
+func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (gardenerapiserver.Interface, error) {
+	var (
+		err                error
+		apiServerConfig    *operatorv1alpha1.GardenerAPIServerConfig
+		auditWebhookConfig *apiserver.AuditWebhook
+	)
+
+	if apiServer := garden.Spec.VirtualCluster.Gardener.APIServer; apiServer != nil {
+		apiServerConfig = apiServer
+
+		auditWebhookConfig, err = r.computeAPIServerAuditWebhookConfig(ctx, apiServer.AuditWebhook)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return sharedcomponent.NewGardenerAPIServer(
+		ctx,
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		metav1.ObjectMeta{Namespace: r.GardenNamespace, Name: garden.Name},
+		r.RuntimeVersion,
+		secretsManager,
+		apiServerConfig,
+		defaultAPIServerAutoscalingConfig(garden),
+		auditWebhookConfig,
+		helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
+		garden.Spec.VirtualCluster.Gardener.ClusterIdentity,
+	)
+}
+
+func (r *Reconciler) newGardenerAdmissionController(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerAdmissionController)
+	if err != nil {
+		return nil, err
+	}
+
+	repository, tag := image.String(), version.Get().GitVersion
+	if image.Tag != nil {
+		repository, tag = image.Repository, *image.Tag
+	}
+	image = &imagevectorutils.Image{Repository: repository, Tag: &tag}
+
+	values := gardeneradmissioncontroller.Values{
+		Image:                       image.String(),
+		LogLevel:                    logger.InfoLevel,
+		RuntimeVersion:              r.RuntimeVersion,
+		TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
+	}
+
+	if config := garden.Spec.VirtualCluster.Gardener.AdmissionController; config != nil {
+		values.ResourceAdmissionConfiguration = operatorv1alpha1conversion.ConvertToAdmissionControllerResourceAdmissionConfiguration(config.ResourceAdmissionConfiguration)
+		if config.LogLevel != nil {
+			values.LogLevel = *config.LogLevel
+		}
+	}
+
+	return gardeneradmissioncontroller.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values), nil
+}
+
+func (r *Reconciler) newGardenerControllerManager(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerControllerManager)
+	if err != nil {
+		return nil, err
+	}
+
+	repository, tag := image.String(), version.Get().GitVersion
+	if image.Tag != nil {
+		repository, tag = image.Repository, *image.Tag
+	}
+	image = &imagevectorutils.Image{Repository: repository, Tag: &tag}
+
+	values := gardenercontrollermanager.Values{
+		Image:    image.String(),
+		LogLevel: logger.InfoLevel,
+	}
+
+	if config := garden.Spec.VirtualCluster.Gardener.ControllerManager; config != nil {
+		values.FeatureGates = config.FeatureGates
+		if config.LogLevel != nil {
+			values.LogLevel = *config.LogLevel
+		}
+
+		for _, defaultProjectQuota := range config.DefaultProjectQuotas {
+			values.Quotas = append(values.Quotas, controllermanagerv1alpha1.QuotaConfiguration{
+				Config:          defaultProjectQuota.Config,
+				ProjectSelector: defaultProjectQuota.ProjectSelector,
+			})
+		}
+	}
+
+	return gardenercontrollermanager.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values), nil
+}
+
+func (r *Reconciler) newGardenerScheduler(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerScheduler)
+	if err != nil {
+		return nil, err
+	}
+
+	repository, tag := image.String(), version.Get().GitVersion
+	if image.Tag != nil {
+		repository, tag = image.Repository, *image.Tag
+	}
+	image = &imagevectorutils.Image{Repository: repository, Tag: &tag}
+
+	values := gardenerscheduler.Values{
+		Image:    image.String(),
+		LogLevel: logger.InfoLevel,
+	}
+
+	if config := garden.Spec.VirtualCluster.Gardener.Scheduler; config != nil {
+		values.FeatureGates = config.FeatureGates
+		if config.LogLevel != nil {
+			values.LogLevel = *config.LogLevel
+		}
+	}
+
+	return gardenerscheduler.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, values), nil
 }
 
 func (r *Reconciler) newFluentOperator() (component.DeployWaiter, error) {
