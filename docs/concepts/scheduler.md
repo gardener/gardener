@@ -12,7 +12,7 @@ The following sections explain the configuration and flow in greater detail.
 
 Previously, an admission plugin in the Gardener API server conducted the scheduling decisions.
 This implies changes to the API server whenever adjustments of the scheduling are needed.
-Decoupling the API server and the scheduler comes with greater flexibility to develop these components independently from each other.
+Decoupling the API server and the scheduler comes with greater flexibility to develop these components independently.
 
 ### 2. Extensibility
 
@@ -38,6 +38,10 @@ The following **sequence** describes the steps involved to determine a seed cand
 1. Apply active [strategy](#strategies) e.g., _Minimal Distance strategy_
 1. Choose least utilized seed, i.e., the one with the least number of shoot control planes, will be the winner and written to the `.spec.seedName` field of the `Shoot`.
 
+In order to put the scheduling decision into effect, the scheduler sends an update request for the `Shoot` resource to
+the API server. After validation, the Gardener Aggregated API server updates the shoot to have the `spec.seedName` field set.
+Subsequently, the Gardenlet picks up and starts to create the cluster on the specified seed.
+
 ## Configuration
 
 The Gardener Scheduler configuration has to be supplied on startup. It is a mandatory and also the only available flag.
@@ -51,31 +55,61 @@ However, the Gardener Scheduler on the other hand does not need a TLS configurat
 The scheduling strategy is defined in the _**candidateDeterminationStrategy**_ of the scheduler's configuration and can have the possible values `SameRegion` and `MinimalDistance`.
 The `SameRegion` strategy is the default strategy.
 
-1. *Same Region strategy*
+### Same Region strategy
 
-   The Gardener Scheduler reads the `spec.provider.type` and `.spec.region` fields from the `Shoot` resource.
+The Gardener Scheduler reads the `spec.provider.type` and `.spec.region` fields from the `Shoot` resource.
 It tries to find a seed that has the identical `.spec.provider.type` and `.spec.provider.region` fields set.
 If it cannot find a suitable seed, it adds an event to the shoot stating that it is unschedulable.
 
-2. *Minimal Distance strategy*
+### Minimal Distance strategy
 
-   The Gardener Scheduler tries to find a valid seed with minimal distance to the shoot's intended region.
-The distance is calculated based on the Levenshtein distance of the region. Therefore, the region name
+The Gardener Scheduler tries to find a valid seed with minimal distance to the shoot's intended region.
+Distances are configured via `ConfigMap`(s), usually per cloud provider in a Gardener landscape.
+The configuration is structured as the following:
+- It refers to one or multiple `CloudProfile`s via annotation `scheduling.gardener.cloud/cloudprofiles`.
+- It contains the declaration as `region-config` via label `scheduling.gardener.cloud/purpose`.
+- If a `CloudProfile` is referred by multiple `ConfigMap`s, only the first one is considered.
+- The `data` fields configure actual distances, where _key_ relates to the `Shoot` region and _value_ contains distances to `Seed` regions. The region distance to itself needs to be specified as well.
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: <name>
+  namespace: garden
+  annotations:
+    scheduling.gardener.cloud/cloudprofiles: cloudprofile-name-1{,optional-cloudprofile-name-2,...}
+  labels:
+    scheduling.gardener.cloud/purpose: region-config
+data:
+  region-1: |
+    region-1: 0
+    region-2: 10
+    region-3: 20
+    ...
+  region-2: |
+    region-2: 0
+    region-1: 10
+    region-3: 10
+    ...
+```
+
+> Gardener provider extensions for public cloud providers usually provide real-world distance data in their github.com
+> repositories. We suggest to check them out before defining your own data.
+
+If a valid seed candidate cannot be found after consulting the distance configuration, the scheduler will fall back to 
+the Levenshtein distance to find the closest region. Therefore, the region name
 is split into a base name and an orientation. Possible orientations are `north`, `south`, `east`, `west` and `central`.
 The distance then is twice the Levenshtein distance of the region's base name plus a correction value based on the
 orientation and the provider.
 
-   If the orientations of shoot and seed candidate match, the correction value is 0, if they differ it is 2 and if
+If the orientations of shoot and seed candidate match, the correction value is 0, if they differ it is 2 and if
 either the seed's or the shoot's region does not have an orientation it is 1.
 If the provider differs, the correction value is additionally incremented by 2.
 
-   Because of this, a matching region with a matching provider is always prefered.
+Because of this, a matching region with a matching provider is always prefered.
 
-In order to put the scheduling decision into effect, the scheduler sends an update request for the `Shoot` resource to
-the API server. After validation, the Gardener Aggregated API server updates the shoot to have the `spec.seedName` field set.
-Subsequently, the Gardenlet picks up and starts to create the cluster on the specified seed.
-
-3. *Special handling based on shoot cluster purpose*
+### Special handling based on shoot cluster purpose
 
 Every shoot cluster can have a purpose that describes what the cluster is used for, and also influences how the cluster is setup (see [Shoot Cluster Purpose](../usage/shoot_purposes.md) for more information).
 

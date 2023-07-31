@@ -3,8 +3,10 @@ kind: ConfigMap
 metadata:
   name: cloudprofile1-scheduling-regions
   namespace: garden
+  annotations:
+    scheduling.gardener.cloud/cloudprofiles: cloudprofile1{,optional-cloudprofile-name-2,...}
   labels:
-    scheduling.gardener.cloud/cloudprofile: cloudprofile1
+    scheduling.gardener.cloud/purpose: region-config
 data:
   europe-west-1: |
     europe-west-1: 0
