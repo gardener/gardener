@@ -58,7 +58,7 @@ func (remoteExtractor) ExtractFromLayer(image, pathSuffix, dest string) error {
 			return fmt.Errorf("unable to get reader for uncompressed layer: %w", err)
 		}
 
-		if err = extractTarGz(buffer, pathSuffix, dest); err != nil {
+		if err = extractFileFromTar(buffer, pathSuffix, dest); err != nil {
 			if errors.Is(err, notFound) {
 				continue
 			}
@@ -73,7 +73,7 @@ func (remoteExtractor) ExtractFromLayer(image, pathSuffix, dest string) error {
 
 var notFound = errors.New("file not contained in tar")
 
-func extractTarGz(uncompressedStream io.Reader, filenameInArchive, destinationOnOS string) error {
+func extractFileFromTar(uncompressedStream io.Reader, searchSuffix, targetFile string) error {
 	var (
 		tarReader = tar.NewReader(uncompressedStream)
 		header    *tar.Header
@@ -83,11 +83,11 @@ func extractTarGz(uncompressedStream io.Reader, filenameInArchive, destinationOn
 	for header, err = tarReader.Next(); err == nil; header, err = tarReader.Next() {
 		switch header.Typeflag {
 		case tar.TypeReg:
-			if !strings.HasSuffix(header.Name, filenameInArchive) {
+			if !strings.HasSuffix(header.Name, searchSuffix) {
 				continue
 			}
 
-			tmpDest := destinationOnOS + ".tmp"
+			tmpDest := targetFile + ".tmp"
 
 			outFile, err := os.OpenFile(tmpDest, os.O_CREATE|os.O_RDWR, 0755)
 			if err != nil {
@@ -100,7 +100,7 @@ func extractTarGz(uncompressedStream io.Reader, filenameInArchive, destinationOn
 				return fmt.Errorf("copying file from tarball failed: %w", err)
 			}
 
-			return os.Rename(tmpDest, destinationOnOS)
+			return os.Rename(tmpDest, targetFile)
 		default:
 			continue
 		}
