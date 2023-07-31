@@ -14,6 +14,7 @@ Resource Types:
 </h3>
 <p>
 (<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerAPIServerConfig">GardenerAPIServerConfig</a>, 
 <a href="#operator.gardener.cloud/v1alpha1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
 </p>
 <p>
@@ -965,6 +966,20 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig
 <td>
 <em>(Optional)</em>
 <p>AuditConfig contains configuration settings for the audit of the kube-apiserver.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>auditWebhook</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.AuditWebhook">
+AuditWebhook
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AuditWebhook contains settings related to an audit webhook configuration.</p>
 </td>
 </tr>
 <tr>

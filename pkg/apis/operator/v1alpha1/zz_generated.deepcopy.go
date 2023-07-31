@@ -516,6 +516,11 @@ func (in *GardenerAPIServerConfig) DeepCopyInto(out *GardenerAPIServerConfig) {
 		*out = new(v1beta1.AuditConfig)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.AuditWebhook != nil {
+		in, out := &in.AuditWebhook, &out.AuditWebhook
+		*out = new(AuditWebhook)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Logging != nil {
 		in, out := &in.Logging, &out.Logging
 		*out = new(v1beta1.APIServerLogging)

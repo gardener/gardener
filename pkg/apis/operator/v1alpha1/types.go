@@ -438,6 +438,9 @@ type GardenerAPIServerConfig struct {
 	// AuditConfig contains configuration settings for the audit of the kube-apiserver.
 	// +optional
 	AuditConfig *gardencorev1beta1.AuditConfig `json:"auditConfig,omitempty"`
+	// AuditWebhook contains settings related to an audit webhook configuration.
+	// +optional
+	AuditWebhook *AuditWebhook `json:"auditWebhook,omitempty"`
 	// Logging contains configuration for the log level and HTTP access logs.
 	// +optional
 	Logging *gardencorev1beta1.APIServerLogging `json:"logging,omitempty"`

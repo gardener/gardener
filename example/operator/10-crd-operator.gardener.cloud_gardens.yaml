@@ -435,6 +435,32 @@ spec:
                                     x-kubernetes-map-type: atomic
                                 type: object
                             type: object
+                          auditWebhook:
+                            description: AuditWebhook contains settings related to
+                              an audit webhook configuration.
+                            properties:
+                              batchMaxSize:
+                                default: 30
+                                description: BatchMaxSize is the maximum size of a
+                                  batch.
+                                format: int32
+                                minimum: 1
+                                type: integer
+                              kubeconfigSecretName:
+                                description: KubeconfigSecretName specifies the name
+                                  of a secret containing the kubeconfig for this webhook.
+                                minLength: 1
+                                type: string
+                              version:
+                                default: audit.k8s.io/v1
+                                description: Version is the API version to send and
+                                  expect from the webhook.
+                                enum:
+                                - audit.k8s.io/v1
+                                type: string
+                            required:
+                            - kubeconfigSecretName
+                            type: object
                           featureGates:
                             additionalProperties:
                               type: boolean
