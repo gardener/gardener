@@ -18,9 +18,31 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
-    - description: Indicates whether the garden has been reconciled.
-      jsonPath: .status.conditions[?(@.type=="Reconciled")].status
-      name: Reconciled
+    - description: Kubernetes version of virtual cluster.
+      jsonPath: .spec.virtualCluster.kubernetes.version
+      name: K8S Version
+      type: string
+    - description: Version of the Gardener components.
+      jsonPath: .status.gardener.version
+      name: Gardener Version
+      type: string
+    - description: Status of the last operation
+      jsonPath: .status.lastOperation.state
+      name: Last Operation
+      type: string
+    - description: Indicates whether the components related to the runtime cluster
+        are healthy.
+      jsonPath: .status.conditions[?(@.type=="RuntimeComponentsHealthy")].status
+      name: Runtime
+      type: string
+    - description: Indicates whether the components related to the virtual cluster
+        are healthy.
+      jsonPath: .status.conditions[?(@.type=="VirtualComponentsHealthy")].status
+      name: Virtual
+      type: string
+    - description: Indicates whether the API server of the virtual cluster is available.
+      jsonPath: .status.conditions[?(@.type=="VirtualGardenAPIServerAvailable")].status
+      name: API Server
       type: string
     - description: creation timestamp
       jsonPath: .metadata.creationTimestamp
