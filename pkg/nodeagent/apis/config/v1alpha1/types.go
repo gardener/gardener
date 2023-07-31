@@ -62,16 +62,16 @@ type NodeAgentConfiguration struct {
 	// access the shoot api server.
 	APIServer APIServer `json:"apiServer"`
 
-	// SecretName defines the name of the secret in the shoot cluster, which contains
+	// SecretName defines the name of the secret in the shoot cluster control plane, which contains
 	// the OSC for the gardener-node-agent.
 	OSCSecretName string `json:"oscSecretName"`
-	// TokenSecretName defines the name of the secret in the shoot cluster, which contains
-	// the projected shoot access token for the gardener-node-agent.
+	// TokenSecretName defines the name of the secret in the shoot cluster control plane, which contains
+	// the `kube-apiserver` access token for the gardener-node-agent.
 	TokenSecretName string `json:"tokenSecretName"`
 
-	// Image is the docker image reference to the gardener-node-agent.
+	// Image is the container image reference to the gardener-node-agent.
 	Image string `json:"image"`
-	// HyperkubeImage is the docker image reference to the hyperkube containing kubelet.
+	// HyperkubeImage is the container image reference to the hyperkube containing kubelet.
 	HyperkubeImage string `json:"hyperkubeImage"`
 
 	// KubernetesVersion contains the kubernetes version of the kubelet, used for annotating
@@ -79,7 +79,7 @@ type NodeAgentConfiguration struct {
 	KubernetesVersion string `json:"kubernetesVersion"`
 
 	// KubeletDataVolumeSize sets the data volume size of an unformatted disk on the worker node,
-	// which is the be used for /var/lib on the worker.
+	// which is used for /var/lib on the worker.
 	// +optional
 	KubeletDataVolumeSize *int64 `json:"KubeletDataVolumeSize,omitempty"`
 }
@@ -89,7 +89,7 @@ type APIServer struct {
 	URL string `json:"url"`
 	// CA is the ca certificate for the api server.
 	CA string `json:"ca"`
-	// BootstrapToken is the initial token to fetch the projected shoot access token for
+	// BootstrapToken is the initial token to fetch the shoot access token for
 	// kubelet and the gardener-node-agent.
 	BootstrapToken string `json:"bootstrapToken"`
 }
