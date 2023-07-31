@@ -52,7 +52,9 @@ func (remoteExtractor) ExtractFromLayer(image, pathSuffix, dest string) error {
 		return fmt.Errorf("unable retrieve image layers: %w", err)
 	}
 
-	for _, layer := range layers {
+	lastLayer := len(layers) - 1
+	for i := range layers {
+		layer := layers[lastLayer-i]
 		buffer, err := layer.Uncompressed()
 		if err != nil {
 			return fmt.Errorf("unable to get reader for uncompressed layer: %w", err)
