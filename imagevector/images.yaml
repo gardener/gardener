@@ -8,14 +8,31 @@ images:
 - name: gardener-apiserver
   sourceRepository: github.com/gardener/gardener
   repository: eu.gcr.io/gardener-project/gardener/apiserver
+  resourceId:
+    name: apiserver
+- name: gardener-admission-controller
+  sourceRepository: github.com/gardener/gardener
+  repository: eu.gcr.io/gardener-project/gardener/admission-controller
+  resourceId:
+    name: admission-controller
+- name: gardener-controller-manager
+  sourceRepository: github.com/gardener/gardener
+  repository: eu.gcr.io/gardener-project/gardener/controller-manager
+  resourceId:
+    name: controller-manager
+- name: gardener-scheduler
+  sourceRepository: github.com/gardener/gardener
+  repository: eu.gcr.io/gardener-project/gardener/scheduler
+  resourceId:
+    name: scheduler
 - name: gardenlet
   sourceRepository: github.com/gardener/gardener
   repository: eu.gcr.io/gardener-project/gardener/gardenlet
 - name: gardener-resource-manager
-  resourceId:
-    name: resource-manager
   sourceRepository: github.com/gardener/gardener
   repository: eu.gcr.io/gardener-project/gardener/resource-manager
+  resourceId:
+    name: resource-manager
 
 # Seed bootstrap
 - name: pause-container

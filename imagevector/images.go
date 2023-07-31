@@ -51,10 +51,16 @@ const (
 	ImageNameFluentBitPluginInstaller = "fluent-bit-plugin-installer"
 	// ImageNameFluentOperator is a constant for an image in the image vector with name 'fluent-operator'.
 	ImageNameFluentOperator = "fluent-operator"
+	// ImageNameGardenerAdmissionController is a constant for an image in the image vector with name 'gardener-admission-controller'.
+	ImageNameGardenerAdmissionController = "gardener-admission-controller"
 	// ImageNameGardenerApiserver is a constant for an image in the image vector with name 'gardener-apiserver'.
 	ImageNameGardenerApiserver = "gardener-apiserver"
+	// ImageNameGardenerControllerManager is a constant for an image in the image vector with name 'gardener-controller-manager'.
+	ImageNameGardenerControllerManager = "gardener-controller-manager"
 	// ImageNameGardenerResourceManager is a constant for an image in the image vector with name 'gardener-resource-manager'.
 	ImageNameGardenerResourceManager = "gardener-resource-manager"
+	// ImageNameGardenerScheduler is a constant for an image in the image vector with name 'gardener-scheduler'.
+	ImageNameGardenerScheduler = "gardener-scheduler"
 	// ImageNameGardenlet is a constant for an image in the image vector with name 'gardenlet'.
 	ImageNameGardenlet = "gardenlet"
 	// ImageNameHvpaController is a constant for an image in the image vector with name 'hvpa-controller'.
