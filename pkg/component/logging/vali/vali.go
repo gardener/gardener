@@ -57,7 +57,8 @@ const (
 	// ServiceName is the name of the logging service.
 	ServiceName = "logging"
 
-	managedResourceNameRuntime = "vali"
+	// ManagedResourceNameRuntime is the name of the managed resource which deploys Vali statefulSet.
+	ManagedResourceNameRuntime = "vali"
 	managedResourceNameTarget  = "vali-target"
 
 	valiName                = "vali"
@@ -273,7 +274,7 @@ func (v *vali) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, v.client, v.namespace, managedResourceNameRuntime, false, registry.SerializedObjects())
+	return managedresources.CreateForSeed(ctx, v.client, v.namespace, ManagedResourceNameRuntime, false, registry.SerializedObjects())
 }
 
 func (v *vali) Destroy(ctx context.Context) error {
@@ -281,7 +282,7 @@ func (v *vali) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	if err := managedresources.DeleteForSeed(ctx, v.client, v.namespace, managedResourceNameRuntime); err != nil {
+	if err := managedresources.DeleteForSeed(ctx, v.client, v.namespace, ManagedResourceNameRuntime); err != nil {
 		return err
 	}
 
@@ -1010,7 +1011,7 @@ func getLabels() map[string]string {
 // current one.
 // Caution: If the passed storage capacity is less than the current one the existing PVC and its PV will be deleted.
 func (v *vali) resizeOrDeleteValiDataVolumeIfStorageNotTheSame(ctx context.Context) error {
-	managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameRuntime, Namespace: v.namespace}}
+	managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: ManagedResourceNameRuntime, Namespace: v.namespace}}
 	addOrRemoveIgnoreAnnotationFromManagedResource := func(addIgnoreAnnotation bool) error {
 		// In order to not create the managed resource here first check if exists.
 		if err := v.client.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource); err != nil {

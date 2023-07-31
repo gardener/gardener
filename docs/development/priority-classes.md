@@ -19,27 +19,27 @@ When using the `gardener-operator` for managing the garden runtime and virtual c
 
 ### `PriorityClass`es for Garden Control Plane Components
 
-| Name                              | Priority  | Associated Components (Examples)                                                                               |
-|---------------------------------- |-----------|----------------------------------------------------------------------------------------------------------------|
-| `gardener-garden-system-critical` | 999999550 | `gardener-operator`, `gardener-resource-manager`, `istio`                                                      |
-| `gardener-garden-system-500`      | 999999500 | `virtual-garden-etcd-events`, `virtual-garden-etcd-main`, `virtual-garden-kube-apiserver`, `gardener-apiserver`|
-| `gardener-garden-system-400`      | 999999400 | `virtual-garden-gardener-resource-manager`, `gardener-admission-controller`                                    |
-| `gardener-garden-system-300`      | 999999300 | `virtual-garden-kube-controller-manager`, `vpa-admission-controller`, `etcd-druid`, `nginx-ingress-controller` |
-| `gardener-garden-system-200`      | 999999200 | `vpa-recommender`, `vpa-updater`, `hvpa-controller`, `gardener-scheduler`                                      |
-| `gardener-garden-system-100`      | 999999100 | `kube-state-metrics`                                                                                           |
+| Name                              | Priority  | Associated Components (Examples)                                                                                |
+|-----------------------------------|-----------|-----------------------------------------------------------------------------------------------------------------|
+| `gardener-garden-system-critical` | 999999550 | `gardener-operator`, `gardener-resource-manager`, `istio`                                                       |
+| `gardener-garden-system-500`      | 999999500 | `virtual-garden-etcd-events`, `virtual-garden-etcd-main`, `virtual-garden-kube-apiserver`, `gardener-apiserver` |
+| `gardener-garden-system-400`      | 999999400 | `virtual-garden-gardener-resource-manager`, `gardener-admission-controller`                                     |
+| `gardener-garden-system-300`      | 999999300 | `virtual-garden-kube-controller-manager`, `vpa-admission-controller`, `etcd-druid`, `nginx-ingress-controller`  |
+| `gardener-garden-system-200`      | 999999200 | `vpa-recommender`, `vpa-updater`, `hvpa-controller`,                                                            |
+| `gardener-garden-system-100`      | 999999100 | `kube-state-metrics`, `fluent-operator`, `fluent-bit`, `vali`                                                   |
 
 ## Seed Clusters
 
 ### `PriorityClass`es for Seed System Components
 
-| Name                               | Priority  | Associated Components (Examples)                                                                                                                                                   |
-|------------------------------------|-----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `gardener-system-critical`         | 999998950 | `gardenlet`, `gardener-resource-manager`, `istio-ingressgateway`, `istiod`                                                                                                         |
-| `gardener-system-900`              | 999998900 | Extensions, `reversed-vpn-auth-server`                                                                                                                                             |
-| `gardener-system-800`              | 999998800 | `dependency-watchdog-endpoint`, `dependency-watchdog-probe`, `etcd-druid`, `(auditlog-)mutator`, `vpa-admission-controller`                                                        |
-| `gardener-system-700`              | 999998700 | `auditlog-seed-controller`, `hvpa-controller`, `vpa-recommender`, `vpa-updater`                                                                                                    |
-| `gardener-system-600`              | 999998600 | `aggregate-alertmanager`, `alertmanager`, `fluent-bit`, `plutono`, `kube-state-metrics`, `nginx-ingress-controller`, `nginx-k8s-backend`, `prometheus`, `vali`,  `seed-prometheus` |
-| `gardener-reserve-excess-capacity` | -5        | `reserve-excess-capacity` ([ref](https://github.com/gardener/gardener/pull/6135))                                                                                                  |
+| Name                               | Priority  | Associated Components (Examples)                                                                                                                                                                      |
+|------------------------------------|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `gardener-system-critical`         | 999998950 | `gardenlet`, `gardener-resource-manager`, `istio-ingressgateway`, `istiod`                                                                                                                            |
+| `gardener-system-900`              | 999998900 | Extensions, `reversed-vpn-auth-server`                                                                                                                                                                |
+| `gardener-system-800`              | 999998800 | `dependency-watchdog-endpoint`, `dependency-watchdog-probe`, `etcd-druid`, `(auditlog-)mutator`, `vpa-admission-controller`                                                                           |
+| `gardener-system-700`              | 999998700 | `auditlog-seed-controller`, `hvpa-controller`, `vpa-recommender`, `vpa-updater`                                                                                                                       |
+| `gardener-system-600`              | 999998600 | `aggregate-alertmanager`, `alertmanager`, `fluent-operator`, `fluent-bit`, `plutono`, `kube-state-metrics`, `nginx-ingress-controller`, `nginx-k8s-backend`, `prometheus`, `vali`,  `seed-prometheus` |
+| `gardener-reserve-excess-capacity` | -5        | `reserve-excess-capacity` ([ref](https://github.com/gardener/gardener/pull/6135))                                                                                                                     |
 
 ### `PriorityClass`es for Shoot Control Plane Components
 
@@ -49,7 +49,7 @@ When using the `gardener-operator` for managing the garden runtime and virtual c
 | `gardener-system-400` | 999998400 | `gardener-resource-manager`                                                                                                                                                            |
 | `gardener-system-300` | 999998300 | `cloud-controller-manager`, `cluster-autoscaler`, `csi-driver-controller`, `kube-controller-manager`, `kube-scheduler`, `machine-controller-manager`, `terraformer`, `vpn-seed-server` |
 | `gardener-system-200` | 999998200 | `csi-snapshot-controller`, `csi-snapshot-validation`, `cert-controller-manager`, `shoot-dns-service`, `vpa-admission-controller`, `vpa-recommender`, `vpa-updater`                     |
-| `gardener-system-100` | 999998100 | `alertmanager`, `plutono`, `kube-state-metrics`, `prometheus`, `vali`, `event-logger`                                                                       |
+| `gardener-system-100` | 999998100 | `alertmanager`, `plutono`, `kube-state-metrics`, `prometheus`, `vali`, `event-logger`                                                                                                  |
 
 ## Shoot Clusters
 

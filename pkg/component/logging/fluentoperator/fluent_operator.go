@@ -219,7 +219,17 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 									"--leader-elect=true",
 									"--disable-component-controllers=fluentd",
 								},
-								Env: f.computeEnv(),
+								Env: []corev1.EnvVar{
+									{
+										Name: "NAMESPACE",
+										ValueFrom: &corev1.EnvVarSource{
+											FieldRef: &corev1.ObjectFieldSelector{
+												APIVersion: "v1",
+												FieldPath:  "metadata.namespace",
+											},
+										},
+									},
+								},
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("20m"),
@@ -311,20 +321,6 @@ func (f *fluentOperator) WaitCleanup(ctx context.Context) error {
 	defer cancel()
 
 	return managedresources.WaitUntilDeleted(timeoutCtx, f.client, f.namespace, OperatorManagedResourceName)
-}
-
-func (f *fluentOperator) computeEnv() []corev1.EnvVar {
-	return []corev1.EnvVar{
-		{
-			Name: "NAMESPACE",
-			ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{
-					APIVersion: "v1",
-					FieldPath:  "metadata.namespace",
-				},
-			},
-		},
-	}
 }
 
 func getLabels() map[string]string {

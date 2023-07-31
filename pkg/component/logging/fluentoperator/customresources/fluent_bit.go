@@ -37,7 +37,7 @@ func GetFluentBit(labels map[string]string, fluentBitName, namespace, image, ini
 
 	return &fluentbitv1alpha2.FluentBit{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%v-%v", fluentBitName, utils.ComputeSHA256Hex([]byte(fmt.Sprintf("%v%v", labels, annotations)))[:6]),
+			Name:      fmt.Sprintf("%v-%v", fluentBitName, utils.ComputeSHA256Hex([]byte(fmt.Sprintf("%v%v", labels, annotations)))[:5]),
 			Namespace: namespace,
 			Labels:    labels,
 		},

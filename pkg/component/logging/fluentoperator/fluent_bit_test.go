@@ -17,11 +17,6 @@ package fluentoperator_test
 import (
 	"context"
 
-	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
-	"github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/custom"
-	fluentbitv1alpha2filter "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/filter"
-	fluentbitv1alpha2input "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/input"
-	fluentbitv1alpha2parser "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/parser"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -44,125 +39,36 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("Custom Resources", func() {
+var _ = Describe("Fluent Bit", func() {
 	var (
 		ctx = context.TODO()
 
-		namespace = "some-namespace"
-		values    = CustomResourcesValues{
-			Suffix: "-garden",
-			Inputs: []*fluentbitv1alpha2.ClusterInput{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   "journald-kubelet",
-						Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
-					},
-					Spec: fluentbitv1alpha2.InputSpec{
-						Systemd: &fluentbitv1alpha2input.Systemd{
-							Tag:           "journald.kubelet",
-							ReadFromTail:  "on",
-							SystemdFilter: []string{"_SYSTEMD_UNIT=kubelet.service"},
-						},
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   "journald-kubelet-monitor",
-						Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
-					},
-					Spec: fluentbitv1alpha2.InputSpec{
-						Systemd: &fluentbitv1alpha2input.Systemd{
-							Tag:           "journald.kubelet-monitor",
-							ReadFromTail:  "on",
-							SystemdFilter: []string{"_SYSTEMD_UNIT=kubelet-monitor.service"},
-						},
-					},
-				},
-			},
-			Filters: []*fluentbitv1alpha2.ClusterFilter{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   "gardener-extension",
-						Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
-					},
-					Spec: fluentbitv1alpha2.FilterSpec{
-						Match: "kubernetes.*gardener-extension*",
-						FilterItems: []fluentbitv1alpha2.FilterItem{
-							{
-								Parser: &fluentbitv1alpha2filter.Parser{
-									KeyName:     "log",
-									Parser:      "extensions-parser",
-									ReserveData: pointer.Bool(true),
-								},
-							},
-							{
-								Modify: &fluentbitv1alpha2filter.Modify{
-									Rules: []fluentbitv1alpha2filter.Rule{
-										{
-											Rename: map[string]string{
-												"level":  "severity",
-												"msg":    "log",
-												"logger": "source",
-											}},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			Parsers: []*fluentbitv1alpha2.ClusterParser{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   "extensions-parser",
-						Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
-					},
-					Spec: fluentbitv1alpha2.ParserSpec{
-						JSON: &fluentbitv1alpha2parser.JSON{
-							TimeKey:    "ts",
-							TimeFormat: "%Y-%m-%dT%H:%M:%S",
-						},
-					},
-				},
-			},
-			Outputs: []*fluentbitv1alpha2.ClusterOutput{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   "journald2",
-						Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
-					},
-					Spec: fluentbitv1alpha2.OutputSpec{
-						CustomPlugin: &custom.CustomPlugin{
-							Config: `Name gardenervali
-		Match journald.*
-		Labels {origin="seed-journald"}
-		RemoveKeys kubernetes,stream,hostname,unit
-		LabelMapPath {"hostname":"host_name","unit":"systemd_component"}
-		QueueDir /fluent-bit/buffers
-		QueueName seed-journald
-		`},
-					},
-				},
-			},
+		namespace         = "some-namespace"
+		image             = "some-image:some-tag"
+		priorityClassName = "some-priority-class"
+		values            = FluentBitValues{
+			Image:              image,
+			InitContainerImage: image,
+			PriorityClass:      priorityClassName,
 		}
 
 		c         client.Client
 		component component.DeployWaiter
 
-		customResourcesManagedResourceName   = "fluent-operator-custom-resources-garden"
+		customResourcesManagedResourceName   = "fluent-bit"
 		customResourcesManagedResource       *resourcesv1alpha1.ManagedResource
 		customResourcesManagedResourceSecret *corev1.Secret
 	)
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		component = NewCustomResources(c, namespace, values)
+		component = NewFluentBit(c, namespace, values)
 	})
 
 	JustBeforeEach(func() {
 		customResourcesManagedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      customResourcesManagedResourceName,
+				Name:      "fluent-bit",
 				Namespace: namespace,
 			},
 		}
@@ -188,7 +94,7 @@ var _ = Describe("Custom Resources", func() {
 					Kind:       "ManagedResource",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            customResourcesManagedResourceName,
+					Name:            "fluent-bit",
 					Namespace:       namespace,
 					Labels:          map[string]string{v1beta1constants.GardenRole: "seed-system-component"},
 					ResourceVersion: "1",
@@ -203,22 +109,18 @@ var _ = Describe("Custom Resources", func() {
 			}))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(customResourcesManagedResourceSecret), customResourcesManagedResourceSecret)).To(Succeed())
 			Expect(customResourcesManagedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(customResourcesManagedResourceSecret.Data).To(HaveLen(14))
+			Expect(customResourcesManagedResourceSecret.Data).To(HaveLen(11))
+			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey(MatchRegexp("configmap__" + namespace + "__fluent-bit-lua-config-.*" + ".yaml")))
+			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("fluentbit__" + namespace + "__fluent-bit-8259c.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterfluentbitconfig____fluent-bit-config.yaml"))
+			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterinput____tail-kubernetes.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterfilter____01-docker.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterfilter____02-containerd.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterfilter____03-add-tag-to-record.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterfilter____zz-modify-severity.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterparser____docker-parser.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterparser____containerd-parser.yaml"))
-			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterinput____tail-kubernetes.yaml"))
 			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusteroutput____journald.yaml"))
-
-			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterinput____journald-kubelet.yaml"))
-			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterinput____journald-kubelet-monitor.yaml"))
-			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterfilter____gardener-extension.yaml"))
-			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusterparser____extensions-parser.yaml"))
-			Expect(customResourcesManagedResourceSecret.Data).To(HaveKey("clusteroutput____journald2.yaml"))
 		})
 	})
 

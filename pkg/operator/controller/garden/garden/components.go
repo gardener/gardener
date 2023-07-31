@@ -49,6 +49,10 @@ import (
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubeapiserver/constants"
 	"github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
+	"github.com/gardener/gardener/pkg/component/logging"
+	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
+	"github.com/gardener/gardener/pkg/component/logging/fluentoperator/customresources"
+	"github.com/gardener/gardener/pkg/component/logging/vali"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/component/vpa"
@@ -60,10 +64,11 @@ import (
 )
 
 type components struct {
-	etcdCRD  component.Deployer
-	vpaCRD   component.Deployer
-	hvpaCRD  component.Deployer
-	istioCRD component.DeployWaiter
+	etcdCRD   component.Deployer
+	vpaCRD    component.Deployer
+	hvpaCRD   component.Deployer
+	istioCRD  component.DeployWaiter
+	fluentCRD component.DeployWaiter
 
 	gardenerResourceManager component.DeployWaiter
 	system                  component.DeployWaiter
@@ -82,7 +87,11 @@ type components struct {
 	virtualGardenGardenerResourceManager resourcemanager.Interface
 	virtualGardenGardenerAccess          component.Deployer
 
-	kubeStateMetrics component.DeployWaiter
+	kubeStateMetrics              component.DeployWaiter
+	fluentOperator                component.DeployWaiter
+	fluentBit                     component.DeployWaiter
+	fluentOperatorCustomResources component.DeployWaiter
+	vali                          component.Deployer
 }
 
 func (r *Reconciler) instantiateComponents(
@@ -104,6 +113,7 @@ func (r *Reconciler) instantiateComponents(
 		c.hvpaCRD = component.OpDestroy(c.hvpaCRD)
 	}
 	c.istioCRD = istio.NewCRD(r.RuntimeClientSet.ChartApplier())
+	c.fluentCRD = fluentoperator.NewCRDs(applier)
 
 	// garden system components
 	c.gardenerResourceManager, err = r.newGardenerResourceManager(garden, secretsManager)
@@ -172,6 +182,22 @@ func (r *Reconciler) instantiateComponents(
 
 	// observability components
 	c.kubeStateMetrics, err = r.newKubeStateMetrics()
+	if err != nil {
+		return
+	}
+	c.fluentOperator, err = r.newFluentOperator()
+	if err != nil {
+		return
+	}
+	c.fluentBit, err = r.newFluentBit()
+	if err != nil {
+		return
+	}
+	c.fluentOperatorCustomResources, err = r.newFluentCustomResources()
+	if err != nil {
+		return
+	}
+	c.vali, err = r.newVali(garden)
 	if err != nil {
 		return
 	}
@@ -678,7 +704,7 @@ func getAPIServerDomains(domains []string) []string {
 }
 
 func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden) (component.DeployWaiter, error) {
-	providerConfig, err := getConfig(garden)
+	providerConfig, err := getNginxIngressConfig(garden)
 	if err != nil {
 		return nil, err
 	}
@@ -700,7 +726,7 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden) 
 	)
 }
 
-func getConfig(garden *operatorv1alpha1.Garden) (map[string]string, error) {
+func getNginxIngressConfig(garden *operatorv1alpha1.Garden) (map[string]string, error) {
 	var (
 		defaultConfig = map[string]interface{}{
 			"enable-vts-status":            "false",
@@ -728,4 +754,53 @@ func getLoadBalancerServiceAnnotations(garden *operatorv1alpha1.Garden) map[stri
 		return utils.MergeStringMaps(garden.Spec.RuntimeCluster.Settings.LoadBalancerServices.Annotations)
 	}
 	return nil
+}
+
+func (r *Reconciler) newFluentOperator() (component.DeployWaiter, error) {
+	return sharedcomponent.NewFluentOperator(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		true,
+		v1beta1constants.PriorityClassNameGardenSystem100,
+	)
+}
+
+func (r *Reconciler) newFluentBit() (component.DeployWaiter, error) {
+	return sharedcomponent.NewFluentBit(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		true,
+		v1beta1constants.PriorityClassNameGardenSystem100,
+	)
+}
+
+func (r *Reconciler) newFluentCustomResources() (component.DeployWaiter, error) {
+	return sharedcomponent.NewFluentOperatorCustomResources(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		true,
+		"-garden",
+		logging.GardenCentralLoggingConfigurations,
+		customresources.GetStaticClusterOutput(map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource}),
+	)
+}
+
+func (r *Reconciler) newVali(garden *operatorv1alpha1.Garden) (vali.Interface, error) {
+	return sharedcomponent.NewVali(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		nil,
+		component.ClusterTypeSeed,
+		1,
+		false,
+		v1beta1constants.PriorityClassNameGardenSystem100,
+		nil,
+		"",
+		false,
+		hvpaEnabled(),
+		&hvpav1alpha1.MaintenanceTimeWindow{
+			Begin: garden.Spec.VirtualCluster.Maintenance.TimeWindow.Begin,
+			End:   garden.Spec.VirtualCluster.Maintenance.TimeWindow.End,
+		},
+	)
 }

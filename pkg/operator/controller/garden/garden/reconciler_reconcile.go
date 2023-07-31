@@ -118,16 +118,20 @@ func (r *Reconciler) reconcile(
 			Fn:   c.etcdCRD.Deploy,
 		})
 		deployVPACRD = g.Add(flow.Task{
-			Name: "Deploying custom resource definition for VPA",
+			Name: "Deploying custom resource definitions for VPA",
 			Fn:   flow.TaskFn(c.vpaCRD.Deploy).DoIf(vpaEnabled(garden.Spec.RuntimeCluster.Settings)),
 		})
 		reconcileHVPACRD = g.Add(flow.Task{
-			Name: "Reconciling custom resource definition for HVPA",
+			Name: "Reconciling custom resource definitions for HVPA",
 			Fn:   c.hvpaCRD.Deploy,
 		})
 		deployIstioCRD = g.Add(flow.Task{
-			Name: "Deploying custom resource definition for Istio",
+			Name: "Deploying custom resource definitions for Istio",
 			Fn:   c.istioCRD.Deploy,
+		})
+		deployFluentCRD = g.Add(flow.Task{
+			Name: "Deploying custom resource definitions for fluent-operator",
+			Fn:   c.fluentCRD.Deploy,
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
@@ -164,14 +168,39 @@ func (r *Reconciler) reconcile(
 			Fn:           component.OpWait(c.istio).Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
+		deployFluentOperator = g.Add(flow.Task{
+			Name:         "Deploying fluent-operator",
+			Fn:           c.fluentOperator.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployFluentCRD),
+		})
+		deployFluentOperatorCustomResources = g.Add(flow.Task{
+			Name:         "Deploying fluent-operator CustomResources",
+			Fn:           c.fluentOperatorCustomResources.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployFluentCRD),
+		})
+		deployFluentBit = g.Add(flow.Task{
+			Name:         "Deploying fluent-bit",
+			Fn:           c.fluentBit.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployFluentCRD),
+		})
+		deployVali = g.Add(flow.Task{
+			Name:         "Deploying Vali",
+			Fn:           c.vali.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
 		syncPointSystemComponents = flow.NewTaskIDs(
 			generateGenericTokenKubeconfig,
 			deploySystemResources,
+			deployFluentCRD,
 			deployVPA,
 			deployHVPA,
 			deployEtcdDruid,
 			deployIstio,
 			deployNginxIngressController,
+			deployFluentOperator,
+			deployFluentOperatorCustomResources,
+			deployFluentBit,
+			deployVali,
 		)
 
 		deployEtcds = g.Add(flow.Task{

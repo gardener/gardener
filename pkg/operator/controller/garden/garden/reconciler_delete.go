@@ -143,12 +143,36 @@ func (r *Reconciler) delete(
 			Fn:           component.OpDestroyAndWait(c.nginxIngressController).Destroy,
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
 		})
+		destroyFluentOperatorCustomResources = g.Add(flow.Task{
+			Name:         "Destroying fluent-operator custom resources",
+			Fn:           component.OpDestroyAndWait(c.fluentOperatorCustomResources).Destroy,
+			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
+		})
+		destroyFluentBit = g.Add(flow.Task{
+			Name:         "Destroying fluent-bit",
+			Fn:           component.OpDestroyAndWait(c.fluentBit).Destroy,
+			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
+		})
+		destroyFluentOperator = g.Add(flow.Task{
+			Name:         "Destroying fluent-operator",
+			Fn:           component.OpDestroyAndWait(c.fluentOperator).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyFluentOperatorCustomResources, destroyFluentBit),
+		})
+		destroyVali = g.Add(flow.Task{
+			Name:         "Destroying Vali",
+			Fn:           component.OpDestroyAndWait(c.vali).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyFluentOperatorCustomResources),
+		})
 		syncPointCleanedUp = flow.NewTaskIDs(
 			destroyEtcdDruid,
 			destroyIstio,
 			destroyHVPAController,
 			destroyVerticalPodAutoscaler,
 			destroyNginxIngressController,
+			destroyFluentOperatorCustomResources,
+			destroyFluentBit,
+			destroyFluentOperator,
+			destroyVali,
 		)
 
 		destroySystemResources = g.Add(flow.Task{
@@ -165,6 +189,11 @@ func (r *Reconciler) delete(
 			Name:         "Destroying and waiting for gardener-resource-manager to be deleted",
 			Fn:           component.OpWait(c.gardenerResourceManager).Destroy,
 			Dependencies: flow.NewTaskIDs(ensureNoManagedResourcesExistAnymore),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying custom resource definition for fluent-operator",
+			Fn:           c.fluentCRD.Destroy,
+			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for Istio",

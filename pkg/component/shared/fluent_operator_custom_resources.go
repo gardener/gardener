@@ -18,7 +18,6 @@ import (
 	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/imagevector"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
 )
@@ -28,37 +27,49 @@ func NewFluentOperatorCustomResources(
 	c client.Client,
 	gardenNamespaceName string,
 	enabled bool,
-	priorityClassName string,
-	additionalInputs []*fluentbitv1alpha2.ClusterInput,
-	additionalFilters []*fluentbitv1alpha2.ClusterFilter,
-	additionalParsers []*fluentbitv1alpha2.ClusterParser,
+	suffix string,
+	centralLoggingConfigurations []component.CentralLoggingConfiguration,
+	output *fluentbitv1alpha2.ClusterOutput,
 ) (
 	deployer component.DeployWaiter,
 	err error,
 ) {
-	fluentBitImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNameFluentBit)
-	if err != nil {
-		return nil, err
-	}
+	var (
+		inputs  []*fluentbitv1alpha2.ClusterInput
+		filters []*fluentbitv1alpha2.ClusterFilter
+		parsers []*fluentbitv1alpha2.ClusterParser
+	)
 
-	fluentBitInitImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNameFluentBitPluginInstaller)
-	if err != nil {
-		return nil, err
+	// Fetch component specific logging configurations
+	for _, componentFn := range centralLoggingConfigurations {
+		loggingConfig, err := componentFn()
+		if err != nil {
+			return nil, err
+		}
+
+		if len(loggingConfig.Inputs) > 0 {
+			inputs = append(inputs, loggingConfig.Inputs...)
+		}
+
+		if len(loggingConfig.Filters) > 0 {
+			filters = append(filters, loggingConfig.Filters...)
+		}
+
+		if len(loggingConfig.Parsers) > 0 {
+			parsers = append(parsers, loggingConfig.Parsers...)
+		}
 	}
 
 	deployer = fluentoperator.NewCustomResources(
 		c,
 		gardenNamespaceName,
 		fluentoperator.CustomResourcesValues{
-			FluentBit: fluentoperator.FluentBit{
-				Image:              fluentBitImage.String(),
-				InitContainerImage: fluentBitInitImage.String(),
-				PriorityClass:      priorityClassName,
-			},
+			Suffix:  suffix,
+			Inputs:  inputs,
+			Filters: filters,
+			Parsers: parsers,
+			Outputs: []*fluentbitv1alpha2.ClusterOutput{output},
 		},
-		additionalInputs,
-		additionalFilters,
-		additionalParsers,
 	)
 
 	if !enabled {
