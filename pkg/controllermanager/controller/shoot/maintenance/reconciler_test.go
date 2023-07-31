@@ -700,6 +700,59 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 	})
 
+	Describe("#DisablePodSecurityPolicyAdmissionController", func() {
+		var (
+			shoot                             *gardencorev1beta1.Shoot
+			policyAdmissionControllerDisabled gardencorev1beta1.AdmissionPlugin
+			foobarAdmissionPlugin             gardencorev1beta1.AdmissionPlugin
+		)
+
+		BeforeEach(func() {
+			policyAdmissionControllerDisabled = gardencorev1beta1.AdmissionPlugin{
+				Name:     "PodSecurityPolicy",
+				Disabled: pointer.Bool(true),
+			}
+			foobarAdmissionPlugin = gardencorev1beta1.AdmissionPlugin{
+				Name:     "foobar",
+				Disabled: pointer.Bool(true),
+			}
+
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "shoot",
+				},
+				Spec: gardencorev1beta1.ShootSpec{},
+			}
+		})
+
+		It("should not change anything if PodSecurityPolicy admission controller is already disabled", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{policyAdmissionControllerDisabled}}
+			result := disablePodSecurityPolicyAdmissionController(shoot, "foobar")
+			Expect(result).To(HaveLen(0))
+			Expect(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).To(ConsistOf(policyAdmissionControllerDisabled))
+		})
+
+		It("should disable PodSecurityPolicy admission controller if there is no KubeAPIServer configuration", func() {
+			result := disablePodSecurityPolicyAdmissionController(shoot, "foobar")
+			Expect(result).To(HaveLen(1))
+			Expect(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).To(ConsistOf(policyAdmissionControllerDisabled))
+		})
+
+		It("should disable PodSecurityPolicy admission controller if there are admission plugins in KubeAPIServer configuration", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{foobarAdmissionPlugin}}
+			result := disablePodSecurityPolicyAdmissionController(shoot, "foobar")
+			Expect(result).To(HaveLen(1))
+			Expect(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).To(ConsistOf(policyAdmissionControllerDisabled, foobarAdmissionPlugin))
+		})
+
+		It("should disable PodSecurityPolicy admission controller if it was enabled before", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{foobarAdmissionPlugin, {Name: "PodSecurityPolicy", Disabled: pointer.Bool(false)}}}
+			result := disablePodSecurityPolicyAdmissionController(shoot, "foobar")
+			Expect(result).To(HaveLen(1))
+			Expect(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).To(ConsistOf(policyAdmissionControllerDisabled, foobarAdmissionPlugin))
+		})
+	})
+
 	Describe("#UpdateToContainerd", func() {
 		var (
 			shoot *gardencorev1beta1.Shoot

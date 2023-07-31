@@ -149,6 +149,12 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		operations = append(operations, reasonsForContainerdUpdate...)
 	}
 
+	// Disable PodSecurityPolicy Admission Controller when shoot cluster is updated to k8s version >= 1.25
+	if versionutils.ConstraintK8sLess125.Check(oldShootKubernetesVersion) && versionutils.ConstraintK8sGreaterEqual125.Check(shootKubernetesVersion) {
+		reasonsForAdmissionPluginUpdate := disablePodSecurityPolicyAdmissionController(maintainedShoot, fmt.Sprintf("PodSecurityPolicy Admission Controller must be disabled for updating Kubernetes to %q", shootKubernetesVersion.String()))
+		operations = append(operations, reasonsForAdmissionPluginUpdate...)
+	}
+
 	// Reset the `EnableStaticTokenKubeconfig` value to false, when shoot cluster is updated to  k8s version >= 1.27.
 	if versionutils.ConstraintK8sLess127.Check(oldShootKubernetesVersion) && pointer.BoolDeref(maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) && versionutils.ConstraintK8sGreaterEqual127.Check(shootKubernetesVersion) {
 		maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(false)
@@ -626,6 +632,36 @@ func ExpirationDateExpired(timestamp *metav1.Time) bool {
 		return false
 	}
 	return time.Now().UTC().After(timestamp.Time) || time.Now().UTC().Equal(timestamp.Time)
+}
+
+// disablePodSecurityPolicyAdmissionController disables the PodSecurityPolicy Admission Controller of a shoot
+func disablePodSecurityPolicyAdmissionController(shoot *gardencorev1beta1.Shoot, reason string) []string {
+	var (
+		reasonsForUpdate []string
+	)
+
+	if shoot.Spec.Kubernetes.KubeAPIServer == nil {
+		shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{}
+	}
+
+	for i, admissionPlugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
+		if admissionPlugin.Name == "PodSecurityPolicy" {
+			if !pointer.BoolDeref(admissionPlugin.Disabled, false) {
+				shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins[i].Disabled = pointer.Bool(true)
+				reasonsForUpdate = append(reasonsForUpdate, reason)
+			}
+			return reasonsForUpdate
+		}
+	}
+
+	disabledAdmissionPlugin := gardencorev1beta1.AdmissionPlugin{
+		Name:     "PodSecurityPolicy",
+		Disabled: pointer.Bool(true),
+	}
+	shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = append(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins, disabledAdmissionPlugin)
+	reasonsForUpdate = append(reasonsForUpdate, reason)
+
+	return reasonsForUpdate
 }
 
 // updateToContainerd updates the CRI of a Shoot's worker pools to containerd
