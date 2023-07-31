@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestHelper(t *testing.T) {
+func TestConversion(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "APIs Operator V1alpha1 Conversion Suite")
 }
