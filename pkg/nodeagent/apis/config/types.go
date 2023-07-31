@@ -33,7 +33,7 @@ type NodeAgentConfiguration struct {
 	OSCSecretName string
 
 	// TokenSecretName defines the name of the secret in the shoot cluster control plane, which contains
-	// the projected shoot access token for the gardener-node-agent.
+	// the `kube-apiserver` access token for the gardener-node-agent.
 	TokenSecretName string
 
 	// Image is the container image reference to the gardener-node-agent.
@@ -55,7 +55,7 @@ type APIServer struct {
 	URL string
 	// CA is the ca certificate for the api server.
 	CA string
-	// BootstrapToken is the initial token to fetch the projected shoot access token for
+	// BootstrapToken is the initial token to fetch the shoot access token for
 	// kubelet and the gardener-node-agent.
 	BootstrapToken string
 }
