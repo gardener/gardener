@@ -148,6 +148,16 @@ var _ = Describe("Scheduler tests", func() {
 		})
 
 		Context("with region config", func() {
+			AfterEach(func() {
+				configMapList := &corev1.ConfigMapList{}
+				Expect(testClient.List(ctx, configMapList, client.MatchingLabels{"scheduling.gardener.cloud/purpose": "region-config"})).To(Succeed())
+
+				for _, configMap := range configMapList.Items {
+					err := testClient.Delete(ctx, &configMap)
+					Expect(client.IgnoreNotFound(err)).NotTo(HaveOccurred())
+				}
+			})
+
 			It("should successfully schedule to closest seed", func() {
 				cloudProfile := createCloudProfile(providerType, "eu-west-1")
 
@@ -156,7 +166,10 @@ var _ = Describe("Scheduler tests", func() {
 						Name:      cloudProfile.Name,
 						Namespace: testNamespace.Name,
 						Labels: map[string]string{
-							"scheduling.gardener.cloud/cloudprofile": cloudProfile.Name,
+							"scheduling.gardener.cloud/purpose": "region-config",
+						},
+						Annotations: map[string]string{
+							"scheduling.gardener.cloud/cloudprofiles": cloudProfile.Name,
 						},
 					},
 					// Choose a better value for 'us-east-1' than for 'eu-west-1' to test that the minimal configured distance is really used, not Levenshtein's algorithm.
@@ -185,6 +198,73 @@ us-central-2: 220`,
 				}).Should(PointTo(Equal(seedUSEast1.Name)))
 			})
 
+			It("should successfully schedule to closest seed if multiple configs are found", func() {
+				cloudProfile := createCloudProfile(providerType, "eu-west-1")
+
+				regionConfig1 := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "a",
+						Namespace: testNamespace.Name,
+						Labels: map[string]string{
+							"scheduling.gardener.cloud/purpose": "region-config",
+						},
+						Annotations: map[string]string{
+							"scheduling.gardener.cloud/cloudprofiles": "foo-cloudprofile," + cloudProfile.Name,
+						},
+					},
+					// Choose a better value for 'us-east-1' than for 'eu-west-1' to test that the minimal configured distance is really used, not Levenshtein's algorithm.
+					Data: map[string]string{
+						"eu-west-1": `
+eu-west-1: 30
+us-east-1: 20
+eu-east-1: 50
+ap-west-1: 300
+us-central-2: 220`,
+					},
+				}
+
+				regionConfig2 := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "b",
+						Namespace: testNamespace.Name,
+						Labels: map[string]string{
+							"scheduling.gardener.cloud/purpose": "region-config",
+						},
+						Annotations: map[string]string{
+							"scheduling.gardener.cloud/cloudprofiles": cloudProfile.Name,
+						},
+					},
+					// Choose a better value for 'us-east-1' than for 'eu-west-1' to test that the minimal configured distance is really used, not Levenshtein's algorithm.
+					Data: map[string]string{
+						"eu-west-1": `
+eu-west-1: 30
+us-east-1: 40
+eu-east-1: 20
+ap-west-1: 300
+us-central-2: 220`,
+					},
+				}
+				Expect(testClient.Create(ctx, regionConfig1)).To(Succeed())
+				Expect(testClient.Create(ctx, regionConfig2)).To(Succeed())
+
+				By("Wait until manager has observed region config")
+				// Use the manager's cache to ensure it has observed the configMap.
+				Eventually(func() ([]corev1.ConfigMap, error) {
+					configMapList := &corev1.ConfigMapList{}
+					if err := testClient.List(ctx, configMapList, client.HasLabels{"scheduling.gardener.cloud/purpose"}); err != nil {
+						return nil, err
+					}
+					return configMapList.Items, nil
+				}).Should(HaveLen(2))
+
+				shoot := createShoot(providerType, cloudProfile.Name, "eu-west-1", nil, pointer.String("somedns.example.com"), nil)
+
+				Eventually(func() *string {
+					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+					return shoot.Spec.SeedName
+				}).Should(PointTo(Or(Equal(seedUSEast1.Name), Equal(seedEUEast1.Name))))
+			})
+
 			It("should fall back to Levenshtein minimal distance if shoot region is not configured", func() {
 				cloudProfile := createCloudProfile(providerType, "eu-west-1")
 
@@ -193,7 +273,10 @@ us-central-2: 220`,
 						Name:      cloudProfile.Name,
 						Namespace: testNamespace.Name,
 						Labels: map[string]string{
-							"scheduling.gardener.cloud/cloudprofile": cloudProfile.Name,
+							"scheduling.gardener.cloud/purpose": "region-config",
+						},
+						Annotations: map[string]string{
+							"scheduling.gardener.cloud/cloudprofiles": cloudProfile.Name,
 						},
 					},
 					Data: map[string]string{
@@ -229,7 +312,10 @@ us-central-2: 220`,
 						Name:      cloudProfile.Name,
 						Namespace: testNamespace.Name,
 						Labels: map[string]string{
-							"scheduling.gardener.cloud/cloudprofile": cloudProfile.Name,
+							"scheduling.gardener.cloud/purpose": "region-config",
+						},
+						Annotations: map[string]string{
+							"scheduling.gardener.cloud/cloudprofiles": cloudProfile.Name,
 						},
 					},
 					Data: map[string]string{
@@ -265,7 +351,10 @@ us-central-3: 220`,
 						Name:      cloudProfile.Name,
 						Namespace: testNamespace.Name,
 						Labels: map[string]string{
-							"scheduling.gardener.cloud/cloudprofile": cloudProfile.Name,
+							"scheduling.gardener.cloud/purpose": "region-config",
+						},
+						Annotations: map[string]string{
+							"scheduling.gardener.cloud/cloudprofiles": cloudProfile.Name,
 						},
 					},
 					Data: map[string]string{
@@ -325,9 +414,9 @@ us-central-3: 220`,
 			})
 
 			It("should successfully schedule to Seed minimal distance in different region", func() {
-				cloudProfile := createCloudProfile(providerType, "au-west-1")
+				cloudProfile := createCloudProfile(providerType, "jp-west-1")
 
-				shoot := createShoot(providerType, cloudProfile.Name, "au-west-1", nil, pointer.String("somedns.example.com"), nil)
+				shoot := createShoot(providerType, cloudProfile.Name, "jp-west-1", nil, pointer.String("somedns.example.com"), nil)
 
 				Eventually(func() *string {
 					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -424,7 +513,7 @@ func createSeed(providerType, region string, zones []string) *gardencorev1beta1.
 		},
 	}
 	ExpectWithOffset(1, testClient.Create(ctx, seed)).To(Succeed())
-	log.Info("Created Seed for test", "seed", client.ObjectKeyFromObject(seed))
+	log.Info("Created Seed for test", "seed", client.ObjectKeyFromObject(seed), "region", seed.Spec.Provider.Region)
 
 	DeferCleanup(func() {
 		By("Delete Seed")

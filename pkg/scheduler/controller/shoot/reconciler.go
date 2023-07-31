@@ -20,6 +20,7 @@ import (
 	"math"
 	"strings"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,8 +31,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/yaml"
-
-	"github.com/go-logr/logr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -168,20 +167,35 @@ func (r *Reconciler) determineSeed(
 }
 
 func (r *Reconciler) getSchedulerRegionConfigMap(ctx context.Context, log logr.Logger, cloudProfile *gardencorev1beta1.CloudProfile) (*corev1.ConfigMap, error) {
-	var schedulerRegionConfig *corev1.ConfigMap
-	schedulerRegionConfigList := &corev1.ConfigMapList{}
-	if err := r.Client.List(ctx, schedulerRegionConfigList, client.InNamespace(r.GardenNamespace), client.MatchingLabels{v1beta1constants.LabelSchedulingCloudProfile: cloudProfile.Name}); err != nil {
+	var (
+		regionConfig     *corev1.ConfigMap
+		regionConfigList = &corev1.ConfigMapList{}
+	)
+
+	if err := r.Client.List(ctx, regionConfigList, client.InNamespace(r.GardenNamespace), client.MatchingLabels{v1beta1constants.SchedulerPurpose: v1beta1constants.SchedulerPurposeRegionConfig}); err != nil {
 		return nil, err
 	}
-	if len(schedulerRegionConfigList.Items) >= 1 {
-		schedulerRegionConfig = &schedulerRegionConfigList.Items[0]
-		if len(schedulerRegionConfigList.Items) > 1 {
-			log.Info("Multiple scheduler region configs found", "cloudProfileName", cloudProfile.Name, "chosenConfigMap", client.ObjectKeyFromObject(schedulerRegionConfig))
+
+	for _, config := range regionConfigList.Items {
+		profileNames := strings.Split(config.Annotations[v1beta1constants.AnnotationSchedulingCloudProfiles], ",")
+		for _, name := range profileNames {
+			if name != cloudProfile.Name {
+				continue
+			}
+			if regionConfig == nil {
+				conf := config
+				regionConfig = &conf
+			} else {
+				log.Info("Duplicate scheduler region config found", "configMap", client.ObjectKeyFromObject(&config), "cloudProfileName", cloudProfile.Name, "chosenConfigMap", client.ObjectKeyFromObject(regionConfig))
+			}
+			break
 		}
-	} else {
+	}
+
+	if regionConfig == nil {
 		log.Info("No region config found for scheduler", "namespaceName", r.GardenNamespace)
 	}
-	return schedulerRegionConfig, nil
+	return regionConfig, nil
 }
 
 func isUsableSeed(seed *gardencorev1beta1.Seed) bool {
