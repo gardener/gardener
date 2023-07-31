@@ -161,6 +161,9 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 
 		reason := "EnableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27 and higher"
 		operations = append(operations, reason)
+
+		reasonsForIncreasingMaxWorkers := ensureSufficientMaxWorkers(maintainedShoot, fmt.Sprintf("Maximum number of workers of a worker group must be greater or equal to its number of zones for updating Kubernetes to %q", shootKubernetesVersion.String()))
+		operations = append(operations, reasonsForIncreasingMaxWorkers...)
 	}
 
 	// Now it's time to update worker pool kubernetes version if specified
@@ -660,6 +663,24 @@ func disablePodSecurityPolicyAdmissionController(shoot *gardencorev1beta1.Shoot,
 	}
 	shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = append(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins, disabledAdmissionPlugin)
 	reasonsForUpdate = append(reasonsForUpdate, reason)
+
+	return reasonsForUpdate
+}
+
+// ensureSufficientMaxWorkers ensures that the number of max workers of a worker group is greater or equal to its number of zones
+func ensureSufficientMaxWorkers(shoot *gardencorev1beta1.Shoot, reason string) []string {
+	var (
+		reasonsForUpdate []string
+	)
+
+	for i, worker := range shoot.Spec.Provider.Workers {
+		if int(worker.Maximum) >= len(worker.Zones) {
+			continue
+		}
+		newMaximum := int32(len(worker.Zones))
+		reasonsForUpdate = append(reasonsForUpdate, fmt.Sprintf("Maximum of worker-pool %q upgraded from %d to %d. Reason: %s", worker.Name, worker.Maximum, newMaximum, reason))
+		shoot.Spec.Provider.Workers[i].Maximum = newMaximum
+	}
 
 	return reasonsForUpdate
 }

@@ -753,6 +753,49 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 	})
 
+	Describe("#EnsureSufficientMaxWorkers", func() {
+		var (
+			shoot *gardencorev1beta1.Shoot
+		)
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "shoot",
+				},
+				Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
+						{
+							Name:    "cpu-worker",
+							Maximum: 3,
+							Zones:   []string{"fooZone", "barZone"},
+						},
+						{
+							Name:    "cpu-worker2",
+							Maximum: 1,
+							Zones:   []string{"fooZone"},
+						},
+					}},
+				},
+			}
+		})
+
+		It("should not change anything if the maximum workers are high enough", func() {
+			result := ensureSufficientMaxWorkers(shoot, "foobar")
+			Expect(result).To(HaveLen(0))
+			Expect(shoot.Spec.Provider.Workers[0].Maximum).To(Equal(int32(3)))
+			Expect(shoot.Spec.Provider.Workers[1].Maximum).To(Equal(int32(1)))
+		})
+
+		It("should increase there are more zones than maximum workers", func() {
+			shoot.Spec.Provider.Workers[1].Zones = append(shoot.Spec.Provider.Workers[1].Zones, "barZone")
+			result := ensureSufficientMaxWorkers(shoot, "foobar")
+			Expect(result).To(HaveLen(1))
+			Expect(shoot.Spec.Provider.Workers[0].Maximum).To(Equal(int32(3)))
+			Expect(shoot.Spec.Provider.Workers[1].Maximum).To(Equal(int32(2)))
+		})
+	})
+
 	Describe("#UpdateToContainerd", func() {
 		var (
 			shoot *gardencorev1beta1.Shoot
