@@ -15,4 +15,4 @@
 // +k8s:deepcopy-gen=package
 // +groupName=nodeagent.config.gardener.cloud
 
-package config // import "github.com/gardener/gardener/pkg/nodeagent/apis/config"
+package config
