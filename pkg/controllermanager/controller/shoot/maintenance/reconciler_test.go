@@ -711,14 +711,6 @@ var _ = Describe("Shoot Maintenance", func() {
 					Name: "shoot",
 				},
 				Spec: gardencorev1beta1.ShootSpec{
-					Kubernetes: gardencorev1beta1.Kubernetes{
-						Version: "1.23.16",
-					},
-					Maintenance: &gardencorev1beta1.Maintenance{
-						AutoUpdate: &gardencorev1beta1.MaintenanceAutoUpdate{
-							MachineImageVersion: pointer.Bool(true),
-						},
-					},
 					Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
 						{
 							Name: "cpu-worker",
@@ -732,24 +724,24 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should not change anything if CRI is not set", func() {
-			_, err := updateToContainerd(shoot, "foobar")
-			Expect(err).NotTo(HaveOccurred())
+			result := updateToContainerd(shoot, "foobar")
+			Expect(result).To(HaveLen(0))
 			Expect(shoot.Spec.Provider.Workers[0].CRI).To(BeNil())
 			Expect(shoot.Spec.Provider.Workers[1].CRI).To(BeNil())
 		})
 
 		It("should change docker to containerd", func() {
 			shoot.Spec.Provider.Workers[1].CRI = &gardencorev1beta1.CRI{Name: "docker"}
-			_, err := updateToContainerd(shoot, "foobar")
-			Expect(err).NotTo(HaveOccurred())
+			result := updateToContainerd(shoot, "foobar")
+			Expect(result).To(HaveLen(1))
 			Expect(shoot.Spec.Provider.Workers[1].CRI.Name).To(Equal(gardencorev1beta1.CRINameContainerD))
 			Expect(shoot.Spec.Provider.Workers[0].CRI).To(BeNil())
 		})
 
 		It("should keep containerd if it is already set", func() {
 			shoot.Spec.Provider.Workers[0].CRI = &gardencorev1beta1.CRI{Name: "containerd"}
-			_, err := updateToContainerd(shoot, "foobar")
-			Expect(err).NotTo(HaveOccurred())
+			result := updateToContainerd(shoot, "foobar")
+			Expect(result).To(HaveLen(0))
 			Expect(shoot.Spec.Provider.Workers[0].CRI.Name).To(Equal(gardencorev1beta1.CRINameContainerD))
 			Expect(shoot.Spec.Provider.Workers[1].CRI).To(BeNil())
 		})

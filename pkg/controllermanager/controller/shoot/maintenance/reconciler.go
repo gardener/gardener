@@ -145,11 +145,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 
 	// Force containerd when shoot cluster is updated to k8s version >= 1.23
 	if versionutils.ConstraintK8sLess123.Check(oldShootKubernetesVersion) && versionutils.ConstraintK8sGreaterEqual123.Check(shootKubernetesVersion) {
-		reasonsForContainerdUpdate, err := updateToContainerd(maintainedShoot, fmt.Sprintf("Updating Kubernetes to %q", shootKubernetesVersion.String()))
-		if err != nil {
-			// continue execution to allow other updates
-			log.Error(err, "Failed updating worker pools' CRI to containerd")
-		}
+		reasonsForContainerdUpdate := updateToContainerd(maintainedShoot, fmt.Sprintf("Updating Kubernetes to %q", shootKubernetesVersion.String()))
 		operations = append(operations, reasonsForContainerdUpdate...)
 	}
 
@@ -633,7 +629,7 @@ func ExpirationDateExpired(timestamp *metav1.Time) bool {
 }
 
 // updateToContainerd updates the CRI of a Shoot's worker pools to containerd
-func updateToContainerd(shoot *gardencorev1beta1.Shoot, reason string) ([]string, error) {
+func updateToContainerd(shoot *gardencorev1beta1.Shoot, reason string) []string {
 	var reasonsForUpdate []string
 
 	for i, worker := range shoot.Spec.Provider.Workers {
@@ -644,5 +640,5 @@ func updateToContainerd(shoot *gardencorev1beta1.Shoot, reason string) ([]string
 		reasonsForUpdate = append(reasonsForUpdate, fmt.Sprintf("CRI of worker-pool %q upgraded from %q to %q. Reason: %s", worker.Name, gardencorev1beta1.CRINameDocker, gardencorev1beta1.CRINameContainerD, reason))
 	}
 
-	return reasonsForUpdate, nil
+	return reasonsForUpdate
 }
