@@ -726,14 +726,13 @@ var _ = Describe("Shoot Maintenance", func() {
 						{
 							Name: "cpu-worker2",
 						},
-					},
-					},
+					}},
 				},
 			}
 		})
 
 		It("should not change anything if CRI is not set", func() {
-			_, err := updateToContainerd(log, shoot, "foobar")
+			_, err := updateToContainerd(shoot, "foobar")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(shoot.Spec.Provider.Workers[0].CRI).To(BeNil())
 			Expect(shoot.Spec.Provider.Workers[1].CRI).To(BeNil())
@@ -741,7 +740,7 @@ var _ = Describe("Shoot Maintenance", func() {
 
 		It("should change docker to containerd", func() {
 			shoot.Spec.Provider.Workers[1].CRI = &gardencorev1beta1.CRI{Name: "docker"}
-			_, err := updateToContainerd(log, shoot, "foobar")
+			_, err := updateToContainerd(shoot, "foobar")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(shoot.Spec.Provider.Workers[1].CRI.Name).To(Equal(gardencorev1beta1.CRINameContainerD))
 			Expect(shoot.Spec.Provider.Workers[0].CRI).To(BeNil())
@@ -749,7 +748,7 @@ var _ = Describe("Shoot Maintenance", func() {
 
 		It("should keep containerd if it is already set", func() {
 			shoot.Spec.Provider.Workers[0].CRI = &gardencorev1beta1.CRI{Name: "containerd"}
-			_, err := updateToContainerd(log, shoot, "foobar")
+			_, err := updateToContainerd(shoot, "foobar")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(shoot.Spec.Provider.Workers[0].CRI.Name).To(Equal(gardencorev1beta1.CRINameContainerD))
 			Expect(shoot.Spec.Provider.Workers[1].CRI).To(BeNil())
