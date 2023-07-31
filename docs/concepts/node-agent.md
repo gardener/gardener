@@ -24,7 +24,7 @@ This figure visualizes the overall architecture of the `gardener-node-agent`. It
 
 ## Reasoning
 
-The `gardener-node-agent` is a replacement for what was called the `cloud-config-downloader` and the `cloud-config-executor`, both written in `bash`. The `gardener-node-agent` gets rid of the sheer complexity of these two scripts, combined with scalability and performance issues urges their removal.
+The `gardener-node-agent` is a replacement for what was called the `cloud-config-downloader` and the `cloud-config-executor`, both written in `bash`. The `gardener-node-agent` implements this functionality as a regular controller and feels more uniform in terms of maintenance.
 
 With the new Architecture we gain a lot, let's describe the most important gains here.
 
