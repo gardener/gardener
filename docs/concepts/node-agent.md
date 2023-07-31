@@ -36,7 +36,7 @@ Because we all develop in go day by day, writing business logic in `bash` is dif
 
 Until now, the `cloud-config-downloader` runs in a loop every 60sec to check if something changed on the shoot which requires modifications on the worker node. This produces a lot of unneeded traffic on the api-server and wastes time, it will sometimes take up to 60sec until a desired modification is started on the worker node.
 By using the controller-runtime we can watch for the `node`, the `OSC` in the `secret`, and the shoot-access-token in the `secret`. If any of these object changed, and only then, the required action will take effect immediately.
-This will speed up operations and will reduce the load on the api-server of the shoot dramatically.
+This will speed up operations and will reduce the load on the api-server of the shoot especially for large clusters.
 
 ## Scalability
 
