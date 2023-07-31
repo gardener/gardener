@@ -168,7 +168,7 @@ func (r *Reconciler) determineSeed(
 
 func (r *Reconciler) getRegionConfigMap(ctx context.Context, log logr.Logger, cloudProfile *gardencorev1beta1.CloudProfile) (*corev1.ConfigMap, error) {
 	regionConfigList := &corev1.ConfigMapList{}
-	if err := r.Client.List(ctx, regionConfigList, client.InNamespace(r.GardenNamespace), client.MatchingLabels{v1beta1constants.SchedulerPurpose: v1beta1constants.SchedulerPurposeRegionConfig}); err != nil {
+	if err := r.Client.List(ctx, regionConfigList, client.InNamespace(r.GardenNamespace), client.MatchingLabels{v1beta1constants.SchedulingPurpose: v1beta1constants.SchedulingPurposeRegionConfig}); err != nil {
 		return nil, err
 	}
 

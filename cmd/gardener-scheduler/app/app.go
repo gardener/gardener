@@ -126,7 +126,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.SchedulerConfiguratio
 		NewCache: cache.BuilderWithOptions(cache.Options{
 			SelectorsByObject: map[client.Object]cache.ObjectSelector{
 				&corev1.ConfigMap{}: {
-					Label: labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.SchedulerPurpose, selection.Equals, v1beta1constants.SchedulerPurposeRegionConfig)),
+					Label: labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.SchedulingPurpose, selection.Equals, v1beta1constants.SchedulingPurposeRegionConfig)),
 				},
 			},
 		}),

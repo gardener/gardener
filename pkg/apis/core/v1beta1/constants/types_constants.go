@@ -567,10 +567,10 @@ const (
 
 	// DefaultSchedulerName is the name of the default scheduler.
 	DefaultSchedulerName = "default-scheduler"
-	// SchedulerPurpose is a constant for the key in a label describing the purpose of the scheduler related object.
-	SchedulerPurpose = "scheduling.gardener.cloud/purpose"
-	// SchedulerPurposeRegionConfig is a constant for a label value indicating that the object should be considered as a region config.
-	SchedulerPurposeRegionConfig = "region-config"
+	// SchedulingPurpose is a constant for the key in a label describing the purpose of the scheduler related object.
+	SchedulingPurpose = "scheduling.gardener.cloud/purpose"
+	// SchedulingPurposeRegionConfig is a constant for a label value indicating that the object should be considered as a region config.
+	SchedulingPurposeRegionConfig = "region-config"
 	// AnnotationSchedulingCloudProfiles is a constant for an annotation key on a configmap which denotes
 	// the linked cloudprofiles containing the region distances.
 	AnnotationSchedulingCloudProfiles = "scheduling.gardener.cloud/cloudprofiles"
