@@ -16,6 +16,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -410,6 +411,9 @@ type Gardener struct {
 	// APIServer contains configuration settings for the gardener-apiserver.
 	// +optional
 	APIServer *GardenerAPIServerConfig `json:"gardenerAPIServer,omitempty"`
+	// AdmissionController contains configuration settings for the gardener-admission-controller.
+	// +optional
+	AdmissionController *GardenerAdmissionControllerConfig `json:"gardenerAdmissionController,omitempty"`
 	// ControllerManager contains configuration settings for the gardener-controller-manager.
 	// +optional
 	ControllerManager *GardenerControllerManagerConfig `json:"gardenerControllerManager,omitempty"`
@@ -443,6 +447,48 @@ type GardenerAPIServerConfig struct {
 	// cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).
 	// +optional
 	WatchCacheSizes *gardencorev1beta1.WatchCacheSizes `json:"watchCacheSizes,omitempty"`
+}
+
+// GardenerAdmissionControllerConfig contains configuration settings for the gardener-admission-controller.
+type GardenerAdmissionControllerConfig struct {
+	// LogLevel is the configured log level for the gardener-admission-controller. Must be one of [info,debug,error].
+	// Defaults to info.
+	// +kubebuilder:validation:Enum=info;debug;error
+	// +kubebuilder:default=info
+	// +optional
+	LogLevel *string `json:"logLevel,omitempty"`
+	// ResourceAdmissionConfiguration is the configuration for resource size restrictions for arbitrary Group-Version-Kinds.
+	// +optional
+	ResourceAdmissionConfiguration *ResourceAdmissionConfiguration `json:"resourceAdmissionConfiguration,omitempty"`
+}
+
+// ResourceAdmissionConfiguration contains settings about arbitrary kinds and the size each resource should have at most.
+type ResourceAdmissionConfiguration struct {
+	// Limits contains configuration for resources which are subjected to size limitations.
+	Limits []ResourceLimit `json:"limits"`
+	// UnrestrictedSubjects contains references to users, groups, or service accounts which aren't subjected to any resource size limit.
+	// +optional
+	UnrestrictedSubjects []rbacv1.Subject `json:"unrestrictedSubjects,omitempty"`
+	// OperationMode specifies the mode the webhooks operates in. Allowed values are "block" and "log". Defaults to "block".
+	// +optional
+	OperationMode *ResourceAdmissionWebhookMode `json:"operationMode,omitempty"`
+}
+
+// ResourceAdmissionWebhookMode is an alias type for the resource admission webhook mode.
+type ResourceAdmissionWebhookMode string
+
+// ResourceLimit contains settings about a kind and the size each resource should have at most.
+type ResourceLimit struct {
+	// APIGroups is the name of the APIGroup that contains the limited resource. WildcardAll represents all groups.
+	// +optional
+	APIGroups []string `json:"apiGroups,omitempty"`
+	// APIVersions is the version of the resource. WildcardAll represents all versions.
+	// +optional
+	APIVersions []string `json:"apiVersions,omitempty"`
+	// Resources is the name of the resource this rule applies to. WildcardAll represents all resources.
+	Resources []string `json:"resources"`
+	// Size specifies the imposed limit.
+	Size resource.Quantity `json:"size"`
 }
 
 // GardenerControllerManagerConfig contains configuration settings for the gardener-controller-manager.

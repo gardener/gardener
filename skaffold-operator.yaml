@@ -17,6 +17,9 @@ build:
         - extensions/pkg/webhook/certificates
         - extensions/pkg/webhook/shoot
         - imagevector
+        - pkg/admissioncontroller/apis/config
+        - pkg/admissioncontroller/apis/config/v1alpha1
+        - pkg/admissioncontroller/apis/config/validation
         - pkg/api/extensions
         - pkg/apis/core
         - pkg/apis/core/install
@@ -34,6 +37,7 @@ build:
         - pkg/apis/operations/v1alpha1
         - pkg/apis/operator
         - pkg/apis/operator/v1alpha1
+        - pkg/apis/operator/v1alpha1/conversion
         - pkg/apis/operator/v1alpha1/helper
         - pkg/apis/operator/v1alpha1/validation
         - pkg/apis/resources

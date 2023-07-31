@@ -27,12 +27,16 @@ import (
 	"k8s.io/component-base/featuregate"
 	"k8s.io/utils/pointer"
 
+	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
+	admissioncontrollerv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
+	admissioncontrollervalidation "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/validation"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	operatorv1alpha1conversion "github.com/gardener/gardener/pkg/apis/operator/v1alpha1/conversion"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
@@ -46,6 +50,7 @@ var gardenCoreScheme *runtime.Scheme
 func init() {
 	gardenCoreScheme = runtime.NewScheme()
 	utilruntime.Must(gardencoreinstall.AddToScheme(gardenCoreScheme))
+	utilruntime.Must(admissioncontrollerv1alpha1.AddToScheme(gardenCoreScheme))
 }
 
 // ValidateGarden contains functionality for performing extended validation of a Garden object which is not possible
@@ -199,6 +204,7 @@ func validateGardener(config operatorv1alpha1.Gardener, fldPath *field.Path) fie
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateGardenerAPIServerConfig(config.APIServer, fldPath.Child("gardenerAPIServer"))...)
+	allErrs = append(allErrs, validateGardenerAdmissionController(config.AdmissionController, fldPath.Child("gardenerAdmissionController"))...)
 	allErrs = append(allErrs, validateGardenerControllerManagerConfig(config.ControllerManager, fldPath.Child("gardenerControllerManager"))...)
 	allErrs = append(allErrs, validateGardenerSchedulerConfig(config.Scheduler, fldPath.Child("gardenerScheduler"))...)
 
@@ -256,6 +262,25 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 			allErrs = append(allErrs, field.InternalError(fldPath.Child("requests"), err))
 		}
 		allErrs = append(allErrs, gardencorevalidation.ValidateAPIServerRequests(requests, fldPath.Child("requests"))...)
+	}
+
+	return allErrs
+}
+
+func validateGardenerAdmissionController(config *operatorv1alpha1.GardenerAdmissionControllerConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if config == nil {
+		return allErrs
+	}
+
+	if config.ResourceAdmissionConfiguration != nil {
+		externalAdmissionConfiguration := operatorv1alpha1conversion.ConvertToAdmissionControllerResourceAdmissionConfiguration(config.ResourceAdmissionConfiguration)
+		internalAdmissionConfiguration := &admissioncontrollerconfig.ResourceAdmissionConfiguration{}
+		if err := gardenCoreScheme.Convert(externalAdmissionConfiguration, internalAdmissionConfiguration, nil); err != nil {
+			allErrs = append(allErrs, field.InternalError(fldPath.Child("resourceAdmissionConfiguration"), err))
+		}
+		allErrs = append(allErrs, admissioncontrollervalidation.ValidateResourceAdmissionConfiguration(internalAdmissionConfiguration, fldPath.Child("resourceAdmissionConfiguration"))...)
 	}
 
 	return allErrs
