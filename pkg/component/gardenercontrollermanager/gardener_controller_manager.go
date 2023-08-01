@@ -16,6 +16,7 @@ package gardenercontrollermanager
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -49,6 +50,8 @@ var TimeoutWaitForManagedResource = 5 * time.Minute
 
 // Values contains configuration values for the gardener-controller-manager resources.
 type Values struct {
+	// Image defines the container image of gardener-controller-manager.
+	Image string
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel string
 	// Quotas is the default configuration matching projects are set up with if a quota is not already specified.
@@ -89,11 +92,17 @@ func (g *gardenerControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	secretGenericTokenKubeconfig, found := g.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
+	}
+
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
 		controllerManagerConfigConfigMap,
 		g.podDisruptionBudget(),
 		g.service(),
 		g.verticalPodAutoscaler(),
+		g.deployment(secretGenericTokenKubeconfig.Name, virtualGardenAccessSecret.Secret.Name, controllerManagerConfigConfigMap.Name),
 	)
 	if err != nil {
 		return err
