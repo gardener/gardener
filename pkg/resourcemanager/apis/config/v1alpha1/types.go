@@ -159,7 +159,7 @@ type GarbageCollectorControllerConfig struct {
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
 	// ConsiderManagedResources specifies if managed resources should be considered
-	// as owners of a garbage collectable secret.
+	// as owners of garbage collectable secrets.
 	// +optional
 	ConsiderManagedResources *bool `json:"considerManagedResources,omitempty"`
 }
