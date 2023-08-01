@@ -435,7 +435,6 @@ func (r *Reconciler) newKubeAPIServer(
 		apiServerConfig              *gardencorev1beta1.KubeAPIServerConfig
 		auditWebhookConfig           *apiserver.AuditWebhook
 		authenticationWebhookConfig  *kubeapiserver.AuthenticationWebhook
-		authorizationWebhookConfig   *kubeapiserver.AuthorizationWebhook
 		resourcesToStoreInETCDEvents []schema.GroupResource
 		minReplicas                  int32 = 2
 	)
@@ -453,11 +452,6 @@ func (r *Reconciler) newKubeAPIServer(
 		}
 
 		authenticationWebhookConfig, err = r.computeKubeAPIServerAuthenticationWebhookConfig(ctx, apiServer.Authentication)
-		if err != nil {
-			return nil, err
-		}
-
-		authorizationWebhookConfig, err = r.computeKubeAPIServerAuthorizationWebhookConfig(ctx, apiServer.Authorization)
 		if err != nil {
 			return nil, err
 		}
@@ -498,7 +492,7 @@ func (r *Reconciler) newKubeAPIServer(
 		pointer.Bool(false),
 		auditWebhookConfig,
 		authenticationWebhookConfig,
-		authorizationWebhookConfig,
+		nil,
 		resourcesToStoreInETCDEvents,
 	)
 }
@@ -541,33 +535,6 @@ func (r *Reconciler) computeKubeAPIServerAuthenticationWebhookConfig(ctx context
 		Kubeconfig: kubeconfig,
 		CacheTTL:   cacheTTL,
 		Version:    config.Webhook.Version,
-	}, nil
-}
-
-func (r *Reconciler) computeKubeAPIServerAuthorizationWebhookConfig(ctx context.Context, config *operatorv1alpha1.Authorization) (*kubeapiserver.AuthorizationWebhook, error) {
-	if config == nil || config.Webhook == nil {
-		return nil, nil
-	}
-
-	key := client.ObjectKey{Namespace: r.GardenNamespace, Name: config.Webhook.KubeconfigSecretName}
-	kubeconfig, err := gardenerutils.FetchKubeconfigFromSecret(ctx, r.RuntimeClientSet.Client(), key)
-	if err != nil {
-		return nil, fmt.Errorf("failed reading kubeconfig for audit webhook from referenced secret %s: %w", key, err)
-	}
-
-	var cacheAuthorizedTTL, cacheUnauthorizedTTL *time.Duration
-	if config.Webhook.CacheAuthorizedTTL != nil {
-		cacheAuthorizedTTL = &config.Webhook.CacheAuthorizedTTL.Duration
-	}
-	if config.Webhook.CacheUnauthorizedTTL != nil {
-		cacheUnauthorizedTTL = &config.Webhook.CacheUnauthorizedTTL.Duration
-	}
-
-	return &kubeapiserver.AuthorizationWebhook{
-		Kubeconfig:           kubeconfig,
-		CacheAuthorizedTTL:   cacheAuthorizedTTL,
-		CacheUnauthorizedTTL: cacheUnauthorizedTTL,
-		Version:              config.Webhook.Version,
 	}, nil
 }
 

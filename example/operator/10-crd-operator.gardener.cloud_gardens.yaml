@@ -940,44 +940,6 @@ spec:
                                 - kubeconfigSecretName
                                 type: object
                             type: object
-                          authorization:
-                            description: Authorization contains settings related to
-                              authorization.
-                            properties:
-                              webhook:
-                                description: Webhook contains settings related to
-                                  an authorization webhook configuration.
-                                properties:
-                                  cacheAuthorizedTTL:
-                                    description: CacheAuthorizedTTL is the duration
-                                      to cache 'authorized' responses from the webhook
-                                      authorizer.
-                                    pattern: ^([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$
-                                    type: string
-                                  cacheUnauthorizedTTL:
-                                    description: CacheUnauthorizedTTL is the duration
-                                      to cache 'unauthorized' responses from the webhook
-                                      authorizer.
-                                    pattern: ^([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$
-                                    type: string
-                                  kubeconfigSecretName:
-                                    description: KubeconfigSecretName specifies the
-                                      name of a secret containing the kubeconfig for
-                                      this webhook.
-                                    minLength: 1
-                                    type: string
-                                  version:
-                                    default: v1beta1
-                                    description: Version is the API version to send
-                                      and expect from the webhook.
-                                    enum:
-                                    - v1beta1
-                                    - v1
-                                    type: string
-                                required:
-                                - kubeconfigSecretName
-                                type: object
-                            type: object
                           defaultNotReadyTolerationSeconds:
                             description: DefaultNotReadyTolerationSeconds indicates
                               the tolerationSeconds of the toleration for notReady:NoExecute

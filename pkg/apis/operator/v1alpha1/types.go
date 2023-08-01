@@ -280,9 +280,6 @@ type KubeAPIServerConfig struct {
 	// Authentication contains settings related to authentication.
 	// +optional
 	Authentication *Authentication `json:"authentication,omitempty"`
-	// Authorization contains settings related to authorization.
-	// +optional
-	Authorization *Authorization `json:"authorization,omitempty"`
 	// ResourcesToStoreInETCDEvents contains a list of resources which should be stored in etcd-events instead of
 	// etcd-main. The 'events' resource is always stored in etcd-events. Note that adding or removing resources from
 	// this list will not migrate them automatically from the etcd-main to etcd-events or vice versa.
@@ -330,35 +327,6 @@ type AuthenticationWebhook struct {
 	// Version is the API version to send and expect from the webhook.
 	// +kubebuilder:default=v1beta1
 	// +kubebuilder:validation:Enum=v1alpha1;v1beta1;v1
-	// +optional
-	Version *string `json:"version,omitempty"`
-}
-
-// Authorization contains settings related to authorization.
-type Authorization struct {
-	// Webhook contains settings related to an authorization webhook configuration.
-	// +optional
-	Webhook *AuthorizationWebhook `json:"webhook,omitempty"`
-}
-
-// AuthorizationWebhook contains settings related to an authorization webhook configuration.
-type AuthorizationWebhook struct {
-	// CacheAuthorizedTTL is the duration to cache 'authorized' responses from the webhook authorizer.
-	// +kubebuilder:validation:Type=string
-	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$"
-	// +optional
-	CacheAuthorizedTTL *metav1.Duration `json:"cacheAuthorizedTTL,omitempty"`
-	// CacheUnauthorizedTTL is the duration to cache 'unauthorized' responses from the webhook authorizer.
-	// +kubebuilder:validation:Type=string
-	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$"
-	// +optional
-	CacheUnauthorizedTTL *metav1.Duration `json:"cacheUnauthorizedTTL,omitempty"`
-	// KubeconfigSecretName specifies the name of a secret containing the kubeconfig for this webhook.
-	// +kubebuilder:validation:MinLength=1
-	KubeconfigSecretName string `json:"kubeconfigSecretName"`
-	// Version is the API version to send and expect from the webhook.
-	// +kubebuilder:default=v1beta1
-	// +kubebuilder:validation:Enum=v1beta1;v1
 	// +optional
 	Version *string `json:"version,omitempty"`
 }
