@@ -20,7 +20,9 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
+	controllermanagerv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -32,8 +34,13 @@ const (
 	// DeploymentName is the name of the deployment.
 	DeploymentName = "gardener-controller-manager"
 
+	probePort   = 2718
+	metricsPort = 2719
+
 	managedResourceNameRuntime = "gardener-controller-manager-runtime"
 	managedResourceNameVirtual = "gardener-controller-manager-virtual"
+
+	roleName = "controller-manager"
 )
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy or
@@ -42,6 +49,12 @@ var TimeoutWaitForManagedResource = 5 * time.Minute
 
 // Values contains configuration values for the gardener-controller-manager resources.
 type Values struct {
+	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
+	LogLevel string
+	// Quotas is the default configuration matching projects are set up with if a quota is not already specified.
+	Quotas []controllermanagerv1alpha1.QuotaConfiguration
+	// FeatureGates is the set of feature gates.
+	FeatureGates map[string]bool
 }
 
 // New creates a new instance of DeployWaiter for the gardener-controller-manager.
@@ -71,7 +84,14 @@ func (g *gardenerControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	runtimeResources, err := runtimeRegistry.AddAllAndSerialize()
+	controllerManagerConfigConfigMap, err := g.configMapControllerManagerConfig()
+	if err != nil {
+		return err
+	}
+
+	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
+		controllerManagerConfigConfigMap,
+	)
 	if err != nil {
 		return err
 	}
@@ -130,4 +150,12 @@ func (g *gardenerControllerManager) WaitCleanup(ctx context.Context) error {
 			return managedresources.WaitUntilDeleted(ctx, g.client, g.namespace, managedResourceNameVirtual)
 		},
 	)(timeoutCtx)
+}
+
+// GetLabels returns the labels for the gardener-controller-manager.
+func GetLabels() map[string]string {
+	return map[string]string{
+		v1beta1constants.LabelApp:  v1beta1constants.LabelGardener,
+		v1beta1constants.LabelRole: roleName,
+	}
 }
