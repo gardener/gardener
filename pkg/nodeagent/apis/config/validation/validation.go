@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
+	"github.com/gardener/gardener/pkg/utils/validation/kubernetesversion"
 )
 
 // ValidateNodeAgentConfiguration validates the given `NodeAgentConfiguration`.
@@ -36,9 +37,13 @@ func ValidateNodeAgentConfiguration(conf *config.NodeAgentConfiguration) field.E
 	if conf.Image == "" {
 		allErrs = append(allErrs, field.Required(configFldPath.Child("image"), "must provide a image"))
 	}
+
 	if conf.KubernetesVersion == "" {
-		allErrs = append(allErrs, field.Required(configFldPath.Child("kubernetesversion"), "must provide a kubernetesversion"))
+		allErrs = append(allErrs, field.Required(configFldPath.Child("kubernetesversion"), "must provide a supported kubernetesversion"))
+	} else if err := kubernetesversion.CheckIfSupported(conf.KubernetesVersion); err != nil {
+		allErrs = append(allErrs, field.Invalid(configFldPath.Child("kubernetesversion"), conf.KubernetesVersion, err.Error()))
 	}
+
 	if conf.OSCSecretName == "" {
 		allErrs = append(allErrs, field.Required(configFldPath.Child("oscsecretname"), "must provide a oscsecretname"))
 	}
