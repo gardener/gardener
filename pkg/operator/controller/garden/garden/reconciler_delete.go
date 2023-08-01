@@ -65,6 +65,29 @@ func (r *Reconciler) delete(
 			Name: "Destroying Kube State Metrics",
 			Fn:   component.OpDestroyAndWait(c.kubeStateMetrics).Destroy,
 		})
+
+		destroyGardenerScheduler = g.Add(flow.Task{
+			Name: "Destroying Gardener Scheduler",
+			Fn:   component.OpDestroyAndWait(c.gardenerScheduler).Destroy,
+		})
+		destroyGardenerControllerManager = g.Add(flow.Task{
+			Name: "Destroying Gardener Controller Manager",
+			Fn:   component.OpDestroyAndWait(c.gardenerControllerManager).Destroy,
+		})
+		destroyGardenerAdmissionController = g.Add(flow.Task{
+			Name: "Destroying Gardener Admission Controller",
+			Fn:   component.OpDestroyAndWait(c.gardenerAdmissionController).Destroy,
+		})
+		destroyGardenerAPIServer = g.Add(flow.Task{
+			Name: "Destroying Gardener API Server",
+			Fn:   component.OpDestroyAndWait(c.gardenerAPIServer).Destroy,
+		})
+		destroyVirtualSystemResources = g.Add(flow.Task{
+			Name:         "Destroying virtual system resources",
+			Fn:           component.OpDestroyAndWait(c.virtualSystem).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyGardenerAPIServer),
+		})
+
 		destroyVirtualGardenGardenerAccess = g.Add(flow.Task{
 			Name: "Destroying Gardener virtual garden access resources",
 			Fn:   component.OpDestroyAndWait(c.virtualGardenGardenerAccess).Destroy,
@@ -74,6 +97,11 @@ func (r *Reconciler) delete(
 			Fn:   component.OpDestroyAndWait(c.kubeControllerManager).Destroy,
 		})
 		syncPointVirtualGardenManagedResourcesDestroyed = flow.NewTaskIDs(
+			destroyGardenerScheduler,
+			destroyGardenerControllerManager,
+			destroyGardenerAdmissionController,
+			destroyGardenerAPIServer,
+			destroyVirtualSystemResources,,
 			destroyVirtualGardenGardenerAccess,
 			destroyKubeControllerManager,
 		)
@@ -184,7 +212,7 @@ func (r *Reconciler) delete(
 			destroyVali,
 		)
 
-		destroySystemResources = g.Add(flow.Task{
+		destroyRuntimeSystemResources = g.Add(flow.Task{
 			Name:         "Destroying runtime system resources",
 			Fn:           component.OpDestroyAndWait(c.runtimeSystem).Destroy,
 			Dependencies: flow.NewTaskIDs(syncPointCleanedUp),
@@ -192,7 +220,7 @@ func (r *Reconciler) delete(
 		ensureNoManagedResourcesExistAnymore = g.Add(flow.Task{
 			Name:         "Ensuring no ManagedResources exist anymore",
 			Fn:           r.checkIfManagedResourcesExist(),
-			Dependencies: flow.NewTaskIDs(destroySystemResources),
+			Dependencies: flow.NewTaskIDs(destroyRuntimeSystemResources),
 		})
 		destroyGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Destroying and waiting for gardener-resource-manager to be deleted",
