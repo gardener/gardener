@@ -92,6 +92,7 @@ func (g *gardenerControllerManager) Deploy(ctx context.Context) error {
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
 		controllerManagerConfigConfigMap,
 		g.podDisruptionBudget(),
+		g.service(),
 	)
 	if err != nil {
 		return err

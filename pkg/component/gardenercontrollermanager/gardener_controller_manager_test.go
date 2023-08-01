@@ -24,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
@@ -71,6 +72,7 @@ var _ = Describe("GardenerControllerManager", func() {
 		managedResourceSecretVirtual *corev1.Secret
 
 		podDisruptionBudget *policyv1.PodDisruptionBudget
+		serviceRuntime      *corev1.Service
 	)
 
 	BeforeEach(func() {
@@ -124,6 +126,29 @@ var _ = Describe("GardenerControllerManager", func() {
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 					"app":  "gardener",
 					"role": "controller-manager",
+				}},
+			},
+		}
+		serviceRuntime = &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-controller-manager",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "controller-manager",
+				},
+			},
+			Spec: corev1.ServiceSpec{
+				Type: corev1.ServiceTypeClusterIP,
+				Selector: map[string]string{
+					"app":  "gardener",
+					"role": "controller-manager",
+				},
+				Ports: []corev1.ServicePort{{
+					Name:       "metrics",
+					Port:       2719,
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromInt(2719),
 				}},
 			},
 		}
@@ -215,9 +240,10 @@ var _ = Describe("GardenerControllerManager", func() {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
 
 				Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretRuntime.Data).To(HaveLen(2))
+				Expect(managedResourceSecretRuntime.Data).To(HaveLen(3))
 				Expect(string(managedResourceSecretRuntime.Data["configmap__some-namespace__gardener-controller-manager-config-7eb74c5d.yaml"])).To(Equal(configMap(namespace, values)))
 				Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-controller-manager.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudget)))
+				Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-controller-manager.yaml"])).To(Equal(componenttest.Serialize(serviceRuntime)))
 
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecretVirtual.Data).To(HaveLen(0))
