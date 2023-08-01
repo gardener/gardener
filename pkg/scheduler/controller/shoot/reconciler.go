@@ -418,7 +418,7 @@ func regionConfigMinimalDistance(log logr.Logger, seeds []gardencorev1beta1.Seed
 	for _, seed := range seeds {
 		dist, ok := regionConfigData[seed.Spec.Provider.Region]
 		if !ok {
-			log.Info("Seed region not available in scheduler region ConfigMap for shoot region", "shootRegion", shoot.Spec.Region, "seedRegion", seed.Spec.Provider.Region)
+			log.Info("Seed region not available in scheduler region ConfigMap for shoot region", "seedName", seed.Name, "shootRegion", shoot.Spec.Region, "seedRegion", seed.Spec.Provider.Region)
 			continue
 		}
 
