@@ -38,6 +38,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	if r.Recorder == nil {
 		r.Recorder = mgr.GetEventRecorderFor(ControllerName + "-scheduler")
 	}
+	if r.GardenNamespace == "" {
+		r.GardenNamespace = v1beta1constants.GardenNamespace
+	}
 
 	return builder.
 		ControllerManagedBy(mgr).

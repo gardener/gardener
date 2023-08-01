@@ -208,7 +208,7 @@ var _ = Describe("GardenerScheduler", func() {
 				{
 					APIGroups: []string{""},
 					Resources: []string{"configmaps"},
-					Verbs:     []string{"create", "delete", "get", "patch", "update"},
+					Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
 				},
 				{
 					APIGroups: []string{gardencorev1beta1.GroupName},
