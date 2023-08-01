@@ -93,6 +93,7 @@ func (g *gardenerControllerManager) Deploy(ctx context.Context) error {
 		controllerManagerConfigConfigMap,
 		g.podDisruptionBudget(),
 		g.service(),
+		g.verticalPodAutoscaler(),
 	)
 	if err != nil {
 		return err
