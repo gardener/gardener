@@ -576,6 +576,11 @@ func (in *GardenerControllerManagerConfig) DeepCopyInto(out *GardenerControllerM
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.LogLevel != nil {
+		in, out := &in.LogLevel, &out.LogLevel
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 
