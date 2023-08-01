@@ -50,7 +50,7 @@ func (a *gardenerAdmissionController) validatingWebhookConfiguration(caSecret *c
 
 	validatingWebhook := &admissionregistrationv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: deploymentName,
+			Name: DeploymentName,
 		},
 		Webhooks: []admissionregistrationv1.ValidatingWebhook{
 			{
@@ -315,5 +315,5 @@ func buildWebhookConfigRulesForResourceSize(config *admissioncontrollerv1alpha1.
 }
 
 func buildClientConfigURL(webhookPath, namespace string) *string {
-	return pointer.String(fmt.Sprintf("https://%s.%s%s", serviceName, namespace, webhookPath))
+	return pointer.String(fmt.Sprintf("https://%s.%s%s", ServiceName, namespace, webhookPath))
 }

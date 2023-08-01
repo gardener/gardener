@@ -79,7 +79,7 @@ func (a *gardenerAdmissionController) admissionConfigConfigMap() (*corev1.Config
 
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      deploymentName,
+			Name:      DeploymentName,
 			Namespace: a.namespace,
 			Labels:    GetLabels(),
 		},

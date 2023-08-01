@@ -28,7 +28,7 @@ import (
 func (a *gardenerAdmissionController) service() *corev1.Service {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      serviceName,
+			Name:      ServiceName,
 			Namespace: a.namespace,
 			Labels:    GetLabels(),
 		},

@@ -49,7 +49,7 @@ func (r *Reconciler) delete(
 	error,
 ) {
 	log.Info("Instantiating component destroyers")
-	c, err := r.instantiateComponents(ctx, log, garden, secretsManager, targetVersion, kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper()), nil)
+	c, err := r.instantiateComponents(ctx, log, garden, secretsManager, targetVersion, kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper()), nil, false)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -101,7 +101,7 @@ func (r *Reconciler) delete(
 			destroyGardenerControllerManager,
 			destroyGardenerAdmissionController,
 			destroyGardenerAPIServer,
-			destroyVirtualSystemResources,,
+			destroyVirtualSystemResources,
 			destroyVirtualGardenGardenerAccess,
 			destroyKubeControllerManager,
 		)

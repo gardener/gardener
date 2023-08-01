@@ -27,7 +27,7 @@ func (a *gardenerAdmissionController) vpa() *vpaautoscalingv1.VerticalPodAutosca
 	autoUpdateMode := vpaautoscalingv1.UpdateModeAuto
 	return &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      deploymentName,
+			Name:      DeploymentName,
 			Namespace: a.namespace,
 			Labels:    GetLabels(),
 		},
@@ -35,7 +35,7 @@ func (a *gardenerAdmissionController) vpa() *vpaautoscalingv1.VerticalPodAutosca
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "Deployment",
-				Name:       deploymentName,
+				Name:       DeploymentName,
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 				UpdateMode: &autoUpdateMode,

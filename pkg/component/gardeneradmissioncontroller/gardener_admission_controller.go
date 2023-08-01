@@ -34,8 +34,10 @@ import (
 )
 
 const (
-	deploymentName = "gardener-admission-controller"
-	serviceName    = deploymentName
+	// DeploymentName is the name of the deployment.
+	DeploymentName = "gardener-admission-controller"
+	// ServiceName is the name of the service.
+	ServiceName = DeploymentName
 
 	roleName = "admission-controller"
 

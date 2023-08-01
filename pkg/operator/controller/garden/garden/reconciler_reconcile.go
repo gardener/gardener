@@ -103,7 +103,12 @@ func (r *Reconciler) reconcile(
 	}
 
 	log.Info("Instantiating component deployers")
-	c, err := r.instantiateComponents(ctx, log, garden, secretsManager, targetVersion, kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper()), wildcardCert)
+	enableSeedAuthorizer, err := r.enableSeedAuthorizer(ctx)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	c, err := r.instantiateComponents(ctx, log, garden, secretsManager, targetVersion, kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper()), wildcardCert, enableSeedAuthorizer)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -370,6 +375,11 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, flow.Errors(err)
 	}
 	*garden = *gardenCopy
+
+	if !enableSeedAuthorizer {
+		log.Info("Triggering a second reconciliation to enable seed authorizer feature")
+		return reconcile.Result{Requeue: true}, nil
+	}
 
 	return reconcile.Result{}, secretsManager.Cleanup(ctx)
 }

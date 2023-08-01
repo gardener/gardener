@@ -118,6 +118,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	if result, err := r.reconcile(ctx, log, garden, secretsManager, targetVersion); err != nil {
 		return result, r.updateStatusOperationError(ctx, garden, err, operationType)
+	} else if result.Requeue {
+		return result, nil
 	}
 
 	return reconcile.Result{RequeueAfter: r.Config.Controllers.Garden.SyncPeriod.Duration}, r.updateStatusOperationSuccess(ctx, garden, operationType)

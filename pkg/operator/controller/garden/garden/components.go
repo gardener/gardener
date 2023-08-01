@@ -25,11 +25,16 @@ import (
 	"github.com/Masterminds/semver"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -71,6 +76,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
@@ -121,6 +128,7 @@ func (r *Reconciler) instantiateComponents(
 	targetVersion *semver.Version,
 	applier kubernetes.Applier,
 	wildcardCert *corev1.Secret,
+	enableSeedAuthorizer bool,
 ) (
 	c components,
 	err error,
@@ -179,7 +187,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.kubeAPIServer, err = r.newKubeAPIServer(ctx, garden, secretsManager, targetVersion)
+	c.kubeAPIServer, err = r.newKubeAPIServer(ctx, garden, secretsManager, targetVersion, enableSeedAuthorizer)
 	if err != nil {
 		return
 	}
@@ -191,7 +199,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.virtualSystem = r.newVirtualSystem()
+	c.virtualSystem = r.newVirtualSystem(enableSeedAuthorizer)
 	c.virtualGardenGardenerAccess = r.newGardenerAccess(garden, secretsManager)
 
 	// gardener control plane components
@@ -199,7 +207,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.gardenerAdmissionController, err = r.newGardenerAdmissionController(garden, secretsManager)
+	c.gardenerAdmissionController, err = r.newGardenerAdmissionController(garden, secretsManager, enableSeedAuthorizer)
 	if err != nil {
 		return
 	}
@@ -240,6 +248,31 @@ func (r *Reconciler) instantiateComponents(
 	}
 
 	return c, nil
+}
+
+func (r *Reconciler) enableSeedAuthorizer(ctx context.Context) (bool, error) {
+	// The reconcile flow deploys the kube-apiserver of the virtual garden cluster before the gardener-apiserver and
+	// gardener-admission-controller (it has to be this way, otherwise the Gardener components cannot start). However,
+	// GAC serves an authorization webhook for the SeedAuthorizer feature. We can only configure kube-apiserver to
+	// consult this webhook when GAC runs, obviously. This is not possible in the initial Garden deployment (due to
+	// above order). Hence, we have to run the flow as second time after the initial Garden creation - this time with
+	// the SeedAuthorizer feature getting enabled. From then on, all subsequent reconciliations can always enable it and
+	// only one reconciliation is needed.
+	if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKey{Name: gardenerapiserver.DeploymentName, Namespace: r.GardenNamespace}, &appsv1.Deployment{}); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return false, err
+		}
+		return false, nil
+	}
+
+	if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKey{Name: gardeneradmissioncontroller.DeploymentName, Namespace: r.GardenNamespace}, &appsv1.Deployment{}); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return false, err
+		}
+		return false, nil
+	}
+
+	return true, nil
 }
 
 const namePrefix = "virtual-garden-"
@@ -455,6 +488,7 @@ func (r *Reconciler) newKubeAPIServer(
 	garden *operatorv1alpha1.Garden,
 	secretsManager secretsmanager.Interface,
 	targetVersion *semver.Version,
+	enableSeedAuthorizer bool,
 ) (
 	kubeapiserver.Interface,
 	error,
@@ -464,6 +498,7 @@ func (r *Reconciler) newKubeAPIServer(
 		apiServerConfig              *gardencorev1beta1.KubeAPIServerConfig
 		auditWebhookConfig           *apiserver.AuditWebhook
 		authenticationWebhookConfig  *kubeapiserver.AuthenticationWebhook
+		authorizationWebhookConfig   *kubeapiserver.AuthorizationWebhook
 		resourcesToStoreInETCDEvents []schema.GroupResource
 	)
 
@@ -482,6 +517,31 @@ func (r *Reconciler) newKubeAPIServer(
 
 		for _, gr := range apiServer.ResourcesToStoreInETCDEvents {
 			resourcesToStoreInETCDEvents = append(resourcesToStoreInETCDEvents, schema.GroupResource{Group: gr.Group, Resource: gr.Resource})
+		}
+	}
+
+	if enableSeedAuthorizer {
+		caSecret, found := secretsManager.Get(operatorv1alpha1.SecretNameCAGardener)
+		if !found {
+			return nil, fmt.Errorf("secret %q not found", operatorv1alpha1.SecretNameCAGardener)
+		}
+
+		kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kubernetesutils.NewKubeconfig(
+			"authorization-webhook",
+			clientcmdv1.Cluster{
+				Server:                   fmt.Sprintf("https://%s/webhooks/auth/seed", gardeneradmissioncontroller.ServiceName),
+				CertificateAuthorityData: caSecret.Data[secretsutils.DataKeyCertificateBundle],
+			},
+			clientcmdv1.AuthInfo{},
+		))
+		if err != nil {
+			return nil, fmt.Errorf("failed generating authorization webhook kubeconfig: %w", err)
+		}
+
+		authorizationWebhookConfig = &kubeapiserver.AuthorizationWebhook{
+			Kubeconfig:           kubeconfig,
+			CacheAuthorizedTTL:   pointer.Duration(0),
+			CacheUnauthorizedTTL: pointer.Duration(0),
 		}
 	}
 
@@ -504,7 +564,7 @@ func (r *Reconciler) newKubeAPIServer(
 		pointer.Bool(false),
 		auditWebhookConfig,
 		authenticationWebhookConfig,
-		nil,
+		authorizationWebhookConfig,
 		resourcesToStoreInETCDEvents,
 	)
 }
@@ -793,8 +853,8 @@ func getLoadBalancerServiceAnnotations(garden *operatorv1alpha1.Garden) map[stri
 	return nil
 }
 
-func (r *Reconciler) newVirtualSystem() component.DeployWaiter {
-	return virtualgardensystem.New(r.RuntimeClientSet.Client(), r.GardenNamespace, virtualgardensystem.Values{})
+func (r *Reconciler) newVirtualSystem(enableSeedAuthorizer bool) component.DeployWaiter {
+	return virtualgardensystem.New(r.RuntimeClientSet.Client(), r.GardenNamespace, virtualgardensystem.Values{SeedAuthorizerEnabled: enableSeedAuthorizer})
 }
 
 func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (gardenerapiserver.Interface, error) {
@@ -828,7 +888,7 @@ func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv
 	)
 }
 
-func (r *Reconciler) newGardenerAdmissionController(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+func (r *Reconciler) newGardenerAdmissionController(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, enableSeedRestriction bool) (component.DeployWaiter, error) {
 	image, err := imagevector.ImageVector().FindImage(imagevector.ImageNameGardenerAdmissionController)
 	if err != nil {
 		return nil, err
@@ -844,6 +904,7 @@ func (r *Reconciler) newGardenerAdmissionController(garden *operatorv1alpha1.Gar
 		Image:                       image.String(),
 		LogLevel:                    logger.InfoLevel,
 		RuntimeVersion:              r.RuntimeVersion,
+		SeedRestrictionEnabled:      enableSeedRestriction,
 		TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 	}
 
