@@ -61,6 +61,8 @@ type Values struct {
 	ResourceAdmissionConfiguration *admissioncontrollerv1alpha1.ResourceAdmissionConfiguration
 	// RuntimeVersion is the Kubernetes version of the runtime cluster.
 	RuntimeVersion *semver.Version
+	// SeedRestrictionEnabled specifies whether the seed-restriction webhook is enabled.
+	SeedRestrictionEnabled bool
 	// TopologyAwareRoutingEnabled determines whether topology aware hints are intended for the gardener-admission-controller.
 	TopologyAwareRoutingEnabled bool
 }
