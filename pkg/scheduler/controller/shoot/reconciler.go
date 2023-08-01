@@ -180,8 +180,7 @@ func (r *Reconciler) getRegionConfigMap(ctx context.Context, log logr.Logger, cl
 				continue
 			}
 			if regionConfig == nil {
-				conf := regionConf
-				regionConfig = &conf
+				regionConfig = regionConf.DeepCopy()
 			} else {
 				log.Info("Duplicate scheduler region config found", "configMap", client.ObjectKeyFromObject(&regionConf), "cloudProfileName", cloudProfile.Name, "chosenConfigMap", client.ObjectKeyFromObject(regionConfig))
 			}
@@ -190,7 +189,7 @@ func (r *Reconciler) getRegionConfigMap(ctx context.Context, log logr.Logger, cl
 	}
 
 	if regionConfig == nil {
-		log.Info("No region config found for scheduler")
+		log.Info("No region config found", "cloudProfileName", cloudProfile.Name)
 	}
 	return regionConfig, nil
 }
@@ -401,13 +400,13 @@ func regionConfigMinimalDistance(log logr.Logger, seeds []gardencorev1beta1.Seed
 	var candidates []gardencorev1beta1.Seed
 
 	if regionConfig == nil || regionConfig.Data[shoot.Spec.Region] == "" {
-		log.Info("Shoot region not available in scheduler region ConfigMap", "region", shoot.Spec.Region)
+		log.Info("Region ConfigMap not provided or Shoot region not available", "region", shoot.Spec.Region)
 		return candidates, nil
 	}
 
 	regionConfigData := make(map[string]int)
 	if err := yaml.Unmarshal([]byte(regionConfig.Data[shoot.Spec.Region]), &regionConfigData); err != nil {
-		return nil, fmt.Errorf("failed to determine seed candidates. Wrong format in ConfigMap %s/%s, Region %s: %w", regionConfig.Namespace, regionConfig.Name, shoot.Spec.Region, err)
+		return nil, fmt.Errorf("failed to determine seed candidates. Wrong format in region ConfigMap %s/%s, Region %q: %w", regionConfig.Namespace, regionConfig.Name, shoot.Spec.Region, err)
 	}
 
 	// If not configured otherwise, assume that a region has the smallest possible distance to itself.
