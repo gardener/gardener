@@ -74,14 +74,14 @@ func (*db) Stop(ctx context.Context, recorder record.EventRecorder, node *corev1
 	}
 	defer dbc.Close()
 
-	c := make(chan string)
+	jobCh := make(chan string)
 
-	if _, err := dbc.StopUnitContext(ctx, unitName, "replace", c); err != nil {
+	if _, err := dbc.StopUnitContext(ctx, unitName, "replace", jobCh); err != nil {
 		return fmt.Errorf("unable to stop unit %s: %w", unitName, err)
 	}
 
-	if job := <-c; job != done {
-		err = fmt.Errorf("stop failed for %s", job)
+	if completion := <-jobCh; completion != done {
+		err = fmt.Errorf("stop failed for %s, due %s", unitName, completion)
 	}
 
 	recordEvent(recorder, node, err, unitName, "SystemDUnitStop", "stop")
@@ -95,15 +95,15 @@ func (*db) Start(ctx context.Context, recorder record.EventRecorder, node *corev
 	}
 	defer dbc.Close()
 
-	c := make(chan string)
+	jobCh := make(chan string)
 
-	if _, err := dbc.StartUnitContext(ctx, unitName, "replace", c); err != nil {
+	if _, err := dbc.StartUnitContext(ctx, unitName, "replace", jobCh); err != nil {
 		return fmt.Errorf("unable to start unit %s: %w", unitName, err)
 	}
 
-	job := <-c
-	if job != done {
-		err = fmt.Errorf("start failed for %s", job)
+	completion := <-jobCh
+	if completion != done {
+		err = fmt.Errorf("start failed for %s, due %s", unitName, completion)
 	}
 
 	recordEvent(recorder, node, err, unitName, "SystemDUnitStart", "start")
@@ -117,15 +117,15 @@ func (*db) Restart(ctx context.Context, recorder record.EventRecorder, node *cor
 	}
 	defer dbc.Close()
 
-	c := make(chan string)
+	jobCh := make(chan string)
 
-	if _, err := dbc.RestartUnitContext(ctx, unitName, "replace", c); err != nil {
+	if _, err := dbc.RestartUnitContext(ctx, unitName, "replace", jobCh); err != nil {
 		return fmt.Errorf("unable to restart unit %s: %w", unitName, err)
 	}
 
-	job := <-c
-	if job != done {
-		err = fmt.Errorf("restart failed %s", job)
+	completion := <-jobCh
+	if completion != done {
+		err = fmt.Errorf("restart failed for %s, due %s", unitName, completion)
 	}
 
 	recordEvent(recorder, node, err, unitName, "SystemDUnitRestart", "restart")
@@ -148,10 +148,10 @@ func (*db) DaemonReload(ctx context.Context) error {
 
 func recordEvent(recorder record.EventRecorder, node *corev1.Node, err error, unitName, reason, msg string) {
 	if recorder != nil && node != nil {
-		if err == nil {
-			recorder.Event(node, corev1.EventTypeNormal, reason, fmt.Sprintf("successfully %s unit %q", msg, unitName))
-		} else {
-			recorder.Event(node, corev1.EventTypeWarning, reason, fmt.Sprintf("failed to %s unit %q %v", msg, unitName, err))
+		eventType := corev1.EventTypeNormal
+		if err != nil {
+			eventType = corev1.EventTypeWarning
 		}
+		recorder.Eventf(node, eventType, reason, "processed %s of unit %q with error %v", msg, unitName, err)
 	}
 }
