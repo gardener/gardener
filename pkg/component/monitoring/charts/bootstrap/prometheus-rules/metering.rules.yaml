@@ -13,7 +13,7 @@ groups:
 # - _replicaset_to_deployment
 # - _pod_to_deployment
 # - _pod_to_other
-# - _pod_to_owner
+# - _pod_to_owner_instance_type
 
   - record: _node_instance_type
     expr: |2
@@ -68,16 +68,26 @@ groups:
 
   - record: _pod_to_daemonset
     expr: |
-      count by (namespace, pod, owner_name) (kube_pod_owner{owner_kind="DaemonSet"})
+      count by (namespace, pod, owner_name, instance_type) (
+        _kube_pod_owner_with_instance_type{owner_kind="DaemonSet"}
+      )
 
   - record: _pod_to_statefulset
     expr: |
-      count by (namespace, pod, owner_name) (kube_pod_owner{owner_kind="StatefulSet"})
+      count by (namespace, pod, owner_name, instance_type) (
+        _kube_pod_owner_with_instance_type{owner_kind="StatefulSet"}
+      )
 
   - record: _pod_to_replicaset
     expr: |
-      count by (namespace, pod, replicaset) (
-        label_replace(kube_pod_owner{owner_kind="ReplicaSet"}, "replicaset", "$1", "owner_name", "(.*)")
+      count by (namespace, pod, replicaset, instance_type) (
+        label_replace(
+          _kube_pod_owner_with_instance_type{owner_kind="ReplicaSet"},
+          "replicaset",
+          "$1",
+          "owner_name",
+          "(.*)"
+        )
       )
 
   - record: _replicaset_to_deployment
@@ -86,19 +96,19 @@ groups:
 
   - record: _pod_to_deployment
     expr: |
-      count by (namespace, pod, owner_name) (
+      count by (namespace, pod, owner_name, instance_type) (
         _pod_to_replicaset + on (namespace, replicaset) group_left (owner_name) _replicaset_to_deployment
       )
 
   - record: _pod_to_other
     expr: |
-      count by (namespace, pod, owner_name) (
-        kube_pod_owner{owner_kind!~"DaemonSet|StatefulSet|ReplicaSet"}
+      count by (namespace, pod, owner_name, instance_type) (
+        _kube_pod_owner_with_instance_type{owner_kind!~"DaemonSet|StatefulSet|ReplicaSet"}
       )
 
-  - record: _pod_to_owner
+  - record: _pod_to_owner_instance_type
     expr: |2
-        count by (namespace, pod, owner) (
+        count by (namespace, pod, owner, instance_type) (
           label_replace(
             _pod_to_statefulset or _pod_to_daemonset or _pod_to_deployment or _pod_to_other,
             "owner",
