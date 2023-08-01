@@ -641,9 +641,7 @@ func ExpirationDateExpired(timestamp *metav1.Time) bool {
 
 // disablePodSecurityPolicyAdmissionController disables the PodSecurityPolicy Admission Controller of a shoot
 func disablePodSecurityPolicyAdmissionController(shoot *gardencorev1beta1.Shoot, reason string) []string {
-	var (
-		reasonsForUpdate []string
-	)
+	var reasonsForUpdate []string
 
 	if shoot.Spec.Kubernetes.KubeAPIServer == nil {
 		shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{}
@@ -671,11 +669,13 @@ func disablePodSecurityPolicyAdmissionController(shoot *gardencorev1beta1.Shoot,
 
 // ensureSufficientMaxWorkers ensures that the number of max workers of a worker group is greater or equal to its number of zones
 func ensureSufficientMaxWorkers(shoot *gardencorev1beta1.Shoot, reason string) []string {
-	var (
-		reasonsForUpdate []string
-	)
+	var reasonsForUpdate []string
 
 	for i, worker := range shoot.Spec.Provider.Workers {
+		if !v1beta1helper.SystemComponentsAllowed(&worker) {
+			continue
+		}
+
 		if int(worker.Maximum) >= len(worker.Zones) {
 			continue
 		}

@@ -780,6 +780,15 @@ var _ = Describe("Shoot Maintenance", func() {
 			}
 		})
 
+		It("should not change worker groups which do not allow system components", func() {
+			shoot.Spec.Provider.Workers[1].SystemComponents = &gardencorev1beta1.WorkerSystemComponents{Allow: false}
+			shoot.Spec.Provider.Workers[1].Zones = append(shoot.Spec.Provider.Workers[1].Zones, "barZone")
+			result := ensureSufficientMaxWorkers(shoot, "foobar")
+			Expect(result).To(HaveLen(0))
+			Expect(shoot.Spec.Provider.Workers[0].Maximum).To(Equal(int32(3)))
+			Expect(shoot.Spec.Provider.Workers[1].Maximum).To(Equal(int32(1)))
+		})
+
 		It("should not change anything if the maximum workers are high enough", func() {
 			result := ensureSufficientMaxWorkers(shoot, "foobar")
 			Expect(result).To(HaveLen(0))
@@ -787,7 +796,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(shoot.Spec.Provider.Workers[1].Maximum).To(Equal(int32(1)))
 		})
 
-		It("should increase there are more zones than maximum workers", func() {
+		It("should increase values if there are more zones than maximum workers", func() {
 			shoot.Spec.Provider.Workers[1].Zones = append(shoot.Spec.Provider.Workers[1].Zones, "barZone")
 			result := ensureSufficientMaxWorkers(shoot, "foobar")
 			Expect(result).To(HaveLen(1))
