@@ -151,8 +151,19 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 
 	// Disable PodSecurityPolicy Admission Controller when shoot cluster is updated to k8s version >= 1.25
 	if versionutils.ConstraintK8sLess125.Check(oldShootKubernetesVersion) && versionutils.ConstraintK8sGreaterEqual125.Check(shootKubernetesVersion) {
+		if maintainedShoot.Spec.Kubernetes.AllowPrivilegedContainers != nil {
+			maintainedShoot.Spec.Kubernetes.AllowPrivilegedContainers = nil
+			operations = append(operations, fmt.Sprintf("allowPrivilegedContainers must be nil for updating Kubernetes to %q", shootKubernetesVersion.String()))
+		}
+
 		reasonsForAdmissionPluginUpdate := disablePodSecurityPolicyAdmissionController(maintainedShoot, fmt.Sprintf("PodSecurityPolicy Admission Controller must be disabled for updating Kubernetes to %q", shootKubernetesVersion.String()))
 		operations = append(operations, reasonsForAdmissionPluginUpdate...)
+		if len(reasonsForAdmissionPluginUpdate) > 0 {
+			operations = append(operations, fmt.Sprintf("Postponing Kubernetes update to %q to the next maintenance window because disabling PodSecurityPolicy Admission Controller and Kubernetes update cannot be done at the same time", shootKubernetesVersion.String()))
+			shootKubernetesVersion = oldShootKubernetesVersion
+			maintainedShoot.Spec.Kubernetes.Version = shoot.Spec.Kubernetes.Version
+			reasonForKubernetesUpdate = []string{}
+		}
 	}
 
 	// Reset the `EnableStaticTokenKubeconfig` value to false, when shoot cluster is updated to  k8s version >= 1.27.
@@ -214,7 +225,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		// First dry run the update call to check if it can be executed successfully.
 		// If not shoot maintenance is marked as failed and is retried only in
 		// next maintenance window.
-		if err := r.Client.Update(ctx, maintainedShoot, &client.UpdateOptions{
+		if err := r.Client.Update(ctx, maintainedShoot.DeepCopy(), &client.UpdateOptions{
 			DryRun: []string{metav1.DryRunAll},
 		}); err != nil {
 			// If shoot maintenance is triggered by `gardener.cloud/operation=maintain` annotation and if it fails in dry run,
