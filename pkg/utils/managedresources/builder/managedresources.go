@@ -143,7 +143,7 @@ func (m *ManagedResource) Reconcile(ctx context.Context) error {
 			mutateFn(resource)
 
 			// only mark the new secrets
-			if err := markSecretsAsGarbageCollectable(ctx, m.client, secretsFromRefs(resource, sets.New[string]())); err != nil {
+			if err := markSecretsAsGarbageCollectable(ctx, m.client, secretsFromRefs(resource, sets.New[string]()), false); err != nil {
 				return err
 			}
 
@@ -156,10 +156,11 @@ func (m *ManagedResource) Reconcile(ctx context.Context) error {
 	// This is done in order to guarantee backwards compatibility with previous versions of this library
 	// when the underlying mananaged resource secrets were not immutable and not garbage collectable.
 	// This guarantees that "old" secrets are always taken care of.
+	// If an old secret is already deleted then we do not care about it and continue the flow.
 	// For more details, please see https://github.com/gardener/gardener/pull/8116
 	excludedNames := sets.New[string]()
 	oldSecrets := secretsFromRefs(resource, excludedNames)
-	if err := markSecretsAsGarbageCollectable(ctx, m.client, oldSecrets); err != nil {
+	if err := markSecretsAsGarbageCollectable(ctx, m.client, oldSecrets, true); err != nil {
 		return err
 	}
 
@@ -177,7 +178,7 @@ func (m *ManagedResource) Reconcile(ctx context.Context) error {
 
 	// mark new secrets (if any) as garbage collectable
 	newSecrets := secretsFromRefs(resource, excludedNames)
-	if err := markSecretsAsGarbageCollectable(ctx, m.client, newSecrets); err != nil {
+	if err := markSecretsAsGarbageCollectable(ctx, m.client, newSecrets, false); err != nil {
 		return err
 	}
 
@@ -189,9 +190,12 @@ func (m *ManagedResource) Delete(ctx context.Context) error {
 	return client.IgnoreNotFound(m.client.Delete(ctx, m.resource))
 }
 
-func markSecretsAsGarbageCollectable(ctx context.Context, c client.Client, secrets []*corev1.Secret) error {
+func markSecretsAsGarbageCollectable(ctx context.Context, c client.Client, secrets []*corev1.Secret, ignoreNotFound bool) error {
 	for _, secret := range secrets {
 		if err := c.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+			if apierrors.IsNotFound(err) && ignoreNotFound {
+				continue
+			}
 			return err
 		}
 
