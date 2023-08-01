@@ -16,6 +16,7 @@ package builder
 
 import (
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -144,7 +145,7 @@ func (m *ManagedResource) Reconcile(ctx context.Context) error {
 
 			// only mark the new secrets
 			if err := markSecretsAsGarbageCollectable(ctx, m.client, secretsFromRefs(resource, sets.New[string]()), false); err != nil {
-				return err
+				return fmt.Errorf("marking new secrets as garbage collectable: %w", err)
 			}
 
 			return m.client.Create(ctx, resource)
@@ -161,7 +162,7 @@ func (m *ManagedResource) Reconcile(ctx context.Context) error {
 	excludedNames := sets.New[string]()
 	oldSecrets := secretsFromRefs(resource, excludedNames)
 	if err := markSecretsAsGarbageCollectable(ctx, m.client, oldSecrets, true); err != nil {
-		return err
+		return fmt.Errorf("marking old secrets as garbage collectable: %w", err)
 	}
 
 	// Update the managed resource if necessary
@@ -179,7 +180,7 @@ func (m *ManagedResource) Reconcile(ctx context.Context) error {
 	// mark new secrets (if any) as garbage collectable
 	newSecrets := secretsFromRefs(resource, excludedNames)
 	if err := markSecretsAsGarbageCollectable(ctx, m.client, newSecrets, false); err != nil {
-		return err
+		return fmt.Errorf("marking new secrets as garbage collectable: %w", err)
 	}
 
 	return m.client.Update(ctx, resource)
