@@ -445,6 +445,7 @@ func lastSecretRotationStartTimes(garden *operatorv1alpha1.Garden) map[string]ti
 
 		if gardenStatus.Credentials.Rotation.ETCDEncryptionKey != nil && gardenStatus.Credentials.Rotation.ETCDEncryptionKey.LastInitiationTime != nil {
 			rotation[v1beta1constants.SecretNameETCDEncryptionKey] = gardenStatus.Credentials.Rotation.ETCDEncryptionKey.LastInitiationTime.Time
+			rotation[v1beta1constants.SecretNameGardenerETCDEncryptionKey] = gardenStatus.Credentials.Rotation.ETCDEncryptionKey.LastInitiationTime.Time
 		}
 
 		if gardenStatus.Credentials.Rotation.Observability != nil && gardenStatus.Credentials.Rotation.Observability.LastInitiationTime != nil {
