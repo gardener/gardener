@@ -29,7 +29,12 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:resource:scope=Cluster,shortName="grdn"
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Reconciled",type=string,JSONPath=`.status.conditions[?(@.type=="Reconciled")].status`,description="Indicates whether the garden has been reconciled."
+// +kubebuilder:printcolumn:name="K8S Version",type=string,JSONPath=`.spec.virtualCluster.kubernetes.version`,description="Kubernetes version of virtual cluster."
+// +kubebuilder:printcolumn:name="Gardener Version",type=string,JSONPath=`.status.gardener.version`,description="Version of the Gardener components."
+// +kubebuilder:printcolumn:name="Last Operation",type=string,JSONPath=`.status.lastOperation.state`,description="Status of the last operation"
+// +kubebuilder:printcolumn:name="Runtime",type=string,JSONPath=`.status.conditions[?(@.type=="RuntimeComponentsHealthy")].status`,description="Indicates whether the components related to the runtime cluster are healthy."
+// +kubebuilder:printcolumn:name="Virtual",type=string,JSONPath=`.status.conditions[?(@.type=="VirtualComponentsHealthy")].status`,description="Indicates whether the components related to the virtual cluster are healthy."
+// +kubebuilder:printcolumn:name="API Server",type=string,JSONPath=`.status.conditions[?(@.type=="VirtualGardenAPIServerAvailable")].status`,description="Indicates whether the API server of the virtual cluster is available."
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="creation timestamp"
 
 // Garden describes a list of gardens.
