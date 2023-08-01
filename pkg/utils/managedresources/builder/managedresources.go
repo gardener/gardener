@@ -197,7 +197,7 @@ func markSecretsAsGarbageCollectable(ctx context.Context, c client.Client, secre
 
 		// if the GC label is already set then skip sending an empty patch
 		if secret.Labels[references.LabelKeyGarbageCollectable] == references.LabelValueGarbageCollectable {
-			return nil
+			continue
 		}
 
 		patch := client.StrategicMergeFrom(secret.DeepCopy())
