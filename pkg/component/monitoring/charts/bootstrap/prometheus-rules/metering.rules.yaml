@@ -214,100 +214,106 @@ groups:
         or
           _namespace_to_shoot_uid_and_date
 
-# - metering  :cpu_usage                 :sum_by_namespace_owner_container
-# - metering  :cpu_requests              :sum_by_namespace_owner_container
-# - metering  :memory_usage              :sum_by_namespace_owner_container
-# - metering  :working_set_memory        :sum_by_namespace_owner_container
-# - metering  :memory_requests           :sum_by_namespace_owner_container
-# - metering  :network_transmit          :sum_by_namespace_owner
-# - metering  :network_receive           :sum_by_namespace_owner
-# - metering  :persistent_volume_claims  :sum_by_namespace_owner
-# - metering  :persistent_volume_usage   :sum_by_namespace_owner
+# - metering  :cpu_usage                 :sum_by_namespace_owner_container_instance_type
+# - metering  :cpu_requests              :sum_by_namespace_owner_container_instance_type
+# - metering  :memory_usage              :sum_by_namespace_owner_container_instance_type
+# - metering  :working_set_memory        :sum_by_namespace_owner_container_instance_type
+# - metering  :memory_requests           :sum_by_namespace_owner_container_instance_type
+# - metering  :network_transmit          :sum_by_namespace_owner_instance_type
+# - metering  :network_receive           :sum_by_namespace_owner_instance_type
+# - metering  :persistent_volume_claims  :sum_by_namespace_owner_instance_type
+# - metering  :persistent_volume_usage   :sum_by_namespace_owner_instance_type
 
-  - record: metering:cpu_usage:sum_by_namespace_owner_container
+  - record: metering:cpu_usage:sum_by_namespace_owner_container_instance_type
     expr: |2
-        sum by (namespace, owner, container) (
-          rate(container_cpu_usage_seconds_total[5m]) + on (namespace, pod) group_left (owner) _pod_to_owner
+        sum by (namespace, owner, container, instance_type) (
+            rate(container_cpu_usage_seconds_total[5m])
+          + on (namespace, pod) group_left (owner, instance_type)
+            _pod_to_owner_instance_type
         )
       + on (namespace) group_left (shoot_uid)
         _namespace_to_shoot_uid
 
-  - record: metering:cpu_requests:sum_by_namespace_owner_container
+  - record: metering:cpu_requests:sum_by_namespace_owner_container_instance_type
     expr: |2
-        sum by (namespace, owner, container) (
+        sum by (namespace, owner, container, instance_type) (
             kube_pod_container_resource_requests{resource="cpu",unit="core"}
-          + on (namespace, pod) group_left (owner)
-            _pod_to_owner
+          + on (namespace, pod) group_left (owner, instance_type)
+            _pod_to_owner_instance_type
         )
       + on (namespace) group_left (shoot_uid)
         _namespace_to_shoot_uid
 
-  - record: metering:memory_usage:sum_by_namespace_owner_container
+  - record: metering:memory_usage:sum_by_namespace_owner_container_instance_type
     expr: |2
-        sum by (namespace, owner, container) (
-          container_memory_usage_bytes + on (namespace, pod) group_left (owner) _pod_to_owner
+        sum by (namespace, owner, container, instance_type) (
+            container_memory_usage_bytes
+          + on (namespace, pod) group_left (owner, instance_type)
+            _pod_to_owner_instance_type
         )
       + on (namespace) group_left (shoot_uid)
         _namespace_to_shoot_uid
 
-  - record: metering:working_set_memory:sum_by_namespace_owner_container
+  - record: metering:working_set_memory:sum_by_namespace_owner_container_instance_type
     expr: |2
-        sum by (namespace, owner, container) (
-          container_memory_working_set_bytes + on (namespace, pod) group_left (owner) _pod_to_owner
+        sum by (namespace, owner, container, instance_type) (
+            container_memory_working_set_bytes
+          + on (namespace, pod) group_left (owner, instance_type)
+            _pod_to_owner_instance_type
         )
       + on (namespace) group_left (shoot_uid)
         _namespace_to_shoot_uid
 
-  - record: metering:memory_requests:sum_by_namespace_owner_container
+  - record: metering:memory_requests:sum_by_namespace_owner_container_instance_type
     expr: |2
-        sum by (namespace, owner, container) (
+        sum by (namespace, owner, container, instance_type) (
             kube_pod_container_resource_requests{resource="memory",unit="byte"}
-          + on (namespace, pod) group_left (owner)
-            _pod_to_owner
+          + on (namespace, pod) group_left (owner, instance_type)
+            _pod_to_owner_instance_type
         )
       + on (namespace) group_left (shoot_uid)
         _namespace_to_shoot_uid
 
-  - record: metering:network_transmit:sum_by_namespace_owner
+  - record: metering:network_transmit:sum_by_namespace_owner_instance_type
     expr: |2
-        sum by (namespace, owner) (
+        sum by (namespace, owner, instance_type) (
             rate(container_network_transmit_bytes_total{host_network=""}[5m])
-          + on (namespace, pod) group_left (owner)
-            _pod_to_owner
+          + on (namespace, pod) group_left (owner, instance_type)
+            _pod_to_owner_instance_type
         )
       + on (namespace) group_left (shoot_uid)
         _namespace_to_shoot_uid
 
-  - record: metering:network_receive:sum_by_namespace_owner
+  - record: metering:network_receive:sum_by_namespace_owner_instance_type
     expr: |2
-        sum by (namespace, owner) (
+        sum by (namespace, owner, instance_type) (
             rate(container_network_receive_bytes_total{host_network=""}[5m])
-          + on (namespace, pod) group_left (owner)
-            _pod_to_owner
+          + on (namespace, pod) group_left (owner, instance_type)
+            _pod_to_owner_instance_type
         )
       + on (namespace) group_left (shoot_uid)
         _namespace_to_shoot_uid
 
-  - record: metering:persistent_volume_claims:sum_by_namespace_owner
+  - record: metering:persistent_volume_claims:sum_by_namespace_owner_instance_type
     expr: |2
-        sum by (namespace, owner) (
+        sum by (namespace, owner, instance_type) (
                 kube_persistentvolumeclaim_resource_requests_storage_bytes
               + on (namespace, persistentvolumeclaim) group_right
                 kube_pod_spec_volumes_persistentvolumeclaims_info * 0
-          + on (namespace, pod) group_left (owner)
-            _pod_to_owner
+          + on (namespace, pod) group_left (owner, instance_type)
+            _pod_to_owner_instance_type
         )
       + on (namespace) group_left (shoot_uid)
         _namespace_to_shoot_uid
 
-  - record: metering:persistent_volume_usage:sum_by_namespace_owner
+  - record: metering:persistent_volume_usage:sum_by_namespace_owner_instance_type
     expr: |2
-        sum by (namespace, owner) (
+        sum by (namespace, owner, instance_type) (
                 max by (namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes)
               + on (namespace, persistentvolumeclaim) group_right
                 kube_pod_spec_volumes_persistentvolumeclaims_info * 0
-          + on (namespace, pod) group_left (owner)
-            _pod_to_owner
+          + on (namespace, pod) group_left (owner, instance_type)
+            _pod_to_owner_instance_type
         )
       + on (namespace) group_left (shoot_uid)
         _namespace_to_shoot_uid
