@@ -25,6 +25,7 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -79,6 +80,9 @@ var _ = Describe("GardenerControllerManager", func() {
 		podDisruptionBudget *policyv1.PodDisruptionBudget
 		serviceRuntime      *corev1.Service
 		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
+
+		clusterRole        *rbacv1.ClusterRole
+		clusterRoleBinding *rbacv1.ClusterRoleBinding
 	)
 
 	BeforeEach(func() {
@@ -189,6 +193,41 @@ var _ = Describe("GardenerControllerManager", func() {
 				},
 			},
 		}
+		clusterRole = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:controller-manager",
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "controller-manager",
+				},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"*"},
+					Resources: []string{"*"},
+					Verbs:     []string{"*"},
+				},
+			},
+		}
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:controller-manager",
+				Labels: map[string]string{
+					"app":  "gardener",
+					"role": "controller-manager",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     "gardener.cloud:system:controller-manager",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "gardener-controller-manager",
+				Namespace: "kube-system",
+			}},
+		}
 
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 	})
@@ -287,7 +326,9 @@ var _ = Describe("GardenerControllerManager", func() {
 				Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-controller-manager.yaml"])).To(Equal(deployment(namespace, "gardener-controller-manager-config-7eb74c5d", values)))
 
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecretVirtual.Data).To(HaveLen(0))
+				Expect(managedResourceSecretVirtual.Data).To(HaveLen(2))
+				Expect(string(managedResourceSecretVirtual.Data["clusterrole____gardener.cloud_system_controller-manager.yaml"])).To(Equal(componenttest.Serialize(clusterRole)))
+				Expect(string(managedResourceSecretVirtual.Data["clusterrolebinding____gardener.cloud_system_controller-manager.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
 			})
 		})
 

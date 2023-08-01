@@ -116,7 +116,10 @@ func (g *gardenerControllerManager) Deploy(ctx context.Context) error {
 		virtualRegistry = managedresources.NewRegistry(operatorclient.VirtualScheme, operatorclient.VirtualCodec, operatorclient.VirtualSerializer)
 	)
 
-	virtualResources, err := virtualRegistry.AddAllAndSerialize()
+	virtualResources, err := virtualRegistry.AddAllAndSerialize(
+		g.clusterRole(),
+		g.clusterRoleBinding(virtualGardenAccessSecret.ServiceAccountName),
+	)
 	if err != nil {
 		return err
 	}
