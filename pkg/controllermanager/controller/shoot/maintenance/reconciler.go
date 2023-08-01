@@ -156,11 +156,13 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	}
 
 	// Reset the `EnableStaticTokenKubeconfig` value to false, when shoot cluster is updated to  k8s version >= 1.27.
-	if versionutils.ConstraintK8sLess127.Check(oldShootKubernetesVersion) && pointer.BoolDeref(maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) && versionutils.ConstraintK8sGreaterEqual127.Check(shootKubernetesVersion) {
-		maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(false)
+	if versionutils.ConstraintK8sLess127.Check(oldShootKubernetesVersion) && versionutils.ConstraintK8sGreaterEqual127.Check(shootKubernetesVersion) {
+		if pointer.BoolDeref(maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
+			maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(false)
 
-		reason := "EnableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27 and higher"
-		operations = append(operations, reason)
+			reason := "EnableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27 and higher"
+			operations = append(operations, reason)
+		}
 
 		reasonsForIncreasingMaxWorkers := ensureSufficientMaxWorkers(maintainedShoot, fmt.Sprintf("Maximum number of workers of a worker group must be greater or equal to its number of zones for updating Kubernetes to %q", shootKubernetesVersion.String()))
 		operations = append(operations, reasonsForIncreasingMaxWorkers...)
