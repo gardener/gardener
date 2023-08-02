@@ -700,6 +700,111 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 	})
 
+	Describe("#DisablePodSecurityPolicyAdmissionController", func() {
+		var (
+			shoot                             *gardencorev1beta1.Shoot
+			policyAdmissionControllerDisabled gardencorev1beta1.AdmissionPlugin
+			foobarAdmissionPlugin             gardencorev1beta1.AdmissionPlugin
+		)
+
+		BeforeEach(func() {
+			policyAdmissionControllerDisabled = gardencorev1beta1.AdmissionPlugin{
+				Name:     "PodSecurityPolicy",
+				Disabled: pointer.Bool(true),
+			}
+			foobarAdmissionPlugin = gardencorev1beta1.AdmissionPlugin{
+				Name:     "foobar",
+				Disabled: pointer.Bool(true),
+			}
+
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "shoot",
+				},
+				Spec: gardencorev1beta1.ShootSpec{},
+			}
+		})
+
+		It("should not change anything if PodSecurityPolicy admission controller is already disabled", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{policyAdmissionControllerDisabled}}
+			result := disablePodSecurityPolicyAdmissionController(shoot, "foobar")
+			Expect(result).To(HaveLen(0))
+			Expect(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).To(ConsistOf(policyAdmissionControllerDisabled))
+		})
+
+		It("should disable PodSecurityPolicy admission controller if there is no KubeAPIServer configuration", func() {
+			result := disablePodSecurityPolicyAdmissionController(shoot, "foobar")
+			Expect(result).To(HaveLen(1))
+			Expect(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).To(ConsistOf(policyAdmissionControllerDisabled))
+		})
+
+		It("should disable PodSecurityPolicy admission controller if there are admission plugins in KubeAPIServer configuration", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{foobarAdmissionPlugin}}
+			result := disablePodSecurityPolicyAdmissionController(shoot, "foobar")
+			Expect(result).To(HaveLen(1))
+			Expect(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).To(ConsistOf(policyAdmissionControllerDisabled, foobarAdmissionPlugin))
+		})
+
+		It("should disable PodSecurityPolicy admission controller if it was enabled before", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{AdmissionPlugins: []gardencorev1beta1.AdmissionPlugin{foobarAdmissionPlugin, {Name: "PodSecurityPolicy", Disabled: pointer.Bool(false)}}}
+			result := disablePodSecurityPolicyAdmissionController(shoot, "foobar")
+			Expect(result).To(HaveLen(1))
+			Expect(shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).To(ConsistOf(policyAdmissionControllerDisabled, foobarAdmissionPlugin))
+		})
+	})
+
+	Describe("#EnsureSufficientMaxWorkers", func() {
+		var (
+			shoot *gardencorev1beta1.Shoot
+		)
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "shoot",
+				},
+				Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
+						{
+							Name:    "cpu-worker",
+							Maximum: 3,
+							Zones:   []string{"fooZone", "barZone"},
+						},
+						{
+							Name:    "cpu-worker2",
+							Maximum: 1,
+							Zones:   []string{"fooZone"},
+						},
+					}},
+				},
+			}
+		})
+
+		It("should not change worker groups which do not allow system components", func() {
+			shoot.Spec.Provider.Workers[1].SystemComponents = &gardencorev1beta1.WorkerSystemComponents{Allow: false}
+			shoot.Spec.Provider.Workers[1].Zones = append(shoot.Spec.Provider.Workers[1].Zones, "barZone")
+			result := ensureSufficientMaxWorkers(shoot, "foobar")
+			Expect(result).To(HaveLen(0))
+			Expect(shoot.Spec.Provider.Workers[0].Maximum).To(Equal(int32(3)))
+			Expect(shoot.Spec.Provider.Workers[1].Maximum).To(Equal(int32(1)))
+		})
+
+		It("should not change anything if the maximum workers are high enough", func() {
+			result := ensureSufficientMaxWorkers(shoot, "foobar")
+			Expect(result).To(HaveLen(0))
+			Expect(shoot.Spec.Provider.Workers[0].Maximum).To(Equal(int32(3)))
+			Expect(shoot.Spec.Provider.Workers[1].Maximum).To(Equal(int32(1)))
+		})
+
+		It("should increase values if there are more zones than maximum workers", func() {
+			shoot.Spec.Provider.Workers[1].Zones = append(shoot.Spec.Provider.Workers[1].Zones, "barZone")
+			result := ensureSufficientMaxWorkers(shoot, "foobar")
+			Expect(result).To(HaveLen(1))
+			Expect(shoot.Spec.Provider.Workers[0].Maximum).To(Equal(int32(3)))
+			Expect(shoot.Spec.Provider.Workers[1].Maximum).To(Equal(int32(2)))
+		})
+	})
+
 	Describe("#UpdateToContainerd", func() {
 		var (
 			shoot *gardencorev1beta1.Shoot
@@ -711,14 +816,6 @@ var _ = Describe("Shoot Maintenance", func() {
 					Name: "shoot",
 				},
 				Spec: gardencorev1beta1.ShootSpec{
-					Kubernetes: gardencorev1beta1.Kubernetes{
-						Version: "1.23.16",
-					},
-					Maintenance: &gardencorev1beta1.Maintenance{
-						AutoUpdate: &gardencorev1beta1.MaintenanceAutoUpdate{
-							MachineImageVersion: pointer.Bool(true),
-						},
-					},
 					Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
 						{
 							Name: "cpu-worker",
@@ -732,24 +829,24 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should not change anything if CRI is not set", func() {
-			_, err := updateToContainerd(shoot, "foobar")
-			Expect(err).NotTo(HaveOccurred())
+			result := updateToContainerd(shoot, "foobar")
+			Expect(result).To(HaveLen(0))
 			Expect(shoot.Spec.Provider.Workers[0].CRI).To(BeNil())
 			Expect(shoot.Spec.Provider.Workers[1].CRI).To(BeNil())
 		})
 
 		It("should change docker to containerd", func() {
 			shoot.Spec.Provider.Workers[1].CRI = &gardencorev1beta1.CRI{Name: "docker"}
-			_, err := updateToContainerd(shoot, "foobar")
-			Expect(err).NotTo(HaveOccurred())
+			result := updateToContainerd(shoot, "foobar")
+			Expect(result).To(HaveLen(1))
 			Expect(shoot.Spec.Provider.Workers[1].CRI.Name).To(Equal(gardencorev1beta1.CRINameContainerD))
 			Expect(shoot.Spec.Provider.Workers[0].CRI).To(BeNil())
 		})
 
 		It("should keep containerd if it is already set", func() {
 			shoot.Spec.Provider.Workers[0].CRI = &gardencorev1beta1.CRI{Name: "containerd"}
-			_, err := updateToContainerd(shoot, "foobar")
-			Expect(err).NotTo(HaveOccurred())
+			result := updateToContainerd(shoot, "foobar")
+			Expect(result).To(HaveLen(0))
 			Expect(shoot.Spec.Provider.Workers[0].CRI.Name).To(Equal(gardencorev1beta1.CRINameContainerD))
 			Expect(shoot.Spec.Provider.Workers[1].CRI).To(BeNil())
 		})
