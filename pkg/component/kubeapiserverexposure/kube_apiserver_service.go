@@ -141,10 +141,9 @@ func (s *service) Deploy(ctx context.Context) error {
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", "*")
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(obj, networkingv1.NetworkPolicyPort{Port: utils.IntStrPtrFromInt(kubeapiserverconstants.Port), Protocol: utils.ProtocolPtr(corev1.ProtocolTCP)}))
 
-		// TODO(timuthy): Drop this annotation once the gardener-operator no longer specifies 'LoadBalancer' as service
-		//  type (then API servers are only exposed indirectly via Istio) and the NetworkPolicy controller in
-		//  gardener-resource-manager is enabled for all relevant namespaces in the seed cluster.
-		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, kubeapiserverconstants.Port))
+		// The 'from-world-to-ports' annotation was set in previous releases. Remove it here since it's not required any more.
+		// TODO(timuthy): Remove this code after v1.77 is released.
+		delete(obj.Annotations, resourcesv1alpha1.NetworkingFromWorldToPorts)
 
 		namespaceSelectors := []metav1.LabelSelector{
 			{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},

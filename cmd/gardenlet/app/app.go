@@ -55,6 +55,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -350,6 +351,11 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
+	log.Info("Removing 'from-world-to-ports' annotation from kube-apiserver services")
+	if err := removeFromWorldToPortsAnnotations(ctx, g.mgr.GetClient()); err != nil {
+		return fmt.Errorf("failed to remove 'from-world-to-ports' annotation from kube-apiserver services: %w", err)
+	}
+
 	log.Info("Setting up shoot client map")
 	shootClientMap, err := clientmapbuilder.
 		NewShootClientMapBuilder().
@@ -397,6 +403,34 @@ func (g *garden) Start(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// TODO(timuthy): Remove this code after v1.77 is released.
+func removeFromWorldToPortsAnnotations(ctx context.Context, seedClient client.Client) error {
+	serviceList := &corev1.ServiceList{}
+	if err := seedClient.List(ctx, serviceList, client.MatchingLabels{
+		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
+		v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
+	}); err != nil {
+		return err
+	}
+
+	var taskFns []flow.TaskFn
+	for _, service := range serviceList.Items {
+		if !metav1.HasAnnotation(service.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts) {
+			continue
+		}
+
+		svc := service
+		patch := client.MergeFrom(svc.DeepCopy())
+
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			delete(svc.Annotations, resourcesv1alpha1.NetworkingFromWorldToPorts)
+			return seedClient.Patch(ctx, &svc, patch)
+		})
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
 }
 
 func (g *garden) registerSeed(ctx context.Context, gardenClient client.Client) error {

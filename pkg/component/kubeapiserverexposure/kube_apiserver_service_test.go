@@ -217,7 +217,6 @@ var _ = Describe("#Service", func() {
 					"foo":                          "bar",
 					"networking.istio.io/exportTo": "*",
 					"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":443}]`,
-					"networking.resources.gardener.cloud/from-world-to-ports":                   `[{"protocol":"TCP","port":443}]`,
 					"networking.resources.gardener.cloud/namespace-selectors":                   `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchLabels":{"networking.gardener.cloud/access-target-apiserver":"allowed"}}]`,
 					"service.kubernetes.io/topology-aware-hints":                                "auto",
 				}
@@ -283,7 +282,6 @@ var _ = Describe("#Service", func() {
 func netpolAnnotations() map[string]string {
 	return map[string]string{
 		"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":443}]`,
-		"networking.resources.gardener.cloud/from-world-to-ports":                   `[{"protocol":"TCP","port":443}]`,
 		"networking.resources.gardener.cloud/namespace-selectors":                   `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchLabels":{"networking.gardener.cloud/access-target-apiserver":"allowed"}}]`,
 	}
 }
@@ -291,7 +289,6 @@ func netpolAnnotations() map[string]string {
 func shootNetpolAnnotations() map[string]string {
 	return map[string]string{
 		"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":443}]`,
-		"networking.resources.gardener.cloud/from-world-to-ports":                   `[{"protocol":"TCP","port":443}]`,
 		"networking.resources.gardener.cloud/namespace-selectors":                   `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchLabels":{"networking.gardener.cloud/access-target-apiserver":"allowed"}},{"matchLabels":{"kubernetes.io/metadata.name":"garden"}},{"matchExpressions":[{"key":"handler.exposureclass.gardener.cloud/name","operator":"Exists"}]},{"matchLabels":{"gardener.cloud/role":"extension"}}]`,
 		"networking.resources.gardener.cloud/pod-label-selector-namespace-alias":    "all-shoots",
 	}
