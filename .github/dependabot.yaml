@@ -1,0 +1,11 @@
+version: 2
+updates:
+# Create PRs for golang version updates
+- package-ecosystem: docker
+  directory: /
+  schedule:
+    interval: daily
+- package-ecosystem: docker
+  directory: /.test-defs
+  schedule:
+    interval: daily
