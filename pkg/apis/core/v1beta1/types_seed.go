@@ -420,9 +420,6 @@ type SeedVolumeProvider struct {
 const (
 	// SeedBackupBucketsReady is a constant for a condition type indicating that associated BackupBuckets are ready.
 	SeedBackupBucketsReady ConditionType = "BackupBucketsReady"
-	// SeedBootstrapped is a constant for a condition type indicating that the seed cluster has been
-	// bootstrapped.
-	SeedBootstrapped ConditionType = "Bootstrapped"
 	// SeedExtensionsReady is a constant for a condition type indicating that the extensions are ready.
 	SeedExtensionsReady ConditionType = "ExtensionsReady"
 	// SeedGardenletReady is a constant for a condition type indicating that the Gardenlet is ready.
