@@ -173,7 +173,7 @@ define GENERATE_HELP_INFO
 #
 # Options:
 #   WHAT   - Specify the targets to run (e.g., "protobuf codegen manifests logcheck gomegacheck monitoring-docs")
-#   WHICH  - Specify which folders to run the "manifests" target in, not applicable for other targets (e.g., "charts cmd example extensions pkg plugin test")
+#   WHICH  - Specify which folders to run the 'manifests' target in, not applicable for other targets (e.g., "charts cmd example extensions pkg plugin test")
 #   MODE   - Specify the mode for the 'manifests' target (e.g., "sequential" or "parallel")
 #
 # Examples:
