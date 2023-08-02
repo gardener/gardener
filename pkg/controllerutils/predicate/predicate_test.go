@@ -499,4 +499,57 @@ var _ = Describe("Predicate", func() {
 			Entry("spec.seedName does not match but status.seedName matches", pointer.String("otherSeed"), pointer.String("seed"), gomega.BeTrue()),
 		)
 	})
+
+	Describe("#ReconciliationFinishedSuccessfully", func() {
+		var lastOperation *gardencorev1beta1.LastOperation
+
+		BeforeEach(func() {
+			lastOperation = &gardencorev1beta1.LastOperation{}
+		})
+
+		It("should return false because last operation is nil on new object", func() {
+			oldLastOperation := lastOperation.DeepCopy()
+			gomega.Expect(ReconciliationFinishedSuccessfully(oldLastOperation, lastOperation)).To(gomega.BeFalse())
+		})
+
+		It("should return false because last operation type is 'Delete' on old object", func() {
+			lastOperation = &gardencorev1beta1.LastOperation{}
+			oldLastOperation := lastOperation.DeepCopy()
+			oldLastOperation.Type = gardencorev1beta1.LastOperationTypeDelete
+			gomega.Expect(ReconciliationFinishedSuccessfully(oldLastOperation, lastOperation)).To(gomega.BeFalse())
+		})
+
+		It("should return false because last operation type is 'Delete' on new object", func() {
+			lastOperation = &gardencorev1beta1.LastOperation{}
+			lastOperation.Type = gardencorev1beta1.LastOperationTypeDelete
+			oldLastOperation := lastOperation.DeepCopy()
+			gomega.Expect(ReconciliationFinishedSuccessfully(oldLastOperation, lastOperation)).To(gomega.BeFalse())
+		})
+
+		It("should return false because last operation type is not 'Processing' on old object", func() {
+			lastOperation = &gardencorev1beta1.LastOperation{}
+			lastOperation.Type = gardencorev1beta1.LastOperationTypeReconcile
+			lastOperation.State = gardencorev1beta1.LastOperationStateSucceeded
+			oldLastOperation := lastOperation.DeepCopy()
+			gomega.Expect(ReconciliationFinishedSuccessfully(oldLastOperation, lastOperation)).To(gomega.BeFalse())
+		})
+
+		It("should return false because last operation type is not 'Succeeded' on new object", func() {
+			lastOperation = &gardencorev1beta1.LastOperation{}
+			lastOperation.Type = gardencorev1beta1.LastOperationTypeReconcile
+			lastOperation.State = gardencorev1beta1.LastOperationStateProcessing
+			oldLastOperation := lastOperation.DeepCopy()
+			oldLastOperation.State = gardencorev1beta1.LastOperationStateProcessing
+			gomega.Expect(ReconciliationFinishedSuccessfully(oldLastOperation, lastOperation)).To(gomega.BeFalse())
+		})
+
+		It("should return true because last operation type is 'Succeeded' on new object", func() {
+			lastOperation = &gardencorev1beta1.LastOperation{}
+			lastOperation.Type = gardencorev1beta1.LastOperationTypeReconcile
+			lastOperation.State = gardencorev1beta1.LastOperationStateSucceeded
+			oldLastOperation := lastOperation.DeepCopy()
+			oldLastOperation.State = gardencorev1beta1.LastOperationStateProcessing
+			gomega.Expect(ReconciliationFinishedSuccessfully(oldLastOperation, lastOperation)).To(gomega.BeTrue())
+		})
+	})
 })

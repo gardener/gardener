@@ -121,20 +121,11 @@ func (r *Reconciler) ShootPredicate() predicate.Predicate {
 			}
 
 			// re-evaluate shoot health status right after a reconciliation operation has succeeded
-			return shootReconciliationFinishedSuccessful(oldShoot, shoot) || seedGotAssigned(oldShoot, shoot)
+			return predicateutils.ReconciliationFinishedSuccessfully(oldShoot.Status.LastOperation, shoot.Status.LastOperation) || seedGotAssigned(oldShoot, shoot)
 		},
 		DeleteFunc:  func(event.DeleteEvent) bool { return false },
 		GenericFunc: func(event.GenericEvent) bool { return false },
 	}
-}
-
-func shootReconciliationFinishedSuccessful(oldShoot, newShoot *gardencorev1beta1.Shoot) bool {
-	return oldShoot.Status.LastOperation != nil &&
-		oldShoot.Status.LastOperation.Type != gardencorev1beta1.LastOperationTypeDelete &&
-		oldShoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateProcessing &&
-		newShoot.Status.LastOperation != nil &&
-		newShoot.Status.LastOperation.Type != gardencorev1beta1.LastOperationTypeDelete &&
-		newShoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded
 }
 
 func seedGotAssigned(oldShoot, newShoot *gardencorev1beta1.Shoot) bool {
