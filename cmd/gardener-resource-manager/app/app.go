@@ -46,6 +46,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/cmd/gardener-resource-manager/app/bootstrappers"
+	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
@@ -243,6 +244,11 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 		}
 	}
 
+	log.Info("Adding field indexes to informers")
+	if err := addAllFieldIndexes(ctx, targetCluster.GetFieldIndexer()); err != nil {
+		return fmt.Errorf("failed adding indexes: %w", err)
+	}
+
 	log.Info("Adding webhook handlers to manager")
 	if err := webhook.AddToManager(mgr, mgr, targetCluster, cfg); err != nil {
 		return fmt.Errorf("failed adding webhook handlers to manager: %w", err)
@@ -259,4 +265,17 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 
 	log.Info("Starting manager")
 	return mgr.Start(ctx)
+}
+
+func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
+	for _, fn := range []func(context.Context, client.FieldIndexer) error{
+		// core/v1 API group
+		indexer.AddPodNodeName,
+	} {
+		if err := fn(ctx, i); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
