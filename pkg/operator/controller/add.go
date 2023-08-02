@@ -23,7 +23,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controller/service"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
@@ -50,14 +49,6 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 	}
 
 	if os.Getenv("GARDENER_OPERATOR_LOCAL") == "true" {
-		virtualGardenKubeAPIServerPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchLabels: map[string]string{
-			v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
-			v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
-		}})
-		if err != nil {
-			return err
-		}
-
 		virtualGardenIstioIngressPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchLabels: sharedcomponent.GetIstioZoneLabels(nil, nil)})
 		if err != nil {
 			return err
@@ -71,7 +62,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Operator
 			return err
 		}
 
-		if err := (&service.Reconciler{}).AddToManager(mgr, predicate.Or(virtualGardenKubeAPIServerPredicate, virtualGardenIstioIngressPredicate, nginxIngressPredicate)); err != nil {
+		if err := (&service.Reconciler{}).AddToManager(mgr, predicate.Or(virtualGardenIstioIngressPredicate, nginxIngressPredicate)); err != nil {
 			return fmt.Errorf("failed adding Service controller: %w", err)
 		}
 	}
