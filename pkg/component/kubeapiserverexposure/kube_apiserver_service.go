@@ -57,9 +57,6 @@ type ServiceValues struct {
 	TopologyAwareRoutingEnabled bool
 	// RuntimeKubernetesVersion is the Kubernetes version of the runtime cluster.
 	RuntimeKubernetesVersion *semver.Version
-	// TODO(timuthy): Drop this annotation once the gardener-operator no longer needs to specify 'LoadBalancer' as type.
-	// ServiceType is the type of the Service.
-	ServiceType *corev1.ServiceType
 }
 
 // serviceValues configure the kube-apiserver service.
@@ -70,8 +67,6 @@ type serviceValues struct {
 	topologyAwareRoutingEnabled bool
 	runtimeKubernetesVersion    *semver.Version
 	clusterIP                   string
-	// TODO(timuthy): Drop this annotation once the gardener-operator no longer needs to specify 'LoadBalancer' as type.
-	serviceType corev1.ServiceType
 }
 
 // NewService creates a new instance of DeployWaiter for the Service used to expose the kube-apiserver.
@@ -103,7 +98,6 @@ func NewService(
 		internalValues = &serviceValues{
 			annotationsFunc: func() map[string]string { return map[string]string{} },
 			clusterIP:       clusterIP,
-			serviceType:     corev1.ServiceTypeClusterIP,
 		}
 		loadBalancerServiceKeyFunc func() client.ObjectKey
 	)
@@ -111,9 +105,6 @@ func NewService(
 	if values != nil {
 		loadBalancerServiceKeyFunc = sniServiceKeyFunc
 
-		if values.ServiceType != nil {
-			internalValues.serviceType = *values.ServiceType
-		}
 		internalValues.annotationsFunc = values.AnnotationsFunc
 		internalValues.topologyAwareRoutingEnabled = values.TopologyAwareRoutingEnabled
 		internalValues.runtimeKubernetesVersion = values.RuntimeKubernetesVersion
@@ -178,7 +169,7 @@ func (s *service) Deploy(ctx context.Context) error {
 
 		gardenerutils.ReconcileTopologyAwareRoutingMetadata(obj, s.values.topologyAwareRoutingEnabled, s.values.runtimeKubernetesVersion)
 
-		obj.Spec.Type = s.values.serviceType
+		obj.Spec.Type = corev1.ServiceTypeClusterIP
 		obj.Spec.Selector = getLabels()
 		obj.Spec.Ports = kubernetesutils.ReconcileServicePorts(obj.Spec.Ports, []corev1.ServicePort{
 			{
@@ -187,7 +178,7 @@ func (s *service) Deploy(ctx context.Context) error {
 				Port:       kubeapiserverconstants.Port,
 				TargetPort: intstr.FromInt(kubeapiserverconstants.Port),
 			},
-		}, s.values.serviceType)
+		}, corev1.ServiceTypeClusterIP)
 		if obj.Spec.ClusterIP == "" && s.values.clusterIP != "" {
 			obj.Spec.ClusterIP = s.values.clusterIP
 		}
