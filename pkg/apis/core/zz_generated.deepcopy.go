@@ -4136,6 +4136,11 @@ func (in *SeedStatus) DeepCopyInto(out *SeedStatus) {
 		in, out := &in.ClientCertificateExpirationTimestamp, &out.ClientCertificateExpirationTimestamp
 		*out = (*in).DeepCopy()
 	}
+	if in.LastOperation != nil {
+		in, out := &in.LastOperation, &out.LastOperation
+		*out = new(LastOperation)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

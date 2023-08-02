@@ -109,6 +109,8 @@ type SeedStatus struct {
 	Allocatable corev1.ResourceList
 	// ClientCertificateExpirationTimestamp is the timestamp at which gardenlet's client certificate expires.
 	ClientCertificateExpirationTimestamp *metav1.Time
+	// LastOperation holds information about the last operation on the Seed.
+	LastOperation *LastOperation
 }
 
 // SeedBackup contains the object store configuration for backups for shoot (currently only etcd).

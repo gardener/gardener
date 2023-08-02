@@ -6988,11 +6988,17 @@ func schema_pkg_apis_core_v1beta1_SeedStatus(ref common.ReferenceCallback) commo
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
+					"lastOperation": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastOperation holds information about the last operation on the Seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener", "k8s.io/apimachinery/pkg/api/resource.Quantity", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation", "k8s.io/apimachinery/pkg/api/resource.Quantity", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 

@@ -123,6 +123,9 @@ type SeedStatus struct {
 	// ClientCertificateExpirationTimestamp is the timestamp at which gardenlet's client certificate expires.
 	// +optional
 	ClientCertificateExpirationTimestamp *metav1.Time `json:"clientCertificateExpirationTimestamp,omitempty" protobuf:"bytes,8,opt,name=clientCertificateExpirationTimestamp"`
+	// LastOperation holds information about the last operation on the Seed.
+	// +optional
+	LastOperation *LastOperation `json:"lastOperation,omitempty" protobuf:"bytes,9,opt,name=lastOperation"`
 }
 
 // SeedBackup contains the object store configuration for backups for shoot (currently only etcd).

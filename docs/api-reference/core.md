@@ -6596,6 +6596,7 @@ string
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.BackupBucketStatus">BackupBucketStatus</a>, 
 <a href="#core.gardener.cloud/v1beta1.BackupEntryStatus">BackupEntryStatus</a>, 
+<a href="#core.gardener.cloud/v1beta1.SeedStatus">SeedStatus</a>, 
 <a href="#core.gardener.cloud/v1beta1.ShootStatus">ShootStatus</a>)
 </p>
 <p>
@@ -9725,6 +9726,20 @@ Kubernetes meta/v1.Time
 <td>
 <em>(Optional)</em>
 <p>ClientCertificateExpirationTimestamp is the timestamp at which gardenlet&rsquo;s client certificate expires.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastOperation</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.LastOperation">
+LastOperation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastOperation holds information about the last operation on the Seed.</p>
 </td>
 </tr>
 </tbody>
