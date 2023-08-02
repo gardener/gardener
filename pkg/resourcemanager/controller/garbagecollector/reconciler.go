@@ -28,10 +28,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -98,6 +100,10 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 			batchv1.SchemeGroupVersion.WithKind("CronJobList"),
 		}
 	)
+
+	if pointer.BoolDeref(r.Config.ConsiderManagedResources, false) {
+		groupVersionKinds = append(groupVersionKinds, resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResourceList"))
+	}
 
 	if versionutils.ConstraintK8sLess125.Check(r.TargetKubernetesVersion) {
 		groupVersionKinds = append(groupVersionKinds, batchv1beta1.SchemeGroupVersion.WithKind("CronJobList"))

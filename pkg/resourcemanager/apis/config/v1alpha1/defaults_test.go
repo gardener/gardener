@@ -266,13 +266,15 @@ var _ = Describe("Defaults", func() {
 
 		It("should not overwrite existing values", func() {
 			obj := &GarbageCollectorControllerConfig{
-				Enabled:    true,
-				SyncPeriod: &metav1.Duration{Duration: time.Second},
+				Enabled:                  true,
+				SyncPeriod:               &metav1.Duration{Duration: time.Second},
+				ConsiderManagedResources: pointer.Bool(true),
 			}
 
 			SetDefaults_GarbageCollectorControllerConfig(obj)
 
 			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Second})))
+			Expect(obj.ConsiderManagedResources).To(Equal(pointer.Bool(true)))
 		})
 	})
 

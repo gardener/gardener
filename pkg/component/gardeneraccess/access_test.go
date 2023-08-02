@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -29,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/gardeneraccess"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -169,14 +171,18 @@ users:
 				Kind:       "Secret",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            managedResourceSecretName,
-				Namespace:       namespace,
+				Name:      managedResourceSecretName,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"resources.gardener.cloud/garbage-collectable-reference": "true",
+				},
 				ResourceVersion: "1",
 			},
 			Type: corev1.SecretTypeOpaque,
 			Data: map[string][]byte{
 				"clusterrolebinding____gardener.cloud_system_gardener.yaml": []byte(clusterRoleBindingYAML),
 			},
+			Immutable: pointer.Bool(true),
 		}
 		expectedManagedResource = &resourcesv1alpha1.ManagedResource{
 			TypeMeta: metav1.TypeMeta{
@@ -190,9 +196,7 @@ users:
 				Labels:          map[string]string{"origin": "gardener"},
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				SecretRefs: []corev1.LocalObjectReference{
-					{Name: managedResourceSecretName},
-				},
+				SecretRefs:   []corev1.LocalObjectReference{},
 				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 				KeepObjects:  pointer.Bool(true),
 			},
@@ -210,6 +214,17 @@ users:
 		It("should successfully deploy all resources", func() {
 			Expect(access.Deploy(ctx)).To(Succeed())
 
+			reconciledManagedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledManagedResource), reconciledManagedResource)).To(Succeed())
+			expectedManagedResource.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: reconciledManagedResource.Spec.SecretRefs[0].Name}}
+			utilruntime.Must(references.InjectAnnotations(expectedManagedResource))
+			Expect(reconciledManagedResource).To(DeepEqual(expectedManagedResource))
+
+			expectedManagedResourceSecret.Name = reconciledManagedResource.Spec.SecretRefs[0].Name
+			reconciledManagedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: expectedManagedResourceSecret.Name, Namespace: namespace}}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledManagedResourceSecret), reconciledManagedResourceSecret)).To(Succeed())
+			Expect(reconciledManagedResourceSecret).To(DeepEqual(expectedManagedResourceSecret))
+
 			reconciledGardenerSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenerSecretName, Namespace: namespace}}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledGardenerSecret), reconciledGardenerSecret)).To(Succeed())
 			Expect(reconciledGardenerSecret).To(DeepEqual(expectedGardenerSecret))
@@ -217,14 +232,6 @@ users:
 			reconciledGardenerInternalSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenerInternalSecretName, Namespace: namespace}}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledGardenerInternalSecret), reconciledGardenerInternalSecret)).To(Succeed())
 			Expect(reconciledGardenerInternalSecret).To(DeepEqual(expectedGardenerInternalSecret))
-
-			reconciledManagedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretName, Namespace: namespace}}
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledManagedResourceSecret), reconciledManagedResourceSecret)).To(Succeed())
-			Expect(reconciledManagedResourceSecret).To(DeepEqual(expectedManagedResourceSecret))
-
-			reconciledManagedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledManagedResource), reconciledManagedResource)).To(Succeed())
-			Expect(reconciledManagedResource).To(DeepEqual(expectedManagedResource))
 		})
 
 		It("should remove legacy secret data", func() {

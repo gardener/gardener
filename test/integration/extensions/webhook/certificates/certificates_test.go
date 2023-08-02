@@ -46,6 +46,7 @@ import (
 	extensionsshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils"
@@ -556,7 +557,16 @@ func newCodec(scheme *runtime.Scheme, codec serializer.CodecFactory, serializer 
 }
 
 func getShootWebhookConfig(codec runtime.Codec, shootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration, namespace string) error {
-	managedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootWebhookManagedResourceName, Namespace: namespace}}
+	managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{
+		Name:      shootWebhookManagedResourceName,
+		Namespace: namespace,
+	}}
+
+	if err := testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource); err != nil {
+		return err
+	}
+
+	managedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResource.Spec.SecretRefs[0].Name, Namespace: namespace}}
 	if err := testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret); err != nil {
 		return err
 	}

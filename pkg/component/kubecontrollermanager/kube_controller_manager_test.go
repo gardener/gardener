@@ -26,19 +26,16 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -49,7 +46,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/component/kubecontrollermanager"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -61,19 +58,18 @@ import (
 
 var _ = Describe("KubeControllerManager", func() {
 	var (
-		ctx                   = context.TODO()
-		testLogger            = logr.Discard()
-		ctrl                  *gomock.Controller
-		c                     *mockclient.MockClient
-		fakeClient            client.Client
-		fakeInterface         kubernetes.Interface
+		ctx        = context.TODO()
+		testLogger = logr.Discard()
+
+		c             client.Client
+		fakeInterface kubernetes.Interface
+
 		sm                    secretsmanager.Interface
 		kubeControllerManager Interface
 		values                Values
 
 		_, podCIDR, _                 = net.ParseCIDR("100.96.0.0/11")
 		_, serviceCIDR, _             = net.ParseCIDR("100.64.0.0/13")
-		fakeErr                       = fmt.Errorf("fake error")
 		namespace                     = "shoot--foo--bar"
 		version                       = "1.22.2"
 		semverVersion, _              = semver.NewVersion(version)
@@ -138,14 +134,414 @@ var _ = Describe("KubeControllerManager", func() {
 		serviceName                      = "kube-controller-manager"
 		managedResourceName              = "shoot-core-kube-controller-manager"
 		managedResourceSecretName        = "managedresource-shoot-core-kube-controller-manager"
+
+		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
+		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		vpa              = &vpaautoscalingv1.VerticalPodAutoscaler{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: vpaautoscalingv1.SchemeGroupVersion.String(),
+				Kind:       "VerticalPodAutoscaler",
+			},
+			ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace, ResourceVersion: "1"},
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+					Name:       v1beta1constants.DeploymentNameKubeControllerManager,
+				},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+					UpdateMode: &vpaUpdateMode,
+				},
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
+						ContainerName: "kube-controller-manager",
+						MinAllowed: corev1.ResourceList{
+							corev1.ResourceMemory: resource.MustParse("100Mi"),
+						},
+						MaxAllowed: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("4"),
+							corev1.ResourceMemory: resource.MustParse("10G"),
+						},
+						ControlledValues: &controlledValues,
+					}},
+				},
+			},
+		}
+
+		secret = &corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: corev1.SchemeGroupVersion.String(),
+				Kind:       "Secret",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      secretName,
+				Namespace: namespace,
+				Annotations: map[string]string{
+					"serviceaccount.resources.gardener.cloud/name":      "kube-controller-manager",
+					"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
+				},
+				Labels: map[string]string{
+					"resources.gardener.cloud/purpose": "token-requestor",
+					"resources.gardener.cloud/class":   "shoot",
+				},
+				ResourceVersion: "1",
+			},
+			Type: corev1.SecretTypeOpaque,
+		}
+
+		pdbMaxUnavailable = intstr.FromInt(1)
+		pdb               = &policyv1.PodDisruptionBudget{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: policyv1.SchemeGroupVersion.String(),
+				Kind:       "PodDisruptionBudget",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      pdbName,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "kubernetes",
+					"role": "controller-manager",
+				},
+				ResourceVersion: "1",
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &pdbMaxUnavailable,
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app":  "kubernetes",
+						"role": "controller-manager",
+					},
+				},
+			},
+		}
+
+		hvpaUpdateModeAuto = hvpav1alpha1.UpdateModeAuto
+		hvpaFor            = func(config *HVPAConfig) *hvpav1alpha1.Hvpa {
+			scaleDownUpdateMode := config.ScaleDownUpdateMode
+			if scaleDownUpdateMode == nil {
+				scaleDownUpdateMode = pointer.String(hvpav1alpha1.UpdateModeAuto)
+			}
+
+			return &hvpav1alpha1.Hvpa{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: hvpav1alpha1.SchemeGroupVersionHvpa.String(),
+					Kind:       "Hvpa",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      hvpaName,
+					Namespace: namespace,
+					Labels: map[string]string{
+						"app":  "kubernetes",
+						"role": "controller-manager",
+						"high-availability-config.resources.gardener.cloud/type": "controller",
+					},
+					ResourceVersion: "1",
+				},
+				Spec: hvpav1alpha1.HvpaSpec{
+					Replicas: pointer.Int32(1),
+					Hpa: hvpav1alpha1.HpaSpec{
+						Deploy: false,
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"app":  "kubernetes",
+								"role": "controller-manager",
+							},
+						},
+						Template: hvpav1alpha1.HpaTemplate{
+							ObjectMeta: metav1.ObjectMeta{
+								Labels: map[string]string{
+									"app":  "kubernetes",
+									"role": "controller-manager",
+								},
+							},
+							Spec: hvpav1alpha1.HpaTemplateSpec{
+								MinReplicas: pointer.Int32(int32(1)),
+								MaxReplicas: int32(1),
+							},
+						},
+					},
+					Vpa: hvpav1alpha1.VpaSpec{
+						Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
+							v1beta1constants.LabelRole: "kube-controller-manager-vpa",
+						}},
+						Deploy: true,
+						ScaleUp: hvpav1alpha1.ScaleType{
+							UpdatePolicy: hvpav1alpha1.UpdatePolicy{
+								UpdateMode: &hvpaUpdateModeAuto,
+							},
+						},
+						ScaleDown: hvpav1alpha1.ScaleType{
+							UpdatePolicy: hvpav1alpha1.UpdatePolicy{
+								UpdateMode: scaleDownUpdateMode,
+							},
+						},
+						Template: hvpav1alpha1.VpaTemplate{
+							ObjectMeta: metav1.ObjectMeta{
+								Labels: map[string]string{
+									v1beta1constants.LabelRole: "kube-controller-manager-vpa",
+								},
+							},
+							Spec: hvpav1alpha1.VpaTemplateSpec{
+								ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+									ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
+										ContainerName: "kube-controller-manager",
+										MinAllowed: corev1.ResourceList{
+											corev1.ResourceMemory: resource.MustParse("100Mi"),
+										},
+										MaxAllowed: corev1.ResourceList{
+											corev1.ResourceCPU:    resource.MustParse("4"),
+											corev1.ResourceMemory: resource.MustParse("10G"),
+										},
+										ControlledValues: &controlledValues,
+									}},
+								},
+							},
+						},
+					},
+					WeightBasedScalingIntervals: []hvpav1alpha1.WeightBasedScalingInterval{
+						{
+							VpaWeight:         hvpav1alpha1.VpaOnly,
+							StartReplicaCount: 1,
+							LastReplicaCount:  1,
+						},
+					},
+					TargetRef: &autoscalingv2beta1.CrossVersionObjectReference{
+						APIVersion: appsv1.SchemeGroupVersion.String(),
+						Kind:       "Deployment",
+						Name:       "kube-controller-manager",
+					},
+				},
+			}
+		}
+
+		serviceFor = func(version string) *corev1.Service {
+			return &corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "Service",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      serviceName,
+					Namespace: namespace,
+					Labels: map[string]string{
+						"app":  "kubernetes",
+						"role": "controller-manager",
+					},
+					Annotations: map[string]string{
+						"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":10257}]`,
+					},
+					ResourceVersion: "1",
+				},
+				Spec: corev1.ServiceSpec{
+					Selector: map[string]string{
+						"app":  "kubernetes",
+						"role": "controller-manager",
+					},
+					Type:      corev1.ServiceTypeClusterIP,
+					ClusterIP: corev1.ClusterIPNone,
+					Ports: []corev1.ServicePort{
+						{
+							Name:     "metrics",
+							Protocol: corev1.ProtocolTCP,
+							Port:     10257,
+						},
+					},
+				},
+			}
+		}
+
+		replicas      int32 = 1
+		deploymentFor       = func(version string, config *gardencorev1beta1.KubeControllerManagerConfig, isWorkerless bool, controllerWorkers ControllerWorkers) *appsv1.Deployment {
+			deploy := &appsv1.Deployment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "Deployment",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      v1beta1constants.DeploymentNameKubeControllerManager,
+					Namespace: namespace,
+					Labels: map[string]string{
+						"app":                 "kubernetes",
+						"role":                "controller-manager",
+						"gardener.cloud/role": "controlplane",
+						"high-availability-config.resources.gardener.cloud/type": "controller",
+					},
+					ResourceVersion: "1",
+				},
+				Spec: appsv1.DeploymentSpec{
+					RevisionHistoryLimit: pointer.Int32(1),
+					Replicas:             &replicas,
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"app":  "kubernetes",
+							"role": "controller-manager",
+						},
+					},
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								"app":                                "kubernetes",
+								"role":                               "controller-manager",
+								"gardener.cloud/role":                "controlplane",
+								"maintenance.gardener.cloud/restart": "true",
+								"networking.gardener.cloud/to-dns":   "allowed",
+								"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443": "allowed",
+							},
+						},
+						Spec: corev1.PodSpec{
+							AutomountServiceAccountToken: pointer.Bool(false),
+							PriorityClassName:            priorityClassName,
+							Containers: []corev1.Container{
+								{
+									Name:            "kube-controller-manager",
+									Image:           image,
+									ImagePullPolicy: corev1.PullIfNotPresent,
+									Command:         commandForKubernetesVersion(version, 10257, config.NodeCIDRMaskSize, config.PodEvictionTimeout, config.NodeMonitorGracePeriod, namespace, isWorkerless, serviceCIDR, podCIDR, getHorizontalPodAutoscalerConfig(config.HorizontalPodAutoscalerConfig), kubernetesutils.FeatureGatesToCommandLineParameter(config.FeatureGates), clusterSigningDuration, controllerWorkers, controllerSyncPeriods),
+									LivenessProbe: &corev1.Probe{
+										ProbeHandler: corev1.ProbeHandler{
+											HTTPGet: &corev1.HTTPGetAction{
+												Path:   "/healthz",
+												Scheme: corev1.URISchemeHTTPS,
+												Port:   intstr.FromInt(10257),
+											},
+										},
+										SuccessThreshold:    1,
+										FailureThreshold:    2,
+										InitialDelaySeconds: 15,
+										PeriodSeconds:       10,
+										TimeoutSeconds:      15,
+									},
+									Ports: []corev1.ContainerPort{
+										{
+											Name:          "metrics",
+											ContainerPort: 10257,
+											Protocol:      corev1.ProtocolTCP,
+										},
+									},
+									Resources: corev1.ResourceRequirements{
+										Requests: corev1.ResourceList{
+											corev1.ResourceCPU:    resource.MustParse("100m"),
+											corev1.ResourceMemory: resource.MustParse("128Mi"),
+										},
+									},
+									VolumeMounts: []corev1.VolumeMount{
+										{
+											Name:      "ca",
+											MountPath: "/srv/kubernetes/ca",
+										},
+										{
+											Name:      "ca-client",
+											MountPath: "/srv/kubernetes/ca-client",
+										},
+										{
+											Name:      "service-account-key",
+											MountPath: "/srv/kubernetes/service-account-key",
+										},
+										{
+											Name:      "server",
+											MountPath: "/var/lib/kube-controller-manager-server",
+										},
+									},
+								},
+							},
+							Volumes: []corev1.Volume{
+								{
+									Name: "ca",
+									VolumeSource: corev1.VolumeSource{
+										Secret: &corev1.SecretVolumeSource{
+											SecretName: "ca",
+										},
+									},
+								},
+								{
+									Name: "ca-client",
+									VolumeSource: corev1.VolumeSource{
+										Secret: &corev1.SecretVolumeSource{
+											SecretName: "ca-client-current",
+										},
+									},
+								},
+								{
+									Name: "service-account-key",
+									VolumeSource: corev1.VolumeSource{
+										Secret: &corev1.SecretVolumeSource{
+											SecretName: "service-account-key-current",
+										},
+									},
+								},
+								{
+									Name: "server",
+									VolumeSource: corev1.VolumeSource{
+										Secret: &corev1.SecretVolumeSource{
+											SecretName: "kube-controller-manager-server",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			if !isWorkerless {
+				deploy.Spec.Template.Spec.Containers[0].VolumeMounts = append(deploy.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+					Name:      "ca-kubelet",
+					MountPath: "/srv/kubernetes/ca-kubelet",
+				})
+
+				deploy.Spec.Template.Spec.Volumes = append(deploy.Spec.Template.Spec.Volumes, corev1.Volume{
+					Name: "ca-kubelet",
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName: "ca-kubelet-current",
+						},
+					},
+				})
+			}
+
+			Expect(gardenerutils.InjectGenericKubeconfig(deploy, genericTokenKubeconfigSecretName, secret.Name)).To(Succeed())
+			return deploy
+		}
+
+		clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+creationTimestamp: null
+name: gardener.cloud:target:kube-controller-manager
+roleRef:
+apiGroup: rbac.authorization.k8s.io
+kind: ClusterRole
+name: system:kube-controller-manager
+subjects:
+- kind: ServiceAccount
+name: kube-controller-manager
+namespace: kube-system
+`
+		managedResourceSecret *corev1.Secret
+		managedResource       *resourcesv1alpha1.ManagedResource
+
+		emptyConfig                = &gardencorev1beta1.KubeControllerManagerConfig{}
+		configWithAutoscalerConfig = &gardencorev1beta1.KubeControllerManagerConfig{
+			// non default configuration
+			HorizontalPodAutoscalerConfig: &gardencorev1beta1.HorizontalPodAutoscalerConfig{
+				CPUInitializationPeriod: &metav1.Duration{Duration: 10 * time.Minute},
+				DownscaleStabilization:  &metav1.Duration{Duration: 10 * time.Minute},
+				InitialReadinessDelay:   &metav1.Duration{Duration: 20 * time.Second},
+				SyncPeriod:              &metav1.Duration{Duration: 20 * time.Second},
+				Tolerance:               pointer.Float64(0.3),
+			},
+			NodeCIDRMaskSize: nil,
+		}
+		configWithFeatureFlags           = &gardencorev1beta1.KubeControllerManagerConfig{KubernetesConfig: gardencorev1beta1.KubernetesConfig{FeatureGates: map[string]bool{"Foo": true, "Bar": false, "Baz": false}}}
+		configWithNodeCIDRMaskSize       = &gardencorev1beta1.KubeControllerManagerConfig{NodeCIDRMaskSize: pointer.Int32(26)}
+		configWithPodEvictionTimeout     = &gardencorev1beta1.KubeControllerManagerConfig{PodEvictionTimeout: &podEvictionTimeout}
+		configWithNodeMonitorGracePeriod = &gardencorev1beta1.KubeControllerManagerConfig{NodeMonitorGracePeriod: &nodeMonitorGracePeriod}
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
+		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		fakeInterface = kubernetesfake.NewClientSetBuilder().WithAPIReader(c).WithClient(c).Build()
-		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
-		sm = fakesecretsmanager.New(fakeClient, namespace)
+		sm = fakesecretsmanager.New(c, namespace)
 
 		values = Values{
 			RuntimeVersion:    runtimeKubernetesVersion,
@@ -166,764 +562,205 @@ var _ = Describe("KubeControllerManager", func() {
 			values,
 		)
 
-		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
-		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
-		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
-		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-client-current", Namespace: namespace}})).To(Succeed())
-		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-kubelet-current", Namespace: namespace}})).To(Succeed())
-		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "service-account-key-current", Namespace: namespace}})).To(Succeed())
-	})
+		managedResourceSecret = &corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: corev1.SchemeGroupVersion.String(),
+				Kind:       "Secret",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            managedResourceSecretName,
+				Namespace:       namespace,
+				ResourceVersion: "1",
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{
+				"clusterrolebinding____gardener.cloud_target_kube-controller-manager.yaml": []byte(clusterRoleBindingYAML),
+			},
+		}
+		managedResource = &resourcesv1alpha1.ManagedResource{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "ManagedResource",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            managedResourceName,
+				Namespace:       namespace,
+				Labels:          map[string]string{"origin": "gardener"},
+				ResourceVersion: "1",
+			},
+			Spec: resourcesv1alpha1.ManagedResourceSpec{
+				SecretRefs: []corev1.LocalObjectReference{
+					{Name: managedResourceSecretName},
+				},
+				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+				KeepObjects:  pointer.Bool(true),
+			},
+		}
 
-	AfterEach(func() {
-		ctrl.Finish()
+		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-client-current", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-kubelet-current", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "service-account-key-current", Namespace: namespace}})).To(Succeed())
 	})
 
 	Describe("#Deploy", func() {
-		Context("Tests expecting a failure", func() {
-			It("should fail when the service cannot be created", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).Return(fakeErr),
-				)
-
-				Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(fakeErr))
-			})
-
-			It("should fail when the secret cannot be created", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).
-						Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
-							obj.SetResourceVersion("0")
-						}),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Return(fakeErr),
-				)
-
-				Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(fakeErr))
-			})
-
-			It("should fail because the deployment cannot be created", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).
-						Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
-							obj.SetResourceVersion("0")
-						}),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).Return(fakeErr),
-				)
-
-				Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(fakeErr))
-			})
-
-			It("should fail because the pod disruption budget cannot be created", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).
-						Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
-							obj.SetResourceVersion("0")
-						}),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, pdbName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).Return(fakeErr),
-				)
-
-				Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(fakeErr))
-			})
-
-			It("should fail because the hvpa cannot be deleted", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).
-						Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
-							obj.SetResourceVersion("0")
-						}),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, pdbName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()),
-					c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: namespace}}).Return(fakeErr),
-				)
-
-				Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(fakeErr))
-			})
-
-			It("should fail because the vpa cannot be created", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).
-						Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
-							obj.SetResourceVersion("0")
-						}),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, pdbName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()),
-					c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: namespace}}),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, vpaName), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Return(fakeErr),
-				)
-
-				Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(fakeErr))
-			})
-
-			It("should fail because the managed resource secret cannot be created", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).
-						Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
-							obj.SetResourceVersion("0")
-						}),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, pdbName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()),
-					c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: namespace}}),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, vpaName), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Return(fakeErr),
-				)
-
-				Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(fakeErr))
-			})
-
-			It("should fail because the managed resource cannot be created", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).
-						Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
-							obj.SetResourceVersion("0")
-						}),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, pdbName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()),
-					c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: namespace}}),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, vpaName), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}), gomock.Any()).Return(fakeErr),
-				)
-
-				Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(fakeErr))
-			})
-		})
-
-		Context("Tests expecting success", func() {
-			var (
-				vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
-				controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-				vpa              = &vpaautoscalingv1.VerticalPodAutoscaler{
-					ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace},
-					Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
-						TargetRef: &autoscalingv1.CrossVersionObjectReference{
-							APIVersion: "apps/v1",
-							Kind:       "Deployment",
-							Name:       v1beta1constants.DeploymentNameKubeControllerManager,
-						},
-						UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-							UpdateMode: &vpaUpdateMode,
-						},
-						ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-							ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
-								ContainerName: "kube-controller-manager",
-								MinAllowed: corev1.ResourceList{
-									corev1.ResourceMemory: resource.MustParse("100Mi"),
-								},
-								MaxAllowed: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("4"),
-									corev1.ResourceMemory: resource.MustParse("10G"),
-								},
-								ControlledValues: &controlledValues,
-							}},
-						},
-					},
-				}
-
-				secret = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      secretName,
-						Namespace: namespace,
-						Annotations: map[string]string{
-							"serviceaccount.resources.gardener.cloud/name":      "kube-controller-manager",
-							"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
-						},
-						Labels: map[string]string{
-							"resources.gardener.cloud/purpose": "token-requestor",
-							"resources.gardener.cloud/class":   "shoot",
-						},
-						ResourceVersion: "0",
-					},
-					Type: corev1.SecretTypeOpaque,
-				}
-
-				pdbMaxUnavailable = intstr.FromInt(1)
-				pdb               = &policyv1.PodDisruptionBudget{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      pdbName,
-						Namespace: namespace,
-						Labels: map[string]string{
-							"app":  "kubernetes",
-							"role": "controller-manager",
-						},
-					},
-					Spec: policyv1.PodDisruptionBudgetSpec{
-						MaxUnavailable: &pdbMaxUnavailable,
-						Selector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								"app":  "kubernetes",
-								"role": "controller-manager",
-							},
-						},
-					},
-				}
-
-				hvpaUpdateModeAuto = hvpav1alpha1.UpdateModeAuto
-				hvpaFor            = func(config *HVPAConfig) *hvpav1alpha1.Hvpa {
-					scaleDownUpdateMode := config.ScaleDownUpdateMode
-					if scaleDownUpdateMode == nil {
-						scaleDownUpdateMode = pointer.String(hvpav1alpha1.UpdateModeAuto)
-					}
-
-					return &hvpav1alpha1.Hvpa{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      hvpaName,
-							Namespace: namespace,
-							Labels: map[string]string{
-								"app":  "kubernetes",
-								"role": "controller-manager",
-								"high-availability-config.resources.gardener.cloud/type": "controller",
-							},
-						},
-						Spec: hvpav1alpha1.HvpaSpec{
-							Replicas: pointer.Int32(1),
-							Hpa: hvpav1alpha1.HpaSpec{
-								Deploy: false,
-								Selector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										"app":  "kubernetes",
-										"role": "controller-manager",
-									},
-								},
-								Template: hvpav1alpha1.HpaTemplate{
-									ObjectMeta: metav1.ObjectMeta{
-										Labels: map[string]string{
-											"app":  "kubernetes",
-											"role": "controller-manager",
-										},
-									},
-									Spec: hvpav1alpha1.HpaTemplateSpec{
-										MinReplicas: pointer.Int32(int32(1)),
-										MaxReplicas: int32(1),
-									},
-								},
-							},
-							Vpa: hvpav1alpha1.VpaSpec{
-								Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
-									v1beta1constants.LabelRole: "kube-controller-manager-vpa",
-								}},
-								Deploy: true,
-								ScaleUp: hvpav1alpha1.ScaleType{
-									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-										UpdateMode: &hvpaUpdateModeAuto,
-									},
-								},
-								ScaleDown: hvpav1alpha1.ScaleType{
-									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-										UpdateMode: scaleDownUpdateMode,
-									},
-								},
-								Template: hvpav1alpha1.VpaTemplate{
-									ObjectMeta: metav1.ObjectMeta{
-										Labels: map[string]string{
-											v1beta1constants.LabelRole: "kube-controller-manager-vpa",
-										},
-									},
-									Spec: hvpav1alpha1.VpaTemplateSpec{
-										ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-											ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
-												ContainerName: "kube-controller-manager",
-												MinAllowed: corev1.ResourceList{
-													corev1.ResourceMemory: resource.MustParse("100Mi"),
-												},
-												MaxAllowed: corev1.ResourceList{
-													corev1.ResourceCPU:    resource.MustParse("4"),
-													corev1.ResourceMemory: resource.MustParse("10G"),
-												},
-												ControlledValues: &controlledValues,
-											}},
-										},
-									},
-								},
-							},
-							WeightBasedScalingIntervals: []hvpav1alpha1.WeightBasedScalingInterval{
-								{
-									VpaWeight:         hvpav1alpha1.VpaOnly,
-									StartReplicaCount: 1,
-									LastReplicaCount:  1,
-								},
-							},
-							TargetRef: &autoscalingv2beta1.CrossVersionObjectReference{
-								APIVersion: appsv1.SchemeGroupVersion.String(),
-								Kind:       "Deployment",
-								Name:       "kube-controller-manager",
-							},
-						},
-					}
-				}
-
-				serviceFor = func(version string) *corev1.Service {
-					return &corev1.Service{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      serviceName,
-							Namespace: namespace,
-							Labels: map[string]string{
-								"app":  "kubernetes",
-								"role": "controller-manager",
-							},
-							Annotations: map[string]string{
-								"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":10257}]`,
-							},
-						},
-						Spec: corev1.ServiceSpec{
-							Selector: map[string]string{
-								"app":  "kubernetes",
-								"role": "controller-manager",
-							},
-							Type:      corev1.ServiceTypeClusterIP,
-							ClusterIP: corev1.ClusterIPNone,
-							Ports: []corev1.ServicePort{
-								{
-									Name:     "metrics",
-									Protocol: corev1.ProtocolTCP,
-									Port:     10257,
-								},
-							},
-						},
-					}
-				}
-
-				replicas      int32 = 1
-				deploymentFor       = func(version string, config *gardencorev1beta1.KubeControllerManagerConfig, isWorkerless bool, controllerWorkers ControllerWorkers) *appsv1.Deployment {
-					deploy := &appsv1.Deployment{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      v1beta1constants.DeploymentNameKubeControllerManager,
-							Namespace: namespace,
-							Labels: map[string]string{
-								"app":                 "kubernetes",
-								"role":                "controller-manager",
-								"gardener.cloud/role": "controlplane",
-								"high-availability-config.resources.gardener.cloud/type": "controller",
-							},
-						},
-						Spec: appsv1.DeploymentSpec{
-							RevisionHistoryLimit: pointer.Int32(1),
-							Replicas:             &replicas,
-							Selector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									"app":  "kubernetes",
-									"role": "controller-manager",
-								},
-							},
-							Template: corev1.PodTemplateSpec{
-								ObjectMeta: metav1.ObjectMeta{
-									Labels: map[string]string{
-										"app":                                "kubernetes",
-										"role":                               "controller-manager",
-										"gardener.cloud/role":                "controlplane",
-										"maintenance.gardener.cloud/restart": "true",
-										"networking.gardener.cloud/to-dns":   "allowed",
-										"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443": "allowed",
-									},
-								},
-								Spec: corev1.PodSpec{
-									AutomountServiceAccountToken: pointer.Bool(false),
-									PriorityClassName:            priorityClassName,
-									Containers: []corev1.Container{
-										{
-											Name:            "kube-controller-manager",
-											Image:           image,
-											ImagePullPolicy: corev1.PullIfNotPresent,
-											Command:         commandForKubernetesVersion(version, 10257, config.NodeCIDRMaskSize, config.PodEvictionTimeout, config.NodeMonitorGracePeriod, namespace, isWorkerless, serviceCIDR, podCIDR, getHorizontalPodAutoscalerConfig(config.HorizontalPodAutoscalerConfig), kubernetesutils.FeatureGatesToCommandLineParameter(config.FeatureGates), clusterSigningDuration, controllerWorkers, controllerSyncPeriods),
-											LivenessProbe: &corev1.Probe{
-												ProbeHandler: corev1.ProbeHandler{
-													HTTPGet: &corev1.HTTPGetAction{
-														Path:   "/healthz",
-														Scheme: corev1.URISchemeHTTPS,
-														Port:   intstr.FromInt(10257),
-													},
-												},
-												SuccessThreshold:    1,
-												FailureThreshold:    2,
-												InitialDelaySeconds: 15,
-												PeriodSeconds:       10,
-												TimeoutSeconds:      15,
-											},
-											Ports: []corev1.ContainerPort{
-												{
-													Name:          "metrics",
-													ContainerPort: 10257,
-													Protocol:      corev1.ProtocolTCP,
-												},
-											},
-											Resources: corev1.ResourceRequirements{
-												Requests: corev1.ResourceList{
-													corev1.ResourceCPU:    resource.MustParse("100m"),
-													corev1.ResourceMemory: resource.MustParse("128Mi"),
-												},
-											},
-											VolumeMounts: []corev1.VolumeMount{
-												{
-													Name:      "ca",
-													MountPath: "/srv/kubernetes/ca",
-												},
-												{
-													Name:      "ca-client",
-													MountPath: "/srv/kubernetes/ca-client",
-												},
-												{
-													Name:      "service-account-key",
-													MountPath: "/srv/kubernetes/service-account-key",
-												},
-												{
-													Name:      "server",
-													MountPath: "/var/lib/kube-controller-manager-server",
-												},
-											},
-										},
-									},
-									Volumes: []corev1.Volume{
-										{
-											Name: "ca",
-											VolumeSource: corev1.VolumeSource{
-												Secret: &corev1.SecretVolumeSource{
-													SecretName: "ca",
-												},
-											},
-										},
-										{
-											Name: "ca-client",
-											VolumeSource: corev1.VolumeSource{
-												Secret: &corev1.SecretVolumeSource{
-													SecretName: "ca-client-current",
-												},
-											},
-										},
-										{
-											Name: "service-account-key",
-											VolumeSource: corev1.VolumeSource{
-												Secret: &corev1.SecretVolumeSource{
-													SecretName: "service-account-key-current",
-												},
-											},
-										},
-										{
-											Name: "server",
-											VolumeSource: corev1.VolumeSource{
-												Secret: &corev1.SecretVolumeSource{
-													SecretName: "kube-controller-manager-server",
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					}
-
-					if !isWorkerless {
-						deploy.Spec.Template.Spec.Containers[0].VolumeMounts = append(deploy.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-							Name:      "ca-kubelet",
-							MountPath: "/srv/kubernetes/ca-kubelet",
-						})
-
-						deploy.Spec.Template.Spec.Volumes = append(deploy.Spec.Template.Spec.Volumes, corev1.Volume{
-							Name: "ca-kubelet",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: "ca-kubelet-current",
-								},
-							},
-						})
-					}
-
-					Expect(gardenerutils.InjectGenericKubeconfig(deploy, genericTokenKubeconfigSecretName, secret.Name)).To(Succeed())
-					return deploy
-				}
-
-				clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  creationTimestamp: null
-  name: gardener.cloud:target:kube-controller-manager
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: system:kube-controller-manager
-subjects:
-- kind: ServiceAccount
-  name: kube-controller-manager
-  namespace: kube-system
-`
-				managedResourceSecret = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      managedResourceSecretName,
-						Namespace: namespace,
-					},
-					Type: corev1.SecretTypeOpaque,
-					Data: map[string][]byte{
-						"clusterrolebinding____gardener.cloud_target_kube-controller-manager.yaml": []byte(clusterRoleBindingYAML),
-					},
-				}
-				managedResource = &resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      managedResourceName,
-						Namespace: namespace,
-						Labels:    map[string]string{"origin": "gardener"},
-					},
-					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						SecretRefs: []corev1.LocalObjectReference{
-							{Name: managedResourceSecretName},
-						},
-						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-						KeepObjects:  pointer.Bool(true),
-					},
-				}
-
-				emptyConfig                = &gardencorev1beta1.KubeControllerManagerConfig{}
-				configWithAutoscalerConfig = &gardencorev1beta1.KubeControllerManagerConfig{
-					// non default configuration
-					HorizontalPodAutoscalerConfig: &gardencorev1beta1.HorizontalPodAutoscalerConfig{
-						CPUInitializationPeriod: &metav1.Duration{Duration: 10 * time.Minute},
-						DownscaleStabilization:  &metav1.Duration{Duration: 10 * time.Minute},
-						InitialReadinessDelay:   &metav1.Duration{Duration: 20 * time.Second},
-						SyncPeriod:              &metav1.Duration{Duration: 20 * time.Second},
-						Tolerance:               pointer.Float64(0.3),
-					},
-					NodeCIDRMaskSize: nil,
-				}
-				configWithFeatureFlags           = &gardencorev1beta1.KubeControllerManagerConfig{KubernetesConfig: gardencorev1beta1.KubernetesConfig{FeatureGates: map[string]bool{"Foo": true, "Bar": false, "Baz": false}}}
-				configWithNodeCIDRMaskSize       = &gardencorev1beta1.KubeControllerManagerConfig{NodeCIDRMaskSize: pointer.Int32(26)}
-				configWithPodEvictionTimeout     = &gardencorev1beta1.KubeControllerManagerConfig{PodEvictionTimeout: &podEvictionTimeout}
-				configWithNodeMonitorGracePeriod = &gardencorev1beta1.KubeControllerManagerConfig{NodeMonitorGracePeriod: &nodeMonitorGracePeriod}
-			)
-
-			DescribeTable("success tests for various kubernetes versions (shoots with workers)",
-				func(config *gardencorev1beta1.KubeControllerManagerConfig, hvpaConfig *HVPAConfig) {
-					isWorkerless = false
-
-					values = Values{
-						RuntimeVersion:         runtimeKubernetesVersion,
-						TargetVersion:          semverVersion,
-						Image:                  image,
-						Config:                 config,
-						PriorityClassName:      priorityClassName,
-						HVPAConfig:             hvpaConfig,
-						IsWorkerless:           isWorkerless,
-						PodNetwork:             podCIDR,
-						ServiceNetwork:         serviceCIDR,
-						ClusterSigningDuration: clusterSigningDuration,
-						ControllerWorkers:      controllerWorkers,
-						ControllerSyncPeriods:  controllerSyncPeriods,
-					}
-					kubeControllerManager = New(testLogger, fakeInterface, namespace, sm, values)
-					kubeControllerManager.SetReplicaCount(replicas)
-
-					if hvpaConfig.Enabled {
-						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
-					}
-
-					gomock.InOrder(
-						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
-						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
-							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-								Expect(obj).To(DeepEqual(serviceFor(version)))
-							}),
-						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).
-							Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
-								obj.SetResourceVersion("0")
-							}),
-						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
-							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-								Expect(obj).To(DeepEqual(secret))
-							}),
-						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
-							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-								Expect(obj).To(DeepEqual(deploymentFor(version, config, isWorkerless, controllerWorkers)))
-							}),
-						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, pdbName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
-						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).
-							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-								Expect(obj).To(DeepEqual(pdb))
-							}),
-					)
-
-					if hvpaConfig.Enabled {
-						gomock.InOrder(
-							c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace}}),
-							c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
-							c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).
-								Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-									Expect(obj).To(DeepEqual(hvpaFor(hvpaConfig)))
-								}),
-						)
-					} else {
-						gomock.InOrder(
-							c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: namespace}}),
-							c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, vpaName), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
-							c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).
-								Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-									Expect(obj).To(DeepEqual(vpa))
-								}),
-						)
-					}
-
-					gomock.InOrder(
-						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).
-							Do(func(ctx context.Context, obj client.Object, _ ...client.UpdateOption) {
-								Expect(obj).To(DeepEqual(managedResourceSecret))
-							}),
-						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
-							Do(func(ctx context.Context, obj client.Object, _ ...client.UpdateOption) {
-								Expect(obj).To(DeepEqual(managedResource))
-							}),
-					)
-
-					Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
+		verifyDeployment := func(config *gardencorev1beta1.KubeControllerManagerConfig, isWorkless bool, hvpaConfig *HVPAConfig, controllerWorkers ControllerWorkers) {
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+			expectedMr := &resourcesv1alpha1.ManagedResource{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
+					Kind:       "ManagedResource",
 				},
-
-				Entry("w/o config", emptyConfig, hvpaConfigDisabled),
-				Entry("with HVPA", emptyConfig, hvpaConfigEnabled),
-				Entry("with HVPA and custom scale-down update mode", emptyConfig, hvpaConfigEnabledScaleDownOff),
-				Entry("with non-default autoscaler config", configWithAutoscalerConfig, hvpaConfigDisabled),
-				Entry("with feature flags", configWithFeatureFlags, hvpaConfigDisabled),
-				Entry("with NodeCIDRMaskSize", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
-				Entry("with PodEvictionTimeout", configWithPodEvictionTimeout, hvpaConfigDisabled),
-				Entry("with NodeMonitorGradePeriod", configWithNodeMonitorGracePeriod, hvpaConfigDisabled),
-			)
-
-			DescribeTable("success tests for various kubernetes versions (workerless shoot)",
-				func(config *gardencorev1beta1.KubeControllerManagerConfig, hvpaConfig *HVPAConfig, controllerWorkers ControllerWorkers) {
-					isWorkerless = true
-
-					values = Values{
-						RuntimeVersion:         runtimeKubernetesVersion,
-						TargetVersion:          semverVersion,
-						Image:                  image,
-						Config:                 config,
-						PriorityClassName:      priorityClassName,
-						HVPAConfig:             hvpaConfig,
-						IsWorkerless:           isWorkerless,
-						PodNetwork:             podCIDR,
-						ServiceNetwork:         serviceCIDR,
-						ClusterSigningDuration: clusterSigningDuration,
-						ControllerWorkers:      controllerWorkers,
-						ControllerSyncPeriods:  controllerSyncPeriods,
-					}
-					kubeControllerManager = New(testLogger, fakeInterface, namespace, sm, values)
-					kubeControllerManager.SetReplicaCount(replicas)
-
-					if hvpaConfig.Enabled {
-						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
-					}
-
-					gomock.InOrder(
-						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
-						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
-							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-								Expect(obj).To(DeepEqual(serviceFor(version)))
-							}),
-						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).
-							Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
-								obj.SetResourceVersion("0")
-							}),
-						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
-							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-								Expect(obj).To(DeepEqual(secret))
-							}),
-						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
-							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-								Expect(obj).To(DeepEqual(deploymentFor(version, config, isWorkerless, controllerWorkers)))
-							}),
-						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, pdbName), gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
-						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).
-							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-								Expect(obj).To(DeepEqual(pdb))
-							}),
-					)
-
-					if hvpaConfig.Enabled {
-						gomock.InOrder(
-							c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace}}),
-							c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
-							c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).
-								Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-									Expect(obj).To(DeepEqual(hvpaFor(hvpaConfig)))
-								}),
-						)
-					} else {
-						gomock.InOrder(
-							c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: namespace}}),
-							c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, vpaName), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
-							c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).
-								Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-									Expect(obj).To(DeepEqual(vpa))
-								}),
-						)
-					}
-
-					gomock.InOrder(
-						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).
-							Do(func(ctx context.Context, obj client.Object, _ ...client.UpdateOption) {
-								Expect(obj).To(DeepEqual(managedResourceSecret))
-							}),
-						c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
-							Do(func(ctx context.Context, obj client.Object, _ ...client.UpdateOption) {
-								Expect(obj).To(DeepEqual(managedResource))
-							}),
-					)
-
-					Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            managedResource.Name,
+					Namespace:       managedResource.Namespace,
+					ResourceVersion: "1",
+					Labels:          map[string]string{"origin": "gardener"},
 				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+					SecretRefs: []corev1.LocalObjectReference{{
+						Name: managedResource.Spec.SecretRefs[0].Name,
+					}},
+					KeepObjects: pointer.Bool(true),
+				},
+			}
+			utilruntime.Must(references.InjectAnnotations(expectedMr))
+			Expect(managedResource).To(DeepEqual(expectedMr))
 
-				Entry("w/o config", emptyConfig, hvpaConfigDisabled, controllerWorkers),
-				Entry("with HVPA", emptyConfig, hvpaConfigEnabled, controllerWorkers),
-				Entry("with HVPA and custom scale-down update mode", emptyConfig, hvpaConfigEnabledScaleDownOff, controllerWorkers),
-				Entry("with non-default autoscaler config", configWithAutoscalerConfig, hvpaConfigDisabled, controllerWorkers),
-				Entry("with feature flags", configWithFeatureFlags, hvpaConfigDisabled, controllerWorkers),
-				Entry("with NodeCIDRMaskSize", configWithNodeCIDRMaskSize, hvpaConfigDisabled, controllerWorkers),
-				Entry("with PodEvictionTimeout", configWithPodEvictionTimeout, hvpaConfigDisabled, controllerWorkers),
-				Entry("with NodeMonitorGradePeriod", configWithNodeMonitorGracePeriod, hvpaConfigDisabled, controllerWorkers),
-				Entry("with disabled controllers", configWithNodeMonitorGracePeriod, hvpaConfigDisabled, controllerWorkersWithDisabledControllers),
-			)
-		})
+			managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+			Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+
+			actualDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace}}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualDeployment), actualDeployment)).To(Succeed())
+			Expect(actualDeployment).To(Equal(deploymentFor(version, config, isWorkerless, controllerWorkers)))
+
+			actualService := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: namespace}}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualService), actualService)).To(Succeed())
+			Expect(actualService).To(DeepEqual(serviceFor(version)))
+
+			actualHVPA := &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: namespace}}
+			actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace}}
+			if hvpaConfig.Enabled {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualHVPA), actualHVPA)).To(Succeed())
+				Expect(actualHVPA).To(Equal(hvpaFor(hvpaConfig)))
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualVPA), actualVPA)).To(BeNotFoundError())
+			} else {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualVPA), actualVPA)).To(Succeed())
+				Expect(actualVPA).To(DeepEqual(vpa))
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualHVPA), actualHVPA)).To(BeNotFoundError())
+			}
+
+			actualPDB := &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: pdbName, Namespace: namespace}}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualPDB), actualPDB)).To(Succeed())
+			Expect(actualPDB).To(DeepEqual(pdb))
+
+			actualSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: namespace}}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualSecret), actualSecret)).To(Succeed())
+			Expect(actualSecret).To(DeepEqual(secret))
+		}
+		DescribeTable("success tests for various kubernetes versions (shoots with workers)",
+			func(config *gardencorev1beta1.KubeControllerManagerConfig, hvpaConfig *HVPAConfig) {
+				isWorkerless = false
+				semverVersion, err := semver.NewVersion(version)
+				Expect(err).NotTo(HaveOccurred())
+
+				values = Values{
+					RuntimeVersion:         runtimeKubernetesVersion,
+					TargetVersion:          semverVersion,
+					Image:                  image,
+					Config:                 config,
+					PriorityClassName:      priorityClassName,
+					HVPAConfig:             hvpaConfig,
+					IsWorkerless:           isWorkerless,
+					PodNetwork:             podCIDR,
+					ServiceNetwork:         serviceCIDR,
+					ClusterSigningDuration: clusterSigningDuration,
+					ControllerWorkers:      controllerWorkers,
+					ControllerSyncPeriods:  controllerSyncPeriods,
+				}
+				kubeControllerManager = New(testLogger, fakeInterface, namespace, sm, values)
+				kubeControllerManager.SetReplicaCount(replicas)
+
+				Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
+
+				verifyDeployment(config, isWorkerless, hvpaConfig, controllerWorkers)
+			},
+
+			Entry("w/o config", emptyConfig, hvpaConfigDisabled),
+			Entry("with HVPA", emptyConfig, hvpaConfigEnabled),
+			Entry("with HVPA and custom scale-down update mode", emptyConfig, hvpaConfigEnabledScaleDownOff),
+			Entry("with non-default autoscaler config", configWithAutoscalerConfig, hvpaConfigDisabled),
+			Entry("with feature flags", configWithFeatureFlags, hvpaConfigDisabled),
+			Entry("with NodeCIDRMaskSize", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
+			Entry("with PodEvictionTimeout", configWithPodEvictionTimeout, hvpaConfigDisabled),
+			Entry("with NodeMonitorGradePeriod", configWithNodeMonitorGracePeriod, hvpaConfigDisabled),
+		)
+
+		DescribeTable("success tests for various kubernetes versions (workerless shoot)",
+			func(config *gardencorev1beta1.KubeControllerManagerConfig, hvpaConfig *HVPAConfig, controllerWorkers ControllerWorkers) {
+				isWorkerless = true
+				semverVersion, err := semver.NewVersion(version)
+				Expect(err).NotTo(HaveOccurred())
+
+				values = Values{
+					RuntimeVersion:         runtimeKubernetesVersion,
+					TargetVersion:          semverVersion,
+					Image:                  image,
+					Config:                 config,
+					PriorityClassName:      priorityClassName,
+					HVPAConfig:             hvpaConfig,
+					IsWorkerless:           isWorkerless,
+					PodNetwork:             podCIDR,
+					ServiceNetwork:         serviceCIDR,
+					ClusterSigningDuration: clusterSigningDuration,
+					ControllerWorkers:      controllerWorkers,
+					ControllerSyncPeriods:  controllerSyncPeriods,
+				}
+				kubeControllerManager = New(testLogger, fakeInterface, namespace, sm, values)
+				kubeControllerManager.SetReplicaCount(replicas)
+
+				Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
+
+				verifyDeployment(config, isWorkerless, hvpaConfig, controllerWorkers)
+			},
+
+			Entry("w/o config", emptyConfig, hvpaConfigDisabled, controllerWorkers),
+			Entry("with HVPA", emptyConfig, hvpaConfigEnabled, controllerWorkers),
+			Entry("with HVPA and custom scale-down update mode", emptyConfig, hvpaConfigEnabledScaleDownOff, controllerWorkers),
+			Entry("with non-default autoscaler config", configWithAutoscalerConfig, hvpaConfigDisabled, controllerWorkers),
+			Entry("with feature flags", configWithFeatureFlags, hvpaConfigDisabled, controllerWorkers),
+			Entry("with NodeCIDRMaskSize", configWithNodeCIDRMaskSize, hvpaConfigDisabled, controllerWorkers),
+			Entry("with PodEvictionTimeout", configWithPodEvictionTimeout, hvpaConfigDisabled, controllerWorkers),
+			Entry("with NodeMonitorGradePeriod", configWithNodeMonitorGracePeriod, hvpaConfigDisabled, controllerWorkers),
+			Entry("with disabled controllers", configWithNodeMonitorGracePeriod, hvpaConfigDisabled, controllerWorkersWithDisabledControllers),
+		)
 	})
 
 	Describe("#Destroy", func() {
 		It("should successfully destroy all resources", func() {
+			mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}
+			mrSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretName, Namespace: namespace}}
+			vpa := &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace}}
+			hvpa := &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: namespace}}
+			service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: namespace}}
+			pdb := &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: pdbName, Namespace: namespace}}
+			deploy := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace}}
+			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: namespace}}
+			Expect(c.Create(ctx, mr)).To(Succeed())
+			Expect(c.Create(ctx, mrSecret)).To(Succeed())
+			Expect(c.Create(ctx, vpa)).To(Succeed())
+			Expect(c.Create(ctx, hvpa)).To(Succeed())
+			Expect(c.Create(ctx, service)).To(Succeed())
+			Expect(c.Create(ctx, deploy)).To(Succeed())
+			Expect(c.Create(ctx, pdb)).To(Succeed())
+			Expect(c.Create(ctx, secret)).To(Succeed())
+
 			kubeControllerManager = New(
 				testLogger,
 				fakeInterface,
@@ -932,18 +769,16 @@ subjects:
 				values,
 			)
 
-			gomock.InOrder(
-				c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretName, Namespace: namespace}}),
-				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace}}),
-				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: namespace}}),
-				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: namespace}}),
-				c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: pdbName, Namespace: namespace}}),
-				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: namespace}}),
-			)
-
 			Expect(kubeControllerManager.Destroy(ctx)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(mrSecret), mrSecret)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(vpa), vpa)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(service), service)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(pdb), pdb)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(BeNotFoundError())
 		})
 	})
 
@@ -967,24 +802,21 @@ subjects:
 		})
 
 		It("should successfully wait for the deployment to be updated", func() {
-			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-			fakeKubernetesInterface := kubernetesfake.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
-
 			values = Values{
 				RuntimeVersion: semver.MustParse("1.25.0"),
 				IsWorkerless:   isWorkerless,
 			}
-			kubeControllerManager = New(testLogger, fakeKubernetesInterface, namespace, nil, values)
+			kubeControllerManager = New(testLogger, fakeInterface, namespace, nil, values)
 
 			deploy := deployment.DeepCopy()
 
 			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
 			defer test.WithVars(&TimeoutWaitForDeployment, 100*time.Millisecond)()
 
-			Expect(fakeClient.Create(ctx, deploy)).To(Succeed())
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)).To(Succeed())
+			Expect(c.Create(ctx, deploy)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)).To(Succeed())
 
-			Expect(fakeClient.Create(ctx, &corev1.Pod{
+			Expect(c.Create(ctx, &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "pod",
 					Namespace: deployment.Namespace,
@@ -1003,7 +835,7 @@ subjects:
 				deploy.Status.Replicas = *deploy.Spec.Replicas
 				deploy.Status.UpdatedReplicas = *deploy.Spec.Replicas
 				deploy.Status.AvailableReplicas = *deploy.Spec.Replicas
-				Expect(fakeClient.Update(ctx, deploy)).To(Succeed())
+				Expect(c.Update(ctx, deploy)).To(Succeed())
 			})
 			defer timer.Stop()
 

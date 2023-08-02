@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/component/istio"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -2081,6 +2083,9 @@ spec:
 	Describe("#Deploy", func() {
 		JustBeforeEach(func() {
 			Expect(istiod.Deploy(ctx)).ToNot(HaveOccurred(), "istiod deploy succeeds")
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstio), managedResourceIstio)).To(Succeed())
+			managedResourceIstioSecret.Name = managedResourceIstio.Spec.SecretRefs[0].Name
 		})
 
 		It("deploys istiod namespace", func() {
@@ -2119,7 +2124,7 @@ spec:
 
 		It("should successfully deploy all resources", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstio), managedResourceIstio)).To(Succeed())
-			Expect(managedResourceIstio).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+			expectedMr := &resourcesv1alpha1.ManagedResource{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
 					Kind:       "ManagedResource",
@@ -2137,11 +2142,15 @@ spec:
 					}},
 					KeepObjects: pointer.Bool(false),
 				},
-			}))
+			}
+			utilruntime.Must(references.InjectAnnotations(expectedMr))
+			Expect(managedResourceIstio).To(Equal(expectedMr))
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 			Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(managedResourceIstioSecret.Data).To(HaveLen(15))
+			Expect(managedResourceIstioSecret.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceIstioSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			By("Verify istio-ingress resources")
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_autoscale_test-ingress.yaml"])).To(Equal(istioIngressAutoscaler(nil, nil)))
@@ -2164,9 +2173,14 @@ spec:
 			Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_vpn-envoy-filter_test-ingress.yaml"])).To(Equal(istioIngressEnvoyVPNFilter))
 
 			By("Verify istio-system resources")
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystem), managedResourceIstioSystem)).To(Succeed())
+			managedResourceIstioSystemSecret.Name = managedResourceIstioSystem.Spec.SecretRefs[0].Name
+
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystemSecret), managedResourceIstioSystemSecret)).To(Succeed())
 			Expect(managedResourceIstioSystemSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceIstioSystemSecret.Data).To(HaveLen(15))
+			Expect(managedResourceIstioSystemSecret.Data).To(HaveLen(14))
+			Expect(managedResourceIstioSystemSecret.Immutable).To(Equal(pointer.Bool(true)))
+			Expect(managedResourceIstioSystemSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_configmap.yaml"])).To(Equal(istiodConfigMap()))
 			Expect(string(managedResourceIstioSystemSecret.Data["istio-istiod_templates_deployment.yaml"])).To(Equal(istiodDeployment("d34796e6fc25a26d4a8a4cb3276e34961b18f867d70f5a1984255d57bfefb4c6")))
@@ -2325,7 +2339,7 @@ spec:
 			It("should successfully deploy all resources", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceIstioSecret.Data).To(HaveLen(15))
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(13))
 
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_vpn-gateway_test-ingress.yaml"])).To(BeEmpty())
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_vpn-envoy-filter_test-ingress.yaml"])).To(BeEmpty())
@@ -2358,7 +2372,7 @@ spec:
 			It("should successfully deploy all resources", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceIstioSecret.Data).To(HaveLen(15))
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(12))
 
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-envoyfilter_test-ingress.yaml"])).To(BeEmpty())
 				Expect(string(managedResourceIstioSecret.Data["istio-ingress_templates_proxy-protocol-gateway_test-ingress.yaml"])).To(BeEmpty())
@@ -2391,7 +2405,7 @@ spec:
 			It("should successfully deploy all resources", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(Succeed())
 				Expect(managedResourceIstioSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceIstioSecret.Data).To(HaveLen(15))
+				Expect(managedResourceIstioSecret.Data).To(HaveLen(12))
 
 				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_configmap.yaml"))
 				Expect(managedResourceIstioSecret.Data).ToNot(HaveKey("istio-istiod_templates_deployment.yaml"))
@@ -2413,8 +2427,33 @@ spec:
 	})
 
 	Describe("#Destroy", func() {
+		var (
+			oldMrSecret       *corev1.Secret
+			oldMrSystemSecret *corev1.Secret
+		)
+
 		BeforeEach(func() {
 			Expect(istiod.Deploy(ctx)).To(Succeed())
+			oldMrSecret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "managedresource-" + managedResourceIstio.Name,
+					Namespace: deployNS,
+				},
+			}
+			oldMrSystemSecret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "managedresource-" + managedResourceIstioSystem.Name,
+					Namespace: deployNS,
+				},
+			}
+			Expect(c.Create(ctx, oldMrSecret)).To(Succeed())
+			Expect(c.Create(ctx, oldMrSystemSecret)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstio), managedResourceIstio)).To(Succeed())
+			managedResourceIstioSecret.Name = managedResourceIstio.Spec.SecretRefs[0].Name
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystem), managedResourceIstioSystem)).To(Succeed())
+			managedResourceIstioSystemSecret.Name = managedResourceIstioSystem.Spec.SecretRefs[0].Name
 		})
 
 		It("should successfully destroy all resources", func() {
@@ -2428,6 +2467,8 @@ spec:
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSecret), managedResourceIstioSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceIstioSecret.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystem), managedResourceIstioSystem)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResourceIstioSystem.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioSystemSecret), managedResourceIstioSystemSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceIstioSystemSecret.Name)))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(oldMrSecret), oldMrSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, oldMrSecret.Name)))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(oldMrSystemSecret), oldMrSystemSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, oldMrSystemSecret.Name)))
 			Expect(c.Get(ctx, client.ObjectKey{Name: deployNS}, namespace)).To(MatchError(apierrors.NewNotFound(corev1.Resource("namespaces"), deployNS)))
 			Expect(c.Get(ctx, client.ObjectKey{Name: deployNSIngress}, namespace)).To(MatchError(apierrors.NewNotFound(corev1.Resource("namespaces"), deployNSIngress)))
 		})

@@ -27,12 +27,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/scheme"
 	testclock "k8s.io/utils/clock/testing"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	. "github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -51,11 +53,11 @@ var _ = Describe("Collector", func() {
 	)
 
 	BeforeEach(func() {
-		c = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		gc = &Reconciler{
 			TargetReader:            c,
 			TargetWriter:            c,
-			Config:                  config.GarbageCollectorControllerConfig{SyncPeriod: &metav1.Duration{}},
+			Config:                  config.GarbageCollectorControllerConfig{SyncPeriod: &metav1.Duration{}, ConsiderManagedResources: pointer.Bool(true)},
 			Clock:                   fakeClock,
 			MinimumObjectLifetime:   &minimumObjectLifetime,
 			TargetKubernetesVersion: semver.MustParse("1.24.0"),
@@ -79,6 +81,7 @@ var _ = Describe("Collector", func() {
 			labeledSecret7       *corev1.Secret
 			labeledSecret8       *corev1.Secret
 			labeledSecret9       *corev1.Secret
+			labeledSecret10      *corev1.Secret
 
 			labeledConfigMap1       *corev1.ConfigMap
 			labeledConfigMap1System *corev1.ConfigMap
@@ -124,6 +127,7 @@ var _ = Describe("Collector", func() {
 			labeledSecret7 = &corev1.Secret{ObjectMeta: labeledObjectMeta}
 			labeledSecret8 = &corev1.Secret{ObjectMeta: labeledObjectMeta}
 			labeledSecret9 = &corev1.Secret{ObjectMeta: labeledObjectMeta}
+			labeledSecret10 = &corev1.Secret{ObjectMeta: labeledObjectMeta}
 			labeledSecret1.Name += "1"
 			labeledSecret1System.Name += "1"
 			labeledSecret1System.Namespace = metav1.NamespaceSystem
@@ -136,6 +140,7 @@ var _ = Describe("Collector", func() {
 			labeledSecret8.Name += "8"
 			labeledSecret9.Name += "9"
 			labeledSecret9.CreationTimestamp = creationTimestamp
+			labeledSecret10.Name += "10"
 
 			labeledConfigMap1 = &corev1.ConfigMap{ObjectMeta: labeledObjectMeta}
 			labeledConfigMap1System = &corev1.ConfigMap{ObjectMeta: labeledObjectMeta}
@@ -217,6 +222,7 @@ var _ = Describe("Collector", func() {
 			Expect(c.Create(ctx, labeledSecret7)).To(Succeed())
 			Expect(c.Create(ctx, labeledSecret8)).To(Succeed())
 			Expect(c.Create(ctx, labeledSecret9)).To(Succeed())
+			Expect(c.Create(ctx, labeledSecret10)).To(Succeed())
 			Expect(c.Create(ctx, labeledConfigMap1)).To(Succeed())
 			Expect(c.Create(ctx, labeledConfigMap1System)).To(Succeed())
 			Expect(c.Create(ctx, labeledConfigMap2)).To(Succeed())
@@ -232,7 +238,8 @@ var _ = Describe("Collector", func() {
 			Expect(c.List(ctx, secretList)).To(Succeed())
 			Expect(secretList.Items).To(ConsistOf(
 				*labeledSecret1, *labeledSecret1System, *labeledSecret2, *labeledSecret3,
-				*labeledSecret4, *labeledSecret5, *labeledSecret6, *labeledSecret7, *labeledSecret8, *labeledSecret9,
+				*labeledSecret4, *labeledSecret5, *labeledSecret6, *labeledSecret7, *labeledSecret8,
+				*labeledSecret9, *labeledSecret10,
 			))
 
 			configMapList := &corev1.ConfigMapList{}
@@ -249,6 +256,7 @@ var _ = Describe("Collector", func() {
 			Expect(c.Create(ctx, &batchv1beta1.CronJob{ObjectMeta: objectMetaFor("cronjob2", metav1.NamespaceDefault, labeledSecret5, labeledConfigMap5)})).To(Succeed())
 			Expect(c.Create(ctx, &corev1.Pod{ObjectMeta: objectMetaFor("pod1", metav1.NamespaceDefault, labeledSecret6, labeledConfigMap6)})).To(Succeed())
 			Expect(c.Create(ctx, &batchv1.CronJob{ObjectMeta: objectMetaFor("cronjob2", metav1.NamespaceDefault, labeledSecret7, labeledConfigMap7)})).To(Succeed())
+			Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: objectMetaFor("mr1", metav1.NamespaceDefault, labeledSecret10)})).To(Succeed())
 
 			_, err := gc.Reconcile(ctx, reconcile.Request{})
 			Expect(err).NotTo(HaveOccurred())
@@ -258,7 +266,7 @@ var _ = Describe("Collector", func() {
 			Expect(secretList.Items).To(ConsistOf(
 				*labeledSecret1, *labeledSecret2, *labeledSecret3,
 				*labeledSecret4, *labeledSecret5, *labeledSecret6,
-				*labeledSecret7, *labeledSecret9,
+				*labeledSecret7, *labeledSecret9, *labeledSecret10,
 			))
 
 			configMapList = &corev1.ConfigMapList{}

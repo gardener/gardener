@@ -204,8 +204,10 @@ func (c *RenderedChart) FileContent(filename string) string {
 func (c *RenderedChart) AsSecretData() map[string][]byte {
 	data := make(map[string][]byte, len(c.Files()))
 	for fileName, fileContent := range c.Files() {
-		key := strings.ReplaceAll(fileName, "/", "_")
-		data[key] = []byte(fileContent)
+		if len(fileContent) != 0 {
+			key := strings.ReplaceAll(fileName, "/", "_")
+			data[key] = []byte(fileContent)
+		}
 	}
 	return data
 }

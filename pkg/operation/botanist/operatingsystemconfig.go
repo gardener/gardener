@@ -207,8 +207,14 @@ func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Conte
 	// Create Secrets for the ManagedResource containing all the executor scripts as well as the RBAC resources.
 	for secretName, data := range managedResourceSecretNameToData {
 		var (
-			managedResourceSecretName, managedResourceSecret = managedresources.NewSecret(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, secretName, nil, true)
 			keyValues                                        = data
+			managedResourceSecretName, managedResourceSecret = managedresources.NewSecret(
+				b.SeedClientSet.Client(),
+				b.Shoot.SeedNamespace,
+				secretName,
+				keyValues,
+				true,
+			)
 		)
 
 		managedResource.WithSecretRef(managedResourceSecretName)
@@ -216,8 +222,7 @@ func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Conte
 
 		fns = append(fns, func(ctx context.Context) error {
 			return managedResourceSecret.
-				WithKeyValues(keyValues).
-				WithLabels(managedResourceSecretLabels).
+				AddLabels(managedResourceSecretLabels).
 				Reconcile(ctx)
 		})
 	}

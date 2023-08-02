@@ -314,7 +314,7 @@ var _ = Describe("GardenerScheduler", func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
 
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntime), managedResourceRuntime)).To(Succeed())
-				Expect(managedResourceRuntime).To(Equal(&resourcesv1alpha1.ManagedResource{
+				expectedRuntimeMr := &resourcesv1alpha1.ManagedResource{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
 						Kind:       "ManagedResource",
@@ -328,16 +328,19 @@ var _ = Describe("GardenerScheduler", func() {
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						Class:       pointer.String("seed"),
-						SecretRefs:  []corev1.LocalObjectReference{{Name: managedResourceSecretRuntime.Name}},
+						SecretRefs:  []corev1.LocalObjectReference{{Name: managedResourceRuntime.Spec.SecretRefs[0].Name}},
 						KeepObjects: pointer.Bool(false),
 					},
 					Status: healthyManagedResourceStatus,
-				}))
+				}
+				utilruntime.Must(references.InjectAnnotations(expectedRuntimeMr))
+				Expect(managedResourceRuntime).To(Equal(expectedRuntimeMr))
 
+				managedResourceSecretRuntime.Name = managedResourceRuntime.Spec.SecretRefs[0].Name
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretRuntime), managedResourceSecretRuntime)).To(Succeed())
 
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceVirtual), managedResourceVirtual)).To(Succeed())
-				Expect(managedResourceVirtual).To(Equal(&resourcesv1alpha1.ManagedResource{
+				expectedVirtualMr := &resourcesv1alpha1.ManagedResource{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
 						Kind:       "ManagedResource",
@@ -351,12 +354,15 @@ var _ = Describe("GardenerScheduler", func() {
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceSecretVirtual.Name}},
+						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceVirtual.Spec.SecretRefs[0].Name}},
 						KeepObjects:  pointer.Bool(false),
 					},
 					Status: healthyManagedResourceStatus,
-				}))
+				}
+				utilruntime.Must(references.InjectAnnotations(expectedVirtualMr))
+				Expect(managedResourceVirtual).To(Equal(expectedVirtualMr))
 
+				managedResourceSecretVirtual.Name = expectedVirtualMr.Spec.SecretRefs[0].Name
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
 
 				Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
@@ -366,11 +372,15 @@ var _ = Describe("GardenerScheduler", func() {
 				Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-scheduler.yaml"])).To(Equal(componenttest.Serialize(serviceRuntime)))
 				Expect(string(managedResourceSecretRuntime.Data["verticalpodautoscaler__some-namespace__gardener-scheduler-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
 				Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-scheduler.yaml"])).To(Equal(deployment(namespace, "gardener-scheduler-config-3cf6616e", values)))
+				Expect(managedResourceSecretRuntime.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecretVirtual.Data).To(HaveLen(2))
 				Expect(string(managedResourceSecretVirtual.Data["clusterrole____gardener.cloud_system_scheduler.yaml"])).To(Equal(componenttest.Serialize(clusterRole)))
 				Expect(string(managedResourceSecretVirtual.Data["clusterrolebinding____gardener.cloud_system_scheduler.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
+				Expect(managedResourceSecretVirtual.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			})
 		})
 

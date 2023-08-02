@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -504,7 +505,7 @@ status:
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					SecretRefs: []corev1.LocalObjectReference{
-						{Name: managedResourceSecretName},
+						{Name: managedResourceSecret.Name},
 					},
 					Class:       pointer.String("seed"),
 					KeepObjects: pointer.Bool(false),
@@ -513,8 +514,9 @@ status:
 		})
 
 		It("should fail because the managed resource secret cannot be updated", func() {
+			utilruntime.Must(kubernetesutils.MakeUnique(managedResourceSecret))
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
 			)
 
@@ -522,10 +524,13 @@ status:
 		})
 
 		It("should fail because the managed resource cannot be updated", func() {
+			utilruntime.Must(kubernetesutils.MakeUnique(managedResourceSecret))
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
 			)
 
@@ -533,13 +538,18 @@ status:
 		})
 
 		It("should successfully deploy all the resources (w/o image vector overwrite)", func() {
+			utilruntime.Must(kubernetesutils.MakeUnique(managedResourceSecret))
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 					Expect(obj).To(Equal(managedResourceSecret))
 				}),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+					managedResource.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}}
+					utilruntime.Must(references.InjectAnnotations(managedResource))
 					Expect(obj).To(DeepEqual(managedResource))
 				}),
 			)
@@ -553,13 +563,18 @@ status:
 			managedResourceSecret.Data["configmap__"+namespace+"__"+configMapName+".yaml"] = []byte(configMapImageVectorOverwriteYAML)
 			managedResourceSecret.Data["deployment__"+namespace+"__etcd-druid.yaml"] = []byte(deploymentWithImageVectorOverwriteYAML)
 
+			utilruntime.Must(kubernetesutils.MakeUnique(managedResourceSecret))
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 					Expect(obj).To(DeepEqual(managedResourceSecret))
 				}),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+					managedResource.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}}
+					utilruntime.Must(references.InjectAnnotations(managedResource))
 					Expect(obj).To(DeepEqual(managedResource))
 				}),
 			)
@@ -669,10 +684,10 @@ status:
 				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})).Return(noMatchError)
 
 				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdCopyBackupsTaskList{})).Return(noMatchError)
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}))
 
 				c.EXPECT().Delete(gomock.Any(), gomock.Any())
-				c.EXPECT().Delete(gomock.Any(), gomock.Any())
-
+				c.EXPECT().Delete(ctx, managedResource)
 				Expect(bootstrapper.Destroy(ctx)).To(Succeed())
 			})
 
@@ -681,10 +696,9 @@ status:
 				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})).Return(notFoundError)
 
 				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdCopyBackupsTaskList{})).Return(notFoundError)
-
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}))
 				c.EXPECT().Delete(gomock.Any(), gomock.Any())
-				c.EXPECT().Delete(gomock.Any(), gomock.Any())
-
+				c.EXPECT().Delete(ctx, managedResource)
 				Expect(bootstrapper.Destroy(ctx)).To(Succeed())
 			})
 
@@ -719,6 +733,8 @@ status:
 				gomock.InOrder(
 					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
 					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdCopyBackupsTaskList{})),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+					c.EXPECT().Delete(ctx, secret),
 					c.EXPECT().Delete(ctx, managedResource).Return(fakeErr),
 				)
 
@@ -729,7 +745,7 @@ status:
 				gomock.InOrder(
 					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
 					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdCopyBackupsTaskList{})),
-					c.EXPECT().Delete(ctx, managedResource),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 					c.EXPECT().Delete(ctx, secret).Return(fakeErr),
 				)
 
@@ -740,8 +756,9 @@ status:
 				gomock.InOrder(
 					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
 					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdCopyBackupsTaskList{})),
-					c.EXPECT().Delete(ctx, managedResource),
+					c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 					c.EXPECT().Delete(ctx, secret),
+					c.EXPECT().Delete(ctx, managedResource),
 				)
 
 				Expect(bootstrapper.Destroy(ctx)).To(Succeed())

@@ -198,6 +198,9 @@ var _ = BeforeSuite(func() {
 				},
 			},
 		}),
+		ClientDisableCacheFor: []client.Object{
+			&corev1.Secret{}, // applied because of operations on managed resources and their secrets
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()

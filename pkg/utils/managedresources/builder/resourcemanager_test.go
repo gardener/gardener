@@ -27,6 +27,7 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -58,6 +59,7 @@ var _ = Describe("Resource Manager", func() {
 					WithKeyValues(data).
 					WithLabels(labels).
 					WithAnnotations(annotations).
+					AddLabels(map[string]string{"one": "two"}).
 					Reconcile(ctx),
 			).To(Succeed())
 
@@ -70,14 +72,60 @@ var _ = Describe("Resource Manager", func() {
 					Kind:       "Secret",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            name,
-					Namespace:       namespace,
-					Annotations:     annotations,
-					Labels:          labels,
+					Name:        name,
+					Namespace:   namespace,
+					Annotations: annotations,
+					Labels: map[string]string{
+						"boo": "goo",
+						"one": "two",
+					},
 					ResourceVersion: "1",
 				},
 				Type: corev1.SecretTypeOpaque,
 				Data: data,
+			}))
+		})
+
+		It("should correctly create an unique managed secret", func() {
+			data := map[string][]byte{"foo": []byte("bar")}
+			uniqueSecretName, secretBuilder := NewSecret(fakeClient).
+				WithNamespacedName(namespace, name).
+				WithKeyValues(data).
+				WithLabels(labels).
+				WithAnnotations(annotations).
+				Unique()
+
+			secretBuilder.AddLabels(map[string]string{"one": "two"})
+
+			Expect(secretBuilder.Reconcile(ctx)).To(Succeed())
+
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      uniqueSecretName,
+					Namespace: namespace,
+				},
+			}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+
+			Expect(secret).To(Equal(&corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Secret",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        uniqueSecretName,
+					Namespace:   namespace,
+					Annotations: annotations,
+					Labels: map[string]string{
+						"boo": "goo",
+						"resources.gardener.cloud/garbage-collectable-reference": "true",
+						"one": "two",
+					},
+					ResourceVersion: "1",
+				},
+				Type:      corev1.SecretTypeOpaque,
+				Data:      data,
+				Immutable: pointer.Bool(true),
 			}))
 		})
 
@@ -87,7 +135,7 @@ var _ = Describe("Resource Manager", func() {
 				existingAnnotations = map[string]string{"existing": "annotation"}
 			)
 
-			mr := &corev1.Secret{
+			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        name,
 					Namespace:   namespace,
@@ -95,7 +143,7 @@ var _ = Describe("Resource Manager", func() {
 					Annotations: existingAnnotations,
 				},
 			}
-			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 
 			Expect(
 				NewSecret(fakeClient).
@@ -105,9 +153,9 @@ var _ = Describe("Resource Manager", func() {
 					Reconcile(ctx),
 			).To(Succeed())
 
-			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), mr)).To(Succeed())
+			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), secret)).To(Succeed())
 
-			Expect(mr).To(Equal(&corev1.Secret{
+			Expect(secret).To(Equal(&corev1.Secret{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "v1",
 					Kind:       "Secret",
@@ -122,23 +170,82 @@ var _ = Describe("Resource Manager", func() {
 				Type: corev1.SecretTypeOpaque,
 			}))
 		})
+
+		It("should not overwrite the GC label for immutable secrets", func() {
+			secretName, secret := NewSecret(fakeClient).
+				WithNamespacedName(namespace, name).
+				WithLabels(labels).
+				Unique()
+
+			secret.WithLabels(map[string]string{"one": "two"})
+			Expect(secret.Reconcile(ctx)).To(Succeed())
+
+			actualSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: namespace}}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(actualSecret), actualSecret)).To(Succeed())
+
+			Expect(actualSecret).To(Equal(&corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Secret",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      secretName,
+					Namespace: namespace,
+					Labels: map[string]string{
+						"one": "two",
+						"resources.gardener.cloud/garbage-collectable-reference": "true",
+					},
+					ResourceVersion: "1",
+				},
+				Type:      corev1.SecretTypeOpaque,
+				Immutable: pointer.Bool(true),
+			}))
+		})
 	})
 
 	Context("ManagedResources", func() {
 		var (
-			name        = "foo"
-			namespace   = "bar"
-			labels      = map[string]string{"boo": "goo"}
-			annotations = map[string]string{"a": "b"}
+			name                      = "foo"
+			namespace                 = "bar"
+			labels                    = map[string]string{"boo": "goo"}
+			annotations               = map[string]string{"a": "b"}
+			secret1, secret2, secret3 *corev1.Secret
 		)
+		BeforeEach(func() {
+			secret1 = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "test1",
+					Namespace:   namespace,
+					Labels:      map[string]string{"foo": "bar"},
+					Annotations: map[string]string{"foo": "bar"},
+				},
+				Data: map[string][]byte{"test": []byte("123")},
+			}
+			secret2 = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test2",
+					Namespace: namespace,
+					Labels:    map[string]string{"abc": "def"},
+				},
+				Data: map[string][]byte{"test": []byte("123")},
+			}
+			secret3 = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test3",
+					Namespace: namespace,
+					Labels:    map[string]string{},
+				},
+				Data: map[string][]byte{"test": []byte("123")},
+			}
+		})
 
 		It("should correctly create a managed resource", func() {
 			var (
 				resourceClass = "shoot"
 				secretRefs    = []corev1.LocalObjectReference{
-					{Name: "test1"},
-					{Name: "test2"},
-					{Name: "test3"},
+					{Name: secret1.Name},
+					{Name: secret2.Name},
+					{Name: secret3.Name},
 				}
 
 				injectedLabels = map[string]string{"shoot.gardener.cloud/no-cleanup": "true"}
@@ -148,6 +255,11 @@ var _ = Describe("Resource Manager", func() {
 				keepObjects                  = true
 				deletePersistentVolumeClaims = true
 			)
+
+			secrets := []*corev1.Secret{secret1, secret2, secret3}
+			for _, s := range secrets {
+				Expect(fakeClient.Create(ctx, s)).To(Succeed())
+			}
 
 			Expect(
 				NewManagedResource(fakeClient).
@@ -168,7 +280,7 @@ var _ = Describe("Resource Manager", func() {
 			mr := &resourcesv1alpha1.ManagedResource{}
 			Expect(fakeClient.Get(ctx, kubernetesutils.Key(namespace, name), mr)).To(Succeed())
 
-			Expect(mr).To(Equal(&resourcesv1alpha1.ManagedResource{
+			expectedMr := &resourcesv1alpha1.ManagedResource{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "resources.gardener.cloud/v1alpha1",
 					Kind:       "ManagedResource",
@@ -189,7 +301,71 @@ var _ = Describe("Resource Manager", func() {
 					KeepObjects:                  pointer.Bool(keepObjects),
 					DeletePersistentVolumeClaims: pointer.Bool(deletePersistentVolumeClaims),
 				},
-			}))
+			}
+
+			Expect(references.InjectAnnotations(expectedMr)).To(Succeed())
+			Expect(mr).To(Equal(expectedMr))
+
+			for _, s := range secrets {
+				secret := &corev1.Secret{}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(s), secret)).To(Succeed())
+				expected := s.DeepCopy()
+				expected.ObjectMeta.ResourceVersion = "2"
+				expected.Labels["resources.gardener.cloud/garbage-collectable-reference"] = "true"
+				expected.TypeMeta = metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Secret",
+				}
+				Expect(secret).To(Equal(expected))
+			}
+		})
+
+		It("should label existing managed resource secrets", func() {
+			mr := &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        name,
+					Namespace:   namespace,
+					Labels:      labels,
+					Annotations: annotations,
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					SecretRefs: []corev1.LocalObjectReference{
+						{Name: secret1.Name},
+						{Name: secret2.Name},
+						{Name: secret3.Name},
+					},
+				},
+			}
+
+			// Create secrets without GC label
+			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
+			for _, s := range []*corev1.Secret{secret1, secret2, secret3} {
+				Expect(fakeClient.Create(ctx, s)).To(Succeed())
+			}
+
+			Expect(
+				NewManagedResource(fakeClient).
+					WithNamespacedName(namespace, name).
+					WithLabels(labels).
+					WithAnnotations(annotations).
+					WithSecretRef(secret1.Name).
+					WithSecretRef(secret2.Name).
+					Reconcile(ctx),
+			).To(Succeed())
+
+			// Old and new secrets should be marked as garbage-collectable
+			for _, s := range []*corev1.Secret{secret1, secret2, secret3} {
+				secret := &corev1.Secret{}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(s), secret)).To(Succeed())
+				expected := s.DeepCopy()
+				expected.ObjectMeta.ResourceVersion = "2"
+				expected.Labels["resources.gardener.cloud/garbage-collectable-reference"] = "true"
+				expected.TypeMeta = metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Secret",
+				}
+				Expect(secret).To(Equal(expected))
+			}
 		})
 
 		It("should keep existing annotations or labels", func() {
