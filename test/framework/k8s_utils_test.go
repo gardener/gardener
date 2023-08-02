@@ -244,10 +244,6 @@ func appendSeedConditionsToShoot(shoot *gardencorev1beta1.Shoot) {
 			Status: gardencorev1beta1.ConditionTrue,
 		},
 		{
-			Type:   gardencorev1beta1.SeedBootstrapped,
-			Status: gardencorev1beta1.ConditionTrue,
-		},
-		{
 			Type:   gardencorev1beta1.SeedBackupBucketsReady,
 			Status: gardencorev1beta1.ConditionTrue,
 		},
