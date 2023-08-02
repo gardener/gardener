@@ -712,6 +712,16 @@ spec:
                             description: FeatureGates contains information about enabled
                               feature gates.
                             type: object
+                          logLevel:
+                            default: info
+                            description: LogLevel is the configured log level for
+                              the gardener-controller-manager. Must be one of [info,debug,error].
+                              Defaults to info.
+                            enum:
+                            - info
+                            - debug
+                            - error
+                            type: string
                         type: object
                       gardenerScheduler:
                         description: Scheduler contains configuration settings for
@@ -726,7 +736,7 @@ spec:
                           logLevel:
                             default: info
                             description: LogLevel is the configured log level for
-                              the gardener-admission-controller. Must be one of [info,debug,error].
+                              the gardener-scheduler. Must be one of [info,debug,error].
                               Defaults to info.
                             enum:
                             - info

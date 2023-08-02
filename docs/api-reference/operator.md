@@ -1090,6 +1090,19 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesConfig
 specified.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>logLevel</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LogLevel is the configured log level for the gardener-controller-manager. Must be one of [info,debug,error].
+Defaults to info.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.GardenerSchedulerConfig">GardenerSchedulerConfig
@@ -1131,7 +1144,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>LogLevel is the configured log level for the gardener-admission-controller. Must be one of [info,debug,error].
+<p>LogLevel is the configured log level for the gardener-scheduler. Must be one of [info,debug,error].
 Defaults to info.</p>
 </td>
 </tr>

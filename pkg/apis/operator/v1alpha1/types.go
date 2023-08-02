@@ -503,6 +503,12 @@ type GardenerControllerManagerConfig struct {
 	// specified.
 	// +optional
 	DefaultProjectQuotas []ProjectQuotaConfiguration `json:"defaultProjectQuotas,omitempty"`
+	// LogLevel is the configured log level for the gardener-controller-manager. Must be one of [info,debug,error].
+	// Defaults to info.
+	// +kubebuilder:validation:Enum=info;debug;error
+	// +kubebuilder:default=info
+	// +optional
+	LogLevel *string `json:"logLevel,omitempty"`
 }
 
 // ProjectQuotaConfiguration defines quota configurations.
@@ -519,7 +525,7 @@ type ProjectQuotaConfiguration struct {
 // GardenerSchedulerConfig contains configuration settings for the gardener-scheduler.
 type GardenerSchedulerConfig struct {
 	gardencorev1beta1.KubernetesConfig `json:",inline"`
-	// LogLevel is the configured log level for the gardener-admission-controller. Must be one of [info,debug,error].
+	// LogLevel is the configured log level for the gardener-scheduler. Must be one of [info,debug,error].
 	// Defaults to info.
 	// +kubebuilder:validation:Enum=info;debug;error
 	// +kubebuilder:default=info
