@@ -775,6 +775,8 @@ build:
         - cmd/gardenlet/app/bootstrappers
         - cmd/utils
         - imagevector
+        - pkg/admissioncontroller/apis/config
+        - pkg/admissioncontroller/apis/config/v1alpha1
         - pkg/api/extensions
         - pkg/api/indexer
         - pkg/apis/core
@@ -896,8 +898,13 @@ build:
         - pkg/component/extensions/operatingsystemconfig/original/components/varlibmount
         - pkg/component/extensions/operatingsystemconfig/utils
         - pkg/component/extensions/worker
+        - pkg/component/gardensystem/runtime
+        - pkg/component/gardensystem/virtual
         - pkg/component/gardeneraccess
         - pkg/component/gardenerapiserver
+        - pkg/component/gardeneradmissioncontroller
+        - pkg/component/gardenercontrollermanager
+        - pkg/component/gardenerscheduler
         - pkg/component/hvpa
         - pkg/component/istio
         - pkg/component/kubeapiserver
@@ -934,6 +941,8 @@ build:
         - pkg/component/vpnauthzserver
         - pkg/component/vpnseedserver
         - pkg/component/vpnshoot
+        - pkg/controllermanager/apis/config
+        - pkg/controllermanager/apis/config/v1alpha1
         - pkg/operation/botanist/matchers
         - pkg/operation/common
         - pkg/operation/garden
@@ -954,6 +963,8 @@ build:
         - pkg/resourcemanager/webhook/seccompprofile
         - pkg/resourcemanager/webhook/systemcomponentsconfig
         - pkg/resourcemanager/webhook/tokeninvalidator
+        - pkg/scheduler/apis/config
+        - pkg/scheduler/apis/config/v1alpha1
         - pkg/utils
         - pkg/utils/chart
         - pkg/utils/context

@@ -31,7 +31,12 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/gardeneraccess"
+	"github.com/gardener/gardener/pkg/component/gardeneradmissioncontroller"
+	"github.com/gardener/gardener/pkg/component/gardenerapiserver"
+	"github.com/gardener/gardener/pkg/component/gardenercontrollermanager"
+	"github.com/gardener/gardener/pkg/component/gardenerscheduler"
 	runtimegardensystem "github.com/gardener/gardener/pkg/component/gardensystem/runtime"
+	virtualgardensystem "github.com/gardener/gardener/pkg/component/gardensystem/virtual"
 	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
@@ -62,6 +67,15 @@ var _ = Describe("Garden Care controller tests", func() {
 			resourcemanager.ManagedResourceName,
 			gardeneraccess.ManagedResourceName,
 			kubecontrollermanager.ManagedResourceName,
+			gardenerapiserver.ManagedResourceNameRuntime,
+			gardenerapiserver.ManagedResourceNameVirtual,
+			gardeneradmissioncontroller.ManagedResourceNameRuntime,
+			gardeneradmissioncontroller.ManagedResourceNameVirtual,
+			gardenercontrollermanager.ManagedResourceNameRuntime,
+			gardenercontrollermanager.ManagedResourceNameVirtual,
+			gardenerscheduler.ManagedResourceNameRuntime,
+			gardenerscheduler.ManagedResourceNameVirtual,
+			virtualgardensystem.ManagedResourceName,
 		}
 
 		requiredControlPlaneDeployments = []string{
