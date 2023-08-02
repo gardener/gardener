@@ -150,8 +150,20 @@ var _ = Describe("Add", func() {
 			Expect(runtimeClient.Create(ctx, garden)).To(Succeed())
 		})
 
-		It("should return a request with the garden name", func() {
-			Expect(reconciler.MapManagedResourceToGarden(ctx, logr.Discard(), nil, nil)).To(ConsistOf(reconcile.Request{NamespacedName: types.NamespacedName{Name: gardenName}}))
+		Context("when Garden reconciliation is not processing", func() {
+			It("should return a request with the garden name", func() {
+				Expect(reconciler.MapManagedResourceToGarden(ctx, logr.Discard(), nil, nil)).To(ConsistOf(reconcile.Request{NamespacedName: types.NamespacedName{Name: gardenName}}))
+			})
+		})
+
+		Context("when Garden reconciliation is processing", func() {
+			BeforeEach(func() {
+				garden.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateProcessing}
+			})
+
+			It("should return an empty list", func() {
+				Expect(reconciler.MapManagedResourceToGarden(ctx, logr.Discard(), nil, nil)).To(BeEmpty())
+			})
 		})
 	})
 })

@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
@@ -136,15 +135,23 @@ func gardenReconciledSuccessfully(oldGarden, newGarden *operatorv1alpha1.Garden)
 
 // MapManagedResourceToGarden is a mapper.MapFunc for mapping a ManagedResource to the owning Garden.
 func (r *Reconciler) MapManagedResourceToGarden(ctx context.Context, log logr.Logger, _ client.Reader, _ client.Object) []reconcile.Request {
-	gardenList := &metav1.PartialObjectMetadataList{}
-	gardenList.SetGroupVersionKind(operatorv1alpha1.SchemeGroupVersion.WithKind("GardenList"))
+	gardenList := &operatorv1alpha1.GardenList{}
 	if err := r.RuntimeClient.List(ctx, gardenList, client.Limit(1)); err != nil {
 		log.Error(err, "Could not list gardens")
 		return nil
 	}
+
 	if len(gardenList.Items) == 0 {
 		return nil
 	}
-	// Garden is a singleton
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: gardenList.Items[0].Name}}}
+	garden := gardenList.Items[0]
+
+	// A garden reconciliation typically touches most of the existing ManagedResources and this will cause the
+	// ManagedResource controller to frequently change their conditions. In this case, we don't want to spam the API
+	// server with updates on the Garden conditions.
+	if garden.Status.LastOperation != nil && garden.Status.LastOperation.State == gardencorev1beta1.LastOperationStateProcessing {
+		return nil
+	}
+
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: garden.Name}}}
 }
