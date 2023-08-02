@@ -166,17 +166,11 @@ var _ = Describe("Replica", func() {
 				},
 			}
 		}
-		seed = func(deletionTimestamp *metav1.Time, gardenletReady, bootstrapped, backupBucketsReady, seedSystemComponentsHealthy bool) *gardencorev1beta1.Seed {
+		seed = func(deletionTimestamp *metav1.Time, gardenletReady, backupBucketsReady, seedSystemComponentsHealthy bool) *gardencorev1beta1.Seed {
 			var conditions []gardencorev1beta1.Condition
 			if gardenletReady {
 				conditions = append(conditions, gardencorev1beta1.Condition{
 					Type:   gardencorev1beta1.SeedGardenletReady,
-					Status: gardencorev1beta1.ConditionTrue,
-				})
-			}
-			if bootstrapped {
-				conditions = append(conditions, gardencorev1beta1.Condition{
-					Type:   gardencorev1beta1.SeedBootstrapped,
 					Status: gardencorev1beta1.ConditionTrue,
 				})
 			}
@@ -270,12 +264,11 @@ var _ = Describe("Replica", func() {
 				managedSeed(nil, true, false), seed, false)
 			Expect(replica.IsSeedReady()).To(Equal(seedReady))
 		},
-		Entry("should return false", seed(nil, false, false, false, false), false),
-		Entry("should return false", seed(nil, true, false, false, false), false),
-		Entry("should return true", seed(nil, true, true, false, true), true),
-		Entry("should return true", seed(nil, true, true, true, true), true),
-		Entry("should return false", seed(nil, true, true, true, false), false),
-		Entry("should return false", seed(&now, true, true, true, true), false),
+		Entry("should return false", seed(nil, false, false, false), false),
+		Entry("should return true", seed(nil, true, false, true), true),
+		Entry("should return true", seed(nil, true, true, true), true),
+		Entry("should return false", seed(nil, true, true, false), false),
+		Entry("should return false", seed(&now, true, true, true), false),
 	)
 
 	DescribeTable("#GetShootHealthStatus",
