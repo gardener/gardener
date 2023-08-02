@@ -23,7 +23,6 @@ import (
 
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -448,9 +447,6 @@ func (k *kubeAPIServer) Destroy(ctx context.Context) error {
 		k.emptyServiceAccount(),
 		k.emptyRoleHAVPN(),
 		k.emptyRoleBindingHAVPN(),
-		// TOOD(rfranzke): Remove this in a future release.
-		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-shoot-apiserver", Namespace: k.namespace}},
-		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-shoot-apiserver", Namespace: k.namespace}},
 	)
 }
 
