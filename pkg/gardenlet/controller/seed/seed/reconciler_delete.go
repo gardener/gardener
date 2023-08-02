@@ -33,7 +33,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/component/clusteridentity"
@@ -114,11 +113,6 @@ func (r *Reconciler) delete(
 	log.Info("No Shoots or BackupBuckets are referencing the Seed, deletion accepted")
 
 	if err := r.runDeleteSeedFlow(ctx, log, seedObj, seedIsGarden); err != nil {
-		conditionSeedBootstrapped := v1beta1helper.GetOrInitConditionWithClock(r.Clock, seedObj.GetInfo().Status.Conditions, gardencorev1beta1.SeedBootstrapped)
-		conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "DebootstrapFailed", fmt.Sprintf("Failed to delete Seed Cluster (%s).", err.Error()))
-		if err := r.patchSeedStatus(ctx, r.GardenClient, seed, "<unknown>", nil, nil, conditionSeedBootstrapped); err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not patch seed status after deletion flow failed: %w", err)
-		}
 		return reconcile.Result{}, err
 	}
 
@@ -418,7 +412,10 @@ func (r *Reconciler) runDeleteSeedFlow(
 		)
 	}
 
-	if err := g.Compile().Run(ctx, flow.Opts{Log: log}); err != nil {
+	if err := g.Compile().Run(ctx, flow.Opts{
+		Log:              log,
+		ProgressReporter: r.reportProgress(log, seed.GetInfo()),
+	}); err != nil {
 		return flow.Errors(err)
 	}
 

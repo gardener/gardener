@@ -326,11 +326,11 @@ Those comprise CA certificates, the various `CustomResourceDefinition`s, the log
 The reconciler also deploys a `BackupBucket` resource in the garden cluster in case the `Seed'`s `.spec.backup` is set.
 It also checks whether the seed cluster's Kubernetes version is at least the [minimum supported version](../usage/supported_k8s_versions.md#seed-cluster-versions) and errors in case this constraint is not met.
 
-This reconciler maintains the `Bootstrapped` condition, i.e. it sets it:
+This reconciler maintains the `.status.lastOperation` field, i.e. it sets it:
 
-- to `Progressing` before it executes its reconciliation flow.
-- to `False` in case an error occurs.
-- to `True` in case the reconciliation succeeded.
+- to `state=Progressing` before it executes its reconciliation flow.
+- to `state=Error` in case an error occurs.
+- to `state=Succeeded` in case the reconciliation succeeded.
 
 #### "Care" Reconciler
 

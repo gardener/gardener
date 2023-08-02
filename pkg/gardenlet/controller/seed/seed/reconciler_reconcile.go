@@ -80,28 +80,7 @@ func (r *Reconciler) reconcile(
 	reconcile.Result,
 	error,
 ) {
-	var (
-		seed                      = seedObj.GetInfo()
-		conditionSeedBootstrapped = v1beta1helper.GetOrInitConditionWithClock(r.Clock, seedObj.GetInfo().Status.Conditions, gardencorev1beta1.SeedBootstrapped)
-	)
-
-	// Initialize capacity and allocatable
-	var capacity, allocatable corev1.ResourceList
-	if r.Config.Resources != nil && len(r.Config.Resources.Capacity) > 0 {
-		capacity = make(corev1.ResourceList, len(r.Config.Resources.Capacity))
-		allocatable = make(corev1.ResourceList, len(r.Config.Resources.Capacity))
-
-		for resourceName, quantity := range r.Config.Resources.Capacity {
-			capacity[resourceName] = quantity
-			allocatable[resourceName] = quantity
-
-			if reservedQuantity, ok := r.Config.Resources.Reserved[resourceName]; ok {
-				allocatableQuantity := quantity.DeepCopy()
-				allocatableQuantity.Sub(reservedQuantity)
-				allocatable[resourceName] = allocatableQuantity
-			}
-		}
-	}
+	seed := seedObj.GetInfo()
 
 	if !controllerutil.ContainsFinalizer(seed, gardencorev1beta1.GardenerName) {
 		log.Info("Adding finalizer")
@@ -127,47 +106,12 @@ func (r *Reconciler) reconcile(
 	}
 
 	// Check whether the Kubernetes version of the Seed cluster fulfills the minimal requirements.
-	seedKubernetesVersion, err := r.checkMinimumK8SVersion(r.SeedClientSet.Version())
-	if err != nil {
-		conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "K8SVersionTooOld", err.Error())
-		if err := r.patchSeedStatus(ctx, r.GardenClient, seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped); err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not patch seed status after check for minimum Kubernetes version failed: %w", err)
-		}
+	if err := r.checkMinimumK8SVersion(r.SeedClientSet.Version()); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	gardenSecrets, err := gardenerutils.ReadGardenSecrets(ctx, log, r.GardenClient, gardenerutils.ComputeGardenNamespace(seed.Name), true)
-	if err != nil {
-		conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "GardenSecretsError", err.Error())
-		if err := r.patchSeedStatus(ctx, r.GardenClient, seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped); err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not patch seed status after reading garden secrets failed: %w", err)
-		}
+	if err := r.runReconcileSeedFlow(ctx, log, seedObj, seedIsGarden); err != nil {
 		return reconcile.Result{}, err
-	}
-
-	conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionProgressing, "BootstrapProgressing", "Seed cluster is currently being bootstrapped.")
-	if err = r.patchSeedStatus(ctx, r.GardenClient, seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped); err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not update status of %s condition to %s: %w", conditionSeedBootstrapped.Type, gardencorev1beta1.ConditionProgressing, err)
-	}
-
-	// Bootstrap the Seed cluster.
-	if err := r.runReconcileSeedFlow(ctx, log, seedObj, seedIsGarden, gardenSecrets); err != nil {
-		conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "BootstrappingFailed", err.Error())
-		if err := r.patchSeedStatus(ctx, r.GardenClient, seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped); err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not patch seed status after reconciliation flow failed: %w", err)
-		}
-		return reconcile.Result{}, err
-	}
-
-	// Set the status of SeedSystemComponentsHealthy condition to Progressing so that the Seed does not immediately become ready
-	// after being successfully bootstrapped in case the system components got updated. The SeedSystemComponentsHealthy condition
-	// will be set to either True, False or Progressing by the seed care reconciler depending on the health of the system components
-	// after the necessary checks are completed.
-	conditionSeedSystemComponentsHealthy := v1beta1helper.GetOrInitConditionWithClock(r.Clock, seed.Status.Conditions, gardencorev1beta1.SeedSystemComponentsHealthy)
-	conditionSeedSystemComponentsHealthy = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedSystemComponentsHealthy, gardencorev1beta1.ConditionProgressing, "SystemComponentsCheckProgressing", "Pending health check of system components after successful bootstrap of seed cluster.")
-	conditionSeedBootstrapped = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionSeedBootstrapped, gardencorev1beta1.ConditionTrue, "BootstrappingSucceeded", "Seed cluster has been bootstrapped successfully.")
-	if err = r.patchSeedStatus(ctx, r.GardenClient, seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped, conditionSeedSystemComponentsHealthy); err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not update status of %s condition to %s and %s conditions to %s: %w", conditionSeedBootstrapped.Type, gardencorev1beta1.ConditionTrue, conditionSeedSystemComponentsHealthy.Type, gardencorev1beta1.ConditionProgressing, err)
 	}
 
 	if seed.Spec.Backup != nil {
@@ -178,21 +122,21 @@ func (r *Reconciler) reconcile(
 		}
 	}
 
-	return reconcile.Result{RequeueAfter: r.Config.Controllers.Seed.SyncPeriod.Duration}, nil
+	return reconcile.Result{}, nil
 }
 
-func (r *Reconciler) checkMinimumK8SVersion(version string) (string, error) {
+func (r *Reconciler) checkMinimumK8SVersion(version string) error {
 	const minKubernetesVersion = "1.22"
 
 	seedVersionOK, err := versionutils.CompareVersions(version, ">=", minKubernetesVersion)
 	if err != nil {
-		return "<unknown>", err
+		return err
 	}
 	if !seedVersionOK {
-		return "<unknown>", fmt.Errorf("the Kubernetes version of the Seed cluster must be at least %s", minKubernetesVersion)
+		return fmt.Errorf("the Kubernetes version of the Seed cluster must be at least %s", minKubernetesVersion)
 	}
 
-	return version, nil
+	return nil
 }
 
 func (r *Reconciler) runReconcileSeedFlow(
@@ -200,7 +144,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 	log logr.Logger,
 	seed *seedpkg.Seed,
 	seedIsGarden bool,
-	secrets map[string]*corev1.Secret,
 ) error {
 	var (
 		applier       = r.SeedClientSet.Applier()
@@ -208,6 +151,11 @@ func (r *Reconciler) runReconcileSeedFlow(
 		chartApplier  = r.SeedClientSet.ChartApplier()
 		chartRenderer = r.SeedClientSet.ChartRenderer()
 	)
+
+	secrets, err := gardenerutils.ReadGardenSecrets(ctx, log, r.GardenClient, gardenerutils.ComputeGardenNamespace(seed.GetInfo().Name), true)
+	if err != nil {
+		return err
+	}
 
 	secretsManager, err := secretsmanager.New(
 		ctx,
@@ -721,7 +669,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 		)
 	}
 
-	if err := g.Compile().Run(ctx, flow.Opts{Log: log}); err != nil {
+	if err := g.Compile().Run(ctx, flow.Opts{
+		Log:              log,
+		ProgressReporter: r.reportProgress(log, seed.GetInfo()),
+	}); err != nil {
 		return flow.Errors(err)
 	}
 

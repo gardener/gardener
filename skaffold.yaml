@@ -1100,7 +1100,7 @@ deploy:
           command:
           - bash
           - -ec
-          - hack/usage/wait-for.sh seed local GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
+          - hack/usage/wait-for.sh seed local GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
 profiles:
 - name: kind2
   patches:
@@ -1112,7 +1112,7 @@ profiles:
     value:
     - bash
     - -ec
-    - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait-for.sh seed local2 GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
+    - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait-for.sh seed local2 GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
 - name: extensions
   patches:
   - op: add
@@ -1126,7 +1126,7 @@ profiles:
     value:
     - bash
     - -ec
-    - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait-for.sh seed "$SEED_NAME" GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady
+    - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait-for.sh seed "$SEED_NAME" GardenletReady SeedSystemComponentsHealthy ExtensionsReady
 - name: ha-single-zone
   patches:
   - op: add
@@ -1137,7 +1137,7 @@ profiles:
     value:
     - bash
     - -ec
-    - hack/usage/wait-for.sh seed local-ha-single-zone GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
+    - hack/usage/wait-for.sh seed local-ha-single-zone GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
 - name: kind2-ha-single-zone
   patches:
   - op: add
@@ -1148,7 +1148,7 @@ profiles:
     value:
     - bash
     - -ec
-    - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait-for.sh seed local2-ha-single-zone GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
+    - KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG hack/usage/wait-for.sh seed local2-ha-single-zone GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
 - name: ha-multi-zone
   patches:
   - op: add
@@ -1159,7 +1159,7 @@ profiles:
     value:
     - bash
     - -ec
-    - TIMEOUT=1200 hack/usage/wait-for.sh seed local-ha-multi-zone GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
+    - TIMEOUT=1200 hack/usage/wait-for.sh seed local-ha-multi-zone GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
 - name: ipv6
   activation:
   - env: IPFAMILY=ipv6

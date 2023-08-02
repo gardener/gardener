@@ -513,14 +513,6 @@ This helm chart creates:
       {
         "lastTransitionTime": "2020-07-17T09:17:49Z",
         "lastUpdateTime": "2020-07-17T09:53:17Z",
-        "message": "Seed cluster has been bootstrapped successfully.",
-        "reason": "BootstrappingSucceeded",
-        "status": "True",
-        "type": "Bootstrapped"
-      },
-      {
-        "lastTransitionTime": "2020-07-17T09:17:49Z",
-        "lastUpdateTime": "2020-07-17T09:53:17Z",
         "message": "Backup Buckets are available.",
         "reason": "BackupBucketsAvailable",
         "status": "True",
