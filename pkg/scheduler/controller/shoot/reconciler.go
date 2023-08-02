@@ -509,7 +509,7 @@ func errorMapToString(errs map[string]error) string {
 }
 
 func verifySeedReadiness(seed *gardencorev1beta1.Seed) bool {
-	if cond := v1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped); cond == nil || cond.Status != gardencorev1beta1.ConditionTrue {
+	if seed.Status.LastOperation == nil {
 		return false
 	}
 

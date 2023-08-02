@@ -27,7 +27,8 @@ The following **sequence** describes the steps involved to determine a seed cand
 1. Determine usable seeds with "usable" defined as follows:
    * no `.metadata.deletionTimestamp`
    * `.spec.settings.scheduling.visible` is `true`
-   * conditions `Bootstrapped`, `GardenletReady`, `BackupBucketsReady` (if available) are `true`
+   * `.status.lastOperation` is not `nil`
+   * conditions `GardenletReady`, `BackupBucketsReady` (if available) are `true`
 1. Filter seeds:
    * matching `.spec.seedSelector` in `CloudProfile` used by the `Shoot`
    * matching `.spec.seedSelector` in `Shoot`

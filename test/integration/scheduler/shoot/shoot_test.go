@@ -566,14 +566,11 @@ func createSeed(providerType, region string, zones []string) *gardencorev1beta1.
 		},
 		Conditions: []gardencorev1beta1.Condition{
 			{
-				Type:   gardencorev1beta1.SeedBootstrapped,
-				Status: gardencorev1beta1.ConditionTrue,
-			},
-			{
 				Type:   gardencorev1beta1.SeedGardenletReady,
 				Status: gardencorev1beta1.ConditionTrue,
 			},
 		},
+		LastOperation: &gardencorev1beta1.LastOperation{},
 	}
 	ExpectWithOffset(1, testClient.Status().Update(ctx, seed)).To(Succeed())
 	return seed
