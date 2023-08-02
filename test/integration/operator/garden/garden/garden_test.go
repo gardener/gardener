@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/utils/pointer"
@@ -234,6 +235,20 @@ var _ = Describe("Garden controller tests", func() {
 			mgrCancel()
 		})
 
+		// When the gardener-{apiserver,admission-controller} deployments are not found, the Garden controller will
+		// trigger another reconciliation to enable the SeedAuthorizer feature. Since gardener-resource-manager does not
+		// run in this test to create them, let's create them manually here to prevent the controller from looping
+		// endlessly. We create them before the Garden resource to prevent that the test runs into a timeout.
+		By("Create gardener-{apiserver,admission-controller} deployments to prevent infinite reconciliation loops")
+		gardenerAPIServerDeployment := newDeployment("gardener-apiserver", testNamespace.Name)
+		gardenerAdmissionControllerDeployment := newDeployment("gardener-admission-controller", testNamespace.Name)
+		Expect(testClient.Create(ctx, gardenerAPIServerDeployment)).To(Succeed())
+		Expect(testClient.Create(ctx, gardenerAdmissionControllerDeployment)).To(Succeed())
+		DeferCleanup(func() {
+			Expect(testClient.Delete(ctx, gardenerAPIServerDeployment)).To(Or(Succeed(), BeNotFoundError()))
+			Expect(testClient.Delete(ctx, gardenerAdmissionControllerDeployment)).To(Or(Succeed(), BeNotFoundError()))
+		})
+
 		By("Create Garden")
 		Expect(testClient.Create(ctx, garden)).To(Succeed())
 		log.Info("Created Garden for test", "garden", garden.Name)
@@ -336,12 +351,12 @@ var _ = Describe("Garden controller tests", func() {
 			g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
 		}).Should(Succeed())
 
-		By("Verify that the relevant ManagedResources have been deployed")
+		By("Verify that the ManagedResources related to runtime components have been deployed")
 		Eventually(func(g Gomega) []resourcesv1alpha1.ManagedResource {
 			managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 			g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
 			return managedResourceList.Items
-		}).Should(ConsistOf(
+		}).Should(ContainElements(
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("garden-system")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("vpa")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("hvpa")})}),
@@ -358,56 +373,9 @@ var _ = Describe("Garden controller tests", func() {
 		// The garden controller waits for the Istio ManagedResources to be healthy, but Istio is not really running in
 		// this test, so let's fake this here.
 		By("Patch Istio ManagedResources to report healthiness")
-		Eventually(func(g Gomega) {
-			for _, name := range []string{"istio-system", "virtual-garden-istio"} {
-				mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "istio-system"}}
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed(), "for "+mr.Name)
-
-				patch := client.MergeFrom(mr.DeepCopy())
-				mr.Status.ObservedGeneration = mr.Generation
-				mr.Status.Conditions = []gardencorev1beta1.Condition{
-					{
-						Type:               "ResourcesHealthy",
-						Status:             "True",
-						LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
-						LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
-					},
-					{
-						Type:               "ResourcesApplied",
-						Status:             "True",
-						LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
-						LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
-					},
-				}
-				g.Expect(testClient.Status().Patch(ctx, mr, patch)).To(Succeed(), "for "+mr.Name)
-			}
-		}).Should(Succeed())
-
-		// The garden controller waits for the nginx-ingress ManagedResource to be healthy, but nginx-controller is not really running in
-		// this test, so let's fake this here.
-		By("Patch nginx-ingress ManagedResource to report healthiness")
-		Eventually(func(g Gomega) {
-			mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress", Namespace: testNamespace.Name}}
-			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed(), "for "+mr.Name)
-
-			patch := client.MergeFrom(mr.DeepCopy())
-			mr.Status.ObservedGeneration = mr.Generation
-			mr.Status.Conditions = []gardencorev1beta1.Condition{
-				{
-					Type:               "ResourcesHealthy",
-					Status:             "True",
-					LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
-					LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
-				},
-				{
-					Type:               "ResourcesApplied",
-					Status:             "True",
-					LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
-					LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
-				},
-			}
-			g.Expect(testClient.Status().Patch(ctx, mr, patch)).To(Succeed(), "for "+mr.Name)
-		}).Should(Succeed())
+		for _, name := range []string{"istio-system", "virtual-garden-istio"} {
+			Eventually(makeManagedResourceHealthy(name, "istio-system")).Should(Succeed())
+		}
 
 		By("Verify that the virtual garden control plane components have been deployed")
 		Eventually(func(g Gomega) []druidv1alpha1.Etcd {
@@ -546,28 +514,7 @@ var _ = Describe("Garden controller tests", func() {
 		// The garden controller waits for the shoot-core-gardener-resource-manager ManagedResource to be healthy, but virtual-garden-gardener-resource-manager is not really running in
 		// this test, so let's fake this here.
 		By("Patch shoot-core-gardener-resource-manager ManagedResource to report healthiness")
-		Eventually(func(g Gomega) {
-			mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "shoot-core-gardener-resource-manager", Namespace: testNamespace.Name}}
-			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
-
-			patch := client.MergeFrom(mr.DeepCopy())
-			mr.Status.ObservedGeneration = mr.Generation
-			mr.Status.Conditions = []gardencorev1beta1.Condition{
-				{
-					Type:               "ResourcesHealthy",
-					Status:             "True",
-					LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
-					LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
-				},
-				{
-					Type:               "ResourcesApplied",
-					Status:             "True",
-					LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
-					LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
-				},
-			}
-			g.Expect(testClient.Status().Patch(ctx, mr, patch)).To(Succeed())
-		}).Should(Succeed())
+		Eventually(makeManagedResourceHealthy("shoot-core-gardener-resource-manager", testNamespace.Name)).Should(Succeed())
 
 		// The secret with the bootstrap certificate should be gone when virtual-garden-gardener-resource-manager was bootstrapped.
 		Eventually(func(g Gomega) []corev1.Secret {
@@ -684,6 +631,58 @@ var _ = Describe("Garden controller tests", func() {
 			g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
 		}).Should(Succeed())
 
+		By("Create gardener-apiserver Service in runtime cluster")
+		// The garden controller requires the existence of the `gardener-apiserver` Service in the runtime cluster (in
+		// reality, this is created asynchronously by gardener-resource-manager which is not running in this test).
+		// Hence, let's manually create it to satisfy the reconciliation flow.
+		gardenerAPIServerService := &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener-apiserver",
+				Namespace: testNamespace.Name,
+			},
+			Spec: corev1.ServiceSpec{
+				Type:     corev1.ServiceTypeClusterIP,
+				Ports:    []corev1.ServicePort{{Port: 443, TargetPort: intstr.FromInt(443)}},
+				Selector: map[string]string{"foo": "bar"},
+			},
+		}
+		Expect(testClient.Create(ctx, gardenerAPIServerService)).To(Succeed())
+		DeferCleanup(func() {
+			Expect(testClient.Delete(ctx, gardenerAPIServerService)).To(Or(Succeed(), BeNotFoundError()))
+		})
+
+		By("Verify that the ManagedResources related to Gardener control plane components have been deployed")
+		Eventually(func(g Gomega) []resourcesv1alpha1.ManagedResource {
+			managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
+			g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
+			return managedResourceList.Items
+		}).Should(ContainElements(
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-apiserver-runtime")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-apiserver-virtual")})}),
+		))
+
+		// The garden controller waits for the Gardener-related ManagedResources to be healthy, but no
+		// gardener-resource-manager is running in this test, so let's fake this here.
+		By("Patch Gardener-related ManagedResources to report healthiness")
+		for _, name := range []string{"apiserver", "admission-controller", "controller-manager", "scheduler"} {
+			Eventually(makeManagedResourceHealthy("gardener-"+name+"-runtime", testNamespace.Name)).Should(Succeed())
+			Eventually(makeManagedResourceHealthy("gardener-"+name+"-virtual", testNamespace.Name)).Should(Succeed())
+		}
+
+		Eventually(func(g Gomega) []resourcesv1alpha1.ManagedResource {
+			managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
+			g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
+			return managedResourceList.Items
+		}).Should(ContainElements(
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-admission-controller-runtime")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-admission-controller-virtual")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-controller-manager-runtime")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-controller-manager-virtual")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-scheduler-runtime")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-scheduler-virtual")})}),
+			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("garden-system-virtual")})}),
+		))
+
 		By("Wait for last operation state to be set to Succeeded")
 		Eventually(func(g Gomega) gardencorev1beta1.LastOperationState {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
@@ -785,4 +784,57 @@ var _ = Describe("Garden controller tests", func() {
 
 func untilInTest(_ context.Context, _ time.Duration, _ retry.Func) error {
 	return nil
+}
+
+func makeManagedResourceHealthy(name, namespace string) func(Gomega) {
+	return func(g Gomega) {
+		mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}
+		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed(), fmt.Sprintf("for %s/%s", namespace, name))
+
+		patch := client.MergeFrom(mr.DeepCopy())
+		mr.Status.ObservedGeneration = mr.Generation
+		mr.Status.Conditions = []gardencorev1beta1.Condition{
+			{
+				Type:               "ResourcesHealthy",
+				Status:             "True",
+				LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
+				LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
+			},
+			{
+				Type:               "ResourcesApplied",
+				Status:             "True",
+				LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
+				LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
+			},
+			{
+				Type:               "ResourcesProgressing",
+				Status:             "False",
+				LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
+				LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
+			},
+		}
+		g.Expect(testClient.Status().Patch(ctx, mr, patch)).To(Succeed(), fmt.Sprintf("for %s/%s", namespace, name))
+	}
+}
+
+func newDeployment(name, namespace string) *appsv1.Deployment {
+	return &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
+			Replicas: pointer.Int32(1),
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar"}},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{
+						Name:  "foo-container",
+						Image: "foo",
+					}},
+				},
+			},
+		},
+	}
 }
