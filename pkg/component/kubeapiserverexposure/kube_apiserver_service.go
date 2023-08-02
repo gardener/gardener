@@ -53,6 +53,8 @@ var (
 type ServiceValues struct {
 	// AnnotationsFunc is a function that returns annotations that should be added to the service.
 	AnnotationsFunc func() map[string]string
+	// NamePrefix is the prefix for the service name.
+	NamePrefix string
 	// TopologyAwareRoutingEnabled indicates whether topology-aware routing is enabled for the kube-apiserver service.
 	TopologyAwareRoutingEnabled bool
 	// RuntimeKubernetesVersion is the Kubernetes version of the runtime cluster.
@@ -64,6 +66,7 @@ type ServiceValues struct {
 // from the outside.
 type serviceValues struct {
 	annotationsFunc             func() map[string]string
+	nameprefix                  string
 	topologyAwareRoutingEnabled bool
 	runtimeKubernetesVersion    *semver.Version
 	clusterIP                   string
@@ -74,8 +77,8 @@ type serviceValues struct {
 func NewService(
 	log logr.Logger,
 	cl client.Client,
+	namespace string,
 	values *ServiceValues,
-	serviceKeyFunc func() client.ObjectKey,
 	sniServiceKeyFunc func() client.ObjectKey,
 	waiter retry.Ops,
 	clusterIPFunc func(clusterIP string),
@@ -106,6 +109,7 @@ func NewService(
 		loadBalancerServiceKeyFunc = sniServiceKeyFunc
 
 		internalValues.annotationsFunc = values.AnnotationsFunc
+		internalValues.nameprefix = values.NamePrefix
 		internalValues.topologyAwareRoutingEnabled = values.TopologyAwareRoutingEnabled
 		internalValues.runtimeKubernetesVersion = values.RuntimeKubernetesVersion
 	}
@@ -113,8 +117,8 @@ func NewService(
 	return &service{
 		log:                        log,
 		client:                     cl,
+		namespace:                  namespace,
 		values:                     internalValues,
-		serviceKeyFunc:             serviceKeyFunc,
 		loadBalancerServiceKeyFunc: loadBalancerServiceKeyFunc,
 		waiter:                     waiter,
 		clusterIPFunc:              clusterIPFunc,
@@ -125,8 +129,8 @@ func NewService(
 type service struct {
 	log                        logr.Logger
 	client                     client.Client
+	namespace                  string
 	values                     *serviceValues
-	serviceKeyFunc             func() client.ObjectKey
 	loadBalancerServiceKeyFunc func() client.ObjectKey
 	waiter                     retry.Ops
 	clusterIPFunc              func(clusterIP string)
@@ -224,7 +228,7 @@ func (s *service) WaitCleanup(ctx context.Context) error {
 }
 
 func (s *service) emptyService() *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: s.serviceKeyFunc().Name, Namespace: s.serviceKeyFunc().Namespace}}
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: s.values.nameprefix + v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.namespace}}
 }
 
 func getLabels() map[string]string {

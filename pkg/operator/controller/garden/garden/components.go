@@ -396,13 +396,12 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 	return kubeapiserverexposure.NewService(
 		log,
 		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
 		&kubeapiserverexposure.ServiceValues{
 			AnnotationsFunc:             func() map[string]string { return annotations },
+			NamePrefix:                  namePrefix,
 			TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 			RuntimeKubernetesVersion:    r.RuntimeVersion,
-		},
-		func() client.ObjectKey {
-			return client.ObjectKey{Name: namePrefix + v1beta1constants.DeploymentNameKubeAPIServer, Namespace: r.GardenNamespace}
 		},
 		func() client.ObjectKey {
 			return client.ObjectKey{Name: v1beta1constants.DefaultSNIIngressServiceName, Namespace: ingressGatewayValues[0].Namespace}
