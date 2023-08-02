@@ -146,7 +146,7 @@ func (r *Reconciler) MapManagedResourceToGarden(ctx context.Context, log logr.Lo
 	}
 	garden := gardenList.Items[0]
 
-	// A garden reconciliation typically touches most of the existing ManagedResources, and this will cause the
+	// A garden reconciliation typically touches most of the existing ManagedResources and this will cause the
 	// ManagedResource controller to frequently change their conditions. In this case, we don't want to spam the API
 	// server with updates on the Garden conditions.
 	if garden.Status.LastOperation != nil && garden.Status.LastOperation.State == gardencorev1beta1.LastOperationStateProcessing {
