@@ -32,7 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/gardeneraccess"
-	"github.com/gardener/gardener/pkg/component/gardensystem"
+	runtimegardensystem "github.com/gardener/gardener/pkg/component/gardensystem/runtime"
 	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
@@ -49,7 +49,7 @@ import (
 var (
 	gardenManagedResources = []string{
 		etcd.Druid,
-		gardensystem.ManagedResourceName,
+		runtimegardensystem.ManagedResourceName,
 		hvpa.ManagedResourceName,
 		"istio-system",
 		"virtual-garden-istio",

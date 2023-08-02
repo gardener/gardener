@@ -31,7 +31,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/gardeneraccess"
-	"github.com/gardener/gardener/pkg/component/gardensystem"
+	runtimegardensystem "github.com/gardener/gardener/pkg/component/gardensystem/runtime"
 	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/kubestatemetrics"
@@ -46,7 +46,7 @@ var _ = Describe("Garden Care controller tests", func() {
 	var (
 		requiredRuntimeClusterManagedResources = []string{
 			etcd.Druid,
-			gardensystem.ManagedResourceName,
+			runtimegardensystem.ManagedResourceName,
 			hvpa.ManagedResourceName,
 			vpa.ManagedResourceControlName,
 			"istio-system",

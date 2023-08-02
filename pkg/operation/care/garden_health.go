@@ -33,7 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/etcd"
 	"github.com/gardener/gardener/pkg/component/gardeneraccess"
-	"github.com/gardener/gardener/pkg/component/gardensystem"
+	runtimegardensystem "github.com/gardener/gardener/pkg/component/gardensystem/runtime"
 	"github.com/gardener/gardener/pkg/component/hvpa"
 	"github.com/gardener/gardener/pkg/component/istio"
 	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
@@ -53,7 +53,7 @@ const virtualGardenPrefix = "virtual-garden-"
 var (
 	requiredGardenRuntimeManagedResources = sets.New(
 		etcd.Druid,
-		gardensystem.ManagedResourceName,
+		runtimegardensystem.ManagedResourceName,
 		kubestatemetrics.ManagedResourceName,
 		fluentoperator.OperatorManagedResourceName,
 		fluentoperator.CustomResourcesManagedResourceName+"-garden",

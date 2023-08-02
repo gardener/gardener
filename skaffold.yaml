@@ -792,7 +792,7 @@ build:
         - pkg/client/kubernetes/clientmap/builder
         - pkg/client/kubernetes/clientmap/internal
         - pkg/client/kubernetes/clientmap/keys
-        - pkg/component/gardensystem
+        - pkg/component/gardensystem/runtime
         - pkg/controller/networkpolicy
         - pkg/controller/networkpolicy/helper
         - pkg/controller/networkpolicy/hostnameresolver
