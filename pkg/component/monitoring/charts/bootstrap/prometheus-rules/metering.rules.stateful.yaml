@@ -8,7 +8,7 @@ groups:
     expr: |2
         count_values without () (
           "year",
-          year(timestamp(count_values without () ("month", month(timestamp(vector(0))))))
+          year(timestamp(count_values ("month", month(timestamp(vector(0))))))
         )
       *
         0
