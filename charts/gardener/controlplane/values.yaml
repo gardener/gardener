@@ -514,16 +514,6 @@ global:
 #         candidateDeterminationStrategy: SameRegion # either {SameRegion,MinimalDistance}
       featureGates: {}
 
-  # System secrets
-  internalDomain:
-    provider: aws-route53 # depends on the DNS extension of your choice
-    domain: example.com
-    credentials: {} # actual keys here depend on the DNS extension of your choice
-  defaultDomains: []
-# - domain: example.com
-#   provider: aws-route53 # depends on the DNS extension of your choice
-#   credentials: {}
-#     # actual keys here depend on the DNS extension of your choice
   alerting: []
 # - auth_type: smtp
 #   to: email-address-to-send-alerts-to
