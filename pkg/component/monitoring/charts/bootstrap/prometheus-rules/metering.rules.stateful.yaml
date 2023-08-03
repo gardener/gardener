@@ -13,6 +13,44 @@ groups:
       *
         0
 
+# - metering  :node_capacity             :sum_by_instance_type   :sum_over_time
+# - metering  :node_capacity             :sum_by_instance_type   :avg_over_time
+# - metering  :node_capacity             :sum_by_instance_type   :avg_over_time   :this_month
+
+  - record: metering:node_capacity:sum_by_instance_type:sum_over_time
+    expr: |2
+        metering:node_capacity:sum_by_instance_type
+      +
+        (
+            last_over_time(metering:node_capacity:sum_by_instance_type:sum_over_time[10m])
+          or
+            metering:node_capacity:sum_by_instance_type * 0
+        )
+
+  - record: metering:node_capacity:sum_by_instance_type:count_over_time
+    expr: |2
+        1 + metering:node_capacity:sum_by_instance_type * 0
+      +
+        (
+            last_over_time(metering:node_capacity:sum_by_instance_type:count_over_time[10m])
+          or
+            metering:node_capacity:sum_by_instance_type * 0
+        )
+
+  - record: metering:node_capacity:sum_by_instance_type:avg_over_time
+    expr: |2
+        metering:node_capacity:sum_by_instance_type:sum_over_time
+      /
+        metering:node_capacity:sum_by_instance_type:count_over_time
+
+  - record: metering:node_capacity:sum_by_instance_type:avg_over_time:this_month
+    expr: |2
+        metering:node_capacity:sum_by_instance_type:avg_over_time
+      or
+          last_over_time(metering:node_capacity:sum_by_instance_type:avg_over_time:this_month[10m])
+        + on (year, month) group_left ()
+          _year_month2
+
 # - metering   :memory_usage_seconds
 # - metering   :disk_usage_seconds
 # - metering   :memory_usage_seconds  :this_month
