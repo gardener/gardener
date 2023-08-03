@@ -33,8 +33,12 @@
       "scopedVars": {
         "resource": {
           "selected": true,
-          "text": "shoots",
-          "value": "shoots"
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         }
       },
       "title": "Request Duration ($resource)",
@@ -79,13 +83,21 @@
       "scopedVars": {
         "ApiServer": {
           "selected": true,
-          "text": "gardener-apiserver",
-          "value": "gardener-apiserver"
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "resource": {
           "selected": true,
-          "text": "shoots",
-          "value": "shoots"
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         }
       },
       "targets": [
@@ -139,8 +151,12 @@
       "scopedVars": {
         "resource": {
           "selected": true,
-          "text": "shoots",
-          "value": "shoots"
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         }
       },
       "title": "Response Size ($resource)",
@@ -184,13 +200,21 @@
       "scopedVars": {
         "ApiServer": {
           "selected": true,
-          "text": "gardener-apiserver",
-          "value": "gardener-apiserver"
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "resource": {
           "selected": true,
-          "text": "shoots",
-          "value": "shoots"
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         }
       },
       "targets": [
@@ -240,8 +264,12 @@
         "allValue": ".+",
         "current": {
           "selected": true,
-          "text": ["gardener-apiserver"],
-          "value": ["gardener-apiserver"]
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": null,
         "definition": "label_values(apiserver_audit_event_total,pod)",
@@ -257,7 +285,7 @@
           "query": "label_values(apiserver_audit_event_total,pod)",
           "refId": "StandardVariableQuery"
         },
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 1,
@@ -272,8 +300,12 @@
         "current": {
           "selected": true,
           "tags": [],
-          "text": ["shoots"],
-          "value": ["shoots"]
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": null,
         "definition": "label_values(apiserver_request_duration_seconds_bucket,resource)",
@@ -302,11 +334,12 @@
     ]
   },
   "time": {
-    "from": "2022-02-08T13:00:40.927Z",
-    "to": "2022-02-08T13:01:24.877Z"
+    "from": "now-30m",
+    "to": "now"
   },
   "timepicker": {},
   "timezone": "utc",
   "title": "API Server Request Duration and Response Size",
-  "uid": "apiserver-request-duration-and-response"
+  "uid": "apiserver-request-duration-and-response",
+  "version": 1
 }
