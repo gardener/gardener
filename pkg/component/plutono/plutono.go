@@ -189,17 +189,7 @@ func (p *plutono) computeResourcesData(ctx context.Context) (*corev1.ConfigMap, 
 				Labels:    getLabels(),
 			},
 			Data: map[string]string{
-				"default.yaml": `apiVersion: 1
-providers:
-- name: 'default'
-  orgId: 1
-  folder: ''
-  type: file
-  disableDeletion: false
-  editable: false
-  options:
-    path: ` + plutonoMountPathDashboards + `
-`,
+				"default.yaml": p.getDashboardsProviders(),
 			},
 		}
 
@@ -279,6 +269,46 @@ func convertToCompactJSON(data map[string]string) (map[string]string, error) {
 	}
 
 	return data, nil
+}
+
+func (p *plutono) getDashboardsProviders() string {
+	dashboardsProviders := `apiVersion: 1
+providers:
+- name: 'default'
+  orgId: 1
+  folder: ''
+  type: file
+  disableDeletion: false
+  editable: false
+  options:
+    path: ` + plutonoMountPathDashboards + `
+`
+
+	if p.values.IsGardenCluster {
+		dashboardsProviders = `apiVersion: 1
+providers:
+- name: 'global'
+  orgId: 1
+  folder: 'Global'
+  type: file
+  disableDeletion: false
+  editable: false
+  updateIntervalSeconds: 120
+  options:
+    path: ` + plutonoMountPathDashboards + `/global
+- name: 'garden'
+  orgId: 1
+  folder: 'Garden'
+  type: file
+  disableDeletion: false
+  editable: false
+  updateIntervalSeconds: 120
+  options:
+    path: ` + plutonoMountPathDashboards + `/garden
+`
+	}
+
+	return dashboardsProviders
 }
 
 func (p *plutono) getDataSource() string {
