@@ -272,26 +272,6 @@ func (p *plutono) computeResourcesData(ctx context.Context) ([]*corev1.ConfigMap
 	return []*corev1.ConfigMap{dashboardConfigMap, dashboardConfigMapGlobal}, data, nil
 }
 
-func getLabels() map[string]string {
-	return map[string]string{
-		"component": name,
-	}
-}
-
-func convertToCompactJSON(data map[string]string) (map[string]string, error) {
-	for key, value := range data {
-		// Convert file contents to compacted JSON
-		// this is necessary to prevent hitting configMap size limit.
-		compactJSON, err := yaml.YAMLToJSON([]byte(value))
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling %s to JSON: %s", key, err)
-		}
-		data[key] = string(compactJSON)
-	}
-
-	return data, nil
-}
-
 func (p *plutono) getDashboardsProviders() string {
 	dashboardsProviders := `apiVersion: 1
 providers:
@@ -836,6 +816,26 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 	}
 
 	return ingress, nil
+}
+
+func getLabels() map[string]string {
+	return map[string]string{
+		"component": name,
+	}
+}
+
+func convertToCompactJSON(data map[string]string) (map[string]string, error) {
+	for key, value := range data {
+		// Convert file contents to compacted JSON
+		// this is necessary to prevent hitting configMap size limit.
+		compactJSON, err := yaml.YAMLToJSON([]byte(value))
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling %s to JSON: %s", key, err)
+		}
+		data[key] = string(compactJSON)
+	}
+
+	return data, nil
 }
 
 func (p *plutono) getPodLabels() map[string]string {
