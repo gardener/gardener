@@ -36,7 +36,7 @@ func Resource(resource string) schema.GroupResource {
 }
 
 var (
-	// SchemeBuilder used to register the Shoot resource.
+	// SchemeBuilder used to register the NodeAgentConfiguration resource.
 	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
 	// AddToScheme is a pointer to SchemeBuilder.AddToScheme.
 	AddToScheme = SchemeBuilder.AddToScheme
