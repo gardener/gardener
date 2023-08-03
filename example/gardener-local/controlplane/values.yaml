@@ -265,13 +265,6 @@ global:
     resources: {}
 
   # General system configuration
-  internalDomain:
-    provider: local
-    domain: internal.local.gardener.cloud
-  defaultDomains:
-  - provider: local
-    domain: external.local.gardener.cloud
-
   rbac:
     seedAuthorizer:
       enabled: true

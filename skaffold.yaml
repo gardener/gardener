@@ -458,6 +458,13 @@ deploy:
           - apply
           - -f
           - example/gardener-local/controlplane/networkpolicy.yaml
+      after:
+      - host:
+          command:
+          - kubectl
+          - apply
+          - -f
+          - example/gardener-local/controlplane/domain-secrets.yaml
     releases:
     - name: gardener-controlplane
       chartPath: charts/gardener/controlplane
