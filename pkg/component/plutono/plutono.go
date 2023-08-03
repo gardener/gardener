@@ -94,6 +94,8 @@ type Values struct {
 	IncludeIstioDashboards bool
 	// IsWorkerless specifies whether the cluster managed by this API server has worker nodes.
 	IsWorkerless bool
+	// IsGardenCluster specifies whether the cluster is garden cluster.
+	IsGardenCluster bool
 	// NodeLocalDNSEnabled specifies whether the node-local-dns is enabled for cluster.
 	NodeLocalDNSEnabled bool
 	// PriorityClassName is the name of the priority class.
