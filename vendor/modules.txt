@@ -96,7 +96,7 @@ github.com/fsnotify/fsnotify
 ## explicit; go 1.20
 github.com/gardener/dependency-watchdog/api/prober
 github.com/gardener/dependency-watchdog/api/weeder
-# github.com/gardener/etcd-druid v0.18.4
+# github.com/gardener/etcd-druid v0.19.0
 ## explicit; go 1.20
 github.com/gardener/etcd-druid/api/v1alpha1
 github.com/gardener/etcd-druid/api/validation
