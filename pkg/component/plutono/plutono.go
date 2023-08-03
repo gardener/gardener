@@ -249,7 +249,7 @@ func (p *plutono) computeResourcesData(ctx context.Context) ([]*corev1.ConfigMap
 		ingress    *networkingv1.Ingress
 	)
 
-	deployment = p.getDeployment(providerConfigMap.Name, dataSourceConfigMap.Name, dashboardConfigMap.Name)
+	deployment = p.getDeployment(providerConfigMap, dataSourceConfigMap, dashboardConfigMap, dashboardConfigMapGlobal)
 	service = p.getService()
 
 	ingress, err = p.getIngress(ctx)
@@ -573,7 +573,7 @@ func (p *plutono) getService() *corev1.Service {
 	return service
 }
 
-func (p *plutono) getDeployment(providerConfigMapName, dataSourceConfigMapName, dashboardConfigMapName string) *appsv1.Deployment {
+func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboardConfigMap, dashboardConfigMapGlobal *corev1.ConfigMap) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -588,10 +588,7 @@ func (p *plutono) getDeployment(providerConfigMapName, dataSourceConfigMapName, 
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: utils.MergeStringMaps(getLabels(), map[string]string{
-						v1beta1constants.LabelNetworkPolicyToDNS:                          v1beta1constants.LabelNetworkPolicyAllowed,
-						gardenerutils.NetworkPolicyLabel(vali.ServiceName, vali.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed,
-					}),
+					Labels: utils.MergeStringMaps(getLabels(), p.getPodLabels()),
 				},
 				Spec: corev1.PodSpec{
 					AutomountServiceAccountToken: pointer.Bool(false),
@@ -601,18 +598,8 @@ func (p *plutono) getDeployment(providerConfigMapName, dataSourceConfigMapName, 
 							Name:            name,
 							Image:           p.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
-							Env: []corev1.EnvVar{
-								{Name: "PL_ALERTING_ENABLED", Value: "false"},
-								{Name: "PL_SNAPSHOTS_EXTERNAL_ENABLED", Value: "false"},
-								{Name: "PL_AUTH_ANONYMOUS_ENABLED", Value: "true"},
-								{Name: "PL_USERS_VIEWERS_CAN_EDIT", Value: "true"},
-								{Name: "PL_DATE_FORMATS_DEFAULT_TIMEZONE", Value: "UTC"},
-							},
+							Env:             p.getEnvVar(),
 							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      "plutono-dashboards",
-									MountPath: plutonoMountPathDashboards,
-								},
 								{
 									Name:      "plutono-datasources",
 									MountPath: "/etc/plutono/provisioning/datasources",
@@ -645,21 +632,11 @@ func (p *plutono) getDeployment(providerConfigMapName, dataSourceConfigMapName, 
 					},
 					Volumes: []corev1.Volume{
 						{
-							Name: "plutono-dashboards",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: dashboardConfigMapName,
-									},
-								},
-							},
-						},
-						{
 							Name: "plutono-datasources",
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: dataSourceConfigMapName,
+										Name: dataSourceConfigMap.Name,
 									},
 								},
 							},
@@ -669,7 +646,7 @@ func (p *plutono) getDeployment(providerConfigMapName, dataSourceConfigMapName, 
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: providerConfigMapName,
+										Name: providerConfigMap.Name,
 									},
 								},
 							},
@@ -688,29 +665,61 @@ func (p *plutono) getDeployment(providerConfigMapName, dataSourceConfigMapName, 
 		},
 	}
 
-	if p.values.ClusterType == component.ClusterTypeSeed {
-		deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring})
-		deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
-			v1beta1constants.LabelRole:                                         v1beta1constants.LabelMonitoring,
-			"networking.gardener.cloud/to-seed-prometheus":                     v1beta1constants.LabelNetworkPolicyAllowed,
-			gardenerutils.NetworkPolicyLabel("aggregate-prometheus-web", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
-			gardenerutils.NetworkPolicyLabel("seed-prometheus-web", 9090):      v1beta1constants.LabelNetworkPolicyAllowed,
-		})
-		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
-			{Name: "PL_AUTH_BASIC_ENABLED", Value: "true"},
-			{Name: "PL_AUTH_DISABLE_LOGIN_FORM", Value: "false"},
+	if p.values.IsGardenCluster {
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
+			{
+				Name: "plutono-dashboards-garden",
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: dashboardConfigMap.Name,
+						},
+					},
+				},
+			},
+			{
+				Name: "plutono-dashboards-global",
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: dashboardConfigMapGlobal.Name,
+						},
+					},
+				},
+			}}...)
+
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
+			{
+				Name:      "plutono-dashboards-garden",
+				MountPath: plutonoMountPathDashboards + "/garden",
+			},
+			{
+				Name:      "plutono-dashboards-global",
+				MountPath: plutonoMountPathDashboards + "/global",
+			},
 		}...)
 	} else {
-		deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring})
-		deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
-			v1beta1constants.GardenRole:                              v1beta1constants.GardenRoleMonitoring,
-			gardenerutils.NetworkPolicyLabel("prometheus-web", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: "plutono-dashboards",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: dashboardConfigMap.Name,
+					},
+				},
+			},
 		})
-		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
-			{Name: "PL_AUTH_BASIC_ENABLED", Value: "false"},
-			{Name: "PL_AUTH_DISABLE_LOGIN_FORM", Value: "true"},
-			{Name: "PL_AUTH_DISABLE_SIGNOUT_MENU", Value: "true"},
-		}...)
+
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      "plutono-dashboards",
+			MountPath: plutonoMountPathDashboards,
+		})
+	}
+
+	if p.values.ClusterType == component.ClusterTypeSeed {
+		deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring})
+	} else if p.values.ClusterType == component.ClusterTypeShoot {
+		deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring})
 	}
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
@@ -807,4 +816,71 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 	}
 
 	return ingress, nil
+}
+
+func (p *plutono) getPodLabels() map[string]string {
+	labels := map[string]string{v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed}
+
+	if p.values.IsGardenCluster {
+		labels = utils.MergeStringMaps(labels, map[string]string{
+			gardenerutils.NetworkPolicyLabel("garden-prometheus", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel("garden-avail-prom", 9091): v1beta1constants.LabelNetworkPolicyAllowed,
+		})
+
+		return labels
+	}
+
+	labels = utils.MergeStringMaps(labels, map[string]string{gardenerutils.NetworkPolicyLabel(vali.ServiceName, vali.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed})
+	if p.values.ClusterType == component.ClusterTypeSeed {
+		labels = utils.MergeStringMaps(labels, map[string]string{
+			v1beta1constants.LabelRole:                                         v1beta1constants.LabelMonitoring,
+			"networking.gardener.cloud/to-seed-prometheus":                     v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel("aggregate-prometheus-web", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel("seed-prometheus-web", 9090):      v1beta1constants.LabelNetworkPolicyAllowed,
+		})
+	} else if p.values.ClusterType == component.ClusterTypeShoot {
+		labels = utils.MergeStringMaps(labels, map[string]string{
+			v1beta1constants.GardenRole:                              v1beta1constants.GardenRoleMonitoring,
+			gardenerutils.NetworkPolicyLabel("prometheus-web", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
+		})
+	}
+
+	return labels
+}
+
+func (p *plutono) getEnvVar() []corev1.EnvVar {
+	envVar := []corev1.EnvVar{
+		{Name: "PL_AUTH_ANONYMOUS_ENABLED", Value: "true"},
+		{Name: "PL_USERS_VIEWERS_CAN_EDIT", Value: "true"},
+		{Name: "PL_DATE_FORMATS_DEFAULT_TIMEZONE", Value: "UTC"},
+	}
+
+	if p.values.IsGardenCluster {
+		envVar = append(envVar,
+			corev1.EnvVar{Name: "PL_AUTH_BASIC_ENABLED", Value: "false"},
+			corev1.EnvVar{Name: "PL_AUTH_DISABLE_LOGIN_FORM", Value: "false"},
+		)
+
+		return envVar
+	}
+
+	envVar = append(envVar,
+		corev1.EnvVar{Name: "PL_ALERTING_ENABLED", Value: "false"},
+		corev1.EnvVar{Name: "PL_SNAPSHOTS_EXTERNAL_ENABLED", Value: "false"},
+	)
+
+	if p.values.ClusterType == component.ClusterTypeSeed {
+		envVar = append(envVar,
+			corev1.EnvVar{Name: "PL_AUTH_BASIC_ENABLED", Value: "true"},
+			corev1.EnvVar{Name: "PL_AUTH_DISABLE_LOGIN_FORM", Value: "false"},
+		)
+	} else if p.values.ClusterType == component.ClusterTypeShoot {
+		envVar = append(envVar,
+			corev1.EnvVar{Name: "PL_AUTH_BASIC_ENABLED", Value: "false"},
+			corev1.EnvVar{Name: "PL_AUTH_DISABLE_LOGIN_FORM", Value: "true"},
+			corev1.EnvVar{Name: "PL_AUTH_DISABLE_SIGNOUT_MENU", Value: "true"},
+		)
+	}
+
+	return envVar
 }
