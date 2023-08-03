@@ -68,6 +68,7 @@ var (
 		"seccompprofile.resources.gardener.cloud/skip":                                "true",
 		"topology-spread-constraints.resources.gardener.cloud/skip":                   "true",
 		"networking.resources.gardener.cloud/to-all-shoots-etcd-main-client-tcp-8080": "allowed",
+		"networking.resources.gardener.cloud/to-all-shoots-kube-apiserver-tcp-443":    "allowed",
 	})
 )
 
