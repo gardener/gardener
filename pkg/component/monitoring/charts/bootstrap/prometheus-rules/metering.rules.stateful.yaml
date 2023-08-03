@@ -56,12 +56,15 @@ groups:
 # - metering   :memory_usage_seconds  :this_month
 # - metering   :disk_usage_seconds    :this_month
 
-
   - record: metering:memory_usage_seconds
     expr: |2
         (metering:working_set_memory:sum_by_namespace > bool 0) * 60
       +
-        (last_over_time(metering:memory_usage_seconds[10m]) or metering:working_set_memory:sum_by_namespace * 0)
+        (
+            last_over_time(metering:memory_usage_seconds[10m])
+          or
+            metering:working_set_memory:sum_by_namespace * 0
+        )
 
   - record: metering:disk_usage_seconds
     expr: |2
