@@ -60,6 +60,10 @@ const (
 )
 
 var (
+	//go:embed dashboards/garden/garden
+	gardenDashboards embed.FS
+	//go:embed dashboards/garden/global
+	gardenGlobalDashboards embed.FS
 	//go:embed dashboards/seed
 	seedDashboards embed.FS
 	//go:embed dashboards/shoot
@@ -67,9 +71,11 @@ var (
 	//go:embed dashboards/common
 	commonDashboards embed.FS
 
-	seedDashboardsPath   = filepath.Join("dashboards", "seed")
-	shootDashboardsPath  = filepath.Join("dashboards", "shoot")
-	commonDashboardsPath = filepath.Join("dashboards", "common")
+	gardenDashboardsPath       = filepath.Join("dashboards", "garden", "garden")
+	gardenGlobalDashboardsPath = filepath.Join("dashboards", "garden", "global")
+	seedDashboardsPath         = filepath.Join("dashboards", "seed")
+	shootDashboardsPath        = filepath.Join("dashboards", "shoot")
+	commonDashboardsPath       = filepath.Join("dashboards", "common")
 )
 
 // Interface contains functions for a Plutono Deployer
@@ -140,13 +146,16 @@ func (p *plutono) Deploy(ctx context.Context) error {
 	}
 
 	// dashboards configmap is not deployed as part of MR because it can breach the secret size limit.
-	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, p.client, dashboardConfigMap, func() error {
-		metav1.SetMetaDataLabel(&dashboardConfigMap.ObjectMeta, "component", name)
-		metav1.SetMetaDataLabel(&dashboardConfigMap.ObjectMeta, references.LabelKeyGarbageCollectable, references.LabelValueGarbageCollectable)
-		return nil
-	})
-	if err != nil {
-		return err
+	for _, configMap := range dashboardConfigMap {
+		if configMap != nil {
+			if _, err = controllerutils.GetAndCreateOrMergePatch(ctx, p.client, configMap, func() error {
+				metav1.SetMetaDataLabel(&configMap.ObjectMeta, "component", name)
+				metav1.SetMetaDataLabel(&configMap.ObjectMeta, references.LabelKeyGarbageCollectable, references.LabelValueGarbageCollectable)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
 	}
 
 	return managedresources.CreateForSeed(ctx, p.client, p.namespace, ManagedResourceName, false, data)
@@ -178,7 +187,7 @@ func (p *plutono) SetWildcardCertName(secretName *string) {
 	p.values.WildcardCertName = secretName
 }
 
-func (p *plutono) computeResourcesData(ctx context.Context) (*corev1.ConfigMap, map[string][]byte, error) {
+func (p *plutono) computeResourcesData(ctx context.Context) ([]*corev1.ConfigMap, map[string][]byte, error) {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 		err      error
@@ -205,24 +214,34 @@ func (p *plutono) computeResourcesData(ctx context.Context) (*corev1.ConfigMap, 
 			},
 		}
 
-		dashboardConfigMap = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "plutono-dashboards",
-				Namespace: p.namespace,
-				Labels:    getLabels(),
-			},
-		}
+		dashboardConfigMap, dashboardConfigMapGlobal *corev1.ConfigMap
 	)
 
-	if dashboards, err := p.getDashboards(ctx); err != nil {
-		return nil, nil, err
+	if p.values.IsGardenCluster {
+		if configMap, err := p.getDashboardsConfigMap(ctx, "garden"); err != nil {
+			return nil, nil, err
+		} else {
+			dashboardConfigMap = configMap
+		}
+
+		if configMap, err := p.getDashboardsConfigMap(ctx, "global"); err != nil {
+			return nil, nil, err
+		} else {
+			dashboardConfigMapGlobal = configMap
+		}
+
+		utilruntime.Must(kubernetesutils.MakeUnique(dashboardConfigMapGlobal))
 	} else {
-		dashboardConfigMap.Data = dashboards
+		if configMap, err := p.getDashboardsConfigMap(ctx, ""); err != nil {
+			return nil, nil, err
+		} else {
+			dashboardConfigMap = configMap
+		}
 	}
 
 	utilruntime.Must(kubernetesutils.MakeUnique(providerConfigMap))
-	utilruntime.Must(kubernetesutils.MakeUnique(dataSourceConfigMap))
 	utilruntime.Must(kubernetesutils.MakeUnique(dashboardConfigMap))
+	utilruntime.Must(kubernetesutils.MakeUnique(dataSourceConfigMap))
 
 	var (
 		deployment *appsv1.Deployment
@@ -249,7 +268,7 @@ func (p *plutono) computeResourcesData(ctx context.Context) (*corev1.ConfigMap, 
 		return nil, nil, err
 	}
 
-	return dashboardConfigMap, data, nil
+	return []*corev1.ConfigMap{dashboardConfigMap, dashboardConfigMapGlobal}, data, nil
 }
 
 func getLabels() map[string]string {
@@ -393,20 +412,40 @@ datasources:
 	return datasource
 }
 
-func (p *plutono) getDashboards(ctx context.Context) (map[string]string, error) {
+func (p *plutono) getDashboardsConfigMap(ctx context.Context, suffix string) (*corev1.ConfigMap, error) {
 	var (
+		configMap            *corev1.ConfigMap
 		requiredDashboards   map[string]embed.FS
 		ignorePaths          = sets.Set[string]{}
 		dashboards           = map[string]string{}
 		extensionsDashboards = strings.Builder{}
 	)
 
-	if p.values.ClusterType == component.ClusterTypeSeed {
+	configMap = &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "plutono-dashboards",
+			Namespace: p.namespace,
+			Labels:    getLabels(),
+		},
+	}
+
+	if suffix != "" {
+		configMap.Name = configMap.Name + "-" + suffix
+	}
+
+	if p.values.IsGardenCluster {
+		if suffix == "garden" {
+			requiredDashboards = map[string]embed.FS{gardenDashboardsPath: gardenDashboards}
+		}
+		if suffix == "global" {
+			requiredDashboards = map[string]embed.FS{gardenGlobalDashboardsPath: gardenGlobalDashboards}
+		}
+	} else if p.values.ClusterType == component.ClusterTypeSeed {
 		requiredDashboards = map[string]embed.FS{seedDashboardsPath: seedDashboards, commonDashboardsPath: commonDashboards}
 		if !p.values.IncludeIstioDashboards {
 			ignorePaths.Insert("istio")
 		}
-	} else {
+	} else if p.values.ClusterType == component.ClusterTypeShoot {
 		requiredDashboards = map[string]embed.FS{shootDashboardsPath: shootDashboards, commonDashboardsPath: commonDashboards}
 		if !p.values.VPAEnabled {
 			ignorePaths.Insert("vpa")
@@ -492,7 +531,13 @@ func (p *plutono) getDashboards(ctx context.Context) (map[string]string, error) 
 	}
 
 	// this is necessary to prevent hitting configmap size limit.
-	return convertToCompactJSON(dashboards)
+	if dashboards, err := convertToCompactJSON(dashboards); err != nil {
+		return nil, err
+	} else {
+		configMap.Data = dashboards
+	}
+
+	return configMap, nil
 }
 
 func (p *plutono) getService() *corev1.Service {
