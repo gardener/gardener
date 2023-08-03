@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
@@ -728,10 +729,29 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 
 func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error) {
 	var (
+		servicePort           = port
 		pathType              = networkingv1.PathTypePrefix
 		credentialsSecretName = p.values.AuthSecretName
 		caName                = v1beta1constants.SecretNameCASeed
 	)
+
+	if p.values.IsGardenCluster {
+		servicePort = 80
+		pathType = networkingv1.PathTypeImplementationSpecific
+		credentialsSecret, err := p.secretsManager.Generate(ctx, &secrets.BasicAuthSecretConfig{
+			Name:           v1beta1constants.SecretNameObservabilityIngress,
+			Format:         secrets.BasicAuthFormatNormal,
+			Username:       "admin",
+			PasswordLength: 32,
+		}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.InPlace),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		credentialsSecretName = credentialsSecret.Name
+		caName = operatorv1alpha1.SecretNameCARuntime
+	}
 
 	if p.values.ClusterType == component.ClusterTypeShoot {
 		credentialsSecret, err := p.secretsManager.Generate(ctx, &secrets.BasicAuthSecretConfig{
@@ -794,7 +814,7 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 									Service: &networkingv1.IngressServiceBackend{
 										Name: name,
 										Port: networkingv1.ServiceBackendPort{
-											Number: int32(port),
+											Number: int32(servicePort),
 										},
 									},
 								},
