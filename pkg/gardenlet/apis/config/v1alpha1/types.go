@@ -559,6 +559,7 @@ type ETCDConfig struct {
 	// features. This field modifies piecemeal the built-in default values from
 	// "github.com/gardener/etcd-druid/pkg/features/features.go".
 	// Default: nil
+	// +optional
 	FeatureGates map[string]bool `json:"featureGates,omitempty"`
 }
 
