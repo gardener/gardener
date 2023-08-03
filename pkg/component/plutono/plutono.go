@@ -28,6 +28,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
@@ -495,6 +496,11 @@ func (p *plutono) getDashboards(ctx context.Context) (map[string]string, error) 
 }
 
 func (p *plutono) getService() *corev1.Service {
+	servicePort := port
+	if p.values.IsGardenCluster {
+		servicePort = 80
+	}
+
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -505,9 +511,10 @@ func (p *plutono) getService() *corev1.Service {
 			Type: corev1.ServiceTypeClusterIP,
 			Ports: []corev1.ServicePort{
 				{
-					Name:     "web",
-					Port:     port,
-					Protocol: corev1.ProtocolTCP,
+					Name:       "web",
+					Port:       int32(servicePort),
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromInt(port),
 				},
 			},
 			Selector: getLabels(),
