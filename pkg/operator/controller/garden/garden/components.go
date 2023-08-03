@@ -53,6 +53,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator/customresources"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
+	"github.com/gardener/gardener/pkg/component/plutono"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/component/vpa"
@@ -91,6 +92,7 @@ type components struct {
 	fluentOperator                component.DeployWaiter
 	fluentBit                     component.DeployWaiter
 	fluentOperatorCustomResources component.DeployWaiter
+	plutono                       plutono.Interface
 	vali                          component.Deployer
 }
 
@@ -198,6 +200,11 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.vali, err = r.newVali(garden)
+	if err != nil {
+		return
+	}
+
+	c.plutono, err = r.newPlutono(secretsManager, garden.Spec.RuntimeCluster.Ingress.Domain, isAuthenticationWebhookEnabled(garden))
 	if err != nil {
 		return
 	}
@@ -722,6 +729,28 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden) 
 	)
 }
 
+func (r *Reconciler) newPlutono(secretsManager secretsmanager.Interface, ingressDomain string, isAuthenticationWebhookEnabled bool) (plutono.Interface, error) {
+	return sharedcomponent.NewPlutono(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		secretsManager,
+		component.ClusterTypeSeed,
+		1,
+		"",
+		fmt.Sprintf("%s.%s", "plutono-garden", ingressDomain),
+		v1beta1constants.PriorityClassNameGardenSystem100,
+		false,
+		false,
+		isAuthenticationWebhookEnabled,
+		false,
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+}
+
 func getNginxIngressConfig(garden *operatorv1alpha1.Garden) (map[string]string, error) {
 	var (
 		defaultConfig = map[string]interface{}{
@@ -799,4 +828,13 @@ func (r *Reconciler) newVali(garden *operatorv1alpha1.Garden) (vali.Interface, e
 			End:   garden.Spec.VirtualCluster.Maintenance.TimeWindow.End,
 		},
 	)
+}
+
+func isAuthenticationWebhookEnabled(garden *operatorv1alpha1.Garden) bool {
+	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil &&
+		garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.Authentication != nil &&
+		garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.Authentication.Webhook != nil {
+		return true
+	}
+	return false
 }

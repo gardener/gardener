@@ -58,6 +58,10 @@ func (r *Reconciler) delete(
 		g = flow.NewGraph("Garden deletion")
 
 		_ = g.Add(flow.Task{
+			Name: "Destroying Plutono",
+			Fn:   component.OpDestroyAndWait(c.plutono).Destroy,
+		})
+		_ = g.Add(flow.Task{
 			Name: "Destroying Kube State Metrics",
 			Fn:   component.OpDestroyAndWait(c.kubeStateMetrics).Destroy,
 		})
