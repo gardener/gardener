@@ -16,6 +16,7 @@ package cloudprofile
 
 import (
 	"context"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -31,6 +32,11 @@ type cloudProfileStrategy struct {
 	names.NameGenerator
 }
 
+// NewStrategy returns a new storage strategy for CloudProfiles.
+func NewStrategy() cloudProfileStrategy {
+	return cloudProfileStrategy{api.Scheme, names.SimpleNameGenerator}
+}
+
 // Strategy defines the storage strategy for CloudProfiles.
 var Strategy = cloudProfileStrategy{api.Scheme, names.SimpleNameGenerator}
 
@@ -39,6 +45,9 @@ func (cloudProfileStrategy) NamespaceScoped() bool {
 }
 
 func (cloudProfileStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
+	cloudprofile := obj.(*core.CloudProfile)
+
+	dropExpiredVersions(cloudprofile)
 }
 
 func (cloudProfileStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
@@ -75,4 +84,30 @@ func (cloudProfileStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Ob
 // WarningsOnUpdate returns warnings to the client performing the update.
 func (cloudProfileStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
 	return nil
+}
+
+func dropExpiredVersions(cloudProfile *core.CloudProfile) {
+	var validKubernetesVersions []core.ExpirableVersion
+
+	for _, version := range cloudProfile.Spec.Kubernetes.Versions {
+		if version.ExpirationDate != nil && version.ExpirationDate.Time.Before(time.Now()) {
+			continue
+		}
+		validKubernetesVersions = append(validKubernetesVersions, version)
+	}
+
+	cloudProfile.Spec.Kubernetes.Versions = validKubernetesVersions
+
+	for i, machineImage := range cloudProfile.Spec.MachineImages {
+		var validMachineImageVersions []core.MachineImageVersion
+
+		for _, version := range machineImage.Versions {
+			if version.ExpirationDate != nil && version.ExpirationDate.Time.Before(time.Now()) {
+				continue
+			}
+			validMachineImageVersions = append(validMachineImageVersions, version)
+		}
+
+		cloudProfile.Spec.MachineImages[i].Versions = validMachineImageVersions
+	}
 }
