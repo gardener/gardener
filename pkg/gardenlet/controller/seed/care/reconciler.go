@@ -86,7 +86,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		return reconcile.Result{}, err
 	}
 
-	updatedConditions := NewHealthCheck(seed, r.SeedClient, r.Clock, r.Namespace, seedIsGarden, r.LoggingEnabled).CheckSeed(ctx, conditions, r.conditionThresholdsToProgressingMapping())
+	updatedConditions := NewHealthCheck(seed, r.SeedClient, r.Clock, r.Namespace, seedIsGarden, r.LoggingEnabled).CheckSeed(ctx, conditions, r.conditionThresholdsToProgressingMapping(), seed.Status.LastOperation)
 
 	// Update Seed status conditions if necessary
 	if v1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) {

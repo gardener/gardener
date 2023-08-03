@@ -136,7 +136,7 @@ var _ = Describe("Seed health", func() {
 
 			It("should set SeedSystemComponentsHealthy condition to true", func() {
 				healthCheck := care.NewHealthForSeed(seed, c, fakeClock, nil, false, true)
-				updatedConditions := healthCheck.CheckSeed(ctx, []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition}, nil)
+				updatedConditions := healthCheck.CheckSeed(ctx, []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition}, nil, nil)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy."))
 			})
@@ -157,7 +157,7 @@ var _ = Describe("Seed health", func() {
 
 			It("should set SeedSystemComponentsHealthy condition to true", func() {
 				healthCheck := care.NewHealthForSeed(seed, c, fakeClock, nil, true, false)
-				updatedConditions := healthCheck.CheckSeed(ctx, []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition}, nil)
+				updatedConditions := healthCheck.CheckSeed(ctx, []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition}, nil, nil)
 				Expect(len(updatedConditions)).ToNot(BeZero())
 				Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy."))
 			})
@@ -168,7 +168,7 @@ var _ = Describe("Seed health", func() {
 				tests = func(reason, message string) {
 					It("should set SeedSystemComponentsHealthy condition to False if there is no Progressing threshold duration mapping", func() {
 						healthCheck := care.NewHealthForSeed(seed, c, fakeClock, nil, false, false)
-						updatedConditions := healthCheck.CheckSeed(ctx, []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition}, nil)
+						updatedConditions := healthCheck.CheckSeed(ctx, []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition}, nil, nil)
 
 						Expect(len(updatedConditions)).ToNot(BeZero())
 						Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, reason, message))
@@ -183,6 +183,7 @@ var _ = Describe("Seed health", func() {
 							ctx,
 							[]gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 							map[gardencorev1beta1.ConditionType]time.Duration{gardencorev1beta1.SeedSystemComponentsHealthy: time.Minute},
+							nil,
 						)
 
 						Expect(len(updatedConditions)).ToNot(BeZero())
@@ -198,6 +199,7 @@ var _ = Describe("Seed health", func() {
 							ctx,
 							[]gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 							map[gardencorev1beta1.ConditionType]time.Duration{gardencorev1beta1.SeedSystemComponentsHealthy: time.Minute},
+							nil,
 						)
 
 						Expect(len(updatedConditions)).ToNot(BeZero())
@@ -213,6 +215,7 @@ var _ = Describe("Seed health", func() {
 							ctx,
 							[]gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 							map[gardencorev1beta1.ConditionType]time.Duration{gardencorev1beta1.SeedSystemComponentsHealthy: time.Minute},
+							nil,
 						)
 
 						Expect(len(updatedConditions)).ToNot(BeZero())
@@ -228,6 +231,7 @@ var _ = Describe("Seed health", func() {
 							ctx,
 							[]gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition},
 							map[gardencorev1beta1.ConditionType]time.Duration{gardencorev1beta1.SeedSystemComponentsHealthy: time.Minute},
+							nil,
 						)
 
 						Expect(len(updatedConditions)).ToNot(BeZero())

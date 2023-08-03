@@ -793,7 +793,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(bestSeed).To(BeNil())
 		})
 
-		It("should fail because it cannot find a seed cluster never reconciled before", func() {
+		It("should fail because it cannot find a seed cluster reconciled at least once before", func() {
 			seed.Status.LastOperation = nil
 
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
