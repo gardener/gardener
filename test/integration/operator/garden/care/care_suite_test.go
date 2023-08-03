@@ -29,7 +29,6 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -45,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/controller/garden/care"
 	"github.com/gardener/gardener/pkg/operator/features"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
 func TestGarden(t *testing.T) {
@@ -127,9 +127,7 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("Setup manager")
-	httpClient, err := rest.HTTPClientFor(restConfig)
-	Expect(err).NotTo(HaveOccurred())
-	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, httpClient)
+	mapper, err := thirdpartyapiutil.NewDynamicRESTMapper(restConfig)
 	Expect(err).NotTo(HaveOccurred())
 
 	mgr, err := manager.New(restConfig, manager.Options{

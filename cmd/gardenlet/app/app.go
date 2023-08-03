@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	goruntime "runtime"
 	"strconv"
@@ -31,6 +32,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -72,6 +74,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
 // Name is a const for the name of this component.
@@ -160,6 +163,13 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		RetryPeriod:                   &cfg.LeaderElection.RetryPeriod.Duration,
 		Controller: controllerconfig.Controller{
 			RecoverPanic: pointer.Bool(true),
+		},
+
+		MapperProvider: func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
+			return thirdpartyapiutil.NewDynamicRESTMapper(
+				config,
+				thirdpartyapiutil.WithLazyDiscovery,
+			)
 		},
 
 		Client: client.Options{
@@ -329,6 +339,13 @@ func (g *garden) Start(ctx context.Context) error {
 				Client: cachedClient,
 				Reader: uncachedClient,
 			}, nil
+		}
+
+		opts.MapperProvider = func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
+			return thirdpartyapiutil.NewDynamicRESTMapper(
+				config,
+				thirdpartyapiutil.WithLazyDiscovery,
+			)
 		}
 	})
 	if err != nil {

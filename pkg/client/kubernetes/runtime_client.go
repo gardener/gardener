@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"golang.org/x/time/rate"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
@@ -29,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	kubernetescache "github.com/gardener/gardener/pkg/client/kubernetes/cache"
+	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
 const (
@@ -55,15 +57,11 @@ func setCacheOptionsDefaults(options *cache.Options) error {
 
 func setClientOptionsDefaults(config *rest.Config, options *client.Options) error {
 	if options.Mapper == nil {
-		httpClient, err := rest.HTTPClientFor(config)
-		if err != nil {
-			return fmt.Errorf("failed to get HTTP client for config: %w", err)
-		}
-
 		// default the client's REST mapper to a dynamic REST mapper (automatically rediscovers resources on NoMatchErrors)
-		mapper, err := apiutil.NewDynamicRESTMapper(
+		mapper, err := thirdpartyapiutil.NewDynamicRESTMapper(
 			config,
-			httpClient,
+			thirdpartyapiutil.WithLazyDiscovery,
+			thirdpartyapiutil.WithLimiter(rate.NewLimiter(rate.Every(5*time.Second), 1)),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to create new DynamicRESTMapper: %w", err)

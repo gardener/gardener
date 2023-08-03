@@ -202,6 +202,7 @@ build:
         - plugin/pkg/shoot/validator
         - plugin/pkg/shoot/vpa
         - plugin/pkg/utils
+        - third_party/controller-runtime/pkg/apiutil
         - vendor
         - VERSION
       ldflags:
@@ -307,6 +308,7 @@ build:
         - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
         - third_party/gopkg.in/yaml.v2
+        - third_party/controller-runtime/pkg/apiutil
         - vendor
         - VERSION
       ldflags:
@@ -370,6 +372,7 @@ build:
         - pkg/utils/validation/cidr
         - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
+        - third_party/controller-runtime/pkg/apiutil
         - vendor
         - VERSION
       ldflags:
@@ -447,6 +450,7 @@ build:
         - pkg/utils/version
         - third_party/apiserver/pkg/apis/audit/v1alpha1
         - third_party/apiserver/pkg/apis/audit/v1beta1
+        - third_party/controller-runtime/pkg/apiutil
         - vendor
         - VERSION
       ldflags:
@@ -673,6 +677,7 @@ build:
         - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
         - third_party/gopkg.in/yaml.v2
+        - third_party/controller-runtime/pkg/apiutil
         - vendor
         - VERSION
       ldflags:
@@ -981,6 +986,7 @@ build:
         - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
         - third_party/gopkg.in/yaml.v2
+        - third_party/controller-runtime/pkg/apiutil
         - vendor
         - VERSION
       ldflags:
@@ -1078,6 +1084,7 @@ build:
         - pkg/utils/validation/kubernetes/core
         - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
+        - third_party/controller-runtime/pkg/apiutil
         - vendor
         - VERSION
       ldflags:

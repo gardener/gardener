@@ -29,13 +29,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/rest"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -65,6 +63,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gardener/gardener/test/utils/operationannotation"
+	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
 var _ = Describe("Garden controller tests", func() {
@@ -116,9 +115,7 @@ var _ = Describe("Garden controller tests", func() {
 		})
 
 		By("Setup manager")
-		httpClient, err := rest.HTTPClientFor(restConfig)
-		Expect(err).NotTo(HaveOccurred())
-		mapper, err := apiutil.NewDynamicRESTMapper(restConfig, httpClient)
+		mapper, err := thirdpartyapiutil.NewDynamicRESTMapper(restConfig)
 		Expect(err).NotTo(HaveOccurred())
 
 		mgr, err := manager.New(restConfig, manager.Options{

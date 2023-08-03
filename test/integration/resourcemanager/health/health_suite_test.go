@@ -16,6 +16,7 @@ package health_test
 
 import (
 	"context"
+	"net/http"
 	"path/filepath"
 	"testing"
 	"time"
@@ -24,6 +25,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
@@ -40,6 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/health/progressing"
 	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
 func TestHealth(t *testing.T) {
@@ -107,6 +110,9 @@ var _ = BeforeSuite(func() {
 		Scheme:             resourcemanagerclient.CombinedScheme,
 		MetricsBindAddress: "0",
 		Namespace:          testNamespace.Name,
+		MapperProvider: func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
+			return thirdpartyapiutil.NewDynamicRESTMapper(config)
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 

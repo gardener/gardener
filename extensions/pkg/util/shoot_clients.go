@@ -26,7 +26,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	extensionsconfig "github.com/gardener/gardener/extensions/pkg/apis/config"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -34,6 +33,7 @@ import (
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
 // ShootClients bundles together several clients for the shoot cluster.
@@ -108,12 +108,7 @@ func NewClientForShoot(ctx context.Context, c client.Client, namespace string, o
 	ApplyRESTOptions(shootRESTConfig, restOptions)
 
 	if opts.Mapper == nil {
-		httpClient, err := rest.HTTPClientFor(shootRESTConfig)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to get HTTP client for config: %w", err)
-		}
-
-		mapper, err := apiutil.NewDynamicRESTMapper(shootRESTConfig, httpClient)
+		mapper, err := thirdpartyapiutil.NewDynamicRESTMapper(shootRESTConfig)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create new DynamicRESTMapper: %w", err)
 		}

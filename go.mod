@@ -64,10 +64,9 @@ require (
 	sigs.k8s.io/controller-runtime v0.15.0
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20221212190805-d4f1e822ca11 // v0.14.1
 	sigs.k8s.io/controller-tools v0.11.3
+	sigs.k8s.io/structured-merge-diff/v4 v4.2.3
 	sigs.k8s.io/yaml v1.3.0
 )
-
-require sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 
 require (
 	github.com/BurntSushi/toml v1.0.0 // indirect

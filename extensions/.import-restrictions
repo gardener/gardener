@@ -24,3 +24,4 @@ rules:
   - github.com/gardener/gardener/pkg/mock
   - github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references
   - github.com/gardener/gardener/pkg/utils
+  - github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil

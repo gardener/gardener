@@ -27,6 +27,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	eventsv1beta1 "k8s.io/api/events/v1beta1"
@@ -38,7 +39,6 @@ import (
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -56,6 +56,7 @@ import (
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook"
+	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
 // Name is a const for the name of this component.
@@ -206,9 +207,10 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 			// use dynamic rest mapper for target cluster, which will automatically rediscover resources on NoMatchErrors
 			// but is rate-limited to not issue to many discovery calls (rate-limit shared across all reconciliations)
 			opts.MapperProvider = func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
-				return apiutil.NewDynamicRESTMapper(
+				return thirdpartyapiutil.NewDynamicRESTMapper(
 					config,
-					httpClient,
+					thirdpartyapiutil.WithLazyDiscovery,
+					thirdpartyapiutil.WithLimiter(rate.NewLimiter(rate.Every(1*time.Minute), 1)), // rediscover at maximum every minute
 				)
 			}
 
