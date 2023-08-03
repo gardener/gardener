@@ -1947,8 +1947,8 @@
       {
         "current": {
           "selected": false,
-          "text": "cluster-prometheus",
-          "value": "cluster-prometheus"
+          "text": "prometheus",
+          "value": "prometheus"
         },
         "error": null,
         "hide": 0,

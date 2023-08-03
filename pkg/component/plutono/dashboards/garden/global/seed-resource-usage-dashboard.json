@@ -1766,7 +1766,7 @@
           "text": "All",
           "value": ["$__all"]
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(seed:container_cpu_usage_seconds_total:sum, seed)",
         "hide": 0,
         "includeAll": true,

@@ -868,7 +868,7 @@
           "text": "All",
           "value": ["$__all"]
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(ALERTS,severity)",
         "hide": 0,
         "includeAll": true,
@@ -893,7 +893,7 @@
           "text": "All",
           "value": ["$__all"]
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(ALERTS,alertstate)",
         "hide": 0,
         "includeAll": true,
@@ -918,7 +918,7 @@
           "text": "All",
           "value": ["$__all"]
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(ALERTS, alertname)",
         "hide": 0,
         "includeAll": true,
@@ -943,7 +943,7 @@
           "text": "All",
           "value": ["$__all"]
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(ALERTS, shoot_infra)",
         "hide": 0,
         "includeAll": true,

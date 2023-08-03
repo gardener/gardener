@@ -40,7 +40,7 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": ["#d44a3a", "rgba(40, 40, 40, 0.89)", "#299c46"],
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "decimals": null,
       "description": "",
       "fieldConfig": {
@@ -128,7 +128,7 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": ["#d44a3a", "rgba(40, 40, 40, 0.89)", "#299c46"],
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "decimals": null,
       "description": "",
       "fieldConfig": {
@@ -216,7 +216,7 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": ["#d44a3a", "rgba(40, 40, 40, 0.89)", "#299c46"],
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "decimals": null,
       "description": "",
       "fieldConfig": {
@@ -304,7 +304,7 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": ["#d44a3a", "rgba(40, 40, 40, 0.89)", "#299c46"],
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "decimals": null,
       "description": "",
       "fieldConfig": {
@@ -392,7 +392,7 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": ["#299c46", "rgba(40, 40, 40, 0.89)", "#d44a3a"],
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -477,7 +477,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "description": "Shows if the API Server is reachable from the shoot cluster.",
       "fieldConfig": {
         "defaults": {
@@ -683,7 +683,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "cluster-prometheus",
+          "datasource": "prometheus",
           "decimals": 0,
           "fill": 0,
           "fillGradient": 0,
@@ -773,7 +773,7 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "cluster-prometheus",
+          "datasource": "prometheus",
           "decimals": 0,
           "description": "",
           "fill": 0,
@@ -1199,7 +1199,7 @@
           "text": "garden",
           "value": "garden"
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "",
         "error": null,
         "hide": 0,
@@ -1227,7 +1227,7 @@
           "text": "alicloud",
           "value": "alicloud"
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "",
         "error": null,
         "hide": 0,

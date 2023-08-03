@@ -19,7 +19,7 @@
   "panels": [
     {
       "collapsed": false,
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -32,7 +32,7 @@
       "type": "row"
     },
     {
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "description": "Shows the maximum number of concurrent reconciliations per controller.",
       "fieldConfig": {
         "defaults": {
@@ -95,7 +95,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "description": "Shows the active workers per controller.",
       "fieldConfig": {
         "defaults": {
@@ -200,7 +200,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "decimals": null,
       "description": "Shows the total number of reconciliations per controller.",
       "fieldConfig": {
@@ -303,7 +303,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "decimals": null,
       "description": "Shows the total number of reconciliation errors per controller.",
       "fieldConfig": {
@@ -404,7 +404,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "description": "Shows the length per reconciliation per controller.",
       "fieldConfig": {
         "defaults": {},
@@ -505,7 +505,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "description": "Shows the reconciliation rate per controller.",
       "fieldConfig": {
         "defaults": {},
@@ -603,7 +603,7 @@
     },
     {
       "collapsed": false,
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -620,7 +620,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "decimals": null,
       "description": "Shows the total number of HTTP requests.",
       "fieldConfig": {
@@ -720,7 +720,7 @@
     },
     {
       "collapsed": false,
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -737,7 +737,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "description": "Shows how long an item stays in the workqueue before being requested.",
       "fieldConfig": {
         "defaults": {},
@@ -838,7 +838,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "description": "Shows how long it takes to process an item.",
       "fieldConfig": {
         "defaults": {},
@@ -939,7 +939,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "description": "Shows how many items of the workqueue are processed.",
       "fieldConfig": {
         "defaults": {},
@@ -1040,7 +1040,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "description": "Shows the current length of the workqueue.",
       "fieldConfig": {
         "defaults": {},
@@ -1142,7 +1142,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "decimals": null,
       "description": "Shows the total number of adds to the work queue.",
       "fieldConfig": {
@@ -1245,7 +1245,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "decimals": null,
       "description": "Shows the total number of retries handled by the workqueue.",
       "fieldConfig": {
@@ -1348,7 +1348,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "description": "Shows for how many seconds the longest running processor for a workqueue has been running.",
       "fieldConfig": {
         "defaults": {},
@@ -1450,7 +1450,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "description": "Shows for how many seconds of work has been done that is in progress and hasn't been observed by work_duration. Large values indicate stuck threads. One can deduce the number of stuck threads by observing the rate at which this increases.",
       "fieldConfig": {
         "defaults": {},
@@ -1591,7 +1591,7 @@
           "text": ["All"],
           "value": ["$__all"]
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(controller_runtime_reconcile_total, result)",
         "description": null,
         "error": null,
@@ -1622,7 +1622,7 @@
           "text": ["All"],
           "value": ["$__all"]
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(rest_client_requests_total, code)",
         "description": null,
         "error": null,

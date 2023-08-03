@@ -593,7 +593,7 @@
           "text": "openstack",
           "value": "openstack"
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(garden_shoot_condition, iaas)",
         "error": null,
         "hide": 0,
@@ -666,7 +666,7 @@
           "text": ["All"],
           "value": ["$__all"]
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",iaas=\"$iaas\"}, project)",
         "error": null,
         "hide": 0,
@@ -693,7 +693,7 @@
           "text": ["All"],
           "value": ["$__all"]
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",iaas=\"$iaas\", project=~\"$project\"}, name)",
         "error": null,
         "hide": 0,
@@ -721,7 +721,7 @@
           "text": ["All"],
           "value": ["$__all"]
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\"}, purpose)",
         "error": null,
         "hide": 0,

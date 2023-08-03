@@ -446,7 +446,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "decimals": 0,
       "description": "### State Meaning\n1 : Up  \n0 : Down (Http health probe for component failed or returned with unhealthy status code)",
       "fill": 0,
@@ -544,7 +544,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "cluster-prometheus",
+      "datasource": "prometheus",
       "decimals": null,
       "description": "Health check response times of the Garden cluster or Gardener components.",
       "fill": 0,
@@ -759,7 +759,7 @@
           "text": "production",
           "value": "production"
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(garden_shoot_condition, purpose)",
         "hide": 0,
         "includeAll": true,
@@ -784,7 +784,7 @@
           "text": "All",
           "value": "$__all"
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(garden_shoot_info, iaas)",
         "hide": 0,
         "includeAll": true,
@@ -809,7 +809,7 @@
           "text": "All",
           "value": "$__all"
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(garden_shoot_info{iaas=~\"$iaas\"}, seed)",
         "hide": 0,
         "includeAll": true,
@@ -834,7 +834,7 @@
           "text": "All",
           "value": "$__all"
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(garden_shoot_info{iaas=~\"$iaas\", seed=~\"$seed\"}, region)",
         "hide": 0,
         "includeAll": true,

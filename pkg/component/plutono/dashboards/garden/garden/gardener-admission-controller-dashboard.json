@@ -371,7 +371,7 @@
           "text": ["All"],
           "value": ["$__all"]
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(gardener_admission_controller_rejected_resources_total, namespace)",
         "description": null,
         "error": null,
@@ -402,7 +402,7 @@
           "text": ["All"],
           "value": ["$__all"]
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(gardener_admission_controller_rejected_resources_total, kind)",
         "description": null,
         "error": null,
@@ -433,7 +433,7 @@
           "text": ["All"],
           "value": ["$__all"]
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(gardener_admission_controller_rejected_resources_total, operation)",
         "description": null,
         "error": null,
@@ -464,7 +464,7 @@
           "text": ["All"],
           "value": ["$__all"]
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(gardener_admission_controller_rejected_resources_total, reason)",
         "description": null,
         "error": null,
@@ -496,7 +496,7 @@
           "text": ["All"],
           "value": ["$__all"]
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(gardener_admission_controller_seed_authorizer_graph_update_duration_seconds_bucket, kind)",
         "description": null,
         "error": null,
@@ -527,7 +527,7 @@
           "text": ["All"],
           "value": ["$__all"]
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(gardener_admission_controller_seed_authorizer_graph_update_duration_seconds_bucket, operation)",
         "description": null,
         "error": null,

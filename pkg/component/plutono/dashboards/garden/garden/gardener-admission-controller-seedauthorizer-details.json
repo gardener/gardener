@@ -41,7 +41,7 @@
             "mode": "spectrum"
           },
           "dataFormat": "tsbuckets",
-          "datasource": "cluster-prometheus",
+          "datasource": "prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {}
@@ -134,7 +134,7 @@
             "mode": "spectrum"
           },
           "dataFormat": "tsbuckets",
-          "datasource": "cluster-prometheus",
+          "datasource": "prometheus",
           "fieldConfig": {
             "defaults": {
               "custom": {}
@@ -217,7 +217,7 @@
           "text": ["All"],
           "value": ["$__all"]
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(gardener_admission_controller_seed_authorizer_graph_update_duration_seconds_bucket,kind)",
         "description": "Objekt kind for the update duration per seconds",
         "error": null,
@@ -248,7 +248,7 @@
           "text": ["All"],
           "value": ["$__all"]
         },
-        "datasource": "cluster-prometheus",
+        "datasource": "prometheus",
         "definition": "label_values(gardener_admission_controller_seed_authorizer_graph_path_check_duration_seconds_bucket,fromKind)",
         "description": "Object kind for the path check duration per seconds",
         "error": null,
