@@ -329,7 +329,34 @@ deleteDatasources:
 # list of datasources to insert/update depending
 # whats available in the database
 datasources:
-- name: prometheus
+`
+
+	if p.values.IsGardenCluster {
+		datasource += `- name: cluster-prometheus
+  type: prometheus
+  access: proxy
+  url: http://` + p.namespace + `-prometheus:80
+  basicAuth: false
+  isDefault: true
+  jsonData:
+    timeInterval: 30s
+  version: 1
+  editable: false
+- name: availability-prometheus
+  type: prometheus
+  access: proxy
+  url: http://` + p.namespace + `-avail-prom:80
+  basicAuth: false
+  isDefault: false
+  jsonData:
+    timeInterval: 30s
+  version: 1
+  editable: false
+`
+		return datasource
+	}
+
+	datasource += `- name: prometheus
   type: prometheus
   access: proxy
   url: ` + url + `
@@ -340,6 +367,7 @@ datasources:
   jsonData:
     timeInterval: 1m
 `
+
 	if p.values.ClusterType == component.ClusterTypeSeed {
 		datasource += `- name: seed-prometheus
   type: prometheus
