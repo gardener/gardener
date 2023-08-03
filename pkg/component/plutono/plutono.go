@@ -100,6 +100,8 @@ type Values struct {
 	IngressHost string
 	// IncludeIstioDashboards specifies whether to include istio dashboard.
 	IncludeIstioDashboards bool
+	// IsAuthenticationWebhookEnabled specifies whether authentication webhook is enabled.
+	IsAuthenticationWebhookEnabled bool
 	// IsWorkerless specifies whether the cluster managed by this API server has worker nodes.
 	IsWorkerless bool
 	// IsGardenCluster specifies whether the cluster is garden cluster.
@@ -417,6 +419,9 @@ func (p *plutono) getDashboardsConfigMap(ctx context.Context, suffix string) (*c
 	if p.values.IsGardenCluster {
 		if suffix == "garden" {
 			requiredDashboards = map[string]embed.FS{gardenDashboardsPath: gardenDashboards}
+			if !p.values.IsAuthenticationWebhookEnabled {
+				ignorePaths.Insert("oidc")
+			}
 		}
 		if suffix == "global" {
 			requiredDashboards = map[string]embed.FS{gardenGlobalDashboardsPath: gardenGlobalDashboards}
