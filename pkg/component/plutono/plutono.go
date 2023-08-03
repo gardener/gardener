@@ -317,7 +317,10 @@ providers:
 func (p *plutono) getDataSource() string {
 	url := "http://prometheus-web:80"
 	maxLine := "1000"
-	if p.values.ClusterType == component.ClusterTypeSeed {
+	if p.values.IsGardenCluster {
+		url = "http://" + p.namespace + "-prometheus:80"
+		maxLine = "5000"
+	} else if p.values.ClusterType == component.ClusterTypeSeed {
 		url = "http://aggregate-prometheus-web:80"
 		maxLine = "5000"
 	}
@@ -334,31 +337,6 @@ deleteDatasources:
 datasources:
 `
 
-	if p.values.IsGardenCluster {
-		datasource += `- name: cluster-prometheus
-  type: prometheus
-  access: proxy
-  url: http://` + p.namespace + `-prometheus:80
-  basicAuth: false
-  isDefault: true
-  jsonData:
-    timeInterval: 30s
-  version: 1
-  editable: false
-- name: availability-prometheus
-  type: prometheus
-  access: proxy
-  url: http://` + p.namespace + `-avail-prom:80
-  basicAuth: false
-  isDefault: false
-  jsonData:
-    timeInterval: 30s
-  version: 1
-  editable: false
-`
-		return datasource
-	}
-
 	datasource += `- name: prometheus
   type: prometheus
   access: proxy
@@ -371,7 +349,19 @@ datasources:
     timeInterval: 1m
 `
 
-	if p.values.ClusterType == component.ClusterTypeSeed {
+	if p.values.IsGardenCluster {
+		datasource += `- name: availability-prometheus
+  type: prometheus
+  access: proxy
+  url: http://` + p.namespace + `-avail-prom:80
+  basicAuth: false
+  isDefault: false
+  jsonData:
+    timeInterval: 30s
+  version: 1
+  editable: false
+`
+	} else if p.values.ClusterType == component.ClusterTypeSeed {
 		datasource += `- name: seed-prometheus
   type: prometheus
   access: proxy
@@ -844,7 +834,10 @@ func convertToCompactJSON(data map[string]string) (map[string]string, error) {
 }
 
 func (p *plutono) getPodLabels() map[string]string {
-	labels := map[string]string{v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed}
+	labels := map[string]string{
+		v1beta1constants.LabelNetworkPolicyToDNS:                          v1beta1constants.LabelNetworkPolicyAllowed,
+		gardenerutils.NetworkPolicyLabel(vali.ServiceName, vali.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed,
+	}
 
 	if p.values.IsGardenCluster {
 		labels = utils.MergeStringMaps(labels, map[string]string{
@@ -855,7 +848,6 @@ func (p *plutono) getPodLabels() map[string]string {
 		return labels
 	}
 
-	labels = utils.MergeStringMaps(labels, map[string]string{gardenerutils.NetworkPolicyLabel(vali.ServiceName, vali.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed})
 	if p.values.ClusterType == component.ClusterTypeSeed {
 		labels = utils.MergeStringMaps(labels, map[string]string{
 			v1beta1constants.LabelRole:                                         v1beta1constants.LabelMonitoring,
