@@ -69,14 +69,17 @@ var (
 	seedDashboards embed.FS
 	//go:embed dashboards/shoot
 	shootDashboards embed.FS
+	//go:embed dashboards/garden-shoot
+	gardenAndShootDashboards embed.FS
 	//go:embed dashboards/common
 	commonDashboards embed.FS
 
-	gardenDashboardsPath       = filepath.Join("dashboards", "garden", "garden")
-	gardenGlobalDashboardsPath = filepath.Join("dashboards", "garden", "global")
-	seedDashboardsPath         = filepath.Join("dashboards", "seed")
-	shootDashboardsPath        = filepath.Join("dashboards", "shoot")
-	commonDashboardsPath       = filepath.Join("dashboards", "common")
+	gardenDashboardsPath         = filepath.Join("dashboards", "garden", "garden")
+	gardenGlobalDashboardsPath   = filepath.Join("dashboards", "garden", "global")
+	seedDashboardsPath           = filepath.Join("dashboards", "seed")
+	shootDashboardsPath          = filepath.Join("dashboards", "shoot")
+	gardenAndShootDashboardsPath = filepath.Join("dashboards", "garden-shoot")
+	commonDashboardsPath         = filepath.Join("dashboards", "common")
 )
 
 // Interface contains functions for a Plutono Deployer
@@ -408,7 +411,7 @@ func (p *plutono) getDashboardsConfigMap(ctx context.Context, suffix string) (*c
 
 	if p.values.IsGardenCluster {
 		if suffix == "garden" {
-			requiredDashboards = map[string]embed.FS{gardenDashboardsPath: gardenDashboards}
+			requiredDashboards = map[string]embed.FS{gardenDashboardsPath: gardenDashboards, gardenAndShootDashboardsPath: gardenAndShootDashboards}
 			if !p.values.IsAuthenticationWebhookEnabled {
 				ignorePaths.Insert("oidc")
 			}
@@ -422,7 +425,7 @@ func (p *plutono) getDashboardsConfigMap(ctx context.Context, suffix string) (*c
 			ignorePaths.Insert("istio")
 		}
 	} else if p.values.ClusterType == component.ClusterTypeShoot {
-		requiredDashboards = map[string]embed.FS{shootDashboardsPath: shootDashboards, commonDashboardsPath: commonDashboards}
+		requiredDashboards = map[string]embed.FS{shootDashboardsPath: shootDashboards, gardenAndShootDashboardsPath: gardenAndShootDashboards, commonDashboardsPath: commonDashboards}
 		if !p.values.VPAEnabled {
 			ignorePaths.Insert("vpa")
 		}
