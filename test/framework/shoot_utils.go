@@ -167,6 +167,8 @@ func CreateShootTestArtifacts(cfg *ShootCreationConfig, projectNamespace string,
 
 	setShootTolerations(shoot)
 
+	setShootControlPlaneHighAvailability(shoot, cfg)
+
 	return shoot.Name, shoot, nil
 }
 
@@ -369,4 +371,23 @@ func PrettyPrintObject(obj runtime.Object) error {
 	}
 	fmt.Print(string(d))
 	return nil
+}
+
+func setShootControlPlaneHighAvailability(shoot *gardencorev1beta1.Shoot, cfg *ShootCreationConfig) {
+	if StringSet(cfg.controlPlaneFailureTolerance) {
+		if shoot.Spec.ControlPlane == nil {
+			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+				HighAvailability: &gardencorev1beta1.HighAvailability{
+					FailureTolerance: gardencorev1beta1.FailureTolerance{},
+				},
+			}
+		}
+
+		if shoot.Spec.ControlPlane.HighAvailability == nil {
+			shoot.Spec.ControlPlane.HighAvailability = &gardencorev1beta1.HighAvailability{
+				FailureTolerance: gardencorev1beta1.FailureTolerance{},
+			}
+		}
+		shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type = gardencorev1beta1.FailureToleranceType(cfg.controlPlaneFailureTolerance)
+	}
 }
