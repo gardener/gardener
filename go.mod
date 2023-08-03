@@ -10,7 +10,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/fluent/fluent-operator/v2 v2.2.0
 	github.com/gardener/dependency-watchdog v1.1.1
-	github.com/gardener/etcd-druid v0.18.4
+	github.com/gardener/etcd-druid v0.19.0
 	github.com/gardener/hvpa-controller/api v0.5.0
 	github.com/gardener/machine-controller-manager v0.48.1
 	github.com/go-logr/logr v1.2.4
