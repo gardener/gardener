@@ -59,6 +59,9 @@ spec:
       labels:
         component: alertmanager
         role: monitoring
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-public-networks: allowed
+        networking.gardener.cloud/to-private-networks: allowed
     spec:
       priorityClassName: gardener-system-600
       containers:
