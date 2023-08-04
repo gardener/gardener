@@ -31,7 +31,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -193,6 +195,43 @@ var _ = Describe("WaiterTest", func() {
 			)
 
 			Expect(kubeControllerManager.WaitForControllerToBeActive(ctx)).To(Succeed())
+		})
+	})
+
+	Describe("#WaitCleanup", func() {
+		var (
+			fakeClient              client.Client
+			fakeKubernetesInterface kubernetes.Interface
+			managedResource         *resourcesv1alpha1.ManagedResource
+		)
+
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+			fakeKubernetesInterface = kubernetesfake.NewClientSetBuilder().WithClient(fakeClient).Build()
+			managedResource = &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "shoot-core-kube-controller-manager",
+					Namespace: namespace,
+				},
+			}
+
+			kubeControllerManager = New(testLogger, fakeKubernetesInterface, namespace, nil, Values{})
+
+			fakeOps := &retryfake.Ops{MaxAttempts: 2}
+			DeferCleanup(test.WithVars(
+				&retry.Until, fakeOps.Until,
+				&retry.UntilTimeout, fakeOps.UntilTimeout,
+			))
+		})
+
+		It("should fail when the wait for the runtime managed resource deletion times out", func() {
+			Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
+
+			Expect(kubeControllerManager.WaitCleanup(ctx)).To(MatchError(ContainSubstring("still exists")))
+		})
+
+		It("should not return an error when they are already removed", func() {
+			Expect(kubeControllerManager.WaitCleanup(ctx)).To(Succeed())
 		})
 	})
 })

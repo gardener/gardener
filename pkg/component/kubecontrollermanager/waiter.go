@@ -29,6 +29,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
@@ -48,7 +49,12 @@ func (k *kubeControllerManager) Wait(ctx context.Context) error {
 	return Until(timeoutCtx, IntervalWaitForDeployment, health.IsDeploymentUpdated(k.seedClient.APIReader(), k.emptyDeployment()))
 }
 
-func (k *kubeControllerManager) WaitCleanup(_ context.Context) error { return nil }
+func (k *kubeControllerManager) WaitCleanup(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForDeployment)
+	defer cancel()
+
+	return managedresources.WaitUntilDeleted(timeoutCtx, k.seedClient.Client(), k.namespace, ManagedResourceName)
+}
 
 func (k *kubeControllerManager) WaitForControllerToBeActive(ctx context.Context) error {
 	const (
