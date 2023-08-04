@@ -24,6 +24,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
@@ -61,14 +62,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 
 		controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
-		if err := r.Client.List(ctx, controllerInstallationList); err != nil {
+		if err := r.Client.List(ctx, controllerInstallationList, client.MatchingFields{gardencore.SeedRefName: seed.Name}); err != nil {
 			return reconcile.Result{}, err
 		}
 
-		for _, controllerInstallation := range controllerInstallationList.Items {
-			if controllerInstallation.Spec.SeedRef.Name == seed.Name {
-				return reconcile.Result{}, fmt.Errorf("cannot remove finalizer of Seed %q because still found at least one ControllerInstallation", seed.Name)
-			}
+		if len(controllerInstallationList.Items) != 0 {
+			return reconcile.Result{}, fmt.Errorf("cannot remove finalizer of Seed %q because still found at least one ControllerInstallation", seed.Name)
 		}
 
 		if controllerutil.ContainsFinalizer(seed, FinalizerName) {
