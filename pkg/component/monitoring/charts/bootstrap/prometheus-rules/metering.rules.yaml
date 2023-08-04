@@ -375,3 +375,65 @@ groups:
           _namespace_to_shoot_uid_and_date
       or ignoring(instance_type)
         _namespace_to_shoot_uid_and_date
+
+# - metering  :cpu_usage                 :sum_by_namespace
+# - metering  :cpu_requests              :sum_by_namespace
+# - metering  :memory_usage              :sum_by_namespace
+# - metering  :working_set_memory        :sum_by_namespace
+# - metering  :memory_requests           :sum_by_namespace
+# - metering  :network_transmit          :sum_by_namespace
+# - metering  :network_receive           :sum_by_namespace
+# - metering  :persistent_volume_claims  :sum_by_namespace
+# - metering  :persistent_volume_usage   :sum_by_namespace
+
+
+  - record: metering:cpu_usage:sum_by_namespace
+    expr: |
+      sum without (instance_type) (metering:cpu_usage:sum_by_namespace_instance_type)
+
+  - record: metering:cpu_requests:sum_by_namespace
+    expr: |
+      sum without (instance_type) (metering:cpu_requests:sum_by_namespace_instance_type)
+
+  - record: metering:memory_usage:sum_by_namespace
+    expr: |
+      sum without (instance_type) (metering:memory_usage:sum_by_namespace_instance_type)
+
+  - record: metering:working_set_memory:sum_by_namespace
+    expr: |
+      sum without (instance_type) (
+        metering:working_set_memory:sum_by_namespace_instance_type
+      )
+
+  - record: metering:memory_requests:sum_by_namespace
+    expr: |
+      sum without (instance_type) (
+        metering:memory_requests:sum_by_namespace_instance_type
+      )
+
+  - record: metering:network_transmit:sum_by_namespace
+    expr: |
+      sum without (instance_type) (
+        metering:network_transmit:sum_by_namespace_instance_type
+      )
+
+  - record: metering:network_receive:sum_by_namespace
+    expr: |
+      sum without (instance_type) (
+        metering:network_receive:sum_by_namespace_instance_type
+      )
+
+   # follows a different pattern: the query for pvc-s should work even if there are no pods in the namespace
+  - record: metering:persistent_volume_claims:sum_by_namespace
+    expr: |2
+          sum by (namespace) (kube_persistentvolumeclaim_resource_requests_storage_bytes)
+        + on (namespace) group_right ()
+          _namespace_to_shoot_uid_and_date
+      or
+        _namespace_to_shoot_uid_and_date
+
+  - record: metering:persistent_volume_usage:sum_by_namespace
+    expr: |
+      sum without (instance_type) (
+        metering:persistent_volume_usage:sum_by_namespace_instance_type
+      )
