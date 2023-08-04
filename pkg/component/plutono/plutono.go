@@ -520,11 +520,6 @@ func (p *plutono) getDashboardsConfigMap(ctx context.Context, suffix string) (*c
 }
 
 func (p *plutono) getService() *corev1.Service {
-	servicePort := port
-	if p.values.IsGardenCluster {
-		servicePort = 80
-	}
-
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -536,7 +531,7 @@ func (p *plutono) getService() *corev1.Service {
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "web",
-					Port:       int32(servicePort),
+					Port:       int32(port),
 					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(port),
 				},
@@ -716,14 +711,12 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 
 func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error) {
 	var (
-		servicePort           = port
 		pathType              = networkingv1.PathTypePrefix
 		credentialsSecretName = p.values.AuthSecretName
 		caName                = v1beta1constants.SecretNameCASeed
 	)
 
 	if p.values.IsGardenCluster {
-		servicePort = 80
 		pathType = networkingv1.PathTypeImplementationSpecific
 		credentialsSecret, err := p.secretsManager.Generate(ctx, &secrets.BasicAuthSecretConfig{
 			Name:           v1beta1constants.SecretNameObservabilityIngress,
@@ -746,7 +739,8 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 			Format:         secrets.BasicAuthFormatNormal,
 			Username:       "admin",
 			PasswordLength: 32,
-		}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.InPlace),
+		}, secretsmanager.Persist(),
+			secretsmanager.Rotate(secretsmanager.InPlace),
 		)
 		if err != nil {
 			return nil, err
@@ -801,7 +795,7 @@ func (p *plutono) getIngress(ctx context.Context) (*networkingv1.Ingress, error)
 									Service: &networkingv1.IngressServiceBackend{
 										Name: name,
 										Port: networkingv1.ServiceBackendPort{
-											Number: int32(servicePort),
+											Number: int32(port),
 										},
 									},
 								},
