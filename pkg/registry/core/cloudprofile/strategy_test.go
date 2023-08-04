@@ -112,7 +112,7 @@ var _ = Describe("PrepareForCreate", func() {
 			},
 		}
 
-		cloudprofileregistry.NewStrategy().PrepareForCreate(context.TODO(), cloudProfile)
+		cloudprofileregistry.Strategy.PrepareForCreate(context.TODO(), cloudProfile)
 
 		Expect(cloudProfile.Spec.Kubernetes.Versions).To(ConsistOf(
 			MatchFields(IgnoreExtras, Fields{

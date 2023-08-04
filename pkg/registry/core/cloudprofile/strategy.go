@@ -32,11 +32,6 @@ type cloudProfileStrategy struct {
 	names.NameGenerator
 }
 
-// NewStrategy returns a new storage strategy for CloudProfiles.
-func NewStrategy() cloudProfileStrategy {
-	return cloudProfileStrategy{api.Scheme, names.SimpleNameGenerator}
-}
-
 // Strategy defines the storage strategy for CloudProfiles.
 var Strategy = cloudProfileStrategy{api.Scheme, names.SimpleNameGenerator}
 
