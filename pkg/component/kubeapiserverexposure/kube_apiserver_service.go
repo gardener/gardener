@@ -66,7 +66,7 @@ type ServiceValues struct {
 // from the outside.
 type serviceValues struct {
 	annotationsFunc             func() map[string]string
-	nameprefix                  string
+	namePrefix                  string
 	topologyAwareRoutingEnabled bool
 	runtimeKubernetesVersion    *semver.Version
 	clusterIP                   string
@@ -109,7 +109,7 @@ func NewService(
 		loadBalancerServiceKeyFunc = sniServiceKeyFunc
 
 		internalValues.annotationsFunc = values.AnnotationsFunc
-		internalValues.nameprefix = values.NamePrefix
+		internalValues.namePrefix = values.NamePrefix
 		internalValues.topologyAwareRoutingEnabled = values.TopologyAwareRoutingEnabled
 		internalValues.runtimeKubernetesVersion = values.RuntimeKubernetesVersion
 	}
@@ -228,7 +228,7 @@ func (s *service) WaitCleanup(ctx context.Context) error {
 }
 
 func (s *service) emptyService() *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: s.values.nameprefix + v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.namespace}}
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: s.values.namePrefix + v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.namespace}}
 }
 
 func getLabels() map[string]string {
