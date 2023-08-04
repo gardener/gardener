@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
+	"k8s.io/utils/pointer"
 )
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {
@@ -136,6 +137,9 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 	if obj.Controllers.ShootMaintenance.ConcurrentSyncs == nil {
 		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.ShootMaintenance.ConcurrentSyncs = &v
+	}
+	if obj.Controllers.ShootMaintenance.EnableShootControlPlaneRestarter == nil {
+		obj.Controllers.ShootMaintenance.EnableShootControlPlaneRestarter = pointer.Bool(true)
 	}
 
 	if obj.Controllers.ShootQuota == nil {
