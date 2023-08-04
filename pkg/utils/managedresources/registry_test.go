@@ -41,13 +41,35 @@ var _ = Describe("Registry", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "secret:name",
 				Namespace: "foo",
+				Annotations: map[string]string{
+					"one":      "two",
+					"foo":      "bar",
+					"a":        "b",
+					"foo/bar1": "bar-foo",
+				},
+				Labels: map[string]string{
+					"foo/bar1": "bar-foo",
+					"a":        "b",
+					"one":      "two",
+					"foo":      "bar",
+				},
 			},
 		}
 		secretFilename   = "secret__" + secret.Namespace + "__secret_name.yaml"
 		secretSerialized = []byte(`apiVersion: v1
 kind: Secret
 metadata:
+  annotations:
+    a: b
+    foo: bar
+    foo/bar1: bar-foo
+    one: two
   creationTimestamp: null
+  labels:
+    a: b
+    foo: bar
+    foo/bar1: bar-foo
+    one: two
   name: ` + secret.Name + `
   namespace: ` + secret.Namespace + `
 `)
