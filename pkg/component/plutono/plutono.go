@@ -146,13 +146,13 @@ type plutono struct {
 }
 
 func (p *plutono) Deploy(ctx context.Context) error {
-	dashboardConfigMap, data, err := p.computeResourcesData(ctx)
+	dashboardConfigMaps, data, err := p.computeResourcesData(ctx)
 	if err != nil {
 		return err
 	}
 
 	// dashboards configmap is not deployed as part of MR because it can breach the secret size limit.
-	for _, configMap := range dashboardConfigMap {
+	for _, configMap := range dashboardConfigMaps {
 		if configMap != nil {
 			if _, err = controllerutils.GetAndCreateOrMergePatch(ctx, p.client, configMap, func() error {
 				metav1.SetMetaDataLabel(&configMap.ObjectMeta, "component", name)
@@ -577,7 +577,16 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap, dashboar
 							Name:            name,
 							Image:           p.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
-							Env:             p.getEnvVar(),
+							Env: []corev1.EnvVar{
+								{Name: "PL_AUTH_ANONYMOUS_ENABLED", Value: "true"},
+								{Name: "PL_USERS_VIEWERS_CAN_EDIT", Value: "true"},
+								{Name: "PL_DATE_FORMATS_DEFAULT_TIMEZONE", Value: "UTC"},
+								{Name: "PL_AUTH_BASIC_ENABLED", Value: "false"},
+								{Name: "PL_AUTH_DISABLE_LOGIN_FORM", Value: "true"},
+								{Name: "PL_AUTH_DISABLE_SIGNOUT_MENU", Value: "true"},
+								{Name: "PL_ALERTING_ENABLED", Value: "false"},
+								{Name: "PL_SNAPSHOTS_EXTERNAL_ENABLED", Value: "false"},
+							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "plutono-datasources",
@@ -866,41 +875,4 @@ func (p *plutono) getPodLabels() map[string]string {
 	}
 
 	return labels
-}
-
-func (p *plutono) getEnvVar() []corev1.EnvVar {
-	envVar := []corev1.EnvVar{
-		{Name: "PL_AUTH_ANONYMOUS_ENABLED", Value: "true"},
-		{Name: "PL_USERS_VIEWERS_CAN_EDIT", Value: "true"},
-		{Name: "PL_DATE_FORMATS_DEFAULT_TIMEZONE", Value: "UTC"},
-	}
-
-	if p.values.IsGardenCluster {
-		envVar = append(envVar,
-			corev1.EnvVar{Name: "PL_AUTH_BASIC_ENABLED", Value: "false"},
-			corev1.EnvVar{Name: "PL_AUTH_DISABLE_LOGIN_FORM", Value: "false"},
-		)
-
-		return envVar
-	}
-
-	envVar = append(envVar,
-		corev1.EnvVar{Name: "PL_ALERTING_ENABLED", Value: "false"},
-		corev1.EnvVar{Name: "PL_SNAPSHOTS_EXTERNAL_ENABLED", Value: "false"},
-	)
-
-	if p.values.ClusterType == component.ClusterTypeSeed {
-		envVar = append(envVar,
-			corev1.EnvVar{Name: "PL_AUTH_BASIC_ENABLED", Value: "true"},
-			corev1.EnvVar{Name: "PL_AUTH_DISABLE_LOGIN_FORM", Value: "false"},
-		)
-	} else if p.values.ClusterType == component.ClusterTypeShoot {
-		envVar = append(envVar,
-			corev1.EnvVar{Name: "PL_AUTH_BASIC_ENABLED", Value: "false"},
-			corev1.EnvVar{Name: "PL_AUTH_DISABLE_LOGIN_FORM", Value: "true"},
-			corev1.EnvVar{Name: "PL_AUTH_DISABLE_SIGNOUT_MENU", Value: "true"},
-		)
-	}
-
-	return envVar
 }

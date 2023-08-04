@@ -296,7 +296,16 @@ metadata:
 										Name:            "plutono",
 										Image:           values.Image,
 										ImagePullPolicy: corev1.PullIfNotPresent,
-										Env:             getEnvVar(values),
+										Env: []corev1.EnvVar{
+											{Name: "PL_AUTH_ANONYMOUS_ENABLED", Value: "true"},
+											{Name: "PL_USERS_VIEWERS_CAN_EDIT", Value: "true"},
+											{Name: "PL_DATE_FORMATS_DEFAULT_TIMEZONE", Value: "UTC"},
+											{Name: "PL_AUTH_BASIC_ENABLED", Value: "false"},
+											{Name: "PL_AUTH_DISABLE_LOGIN_FORM", Value: "true"},
+											{Name: "PL_AUTH_DISABLE_SIGNOUT_MENU", Value: "true"},
+											{Name: "PL_ALERTING_ENABLED", Value: "false"},
+											{Name: "PL_SNAPSHOTS_EXTERNAL_ENABLED", Value: "false"},
+										},
 										VolumeMounts: []corev1.VolumeMount{
 											{
 												Name:      "plutono-datasources",
@@ -600,13 +609,13 @@ status:
 					It("should succesfully deploy all resources", func() {
 						Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-5be2bcda.yaml"])).To(Equal(providerConfigMapYAMLFor(values)))
 						Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-ff212e8b.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
-						testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: "plutono-dashboards-garden-3d3134e9"}, 14)
+						testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: "plutono-dashboards-garden-bd4c6ab7"}, 14)
 						testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: "plutono-dashboards-global-c4e871d6"}, 7)
 						Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values)))
 						Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values)))
 						managedResourceDeployment, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["deployment__some-namespace__plutono.yaml"], nil, &appsv1.Deployment{})
 						Expect(err).ToNot(HaveOccurred())
-						deployment := deploymentYAMLFor(values, []string{"plutono-dashboards-garden-3d3134e9", "plutono-dashboards-global-c4e871d6"})
+						deployment := deploymentYAMLFor(values, []string{"plutono-dashboards-garden-bd4c6ab7", "plutono-dashboards-global-c4e871d6"})
 						utilruntime.Must(references.InjectAnnotations(deployment))
 						Expect(deployment).To(DeepEqual(managedResourceDeployment))
 					})
@@ -620,13 +629,13 @@ status:
 					It("should succesfully deploy all resources", func() {
 						Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-5be2bcda.yaml"])).To(Equal(providerConfigMapYAMLFor(values)))
 						Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-ff212e8b.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
-						testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: "plutono-dashboards-garden-9304987a"}, 15)
+						testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: "plutono-dashboards-garden-d1aea73a"}, 15)
 						testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: "plutono-dashboards-global-c4e871d6"}, 7)
 						Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values)))
 						Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values)))
 						managedResourceDeployment, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["deployment__some-namespace__plutono.yaml"], nil, &appsv1.Deployment{})
 						Expect(err).ToNot(HaveOccurred())
-						deployment := deploymentYAMLFor(values, []string{"plutono-dashboards-garden-9304987a", "plutono-dashboards-global-c4e871d6"})
+						deployment := deploymentYAMLFor(values, []string{"plutono-dashboards-garden-d1aea73a", "plutono-dashboards-global-c4e871d6"})
 						utilruntime.Must(references.InjectAnnotations(deployment))
 						Expect(deployment).To(DeepEqual(managedResourceDeployment))
 					})
@@ -643,12 +652,12 @@ status:
 			It("should succesfully deploy all resources", func() {
 				Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-29d306e7.yaml"])).To(Equal(providerConfigMapYAMLFor(values)))
 				Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-0fd41775.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
-				testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: "plutono-dashboards-c548cc7b"}, 33)
+				testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: "plutono-dashboards-71092588"}, 33)
 				Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values)))
 				Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values)))
 				managedResourceDeployment, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["deployment__some-namespace__plutono.yaml"], nil, &appsv1.Deployment{})
 				Expect(err).ToNot(HaveOccurred())
-				deployment := deploymentYAMLFor(values, []string{"plutono-dashboards-c548cc7b"})
+				deployment := deploymentYAMLFor(values, []string{"plutono-dashboards-71092588"})
 				utilruntime.Must(references.InjectAnnotations(deployment))
 				Expect(deployment).To(DeepEqual(managedResourceDeployment))
 			})
@@ -665,12 +674,12 @@ status:
 				It("should succesfully deploy all resources", func() {
 					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-29d306e7.yaml"])).To(Equal(providerConfigMapYAMLFor(values)))
 					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-0fd41775.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
-					testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: "plutono-dashboards-048afa48"}, 38)
+					testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: "plutono-dashboards-4bdb8e0c"}, 38)
 					Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values)))
 					Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values)))
 					managedResourceDeployment, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["deployment__some-namespace__plutono.yaml"], nil, &appsv1.Deployment{})
 					Expect(err).ToNot(HaveOccurred())
-					deployment := deploymentYAMLFor(values, []string{"plutono-dashboards-048afa48"})
+					deployment := deploymentYAMLFor(values, []string{"plutono-dashboards-4bdb8e0c"})
 					utilruntime.Must(references.InjectAnnotations(deployment))
 					Expect(deployment).To(DeepEqual(managedResourceDeployment))
 				})
@@ -684,12 +693,12 @@ status:
 				It("should succesfully deploy all resources", func() {
 					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-29d306e7.yaml"])).To(Equal(providerConfigMapYAMLFor(values)))
 					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-0fd41775.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
-					testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: "plutono-dashboards-8e8a4d87"}, 27)
+					testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: "plutono-dashboards-bc6281a9"}, 27)
 					Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values)))
 					Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values)))
 					managedResourceDeployment, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["deployment__some-namespace__plutono.yaml"], nil, &appsv1.Deployment{})
 					Expect(err).ToNot(HaveOccurred())
-					deployment := deploymentYAMLFor(values, []string{"plutono-dashboards-8e8a4d87"})
+					deployment := deploymentYAMLFor(values, []string{"plutono-dashboards-bc6281a9"})
 					utilruntime.Must(references.InjectAnnotations(deployment))
 					Expect(deployment).To(DeepEqual(managedResourceDeployment))
 				})
@@ -851,41 +860,4 @@ func getPodLabels(values Values) map[string]string {
 	}
 
 	return labels
-}
-
-func getEnvVar(values Values) []corev1.EnvVar {
-	envVar := []corev1.EnvVar{
-		{Name: "PL_AUTH_ANONYMOUS_ENABLED", Value: "true"},
-		{Name: "PL_USERS_VIEWERS_CAN_EDIT", Value: "true"},
-		{Name: "PL_DATE_FORMATS_DEFAULT_TIMEZONE", Value: "UTC"},
-	}
-
-	if values.IsGardenCluster {
-		envVar = append(envVar,
-			corev1.EnvVar{Name: "PL_AUTH_BASIC_ENABLED", Value: "false"},
-			corev1.EnvVar{Name: "PL_AUTH_DISABLE_LOGIN_FORM", Value: "false"},
-		)
-
-		return envVar
-	}
-
-	envVar = append(envVar,
-		corev1.EnvVar{Name: "PL_ALERTING_ENABLED", Value: "false"},
-		corev1.EnvVar{Name: "PL_SNAPSHOTS_EXTERNAL_ENABLED", Value: "false"},
-	)
-
-	if values.ClusterType == comp.ClusterTypeSeed {
-		envVar = append(envVar,
-			corev1.EnvVar{Name: "PL_AUTH_BASIC_ENABLED", Value: "true"},
-			corev1.EnvVar{Name: "PL_AUTH_DISABLE_LOGIN_FORM", Value: "false"},
-		)
-	} else if values.ClusterType == comp.ClusterTypeShoot {
-		envVar = append(envVar,
-			corev1.EnvVar{Name: "PL_AUTH_BASIC_ENABLED", Value: "false"},
-			corev1.EnvVar{Name: "PL_AUTH_DISABLE_LOGIN_FORM", Value: "true"},
-			corev1.EnvVar{Name: "PL_AUTH_DISABLE_SIGNOUT_MENU", Value: "true"},
-		)
-	}
-
-	return envVar
 }
