@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/utils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -48,7 +49,9 @@ var _ = Describe("#Service", func() {
 		clusterIP        string
 		clusterIPFunc    func(string)
 		ingressIPFunc    func(string)
-		serviceObjKey    client.ObjectKey
+		namePrefix       string
+		namespace        string
+		expectedName     string
 		sniServiceObjKey client.ObjectKey
 	)
 
@@ -62,7 +65,9 @@ var _ = Describe("#Service", func() {
 
 		ingressIP = ""
 		clusterIP = ""
-		serviceObjKey = client.ObjectKey{Name: "test-deploy", Namespace: "test-namespace"}
+		namePrefix = "test-"
+		namespace = "test-namespace"
+		expectedName = "test-kube-apiserver"
 		sniServiceObjKey = client.ObjectKey{Name: "foo", Namespace: "bar"}
 		clusterIPFunc = func(c string) { clusterIP = c }
 		ingressIPFunc = func(c string) { ingressIP = c }
@@ -73,8 +78,8 @@ var _ = Describe("#Service", func() {
 				Kind:       "Service",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      serviceObjKey.Name,
-				Namespace: serviceObjKey.Namespace,
+				Name:      expectedName,
+				Namespace: namespace,
 				Labels: map[string]string{
 					"app":                                    "kubernetes",
 					"role":                                   "apiserver",
@@ -119,10 +124,11 @@ var _ = Describe("#Service", func() {
 		defaultDepWaiter = NewService(
 			log,
 			c,
+			namespace,
 			&ServiceValues{
 				AnnotationsFunc: func() map[string]string { return map[string]string{"foo": "bar"} },
+				NamePrefix:      namePrefix,
 			},
-			func() client.ObjectKey { return serviceObjKey },
 			func() client.ObjectKey { return sniServiceObjKey },
 			&retryfake.Ops{MaxAttempts: 1},
 			clusterIPFunc,
@@ -131,12 +137,12 @@ var _ = Describe("#Service", func() {
 		)
 	})
 
-	var assertEnabledSNI = func() {
+	var assertService = func() {
 		It("deploys service", func() {
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 			actual := &corev1.Service{}
-			Expect(c.Get(ctx, serviceObjKey, actual)).To(Succeed())
+			Expect(c.Get(ctx, kubernetesutils.Key(namespace, expectedName), actual)).To(Succeed())
 
 			Expect(actual).To(DeepEqual(expected))
 			Expect(clusterIP).To(Equal("1.1.1.1"))
@@ -152,18 +158,18 @@ var _ = Describe("#Service", func() {
 		It("deletes service", func() {
 			Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
 
-			Expect(c.Get(ctx, serviceObjKey, &corev1.Service{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, kubernetesutils.Key(namespace, expectedName), &corev1.Service{})).To(BeNotFoundError())
 		})
 
 		It("waits for deletion service", func() {
 			Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
 			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(Succeed())
 
-			Expect(c.Get(ctx, serviceObjKey, &corev1.Service{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, kubernetesutils.Key(namespace, expectedName), &corev1.Service{})).To(BeNotFoundError())
 		})
 	}
 
-	Context("SNI enabled", func() {
+	Context("when service is not in shoot namespace", func() {
 		BeforeEach(func() {
 			expected.Annotations = utils.MergeStringMaps(map[string]string{
 				"foo":                          "bar",
@@ -171,14 +177,13 @@ var _ = Describe("#Service", func() {
 			}, netpolAnnotations())
 		})
 
-		assertEnabledSNI()
+		assertService()
 	})
 
 	Context("when service is designed for shoots", func() {
 		BeforeEach(func() {
-			namespace := "shoot-" + expected.Namespace
+			namespace = "shoot-" + expected.Namespace
 
-			serviceObjKey = client.ObjectKey{Name: serviceObjKey.Name, Namespace: namespace}
 			expected.Annotations = utils.MergeStringMaps(map[string]string{
 				"foo":                          "bar",
 				"networking.istio.io/exportTo": "*",
@@ -186,7 +191,7 @@ var _ = Describe("#Service", func() {
 			expected.Namespace = namespace
 		})
 
-		assertEnabledSNI()
+		assertService()
 	})
 
 	Describe("#Deploy", func() {
@@ -195,12 +200,13 @@ var _ = Describe("#Service", func() {
 				defaultDepWaiter = NewService(
 					log,
 					c,
+					namespace,
 					&ServiceValues{
 						AnnotationsFunc:             func() map[string]string { return map[string]string{"foo": "bar"} },
+						NamePrefix:                  namePrefix,
 						TopologyAwareRoutingEnabled: true,
 						RuntimeKubernetesVersion:    semver.MustParse("1.26.1"),
 					},
-					func() client.ObjectKey { return serviceObjKey },
 					func() client.ObjectKey { return sniServiceObjKey },
 					&retryfake.Ops{MaxAttempts: 1},
 					clusterIPFunc,
@@ -211,13 +217,12 @@ var _ = Describe("#Service", func() {
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 				actual := &corev1.Service{}
-				Expect(c.Get(ctx, serviceObjKey, actual)).To(Succeed())
+				Expect(c.Get(ctx, kubernetesutils.Key(namespace, expectedName), actual)).To(Succeed())
 
 				expected.Annotations = map[string]string{
 					"foo":                          "bar",
 					"networking.istio.io/exportTo": "*",
 					"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":443}]`,
-					"networking.resources.gardener.cloud/from-world-to-ports":                   `[{"protocol":"TCP","port":443}]`,
 					"networking.resources.gardener.cloud/namespace-selectors":                   `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchLabels":{"networking.gardener.cloud/access-target-apiserver":"allowed"}}]`,
 					"service.kubernetes.io/topology-aware-hints":                                "auto",
 				}
@@ -239,10 +244,11 @@ var _ = Describe("#Service", func() {
 				defaultDepWaiter = NewService(
 					log,
 					c,
+					namespace,
 					&ServiceValues{
 						AnnotationsFunc: func() map[string]string { return nil },
+						NamePrefix:      namePrefix,
 					},
-					func() client.ObjectKey { return serviceObjKey },
 					func() client.ObjectKey { return sniServiceObjKey },
 					&retryfake.Ops{MaxAttempts: 1},
 					clusterIPFunc,
@@ -256,7 +262,7 @@ var _ = Describe("#Service", func() {
 					Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 					actual := &corev1.Service{}
-					Expect(c.Get(ctx, serviceObjKey, actual)).To(Succeed())
+					Expect(c.Get(ctx, kubernetesutils.Key(namespace, expectedName), actual)).To(Succeed())
 
 					Expect(actual.Spec.ClusterIP).To(Equal(expected.Spec.ClusterIP))
 				})
@@ -271,7 +277,7 @@ var _ = Describe("#Service", func() {
 					Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 					actual := &corev1.Service{}
-					Expect(c.Get(ctx, serviceObjKey, actual)).To(Succeed())
+					Expect(c.Get(ctx, kubernetesutils.Key(namespace, expectedName), actual)).To(Succeed())
 
 					Expect(actual.Spec.ClusterIP).To(Equal(clusterIP))
 				})
@@ -283,7 +289,6 @@ var _ = Describe("#Service", func() {
 func netpolAnnotations() map[string]string {
 	return map[string]string{
 		"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":443}]`,
-		"networking.resources.gardener.cloud/from-world-to-ports":                   `[{"protocol":"TCP","port":443}]`,
 		"networking.resources.gardener.cloud/namespace-selectors":                   `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchLabels":{"networking.gardener.cloud/access-target-apiserver":"allowed"}}]`,
 	}
 }
@@ -291,7 +296,6 @@ func netpolAnnotations() map[string]string {
 func shootNetpolAnnotations() map[string]string {
 	return map[string]string{
 		"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":443}]`,
-		"networking.resources.gardener.cloud/from-world-to-ports":                   `[{"protocol":"TCP","port":443}]`,
 		"networking.resources.gardener.cloud/namespace-selectors":                   `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchLabels":{"networking.gardener.cloud/access-target-apiserver":"allowed"}},{"matchLabels":{"kubernetes.io/metadata.name":"garden"}},{"matchExpressions":[{"key":"handler.exposureclass.gardener.cloud/name","operator":"Exists"}]},{"matchLabels":{"gardener.cloud/role":"extension"}}]`,
 		"networking.resources.gardener.cloud/pod-label-selector-namespace-alias":    "all-shoots",
 	}

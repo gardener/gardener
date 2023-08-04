@@ -31,13 +31,11 @@ func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
 	return kubeapiserverexposure.NewService(
 		b.Logger,
 		b.SeedClientSet.Client(),
+		b.Shoot.SeedNamespace,
 		&kubeapiserverexposure.ServiceValues{
 			AnnotationsFunc:             func() map[string]string { return b.IstioLoadBalancerAnnotations() },
 			TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled,
 			RuntimeKubernetesVersion:    b.Seed.KubernetesVersion,
-		},
-		func() client.ObjectKey {
-			return client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}
 		},
 		func() client.ObjectKey {
 			return client.ObjectKey{Name: b.IstioServiceName(), Namespace: b.IstioNamespace()}
