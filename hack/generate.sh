@@ -83,8 +83,7 @@ run_target() {
       $REPO_ROOT/hack/generate-monitoring-docs.sh
       ;;
     *)
-      echo "Unknown target: $target. Available targets are 'protobuf', 'codegen', 'manifests', 'logcheck', 'gomegacheck', 'monitoring-docs'."
-      echo ""
+      printf "Unknown target: $target. Available targets are 'protobuf', 'codegen', 'manifests', 'logcheck', 'gomegacheck', 'monitoring-docs'.\n\n"
       ;;
   esac
 }
