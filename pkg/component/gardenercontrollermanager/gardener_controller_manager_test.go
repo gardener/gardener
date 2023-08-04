@@ -272,7 +272,7 @@ var _ = Describe("GardenerControllerManager", func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
 
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntime), managedResourceRuntime)).To(Succeed())
-				Expect(managedResourceRuntime).To(Equal(&resourcesv1alpha1.ManagedResource{
+				expectedRuntimeMr := &resourcesv1alpha1.ManagedResource{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
 						Kind:       "ManagedResource",
@@ -286,16 +286,19 @@ var _ = Describe("GardenerControllerManager", func() {
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						Class:       pointer.String("seed"),
-						SecretRefs:  []corev1.LocalObjectReference{{Name: managedResourceSecretRuntime.Name}},
+						SecretRefs:  []corev1.LocalObjectReference{{Name: managedResourceRuntime.Spec.SecretRefs[0].Name}},
 						KeepObjects: pointer.Bool(false),
 					},
 					Status: healthyManagedResourceStatus,
-				}))
+				}
+				utilruntime.Must(references.InjectAnnotations(expectedRuntimeMr))
+				Expect(managedResourceRuntime).To(Equal(expectedRuntimeMr))
 
+				managedResourceSecretRuntime.Name = managedResourceRuntime.Spec.SecretRefs[0].Name
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretRuntime), managedResourceSecretRuntime)).To(Succeed())
 
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceVirtual), managedResourceVirtual)).To(Succeed())
-				Expect(managedResourceVirtual).To(Equal(&resourcesv1alpha1.ManagedResource{
+				expectedVirtualMr := &resourcesv1alpha1.ManagedResource{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
 						Kind:       "ManagedResource",
@@ -309,26 +312,33 @@ var _ = Describe("GardenerControllerManager", func() {
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceSecretVirtual.Name}},
+						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceVirtual.Spec.SecretRefs[0].Name}},
 						KeepObjects:  pointer.Bool(false),
 					},
 					Status: healthyManagedResourceStatus,
-				}))
+				}
+				utilruntime.Must(references.InjectAnnotations(expectedVirtualMr))
+				Expect(managedResourceVirtual).To(Equal(expectedVirtualMr))
 
+				managedResourceSecretVirtual.Name = expectedVirtualMr.Spec.SecretRefs[0].Name
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
 
 				Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecretRuntime.Data).To(HaveLen(5))
-				Expect(string(managedResourceSecretRuntime.Data["configmap__some-namespace__gardener-controller-manager-config-7eb74c5d.yaml"])).To(Equal(configMap(namespace, values)))
+				Expect(string(managedResourceSecretRuntime.Data["configmap__some-namespace__gardener-controller-manager-config-cff08f20.yaml"])).To(Equal(configMap(namespace, values)))
 				Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-controller-manager.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudget)))
 				Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-controller-manager.yaml"])).To(Equal(componenttest.Serialize(serviceRuntime)))
 				Expect(string(managedResourceSecretRuntime.Data["verticalpodautoscaler__some-namespace__gardener-controller-manager-vpa.yaml"])).To(Equal(componenttest.Serialize(vpa)))
-				Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-controller-manager.yaml"])).To(Equal(deployment(namespace, "gardener-controller-manager-config-7eb74c5d", values)))
+				Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-controller-manager.yaml"])).To(Equal(deployment(namespace, "gardener-controller-manager-config-cff08f20", values)))
+				Expect(managedResourceSecretRuntime.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				Expect(managedResourceSecretVirtual.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecretVirtual.Data).To(HaveLen(2))
 				Expect(string(managedResourceSecretVirtual.Data["clusterrole____gardener.cloud_system_controller-manager.yaml"])).To(Equal(componenttest.Serialize(clusterRole)))
 				Expect(string(managedResourceSecretVirtual.Data["clusterrolebinding____gardener.cloud_system_controller-manager.yaml"])).To(Equal(componenttest.Serialize(clusterRoleBinding)))
+				Expect(managedResourceSecretVirtual.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecretVirtual.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 			})
 		})
 
@@ -659,9 +669,6 @@ func configMap(namespace string, testValues Values) string {
 			Kubeconfig: gardenerutils.PathGenericKubeconfig,
 		},
 		Controllers: controllermanagerv1alpha1.ControllerManagerControllerConfiguration{
-			CertificateSigningRequest: &controllermanagerv1alpha1.CertificateSigningRequestControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(5),
-			},
 			ControllerRegistration: &controllermanagerv1alpha1.ControllerRegistrationControllerConfiguration{
 				ConcurrentSyncs: pointer.Int(20),
 			},
@@ -674,21 +681,15 @@ func configMap(namespace string, testValues Values) string {
 			},
 			Seed: &controllermanagerv1alpha1.SeedControllerConfiguration{
 				ConcurrentSyncs:    pointer.Int(20),
-				SyncPeriod:         &metav1.Duration{Duration: 10 * time.Second},
-				MonitorPeriod:      &metav1.Duration{Duration: 40 * time.Second},
 				ShootMonitorPeriod: &metav1.Duration{Duration: 300 * time.Second},
 			},
 			SeedExtensionsCheck: &controllermanagerv1alpha1.SeedExtensionsCheckControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(5),
-				SyncPeriod:      &metav1.Duration{Duration: 30 * time.Second},
 				ConditionThresholds: []controllermanagerv1alpha1.ConditionThreshold{{
 					Duration: metav1.Duration{Duration: 1 * time.Minute},
 					Type:     "ExtensionsReady",
 				}},
 			},
 			SeedBackupBucketsCheck: &controllermanagerv1alpha1.SeedBackupBucketsCheckControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(5),
-				SyncPeriod:      &metav1.Duration{Duration: 30 * time.Second},
 				ConditionThresholds: []controllermanagerv1alpha1.ConditionThreshold{{
 					Duration: metav1.Duration{Duration: 1 * time.Minute},
 					Type:     "BackupBucketsReady",
@@ -699,31 +700,10 @@ func configMap(namespace string, testValues Values) string {
 				TTLNonShootEvents: &metav1.Duration{Duration: 2 * time.Hour},
 			},
 			ShootMaintenance: controllermanagerv1alpha1.ShootMaintenanceControllerConfiguration{
-				ConcurrentSyncs:                  pointer.Int(20),
-				EnableShootControlPlaneRestarter: pointer.Bool(true),
-			},
-			ShootQuota: &controllermanagerv1alpha1.ShootQuotaControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(5),
-				SyncPeriod:      &metav1.Duration{Duration: 60 * time.Minute},
-			},
-			ShootHibernation: controllermanagerv1alpha1.ShootHibernationControllerConfiguration{
-				ConcurrentSyncs:         pointer.Int(5),
-				TriggerDeadlineDuration: &metav1.Duration{Duration: 2 * time.Hour},
+				ConcurrentSyncs: pointer.Int(20),
 			},
 			ShootReference: &controllermanagerv1alpha1.ShootReferenceControllerConfiguration{
 				ConcurrentSyncs: pointer.Int(20),
-			},
-			ShootRetry: &controllermanagerv1alpha1.ShootRetryControllerConfiguration{
-				ConcurrentSyncs:   pointer.Int(5),
-				RetryPeriod:       &metav1.Duration{Duration: 10 * time.Minute},
-				RetryJitterPeriod: &metav1.Duration{Duration: 5 * time.Minute},
-			},
-			ManagedSeedSet: &controllermanagerv1alpha1.ManagedSeedSetControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(5),
-				SyncPeriod:      metav1.Duration{Duration: 30 * time.Minute},
-			},
-			ExposureClass: &controllermanagerv1alpha1.ExposureClassControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(5),
 			},
 		},
 		LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{

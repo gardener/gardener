@@ -66,9 +66,6 @@ func (g *gardenerControllerManager) configMapControllerManagerConfig() (*corev1.
 			Kubeconfig: gardenerutils.PathGenericKubeconfig,
 		},
 		Controllers: controllermanagerv1alpha1.ControllerManagerControllerConfiguration{
-			CertificateSigningRequest: &controllermanagerv1alpha1.CertificateSigningRequestControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(5),
-			},
 			ControllerRegistration: &controllermanagerv1alpha1.ControllerRegistrationControllerConfiguration{
 				ConcurrentSyncs: pointer.Int(20),
 			},
@@ -81,21 +78,15 @@ func (g *gardenerControllerManager) configMapControllerManagerConfig() (*corev1.
 			},
 			Seed: &controllermanagerv1alpha1.SeedControllerConfiguration{
 				ConcurrentSyncs:    pointer.Int(20),
-				SyncPeriod:         &metav1.Duration{Duration: 10 * time.Second},
-				MonitorPeriod:      &metav1.Duration{Duration: 40 * time.Second},
 				ShootMonitorPeriod: &metav1.Duration{Duration: 300 * time.Second},
 			},
 			SeedExtensionsCheck: &controllermanagerv1alpha1.SeedExtensionsCheckControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(5),
-				SyncPeriod:      &metav1.Duration{Duration: 30 * time.Second},
 				ConditionThresholds: []controllermanagerv1alpha1.ConditionThreshold{{
 					Duration: metav1.Duration{Duration: 1 * time.Minute},
 					Type:     "ExtensionsReady",
 				}},
 			},
 			SeedBackupBucketsCheck: &controllermanagerv1alpha1.SeedBackupBucketsCheckControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(5),
-				SyncPeriod:      &metav1.Duration{Duration: 30 * time.Second},
 				ConditionThresholds: []controllermanagerv1alpha1.ConditionThreshold{{
 					Duration: metav1.Duration{Duration: 1 * time.Minute},
 					Type:     "BackupBucketsReady",
@@ -106,31 +97,10 @@ func (g *gardenerControllerManager) configMapControllerManagerConfig() (*corev1.
 				TTLNonShootEvents: &metav1.Duration{Duration: 2 * time.Hour},
 			},
 			ShootMaintenance: controllermanagerv1alpha1.ShootMaintenanceControllerConfiguration{
-				ConcurrentSyncs:                  pointer.Int(20),
-				EnableShootControlPlaneRestarter: pointer.Bool(true),
-			},
-			ShootQuota: &controllermanagerv1alpha1.ShootQuotaControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(5),
-				SyncPeriod:      &metav1.Duration{Duration: 60 * time.Minute},
-			},
-			ShootHibernation: controllermanagerv1alpha1.ShootHibernationControllerConfiguration{
-				ConcurrentSyncs:         pointer.Int(5),
-				TriggerDeadlineDuration: &metav1.Duration{Duration: 2 * time.Hour},
+				ConcurrentSyncs: pointer.Int(20),
 			},
 			ShootReference: &controllermanagerv1alpha1.ShootReferenceControllerConfiguration{
 				ConcurrentSyncs: pointer.Int(20),
-			},
-			ShootRetry: &controllermanagerv1alpha1.ShootRetryControllerConfiguration{
-				ConcurrentSyncs:   pointer.Int(5),
-				RetryPeriod:       &metav1.Duration{Duration: 10 * time.Minute},
-				RetryJitterPeriod: &metav1.Duration{Duration: 5 * time.Minute},
-			},
-			ManagedSeedSet: &controllermanagerv1alpha1.ManagedSeedSetControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(5),
-				SyncPeriod:      metav1.Duration{Duration: 30 * time.Minute},
-			},
-			ExposureClass: &controllermanagerv1alpha1.ExposureClassControllerConfiguration{
-				ConcurrentSyncs: pointer.Int(5),
 			},
 		},
 		LeaderElection: &componentbaseconfigv1alpha1.LeaderElectionConfiguration{

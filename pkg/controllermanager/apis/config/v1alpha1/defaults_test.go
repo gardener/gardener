@@ -85,6 +85,8 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.Controllers.ShootMaintenance.ConcurrentSyncs).NotTo(BeNil())
 			Expect(obj.Controllers.ShootMaintenance.ConcurrentSyncs).To(PointTo(Equal(5)))
+			Expect(obj.Controllers.ShootMaintenance.EnableShootControlPlaneRestarter).NotTo(BeNil())
+			Expect(obj.Controllers.ShootMaintenance.EnableShootControlPlaneRestarter).To(PointTo(Equal(true)))
 
 			Expect(obj.Controllers.ShootQuota).NotTo(BeNil())
 			Expect(obj.Controllers.ShootQuota.ConcurrentSyncs).NotTo(BeNil())
