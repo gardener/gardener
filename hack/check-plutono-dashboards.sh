@@ -22,4 +22,16 @@ set -o pipefail
 echo "> Checking Plutono dashboards"
 
 
-go run "$(dirname "$0")/tools/plutonodashboardcheck"
+function check_dashboards {
+  while IFS= read -r file
+  do 
+    jq -c -r '{title: (.title // error("title is not set")),
+               uid:   (.uid   // error("uid is not set"))}
+              | "\(input_filename) \(.uid)"' "$file" \
+    || { echo "Error: Failure while parsing dashboard: $file" >&2; return 1; }
+  done < <(find . -path '*/dashboards/*' -name '*.json' -type f) \
+  | sort -k 2 | uniq -D -f 1 \
+  | { grep . && echo "Error: dashboards with duplicate UIDs" >&2 && return 1 || return 0; }
+}
+
+check_dashboards
