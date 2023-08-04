@@ -36,6 +36,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -73,11 +74,11 @@ func (g *gardenSystem) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, g.client, g.namespace, ManagedResourceName, false, data)
+	return managedresources.CreateForShoot(ctx, g.client, g.namespace, ManagedResourceName, managedresources.LabelValueGardener, false, data)
 }
 
 func (g *gardenSystem) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, g.client, g.namespace, ManagedResourceName)
+	return managedresources.DeleteForShoot(ctx, g.client, g.namespace, ManagedResourceName)
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -104,8 +105,9 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 
 		namespaceGarden = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   v1beta1constants.GardenNamespace,
-				Labels: map[string]string{v1beta1constants.LabelApp: v1beta1constants.LabelGardener},
+				Name:        v1beta1constants.GardenNamespace,
+				Labels:      map[string]string{v1beta1constants.LabelApp: v1beta1constants.LabelGardener},
+				Annotations: map[string]string{resourcesv1alpha1.KeepObject: "true"},
 			},
 		}
 		clusterRoleSeedBootstrapper = &rbacv1.ClusterRole{
