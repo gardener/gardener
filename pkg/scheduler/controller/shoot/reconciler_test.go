@@ -84,11 +84,8 @@ var _ = Describe("Scheduler_Control", func() {
 						Type:   gardencorev1beta1.SeedGardenletReady,
 						Status: gardencorev1beta1.ConditionTrue,
 					},
-					{
-						Type:   gardencorev1beta1.SeedBootstrapped,
-						Status: gardencorev1beta1.ConditionTrue,
-					},
 				},
+				LastOperation: &gardencorev1beta1.LastOperation{},
 			},
 		}
 		shootBase = gardencorev1beta1.Shoot{
@@ -204,7 +201,7 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(bestSeed.Name).To(Equal(secondSeed.Name))
 		})
 
-		//// FAIL
+		// FAIL
 
 		It("should fail because it cannot find a seed cluster 1) 'Same Region' seed determination strategy 2) region that no seed supports", func() {
 			shoot.Spec.Region = "another-region"
@@ -786,10 +783,6 @@ var _ = Describe("Scheduler_Control", func() {
 					Type:   gardencorev1beta1.SeedGardenletReady,
 					Status: gardencorev1beta1.ConditionFalse,
 				},
-				{
-					Type:   gardencorev1beta1.SeedBootstrapped,
-					Status: gardencorev1beta1.ConditionTrue,
-				},
 			}
 
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
@@ -800,17 +793,8 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(bestSeed).To(BeNil())
 		})
 
-		It("should fail because it cannot find a seed cluster due to not bootstrapped", func() {
-			seed.Status.Conditions = []gardencorev1beta1.Condition{
-				{
-					Type:   gardencorev1beta1.SeedGardenletReady,
-					Status: gardencorev1beta1.ConditionTrue,
-				},
-				{
-					Type:   gardencorev1beta1.SeedBootstrapped,
-					Status: gardencorev1beta1.ConditionFalse,
-				},
-			}
+		It("should fail because it cannot find a seed cluster reconciled at least once before", func() {
+			seed.Status.LastOperation = nil
 
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
@@ -918,11 +902,11 @@ var _ = DescribeTable("condition is false",
 			},
 			Status: gardencorev1beta1.SeedStatus{
 				Conditions: []gardencorev1beta1.Condition{
-					{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
 					{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
 					{Type: gardencorev1beta1.SeedBackupBucketsReady, Status: gardencorev1beta1.ConditionTrue},
 					{Type: gardencorev1beta1.SeedExtensionsReady, Status: gardencorev1beta1.ConditionTrue},
 				},
+				LastOperation: &gardencorev1beta1.LastOperation{},
 			},
 		}
 
@@ -940,8 +924,6 @@ var _ = DescribeTable("condition is false",
 		Expect(verifySeedReadiness(seed)).To(expected)
 	},
 
-	Entry("SeedBootstrapped is missing", gardencorev1beta1.SeedBootstrapped, true, true, BeFalse()),
-	Entry("SeedBootstrapped is false", gardencorev1beta1.SeedBootstrapped, false, true, BeFalse()),
 	Entry("SeedGardenletReady is missing", gardencorev1beta1.SeedGardenletReady, true, true, BeFalse()),
 	Entry("SeedGardenletReady is false", gardencorev1beta1.SeedGardenletReady, false, true, BeFalse()),
 	Entry("SeedBackupBucketsReady is missing", gardencorev1beta1.SeedBackupBucketsReady, true, true, BeFalse()),

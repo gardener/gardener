@@ -86,13 +86,15 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		return reconcile.Result{}, err
 	}
 
-	updatedConditions := NewHealthCheck(seed, r.SeedClient, r.Clock, r.Namespace, seedIsGarden, r.LoggingEnabled).CheckSeed(ctx, conditions, r.conditionThresholdsToProgressingMapping())
+	updatedConditions := NewHealthCheck(seed, r.SeedClient, r.Clock, r.Namespace, seedIsGarden, r.LoggingEnabled).CheckSeed(ctx, conditions, r.conditionThresholdsToProgressingMapping(), seed.Status.LastOperation)
 
 	// Update Seed status conditions if necessary
 	if v1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) {
 		// Rebuild seed conditions to ensure that only the conditions with the
 		// correct types will be updated, and any other conditions will remain intact
 		conditions = v1beta1helper.BuildConditions(seed.Status.Conditions, updatedConditions, conditionTypes)
+		// TODO(rfranzke): Drop this line after v1.80 has been released.
+		conditions = v1beta1helper.RemoveConditions(conditions, "Bootstrapped")
 
 		log.Info("Updating seed status conditions")
 		patch := client.StrategicMergeFrom(seed.DeepCopy())

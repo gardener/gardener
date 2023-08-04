@@ -318,12 +318,14 @@ var _ = Describe("Seed controller tests", func() {
 	})
 
 	Context("when seed namespace does not exist", func() {
-		It("should not maintain the Bootstrapped condition", func() {
-			By("Ensure Bootstrapped condition is not set")
-			Consistently(func(g Gomega) []gardencorev1beta1.Condition {
+		It("should set the last operation to 'Error'", func() {
+			By("Wait for 'last operation' state to be set to Error")
+			Eventually(func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-				return seed.Status.Conditions
-			}).Should(BeEmpty())
+				g.Expect(seed.Status.LastOperation).NotTo(BeNil())
+				g.Expect(seed.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateError))
+				g.Expect(seed.Status.LastOperation.Description).To(ContainSubstring("failed to get seed namespace in garden cluster"))
+			}).Should(Succeed())
 		})
 	})
 
@@ -353,16 +355,14 @@ var _ = Describe("Seed controller tests", func() {
 		})
 
 		Context("when internal domain secret does not exist", func() {
-			It("should set the Bootstrapped condition to False", func() {
-				By("Wait for Bootstrapped condition to be set to False")
-				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+			It("should set the last operation to 'Error'", func() {
+				By("Wait for 'last operation' state to be set to Error")
+				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-					return seed.Status.Conditions
-				}).Should(ContainCondition(
-					OfType(gardencorev1beta1.SeedBootstrapped),
-					WithStatus(gardencorev1beta1.ConditionFalse),
-					WithReason("GardenSecretsError"),
-				))
+					g.Expect(seed.Status.LastOperation).NotTo(BeNil())
+					g.Expect(seed.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateError))
+					g.Expect(seed.Status.LastOperation.Description).To(ContainSubstring("need an internal domain secret but found none"))
+				}).Should(Succeed())
 			})
 		})
 
@@ -404,17 +404,14 @@ var _ = Describe("Seed controller tests", func() {
 			})
 
 			Context("when global monitoring secret does not exist", func() {
-				It("should set the Bootstrapped condition to False", func() {
-					By("Wait for Bootstrapped condition to be set to False")
-					Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				It("should set the last operation to 'Error'", func() {
+					By("Wait for 'last operation' state to be set to Error")
+					Eventually(func(g Gomega) {
 						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-						return seed.Status.Conditions
-					}).Should(ContainCondition(
-						OfType(gardencorev1beta1.SeedBootstrapped),
-						WithStatus(gardencorev1beta1.ConditionFalse),
-						WithReason("BootstrappingFailed"),
-						WithMessage("global monitoring secret not found in seed namespace"),
-					))
+						g.Expect(seed.Status.LastOperation).NotTo(BeNil())
+						g.Expect(seed.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateError))
+						g.Expect(seed.Status.LastOperation.Description).To(ContainSubstring("global monitoring secret not found in seed namespace"))
+					}).Should(Succeed())
 				})
 			})
 
@@ -454,14 +451,12 @@ var _ = Describe("Seed controller tests", func() {
 						return seed.Finalizers
 					}).Should(ConsistOf("gardener"))
 
-					By("Wait for Bootstrapped condition to be set to Progressing")
-					Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					By("Wait for 'last operation' state to be set to Processing")
+					Eventually(func(g Gomega) {
 						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-						return seed.Status.Conditions
-					}).Should(ContainCondition(
-						OfType(gardencorev1beta1.SeedBootstrapped),
-						WithStatus(gardencorev1beta1.ConditionProgressing),
-					))
+						g.Expect(seed.Status.LastOperation).NotTo(BeNil())
+						g.Expect(seed.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateProcessing))
+					}).Should(Succeed())
 
 					By("Verify that CA secret was generated")
 					Eventually(func(g Gomega) []corev1.Secret {
@@ -667,14 +662,12 @@ var _ = Describe("Seed controller tests", func() {
 						return managedResourceList.Items
 					}).Should(ConsistOf(expectedIstioManagedResources))
 
-					By("Wait for Bootstrapped condition to be set to True")
-					Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					By("Wait for 'last operation' state to be set to Succeeded")
+					Eventually(func(g Gomega) {
 						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-						return seed.Status.Conditions
-					}).Should(And(
-						ContainCondition(OfType(gardencorev1beta1.SeedBootstrapped), WithStatus(gardencorev1beta1.ConditionTrue)),
-						ContainCondition(OfType(gardencorev1beta1.SeedSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing)),
-					))
+						g.Expect(seed.Status.LastOperation).NotTo(BeNil())
+						g.Expect(seed.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					}).Should(Succeed())
 
 					By("Delete Seed")
 					Expect(testClient.Delete(ctx, seed)).To(Succeed())
@@ -716,7 +709,7 @@ var _ = Describe("Seed controller tests", func() {
 					}).Should(BeNotFoundError())
 				}
 
-				It("should properly maintain the Bootstrapped condition and deploy all seed system components", func() {
+				It("should properly maintain the last operation and deploy all seed system components", func() {
 					test(false)
 				})
 

@@ -34,7 +34,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
@@ -100,20 +99,11 @@ func (r *Reconciler) SeedPredicate() predicate.Predicate {
 				return false
 			}
 
-			return seedBootstrappedSuccessfully(oldSeed, seed)
+			return predicateutils.ReconciliationFinishedSuccessfully(oldSeed.Status.LastOperation, seed.Status.LastOperation)
 		},
 		DeleteFunc:  func(event.DeleteEvent) bool { return false },
 		GenericFunc: func(event.GenericEvent) bool { return false },
 	}
-}
-
-func seedBootstrappedSuccessfully(oldSeed, newSeed *gardencorev1beta1.Seed) bool {
-	oldBootstrappedCondition := v1beta1helper.GetCondition(oldSeed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
-	newBootstrappedCondition := v1beta1helper.GetCondition(newSeed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
-
-	return newBootstrappedCondition != nil &&
-		newBootstrappedCondition.Status == gardencorev1beta1.ConditionTrue &&
-		(oldBootstrappedCondition == nil || oldBootstrappedCondition.Status != gardencorev1beta1.ConditionTrue)
 }
 
 // IsSystemComponent returns a predicate which evaluates to true in case the gardener.cloud/role=system-component label

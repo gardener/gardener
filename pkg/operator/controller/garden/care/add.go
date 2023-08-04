@@ -117,20 +117,11 @@ func (r *Reconciler) GardenPredicate() predicate.Predicate {
 			}
 
 			// re-evaluate health status right after a reconciliation operation has succeeded
-			return gardenReconciledSuccessfully(oldGarden, garden)
+			return predicateutils.ReconciliationFinishedSuccessfully(oldGarden.Status.LastOperation, garden.Status.LastOperation)
 		},
 		DeleteFunc:  func(event.DeleteEvent) bool { return false },
 		GenericFunc: func(event.GenericEvent) bool { return false },
 	}
-}
-
-func gardenReconciledSuccessfully(oldGarden, newGarden *operatorv1alpha1.Garden) bool {
-	return oldGarden.Status.LastOperation != nil &&
-		oldGarden.Status.LastOperation.Type != gardencorev1beta1.LastOperationTypeDelete &&
-		oldGarden.Status.LastOperation.State == gardencorev1beta1.LastOperationStateProcessing &&
-		newGarden.Status.LastOperation != nil &&
-		newGarden.Status.LastOperation.Type != gardencorev1beta1.LastOperationTypeDelete &&
-		newGarden.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded
 }
 
 // MapManagedResourceToGarden is a mapper.MapFunc for mapping a ManagedResource to the owning Garden.

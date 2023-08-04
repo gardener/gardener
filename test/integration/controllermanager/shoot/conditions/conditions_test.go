@@ -139,7 +139,6 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 				return shoot.Status.Conditions
 			}).Should(And(
 				Not(ContainCondition(OfType(gardencorev1beta1.SeedBackupBucketsReady))),
-				Not(ContainCondition(OfType(gardencorev1beta1.SeedBootstrapped))),
 				Not(ContainCondition(OfType(gardencorev1beta1.SeedExtensionsReady))),
 				Not(ContainCondition(OfType(gardencorev1beta1.SeedGardenletReady))),
 				Not(ContainCondition(OfType(gardencorev1beta1.SeedSystemComponentsHealthy))),
@@ -160,7 +159,6 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 				return shoot.Status.Conditions
 			}).Should(And(
 				Not(ContainCondition(OfType(gardencorev1beta1.SeedBackupBucketsReady))),
-				Not(ContainCondition(OfType(gardencorev1beta1.SeedBootstrapped))),
 				Not(ContainCondition(OfType(gardencorev1beta1.SeedExtensionsReady))),
 				Not(ContainCondition(OfType(gardencorev1beta1.SeedGardenletReady))),
 				Not(ContainCondition(OfType(gardencorev1beta1.SeedSystemComponentsHealthy))),
@@ -193,7 +191,6 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 		It("should copy the seed conditions to the shoot", func() {
 			conditions := []gardencorev1beta1.Condition{
 				{Type: gardencorev1beta1.SeedBackupBucketsReady, Status: gardencorev1beta1.ConditionProgressing},
-				{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionProgressing},
 				{Type: gardencorev1beta1.SeedExtensionsReady, Status: gardencorev1beta1.ConditionProgressing},
 				{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionProgressing},
 				{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionProgressing},
@@ -210,7 +207,6 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 				return updatedSeed.Status.Conditions
 			}).Should(And(
 				ContainCondition(OfType(gardencorev1beta1.SeedBackupBucketsReady)),
-				ContainCondition(OfType(gardencorev1beta1.SeedBootstrapped)),
 				ContainCondition(OfType(gardencorev1beta1.SeedExtensionsReady)),
 				ContainCondition(OfType(gardencorev1beta1.SeedGardenletReady)),
 				ContainCondition(OfType(gardencorev1beta1.SeedSystemComponentsHealthy)),
@@ -222,7 +218,6 @@ var _ = Describe("Shoot Conditions controller tests", func() {
 				return shoot.Status.Conditions
 			}).Should(And(
 				ContainCondition(OfType(gardencorev1beta1.SeedBackupBucketsReady)),
-				ContainCondition(OfType(gardencorev1beta1.SeedBootstrapped)),
 				ContainCondition(OfType(gardencorev1beta1.SeedExtensionsReady)),
 				ContainCondition(OfType(gardencorev1beta1.SeedGardenletReady)),
 				ContainCondition(OfType(gardencorev1beta1.SeedSystemComponentsHealthy)),

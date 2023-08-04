@@ -200,12 +200,12 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), func() {
 				return err
 			}
 
-			var conditionMessage = fmt.Sprintf("%q condition missing", gardencorev1beta1.SeedBootstrapped)
-			if condition := helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped); condition != nil {
-				conditionMessage = condition.Message
+			var message = "last operation missing"
+			if lastOp := seed.Status.LastOperation; lastOp != nil {
+				message = lastOp.Description
 			}
 
-			return fmt.Errorf("seed %q is not deleted yet: %s", client.ObjectKeyFromObject(seed), conditionMessage)
+			return fmt.Errorf("seed %q is not deleted yet: %s", client.ObjectKeyFromObject(seed), message)
 		}).WithPolling(5 * time.Second).Should(Succeed())
 
 		By("Wait for ManagedSeed to be deleted")

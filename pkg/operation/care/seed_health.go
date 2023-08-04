@@ -80,6 +80,7 @@ func (h *SeedHealth) CheckSeed(
 	ctx context.Context,
 	conditions []gardencorev1beta1.Condition,
 	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
+	lastOperation *gardencorev1beta1.LastOperation,
 ) []gardencorev1beta1.Condition {
 
 	var systemComponentsCondition gardencorev1beta1.Condition
@@ -90,7 +91,7 @@ func (h *SeedHealth) CheckSeed(
 		}
 	}
 
-	checker := NewHealthChecker(h.seedClient, h.clock, thresholdMappings, nil, nil, nil, nil, nil)
+	checker := NewHealthChecker(h.seedClient, h.clock, thresholdMappings, nil, nil, lastOperation, nil, nil)
 	newSystemComponentsCondition, err := h.checkSeedSystemComponents(ctx, checker, systemComponentsCondition)
 	return []gardencorev1beta1.Condition{NewConditionOrError(h.clock, systemComponentsCondition, newSystemComponentsCondition, err)}
 }

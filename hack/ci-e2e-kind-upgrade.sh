@@ -238,7 +238,7 @@ kubectl wait seed $SEED_NAME --timeout=5m --for=jsonpath="{.status.gardener.vers
 # TIMEOUT has been increased to 1200 (20 minutes) due to the upgrading of Gardener for seed.
 # In a single-zone setup, 2 istio-ingressgateway pods will be running, and it will take 9 minutes to complete the rollout.
 # In a multi-zone setup, 6 istio-ingressgateway pods will be running, and it will take 18 minutes to complete the rollout.
-TIMEOUT=1200 ./hack/usage/wait-for.sh seed "$SEED_NAME" GardenletReady Bootstrapped SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
+TIMEOUT=1200 ./hack/usage/wait-for.sh seed "$SEED_NAME" GardenletReady SeedSystemComponentsHealthy ExtensionsReady BackupBucketsReady
 
 # The downtime validator considers downtime after 3 consecutive failures, taking a total of 30 seconds.
 # Therefore, we're waiting for double that amount of time (60s) to detect if there is any downtime after the upgrade process.
