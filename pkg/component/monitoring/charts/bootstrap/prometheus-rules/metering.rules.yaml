@@ -317,3 +317,61 @@ groups:
         )
       + on (namespace) group_left (shoot_uid)
         _namespace_to_shoot_uid
+
+# - metering  :cpu_usage                 :sum_by_namespace_owner_container
+# - metering  :cpu_requests              :sum_by_namespace_owner_container
+# - metering  :memory_usage              :sum_by_namespace_owner_container
+# - metering  :working_set_memory        :sum_by_namespace_owner_container
+# - metering  :memory_requests           :sum_by_namespace_owner_container
+# - metering  :network_transmit          :sum_by_namespace_owner
+# - metering  :network_receive           :sum_by_namespace_owner
+# - metering  :persistent_volume_claims  :sum_by_namespace_owner
+# - metering  :persistent_volume_usage   :sum_by_namespace_owner
+
+  - record: metering:cpu_usage:sum_by_namespace_owner_container
+    expr: |
+      sum without (instance_type) (metering:cpu_usage:sum_by_namespace_owner_container_instance_type)
+
+  - record: metering:cpu_requests:sum_by_namespace_owner_container
+    expr: |
+      sum without (instance_type) (metering:cpu_requests:sum_by_namespace_owner_container_instance_type)
+
+  - record: metering:memory_usage:sum_by_namespace_owner_container
+    expr: |
+      sum without (instance_type) (metering:memory_usage:sum_by_namespace_owner_container_instance_type)
+
+  - record: metering:working_set_memory:sum_by_namespace_owner_container
+    expr: |
+      sum without (instance_type) (
+        metering:working_set_memory:sum_by_namespace_owner_container_instance_type
+      )
+
+  - record: metering:memory_requests:sum_by_namespace_owner_container
+    expr: |
+      sum without (instance_type) (
+        metering:memory_requests:sum_by_namespace_owner_container_instance_type
+      )
+
+  - record: metering:network_transmit:sum_by_namespace_owner
+    expr: |
+      sum without (instance_type) (
+        metering:network_transmit:sum_by_namespace_owner_instance_type
+      )
+
+  - record: metering:network_receive:sum_by_namespace_owner
+    expr: |
+      sum without (instance_type) (
+        metering:network_receive:sum_by_namespace_owner_instance_type
+      )
+
+  - record: metering:persistent_volume_claims:sum_by_namespace_owner
+    expr: |
+      sum without (instance_type) (
+        metering:persistent_volume_claims:sum_by_namespace_owner_instance_type
+      )
+
+  - record: metering:persistent_volume_usage:sum_by_namespace_owner
+    expr: |
+      sum without (instance_type) (
+        metering:persistent_volume_usage:sum_by_namespace_owner_instance_type
+      )
