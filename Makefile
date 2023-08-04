@@ -190,7 +190,9 @@ generate:
 	@echo "$$GENERATE_HELP_INFO"
 else
 generate: tools-for-generate
+	@echo ""
 	@echo "For more info on the generate command, Run 'make generate PRINT_HELP=y'"
+	@echo ""
 	@REPO_ROOT=$(REPO_ROOT) LOGCHECK_DIR=$(LOGCHECK_DIR) GOMEGACHECK_DIR=$(GOMEGACHECK_DIR) hack/generate.sh --what "$(WHAT)" --which "$(WHICH)" --mode "$(MODE)"
 	$(MAKE) format
 endif

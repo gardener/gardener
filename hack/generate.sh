@@ -18,16 +18,14 @@ set -e
 
 WHAT="protobuf codegen manifests logcheck gomegacheck monitoring-docs"
 WHICH="charts cmd example extensions pkg plugin test"
-MODE="paralell"
+MODE="parallel"
 
 parse_flags() {
   while test $# -gt 0; do
     case "$1" in
       --what)
         shift
-        if [[ -n "$1" ]]; then
-          WHAT="$1"
-        fi
+        WHAT="${1:-$WHAT}"
         ;;
       --mode)
         shift
@@ -37,9 +35,7 @@ parse_flags() {
         ;;
       --which)
         shift
-        if [[ -n "$1" ]]; then
-          WHICH="$1"
-        fi
+        WHICH="${1:-$WHICH}"
         ;;
       *)
         echo "Unknown argument: $1"
@@ -51,10 +47,12 @@ parse_flags() {
 }
 
 overwrite_paths() {
-  IFS=' ' read -ra entries <<< "$WHICH"
+  local which=$WHICH
+  IFS=' ' read -ra entries <<< "$which"
   for entry in "${entries[@]}"; do
-    WHICH=${WHICH//$entry/./$entry/...}
+    which=${which//$entry/./$entry/...}
   done
+  echo "$which"
 }
 
 run_target() {
@@ -68,9 +66,9 @@ run_target() {
       ;;
     manifests)
       if [[ "$MODE" == "sequential" ]]; then
-        # For sequential mode, we need paths to be of the form ./charts/.., ./extensions/.. etc.
-        overwrite_paths
-        $REPO_ROOT/hack/generate-sequential.sh $WHICH
+        # In sequential mode, paths need to be converted to go package notation (e.g., ./charts/...)
+        which=$(overwrite_paths)
+        $REPO_ROOT/hack/generate-sequential.sh $which
       else
         $REPO_ROOT/hack/generate-parallel.sh $WHICH
       fi
@@ -85,13 +83,15 @@ run_target() {
       $REPO_ROOT/hack/generate-monitoring-docs.sh
       ;;
     *)
-      echo "Unknown target: $target"
+      echo "Unknown target: $target. Available targets are 'protobuf', 'codegen', 'manifests', 'logcheck', 'gomegacheck', 'monitoring-docs'."
+      echo ""
       ;;
   esac
 }
 
 parse_flags "$@"
 
-for target in $WHAT; do
+IFS=' ' read -ra TARGETS <<< "$WHAT"
+for target in "${TARGETS[@]}"; do
   run_target "$target"
 done
