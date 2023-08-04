@@ -79,6 +79,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					GetETCDEncryptionKeyRotation: func() *gardencorev1beta1.ETCDEncryptionKeyRotation {
 						return f.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey
 					},
+					EncryptionKey:  v1beta1constants.SecretNameETCDEncryptionKey,
+					RoleLabelValue: v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration,
 				},
 				&rotationutils.ServiceAccountKeyVerifier{
 					RuntimeClient:               f.ShootFramework.SeedClient.Client(),
@@ -90,9 +92,22 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				},
 
 				// advanced verifiers testing things from the user's perspective
-				&rotationutils.SecretEncryptionVerifier{NewTargetClientFunc: func() (kubernetes.Interface, error) {
-					return access.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, f.Shoot)
-				}},
+				&rotationutils.EncryptedDataVerifier{
+					NewTargetClientFunc: func() (kubernetes.Interface, error) {
+						return access.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, f.Shoot)
+					},
+					Resources: []rotationutils.EncryptedResource{
+						{
+							NewObject: func() client.Object {
+								return &corev1.Secret{
+									ObjectMeta: metav1.ObjectMeta{GenerateName: "test-foo-", Namespace: "default"},
+									StringData: map[string]string{"content": "foo"},
+								}
+							},
+							NewEmptyList: func() client.ObjectList { return &corev1.SecretList{} },
+						},
+					},
+				},
 				&rotation.ShootAccessVerifier{ShootCreationFramework: f},
 			}
 

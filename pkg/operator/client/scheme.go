@@ -28,8 +28,12 @@ import (
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 
+	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
+	operationsinstall "github.com/gardener/gardener/pkg/apis/operations/install"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	seedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
+	settingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
 )
 
 var (
@@ -77,4 +81,8 @@ func init() {
 
 	utilruntime.Must(AddVirtualSchemeToScheme(VirtualScheme))
 	apiextensionsinstall.Install(VirtualScheme)
+	gardencoreinstall.Install(VirtualScheme)
+	seedmanagementinstall.Install(VirtualScheme)
+	settingsinstall.Install(VirtualScheme)
+	operationsinstall.Install(VirtualScheme)
 }
