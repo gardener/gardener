@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestGardenerScheduler(t *testing.T) {
+func TestGardenerControllerManager(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Component GardenerControllerManager Suite")
 }
