@@ -28,6 +28,8 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -392,7 +394,8 @@ func (p *plutono) getDashboardsConfigMap(ctx context.Context, suffix string) (*c
 		requiredDashboards   map[string]embed.FS
 		ignorePaths          = sets.Set[string]{}
 		dashboards           = map[string]string{}
-		extensionsDashboards = strings.Builder{}
+		extensionsDashboards = utils.MustNewRequirement(v1beta1constants.LabelExtensionConfiguration, selection.Equals, v1beta1constants.LabelMonitoring)
+		labelSelector        = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(extensionsDashboards)}
 	)
 
 	configMap = &corev1.ConfigMap{
@@ -410,7 +413,16 @@ func (p *plutono) getDashboardsConfigMap(ctx context.Context, suffix string) (*c
 	if p.values.IsGardenCluster {
 		if suffix == "garden" {
 			requiredDashboards = map[string]embed.FS{gardenDashboardsPath: gardenDashboards, gardenAndShootDashboardsPath: gardenAndShootDashboards}
+
+			dashboard, err := p.getAdditionalDashboards(ctx, labelSelector, []string{v1beta1constants.PlutonoConfigMapOperatorDashboard})
+			if err != nil {
+				return nil, err
+			}
+			if dashboard != nil {
+				dashboards = dashboard
+			}
 		}
+
 		if suffix == "global" {
 			requiredDashboards = map[string]embed.FS{gardenGlobalDashboardsPath: gardenGlobalDashboards}
 		}
@@ -442,31 +454,12 @@ func (p *plutono) getDashboardsConfigMap(ctx context.Context, suffix string) (*c
 			}
 		}
 
-		// Fetch extensions provider-specific monitoring configuration
-		existingConfigMaps := &corev1.ConfigMapList{}
-		if err := p.client.List(ctx, existingConfigMaps,
-			client.InNamespace(p.namespace),
-			client.MatchingLabels{v1beta1constants.LabelExtensionConfiguration: v1beta1constants.LabelMonitoring}); err != nil {
+		dashboard, err := p.getAdditionalDashboards(ctx, labelSelector, []string{v1beta1constants.PlutonoConfigMapOperatorDashboard, v1beta1constants.PlutonoConfigMapUserDashboard})
+		if err != nil {
 			return nil, err
 		}
-
-		// Need stable order before passing the dashboards to Plutono config to avoid unnecessary changes
-		kubernetesutils.ByName().Sort(existingConfigMaps)
-
-		// Read extension monitoring configurations
-		for _, cm := range existingConfigMaps.Items {
-			if operatorsDashboard, ok := cm.Data[v1beta1constants.PlutonoConfigMapOperatorDashboard]; ok && operatorsDashboard != "" {
-				extensionsDashboards.WriteString(fmt.Sprintln(strings.ReplaceAll(strings.ReplaceAll(operatorsDashboard, "Grafana", "Plutono"), "loki", "vali")))
-			}
-			if usersDashboard, ok := cm.Data[v1beta1constants.PlutonoConfigMapUserDashboard]; ok && usersDashboard != "" {
-				extensionsDashboards.WriteString(fmt.Sprintln(strings.ReplaceAll(strings.ReplaceAll(usersDashboard, "Grafana", "Plutono"), "loki", "vali")))
-			}
-		}
-
-		if extensionsDashboards.Len() > 0 {
-			if err := yaml.Unmarshal([]byte(extensionsDashboards.String()), &dashboards); err != nil {
-				return nil, err
-			}
+		if dashboard != nil {
+			dashboards = dashboard
 		}
 	}
 
@@ -864,4 +857,39 @@ func (p *plutono) getPodLabels() map[string]string {
 	}
 
 	return labels
+}
+
+func (p *plutono) getAdditionalDashboards(ctx context.Context, labelSelector labels.Selector, keys []string) (map[string]string, error) {
+	var (
+		dashboards           = map[string]string{}
+		additionalDashboards = strings.Builder{}
+	)
+
+	// Fetch additional monitoring configuration
+	existingConfigMaps := &corev1.ConfigMapList{}
+	if err := p.client.List(ctx, existingConfigMaps,
+		client.InNamespace(p.namespace),
+		client.MatchingLabelsSelector{Selector: labelSelector}); err != nil {
+		return nil, err
+	}
+
+	// Need stable order before passing the dashboards to Plutono config to avoid unnecessary changes
+	kubernetesutils.ByName().Sort(existingConfigMaps)
+
+	// Read monitoring configurations
+	for _, cm := range existingConfigMaps.Items {
+		for _, key := range keys {
+			if dashboard, ok := cm.Data[key]; ok && dashboard != "" {
+				additionalDashboards.WriteString(fmt.Sprintln(strings.ReplaceAll(strings.ReplaceAll(dashboard, "Grafana", "Plutono"), "loki", "vali")))
+			}
+		}
+	}
+
+	if additionalDashboards.Len() > 0 {
+		if err := yaml.Unmarshal([]byte(additionalDashboards.String()), &dashboards); err != nil {
+			return nil, err
+		}
+	}
+
+	return dashboards, nil
 }
