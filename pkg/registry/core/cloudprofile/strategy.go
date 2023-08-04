@@ -52,7 +52,7 @@ func (cloudProfileStrategy) PrepareForCreate(ctx context.Context, obj runtime.Ob
 
 func (cloudProfileStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	cloudprofile := obj.(*core.CloudProfile)
-	return validation.ValidateCloudProfileCreation(cloudprofile)
+	return validation.ValidateCloudProfile(cloudprofile)
 }
 
 func (cloudProfileStrategy) Canonicalize(obj runtime.Object) {
