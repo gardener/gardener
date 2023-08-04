@@ -392,7 +392,6 @@ func defaultPlutono(
 		false,
 		false,
 		false,
-		false,
 		wildcardCertName,
 	)
 }

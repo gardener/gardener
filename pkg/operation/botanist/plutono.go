@@ -45,7 +45,6 @@ func (b *Botanist) DefaultPlutono() (plutono.Interface, error) {
 		v1beta1constants.PriorityClassNameShootControlPlane100,
 		features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment),
 		b.ShootUsesDNS(),
-		false,
 		b.Shoot.IsWorkerless,
 		false,
 		b.Shoot.NodeLocalDNSEnabled,

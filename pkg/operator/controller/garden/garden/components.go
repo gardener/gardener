@@ -204,7 +204,7 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 
-	c.plutono, err = r.newPlutono(secretsManager, garden.Spec.RuntimeCluster.Ingress.Domain, isAuthenticationWebhookEnabled(garden))
+	c.plutono, err = r.newPlutono(secretsManager, garden.Spec.RuntimeCluster.Ingress.Domain)
 	if err != nil {
 		return
 	}
@@ -729,7 +729,7 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden) 
 	)
 }
 
-func (r *Reconciler) newPlutono(secretsManager secretsmanager.Interface, ingressDomain string, isAuthenticationWebhookEnabled bool) (plutono.Interface, error) {
+func (r *Reconciler) newPlutono(secretsManager secretsmanager.Interface, ingressDomain string) (plutono.Interface, error) {
 	return sharedcomponent.NewPlutono(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
@@ -741,7 +741,6 @@ func (r *Reconciler) newPlutono(secretsManager secretsmanager.Interface, ingress
 		v1beta1constants.PriorityClassNameGardenSystem100,
 		false,
 		false,
-		isAuthenticationWebhookEnabled,
 		false,
 		true,
 		false,
@@ -828,13 +827,4 @@ func (r *Reconciler) newVali(garden *operatorv1alpha1.Garden) (vali.Interface, e
 			End:   garden.Spec.VirtualCluster.Maintenance.TimeWindow.End,
 		},
 	)
-}
-
-func isAuthenticationWebhookEnabled(garden *operatorv1alpha1.Garden) bool {
-	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil &&
-		garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.Authentication != nil &&
-		garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.Authentication.Webhook != nil {
-		return true
-	}
-	return false
 }
