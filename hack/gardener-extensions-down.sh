@@ -59,6 +59,8 @@ remaining_seeds=$(kubectl --kubeconfig="$PATH_GARDEN_KUBECONFIG" get seed --no-h
 if [[ "$remaining_seeds" != "" ]]; then
   echo "No clean up of kind cluster because of remaining seeds: ${remaining_seeds//$'\n'/,}"
 else
+  echo "Cleaning up admission controllers"
+  "$SCRIPT_DIR"/../example/provider-extensions/garden/configure-admission.sh "$PATH_GARDEN_KUBECONFIG" delete
   echo "Cleaning up kind cluster"
   kubectl --kubeconfig="$PATH_GARDEN_KUBECONFIG" delete validatingwebhookconfiguration/gardener-admission-controller --ignore-not-found
   kubectl --kubeconfig="$PATH_GARDEN_KUBECONFIG" annotate project local garden confirmation.gardener.cloud/deletion=true
