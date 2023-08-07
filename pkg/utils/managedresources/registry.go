@@ -24,7 +24,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	apimachineryjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
+	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -38,7 +39,7 @@ type Registry struct {
 	scheme           *runtime.Scheme
 	codec            runtime.Codec
 	nameToObject     map[string]*object
-	isSerializerYAML bool
+	isYAMLSerializer bool
 }
 
 type object struct {
@@ -48,7 +49,7 @@ type object struct {
 
 // NewRegistry returns a new registry for resources. The given scheme, codec, and serializer must know all the resource
 // types that will later be added to the registry.
-func NewRegistry(scheme *runtime.Scheme, codec serializer.CodecFactory, serializer *apimachineryjson.Serializer) *Registry {
+func NewRegistry(scheme *runtime.Scheme, codec serializer.CodecFactory, serializer *jsonserializer.Serializer) *Registry {
 	var groupVersions schema.GroupVersions
 	for k := range scheme.AllKnownTypes() {
 		groupVersions = append(groupVersions, k.GroupVersion())
@@ -66,23 +67,21 @@ func NewRegistry(scheme *runtime.Scheme, codec serializer.CodecFactory, serializ
 		return groupVersions[i].Group < groupVersions[j].Group
 	})
 
-	// A workaround to incosistent ordering in yaml.v2 when encoding maps
+	// A workaround to incosistent/unstable ordering in yaml.v2 when encoding maps
 	// Can be removed once k8s.io/apimachinery/pkg/runtime/serializer/json migrates to yaml.v3
 	// or the issue is resolved upstream in yaml.v2
+	// Please see https://github.com/go-yaml/yaml/pull/736
 	serializerIdentifier := struct {
 		YAML string `json:"yaml"`
 	}{}
 
-	if err := json.Unmarshal([]byte(serializer.Identifier()), &serializerIdentifier); err != nil {
-		// this should never happen
-		panic(fmt.Errorf("could not unmarshal serializer identifier: %w", err))
-	}
+	utilruntime.Must(json.Unmarshal([]byte(serializer.Identifier()), &serializerIdentifier))
 
 	return &Registry{
 		scheme:           scheme,
 		codec:            codec.CodecForVersions(serializer, serializer, groupVersions, groupVersions),
 		nameToObject:     make(map[string]*object),
-		isSerializerYAML: serializerIdentifier.YAML == "true",
+		isYAMLSerializer: serializerIdentifier.YAML == "true",
 	}
 }
 
@@ -110,14 +109,13 @@ func (r *Registry) Add(objs ...client.Object) error {
 		}
 
 		// We use a copy of the upstream package as a workaround
-		// to incosistent ordering in yaml.v2 when encoding maps
+		// to incosistent/unstable ordering in yaml.v2 when encoding maps
 		// Can be removed once k8s.io/apimachinery/pkg/runtime/serializer/json migrates to yaml.v3
 		// or the issue is resolved upstream in yaml.v2
-		if r.isSerializerYAML {
-			// we do not handle arrays since the iterated variables
-			// are of type client.Object
-			anyObj := map[string]any{}
-			if err := forkedyaml.Unmarshal(serializationYAML, anyObj); err != nil {
+		// Please see https://github.com/go-yaml/yaml/pull/736
+		if r.isYAMLSerializer {
+			var anyObj interface{}
+			if err := forkedyaml.Unmarshal(serializationYAML, &anyObj); err != nil {
 				return err
 			}
 
