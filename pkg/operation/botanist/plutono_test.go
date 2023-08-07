@@ -31,7 +31,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	mockcomponent "github.com/gardener/gardener/pkg/component/mock"
+	mockplutono "github.com/gardener/gardener/pkg/component/plutono/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
@@ -54,7 +54,7 @@ var _ = Describe("Plutono", func() {
 
 		sm secretsmanager.Interface
 
-		mockPlutono *mockcomponent.MockDeployWaiter
+		mockPlutono *mockplutono.MockInterface
 
 		botanist *Botanist
 
@@ -90,7 +90,7 @@ var _ = Describe("Plutono", func() {
 			Data: map[string][]byte{"username": {}, "password": {}, "auth": {}},
 		})).To(Succeed())
 
-		mockPlutono = mockcomponent.NewMockDeployWaiter(ctrl)
+		mockPlutono = mockplutono.NewMockInterface(ctrl)
 
 		botanist = &Botanist{
 			Operation: &operation.Operation{
