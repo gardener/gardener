@@ -837,7 +837,7 @@ gopkg.in/ini.v1
 # gopkg.in/natefinch/lumberjack.v2 v2.0.0
 ## explicit
 gopkg.in/natefinch/lumberjack.v2
-# gopkg.in/yaml.v2 v2.4.0
+# gopkg.in/yaml.v2 v2.4.0 => ./third_party/gopkg.in/yaml.v2
 ## explicit; go 1.15
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.1
