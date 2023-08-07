@@ -10,6 +10,7 @@ rules:
   - github.com/gardener/gardener/pkg/client/kubernetes
   - github.com/gardener/gardener/pkg/controllerutils
   - github.com/gardener/gardener/pkg/extensions
+  - github.com/gardener/gardener/third_party/gopkg.in/yaml.v2
   # The seedmanagement API imports the gardenlet config in its conversion and defaulting code and this is imported by
   # the kubernetes client package, roughly like this:
   # extensions/pkg -> pkg/client/kubernetes -> pkg/apis/seedmanagement/v1alpha1 -> pkg/gardenlet/apis/config

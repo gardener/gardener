@@ -24,6 +24,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
+	forkedyaml "github.com/gardener/gardener/third_party/gopkg.in/yaml.v2"
 )
 
 // Serialize serializes and encodes the passed object.
@@ -51,5 +52,13 @@ func Serialize(obj client.Object) string {
 	serializationYAML, err := runtime.Encode(codec, obj)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
-	return string(serializationYAML)
+	// Keep this in sync with pkg/utils/managedresources/registry.go
+	// See https://github.com/gardener/gardener/pull/8312
+	var anyObj interface{}
+	Expect(forkedyaml.Unmarshal(serializationYAML, &anyObj)).To(Succeed())
+
+	serBytes, err := forkedyaml.Marshal(anyObj)
+	Expect(err).NotTo(HaveOccurred())
+
+	return string(serBytes)
 }

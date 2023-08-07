@@ -303,6 +303,7 @@ build:
         - pkg/utils/timewindow
         - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
+        - third_party/gopkg.in/yaml.v2
         - vendor
         - VERSION
       ldflags:
@@ -657,6 +658,7 @@ build:
         - pkg/utils/timewindow
         - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
+        - third_party/gopkg.in/yaml.v2
         - vendor
         - VERSION
       ldflags:
@@ -964,6 +966,7 @@ build:
         - pkg/utils/validation/features
         - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
+        - third_party/gopkg.in/yaml.v2
         - vendor
         - VERSION
       ldflags:
