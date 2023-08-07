@@ -42,11 +42,7 @@ This will speed up operations and will reduce the load on the api-server of the 
 
 ## Scalability
 
-The `cloud-config-downloader` add a random wait time before restarting the `kubelet` in case the `kubelet` was updated or a configuration change was made to it. This is required to reduce the load on the API server and the traffic on the internet uplink. It also reduces the overall downtime of the services in the cluster because every `kubelet` restart takes a node for several seconds into `NotReady` state which eventually interrupts service availability.
-
-```
-TODO: The `gardener-node-agent` could do this in a much more intelligent way because it watches the `node` object. The gardenlet could add some annotation which tells the `gardener-node-agent` to wait for the kubelet in a coordinated manner. The coordination could be in chunks of nodes and wait for them to finish and then start with the next chunk. Also a equal time spread is possible.
-```
+The `cloud-config-downloader` adds a random wait time before restarting the `kubelet` in case the `kubelet` was updated or a configuration change was made to it. This is required to reduce the load on the API server and the traffic on the internet uplink. It also reduces the overall downtime of the services in the cluster because every `kubelet` restart takes a node for several seconds into `NotReady` state which eventually interrupts service availability.
 
 Decision was made to keep the existing jitter mechanism which calculates the kubelet-download-and-restart-delay-seconds on the controller itself.
 
@@ -59,3 +55,9 @@ Because actual and previous configuration are compared, removed files and units 
 ### Availability
 
 Previously, the `cloud-config-downloader` simply restarted the `systemd-units` on every change to the `OSC`, regardless which of the services changed. The `gardener-node-agent` first checks which systemd-unit was changed, and will only restart these. This will remove unneeded `kubelet` restarts.
+
+### Future Development
+
+The `gardener-node-agent` opens up the possibilty for further improvements.
+
+Necessary restarts of the `kubelet` could be deterministic instead of the aforementioned random jittering. In that case the `gardenlet` could add annotations across all nodes. As the `gardener-node-agent` watches the `node` object, it could wait with `kubelet` restarts, OSC changes or react immediately. Ciritical changes could be performed in chunks of nodes in serial order, but an equal time spread is possible, too.
