@@ -37,10 +37,8 @@ func (l keyList) Less(i, j int) bool {
 		return ak < bk
 	}
 	ar, br := []rune(a.String()), []rune(b.String())
-	digits := false
 	for i := 0; i < len(ar) && i < len(br); i++ {
 		if ar[i] == br[i] {
-			digits = unicode.IsDigit(ar[i])
 			continue
 		}
 		al := unicode.IsLetter(ar[i])
@@ -49,11 +47,7 @@ func (l keyList) Less(i, j int) bool {
 			return ar[i] < br[i]
 		}
 		if al || bl {
-			if digits {
-				return al
-			} else {
-				return bl
-			}
+			return bl
 		}
 		var ai, bi int
 		var an, bn int64

@@ -15,6 +15,7 @@
 package managedresources
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
@@ -23,18 +24,21 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	apimachineryjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+
+	forkedyaml "github.com/gardener/gardener/third_party/gopkg.in/yaml.v2"
 )
 
 // Registry stores objects and their serialized form. It allows to compute a map of all registered objects that can be
 // used as part of a Secret's data which is referenced by a ManagedResource.
 type Registry struct {
-	scheme       *runtime.Scheme
-	codec        runtime.Codec
-	nameToObject map[string]*object
+	scheme           *runtime.Scheme
+	codec            runtime.Codec
+	nameToObject     map[string]*object
+	isSerializerYAML bool
 }
 
 type object struct {
@@ -44,7 +48,7 @@ type object struct {
 
 // NewRegistry returns a new registry for resources. The given scheme, codec, and serializer must know all the resource
 // types that will later be added to the registry.
-func NewRegistry(scheme *runtime.Scheme, codec serializer.CodecFactory, serializer *json.Serializer) *Registry {
+func NewRegistry(scheme *runtime.Scheme, codec serializer.CodecFactory, serializer *apimachineryjson.Serializer) *Registry {
 	var groupVersions schema.GroupVersions
 	for k := range scheme.AllKnownTypes() {
 		groupVersions = append(groupVersions, k.GroupVersion())
@@ -62,10 +66,23 @@ func NewRegistry(scheme *runtime.Scheme, codec serializer.CodecFactory, serializ
 		return groupVersions[i].Group < groupVersions[j].Group
 	})
 
+	// A workaround to incosistent ordering in yaml.v2 when encoding maps
+	// Can be removed once k8s.io/apimachinery/pkg/runtime/serializer/json migrates to yaml.v3
+	// or the issue is resolved upstream in yaml.v2
+	serializerIdentifier := struct {
+		YAML string `json:"yaml"`
+	}{}
+
+	if err := json.Unmarshal([]byte(serializer.Identifier()), &serializerIdentifier); err != nil {
+		// this should never happen
+		panic(fmt.Errorf("could not unmarshal serializer identifier: %w", err))
+	}
+
 	return &Registry{
-		scheme:       scheme,
-		codec:        codec.CodecForVersions(serializer, serializer, groupVersions, groupVersions),
-		nameToObject: make(map[string]*object),
+		scheme:           scheme,
+		codec:            codec.CodecForVersions(serializer, serializer, groupVersions, groupVersions),
+		nameToObject:     make(map[string]*object),
+		isSerializerYAML: serializerIdentifier.YAML == "true",
 	}
 }
 
@@ -90,6 +107,25 @@ func (r *Registry) Add(objs ...client.Object) error {
 		serializationYAML, err := runtime.Encode(r.codec, obj)
 		if err != nil {
 			return err
+		}
+
+		// We use a copy of the upstream package as a workaround
+		// to incosistent ordering in yaml.v2 when encoding maps
+		// Can be removed once k8s.io/apimachinery/pkg/runtime/serializer/json migrates to yaml.v3
+		// or the issue is resolved upstream in yaml.v2
+		if r.isSerializerYAML {
+			// we do not handle arrays since the iterated variables
+			// are of type client.Object
+			anyObj := map[string]any{}
+			if err := forkedyaml.Unmarshal(serializationYAML, anyObj); err != nil {
+				return err
+			}
+
+			serBytes, err := forkedyaml.Marshal(anyObj)
+			if err != nil {
+				return err
+			}
+			serializationYAML = serBytes
 		}
 
 		r.nameToObject[filename] = &object{
