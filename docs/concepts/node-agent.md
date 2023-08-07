@@ -8,11 +8,11 @@ It effectively is a Kubernetes controller deployed onto the worker node.
 
 ![Design](./images/gardener-nodeagent-architecture.drawio.svg)
 
-This figure visualizes the overall architecture of the `gardener-node-agent`. On the left side it starts with the operating system config (`OSC`) being transferred through the userdata to a machine through the `machine-controller-manager` (MCM).
+This figure visualizes the overall architecture of the `gardener-node-agent`. On the left side it starts with an `OperatingSystemConfig` resource (`OSC`) with a corresponding worker pool specific `cloud-config-<worker-pool>` secret being passed by reference through the userdata to a machine by the `machine-controller-manager` (MCM)
 
-On the right side the `gardener-node-agent` will be installed and bootstrapped. Details on this can be found in the next section.
+On the right side the `cloud-config` secret will be extracted and used by the `gardener-node-agent` after being installed. Details on this can be found in the next section.
 
-After the bootstrap phase, the `gardener-node-agent` runs a systemd service watching on secret resources located in the `kube-system` namespace. There is a secret resource that contains the `OperatingSystemConfig`. The OSC secret exists for every worker group of the shoot cluster and is named accordingly. When `gardener-node-agent` applies the OSC, it installs the kubelet + configuration on the worker node.
+Finally the `gardener-node-agent` runs a systemd service watching on secret resources located in the `kube-system` namespace like our `cloud-config` secret that contains the `OperatingSystemConfig`. When `gardener-node-agent` applies the OSC, it installs the kubelet + configuration on the worker node.
 
 ## Installation and Bootstrapping
 
