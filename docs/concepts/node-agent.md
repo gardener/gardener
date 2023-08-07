@@ -8,7 +8,7 @@ It effectively is a Kubernetes controller deployed onto the worker node.
 
 ![Design](./images/gardener-nodeagent-architecture.drawio.svg)
 
-This figure visualizes the overall architecture of the `gardener-node-agent`. On the left side it starts with an `OperatingSystemConfig` resource (`OSC`) with a corresponding worker pool specific `cloud-config-<worker-pool>` secret being passed by reference through the userdata to a machine by the `machine-controller-manager` (MCM)
+This figure visualizes the overall architecture of the `gardener-node-agent`. On the left side it starts with an [`OperatingSystemConfig`](../extensions/operatingsystemconfig.md) resource (`OSC`) with a corresponding worker pool specific `cloud-config-<worker-pool>` secret being passed by reference through the userdata to a machine by the `machine-controller-manager` (MCM)
 
 On the right side the `cloud-config` secret will be extracted and used by the `gardener-node-agent` after being installed. Details on this can be found in the next section.
 
