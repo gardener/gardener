@@ -42,16 +42,22 @@ var _ = Describe("Registry", func() {
 				Name:      "secret:name",
 				Namespace: "foo",
 				Annotations: map[string]string{
-					"one":      "two",
-					"foo":      "bar",
-					"a":        "b",
-					"foo/bar1": "bar-foo",
+					"foo.bar/test-939fc8c2": "3",
+					"foo.bar/test-ea8edc28": "7",
+					"foo.bar/test-9dca243c": "1",
+					"foo.bar/test-47fc132b": "2",
+					"foo.bar/test-2871f8c4": "4",
+					"foo.bar/test-07679f5e": "5",
+					"foo.bar/test-d2718f1d": "6",
 				},
 				Labels: map[string]string{
-					"foo/bar1": "bar-foo",
-					"a":        "b",
-					"one":      "two",
-					"foo":      "bar",
+					"foo.bar/test-939fc8c2": "3",
+					"foo.bar/test-47fc132b": "2",
+					"foo.bar/test-d2718f1d": "6",
+					"foo.bar/test-9dca243c": "1",
+					"foo.bar/test-07679f5e": "5",
+					"foo.bar/test-2871f8c4": "4",
+					"foo.bar/test-ea8edc28": "7",
 				},
 			},
 		}
@@ -60,16 +66,22 @@ var _ = Describe("Registry", func() {
 kind: Secret
 metadata:
   annotations:
-    a: b
-    foo: bar
-    foo/bar1: bar-foo
-    one: two
+    foo.bar/test-9dca243c: "1"
+    foo.bar/test-47fc132b: "2"
+    foo.bar/test-939fc8c2: "3"
+    foo.bar/test-2871f8c4: "4"
+    foo.bar/test-07679f5e: "5"
+    foo.bar/test-d2718f1d: "6"
+    foo.bar/test-ea8edc28: "7"
   creationTimestamp: null
   labels:
-    a: b
-    foo: bar
-    foo/bar1: bar-foo
-    one: two
+    foo.bar/test-9dca243c: "1"
+    foo.bar/test-47fc132b: "2"
+    foo.bar/test-939fc8c2: "3"
+    foo.bar/test-2871f8c4: "4"
+    foo.bar/test-07679f5e: "5"
+    foo.bar/test-d2718f1d: "6"
+    foo.bar/test-ea8edc28: "7"
   name: ` + secret.Name + `
   namespace: ` + secret.Namespace + `
 `)
