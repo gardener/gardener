@@ -74,6 +74,7 @@ var (
 // Interface contains functions for a Plutono Deployer
 type Interface interface {
 	component.DeployWaiter
+	SetWildcardCertName(*string)
 }
 
 // Values is a set of configuration values for the plutono component.
@@ -167,6 +168,10 @@ func (p *plutono) WaitCleanup(ctx context.Context) error {
 	defer cancel()
 
 	return managedresources.WaitUntilDeleted(timeoutCtx, p.client, p.namespace, ManagedResourceName)
+}
+
+func (p *plutono) SetWildcardCertName(secretName *string) {
+	p.values.WildcardCertName = secretName
 }
 
 func (p *plutono) computeResourcesData(ctx context.Context) (*corev1.ConfigMap, map[string][]byte, error) {
