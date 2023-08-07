@@ -4,23 +4,25 @@ The goal of the `gardener-node-agent` is to bootstrap a machine into a worker no
 
 It effectively is a Kubernetes controller deployed onto the worker node.
 
-## Basic Design
+## Architecture and Basic Design
 
-This section describes how the `gardener-node-agent` works, what its responsibilities are and how it is installed onto the worker node.
+![Design](./images/gardener-nodeagent-architecture.drawio.svg)
 
-In order to install the `gardener-node-agent` onto a worker node, there is a very small bash script called [`gardener-node-init.sh`](../../pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/init.tpl.sh), which will be copied to `/var/lib/gardener-node-agent/gardener-node-init.sh` on the node with cloud-init data. This script's sole purpose is downloading and starting the `gardener-node-agent`. The binary artifact is extracted from an [OCI artifact](https://github.com/opencontainers/image-spec/blob/main/manifest.md). At the beginning, two architectures of the `gardener-node-agent` are supported: `amd64` and `x86`. The `kubelet` should also be contained in the same OCI artifact.
+This figure visualizes the overall architecture of the `gardener-node-agent`. On the left side it starts with the operating system config (`OSC`) being transferred through the userdata to a machine through the `machine-controller-manager` (MCM).
+
+On the right side the `gardener-node-agent` will be installed and bootstrapped. Details on this can be found in the next section.
+
+After the bootstrap phase, the `gardener-node-agent` runs a systemd service watching on secret resources located in the `kube-system` namespace. There is a secret resource that contains the `OperatingSystemConfig`. The OSC secret exists for every worker group of the shoot cluster and is named accordingly. When `gardener-node-agent` applies the OSC, it installs the kubelet + configuration on the worker node.
+
+## Installation and Bootstrapping
+
+This section describes how the `gardener-node-agent` is initially installed onto the worker node.
+
+In the beginning, there is a very small bash script called [`gardener-node-init.sh`](../../pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/init.tpl.sh), which will be copied to `/var/lib/gardener-node-agent/gardener-node-init.sh` on the node with cloud-init data. This script's sole purpose is downloading and starting the `gardener-node-agent`. The binary artifact is extracted from an [OCI artifact](https://github.com/opencontainers/image-spec/blob/main/manifest.md). At the beginning, two architectures of the `gardener-node-agent` are supported: `amd64` and `x86`. The `kubelet` should also be contained in the same OCI artifact.
 
 Along with the init script, a configuration for the `gardener-node-agent` is carried over to the worker node at `/var/lib/gardener-node-agent/configuration.yaml`. This configuration contains things like the shoot's kube-apiserver endpoint, the according certificates to communicate with it, the bootstrap token for the kubelet, and so on.
 
 In a bootstrapping phase, the `gardener-node-agent` sets itself up as a systemd service. It also executes tasks that need to be executed before any other components are installed, e.g. formatting the data device for the kubelet.
-
-After the bootstrap phase, the `gardener-node-agent` runs a systemd service watching on secret resources located in the `kube-system` namespace. There is a secret resource that contains the `OperatingSystemConfig`. The OSC secret exists for every worker group of the shoot cluster and is named accordingly. When `gardener-node-agent` applies the OSC, it installs the kubelet + configuration on the worker node.
-
-## Architecture
-
-![Design](./images/gardener-nodeagent-architecture.drawio.svg)
-
-This figure visualizes the overall architecture of the `gardener-node-agent`. It starts with the operating system config (OSC) being transferred through the userdata to a machine through the `machine-controller-manager` (MCM). The bootstrap phase of the `gardener-node-agent` will then happen as described in the previous section.
 
 ## Reasoning
 
