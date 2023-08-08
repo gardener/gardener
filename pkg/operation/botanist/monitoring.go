@@ -119,6 +119,9 @@ func (b *Botanist) DeployMonitoring(ctx context.Context) error {
 		return b.Shoot.Components.Monitoring.Monitoring.Destroy(ctx)
 	}
 
+	if b.ControlPlaneWildcardCert != nil {
+		b.Operation.Shoot.Components.Monitoring.Monitoring.SetWildcardCertName(pointer.String(b.ControlPlaneWildcardCert.GetName()))
+	}
 	b.Shoot.Components.Monitoring.Monitoring.SetNamespaceUID(b.SeedNamespaceObject.UID)
 	b.Shoot.Components.Monitoring.Monitoring.SetComponents(b.getMonitoringComponents())
 	return b.Shoot.Components.Monitoring.Monitoring.Deploy(ctx)
