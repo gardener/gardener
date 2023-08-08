@@ -16,6 +16,81 @@
 
 set -e
 
-echo "> Generate"
+WHAT="protobuf codegen manifests logcheck gomegacheck monitoring-docs"
+WHICH="charts cmd example extensions pkg plugin test"
+MODE="parallel"
 
-go generate $@
+parse_flags() {
+  while test $# -gt 0; do
+    case "$1" in
+      --what)
+        shift
+        WHAT="${1:-$WHAT}"
+        ;;
+      --mode)
+        shift
+        if [[ -n "$1" ]]; then
+        MODE="$1"
+        fi
+        ;;
+      --which)
+        shift
+        WHICH="${1:-$WHICH}"
+        ;;
+      *)
+        echo "Unknown argument: $1"
+        exit 1
+        ;;
+    esac
+    shift
+  done
+}
+
+overwrite_paths() {
+  local which=$WHICH
+  IFS=' ' read -ra entries <<< "$which"
+  for entry in "${entries[@]}"; do
+    which=${which//$entry/./$entry/...}
+  done
+  echo "$which"
+}
+
+run_target() {
+  local target=$1
+  case "$target" in
+    protobuf)
+      $REPO_ROOT/hack/update-protobuf.sh
+      ;;
+    codegen)
+      $REPO_ROOT/hack/update-codegen.sh
+      ;;
+    manifests)
+      if [[ "$MODE" == "sequential" ]]; then
+        # In sequential mode, paths need to be converted to go package notation (e.g., ./charts/...)
+        which=$(overwrite_paths)
+        $REPO_ROOT/hack/generate-sequential.sh $which
+      else
+        $REPO_ROOT/hack/generate-parallel.sh $WHICH
+      fi
+      ;;
+    logcheck)
+      cd "$REPO_ROOT/$LOGCHECK_DIR" && go generate ./...
+      ;;
+    gomegacheck)
+      cd "$REPO_ROOT/$GOMEGACHECK_DIR" && go generate ./...
+      ;;
+    monitoring-docs)
+      $REPO_ROOT/hack/generate-monitoring-docs.sh
+      ;;
+    *)
+      printf "Unknown target: $target. Available targets are 'protobuf', 'codegen', 'manifests', 'logcheck', 'gomegacheck', 'monitoring-docs'.\n\n"
+      ;;
+  esac
+}
+
+parse_flags "$@"
+
+IFS=' ' read -ra TARGETS <<< "$WHAT"
+for target in "${TARGETS[@]}"; do
+  run_target "$target"
+done

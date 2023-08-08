@@ -44,6 +44,7 @@ DEV_SETUP_WITH_WEBHOOKS                    := false
 IPFAMILY                                   := ipv4
 PARALLEL_E2E_TESTS                         := 15
 GARDENER_RELEASE_DOWNLOAD_PATH             := $(REPO_ROOT)/dev
+PRINT_HELP ?=
 
 ifneq ($(SEED_NAME),provider-extensions)
 	SEED_KUBECONFIG := $(REPO_ROOT)/example/provider-extensions/seed/kubeconfig-$(SEED_NAME)
@@ -167,25 +168,32 @@ check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(
 
 tools-for-generate: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GOIMPORTS) $(GO_TO_PROTOBUF) $(HELM) $(MOCKGEN) $(OPENAPI_GEN) $(PROTOC) $(PROTOC_GEN_GOGO) $(YAML2JSON) $(YQ)
 
+define GENERATE_HELP_INFO
+# Usage: make generate [WHAT="<targets>"] [MODE="<mode>"] [WHICH="<folders>"]
+#
+# Options:
+#   WHAT   - Specify the targets to run (e.g., "protobuf codegen manifests logcheck gomegacheck monitoring-docs")
+#   WHICH  - Specify which folders to run the 'manifests' target in, not applicable for other targets (e.g., "charts cmd example extensions pkg plugin test")
+#   MODE   - Specify the mode for the 'manifests' target (e.g., "sequential" or "parallel")
+#
+# Examples:
+#   make generate
+#   make generate WHAT="codegen protobuf"
+#   make generate WHAT="codegen protobuf" MODE="sequential"
+#   make generate WHAT="manifests" WHICH="pkg plugin" MODE="sequential"
+#
+endef
+export GENERATE_HELP_INFO
 .PHONY: generate
+ifeq ($(PRINT_HELP),y)
+generate:
+	@echo "$$GENERATE_HELP_INFO"
+else
 generate: tools-for-generate
-	@hack/update-protobuf.sh
-	@hack/update-codegen.sh
-	@hack/generate-parallel.sh charts cmd example extensions pkg plugin test
-	@cd $(LOGCHECK_DIR); go generate ./...
-	@cd $(GOMEGACHECK_DIR); go generate ./...
-	@hack/generate-monitoring-docs.sh
+	@printf "\nFor more info on the generate command, Run 'make generate PRINT_HELP=y'\n\n"
+	@REPO_ROOT=$(REPO_ROOT) LOGCHECK_DIR=$(LOGCHECK_DIR) GOMEGACHECK_DIR=$(GOMEGACHECK_DIR) hack/generate.sh --what "$(WHAT)" --which "$(WHICH)" --mode "$(MODE)"
 	$(MAKE) format
-
-.PHONY: generate-sequential
-generate-sequential: tools-for-generate
-	@hack/update-protobuf.sh
-	@hack/update-codegen.sh
-	@hack/generate.sh ./charts/... ./cmd/... ./example/... ./extensions/... ./pkg/... ./plugin/... ./test/...
-	@cd $(LOGCHECK_DIR); go generate ./...
-	@cd $(GOMEGACHECK_DIR); go generate ./...
-	@hack/generate-monitoring-docs.sh
-	$(MAKE) format
+endif
 
 .PHONY: format
 format: $(GOIMPORTS) $(GOIMPORTSREVISER)
