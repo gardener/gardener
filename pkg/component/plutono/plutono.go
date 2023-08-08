@@ -74,6 +74,7 @@ var (
 // Interface contains functions for a Plutono Deployer
 type Interface interface {
 	component.DeployWaiter
+	// SetWildcardCertName sets the WildcardCertName components.
 	SetWildcardCertName(*string)
 }
 

@@ -66,6 +66,8 @@ type Interface interface {
 	SetNamespaceUID(types.UID)
 	// SetComponents sets the monitoring components.
 	SetComponents([]component.MonitoringComponent)
+	// SetWildcardCertName sets the WildcardCertName components.
+	SetWildcardCertName(*string)
 }
 
 // Values is a set of configuration values for the monitoring components.
@@ -506,6 +508,7 @@ func (m *monitoring) Destroy(ctx context.Context) error {
 
 func (m *monitoring) SetNamespaceUID(uid types.UID)                   { m.values.NamespaceUID = uid }
 func (m *monitoring) SetComponents(c []component.MonitoringComponent) { m.values.Components = c }
+func (m *monitoring) SetWildcardCertName(secretName *string)          { m.values.WildcardCertName = secretName }
 
 func (m *monitoring) newShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(v1beta1constants.StatefulSetNamePrometheus, m.namespace)
