@@ -231,7 +231,7 @@ images:
 - name: node-exporter
   sourceRepository: github.com/prometheus/node_exporter
   repository: quay.io/prometheus/node-exporter
-  tag: v1.5.0
+  tag: v1.6.1
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
