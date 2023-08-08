@@ -76,7 +76,7 @@ check-not-initial() {
   else
     local yqResult
     yqResult=$(yq "${yqArg}" "$file")
-    if [[  $yqResult  == "" ]] || [[  $yqResult  == "null" ]] || [[  $yqResult == "[]" ]]; then
+    if [[  $yqResult  == "" ]] || [[  $yqResult  == "null" ]] || [[  $yqResult == "[]" ]] || [[  $yqResult == "{}" ]]; then
       echo "\"$yqArg\" in file \"$file\" is empty or does not exist. Please check your config."
       exit 1
     fi

@@ -33,9 +33,9 @@ As this setup is running on a real infrastructure, you have to provide credentia
 ### DNS
 Gardener control plane requires DNS for default and internal domains. Thus, you have to configure a valid DNS provider for your setup.
 
-Please maintain your DNS provider configuration and credentials at `./example/provider-extensions/garden/controlplane/values.yaml`.
+Please maintain your DNS provider configuration and credentials at `./example/provider-extensions/garden/controlplane/domain-secrets.yaml`.
 
-You can find a template for the file at `./example/provider-extensions/garden/controlplane/values.yaml.tmpl`.
+You can find a template for the file at `./example/provider-extensions/garden/controlplane/domain-secrets.yaml.tmpl`.
 
 ### Infrastructure
 Infrastructure secrets and the corresponding secret bindings should be maintained at:
