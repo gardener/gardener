@@ -34,11 +34,6 @@ import (
 
 // DefaultPlutono returns a deployer for Plutono.
 func (b *Botanist) DefaultPlutono() (plutono.Interface, error) {
-	var wildcardCertName *string
-	if b.ControlPlaneWildcardCert != nil {
-		wildcardCertName = pointer.String(b.ControlPlaneWildcardCert.GetName())
-	}
-
 	return shared.NewPlutono(
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,
@@ -53,7 +48,7 @@ func (b *Botanist) DefaultPlutono() (plutono.Interface, error) {
 		b.Shoot.VPNHighAvailabilityEnabled,
 		v1beta1constants.PriorityClassNameShootControlPlane100,
 		b.Shoot.GetReplicas(1),
-		wildcardCertName,
+		nil,
 		b.Shoot.WantsVerticalPodAutoscaler,
 	)
 }
