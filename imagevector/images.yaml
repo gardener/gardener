@@ -266,7 +266,7 @@ images:
 - name: blackbox-exporter
   sourceRepository: github.com/prometheus/blackbox_exporter
   repository: quay.io/prometheus/blackbox-exporter
-  tag: v0.23.0
+  tag: v0.24.0
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
