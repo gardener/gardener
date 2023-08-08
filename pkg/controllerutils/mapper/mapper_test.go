@@ -83,7 +83,7 @@ var _ = Describe("Controller Mapper", func() {
 		var mapper Mapper
 
 		BeforeEach(func() {
-			mapper = ClusterToObjectMapper(ctx, mgr, newObjListFunc, nil)
+			mapper = ClusterToObjectMapper(mgr, newObjListFunc, nil)
 		})
 
 		It("should find all objects for the passed cluster", func() {
@@ -105,7 +105,7 @@ var _ = Describe("Controller Mapper", func() {
 					},
 				},
 			}
-			mapper = ClusterToObjectMapper(ctx, mgr, newObjListFunc, predicates)
+			mapper = ClusterToObjectMapper(mgr, newObjListFunc, predicates)
 
 			Expect(fakeClient.Create(ctx, infra)).To(Succeed())
 
