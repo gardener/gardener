@@ -103,6 +103,7 @@ func (r *Reconciler) instantiateComponents(
 	secretsManager secretsmanager.Interface,
 	targetVersion *semver.Version,
 	applier kubernetes.Applier,
+	wildcardCert *corev1.Secret,
 ) (
 	c components,
 	err error,
@@ -204,7 +205,7 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 
-	c.plutono, err = r.newPlutono(secretsManager, garden.Spec.RuntimeCluster.Ingress.Domain)
+	c.plutono, err = r.newPlutono(secretsManager, garden.Spec.RuntimeCluster.Ingress.Domain, wildcardCert)
 	if err != nil {
 		return
 	}
@@ -729,7 +730,12 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden) 
 	)
 }
 
-func (r *Reconciler) newPlutono(secretsManager secretsmanager.Interface, ingressDomain string) (plutono.Interface, error) {
+func (r *Reconciler) newPlutono(secretsManager secretsmanager.Interface, ingressDomain string, wildcardCert *corev1.Secret) (plutono.Interface, error) {
+	var wildcardCertName *string
+	if wildcardCert != nil {
+		wildcardCertName = pointer.String(wildcardCert.GetName())
+	}
+
 	return sharedcomponent.NewPlutono(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
@@ -746,7 +752,7 @@ func (r *Reconciler) newPlutono(secretsManager secretsmanager.Interface, ingress
 		false,
 		false,
 		false,
-		nil,
+		wildcardCertName,
 	)
 }
 
