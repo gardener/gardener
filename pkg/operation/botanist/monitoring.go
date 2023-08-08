@@ -53,11 +53,6 @@ func (b *Botanist) DefaultMonitoring() (monitoring.Interface, error) {
 		alertingSecrets = append(alertingSecrets, b.LoadSecret(key))
 	}
 
-	var wildcardSecretName *string
-	if b.ControlPlaneWildcardCert != nil {
-		wildcardSecretName = &b.ControlPlaneWildcardCert.Name
-	}
-
 	values := monitoring.Values{
 		AlertingSecrets:              alertingSecrets,
 		AlertmanagerEnabled:          b.Shoot.WantsAlertmanager,
@@ -84,7 +79,7 @@ func (b *Botanist) DefaultMonitoring() (monitoring.Interface, error) {
 		StorageCapacityAlertmanager:  b.Seed.GetValidVolumeSize("1Gi"),
 		TargetName:                   b.Shoot.GetInfo().Name,
 		TargetProviderType:           b.Shoot.GetInfo().Spec.Provider.Type,
-		WildcardCertName:             wildcardSecretName,
+		WildcardCertName:             nil,
 	}
 
 	if b.Shoot.Networks != nil {
@@ -119,6 +114,9 @@ func (b *Botanist) DeployMonitoring(ctx context.Context) error {
 		return b.Shoot.Components.Monitoring.Monitoring.Destroy(ctx)
 	}
 
+	if b.ControlPlaneWildcardCert != nil {
+		b.Operation.Shoot.Components.Monitoring.Monitoring.SetWildcardCertName(pointer.String(b.ControlPlaneWildcardCert.GetName()))
+	}
 	b.Shoot.Components.Monitoring.Monitoring.SetNamespaceUID(b.SeedNamespaceObject.UID)
 	b.Shoot.Components.Monitoring.Monitoring.SetComponents(b.getMonitoringComponents())
 	return b.Shoot.Components.Monitoring.Monitoring.Deploy(ctx)
