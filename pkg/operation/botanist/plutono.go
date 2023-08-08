@@ -60,6 +60,9 @@ func (b *Botanist) DefaultPlutono() (plutono.Interface, error) {
 
 // DeployPlutono deploys the plutono in the Seed cluster.
 func (b *Botanist) DeployPlutono(ctx context.Context) error {
+	if b.ControlPlaneWildcardCert != nil {
+		b.Operation.Shoot.Components.ControlPlane.Plutono.SetWildcardCertName(pointer.String(b.ControlPlaneWildcardCert.GetName()))
+	}
 	// disable monitoring if shoot has purpose testing or monitoring and vali is disabled
 	if !b.Operation.WantsPlutono() {
 		if err := b.Shoot.Components.ControlPlane.Plutono.Destroy(ctx); err != nil {
