@@ -29,7 +29,6 @@ import (
 )
 
 type clusterToObjectMapper struct {
-	ctx            context.Context
 	reader         cache.Cache
 	newObjListFunc func() client.ObjectList
 	predicates     []predicate.Predicate
@@ -53,9 +52,8 @@ func (m *clusterToObjectMapper) Map(ctx context.Context, _ logr.Logger, reader c
 
 // ClusterToObjectMapper returns a mapper that returns requests for objects whose
 // referenced clusters have been modified.
-func ClusterToObjectMapper(ctx context.Context, mgr manager.Manager, newObjListFunc func() client.ObjectList, predicates []predicate.Predicate) Mapper {
+func ClusterToObjectMapper(mgr manager.Manager, newObjListFunc func() client.ObjectList, predicates []predicate.Predicate) Mapper {
 	return &clusterToObjectMapper{
-		ctx:            ctx,
 		reader:         mgr.GetCache(),
 		newObjListFunc: newObjListFunc,
 		predicates:     predicates,
