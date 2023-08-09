@@ -50,6 +50,18 @@ config:
     # (it will be still able to pull images but registry cache won't be used).
     ContainerdRegistryHostsDir: true
   etcdConfig:
+    etcdController:
+      workers: 3
+    custodianController:
+      workers: 3
+    backupCompactionController:
+      workers: 3
+      enableBackupCompaction: true
+      eventsThreshold: 1000000
+      activeDeadlineDuration: "3h"
+    backupLeaderElection:
+      reelectionPeriod: 5s
+      etcdConnectionTimeout: 5s
     featureGates:
       UseEtcdWrapper: false
   logging:
