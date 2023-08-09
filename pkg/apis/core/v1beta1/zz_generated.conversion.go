@@ -4013,8 +4013,8 @@ func Convert_core_MachineControllerManagerSettings_To_v1beta1_MachineControllerM
 
 func autoConvert_v1beta1_MachineImage_To_core_MachineImage(in *MachineImage, out *core.MachineImage, s conversion.Scope) error {
 	out.Name = in.Name
-	out.UpdateStrategy = (*core.MachineImageUpdateStrategy)(unsafe.Pointer(in.UpdateStrategy))
 	out.Versions = *(*[]core.MachineImageVersion)(unsafe.Pointer(&in.Versions))
+	out.UpdateStrategy = (*core.MachineImageUpdateStrategy)(unsafe.Pointer(in.UpdateStrategy))
 	return nil
 }
 
@@ -4025,8 +4025,8 @@ func Convert_v1beta1_MachineImage_To_core_MachineImage(in *MachineImage, out *co
 
 func autoConvert_core_MachineImage_To_v1beta1_MachineImage(in *core.MachineImage, out *MachineImage, s conversion.Scope) error {
 	out.Name = in.Name
-	out.UpdateStrategy = (*MachineImageUpdateStrategy)(unsafe.Pointer(in.UpdateStrategy))
 	out.Versions = *(*[]MachineImageVersion)(unsafe.Pointer(&in.Versions))
+	out.UpdateStrategy = (*MachineImageUpdateStrategy)(unsafe.Pointer(in.UpdateStrategy))
 	return nil
 }
 

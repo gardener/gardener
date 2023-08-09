@@ -6891,6 +6891,19 @@ string
 </tr>
 <tr>
 <td>
+<code>versions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.MachineImageVersion">
+[]MachineImageVersion
+</a>
+</em>
+</td>
+<td>
+<p>Versions contains versions, expiration dates and container runtimes of the machine image</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>updateStrategy</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.MachineImageUpdateStrategy">
@@ -6904,19 +6917,6 @@ MachineImageUpdateStrategy
 - patch: update to the latest patch version of the current minor version. (default)
 - minor: update to the latest minor and patch version.
 - major: always update to the overall latest version.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>versions</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.MachineImageVersion">
-[]MachineImageVersion
-</a>
-</em>
-</td>
-<td>
-<p>Versions contains versions, expiration dates and container runtimes of the machine image</p>
 </td>
 </tr>
 </tbody>

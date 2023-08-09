@@ -109,16 +109,16 @@ type KubernetesSettings struct {
 type MachineImage struct {
 	// Name is the name of the image.
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// Versions contains versions, expiration dates and container runtimes of the machine image
+	// +patchMergeKey=version
+	// +patchStrategy=merge
+	Versions []MachineImageVersion `json:"versions" patchStrategy:"merge" patchMergeKey:"version" protobuf:"bytes,2,rep,name=versions"`
 	// UpdateStrategy is the update strategy to use {patch, minor, major} for the machine image
 	//  - patch: update to the latest patch version of the current minor version. (default)
 	//  - minor: update to the latest minor and patch version.
 	//  - major: always update to the overall latest version.
 	// +optional
-	UpdateStrategy *MachineImageUpdateStrategy `json:"updateStrategy,omitempty" protobuf:"bytes,2,opt,name=updateStrategy"`
-	// Versions contains versions, expiration dates and container runtimes of the machine image
-	// +patchMergeKey=version
-	// +patchStrategy=merge
-	Versions []MachineImageVersion `json:"versions" patchStrategy:"merge" patchMergeKey:"version" protobuf:"bytes,3,rep,name=versions"`
+	UpdateStrategy *MachineImageUpdateStrategy `json:"updateStrategy,omitempty" protobuf:"bytes,3,opt,name=updateStrategy"`
 }
 
 // MachineImageVersion is an expirable version with list of supported container runtimes and interfaces

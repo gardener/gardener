@@ -96,13 +96,13 @@ type KubernetesSettings struct {
 type MachineImage struct {
 	// Name is the name of the image.
 	Name string
+	// Versions contains versions, expiration dates and container runtimes of the machine image
+	Versions []MachineImageVersion
 	// UpdateStrategy is the update strategy to use {patch, minor, major} for the machine image
 	//  - patch: update to the latest patch version of the current minor version. (default)
 	//  - minor: update to the latest minor and patch version.
 	//  - major: always update to the overall latest version.
 	UpdateStrategy *MachineImageUpdateStrategy
-	// Versions contains versions, expiration dates and container runtimes of the machine image
-	Versions []MachineImageVersion
 }
 
 // MachineImageVersion is an expirable version with list of supported container runtimes and interfaces

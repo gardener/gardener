@@ -4564,13 +4564,6 @@ func schema_pkg_apis_core_v1beta1_MachineImage(ref common.ReferenceCallback) com
 							Format:      "",
 						},
 					},
-					"updateStrategy": {
-						SchemaProps: spec.SchemaProps{
-							Description: "UpdateStrategy is the update strategy to use {patch, minor, major} for the machine image\n - patch: update to the latest patch version of the current minor version. (default)\n - minor: update to the latest minor and patch version.\n - major: always update to the overall latest version.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
 					"versions": {
 						VendorExtensible: spec.VendorExtensible{
 							Extensions: spec.Extensions{
@@ -4589,6 +4582,13 @@ func schema_pkg_apis_core_v1beta1_MachineImage(ref common.ReferenceCallback) com
 									},
 								},
 							},
+						},
+					},
+					"updateStrategy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "UpdateStrategy is the update strategy to use {patch, minor, major} for the machine image\n - patch: update to the latest patch version of the current minor version. (default)\n - minor: update to the latest minor and patch version.\n - major: always update to the overall latest version.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},
