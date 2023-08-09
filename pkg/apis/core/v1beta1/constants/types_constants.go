@@ -280,6 +280,8 @@ const (
 	GardenRoleDefaultDomain = "default-domain"
 	// GardenRoleInternalDomain is the value of the GardenRole key indicating type 'internal-domain'.
 	GardenRoleInternalDomain = "internal-domain"
+	// GardenRoleBackupSecret is the value of the GardenRole key indicating type 'backup-secret'.
+	GardenRoleBackupSecret = "backup-secret"
 	// GardenRoleOpenVPNDiffieHellman is the value of the GardenRole key indicating type 'openvpn-diffie-hellman'.
 	GardenRoleOpenVPNDiffieHellman = "openvpn-diffie-hellman"
 	// GardenRoleGlobalMonitoring is the value of the GardenRole key indicating type 'global-monitoring'

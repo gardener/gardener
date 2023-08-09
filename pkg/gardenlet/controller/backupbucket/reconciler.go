@@ -131,6 +131,13 @@ func (r *Reconciler) reconcileBackupBucket(
 		}
 	}
 
+	if !metav1.HasLabel(gardenSecret.ObjectMeta, v1beta1constants.GardenRole) {
+		log.Info("Adding gardener role label to secret", "secret", client.ObjectKeyFromObject(gardenSecret))
+		if err := r.addGardenRoleLabel(gardenCtx, gardenSecret); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add labels and finalizer to backup secret: %w", err)
+		}
+	}
+
 	var (
 		mustReconcileExtensionBackupBucket = false
 		// we should reconcile the secret only when the data has changed, since now we depend on
@@ -349,6 +356,12 @@ func (r *Reconciler) emptyExtensionSecret(backupBucketName string) *corev1.Secre
 			Namespace: r.GardenNamespace,
 		},
 	}
+}
+
+func (r *Reconciler) addGardenRoleLabel(ctx context.Context, gardenSecret *corev1.Secret) error {
+	patch := client.MergeFrom(gardenSecret.DeepCopy())
+	metav1.SetMetaDataLabel(&gardenSecret.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleBackupSecret)
+	return r.GardenClient.Patch(ctx, gardenSecret, patch)
 }
 
 func (r *Reconciler) reconcileBackupBucketExtensionSecret(ctx context.Context, extensionSecret, gardenSecret *corev1.Secret, backupBucket *gardencorev1beta1.BackupBucket) error {

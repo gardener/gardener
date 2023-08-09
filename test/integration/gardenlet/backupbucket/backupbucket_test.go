@@ -211,6 +211,7 @@ var _ = Describe("BackupBucket controller tests", func() {
 
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenSecret), gardenSecret)).To(Succeed())
 				g.Expect(gardenSecret.Finalizers).To(ConsistOf("gardener.cloud/gardener"))
+				g.Expect(gardenSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "backup-secret"))
 			}).Should(Succeed())
 		})
 
