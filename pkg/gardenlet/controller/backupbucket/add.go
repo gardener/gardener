@@ -16,8 +16,10 @@ package backupbucket
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
@@ -25,11 +27,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -79,10 +83,18 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 		return err
 	}
 
-	return c.Watch(
+	if err := c.Watch(
 		source.NewKindWithCache(&extensionsv1alpha1.BackupBucket{}, seedCluster.GetCache()),
 		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapExtensionBackupBucketToCoreBackupBucket), mapper.UpdateWithNew, c.GetLogger()),
 		predicateutils.LastOperationChanged(predicateutils.GetExtensionLastOperation),
+	); err != nil {
+		return err
+	}
+
+	return c.Watch(
+		source.NewKindWithCache(&corev1.Secret{}, gardenCluster.GetCache()),
+		mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapSecretsToBackupBucket), mapper.UpdateWithOldAndNew, c.GetLogger()),
+		SecretPredicate(),
 	)
 }
 
@@ -97,8 +109,69 @@ func (r *Reconciler) SeedNamePredicate() predicate.Predicate {
 	})
 }
 
+// SecretPredicate returns a predicate which returns true when the secret has gardener.cloud/role label backup-secret and the secret data has changed.
+func SecretPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		// We don't want to requeue the secret on controller restart
+		CreateFunc: func(e event.CreateEvent) bool {
+			return false
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			secret, ok := e.ObjectNew.(*corev1.Secret)
+			if !ok {
+				return false
+			}
+
+			if secret.Labels[v1beta1constants.GardenRole] != v1beta1constants.GardenRoleBackupSecret {
+				return false
+			}
+
+			oldSecret, ok := e.ObjectOld.(*corev1.Secret)
+			if !ok {
+				return false
+			}
+
+			return !reflect.DeepEqual(oldSecret.Data, secret.Data)
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return false
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			return false
+		},
+	}
+}
+
 // MapExtensionBackupBucketToCoreBackupBucket is a mapper.MapFunc for mapping a extensions.gardener.cloud/v1alpha1.BackupBucket to the owning
 // core.gardener.cloud/v1beta1.BackupBucket.
 func (r *Reconciler) MapExtensionBackupBucketToCoreBackupBucket(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: obj.GetName()}}}
+}
+
+// MapSecretsToBackupBucket is a mapper.MapFunc for mapping a Secret to the BackupBuckets referencing it.
+func (r *Reconciler) MapSecretsToBackupBucket(ctx context.Context, log logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+	secret, ok := obj.(*corev1.Secret)
+	if !ok {
+		return nil
+	}
+
+	backupBucketList := &gardencorev1beta1.BackupBucketList{}
+	if err := r.GardenClient.List(ctx, backupBucketList, client.MatchingFields{gardencore.BackupBucketSeedName: r.SeedName}); err != nil {
+		log.Error(err, "Failed to list backupbuckets")
+		return nil
+	}
+
+	list := mapper.ObjectListToRequests(backupBucketList, func(object client.Object) bool {
+		backupBucket, ok := object.(*gardencorev1beta1.BackupBucket)
+		if !ok {
+			return false
+		}
+
+		// The GCM secret controller only copies the secrets in the garden namespace to the seed namespace, so only
+		// requeue the BackupBucket if the secret referenced is in the garden namespace
+		return backupBucket.Spec.SecretRef.Name == secret.Name &&
+			backupBucket.Spec.SecretRef.Namespace == v1beta1constants.GardenNamespace
+	})
+
+	return list
 }

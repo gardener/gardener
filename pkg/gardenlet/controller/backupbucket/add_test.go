@@ -20,6 +20,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
@@ -77,6 +78,57 @@ var _ = Describe("Add", func() {
 			Expect(p.Update(event.UpdateEvent{ObjectNew: backupBucket})).To(BeFalse())
 			Expect(p.Delete(event.DeleteEvent{Object: backupBucket})).To(BeFalse())
 			Expect(p.Generic(event.GenericEvent{Object: backupBucket})).To(BeFalse())
+		})
+	})
+
+	Describe("#SecretPredicate", func() {
+		var (
+			p      predicate.Predicate
+			secret *corev1.Secret
+		)
+
+		BeforeEach(func() {
+			p = SecretPredicate()
+			secret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"gardener.cloud/role": "backup-secret",
+					},
+				},
+				Data: map[string][]byte{
+					"foo": []byte("bar"),
+				},
+			}
+		})
+
+		It("should return false because the secret does not have the garden role label", func() {
+			secret.Labels = nil
+
+			Expect(p.Create(event.CreateEvent{Object: secret})).To(BeFalse())
+			Expect(p.Update(event.UpdateEvent{ObjectNew: secret})).To(BeFalse())
+			Expect(p.Delete(event.DeleteEvent{Object: secret})).To(BeFalse())
+			Expect(p.Generic(event.GenericEvent{Object: secret})).To(BeFalse())
+		})
+
+		It("should return false because the secret data has not changed", func() {
+			oldSecret := secret.DeepCopy()
+
+			Expect(p.Create(event.CreateEvent{Object: secret})).To(BeFalse())
+			Expect(p.Update(event.UpdateEvent{ObjectNew: secret, ObjectOld: oldSecret})).To(BeFalse())
+			Expect(p.Delete(event.DeleteEvent{Object: secret})).To(BeFalse())
+			Expect(p.Generic(event.GenericEvent{Object: secret})).To(BeFalse())
+		})
+
+		It("should return true for Update event because the secret data has changed", func() {
+			oldSecret := secret.DeepCopy()
+			oldSecret.Data = map[string][]byte{
+				"foo": []byte("dash"),
+			}
+
+			Expect(p.Create(event.CreateEvent{Object: secret})).To(BeFalse())
+			Expect(p.Update(event.UpdateEvent{ObjectNew: secret, ObjectOld: oldSecret})).To(BeTrue())
+			Expect(p.Delete(event.DeleteEvent{Object: secret})).To(BeFalse())
+			Expect(p.Generic(event.GenericEvent{Object: secret})).To(BeFalse())
 		})
 	})
 
