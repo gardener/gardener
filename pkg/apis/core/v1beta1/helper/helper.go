@@ -16,7 +16,7 @@ package helper
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -453,7 +453,7 @@ func ShootMachineImageVersionExists(constraint gardencorev1beta1.MachineImage, i
 	return false, 0
 }
 
-// ToExpirableVersions returns the expirable versions from the given machine image versions
+// ToExpirableVersions returns the expirable versions from the given machine image versions.
 func ToExpirableVersions(versions []gardencorev1beta1.MachineImageVersion) []gardencorev1beta1.ExpirableVersion {
 	expVersions := []gardencorev1beta1.ExpirableVersion{}
 	for _, version := range versions {
@@ -533,15 +533,6 @@ func FindPrimaryDNSProvider(providers []gardencorev1beta1.DNSProvider) *gardenco
 // VersionPredicate is a function that evaluates a condition on the given versions.
 type VersionPredicate func(expirableVersion gardencorev1beta1.ExpirableVersion, version *semver.Version) (bool, error)
 
-// GetExpirableVersionsForMachineImageVersions returns a slice of expirable versions from a slice of machine image versions
-func GetExpirableVersionsForMachineImageVersions(versions []gardencorev1beta1.MachineImageVersion) []gardencorev1beta1.ExpirableVersion {
-	var expirableVersions []gardencorev1beta1.ExpirableVersion
-	for _, v := range versions {
-		expirableVersions = append(expirableVersions, v.ExpirableVersion)
-	}
-	return expirableVersions
-}
-
 // GetLatestVersionForPatchAutoUpdate finds the latest patch version for a given <currentVersion> for the current minor version from a given slice of versions.
 // The current version, preview and expired versions do not qualify.
 // In case no newer patch version is found, returns false and an empty string. Otherwise, returns true and the found version.
@@ -557,6 +548,7 @@ func GetLatestVersionForPatchAutoUpdate(versions []gardencorev1beta1.ExpirableVe
 }
 
 // GetLatestVersionForMinorAutoUpdate finds the latest minor with the latest patch version higher than a given <currentVersion> for the current major version from a given slice of versions.
+// Returns the highest patch version for the current minor in case the current version is not the highest patch version yet.
 // The current version, preview and expired versions do not qualify.
 // In case no newer version is found, returns false and an empty string. Otherwise, returns true and the found version.
 func GetLatestVersionForMinorAutoUpdate(versions []gardencorev1beta1.ExpirableVersion, currentVersion string) (bool, string, error) {
@@ -580,6 +572,7 @@ func GetLatestVersionForMinorAutoUpdate(versions []gardencorev1beta1.ExpirableVe
 }
 
 // GetOverallLatestVersionForAutoUpdate finds the overall latest version higher than a given <currentVersion> for the current major version from a given slice of versions.
+// Returns the highest patch version for the current minor in case the current version is not the highest patch version yet.
 // The current, preview and expired versions do not qualify.
 // In case no newer version is found, returns false and an empty string. Otherwise, returns true and the found version.
 func GetOverallLatestVersionForAutoUpdate(versions []gardencorev1beta1.ExpirableVersion, currentVersion string) (bool, string, error) {
@@ -604,7 +597,7 @@ func GetOverallLatestVersionForAutoUpdate(versions []gardencorev1beta1.Expirable
 // getVersionForAutoUpdate finds the latest eligible version higher than a given <currentVersion> from a slice of versions.
 // Versions <= the current version, preview and expired versions do not qualify for patch updates.
 // First tries to find a non-deprecated version.
-// In case no newer patch version is found, returns false and an empty string.Otherwise, returns true and the found version.
+// In case no newer patch version is found, returns false and an empty string. Otherwise, returns true and the found version.
 func getVersionForAutoUpdate(versions []gardencorev1beta1.ExpirableVersion, currentSemVerVersion *semver.Version, predicates []VersionPredicate) (bool, string, error) {
 	versionPredicates := append([]VersionPredicate{FilterExpiredVersion(), FilterSameVersion(*currentSemVerVersion), FilterLowerVersion(*currentSemVerVersion)}, predicates...)
 
@@ -632,7 +625,7 @@ func getVersionForAutoUpdate(versions []gardencorev1beta1.ExpirableVersion, curr
 
 // GetVersionForForcefulUpdateToConsecutiveMinor finds a version from a slice of expirable versions that qualifies for a minor level update given a <currentVersion>.
 // A qualifying version is a non-preview version having the minor version increased by exactly one version (required for Kubernetes version upgrades).
-// In case the consecutive minor version has only expired versions, picks the latest expired version (will try another update during the next maintenance time)
+// In case the consecutive minor version has only expired versions, picks the latest expired version (will try another update during the next maintenance time).
 // If a version can be found, returns true and the qualifying patch version of the next minor version.
 // In case it does not find a version, it returns false and an empty string.
 func GetVersionForForcefulUpdateToConsecutiveMinor(versions []gardencorev1beta1.ExpirableVersion, currentVersion string) (bool, string, error) {
@@ -665,7 +658,7 @@ func GetVersionForForcefulUpdateToConsecutiveMinor(versions []gardencorev1beta1.
 
 // GetVersionForForcefulUpdateToNextHigherMinor finds a version from a slice of expirable versions that qualifies for a minor level update given a <currentVersion>.
 // A qualifying version is the highest non-preview version with the next higher minor version from the given slice of versions.
-// In case the consecutive minor version has only expired versions, picks the latest expired version (will try another update during the next maintenance time)
+// In case the consecutive minor version has only expired versions, picks the latest expired version (will try another update during the next maintenance time).
 // If a version can be found, returns true and the qualifying version.
 // In case it does not find a version, it returns false and an empty string.
 func GetVersionForForcefulUpdateToNextHigherMinor(versions []gardencorev1beta1.ExpirableVersion, currentVersion string) (bool, string, error) {
@@ -677,12 +670,12 @@ func GetVersionForForcefulUpdateToNextHigherMinor(versions []gardencorev1beta1.E
 	predicates := []VersionPredicate{FilterDifferentMajorVersion(*currentSemVerVersion), FilterEqualAndSmallerMinorVersion(*currentSemVerVersion)}
 
 	// prefer non-expired version
-	return getVersionForMachineImageForceUpdate(versions, func(v semver.Version) int64 { return v.Minor() }, currentSemVerVersion, predicates)
+	return getVersionForMachineImageForceUpdate(versions, func(v semver.Version) int64 { return int64(v.Minor()) }, currentSemVerVersion, predicates)
 }
 
 // GetVersionForForcefulUpdateToNextHigherMajor finds a version from a slice of expirable versions that qualifies for a major level update given a <currentVersion>.
 // A qualifying version is a non-preview version with the next (as defined in the CloudProfile for the image) higher major version.
-// In case the next major version has only expired versions, picks the latest expired version (will try another update during the next maintenance time)
+// In case the next major version has only expired versions, picks the latest expired version (will try another update during the next maintenance time).
 // If a version can be found, returns true and the qualifying version of the next major version.
 // In case it does not find a version, it returns false and an empty string.
 func GetVersionForForcefulUpdateToNextHigherMajor(versions []gardencorev1beta1.ExpirableVersion, currentVersion string) (bool, string, error) {
@@ -694,12 +687,12 @@ func GetVersionForForcefulUpdateToNextHigherMajor(versions []gardencorev1beta1.E
 	predicates := []VersionPredicate{FilterEqualAndSmallerMajorVersion(*currentSemVerVersion)}
 
 	// prefer non-expired version
-	return getVersionForMachineImageForceUpdate(versions, func(v semver.Version) int64 { return v.Major() }, currentSemVerVersion, predicates)
+	return getVersionForMachineImageForceUpdate(versions, func(v semver.Version) int64 { return int64(v.Major()) }, currentSemVerVersion, predicates)
 }
 
 // getVersionForMachineImageForceUpdate finds a version from a slice of expirable versions that qualifies for an update given a <currentVersion>.
 // In contrast to determining a version for an auto-update, also allows update to an expired version in case a not-expired version cannot be determined.
-// Used only for machine image updates, as finds a qualifying version from the next higher minor version, which is not necessarily consecutive (n+1)
+// Used only for machine image updates, as finds a qualifying version from the next higher minor version, which is not necessarily consecutive (n+1).
 func getVersionForMachineImageForceUpdate(versions []gardencorev1beta1.ExpirableVersion, getMajorOrMinor GetMajorOrMinor, currentSemVerVersion *semver.Version, predicates []VersionPredicate) (bool, string, error) {
 	foundVersion, qualifyingVersion, nextMinorOrMajorVersion, err := GetQualifyingVersionForNextHigher(versions, getMajorOrMinor, currentSemVerVersion, append(predicates, FilterExpiredVersion())...)
 	if err != nil {
@@ -734,7 +727,7 @@ func getVersionForMachineImageForceUpdate(versions []gardencorev1beta1.Expirable
 	return true, qualifyingVersion.Version, nil
 }
 
-// GetLatestQualifyingVersion returns the latest expirable version from a set of expirable versions
+// GetLatestQualifyingVersion returns the latest expirable version from a set of expirable versions.
 // A version qualifies if its classification is not preview and the optional predicate does not filter out the version.
 // If the predicate returns true, the version is not considered for the latest qualifying version.
 func GetLatestQualifyingVersion(versions []gardencorev1beta1.ExpirableVersion, predicate ...VersionPredicate) (qualifyingVersionFound bool, latest *gardencorev1beta1.ExpirableVersion, err error) {
@@ -779,29 +772,22 @@ OUTER:
 	return true, latestVersion, nil
 }
 
-// ByVersion defines operations necessary for sorting a slice of expirable versions
-type ByVersion []gardencorev1beta1.ExpirableVersion
-
-func (a ByVersion) Len() int { return len(a) }
-func (a ByVersion) Less(i, j int) bool {
-	return semver.MustParse(a[i].Version).LessThan(semver.MustParse(a[j].Version))
-}
-func (a ByVersion) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-
-// GetMajorOrMinor returns either the major or the minor version from a semVer version
+// GetMajorOrMinor returns either the major or the minor version from a semVer version.
 type GetMajorOrMinor func(v semver.Version) int64
 
-// GetQualifyingVersionForNextHigher returns the latest expirable version for the next higher {minor/major} (not necessarily consecutive n+1) version from a set of expirable versions
+// GetQualifyingVersionForNextHigher returns the latest expirable version for the next higher {minor/major} (not necessarily consecutive n+1) version from a set of expirable versions.
 // A version qualifies if its classification is not preview and the optional predicate does not filter out the version.
 // If the predicate returns true, the version is not considered for the latest qualifying version.
 func GetQualifyingVersionForNextHigher(versions []gardencorev1beta1.ExpirableVersion, majorOrMinor GetMajorOrMinor, currentSemVerVersion *semver.Version, predicates ...VersionPredicate) (qualifyingVersionFound bool, qualifyingVersion *gardencorev1beta1.ExpirableVersion, nextMinorOrMajor int64, err error) {
 	// How to find the highest version with the next higher (not necessarily consecutive n+1) minor version (if the next higher minor version has no qualifying version, skip it to avoid consecutive updates)
-	// 1) Sort the versions ascending
+	// 1) Sort the versions in ascending order
 	// 2) Loop over the sorted array until the minor version changes (select all versions for the next higher minor)
 	//    - predicates filter out version with minor/major <= current_minor/major
 	// 3) Then select the last version in the array (that's the highest)
 
-	sort.Sort(ByVersion(versions))
+	slices.SortFunc(versions, func(a, b gardencorev1beta1.ExpirableVersion) int {
+		return semver.MustParse(a.Version).Compare(semver.MustParse(b.Version))
+	})
 
 	var (
 		highestVersionNextHigherMinorOrMajor   *semver.Version
@@ -856,7 +842,7 @@ OUTER:
 	return true, &expirableVersionNextHigherMinorOrMajor, nextMajorOrMinorVersion, nil
 }
 
-// FilterDifferentMajorMinorVersionAndLowerPatchVersionsOfSameMinor returns a VersionPredicate(closure) returns true if a given version v
+// FilterDifferentMajorMinorVersionAndLowerPatchVersionsOfSameMinor returns a VersionPredicate(closure) that returns true if a given version v
 //   - has a different major.minor version compared to the currentSemVerVersion
 //   - has a lower patch version (acts as >= relational operator)
 //
@@ -874,8 +860,7 @@ func FilterDifferentMajorMinorVersionAndLowerPatchVersionsOfSameMinor(currentSem
 // FilterNonConsecutiveMinorVersion returns a VersionPredicate(closure) that evaluates whether a given version v has a consecutive minor version compared to the currentSemVerVersion
 //   - implicitly, therefore also versions cannot be smaller than the current version
 //
-// returns true if v does not have a consecutive minor version
-// Uses the caret range operator.
+// returns true if v does not have a consecutive minor version.
 func FilterNonConsecutiveMinorVersion(currentSemVerVersion semver.Version) VersionPredicate {
 	return func(_ gardencorev1beta1.ExpirableVersion, v *semver.Version) (bool, error) {
 		if v.Major() != currentSemVerVersion.Major() {
@@ -887,37 +872,32 @@ func FilterNonConsecutiveMinorVersion(currentSemVerVersion semver.Version) Versi
 	}
 }
 
-// FilterDifferentMajorVersion returns a VersionPredicate(closure) that evaluates whether a given version v has the same major version compared to the currentSemVerVersion
-// returns true if v does not have the same major version
-// Uses the caret range operator.
+// FilterDifferentMajorVersion returns a VersionPredicate(closure) that evaluates whether a given version v has the same major version compared to the currentSemVerVersion.
+// Returns true if v does not have the same major version.
 func FilterDifferentMajorVersion(currentSemVerVersion semver.Version) VersionPredicate {
 	return func(_ gardencorev1beta1.ExpirableVersion, v *semver.Version) (bool, error) {
-		isWithinRange, err := versionutils.CompareVersions(v.String(), "^", currentSemVerVersion.String())
-		if err != nil {
-			return true, err
-		}
-		return !isWithinRange, nil
+		return v.Major() != currentSemVerVersion.Major(), nil
 	}
 }
 
-// FilterEqualAndSmallerMajorVersion returns a VersionPredicate(closure) that evaluates whether a given version v has a smaller major version compared to the currentSemVerVersion
-// returns true if v has a smaller or equal major version
+// FilterEqualAndSmallerMajorVersion returns a VersionPredicate(closure) that evaluates whether a given version v has a smaller major version compared to the currentSemVerVersion.
+// Returns true if v has a smaller or equal major version.
 func FilterEqualAndSmallerMajorVersion(currentSemVerVersion semver.Version) VersionPredicate {
 	return func(_ gardencorev1beta1.ExpirableVersion, v *semver.Version) (bool, error) {
 		return v.Major() <= currentSemVerVersion.Major(), nil
 	}
 }
 
-// FilterEqualAndSmallerMinorVersion returns a VersionPredicate(closure) that evaluates whether a given version v has a smaller or equal minor version compared to the currentSemVerVersion
-// returns true if v has a smaller or equal minor version
+// FilterEqualAndSmallerMinorVersion returns a VersionPredicate(closure) that evaluates whether a given version v has a smaller or equal minor version compared to the currentSemVerVersion.
+// Returns true if v has a smaller or equal minor version.
 func FilterEqualAndSmallerMinorVersion(currentSemVerVersion semver.Version) VersionPredicate {
 	return func(_ gardencorev1beta1.ExpirableVersion, v *semver.Version) (bool, error) {
 		return v.Minor() <= currentSemVerVersion.Minor(), nil
 	}
 }
 
-// FilterSameVersion returns a VersionPredicate(closure) that evaluates whether a given version v is equal to the currentSemVerVersion
-// returns true if it is equal
+// FilterSameVersion returns a VersionPredicate(closure) that evaluates whether a given version v is equal to the currentSemVerVersion.
+// returns true if it is equal.
 func FilterSameVersion(currentSemVerVersion semver.Version) VersionPredicate {
 	return func(_ gardencorev1beta1.ExpirableVersion, v *semver.Version) (bool, error) {
 		return v.Equal(&currentSemVerVersion), nil

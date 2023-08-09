@@ -6913,10 +6913,10 @@ MachineImageUpdateStrategy
 </td>
 <td>
 <em>(Optional)</em>
-<p>UpdateStrategy is the update strategy to use {patch, minor, major} for the machine image
-- patch: update to the latest patch version of the current minor version. (default)
+<p>UpdateStrategy is the update strategy to use for the machine image. Possible values are:
+- patch: update to the latest patch version of the current minor version.
 - minor: update to the latest minor and patch version.
-- major: always update to the overall latest version.</p>
+- major: always update to the overall latest version (default).</p>
 </td>
 </tr>
 </tbody>

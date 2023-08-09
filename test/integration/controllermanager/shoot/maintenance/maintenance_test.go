@@ -121,7 +121,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-									// AMD overall latest version: 3.0.1
+									// AMD64 overall latest version: 3.0.1
 									Version:        overallLatestVersionAMD64,
 									Classification: &supportedClassification,
 								},
@@ -282,7 +282,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 							},
 							{
 								ExpirableVersion: gardencorev1beta1.ExpirableVersion{
-									// AMD highest patch version for Shoot's minor: 0.0.3
+									// AMD64 highest patch version for Shoot's minor: 0.0.3
 									Version:        highestPatchSameMinorAMD64,
 									Classification: &deprecatedClassification,
 								},
@@ -618,6 +618,48 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				}).Should(Succeed())
 			})
 
+			It("updating one worker pool fails, while the other one succeeds (update strategy: major)", func() {
+				By("Set Shoot's machine version to be the latest in the minor in the CloudProfile")
+				cloneShoot := &gardencorev1beta1.Shoot{}
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), cloneShoot)).ToNot(HaveOccurred())
+				patch := client.StrategicMergeFrom(cloneShoot.DeepCopy())
+
+				cloneShoot.Spec.Provider.Workers[0].Machine.Image.Version = &highestPatchSameMinorAMD64
+				cloneShoot.Spec.Provider.Workers[1].Machine.Image.Version = &overallLatestVersionARM
+				Expect(testClient.Patch(ctx, cloneShoot, patch)).ToNot(HaveOccurred())
+
+				cpPatch := client.MergeFrom(cloudProfile.DeepCopy())
+				updateStrategyMajor := gardencorev1beta1.UpdateStrategyMajor
+				cloudProfile.Spec.MachineImages[0].UpdateStrategy = &updateStrategyMajor
+				Expect(testClient.Patch(ctx, cloudProfile, cpPatch)).To(Succeed())
+
+				By("Expire Shoot worker 1's machine image in the CloudProfile")
+				Expect(patchCloudProfileForMachineImageMaintenance(ctx, testClient, shoot.Spec.CloudProfileName, *cloneShoot.Spec.Provider.Workers[0].Machine.Image, &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
+
+				By("Expire Shoot worker 2's machine image in the CloudProfile")
+				Expect(patchCloudProfileForMachineImageMaintenance(ctx, testClient, shoot.Spec.CloudProfileName, *cloneShoot.Spec.Provider.Workers[1].Machine.Image, &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
+
+				By("Wait until manager has observed the CloudProfile update for the first worker")
+				waitMachineImageVersionToBeExpiredInCloudProfile(shoot.Spec.CloudProfileName, cloneShoot.Spec.Provider.Workers[0].Machine.Image.Name, *cloneShoot.Spec.Provider.Workers[0].Machine.Image.Version, &expirationDateInThePast)
+
+				By("Wait until manager has observed the CloudProfile update for the second worker")
+				waitMachineImageVersionToBeExpiredInCloudProfile(shoot.Spec.CloudProfileName, cloneShoot.Spec.Provider.Workers[1].Machine.Image.Name, *cloneShoot.Spec.Provider.Workers[1].Machine.Image.Version, &expirationDateInThePast)
+
+				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
+
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+					g.Expect(*shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: shoot.Spec.Provider.Workers[0].Machine.Image.Name, Version: &overallLatestVersionAMD64}))
+					g.Expect(*shoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: shoot.Spec.Provider.Workers[1].Machine.Image.Name, Version: &overallLatestVersionARM}))
+					g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring("(1/2) maintenance operations successful"))
+					g.Expect(shoot.Status.LastMaintenance.FailureReason).ToNot(BeNil())
+					g.Expect(*shoot.Status.LastMaintenance.FailureReason).To(ContainSubstring("Worker pool \"cpu-worker2\": failed to update machine image"))
+					g.Expect(shoot.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
+					g.Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateFailed))
+				}).Should(Succeed())
+			})
+
 			It("force update to latest patch version in minor, as the current version is not the latest for the current minor (update strategy: major)", func() {
 				By("Expire Shoot's machine image in the CloudProfile")
 				Expect(patchCloudProfileForMachineImageMaintenance(ctx, testClient, shoot.Spec.CloudProfileName, testMachineImage, &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
@@ -662,8 +704,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 					g.Expect(*shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: machineImageName, Version: pointer.String(highestPatchSameMinorAMD64)}))
 					g.Expect(*shoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: machineImageName, Version: pointer.String(highestPatchSameMinorARM)}))
 					g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker1\": Updated machine image from \"foo-image\" version \"%s\" to version \"%s\". Reason: Automatic update of the machine image version is configured (image update strategy: patch)", testMachineImageVersion, highestPatchSameMinorAMD64)))
-					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker2\": Updated machine image from \"foo-image\" version \"%s\" to version \"%s\". Reason: Automatic update of the machine image version is configured (image update strategy: patch)", testMachineImageVersion, highestPatchSameMinorARM)))
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker1\": Updated machine image \"foo-image\" from \"%s\" to \"%s\". Reason: Automatic update of the machine image version is configured (image update strategy: patch)", testMachineImageVersion, highestPatchSameMinorAMD64)))
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker2\": Updated machine image \"foo-image\" from \"%s\" to \"%s\". Reason: Automatic update of the machine image version is configured (image update strategy: patch)", testMachineImageVersion, highestPatchSameMinorARM)))
 					g.Expect(shoot.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 					g.Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
 				}).Should(Succeed())
@@ -682,8 +724,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 					g.Expect(*shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: shoot.Spec.Provider.Workers[0].Machine.Image.Name, Version: &highestPatchSameMinorAMD64}))
 					g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker1\": Updated machine image from \"foo-image\" version \"%s\" to version \"%s\". Reason: Machine image version expired - force update required (image update strategy: patch)", testMachineImageVersion, highestPatchSameMinorAMD64)))
-					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker2\": Updated machine image from \"foo-image\" version \"%s\" to version \"%s\". Reason: Machine image version expired - force update required (image update strategy: patch)", testMachineImageVersion, highestPatchSameMinorARM)))
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker1\": Updated machine image \"foo-image\" from \"%s\" to \"%s\". Reason: Machine image version expired - force update required (image update strategy: patch)", testMachineImageVersion, highestPatchSameMinorAMD64)))
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker2\": Updated machine image \"foo-image\" from \"%s\" to \"%s\". Reason: Machine image version expired - force update required (image update strategy: patch)", testMachineImageVersion, highestPatchSameMinorARM)))
 					g.Expect(shoot.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 					g.Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
 				}).Should(Succeed())
@@ -718,8 +760,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 					g.Expect(*shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: shoot.Spec.Provider.Workers[0].Machine.Image.Name, Version: &highestPatchNextMinorAMD64}))
 					g.Expect(*shoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: shoot.Spec.Provider.Workers[1].Machine.Image.Name, Version: &highestPatchNextMinorARM}))
 					g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker1\": Updated machine image from \"foo-image\" version \"%s\" to version \"%s\". Reason: Machine image version expired - force update required (image update strategy: patch)", highestPatchSameMinorAMD64, highestPatchNextMinorAMD64)))
-					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker2\": Updated machine image from \"foo-image\" version \"%s\" to version \"%s\". Reason: Machine image version expired - force update required (image update strategy: patch)", highestPatchSameMinorARM, highestPatchNextMinorARM)))
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker1\": Updated machine image \"foo-image\" from \"%s\" to \"%s\". Reason: Machine image version expired - force update required (image update strategy: patch)", highestPatchSameMinorAMD64, highestPatchNextMinorAMD64)))
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker2\": Updated machine image \"foo-image\" from \"%s\" to \"%s\". Reason: Machine image version expired - force update required (image update strategy: patch)", highestPatchSameMinorARM, highestPatchNextMinorARM)))
 					g.Expect(shoot.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 					g.Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
 				}).Should(Succeed())
@@ -787,8 +829,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 					g.Expect(*shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: machineImageName, Version: pointer.String(highestVersionForCurrentMajorAMD64)}))
 					g.Expect(*shoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: machineImageName, Version: pointer.String(highestVersionForCurrentMajorARM)}))
 					g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker1\": Updated machine image from \"foo-image\" version \"%s\" to version \"%s\". Reason: Automatic update of the machine image version is configured (image update strategy: minor)", highestPatchNextMinorAMD64, highestVersionForCurrentMajorAMD64)))
-					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker2\": Updated machine image from \"foo-image\" version \"%s\" to version \"%s\". Reason: Automatic update of the machine image version is configured (image update strategy: minor)", highestPatchNextMinorARM, highestVersionForCurrentMajorARM)))
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker1\": Updated machine image \"foo-image\" from \"%s\" to \"%s\". Reason: Automatic update of the machine image version is configured (image update strategy: minor)", highestPatchNextMinorAMD64, highestVersionForCurrentMajorAMD64)))
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker2\": Updated machine image \"foo-image\" from \"%s\" to \"%s\". Reason: Automatic update of the machine image version is configured (image update strategy: minor)", highestPatchNextMinorARM, highestVersionForCurrentMajorARM)))
 					g.Expect(shoot.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 					g.Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
 				}).Should(Succeed())
@@ -823,8 +865,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 					g.Expect(*shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: shoot.Spec.Provider.Workers[0].Machine.Image.Name, Version: &highestVersionForCurrentMajorAMD64}))
 					g.Expect(*shoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: shoot.Spec.Provider.Workers[1].Machine.Image.Name, Version: &highestVersionForCurrentMajorARM}))
 					g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker1\": Updated machine image from \"foo-image\" version \"%s\" to version \"%s\". Reason: Machine image version expired - force update required (image update strategy: minor)", highestPatchSameMinorAMD64, highestVersionForCurrentMajorAMD64)))
-					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker2\": Updated machine image from \"foo-image\" version \"%s\" to version \"%s\". Reason: Machine image version expired - force update required (image update strategy: minor)", highestPatchSameMinorARM, highestVersionForCurrentMajorARM)))
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker1\": Updated machine image \"foo-image\" from \"%s\" to \"%s\". Reason: Machine image version expired - force update required (image update strategy: minor)", highestPatchSameMinorAMD64, highestVersionForCurrentMajorAMD64)))
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker2\": Updated machine image \"foo-image\" from \"%s\" to \"%s\". Reason: Machine image version expired - force update required (image update strategy: minor)", highestPatchSameMinorARM, highestVersionForCurrentMajorARM)))
 					g.Expect(shoot.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 					g.Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
 				}).Should(Succeed())
@@ -859,8 +901,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 					g.Expect(*shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: shoot.Spec.Provider.Workers[0].Machine.Image.Name, Version: &highestVersionNextMajorAMD64}))
 					g.Expect(*shoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(gardencorev1beta1.ShootMachineImage{Name: shoot.Spec.Provider.Workers[1].Machine.Image.Name, Version: &highestVersionNextMajorARM}))
 					g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker1\": Updated machine image from \"foo-image\" version \"%s\" to version \"%s\". Reason: Machine image version expired - force update required (image update strategy: minor)", highestVersionForCurrentMajorAMD64, highestVersionNextMajorAMD64)))
-					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker2\": Updated machine image from \"foo-image\" version \"%s\" to version \"%s\". Reason: Machine image version expired - force update required (image update strategy: minor)", highestVersionForCurrentMajorARM, highestVersionNextMajorARM)))
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker1\": Updated machine image \"foo-image\" from \"%s\" to \"%s\". Reason: Machine image version expired - force update required (image update strategy: minor)", highestVersionForCurrentMajorAMD64, highestVersionNextMajorAMD64)))
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring(fmt.Sprintf("Worker pool \"cpu-worker2\": Updated machine image \"foo-image\" from \"%s\" to \"%s\". Reason: Machine image version expired - force update required (image update strategy: minor)", highestVersionForCurrentMajorARM, highestVersionNextMajorARM)))
 					g.Expect(shoot.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 					g.Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
 				}).Should(Succeed())
@@ -938,11 +980,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				Eventually(func(g Gomega) string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 					g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(*shoot.Status.LastMaintenance).To(Equal(gardencorev1beta1.LastMaintenance{
-						Description:   "Control Plane: Updated Kubernetes version from \"0.0.1\" to \"0.0.5\". Reason: AutoUpdate of Kubernetes version configured",
-						TriggeredTime: metav1.Time{Time: fakeClock.Now()},
-						State:         gardencorev1beta1.LastOperationStateSucceeded,
-					}))
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"0.0.1\" to \"0.0.5\". Reason: Automatic update of Kubernetes version configured"))
+					g.Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
 					return shoot.Spec.Kubernetes.Version
 				}).Should(Equal(testKubernetesVersionHighestPatchLowMinor.Version))
 			})
@@ -959,11 +998,9 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				Eventually(func(g Gomega) string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 					g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(*shoot.Status.LastMaintenance).To(Equal(gardencorev1beta1.LastMaintenance{
-						Description:   "Control Plane: Updated Kubernetes version from \"0.0.1\" to \"0.0.5\". Reason: Kubernetes version expired - force update required",
-						TriggeredTime: metav1.Time{Time: fakeClock.Now()},
-						State:         gardencorev1beta1.LastOperationStateSucceeded,
-					}))
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"0.0.1\" to \"0.0.5\". Reason: Kubernetes version expired - force update required"))
+					g.Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(shoot.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 					return shoot.Spec.Kubernetes.Version
 				}).Should(Equal(testKubernetesVersionHighestPatchLowMinor.Version))
 			})
@@ -980,11 +1017,9 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				Eventually(func(g Gomega) string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot126), shoot126)).To(Succeed())
 					g.Expect(shoot126.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(*shoot126.Status.LastMaintenance).To(Equal(gardencorev1beta1.LastMaintenance{
-						Description:   "Control Plane: Updated Kubernetes version from \"1.26.0\" to \"1.27.0\". Reason: Kubernetes version expired - force update required, EnableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27 and higher",
-						TriggeredTime: metav1.Time{Time: fakeClock.Now()},
-						State:         gardencorev1beta1.LastOperationStateSucceeded,
-					}))
+					g.Expect(shoot126.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.26.0\" to \"1.27.0\". Reason: Kubernetes version expired - force update required, EnableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27 and higher"))
+					g.Expect(shoot126.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(shoot126.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 					g.Expect(shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(Equal(pointer.Bool(false)))
 					return shoot126.Spec.Kubernetes.Version
 				}).Should(Equal("1.27.0"))
@@ -1008,11 +1043,9 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				Eventually(func(g Gomega) string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 					g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(*shoot.Status.LastMaintenance).To(Equal(gardencorev1beta1.LastMaintenance{
-						Description:   "Control Plane: Updated Kubernetes version from \"0.0.5\" to \"0.1.5\". Reason: Kubernetes version expired - force update required",
-						TriggeredTime: metav1.Time{Time: fakeClock.Now()},
-						State:         gardencorev1beta1.LastOperationStateSucceeded,
-					}))
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"0.0.5\" to \"0.1.5\". Reason: Kubernetes version expired - force update required"))
+					g.Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(shoot.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 					return shoot.Spec.Kubernetes.Version
 				}).Should(Equal(testKubernetesVersionHighestPatchConsecutiveMinor.Version))
 			})
@@ -1040,11 +1073,9 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				Eventually(func(g Gomega) string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 					g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(*shoot.Status.LastMaintenance).To(Equal(gardencorev1beta1.LastMaintenance{
-						Description:   "Control Plane: Updated Kubernetes version from \"0.0.1\" to \"0.0.5\". Reason: AutoUpdate of Kubernetes version configured, Worker pool \"cpu-worker1\": Updated Kubernetes version from \"0.0.1\" to \"0.0.5\". Reason: AutoUpdate of Kubernetes version configured",
-						TriggeredTime: metav1.Time{Time: fakeClock.Now()},
-						State:         gardencorev1beta1.LastOperationStateSucceeded,
-					}))
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring("All maintenance operations successful. Control Plane: Updated Kubernetes version from \"0.0.1\" to \"0.0.5\". Reason: Automatic update of Kubernetes version configured, Worker pool \"cpu-worker1\": Updated Kubernetes version from \"0.0.1\" to \"0.0.5\". Reason: Automatic update of Kubernetes version configured"))
+					g.Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(shoot.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 					return *shoot.Spec.Provider.Workers[0].Kubernetes.Version
 				}).Should(Equal(testKubernetesVersionHighestPatchLowMinor.Version))
 			})
@@ -1066,11 +1097,9 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				Eventually(func(g Gomega) string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 					g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(*shoot.Status.LastMaintenance).To(Equal(gardencorev1beta1.LastMaintenance{
-						Description:   "Control Plane: Updated Kubernetes version from \"0.0.1\" to \"0.0.5\". Reason: Kubernetes version expired - force update required, Worker pool \"cpu-worker1\": Updated Kubernetes version from \"0.0.1\" to \"0.0.5\". Reason: Kubernetes version expired - force update required",
-						TriggeredTime: metav1.Time{Time: fakeClock.Now()},
-						State:         gardencorev1beta1.LastOperationStateSucceeded,
-					}))
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"0.0.1\" to \"0.0.5\". Reason: Kubernetes version expired - force update required, Worker pool \"cpu-worker1\": Updated Kubernetes version from \"0.0.1\" to \"0.0.5\". Reason: Kubernetes version expired - force update required"))
+					g.Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(shoot.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 					return *shoot.Spec.Provider.Workers[0].Kubernetes.Version
 				}).Should(Equal(testKubernetesVersionHighestPatchLowMinor.Version))
 			})
@@ -1095,11 +1124,9 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				Eventually(func(g Gomega) string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 					g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(*shoot.Status.LastMaintenance).To(Equal(gardencorev1beta1.LastMaintenance{
-						Description:   "Control Plane: Updated Kubernetes version from \"0.0.5\" to \"0.1.5\". Reason: Kubernetes version expired - force update required, Worker pool \"cpu-worker1\": Updated Kubernetes version from \"0.0.5\" to \"0.1.5\". Reason: Kubernetes version expired - force update required",
-						TriggeredTime: metav1.Time{Time: fakeClock.Now()},
-						State:         gardencorev1beta1.LastOperationStateSucceeded,
-					}))
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"0.0.5\" to \"0.1.5\". Reason: Kubernetes version expired - force update required, Worker pool \"cpu-worker1\": Updated Kubernetes version from \"0.0.5\" to \"0.1.5\". Reason: Kubernetes version expired - force update required"))
+					g.Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(shoot.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 					return *shoot.Spec.Provider.Workers[0].Kubernetes.Version
 				}).Should(Equal(testKubernetesVersionHighestPatchConsecutiveMinor.Version))
 			})
@@ -1124,11 +1151,9 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				Eventually(func(g Gomega) string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 					g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(*shoot.Status.LastMaintenance).To(Equal(gardencorev1beta1.LastMaintenance{
-						Description:   "Worker pool \"cpu-worker1\": Updated Kubernetes version from \"0.0.5\" to \"0.1.5\". Reason: Kubernetes version expired - force update required",
-						TriggeredTime: metav1.Time{Time: fakeClock.Now()},
-						State:         gardencorev1beta1.LastOperationStateSucceeded,
-					}))
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring("Worker pool \"cpu-worker1\": Updated Kubernetes version from \"0.0.5\" to \"0.1.5\". Reason: Kubernetes version expired - force update required"))
+					g.Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(shoot.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 					return *shoot.Spec.Provider.Workers[0].Kubernetes.Version
 				}).Should(Equal(testKubernetesVersionLowPatchConsecutiveMinor.Version))
 			})
@@ -1159,11 +1184,9 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				Eventually(func(g Gomega) string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 					g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(*shoot.Status.LastMaintenance).To(Equal(gardencorev1beta1.LastMaintenance{
-						Description:   "Control Plane: Updated Kubernetes version from \"0.0.1\" to \"0.0.5\". Reason: AutoUpdate of Kubernetes version configured",
-						TriggeredTime: metav1.Time{Time: fakeClock.Now()},
-						State:         gardencorev1beta1.LastOperationStateSucceeded,
-					}))
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"0.0.1\" to \"0.0.5\". Reason: Automatic update of Kubernetes version configured"))
+					g.Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(shoot.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 					return shoot.Spec.Kubernetes.Version
 				}).Should(Equal(testKubernetesVersionHighestPatchLowMinor.Version))
 			})
@@ -1184,11 +1207,9 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				Eventually(func(g Gomega) string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 					g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(*shoot.Status.LastMaintenance).To(Equal(gardencorev1beta1.LastMaintenance{
-						Description:   "Control Plane: Updated Kubernetes version from \"0.0.1\" to \"0.0.5\". Reason: Kubernetes version expired - force update required",
-						TriggeredTime: metav1.Time{Time: fakeClock.Now()},
-						State:         gardencorev1beta1.LastOperationStateSucceeded,
-					}))
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"0.0.1\" to \"0.0.5\". Reason: Kubernetes version expired - force update required"))
+					g.Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(shoot.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 					return shoot.Spec.Kubernetes.Version
 				}).Should(Equal(testKubernetesVersionHighestPatchLowMinor.Version))
 			})
@@ -1212,11 +1233,9 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				Eventually(func(g Gomega) string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 					g.Expect(shoot.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(*shoot.Status.LastMaintenance).To(Equal(gardencorev1beta1.LastMaintenance{
-						Description:   "Control Plane: Updated Kubernetes version from \"0.0.5\" to \"0.1.5\". Reason: Kubernetes version expired - force update required",
-						TriggeredTime: metav1.Time{Time: fakeClock.Now()},
-						State:         gardencorev1beta1.LastOperationStateSucceeded,
-					}))
+					g.Expect(shoot.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"0.0.5\" to \"0.1.5\". Reason: Kubernetes version expired - force update required"))
+					g.Expect(shoot.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(shoot.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 					return shoot.Spec.Kubernetes.Version
 				}).Should(Equal(testKubernetesVersionHighestPatchConsecutiveMinor.Version))
 			})
@@ -1233,12 +1252,10 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				Eventually(func(g Gomega) string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot126), shoot126)).To(Succeed())
 					g.Expect(shoot126.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(*shoot126.Status.LastMaintenance).To(Equal(gardencorev1beta1.LastMaintenance{
-						Description: "Control Plane: Updated Kubernetes version from \"1.26.0\" to \"1.27.0\". Reason: Kubernetes version expired - force update required, " +
-							"EnableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27 and higher",
-						TriggeredTime: metav1.Time{Time: fakeClock.Now()},
-						State:         gardencorev1beta1.LastOperationStateSucceeded,
-					}))
+					g.Expect(shoot126.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.26.0\" to \"1.27.0\". Reason: Kubernetes version expired - force update required"))
+					g.Expect(shoot126.Status.LastMaintenance.Description).To(ContainSubstring("EnableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27 and higher"))
+					g.Expect(shoot126.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+					g.Expect(shoot126.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 					g.Expect(shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(Equal(pointer.Bool(false)))
 					return shoot126.Spec.Kubernetes.Version
 				}).Should(Equal("1.27.0"))

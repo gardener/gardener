@@ -1565,10 +1565,10 @@ message MachineImage {
   // +patchStrategy=merge
   repeated MachineImageVersion versions = 2;
 
-  // UpdateStrategy is the update strategy to use {patch, minor, major} for the machine image
-  //  - patch: update to the latest patch version of the current minor version. (default)
+  // UpdateStrategy is the update strategy to use for the machine image. Possible values are:
+  //  - patch: update to the latest patch version of the current minor version.
   //  - minor: update to the latest minor and patch version.
-  //  - major: always update to the overall latest version.
+  //  - major: always update to the overall latest version (default).
   // +optional
   optional string updateStrategy = 3;
 }

@@ -1092,10 +1092,10 @@ var _ = Describe("Helper", func() {
 
 				// setup filter for smaller minor or smaller major
 				if getNextHigherMinor {
-					majorMinor = func(v semver.Version) int64 { return v.Minor() }
+					majorMinor = func(v semver.Version) int64 { return int64(v.Minor()) }
 					filterSmaller = FilterEqualAndSmallerMinorVersion(*currentSemVerVersion)
 				} else {
-					majorMinor = func(v semver.Version) int64 { return v.Major() }
+					majorMinor = func(v semver.Version) int64 { return int64(v.Major()) }
 					filterSmaller = FilterEqualAndSmallerMajorVersion(*currentSemVerVersion)
 				}
 
@@ -1274,24 +1274,8 @@ var _ = Describe("Helper", func() {
 		)
 
 		Describe("#Expirable Version Helper", func() {
-			expirationDate := metav1.Time{Time: time.Now().AddDate(0, 0, -1)}
 			classificationPreview := gardencorev1beta1.ClassificationPreview
-			expectedExpirableVersion := gardencorev1beta1.ExpirableVersion{
-				Version:        "1.0.0",
-				ExpirationDate: &expirationDate,
-				Classification: &classificationPreview,
-			}
 
-			DescribeTable("#GetExpirableVersionsForMachineImageVersions", func(versions []gardencorev1beta1.MachineImageVersion, expected []gardencorev1beta1.ExpirableVersion) {
-				Expect(GetExpirableVersionsForMachineImageVersions(versions)).To(Equal(expected))
-			},
-				Entry("Should succeed", []gardencorev1beta1.MachineImageVersion{
-					{
-						ExpirableVersion: expectedExpirableVersion,
-					}},
-					[]gardencorev1beta1.ExpirableVersion{*expectedExpirableVersion.DeepCopy()},
-				),
-			)
 			DescribeTable("#GetLatestVersionForPatchAutoUpdate",
 				func(currentVersion string, cloudProfileVersions []gardencorev1beta1.ExpirableVersion, expectedVersion string, qualifyingVersionFound bool) {
 					ok, newVersion, err := GetLatestVersionForPatchAutoUpdate(cloudProfileVersions, currentVersion)

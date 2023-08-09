@@ -139,7 +139,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			})
 
 			It("should update machine image version to overall latest. Auto update: already on latest patch for minor, and there is an overall higher version available", func() {
-				_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
 				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", overallLatestVersion)
@@ -175,7 +175,7 @@ var _ = Describe("Shoot Maintenance", func() {
 
 				shoot.Spec.Provider.Workers[0].Machine.Architecture = pointer.String("arm64")
 
-				_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
 				Expect(err).NotTo(HaveOccurred())
 				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", expectedVersion)
 			})
@@ -218,7 +218,7 @@ var _ = Describe("Shoot Maintenance", func() {
 				}
 
 				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, otherWorker)
-				_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
 
@@ -238,7 +238,7 @@ var _ = Describe("Shoot Maintenance", func() {
 
 				cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions, highestForMinor)
 
-				_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
 				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", expectedVersion)
@@ -248,7 +248,7 @@ var _ = Describe("Shoot Maintenance", func() {
 				shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = pointer.Bool(false)
 				cloudProfile.Spec.MachineImages[0].Versions[0].ExpirationDate = &expirationDateInThePast
 
-				_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
 				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", overallLatestVersion)
@@ -283,7 +283,7 @@ var _ = Describe("Shoot Maintenance", func() {
 					},
 				}
 
-				_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
 				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", expectedVersion)
@@ -299,15 +299,15 @@ var _ = Describe("Shoot Maintenance", func() {
 				}
 				cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions, highestExpiredVersion)
 				shoot.Spec.Provider.Workers[0].Machine.Image.Version = &highestExpiredVersion.Version
-				_, _, failures, err := maintainMachineImages(log, shoot, cloudProfile)
+				results, err := maintainMachineImages(log, shoot, cloudProfile)
 
-				Expect(failures).To(HaveLen(1))
+				Expect(results[shoot.Spec.Provider.Workers[0].Name].isSuccessful).To(BeFalse())
 				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should not change version: already on highest version.", func() {
 				shoot.Spec.Provider.Workers[0].Machine.Image.Version = &overallLatestVersion
-				_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
 				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", overallLatestVersion)
@@ -342,7 +342,7 @@ var _ = Describe("Shoot Maintenance", func() {
 				cloudProfile.Spec.MachineImages[0].Versions = versions
 
 				// the shoots patch version is expired and there is no higher non-expired & non-preview patch version of the same minor -> force update
-				_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
 				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", expectedVersion)
@@ -398,7 +398,7 @@ var _ = Describe("Shoot Maintenance", func() {
 				}
 
 				// the shoots patch version is expired and there is no higher non-expired & non-preview patch version of the same minor -> force update
-				_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
 				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", expectedVersion)
@@ -441,7 +441,7 @@ var _ = Describe("Shoot Maintenance", func() {
 					},
 				}
 
-				_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
 				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", highestPatchNextMinor)
@@ -477,7 +477,7 @@ var _ = Describe("Shoot Maintenance", func() {
 				cloudProfile.Spec.MachineImages[0].Versions = versions
 
 				// the shoots patch version is expired and there is no higher non-expired & non-preview patch version of the same minor -> force update
-				_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
 				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", highestNonPreviewPatchVersionNplusTwoMinor.Version)
@@ -522,7 +522,7 @@ var _ = Describe("Shoot Maintenance", func() {
 				cloudProfile.Spec.MachineImages[0].Versions = versions
 
 				// the shoots patch version is expired and there is no higher non-expired & non-preview patch version of the same minor -> force update
-				_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
 				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", expiredPatchVersionNextMinor.Version)
@@ -556,7 +556,7 @@ var _ = Describe("Shoot Maintenance", func() {
 				}
 				shoot.Spec.Provider.Workers[0].Machine.Image.Version = &highestVersionForMinor
 				expected := shoot.Spec.Provider.Workers[0].Machine.Image.DeepCopy()
-				_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(expected))
 			})
@@ -571,9 +571,9 @@ var _ = Describe("Shoot Maintenance", func() {
 				}
 				cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions, highestExpiredVersion)
 				shoot.Spec.Provider.Workers[0].Machine.Image.Version = &highestExpiredVersion.Version
-				_, _, failures, err := maintainMachineImages(log, shoot, cloudProfile)
+				results, err := maintainMachineImages(log, shoot, cloudProfile)
 
-				Expect(failures).To(HaveLen(1))
+				Expect(results[shoot.Spec.Provider.Workers[0].Name].isSuccessful).To(BeFalse())
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})
@@ -623,7 +623,7 @@ var _ = Describe("Shoot Maintenance", func() {
 					},
 				}
 
-				_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
 				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", highestPatchCurrentMinor)
@@ -672,7 +672,7 @@ var _ = Describe("Shoot Maintenance", func() {
 					},
 				}
 
-				_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
 				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", highestVersionForCurrentMajor)
@@ -722,7 +722,7 @@ var _ = Describe("Shoot Maintenance", func() {
 					},
 				}
 
-				_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
 				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", highestVersionForCurrentMajor)
@@ -768,7 +768,7 @@ var _ = Describe("Shoot Maintenance", func() {
 				shoot.Spec.Provider.Workers[0].Machine.Image.Version = &latestVersionForCurrentMajor
 
 				// the shoots patch version is expired and there is no higher non-expired & non-preview patch version of the same minor -> force update
-				_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
 				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", latestVersionNextMajor)
@@ -804,7 +804,7 @@ var _ = Describe("Shoot Maintenance", func() {
 				cloudProfile.Spec.MachineImages[0].Versions = versions
 
 				// the shoots patch version is expired and there is no higher non-expired & non-preview patch version of the same minor -> force update
-				_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
 				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", highestNonPreviewVersionNplusTwoMajor.Version)
@@ -820,9 +820,9 @@ var _ = Describe("Shoot Maintenance", func() {
 				}
 				cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions, highestExpiredVersion)
 				shoot.Spec.Provider.Workers[0].Machine.Image.Version = &highestExpiredVersion.Version
-				_, _, failures, err := maintainMachineImages(log, shoot, cloudProfile)
+				results, err := maintainMachineImages(log, shoot, cloudProfile)
 
-				Expect(failures).To(HaveLen(1))
+				Expect(results[shoot.Spec.Provider.Workers[0].Name].isSuccessful).To(BeFalse())
 				Expect(err).ToNot(HaveOccurred())
 				// make sure still has same version
 				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", highestExpiredVersion.Version)
@@ -856,7 +856,7 @@ var _ = Describe("Shoot Maintenance", func() {
 				}
 
 				shoot.Spec.Provider.Workers[0].Machine.Image.Version = &highestVersionForMajor
-				_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+				_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 				Expect(err).NotTo(HaveOccurred())
 				assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", highestVersionForMajor)
@@ -866,7 +866,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		It("should treat workers with `cri: nil` like `cri.name: docker` and not update if `docker` is not explicitly supported by the machine image", func() {
 			cloudProfile.Spec.MachineImages[0].Versions[1].CRI = []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}}
 
-			_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+			_, err := maintainMachineImages(log, shoot, cloudProfile)
 			Expect(err).NotTo(HaveOccurred())
 			assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", "1.0.0")
 		})
@@ -875,7 +875,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = pointer.Bool(false)
 
 			expected := shoot.Spec.Provider.Workers[0].Machine.Image.DeepCopy()
-			_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+			_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(expected))
@@ -886,7 +886,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			shoot.Spec.Provider.Workers[0].CRI = &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD}
 
 			expected := shoot.Spec.Provider.Workers[0].Machine.Image.DeepCopy()
-			_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+			_, err := maintainMachineImages(log, shoot, cloudProfile)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(expected))
 		})
@@ -899,7 +899,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			// add another pool without CRI constraints -> should be updated via auto-update
 			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{Name: "worker-without-cri-config", Machine: gardencorev1beta1.Machine{Image: shootCurrentImage.DeepCopy(), Architecture: pointer.String("amd64")}})
 
-			_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+			_, err := maintainMachineImages(log, shoot, cloudProfile)
 			Expect(err).NotTo(HaveOccurred())
 
 			assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", "1.0.0")
@@ -915,7 +915,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			// add another pool without CRI constraints -> should be updated via auto-update to the highest patch version of the same minor
 			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{Name: "worker-without-containerruntime", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD}, Machine: gardencorev1beta1.Machine{Image: shootCurrentImage.DeepCopy(), Architecture: pointer.String("amd64")}})
 
-			_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+			_, err := maintainMachineImages(log, shoot, cloudProfile)
 			Expect(err).NotTo(HaveOccurred())
 
 			assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", "1.0.0")
@@ -930,7 +930,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{Name: "worker-with-gvisor-and-kata", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD, ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{Type: "gvisor"}, {Type: "kata-container"}}}, Machine: gardencorev1beta1.Machine{Image: shootCurrentImage.DeepCopy(), Architecture: pointer.String("amd64")}})
 			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{Name: "worker-with-gvisor", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD, ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{Type: "gvisor"}}}, Machine: gardencorev1beta1.Machine{Image: shootCurrentImage.DeepCopy(), Architecture: pointer.String("amd64")}})
 
-			_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+			_, err := maintainMachineImages(log, shoot, cloudProfile)
 			Expect(err).NotTo(HaveOccurred())
 
 			assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", "1.0.0")
@@ -943,7 +943,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			shoot.Spec.Kubernetes.Version = "1.26.0"
 
 			expected := shoot.Spec.Provider.Workers[0].Machine.Image.DeepCopy()
-			_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+			_, err := maintainMachineImages(log, shoot, cloudProfile)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(expected))
 		})
@@ -952,7 +952,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			cloudProfile.Spec.MachineImages[0].Versions[1].KubeletVersionConstraint = pointer.String("< 1.26")
 			shoot.Spec.Kubernetes.Version = "1.25.1"
 
-			_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+			_, err := maintainMachineImages(log, shoot, cloudProfile)
 			Expect(err).NotTo(HaveOccurred())
 			assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", overallLatestVersion)
 		})
@@ -965,7 +965,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			}
 
 			expected := shoot.Spec.Provider.Workers[0].Machine.Image.DeepCopy()
-			_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+			_, err := maintainMachineImages(log, shoot, cloudProfile)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(expected))
 		})
@@ -978,7 +978,7 @@ var _ = Describe("Shoot Maintenance", func() {
 				Version: pointer.String("1.26.0"),
 			}
 
-			_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+			_, err := maintainMachineImages(log, shoot, cloudProfile)
 			Expect(err).NotTo(HaveOccurred())
 			assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", cloudProfile.Spec.MachineImages[0].Versions[1].Version)
 		})
@@ -986,7 +986,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		It("should return an error - cloud profile has no matching (machineImage.name) machine image defined", func() {
 			cloudProfile.Spec.MachineImages = cloudProfile.Spec.MachineImages[1:]
 
-			_, _, _, err := maintainMachineImages(log, shoot, cloudProfile)
+			_, err := maintainMachineImages(log, shoot, cloudProfile)
 
 			Expect(err).To(HaveOccurred())
 		})
@@ -1055,7 +1055,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			cloudProfile.Spec.Kubernetes.Versions[4].ExpirationDate = &expirationDateInThePast
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.1"}
 
-			_, _, _, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
 			})
@@ -1073,7 +1073,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			// mark latest version 1.02 as preview
 			cloudProfile.Spec.Kubernetes.Versions[3].Classification = &previewClassification
 
-			_, _, _, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
 			})
@@ -1087,7 +1087,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			cloudProfile.Spec.Kubernetes.Versions[3].ExpirationDate = &expirationDateInThePast
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.2"}
 
-			_, _, _, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
 			})
@@ -1101,7 +1101,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			cloudProfile.Spec.Kubernetes.Versions[3].ExpirationDate = &expirationDateInThePast
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.2"}
 
-			_, _, _, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
 			})
@@ -1122,7 +1122,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			cloudProfile.Spec.Kubernetes.Versions[1].ExpirationDate = &expirationDateInThePast
 			cloudProfile.Spec.Kubernetes.Versions[2].ExpirationDate = &expirationDateInThePast
 
-			_, _, _, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
 			})
@@ -1140,7 +1140,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			cloudProfile.Spec.Kubernetes.Versions[3].ExpirationDate = &expirationDateInThePast
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.2"}
 
-			_, _, _, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
 			})
@@ -1152,7 +1152,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.1"}
 
-			_, _, _, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
 			})
@@ -1166,7 +1166,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			cloudProfile.Spec.Kubernetes.Versions[4].ExpirationDate = &expirationDateInTheFuture
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.1"}
 
-			_, _, _, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
 			})
@@ -1180,7 +1180,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.0"}
 
-			_, _, _, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
 			})
@@ -1194,7 +1194,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.2"}
 
-			_, _, _, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
 			})
@@ -1208,7 +1208,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			cloudProfile.Spec.Kubernetes.Versions[3].ExpirationDate = &expirationDateInThePast
 			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.1.2"}
 
-			_, _, _, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			_, err := maintainKubernetesVersion(log, shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 				shoot.Spec.Kubernetes.Version = v
 				return nil
 			})

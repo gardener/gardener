@@ -98,10 +98,10 @@ type MachineImage struct {
 	Name string
 	// Versions contains versions, expiration dates and container runtimes of the machine image
 	Versions []MachineImageVersion
-	// UpdateStrategy is the update strategy to use {patch, minor, major} for the machine image
-	//  - patch: update to the latest patch version of the current minor version. (default)
+	// UpdateStrategy is the update strategy to use for the machine image. Possible values are:
+	//  - patch: update to the latest patch version of the current minor version.
 	//  - minor: update to the latest minor and patch version.
-	//  - major: always update to the overall latest version.
+	//  - major: always update to the overall latest version (default).
 	UpdateStrategy *MachineImageUpdateStrategy
 }
 

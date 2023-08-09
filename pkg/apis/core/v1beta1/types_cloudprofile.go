@@ -113,12 +113,12 @@ type MachineImage struct {
 	// +patchMergeKey=version
 	// +patchStrategy=merge
 	Versions []MachineImageVersion `json:"versions" patchStrategy:"merge" patchMergeKey:"version" protobuf:"bytes,2,rep,name=versions"`
-	// UpdateStrategy is the update strategy to use {patch, minor, major} for the machine image
-	//  - patch: update to the latest patch version of the current minor version. (default)
+	// UpdateStrategy is the update strategy to use for the machine image. Possible values are:
+	//  - patch: update to the latest patch version of the current minor version.
 	//  - minor: update to the latest minor and patch version.
-	//  - major: always update to the overall latest version.
+	//  - major: always update to the overall latest version (default).
 	// +optional
-	UpdateStrategy *MachineImageUpdateStrategy `json:"updateStrategy,omitempty" protobuf:"bytes,3,opt,name=updateStrategy"`
+	UpdateStrategy *MachineImageUpdateStrategy `json:"updateStrategy,omitempty" protobuf:"bytes,3,opt,name=updateStrategy,casttype=MachineImageUpdateStrategy"`
 }
 
 // MachineImageVersion is an expirable version with list of supported container runtimes and interfaces

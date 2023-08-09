@@ -87,22 +87,23 @@ spec:
         expirationDate: "2022-11-30T23:59:59Z"
         version: 1.24.5
 ```
+
 ## Automatic Version Upgrades 
 
 There are two ways, the Kubernetes version of the control plane as well as the Kubernetes and machine image version of a worker pool can be upgraded: `auto update` and `forceful` update.
-See [here](./shoot_maintenance.md#automatic-version-updates) how to enable `auto updates` for Kubernetes or machine image versions on the Shoot cluster.
+See [Automatic Version Updates](./shoot_maintenance.md#automatic-version-updates) for how to enable `auto updates` for Kubernetes or machine image versions on the Shoot cluster.
 
-If a Shoot is running a version after its expiration date has passed, it will be forcefully migrated during its maintenance time.
+If a Shoot is running a version after its expiration date has passed, it will be forcefully updated during its maintenance time.
 This happens **even if the owner has opted out of automatic cluster updates!**
 
-**When an auto update is triggered**:
-- the `Shoot` has auto-update enabled and the version is not the *latest eligible version* for the auto-update. Please note that this *latest version* that qualifies for an auto-update is not necessarily the overall latest version in the cloudprofile:
-   - For Kubernetes version, the latest eligible version for auto-updates is the latest patch version of the current minor
-   - For machine image version, the latest eligible version for auto-updates depends on the `updateStrategy` of the machine image.
-- the `Shoot` has auto-update disabled and the version is either expired or does not exist. 
+**When an auto update is triggered?**:
+- The `Shoot` has auto-update enabled and the version is not the *latest eligible version* for the auto-update. Please note that this *latest version* that qualifies for an auto-update is not necessarily the overall latest version in the CloudProfile:
+   - For Kubernetes version, the latest eligible version for auto-updates is the latest patch version of the current minor.
+   - For machine image version, the latest eligible version for auto-updates is controlled by the `updateStrategy` field of the machine image in the CloudProfile.
+- The `Shoot` has auto-update disabled and the version is either expired or does not exist. 
 
 The auto update can fail if the version is already on the *latest eligible version* for the auto-update. A failed auto update triggers a **force update**.
-The force and auto update path for Kubernetes and machine image versions differ slightly and are described in more detail below .
+The force and auto update path for Kubernetes and machine image versions differ slightly and are described in more detail below.
 
 **Update rules for both Kubernetes and machine image versions**
 - Both auto and force update first try to update to the latest patch version of the same minor.
@@ -114,12 +115,12 @@ The force and auto update path for Kubernetes and machine image versions differ 
 
 Administrators can define three different **update strategies** (field `updateStrategy`) for machine images in the CloudProfile: `patch`, `minor`, `major (default)`. This is to accommodate the different version schemes of Operating Systems (e.g. Gardenlinux only updates major and minor versions with occasional patches).
 - `patch`: update to the latest patch version of the current minor version. When using an expired version: force update to the latest patch of the current minor. If already on the latest patch version, then force update to the next higher (not necessarily +1) minor version.
-- `minor` update to the latest minor and patch version. When using an expired version: force update to the latest minor and patch of the current major. If already on the latest minor and patch of the current major, then update to the next higher (not necessarily +1) major version
-- `major` always update to the overall latest version. This is the legacy behavior for automatic machine image version upgrades. Force updates are not possible and will fail if the latest version in the CloudProfile for that image is expired (EOL scenario).
+- `minor`: update to the latest minor and patch version. When using an expired version: force update to the latest minor and patch of the current major. If already on the latest minor and patch of the current major, then update to the next higher (not necessarily +1) major version.
+- `major`: always update to the overall latest version. This is the legacy behavior for automatic machine image version upgrades. Force updates are not possible and will fail if the latest version in the CloudProfile for that image is expired (EOL scenario).
 
-Example configuration in the CloudProfile
+Example configuration in the CloudProfile:
 
-```
+```yaml
 machineImages:
   - name: gardenlinux
      autoUpdateStrategy: minor
@@ -181,18 +182,13 @@ spec:
 
 The Gardener API server enforces the following requirements for versions:
 
-### Deletion of a Version
-
 - A version that is in use by a Shoot cannot be deleted from the `CloudProfile`.
-
-### Adding a Version
-
-- A version must not have an expiration date in the past.
+- Creating a new version with expiration date in the past is not allowed.
 - There can be only one `supported` version per minor version.
 - The latest Kubernetes version cannot have an expiration date.
-- The latest version for a machine image can have an expiration date. [*]
+  - NOTE: The latest version for a machine image can have an expiration date. [*]
 
-<sub>[*] Useful for cases in which support for A given machine image needs to be deprecated and removed (for example, the machine image reaches end of life).</sub>
+<sub>[*] Useful for cases in which support for a given machine image needs to be deprecated and removed (for example, the machine image reaches end of life).</sub>
 
 ## Related Documentation
 

@@ -100,7 +100,7 @@ func AddWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.C
 
 	qualifyingVersionFound, latestImageVersion, err := helper.GetLatestQualifyingVersion(helper.ToExpirableVersions(machineImage.Versions))
 	if err != nil {
-		return fmt.Errorf("an error occured while determining the latest Shoot Machine Image for machine image %q: %w", machineImage.Name, err)
+		return fmt.Errorf("an error occurred while determining the latest Shoot machine image for machine image %q: %w", machineImage.Name, err)
 	}
 
 	if !qualifyingVersionFound {

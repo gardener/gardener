@@ -100,6 +100,15 @@ func requeueAfterDuration(shoot *gardencorev1beta1.Shoot) (time.Duration, time.T
 	return duration, nextMaintenance
 }
 
+// updateResult represents the result of a Kubernetes or Machine image maintenance operation
+// Such maintenance operations can fail if a version must be updated, but the GCM cannot find a suitable version to update to.
+// Note: the updates might still be rejected by APIServer validation.
+type updateResult struct {
+	description  string
+	reason       string
+	isSuccessful bool
+}
+
 func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
 	log.Info("Maintaining Shoot")
 
@@ -110,15 +119,8 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		err        error
 	)
 
-	workerToReasonForKubernetesUpdate := make(map[string]string)
-	workerToReasonForImageUpdate := make(map[string]string)
-
-	// Note: the updates might still be rejected by APIServer validation. This simply means that we found a suitable version to update to.
-	workerToSuccessfulImageUpdate := make(map[string]string)
-	workerToSuccessfulKubernetesUpdate := make(map[string]string)
-
-	workerToFailedKubernetesUpdate := make(map[string]string)
-	workerToFailedImageUpdate := make(map[string]string)
+	workerToKubernetesUpdate := make(map[string]updateResult)
+	workerToMachineImageUpdate := make(map[string]updateResult)
 
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
 	if err = r.Client.Get(ctx, kubernetesutils.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
@@ -126,14 +128,14 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	}
 
 	if !v1beta1helper.IsWorkerless(shoot) {
-		workerToReasonForImageUpdate, workerToSuccessfulImageUpdate, workerToFailedImageUpdate, err = maintainMachineImages(log, maintainedShoot, cloudProfile)
+		workerToMachineImageUpdate, err = maintainMachineImages(log, maintainedShoot, cloudProfile)
 		if err != nil {
 			// continue execution to allow the kubernetes version update
 			log.Error(err, "Failed to maintain Shoot machine images")
 		}
 	}
 
-	reasonControlPlaneKubernetesUpdate, successMsgControlPlaneKubernetesUpdate, failureMsgControlPlaneKubernetesUpdate, err := maintainKubernetesVersion(log, maintainedShoot.Spec.Kubernetes.Version, maintainedShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+	kubernetesControlPlaneUpdate, err := maintainKubernetesVersion(log, maintainedShoot.Spec.Kubernetes.Version, maintainedShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 		maintainedShoot.Spec.Kubernetes.Version = v
 		return nil
 	})
@@ -165,7 +167,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			operations = append(operations, fmt.Sprintf("Postponing Kubernetes update to %q to the next maintenance window because disabling PodSecurityPolicy Admission Controller and Kubernetes update cannot be done at the same time", shootKubernetesVersion.String()))
 			shootKubernetesVersion = oldShootKubernetesVersion
 			maintainedShoot.Spec.Kubernetes.Version = shoot.Spec.Kubernetes.Version
-			reasonControlPlaneKubernetesUpdate = nil
+			kubernetesControlPlaneUpdate = nil
 		}
 	}
 
@@ -189,7 +191,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		}
 
 		workerLog := log.WithValues("worker", pool.Name)
-		reasonForUpdate, successMsg, failureMsg, err := maintainKubernetesVersion(workerLog, *pool.Kubernetes.Version, maintainedShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+		workerKubernetesUpdate, err := maintainKubernetesVersion(workerLog, *pool.Kubernetes.Version, maintainedShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
 			workerPoolSemver, err := semver.NewVersion(v)
 			if err != nil {
 				return err
@@ -207,16 +209,13 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			workerLog.Error(err, "Could not maintain Kubernetes version for worker pool")
 		}
 
-		if reasonForUpdate != nil {
-			workerToReasonForKubernetesUpdate[pool.Name] = *reasonForUpdate
-		}
-
-		if successMsg != nil {
-			workerToSuccessfulKubernetesUpdate[pool.Name] = *successMsg
-		}
-
-		if failureMsg != nil {
-			workerToFailedKubernetesUpdate[pool.Name] = *failureMsg
+		if workerKubernetesUpdate != nil {
+			result := updateResult{
+				reason: workerKubernetesUpdate.reason,
+			}
+			result.isSuccessful = workerKubernetesUpdate.isSuccessful
+			result.description = workerKubernetesUpdate.description
+			workerToKubernetesUpdate[pool.Name] = result
 		}
 	}
 
@@ -225,21 +224,16 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		operations = append(operations, fmt.Sprintf("Added %q operation annotation", operation))
 	}
 
-	requirePatch := len(operations) > 0 || reasonControlPlaneKubernetesUpdate != nil || len(workerToReasonForKubernetesUpdate) > 0 || len(workerToReasonForImageUpdate) > 0
+	requirePatch := len(operations) > 0 || kubernetesControlPlaneUpdate != nil || len(workerToKubernetesUpdate) > 0 || len(workerToMachineImageUpdate) > 0
 	if requirePatch {
 		patch := client.MergeFrom(shoot.DeepCopy())
 
-		// make sure to both include successful and failed maintenance operations
+		// make sure to include both successful and failed maintenance operations
 		description, failureReason := buildMaintenanceMessages(
-			reasonControlPlaneKubernetesUpdate,
-			successMsgControlPlaneKubernetesUpdate,
-			failureMsgControlPlaneKubernetesUpdate,
-			workerToReasonForKubernetesUpdate,
-			workerToSuccessfulKubernetesUpdate,
-			workerToFailedKubernetesUpdate,
-			workerToReasonForImageUpdate,
-			workerToSuccessfulImageUpdate,
-			workerToFailedImageUpdate)
+			kubernetesControlPlaneUpdate,
+			workerToKubernetesUpdate,
+			workerToMachineImageUpdate,
+		)
 
 		// append also other maintenance operation
 		if len(operations) > 0 {
@@ -249,7 +243,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		shoot.Status.LastMaintenance = &gardencorev1beta1.LastMaintenance{
 			Description:   description,
 			TriggeredTime: metav1.Time{Time: r.Clock.Now()},
-			State:         gardencorev1beta1.LastOperationStateSucceeded,
+			State:         gardencorev1beta1.LastOperationStateProcessing,
 		}
 
 		// if any maintenance operation failed, set the status to 'Failed' and retry in the next maintenance cycle
@@ -272,8 +266,9 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			if hasMaintainNowAnnotation(shoot) {
 				delete(shoot.Annotations, v1beta1constants.GardenerOperation)
 			}
+			shoot.Status.LastMaintenance.Description = "Maintenance failed"
 			shoot.Status.LastMaintenance.State = gardencorev1beta1.LastOperationStateFailed
-			shoot.Status.LastMaintenance.FailureReason = pointer.String(fmt.Sprintf("Maintenance failed: %s", err.Error()))
+			shoot.Status.LastMaintenance.FailureReason = pointer.String(fmt.Sprintf("Updates to the Shoot failed to be applied: %s", err.Error()))
 			if err := r.Client.Status().Patch(ctx, shoot, patch); err != nil {
 				return err
 			}
@@ -300,9 +295,8 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	}
 
 	if shoot.Status.LastMaintenance != nil && shoot.Status.LastMaintenance.State == gardencorev1beta1.LastOperationStateProcessing {
-		maintenanceStatus := gardencorev1beta1.LastOperationStateSucceeded
 		patch := client.MergeFrom(shoot.DeepCopy())
-		shoot.Status.LastMaintenance.State = maintenanceStatus
+		shoot.Status.LastMaintenance.State = gardencorev1beta1.LastOperationStateSucceeded
 
 		if err := r.Client.Status().Patch(ctx, shoot, patch); err != nil {
 			return err
@@ -310,84 +304,85 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 	}
 
 	// make sure to report (partial) maintenance failures
-	if reasonControlPlaneKubernetesUpdate != nil {
-		if successMsgControlPlaneKubernetesUpdate != nil {
-			r.Recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventK8sVersionMaintenance, "%s", fmt.Sprintf("Control Plane: %s. Reason: %s.",
-				*successMsgControlPlaneKubernetesUpdate, *reasonControlPlaneKubernetesUpdate))
-		} else if failureMsgControlPlaneKubernetesUpdate != nil {
-			r.Recorder.Eventf(shoot, corev1.EventTypeWarning, gardencorev1beta1.ShootEventK8sVersionMaintenance, "%s", fmt.Sprintf("Control Plane: Kubernetes version maintenance failed. Reason for update: %s. Error: %v", *reasonControlPlaneKubernetesUpdate, *failureMsgControlPlaneKubernetesUpdate))
+	if kubernetesControlPlaneUpdate != nil {
+		if kubernetesControlPlaneUpdate.isSuccessful {
+			r.Recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventK8sVersionMaintenance, "%s", fmt.Sprintf("Control Plane: %s. Reason: %s.", kubernetesControlPlaneUpdate.description, kubernetesControlPlaneUpdate.reason))
+		} else {
+			r.Recorder.Eventf(shoot, corev1.EventTypeWarning, gardencorev1beta1.ShootEventK8sVersionMaintenance, "%s", fmt.Sprintf("Control Plane: Kubernetes version maintenance failed. Reason for update: %s. Error: %v", kubernetesControlPlaneUpdate.reason, kubernetesControlPlaneUpdate.description))
 		}
 	}
 
-	r.recordMaintenanceEventsForPool(workerToReasonForKubernetesUpdate, workerToSuccessfulKubernetesUpdate, workerToFailedKubernetesUpdate, shoot, gardencorev1beta1.ShootEventK8sVersionMaintenance, "Kubernetes")
-	r.recordMaintenanceEventsForPool(workerToReasonForImageUpdate, workerToSuccessfulImageUpdate, workerToFailedImageUpdate, shoot, gardencorev1beta1.ShootEventImageVersionMaintenance, "Machine image")
+	r.recordMaintenanceEventsForPool(workerToKubernetesUpdate, shoot, gardencorev1beta1.ShootEventK8sVersionMaintenance, "Kubernetes")
+	r.recordMaintenanceEventsForPool(workerToMachineImageUpdate, shoot, gardencorev1beta1.ShootEventImageVersionMaintenance, "Machine image")
 
 	log.Info("Shoot maintenance completed")
 	return nil
 }
 
 // buildMaintenanceMessages builds a combined message containing the performed maintenance operations over all worker pools. If the maintenance operation failed, the description
-// contains an indication for the failure and the reason the update was triggered. Details for failed maintenance operations are return in the second return string.
-func buildMaintenanceMessages(reasonControlPlaneKubernetesUpdate *string, successMsgControlPlaneKubernetesUpdate *string, failureMsgControlPlaneKubernetesUpdate *string, workerToReasonForKubernetesUpdate map[string]string, workerToSuccessfulKubernetesUpdate map[string]string, workerToFailedKubernetesUpdate map[string]string, workerToReasonForImageUpdate map[string]string, workerToSuccessfulImageUpdate map[string]string, workerToFailedImageUpdate map[string]string) (string, string) {
+// contains an indication for the failure and the reason the update was triggered. Details for failed maintenance operations are returned in the second return string.
+func buildMaintenanceMessages(kubernetesControlPlaneUpdate *updateResult, workerToKubernetesUpdate map[string]updateResult, workerToMachineImageUpdate map[string]updateResult) (string, string) {
+	countSuccessfulOperations := 0
+	countFailedOperations := 0
 	description := ""
 	failureReason := ""
 
-	if reasonControlPlaneKubernetesUpdate != nil {
-		if successMsgControlPlaneKubernetesUpdate != nil {
-			description = fmt.Sprintf("%s, %s", description, fmt.Sprintf("Control Plane: %s. Reason: %s", *successMsgControlPlaneKubernetesUpdate, *reasonControlPlaneKubernetesUpdate))
-		} else if failureMsgControlPlaneKubernetesUpdate != nil {
-			description = fmt.Sprintf("%s, %s", description, fmt.Sprintf("Control Plane: Kubernetes version update failed. Reason for update: %s", *reasonControlPlaneKubernetesUpdate))
-			failureReason = fmt.Sprintf("%s, Control Plane: Kubernetes maintenance failure due to: %s", failureReason, *failureMsgControlPlaneKubernetesUpdate)
+	if kubernetesControlPlaneUpdate != nil {
+		if kubernetesControlPlaneUpdate.isSuccessful {
+			countSuccessfulOperations++
+			description = fmt.Sprintf("%s, %s", description, fmt.Sprintf("Control Plane: %s. Reason: %s", kubernetesControlPlaneUpdate.description, kubernetesControlPlaneUpdate.reason))
+		} else {
+			countFailedOperations++
+			description = fmt.Sprintf("%s, %s", description, fmt.Sprintf("Control Plane: Kubernetes version update failed. Reason for update: %s", kubernetesControlPlaneUpdate.reason))
+			failureReason = fmt.Sprintf("%s, Control Plane: Kubernetes maintenance failure due to: %s", failureReason, kubernetesControlPlaneUpdate.description)
 		}
 	}
 
-	for worker, reasonForUpdate := range workerToReasonForKubernetesUpdate {
-		successMsg, ok := workerToSuccessfulKubernetesUpdate[worker]
-		if ok {
-			description = fmt.Sprintf("%s, %s", description, fmt.Sprintf("Worker pool %q: %s. Reason: %s", worker, successMsg, reasonForUpdate))
+	for worker, result := range workerToKubernetesUpdate {
+		if result.isSuccessful {
+			countSuccessfulOperations++
+			description = fmt.Sprintf("%s, %s", description, fmt.Sprintf("Worker pool %q: %s. Reason: %s", worker, result.description, result.reason))
 			continue
 		}
 
-		failureMsg, ok2 := workerToFailedKubernetesUpdate[worker]
-		if ok2 {
-			description = fmt.Sprintf("%s, %s", description, fmt.Sprintf("Worker pool %q: Kubernetes version maintenance failed. Reason for update: %s", worker, reasonForUpdate))
-			failureReason = fmt.Sprintf("%s, Worker pool %q: Kubernetes maintenance failure due to: %s", failureReason, worker, failureMsg)
-		}
+		countFailedOperations++
+		description = fmt.Sprintf("%s, %s", description, fmt.Sprintf("Worker pool %q: Kubernetes version maintenance failed. Reason for update: %s", worker, result.reason))
+		failureReason = fmt.Sprintf("%s, Worker pool %q: Kubernetes maintenance failure due to: %s", failureReason, worker, result.description)
 	}
 
-	for worker, reasonForUpdate := range workerToReasonForImageUpdate {
-		successMsg, ok := workerToSuccessfulImageUpdate[worker]
-		if ok {
-			description = fmt.Sprintf("%s, %s", description, fmt.Sprintf("Worker pool %q: %s. Reason: %s", worker, successMsg, reasonForUpdate))
+	for worker, result := range workerToMachineImageUpdate {
+		if result.isSuccessful {
+			countSuccessfulOperations++
+			description = fmt.Sprintf("%s, %s", description, fmt.Sprintf("Worker pool %q: %s. Reason: %s", worker, result.description, result.reason))
 			continue
 		}
 
-		failureMsg, ok2 := workerToFailedImageUpdate[worker]
-		if ok2 {
-			description = fmt.Sprintf("%s, %s", description, fmt.Sprintf("Worker pool %q: machine image version maintenance failed. Reason for update: %s", worker, reasonForUpdate))
-			failureReason = fmt.Sprintf("%s, Worker pool %q: %s", failureReason, worker, failureMsg)
-		}
+		countFailedOperations++
+		description = fmt.Sprintf("%s, %s", description, fmt.Sprintf("Worker pool %q: machine image version maintenance failed. Reason for update: %s", worker, result.reason))
+		failureReason = fmt.Sprintf("%s, Worker pool %q: %s", failureReason, worker, result.description)
 	}
 
 	description = strings.TrimPrefix(description, ", ")
 	failureReason = strings.TrimPrefix(failureReason, ", ")
-	return description, failureReason
+
+	if countFailedOperations == 0 {
+		return fmt.Sprintf("All maintenance operations successful. %s", description), failureReason
+	}
+
+	return fmt.Sprintf("(%d/%d) maintenance operations successful. %s", countSuccessfulOperations, countSuccessfulOperations+countFailedOperations, description), failureReason
 }
 
 // recordMaintenanceEventsForPool records dedicated events for each failed/succeeded maintenance operation per pool
-func (r *Reconciler) recordMaintenanceEventsForPool(workerToReasonForUpdate map[string]string, workerToSuccessfulUpdate map[string]string, workerToFailedUpdate map[string]string, shoot *gardencorev1beta1.Shoot, eventType string, maintenanceType string) {
-	for worker, reasonForUpdate := range workerToReasonForUpdate {
-		successMsg, ok := workerToSuccessfulUpdate[worker]
-		if ok {
+func (r *Reconciler) recordMaintenanceEventsForPool(workerToUpdateResult map[string]updateResult, shoot *gardencorev1beta1.Shoot, eventType string, maintenanceType string) {
+	for worker, reason := range workerToUpdateResult {
+		if reason.isSuccessful {
 			r.Recorder.Eventf(shoot, corev1.EventTypeNormal, eventType, "%s", fmt.Sprintf("Worker pool %q: %v. Reason: %s.",
-				worker, successMsg, reasonForUpdate))
+				worker, reason.description, reason.reason))
+			continue
 		}
 
-		failureMsg, ok := workerToFailedUpdate[worker]
-		if ok {
-			r.Recorder.Eventf(shoot, corev1.EventTypeWarning, eventType, "%s", fmt.Sprintf("Worker pool %q: %s version maintenance failed. Reason for update: %s. Error: %v",
-				worker, maintenanceType, reasonForUpdate, failureMsg))
-		}
+		r.Recorder.Eventf(shoot, corev1.EventTypeWarning, eventType, "%s", fmt.Sprintf("Worker pool %q: %s version maintenance failed. Reason for update: %s. Error: %v",
+			worker, maintenanceType, reason.reason, reason.description))
 	}
 }
 
@@ -438,15 +433,12 @@ func maintainTasks(shoot *gardencorev1beta1.Shoot, config config.ShootMaintenanc
 }
 
 // maintainMachineImages updates the machine images of a Shoot's worker pools if necessary
-func maintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile) (map[string]string, map[string]string, map[string]string, error) {
-	reasonsRequiringUpdate := make(map[string]string)
-	// Note: the update might still be rejected by APIServer validation. This simply means that we found a suitable version to update to.
-	successfulUpdates := make(map[string]string)
-	failedUpdates := make(map[string]string)
+func maintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile) (map[string]updateResult, error) {
+	maintenanceResults := make(map[string]updateResult)
 
 	controlPlaneVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
 
 	for i, worker := range shoot.Spec.Provider.Workers {
@@ -455,12 +447,12 @@ func maintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, clou
 
 		machineImageFromCloudProfile, err := determineMachineImage(cloudProfile, workerImage)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, err
 		}
 
 		kubeletVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(controlPlaneVersion, worker.Kubernetes)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, err
 		}
 
 		filteredMachineImageVersionsFromCloudProfile := filterForArchitecture(&machineImageFromCloudProfile, worker.Machine.Architecture)
@@ -475,9 +467,12 @@ func maintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, clou
 
 		updatedMachineImageVersion, err := determineMachineImageVersion(workerImage, filteredMachineImageVersionsFromCloudProfile, isExpired)
 		if err != nil {
-			log.Error(err, "Maintenance of machine image failed", "worker-pool", worker.Name, "machine-image", workerImage.Name)
-			reasonsRequiringUpdate[worker.Name] = reason
-			failedUpdates[worker.Name] = fmt.Sprintf("failed to update machine image %q - %s", workerImage.Name, err.Error())
+			log.Error(err, "Maintenance of machine image failed", "workerPool", worker.Name, "machineImage", workerImage.Name)
+			maintenanceResults[worker.Name] = updateResult{
+				description:  fmt.Sprintf("failed to update machine image %q: %s", workerImage.Name, err.Error()),
+				reason:       reason,
+				isSuccessful: false,
+			}
 			continue
 		}
 		// current version is already the latest
@@ -486,42 +481,57 @@ func maintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, clou
 		}
 
 		workerLog.Info("MachineImage will be updated", "newVersion", updatedMachineImageVersion, "reason", reason)
-		reasonsRequiringUpdate[worker.Name] = reason
-		successfulUpdates[worker.Name] = fmt.Sprintf("Updated machine image from %q version %q to version %q", workerImage.Name, *workerImage.Version, updatedMachineImageVersion)
+		maintenanceResults[worker.Name] = updateResult{
+			description:  fmt.Sprintf("Updated machine image %q from %q to %q", workerImage.Name, *workerImage.Version, updatedMachineImageVersion),
+			reason:       reason,
+			isSuccessful: true,
+		}
 
 		// update the machine image version
 		shoot.Spec.Provider.Workers[i].Machine.Image.Version = &updatedMachineImageVersion
 	}
 
-	return reasonsRequiringUpdate, successfulUpdates, failedUpdates, nil
+	return maintenanceResults, nil
 }
 
-// maintainKubernetesVersion updates a Shoot's Kubernetes version if necessary and returns the reason why an update was done
-func maintainKubernetesVersion(log logr.Logger, kubernetesVersion string, autoUpdate bool, profile *gardencorev1beta1.CloudProfile, updateFunc func(string) error) (*string, *string, *string, error) {
+// maintainKubernetesVersion updates the Kubernetes version if necessary and returns the reason why an update was done
+func maintainKubernetesVersion(log logr.Logger, kubernetesVersion string, autoUpdate bool, profile *gardencorev1beta1.CloudProfile, updateFunc func(string) error) (*updateResult, error) {
 	shouldBeUpdated, reason, isExpired, err := shouldKubernetesVersionBeUpdated(kubernetesVersion, autoUpdate, profile)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
 	if !shouldBeUpdated {
-		return nil, nil, nil, nil
+		return nil, nil
 	}
 
 	updatedKubernetesVersion, err := determineKubernetesVersion(kubernetesVersion, profile, isExpired)
 	if err != nil {
-		return &reason, nil, pointer.String(fmt.Sprintf("could not determine higher suitable version than %q: %v", kubernetesVersion, err)), err
+		return &updateResult{
+			description:  fmt.Sprintf("could not determine higher suitable version than %q: %v", kubernetesVersion, err),
+			reason:       reason,
+			isSuccessful: false,
+		}, err
 	}
 	// current version is already the latest
 	if updatedKubernetesVersion == "" {
-		return nil, nil, nil, nil
+		return nil, nil
 	}
 
 	err = updateFunc(updatedKubernetesVersion)
 	if err != nil {
-		return &reason, nil, pointer.String(err.Error()), err
+		return &updateResult{
+			description:  err.Error(),
+			reason:       reason,
+			isSuccessful: false,
+		}, err
 	}
 
 	log.Info("Kubernetes version will be updated", "version", kubernetesVersion, "newVersion", updatedKubernetesVersion, "reason", reason)
-	return &reason, pointer.String(fmt.Sprintf("Updated Kubernetes version from %q to %q", kubernetesVersion, updatedKubernetesVersion)), nil, nil
+	return &updateResult{
+		description:  fmt.Sprintf("Updated Kubernetes version from %q to %q", kubernetesVersion, updatedKubernetesVersion),
+		reason:       reason,
+		isSuccessful: true,
+	}, nil
 }
 
 func determineKubernetesVersion(kubernetesVersion string, profile *gardencorev1beta1.CloudProfile, isExpired bool) (string, error) {
@@ -553,7 +563,7 @@ func shouldKubernetesVersionBeUpdated(kubernetesVersion string, autoUpdate bool,
 	}
 
 	if autoUpdate {
-		updateReason = "AutoUpdate of Kubernetes version configured"
+		updateReason = "Automatic update of Kubernetes version configured"
 		return true, updateReason, false, nil
 	}
 
@@ -743,7 +753,7 @@ func determineMachineImageVersion(shootMachineImage *gardencorev1beta1.ShootMach
 	}
 
 	version, err := determineVersionForStrategy(
-		v1beta1helper.GetExpirableVersionsForMachineImageVersions(machineImage.Versions),
+		v1beta1helper.ToExpirableVersions(machineImage.Versions),
 		*shootMachineImage.Version,
 		getHigherVersionAutoUpdate,
 		getHigherVersionForceUpdate,
@@ -758,7 +768,7 @@ func determineMachineImageVersion(shootMachineImage *gardencorev1beta1.ShootMach
 func determineVersionForStrategy(expirableVersions []gardencorev1beta1.ExpirableVersion, currentVersion string, getHigherVersionAutoUpdate GetHigherVersion, getHigherVersionForceUpdate GetHigherVersion, isCurrentVersionExpired bool) (string, error) {
 	higherQualifyingVersionFound, latestVersionForMajor, err := getHigherVersionAutoUpdate(expirableVersions, currentVersion)
 	if err != nil {
-		return "", fmt.Errorf("failed to determine a higher patch version for auto-update: %s", err.Error())
+		return "", fmt.Errorf("failed to determine a higher patch version for automatic update: %w", err)
 	}
 
 	if higherQualifyingVersionFound {

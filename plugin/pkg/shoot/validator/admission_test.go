@@ -2203,8 +2203,8 @@ var _ = Describe("validator", func() {
 				})
 
 				It("should allow updating a cluster to an expired kubernetes version", func() {
-					shoot.Spec.Kubernetes.Version = "1.25.0"
 					oldShoot := shoot.DeepCopy()
+					shoot.Spec.Kubernetes.Version = expiredVersion.Version
 
 					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
@@ -2277,7 +2277,7 @@ var _ = Describe("validator", func() {
 					Expect(err).To(MatchError(ContainSubstring("spec.provider.workers[0].kubernetes.version: Unsupported value: %q", expiredVersion.Version)))
 				})
 
-				It("should allow to update a cluster to an expired worker group kubernetes version", func() {
+				It("should allow updating a cluster to an expired worker group kubernetes version", func() {
 					oldShoot := shoot.DeepCopy()
 					shoot.Spec.Kubernetes.Version = highestSupportedVersion.Version
 					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: &expiredVersion.Version}
