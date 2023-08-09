@@ -107,18 +107,18 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		maintainedShoot = shoot.DeepCopy()
 		// for maintenance operations unrelated to machine images and Kubernetes versions
 		operations []string
-
-		workerToReasonForKubernetesUpdate map[string]string
-		workerToReasonForImageUpdate      map[string]string
-
-		// Note: the updates might still be rejected by APIServer validation. This simply means that we found a suitable version to update to.
-		workerToSuccessfulImageUpdate      map[string]string
-		workerToSuccessfulKubernetesUpdate map[string]string
-
-		workerToFailedKubernetesUpdate map[string]string
-		workerToFailedImageUpdate      map[string]string
-		err                            error
+		err        error
 	)
+
+	workerToReasonForKubernetesUpdate := make(map[string]string)
+	workerToReasonForImageUpdate := make(map[string]string)
+
+	// Note: the updates might still be rejected by APIServer validation. This simply means that we found a suitable version to update to.
+	workerToSuccessfulImageUpdate := make(map[string]string)
+	workerToSuccessfulKubernetesUpdate := make(map[string]string)
+
+	workerToFailedKubernetesUpdate := make(map[string]string)
+	workerToFailedImageUpdate := make(map[string]string)
 
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
 	if err = r.Client.Get(ctx, kubernetesutils.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
@@ -165,7 +165,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 			operations = append(operations, fmt.Sprintf("Postponing Kubernetes update to %q to the next maintenance window because disabling PodSecurityPolicy Admission Controller and Kubernetes update cannot be done at the same time", shootKubernetesVersion.String()))
 			shootKubernetesVersion = oldShootKubernetesVersion
 			maintainedShoot.Spec.Kubernetes.Version = shoot.Spec.Kubernetes.Version
-			reasonForKubernetesUpdate = []string{}
+			reasonControlPlaneKubernetesUpdate = nil
 		}
 	}
 
@@ -475,7 +475,7 @@ func maintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, clou
 
 		updatedMachineImageVersion, err := determineMachineImageVersion(workerImage, filteredMachineImageVersionsFromCloudProfile, isExpired)
 		if err != nil {
-			log.Error(err, "maintenance of machine image failed", "worker-pool", worker.Name, "machine image", workerImage.Name)
+			log.Error(err, "Maintenance of machine image failed", "worker-pool", worker.Name, "machine-image", workerImage.Name)
 			reasonsRequiringUpdate[worker.Name] = reason
 			failedUpdates[worker.Name] = fmt.Sprintf("failed to update machine image %q - %s", workerImage.Name, err.Error())
 			continue
@@ -718,6 +718,7 @@ func shouldMachineImageVersionBeUpdated(shootMachineImage *gardencorev1beta1.Sho
 	return false, "", false
 }
 
+// GetHigherVersion takes a slice of versions and returns if higher suitable version could be found, the version or an error
 type GetHigherVersion func(versions []gardencorev1beta1.ExpirableVersion, currentVersion string) (bool, string, error)
 
 func determineMachineImageVersion(shootMachineImage *gardencorev1beta1.ShootMachineImage, machineImage *gardencorev1beta1.MachineImage, isExpired bool) (string, error) {
