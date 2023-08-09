@@ -51,7 +51,7 @@ config:
     ContainerdRegistryHostsDir: true
   etcdConfig:
     featureGates:
-      UseEtcdWrapper: true
+      UseEtcdWrapper: false
   logging:
     enabled: true
     vali:
