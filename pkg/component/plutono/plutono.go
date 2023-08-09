@@ -414,12 +414,12 @@ func (p *plutono) getDashboardsConfigMap(ctx context.Context, suffix string) (*c
 		if suffix == "garden" {
 			requiredDashboards = map[string]embed.FS{gardenDashboardsPath: gardenDashboards, gardenAndShootDashboardsPath: gardenAndShootDashboards}
 
-			dashboard, err := p.getAdditionalDashboards(ctx, labelSelector, []string{v1beta1constants.PlutonoConfigMapOperatorDashboard})
+			additionalDashboards, err := p.getAdditionalDashboards(ctx, labelSelector, []string{v1beta1constants.PlutonoConfigMapOperatorDashboard})
 			if err != nil {
 				return nil, err
 			}
-			if dashboard != nil {
-				dashboards = dashboard
+			if additionalDashboards != nil {
+				dashboards = additionalDashboards
 			}
 		}
 
@@ -454,12 +454,12 @@ func (p *plutono) getDashboardsConfigMap(ctx context.Context, suffix string) (*c
 			}
 		}
 
-		dashboard, err := p.getAdditionalDashboards(ctx, labelSelector, []string{v1beta1constants.PlutonoConfigMapOperatorDashboard, v1beta1constants.PlutonoConfigMapUserDashboard})
+		additionalDashboards, err := p.getAdditionalDashboards(ctx, labelSelector, []string{v1beta1constants.PlutonoConfigMapOperatorDashboard, v1beta1constants.PlutonoConfigMapUserDashboard})
 		if err != nil {
 			return nil, err
 		}
-		if dashboard != nil {
-			dashboards = dashboard
+		if additionalDashboards != nil {
+			dashboards = additionalDashboards
 		}
 	}
 

@@ -221,6 +221,7 @@ Other system components are:
 The reconciler also manages a few observability-related components (more planned as part of [GEP-19](../proposals/19-migrating-observability-stack-to-operators.md)):
 
 - Fluent Operator
+- Plutono
 - Vali
 
 As soon as all system components are up, the reconciler deploys the virtual garden cluster.
