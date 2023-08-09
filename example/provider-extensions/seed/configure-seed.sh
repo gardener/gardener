@@ -76,7 +76,7 @@ check-not-initial() {
   else
     local yqResult
     yqResult=$(yq "${yqArg}" "$file")
-    if [[  $yqResult  == "" ]] || [[  $yqResult  == "null" ]] || [[  $yqResult == "[]" ]]; then
+    if [[  $yqResult  == "" ]] || [[  $yqResult  == "null" ]] || [[  $yqResult == "[]" ]] || [[  $yqResult == "{}" ]]; then
       echo "\"$yqArg\" in file \"$file\" is empty or does not exist. Please check your config."
       exit 1
     fi
@@ -100,21 +100,37 @@ ensure-gardener-dns-annotations() {
 }
 
 echo "Ensuring config files"
-ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/values.yaml
+ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/infrastructure-secrets.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/garden/project/credentials/secretbindings.yaml
 ensure-config-file "$REPO_ROOT_DIR"/example/provider-extensions/"$gardenlet_values" "$REPO_ROOT_DIR"/example/provider-extensions/gardenlet/values.yaml.tmpl
 
 echo "Check if essential config options are initialized"
-check-not-initial $seed_kubeconfig ""
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/values.yaml ".global.internalDomain.domain"
-check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/values.yaml ".global.internalDomain.provider"
+check-not-initial "$seed_kubeconfig" ""
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 0) | .data'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 1) | .data'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 0) | .metadata.annotations.["dns.gardener.cloud/domain"]'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 1) | .metadata.annotations.["dns.gardener.cloud/domain"]'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 0) | .metadata.annotations.["dns.gardener.cloud/provider"]'
+check-not-initial "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml 'select(document_index == 1) | .metadata.annotations.["dns.gardener.cloud/provider"]'
+
+role1=$(yq 'select(document_index == 0) | .metadata.labels.["gardener.cloud/role"]' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml)
+role2=$(yq 'select(document_index == 1) | .metadata.labels.["gardener.cloud/role"]' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml)
+
+if [[ $role1 != "default-domain" ]]; then
+  echo "first secret in $REPO_ROOT_DIR/example/provider-extensions/garden/controlplane/domain-secrets.yaml must be labeled as gardener.cloud/role=default-domain"
+  exit 1
+fi
+if [[ $role2 != "internal-domain" ]]; then
+  echo "second secret in $REPO_ROOT_DIR/example/provider-extensions/garden/controlplane/domain-secrets.yaml must be labeled as gardener.cloud/role=internal-domain"
+  exit 1
+fi
 
 registry_domain=
 relay_domain=
 
-internal_dns_secret=$(yq -e '.global.internalDomain.domain' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/values.yaml | sed 's/\./-/g' | sed 's/^/internal-domain-/')
-dns_provider_type=$(yq -e '.global.internalDomain.provider' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/values.yaml)
+internal_dns_secret=$(yq -e 'select(document_index == 1) | .metadata.name' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml)
+dns_provider_type=$(yq -e 'select(document_index == 1) | .metadata.annotations.["dns.gardener.cloud/provider"]' "$REPO_ROOT_DIR"/example/provider-extensions/garden/controlplane/domain-secrets.yaml)
 
 if kubectl get configmaps -n kube-system shoot-info --kubeconfig "$seed_kubeconfig" -o yaml > "$temp_shoot_info"; then
   use_shoot_info="true"
