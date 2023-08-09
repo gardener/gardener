@@ -590,7 +590,7 @@ images:
 - name: hvpa-controller
   sourceRepository: github.com/gardener/hvpa-controller
   repository: eu.gcr.io/gardener-project/gardener/hvpa-controller
-  tag: "v0.13.0"
+  tag: "v0.14.0"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:
