@@ -859,6 +859,51 @@ var _ = Describe("Helper", func() {
 				"1.17.1",
 				false,
 			),
+			Entry("Get latest version across major versions",
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version: "3.0.1",
+					},
+					{
+						Version:        "2.1.1",
+						Classification: &deprecatedClassification,
+					},
+					{
+						Version:        "2.0.0",
+						Classification: &supportedClassification,
+					},
+					{
+						Version: "0.4.1",
+					},
+				},
+				"0.4.1",
+				true,
+				"3.0.1",
+				false,
+			),
+			Entry("Get latest version across major versions, preferring lower supported version",
+				[]gardencorev1beta1.ExpirableVersion{
+					{
+						Version:        "3.0.1",
+						Classification: &deprecatedClassification,
+					},
+					{
+						Version:        "2.1.1",
+						Classification: &deprecatedClassification,
+					},
+					{
+						Version:        "2.0.0",
+						Classification: &supportedClassification,
+					},
+					{
+						Version: "0.4.1",
+					},
+				},
+				"0.4.1",
+				true,
+				"2.0.0",
+				false,
+			),
 			Entry("Expect no higher version than the current version to be found, as already on the latest version",
 				[]gardencorev1beta1.ExpirableVersion{
 					{
@@ -1037,7 +1082,7 @@ var _ = Describe("Helper", func() {
 		)
 
 		DescribeTable("#GetQualifyingVersionForNextHigher",
-			func(original []gardencorev1beta1.ExpirableVersion, currentVersion string, getNextHigherMinor bool, expectVersionToBeFound bool, expected *string, nextMinorOrMajorVersion int64, expectError bool) {
+			func(original []gardencorev1beta1.ExpirableVersion, currentVersion string, getNextHigherMinor bool, expectVersionToBeFound bool, expected *string, expectedNextMinorOrMajorVersion int64, expectError bool) {
 				var (
 					majorMinor    GetMajorOrMinor
 					filterSmaller VersionPredicate
@@ -1059,6 +1104,7 @@ var _ = Describe("Helper", func() {
 					Expect(err).To(HaveOccurred())
 					return
 				}
+				Expect(nextMinorOrMajorVersion).To(Equal(expectedNextMinorOrMajorVersion))
 				Expect(err).ToNot(HaveOccurred())
 				Expect(foundVersion).To(Equal(expectVersionToBeFound))
 				if foundVersion {
@@ -1187,7 +1233,7 @@ var _ = Describe("Helper", func() {
 				true, // target minor
 				false,
 				nil,
-				int64(1), // next minor version to be found
+				int64(3), // next minor version to be found
 				false,
 			),
 			Entry("Expect no version to be found: already on overall highest version",
@@ -1209,7 +1255,7 @@ var _ = Describe("Helper", func() {
 				true, // target minor
 				false,
 				nil,
-				int64(0),
+				int64(-1),
 				false,
 			),
 			Entry("Expect error, because contains invalid semVer",
@@ -1356,6 +1402,18 @@ var _ = Describe("Helper", func() {
 						{Version: "1.12.2"},
 					},
 					"1.15.1",
+					true,
+				),
+				Entry("Should find qualifying version - the latest version for the major.",
+					"0.2.3",
+					[]gardencorev1beta1.ExpirableVersion{
+						{Version: "2.0.0"},
+						{Version: "1.15.1"},
+						{Version: "0.4.1"},
+						{Version: "0.4.0"},
+						{Version: "0.2.3"},
+					},
+					"0.4.1",
 					true,
 				),
 				Entry("Should find qualifying version - do not consider preview versions for auto updates.",
