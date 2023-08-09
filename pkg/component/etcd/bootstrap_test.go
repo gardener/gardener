@@ -60,6 +60,7 @@ var _ = Describe("Etcd", func() {
 		imageVectorOverwriteEmpty *string
 		imageVectorOverwriteFull  = pointer.String("some overwrite")
 		priorityClassName         = "some-priority-class"
+		useEtcdWrapper            = "UseEtcdWrapper"
 
 		managedResourceName       = "etcd-druid"
 		managedResourceSecretName = "managedresource-" + managedResourceName
@@ -434,6 +435,58 @@ spec:
         name: imagevector-overwrite
 status: {}
 `
+			deploymentWithFeatureGates = `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    gardener.cloud/role: etcd-druid
+    high-availability-config.resources.gardener.cloud/type: controller
+  name: etcd-druid
+  namespace: ` + namespace + `
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      gardener.cloud/role: etcd-druid
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        gardener.cloud/role: etcd-druid
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-runtime-apiserver: allowed
+    spec:
+      containers:
+      - command:
+        - /etcd-druid
+        - --enable-leader-election=true
+        - --ignore-operation-annotation=false
+        - --disable-etcd-serviceaccount-automount=true
+        - --workers=25
+        - --custodian-workers=3
+        - --compaction-workers=3
+        - --enable-backup-compaction=true
+        - --etcd-events-threshold=1000000
+        - --active-deadline-duration=3h0m0s
+        - --feature-gates=UseEtcdWrapper=true
+        image: ` + etcdDruidImage + `
+        imagePullPolicy: IfNotPresent
+        name: etcd-druid
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+      priorityClassName: ` + priorityClassName + `
+      serviceAccountName: etcd-druid
+status: {}
+`
 			serviceYAML = `apiVersion: v1
 kind: Service
 metadata:
@@ -568,6 +621,31 @@ status:
 				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 					Expect(obj).To(DeepEqual(managedResourceSecret))
+				}),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+					managedResource.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}}
+					utilruntime.Must(references.InjectAnnotations(managedResource))
+					Expect(obj).To(DeepEqual(managedResource))
+				}),
+			)
+
+			Expect(bootstrapper.Deploy(ctx)).To(Succeed())
+		})
+
+		It("should successfully deploy all the resources (w/ feature gates being present in etcd config)", func() {
+			etcdConfig.FeatureGates = map[string]bool{
+				useEtcdWrapper: true,
+			}
+			managedResourceSecret.Data["deployment__"+namespace+"__etcd-druid.yaml"] = []byte(deploymentWithFeatureGates)
+
+			utilruntime.Must(kubernetesutils.MakeUnique(managedResourceSecret))
+			gomock.InOrder(
+				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+					Expect(obj).To(Equal(managedResourceSecret))
 				}),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 				c.EXPECT().Get(ctx, kubernetesutils.Key(namespace, managedResourceSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),

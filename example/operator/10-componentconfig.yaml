@@ -44,6 +44,8 @@ controllers:
         enableBackupCompaction: false
         eventsThreshold: 1000000
         activeDeadlineDuration: "3h"
+    # featureGates:
+    #   UseEtcdWrapper: true
   gardenCare:
     syncPeriod: 1m
     conditionThresholds:

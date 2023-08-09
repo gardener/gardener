@@ -717,6 +717,7 @@ func autoConvert_v1alpha1_ETCDConfig_To_config_ETCDConfig(in *ETCDConfig, out *c
 	out.CustodianController = (*config.CustodianController)(unsafe.Pointer(in.CustodianController))
 	out.BackupCompactionController = (*config.BackupCompactionController)(unsafe.Pointer(in.BackupCompactionController))
 	out.BackupLeaderElection = (*config.ETCDBackupLeaderElection)(unsafe.Pointer(in.BackupLeaderElection))
+	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	return nil
 }
 
@@ -730,6 +731,7 @@ func autoConvert_config_ETCDConfig_To_v1alpha1_ETCDConfig(in *config.ETCDConfig,
 	out.CustodianController = (*CustodianController)(unsafe.Pointer(in.CustodianController))
 	out.BackupCompactionController = (*BackupCompactionController)(unsafe.Pointer(in.BackupCompactionController))
 	out.BackupLeaderElection = (*ETCDBackupLeaderElection)(unsafe.Pointer(in.BackupLeaderElection))
+	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	return nil
 }
 

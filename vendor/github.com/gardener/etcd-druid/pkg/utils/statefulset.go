@@ -21,6 +21,7 @@ import (
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -47,12 +48,8 @@ func IsStatefulSetReady(etcdReplicas int32, statefulSet *appsv1.StatefulSet) (bo
 
 // GetStatefulSet fetches StatefulSet created for the etcd.
 func GetStatefulSet(ctx context.Context, cl client.Client, etcd *druidv1alpha1.Etcd) (*appsv1.StatefulSet, error) {
-	selector, err := metav1.LabelSelectorAsSelector(etcd.Spec.Selector)
-	if err != nil {
-		return nil, err
-	}
 	statefulSets := &appsv1.StatefulSetList{}
-	if err = cl.List(ctx, statefulSets, client.InNamespace(etcd.Namespace), client.MatchingLabelsSelector{Selector: selector}); err != nil {
+	if err := cl.List(ctx, statefulSets, client.InNamespace(etcd.Namespace), client.MatchingLabelsSelector{Selector: labels.Set(etcd.GetDefaultLabels()).AsSelector()}); err != nil {
 		return nil, err
 	}
 
@@ -62,5 +59,5 @@ func GetStatefulSet(ctx context.Context, cl client.Client, etcd *druidv1alpha1.E
 		}
 	}
 
-	return nil, err
+	return nil, nil
 }
