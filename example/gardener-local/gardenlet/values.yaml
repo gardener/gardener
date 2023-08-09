@@ -49,6 +49,9 @@ config:
     # If disabled, a Shoot cluster in local setup won't be able to use the registry cache
     # (it will be still able to pull images but registry cache won't be used).
     ContainerdRegistryHostsDir: true
+  etcdConfig:
+    featureGates:
+      UseEtcdWrapper: false
   logging:
     enabled: true
     vali:

@@ -293,6 +293,13 @@ func (in *ETCDConfig) DeepCopyInto(out *ETCDConfig) {
 		*out = new(ETCDBackupLeaderElection)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.FeatureGates != nil {
+		in, out := &in.FeatureGates, &out.FeatureGates
+		*out = make(map[string]bool, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	return
 }
 
