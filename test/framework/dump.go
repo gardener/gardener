@@ -216,13 +216,13 @@ func (f *CommonFramework) dumpDeploymentInfoForNamespace(ctx context.Context, lo
 		return err
 	}
 	for _, deployment := range deployments.Items {
-		log = log.WithValues("name", deployment.Name, "replicas", deployment.Status.Replicas, "availableReplicas", deployment.Status.AvailableReplicas)
+		objectLog := log.WithValues("name", deployment.Name, "replicas", deployment.Status.Replicas, "availableReplicas", deployment.Status.AvailableReplicas)
 
 		if err := health.CheckDeployment(&deployment); err != nil {
-			log.Info("Found unhealthy Deployment", "reason", err.Error(), "conditions", deployment.Status.Conditions)
+			objectLog.Info("Found unhealthy Deployment", "reason", err.Error(), "conditions", deployment.Status.Conditions)
 			continue
 		}
-		log.Info("Found healthy Deployment")
+		objectLog.Info("Found healthy Deployment")
 	}
 	return nil
 }
@@ -236,13 +236,13 @@ func (f *CommonFramework) dumpStatefulSetInfoForNamespace(ctx context.Context, l
 		return err
 	}
 	for _, statefulSet := range statefulSets.Items {
-		log = log.WithValues("name", statefulSet.Name, "replicas", statefulSet.Status.Replicas, "readyReplicas", statefulSet.Status.ReadyReplicas)
+		objectLog := log.WithValues("name", statefulSet.Name, "replicas", statefulSet.Status.Replicas, "readyReplicas", statefulSet.Status.ReadyReplicas)
 
 		if err := health.CheckStatefulSet(&statefulSet); err != nil {
-			log.Info("Found unhealthy StatefulSet", "reason", err.Error(), "conditions", statefulSet.Status.Conditions)
+			objectLog.Info("Found unhealthy StatefulSet", "reason", err.Error(), "conditions", statefulSet.Status.Conditions)
 			continue
 		}
-		log.Info("Found healthy StatefulSet")
+		objectLog.Info("Found healthy StatefulSet")
 	}
 	return nil
 }
@@ -256,13 +256,13 @@ func (f *CommonFramework) dumpDaemonSetInfoForNamespace(ctx context.Context, log
 		return err
 	}
 	for _, ds := range daemonSets.Items {
-		log = log.WithValues("name", ds.Name, "currentNumberScheduled", ds.Status.CurrentNumberScheduled, "desiredNumberScheduled", ds.Status.DesiredNumberScheduled)
+		objectLog := log.WithValues("name", ds.Name, "currentNumberScheduled", ds.Status.CurrentNumberScheduled, "desiredNumberScheduled", ds.Status.DesiredNumberScheduled)
 
 		if err := health.CheckDaemonSet(&ds); err != nil {
-			log.Info("Found unhealthy DaemonSet", "reason", err.Error(), "conditions", ds.Status.Conditions)
+			objectLog.Info("Found unhealthy DaemonSet", "reason", err.Error(), "conditions", ds.Status.Conditions)
 			continue
 		}
-		log.Info("Found healthy DaemonSet")
+		objectLog.Info("Found healthy DaemonSet")
 	}
 	return nil
 }
@@ -326,20 +326,20 @@ func (f *CommonFramework) dumpNodes(ctx context.Context, log logr.Logger, k8sCli
 		return err
 	}
 	for _, node := range nodes.Items {
-		log = log.WithValues("nodeName", node.Name)
+		objectLog := log.WithValues("nodeName", node.Name)
 		if err := health.CheckNode(&node); err != nil {
-			log.Info("Found unhealthy Node", "phase", node.Status.Phase, "reason", err.Error(), "conditions", node.Status.Conditions)
+			objectLog.Info("Found unhealthy Node", "phase", node.Status.Phase, "reason", err.Error(), "conditions", node.Status.Conditions)
 		} else {
-			log.Info("Found healthy Node", "phase", node.Status.Phase)
+			objectLog.Info("Found healthy Node", "phase", node.Status.Phase)
 		}
-		log.Info("Node resource capacity", "cpu", node.Status.Capacity.Cpu().String(), "memory", node.Status.Capacity.Memory().String())
+		objectLog.Info("Node resource capacity", "cpu", node.Status.Capacity.Cpu().String(), "memory", node.Status.Capacity.Memory().String())
 
 		nodeMetric := &metricsv1beta1.NodeMetrics{}
 		if err := k8sClient.Client().Get(ctx, client.ObjectKey{Name: node.Name}, nodeMetric); err != nil {
-			log.Error(err, "Unable to receive metrics for node")
+			objectLog.Error(err, "Unable to receive metrics for node")
 			continue
 		}
-		log.Info("Node resource usage", "cpu", nodeMetric.Usage.Cpu().String(), "memory", nodeMetric.Usage.Memory().String())
+		objectLog.Info("Node resource usage", "cpu", nodeMetric.Usage.Cpu().String(), "memory", nodeMetric.Usage.Memory().String())
 	}
 	return nil
 }
