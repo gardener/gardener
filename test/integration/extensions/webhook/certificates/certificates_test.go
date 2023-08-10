@@ -71,6 +71,7 @@ var shootNamespaceSelector = map[string]string{"shoot.gardener.cloud/provider": 
 var _ = Describe("Certificates tests", func() {
 	var (
 		err       error
+		ok        bool
 		mgr       manager.Manager
 		codec     = newCodec(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 		fakeClock *testclock.FakeClock
@@ -86,6 +87,7 @@ var _ = Describe("Certificates tests", func() {
 		seedWebhookConfig        *admissionregistrationv1.MutatingWebhookConfiguration
 		shootWebhookConfig       *admissionregistrationv1.MutatingWebhookConfiguration
 		atomicShootWebhookConfig *atomic.Value
+		defaultServer            *webhook.DefaultServer
 
 		failurePolicyFail        = admissionregistrationv1.Fail
 		matchPolicyExact         = admissionregistrationv1.Exact
@@ -198,13 +200,16 @@ var _ = Describe("Certificates tests", func() {
 			atomicShootWebhookConfig, err = webhookConfig.AddToManager(ctx, mgr)
 			Expect(err).NotTo(HaveOccurred())
 
+			defaultServer, ok = mgr.GetWebhookServer().(*webhook.DefaultServer)
+			Expect(ok).To(BeTrue())
+
 			By("Verify certificates exist on disk")
 			Eventually(func(g Gomega) {
-				serverCert, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().(*webhook.DefaultServer).Options.CertDir, "tls.crt"))
+				serverCert, err := os.ReadFile(filepath.Join(defaultServer.Options.CertDir, "tls.crt"))
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(serverCert).NotTo(BeEmpty())
 
-				serverKey, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().(*webhook.DefaultServer).Options.CertDir, "tls.key"))
+				serverKey, err := os.ReadFile(filepath.Join(defaultServer.Options.CertDir, "tls.key"))
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(serverKey).NotTo(BeEmpty())
 			}).Should(Succeed())
@@ -269,13 +274,13 @@ var _ = Describe("Certificates tests", func() {
 
 				By("Read generated server certificate from disk")
 				Eventually(func(g Gomega) []byte {
-					serverCert1, err = os.ReadFile(filepath.Join(mgr.GetWebhookServer().(*webhook.DefaultServer).Options.CertDir, "tls.crt"))
+					serverCert1, err = os.ReadFile(filepath.Join(defaultServer.Options.CertDir, "tls.crt"))
 					g.Expect(err).NotTo(HaveOccurred())
 					return serverCert1
 				}).Should(Not(BeEmpty()))
 
 				Eventually(func(g Gomega) []byte {
-					serverKey1, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().(*webhook.DefaultServer).Options.CertDir, "tls.key"))
+					serverKey1, err := os.ReadFile(filepath.Join(defaultServer.Options.CertDir, "tls.key"))
 					g.Expect(err).NotTo(HaveOccurred())
 					return serverKey1
 				}).Should(Not(BeEmpty()))
@@ -290,7 +295,7 @@ var _ = Describe("Certificates tests", func() {
 
 				By("Read re-generated server certificate from disk")
 				Eventually(func(g Gomega) []byte {
-					serverCert2, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().(*webhook.DefaultServer).Options.CertDir, "tls.crt"))
+					serverCert2, err := os.ReadFile(filepath.Join(defaultServer.Options.CertDir, "tls.crt"))
 					g.Expect(err).NotTo(HaveOccurred())
 					return serverCert2
 				}).Should(And(
@@ -367,11 +372,11 @@ var _ = Describe("Certificates tests", func() {
 
 			By("Verify certificates exist on disk")
 			Eventually(func(g Gomega) {
-				serverCert, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().(*webhook.DefaultServer).Options.CertDir, "tls.crt"))
+				serverCert, err := os.ReadFile(filepath.Join(defaultServer.Options.CertDir, "tls.crt"))
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(serverCert).NotTo(BeEmpty())
 
-				serverKey, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().(*webhook.DefaultServer).Options.CertDir, "tls.key"))
+				serverKey, err := os.ReadFile(filepath.Join(defaultServer.Options.CertDir, "tls.key"))
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(serverKey).NotTo(BeEmpty())
 			}).Should(Succeed())
@@ -461,13 +466,13 @@ var _ = Describe("Certificates tests", func() {
 
 				By("Read generated server certificate from disk")
 				Eventually(func(g Gomega) []byte {
-					serverCert1, err = os.ReadFile(filepath.Join(mgr.GetWebhookServer().(*webhook.DefaultServer).Options.CertDir, "tls.crt"))
+					serverCert1, err = os.ReadFile(filepath.Join(defaultServer.Options.CertDir, "tls.crt"))
 					g.Expect(err).NotTo(HaveOccurred())
 					return serverCert1
 				}).Should(Not(BeEmpty()))
 
 				Eventually(func(g Gomega) []byte {
-					serverKey1, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().(*webhook.DefaultServer).Options.CertDir, "tls.key"))
+					serverKey1, err := os.ReadFile(filepath.Join(defaultServer.Options.CertDir, "tls.key"))
 					g.Expect(err).NotTo(HaveOccurred())
 					return serverKey1
 				}).Should(Not(BeEmpty()))
@@ -494,7 +499,7 @@ var _ = Describe("Certificates tests", func() {
 
 				By("Read re-generated server certificate from disk")
 				Eventually(func(g Gomega) []byte {
-					serverCert2, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().(*webhook.DefaultServer).Options.CertDir, "tls.crt"))
+					serverCert2, err := os.ReadFile(filepath.Join(defaultServer.Options.CertDir, "tls.crt"))
 					g.Expect(err).NotTo(HaveOccurred())
 					return serverCert2
 				}).Should(And(

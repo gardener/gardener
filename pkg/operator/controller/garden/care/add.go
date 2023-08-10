@@ -82,8 +82,8 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 				r.Config.Controllers.GardenCare.SyncPeriod.Duration,
 			),
 		}).
-		WatchesRawSource(
-			source.Kind(mgr.GetCache(), &operatorv1alpha1.Garden{}),
+		Watches(
+			&operatorv1alpha1.Garden{},
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(r.GardenPredicate()),
 		).Build(r)

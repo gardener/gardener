@@ -86,7 +86,13 @@ type reconciler struct {
 // AddToManager generates webhook CA and server cert if it doesn't exist on the cluster yet. Then it adds reconciler to
 // the given manager in order to periodically regenerate the webhook secrets.
 func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager) error {
-	r.serverPort = mgr.GetWebhookServer().(*webhook.DefaultServer).Options.Port
+	webhookServer := mgr.GetWebhookServer()
+	defaultServer, ok := webhookServer.(*webhook.DefaultServer)
+	if !ok {
+		return fmt.Errorf("expected *webhook.DefaultServer, got %T", webhookServer)
+	}
+
+	r.serverPort = defaultServer.Options.Port
 	r.client = mgr.GetClient()
 
 	present, err := isWebhookServerSecretPresent(ctx, mgr.GetAPIReader(), r.ServerSecretName, r.Namespace, r.Identity)

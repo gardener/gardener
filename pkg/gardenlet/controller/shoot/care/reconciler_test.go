@@ -88,7 +88,7 @@ var _ = Describe("Shoot Care Control", func() {
 			},
 		}
 
-		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithStatusSubresource(shoot).Build()
+		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithStatusSubresource(&gardencorev1beta1.Shoot{}).Build()
 
 		fakeClock = testclock.NewFakeClock(time.Now())
 	})

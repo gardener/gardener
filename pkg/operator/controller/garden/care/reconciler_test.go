@@ -75,7 +75,7 @@ var _ = Describe("Garden Care Control", func() {
 			},
 		}
 
-		runtimeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).WithStatusSubresource(garden).Build()
+		runtimeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).WithStatusSubresource(&operatorv1alpha1.Garden{}).Build()
 		gardenClientMap = fakeclientmap.NewClientMapBuilder().WithRuntimeClientForKey(keys.ForGarden(garden), runtimeClient).Build()
 
 		fakeClock = testclock.NewFakeClock(time.Now())

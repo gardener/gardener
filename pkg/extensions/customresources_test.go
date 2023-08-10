@@ -93,7 +93,7 @@ var _ = Describe("extensions", func() {
 			},
 		}
 
-		c = fake.NewClientBuilder().WithScheme(scheme).WithStatusSubresource(expected).Build()
+		c = fake.NewClientBuilder().WithScheme(scheme).WithStatusSubresource(&extensionsv1alpha1.Worker{}).Build()
 
 		fakeOps = &retryfake.Ops{MaxAttempts: 1}
 		resetVars = test.WithVars(

@@ -164,7 +164,7 @@ var _ = Describe("Extension", func() {
 			},
 		}
 
-		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithStatusSubresource(beforeExtension).Build()
+		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithStatusSubresource(&extensionsv1alpha1.Extension{}).Build()
 
 		ext = extension.New(
 			log,

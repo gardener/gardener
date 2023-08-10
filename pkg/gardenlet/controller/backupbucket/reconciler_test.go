@@ -102,7 +102,7 @@ var _ = Describe("Controller", func() {
 			},
 		}
 
-		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithStatusSubresource(backupBucket).Build()
+		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithStatusSubresource(&gardencorev1beta1.BackupBucket{}).Build()
 
 		testSchemeBuilder := runtime.NewSchemeBuilder(
 			kubernetes.AddSeedSchemeToScheme,

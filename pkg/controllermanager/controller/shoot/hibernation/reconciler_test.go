@@ -167,7 +167,7 @@ var _ = Describe("Shoot Hibernation", func() {
 					Status: gardencorev1beta1.ShootStatus{},
 				}
 
-				c = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithStatusSubresource(shoot).Build()
+				c = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithStatusSubresource(&gardencorev1beta1.Shoot{}).Build()
 			})
 
 			DescribeTable("should properly enable or disable hibernation and requeue the shoot", func(t testEntry) {
