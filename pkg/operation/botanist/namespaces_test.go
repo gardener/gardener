@@ -442,6 +442,34 @@ var _ = Describe("Namespaces", func() {
 						Or(Equal("1"), Equal("2"), Equal("3")),
 					))
 				})
+
+				It("should not amend zone information if failure tolerance is unchanged", func() {
+					Expect(seedClient.Create(ctx, &corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: namespace,
+							Annotations: map[string]string{
+								"high-availability-config.resources.gardener.cloud/zones": "1,2,a,b",
+								"high-availability-config.resources.gardener.cloud/type":  "zone",
+							},
+						},
+					})).To(Succeed())
+
+					defaultShootInfo.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+						HighAvailability: &gardencorev1beta1.HighAvailability{
+							FailureTolerance: gardencorev1beta1.FailureTolerance{
+								Type: gardencorev1beta1.FailureToleranceTypeZone,
+							},
+						},
+					}
+					botanist.Shoot.SetInfo(defaultShootInfo)
+
+					Expect(botanist.SeedNamespaceObject).To(BeNil())
+
+					Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+
+					defaultExpectations(gardencorev1beta1.FailureToleranceTypeZone, 4)
+					Expect(botanist.SeedNamespaceObject.Annotations).To(HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "1,2,a,b"))
+				})
 			})
 
 			Context("when volume creation is in progress", func() {
