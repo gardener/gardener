@@ -28,7 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -54,16 +53,8 @@ var (
 		v1beta1constants.ETCDEvents,
 	)
 
-	requiredMonitoringSeedDeploymentsBefore171 = sets.New(
-		v1beta1constants.DeploymentNameGrafana,
-	)
-
 	requiredMonitoringSeedDeployments = sets.New(
 		v1beta1constants.DeploymentNamePlutono,
-	)
-
-	requiredLoggingStatefulSetsBefore171 = sets.New(
-		v1beta1constants.StatefulSetNameLoki,
 	)
 
 	requiredLoggingStatefulSets = sets.New(
@@ -74,16 +65,6 @@ var (
 		v1beta1constants.DeploymentNameEventLogger,
 	)
 )
-
-// TODO(rickardsjp, istvanballok): remove in release v1.77
-var versionConstraintLessThan171 *semver.Constraints
-
-func init() {
-	var err error
-
-	versionConstraintLessThan171, err = semver.NewConstraint("< 1.71-0")
-	utilruntime.Must(err)
-}
 
 func mustGardenRoleLabelSelector(gardenRoles ...string) labels.Selector {
 	if len(gardenRoles) == 1 {
@@ -495,11 +476,6 @@ func computeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (set
 
 func computeRequiredMonitoringSeedDeployments(shoot *gardencorev1beta1.Shoot, gardenerVersion *semver.Version) sets.Set[string] {
 	requiredDeployments := requiredMonitoringSeedDeployments.Clone()
-	// TODO(rickardsjp, istvanballok): remove in release v1.77
-	if versionConstraintLessThan171.Check(gardenerVersion) {
-		requiredDeployments = requiredMonitoringSeedDeploymentsBefore171.Clone()
-	}
-
 	if !v1beta1helper.IsWorkerless(shoot) {
 		requiredDeployments.Insert(v1beta1constants.DeploymentNameKubeStateMetrics)
 	}
@@ -794,12 +770,7 @@ func (b *HealthChecker) CheckLoggingControlPlane(
 			return nil, err
 		}
 
-		// TODO(rickardsjp, istvanballok): remove in release v1.77
-		requiredStatefulSets := requiredLoggingStatefulSets
-		if versionConstraintLessThan171.Check(b.gardenerVersion) {
-			requiredStatefulSets = requiredLoggingStatefulSetsBefore171
-		}
-		if exitCondition := b.checkRequiredStatefulSets(condition, requiredStatefulSets, statefulSetList.Items); exitCondition != nil {
+		if exitCondition := b.checkRequiredStatefulSets(condition, requiredLoggingStatefulSets, statefulSetList.Items); exitCondition != nil {
 			return exitCondition, nil
 		}
 		if exitCondition := b.checkStatefulSets(condition, statefulSetList.Items); exitCondition != nil {

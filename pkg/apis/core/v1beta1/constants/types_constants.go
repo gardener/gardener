@@ -144,8 +144,6 @@ const (
 	// DeploymentNameGardenerResourceManager is a constant for the name of a Kubernetes deployment object that contains
 	// the gardener-resource-manager pod.
 	DeploymentNameGardenerResourceManager = "gardener-resource-manager"
-	// DeploymentNameGrafana is a constant for the name of a Kubernetes deployment object that contains the grafana pod.
-	DeploymentNameGrafana = "grafana"
 	// DeploymentNamePlutono is a constant for the name of a Kubernetes deployment object that contains the plutono pod.
 	DeploymentNamePlutono = "plutono"
 	// DeploymentNameEventLogger is a constant for the name of a Kubernetes deployment object that contains
@@ -192,9 +190,6 @@ const (
 	ETCDMain = "etcd-" + ETCDRoleMain
 	// ETCDEvents is a constant for the name of etcd-events Etcd object.
 	ETCDEvents = "etcd-" + ETCDRoleEvents
-	// StatefulSetNameLoki is a constant for the name of a Kubernetes stateful set object that contains
-	// the loki pod.
-	StatefulSetNameLoki = "loki"
 	// StatefulSetNameVali is a constant for the name of a Kubernetes stateful set object that contains
 	// the vali pod.
 	StatefulSetNameVali = "vali"

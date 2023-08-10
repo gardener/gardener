@@ -153,7 +153,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 
 		By("Patch shoot status")
 		patch := client.MergeFrom(shoot.DeepCopy())
-		shoot.Status.Gardener.Version = "1.71.0"
+		shoot.Status.Gardener.Version = "1.2.3"
 		shoot.Status.TechnicalID = testNamespace.Name
 		Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 
