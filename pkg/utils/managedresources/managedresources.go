@@ -312,15 +312,15 @@ func WaitUntilListDeleted(ctx context.Context, client client.Client, mrList *res
 	return allErrs.ErrorOrNil()
 }
 
-// WaitUntilDeleted waits until the given managed resource is deleted.
-func WaitUntilDeleted(ctx context.Context, client client.Client, namespace, name string) error {
+// WaitUntilDeleted waits until the given managed resource and its secrets are deleted.
+func WaitUntilDeleted(ctx context.Context, c client.Client, namespace, name string) error {
 	mr := &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
 	}
-	if err := kubernetesutils.WaitUntilResourceDeleted(ctx, client, mr, IntervalWait); err != nil {
+	if err := kubernetesutils.WaitUntilResourceDeleted(ctx, c, mr, IntervalWait); err != nil {
 		resourcesAppliedCondition := v1beta1helper.GetCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
 		if resourcesAppliedCondition != nil && resourcesAppliedCondition.Status != gardencorev1beta1.ConditionTrue &&
 			(resourcesAppliedCondition.Reason == resourcesv1alpha1.ConditionDeletionFailed || resourcesAppliedCondition.Reason == resourcesv1alpha1.ConditionDeletionPending) {
@@ -328,6 +328,16 @@ func WaitUntilDeleted(ctx context.Context, client client.Client, namespace, name
 			return v1beta1helper.NewErrorWithCodes(deleteError, checkConfigurationError(err)...)
 		}
 		return err
+	}
+
+	secrets := &corev1.SecretList{}
+	if err := c.List(ctx, secrets, client.InNamespace(namespace), client.MatchingLabels(map[string]string{"managed-by": name})); err != nil {
+		return err
+	}
+	for _, secret := range secrets.Items {
+		if err := kubernetesutils.WaitUntilResourceDeleted(ctx, c, &secret, IntervalWait); err != nil {
+			return err
+		}
 	}
 	return nil
 }
