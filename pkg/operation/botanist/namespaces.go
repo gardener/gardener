@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -91,61 +92,12 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 		}
 
 		if seedZones := b.Seed.GetInfo().Spec.Provider.Zones; len(seedZones) > 0 {
-			zonesToSelect := 1
-			if failureToleranceType != nil && *failureToleranceType == gardencorev1beta1.FailureToleranceTypeZone {
-				zonesToSelect = 3
+			zones, err := calculateShootZones(ctx, b.SeedClientSet.Client(), b.Logger, namespace, failureToleranceType, seedZones)
+			if err != nil {
+				return err
 			}
 
-			chosenZones := sets.New[string]()
-
-			if zones, ok := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones]; ok {
-				chosenZones.Insert(strings.Split(zones, ",")...)
-			}
-
-			// The zones annotation is used to add a node affinity to pods and pin them to exactly those zones part of
-			// the annotation's value. However, existing clusters might already run in multiple zones. In particular,
-			// if they have created their volumes in multiple zones already, we cannot change this unless we delete and
-			// recreate the disks. This is nothing we want to do automatically, so let's find the existing volumes and
-			// use their zones from now on.
-			// As a consequence, even shoots w/o failure tolerance type 'zone' might be pinned to multiple zones.
-			pvcList := &corev1.PersistentVolumeClaimList{}
-			if err := b.SeedClientSet.Client().List(ctx, pvcList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
-				return fmt.Errorf("failed listing PVCs: %w", err)
-			}
-
-			for _, pvc := range pvcList.Items {
-				// Skip handling if PV has not been created yet.
-				if pvc.Spec.VolumeName == "" {
-					continue
-				}
-
-				pv := &corev1.PersistentVolume{}
-				if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: pvc.Spec.VolumeName}, pv); err != nil {
-					return fmt.Errorf("failed getting PV %s: %w", pvc.Spec.VolumeName, err)
-				}
-
-				pvNodeAffinity := pv.Spec.NodeAffinity
-				if pvNodeAffinity == nil || pvNodeAffinity.Required == nil {
-					continue
-				}
-
-				for _, term := range pvNodeAffinity.Required.NodeSelectorTerms {
-					zonesFromTerm := ExtractZonesFromNodeSelectorTerm(term)
-					if len(zonesFromTerm) > 0 {
-						chosenZones.Insert(zonesFromTerm...)
-						b.Logger.Info("Found existing zone(s) due to volume", "zone", strings.Join(zonesFromTerm, ","), "persistentVolume", client.ObjectKeyFromObject(pv))
-					}
-				}
-			}
-
-			if len(seedZones) < zonesToSelect-chosenZones.Len() {
-				return fmt.Errorf("cannot select %d zones for shoot because seed only specifies %d zones in its specification", zonesToSelect, len(seedZones))
-			}
-
-			for chosenZones.Len() < zonesToSelect {
-				chosenZones.Insert(seedZones[rand.Intn(len(seedZones))])
-			}
-			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(sets.List(chosenZones), ","))
+			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, strings.Join(zones, ","))
 		}
 
 		return nil
@@ -155,6 +107,69 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 
 	b.SeedNamespaceObject = namespace
 	return nil
+}
+
+// calculateShootZones calculates and picks zones for the shoot cluster based on the passed 'failureToleranceType'.
+// 'failureToleranceType' == 'zone' -> 3 zones
+// 'failureToleranceType' != 'zone' -> 1 zone
+// If there are volumes in already used zones, then these zones will be part of the list too.
+func calculateShootZones(ctx context.Context, cl client.Client, log logr.Logger, namespace *corev1.Namespace, failureToleranceType *gardencorev1beta1.FailureToleranceType, seedZones []string) ([]string, error) {
+	zonesToSelect := 1
+	if failureToleranceType != nil && *failureToleranceType == gardencorev1beta1.FailureToleranceTypeZone {
+		zonesToSelect = 3
+	}
+
+	chosenZones := sets.New[string]()
+
+	if zones, ok := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones]; ok {
+		chosenZones.Insert(strings.Split(zones, ",")...)
+	}
+
+	// The zones annotation is used to add a node affinity to pods and pin them to exactly those zones part of
+	// the annotation's value. However, existing clusters might already run in multiple zones. In particular,
+	// if they have created their volumes in multiple zones already, we cannot change this unless we delete and
+	// recreate the disks. This is nothing we want to do automatically, so let's find the existing volumes and
+	// use their zones from now on.
+	// As a consequence, even shoots w/o failure tolerance type 'zone' might be pinned to multiple zones.
+	pvcList := &corev1.PersistentVolumeClaimList{}
+	if err := cl.List(ctx, pvcList, client.InNamespace(namespace.Name)); err != nil {
+		return nil, fmt.Errorf("failed listing PVCs: %w", err)
+	}
+
+	for _, pvc := range pvcList.Items {
+		// Skip handling if PV has not been created yet.
+		if pvc.Spec.VolumeName == "" {
+			continue
+		}
+
+		pv := &corev1.PersistentVolume{}
+		if err := cl.Get(ctx, client.ObjectKey{Name: pvc.Spec.VolumeName}, pv); err != nil {
+			return nil, fmt.Errorf("failed getting PV %s: %w", pvc.Spec.VolumeName, err)
+		}
+
+		pvNodeAffinity := pv.Spec.NodeAffinity
+		if pvNodeAffinity == nil || pvNodeAffinity.Required == nil {
+			continue
+		}
+
+		for _, term := range pvNodeAffinity.Required.NodeSelectorTerms {
+			zonesFromTerm := ExtractZonesFromNodeSelectorTerm(term)
+			if len(zonesFromTerm) > 0 {
+				chosenZones.Insert(zonesFromTerm...)
+				log.Info("Found existing zone(s) due to volume", "zone", strings.Join(zonesFromTerm, ","), "persistentVolume", client.ObjectKeyFromObject(pv))
+			}
+		}
+	}
+
+	if len(seedZones) < zonesToSelect-chosenZones.Len() {
+		return nil, fmt.Errorf("cannot select %d zones for shoot because seed only specifies %d zones in its specification", zonesToSelect, len(seedZones))
+	}
+
+	for chosenZones.Len() < zonesToSelect {
+		chosenZones.Insert(seedZones[rand.Intn(len(seedZones))])
+	}
+
+	return sets.List(chosenZones), nil
 }
 
 // ExtractZonesFromNodeSelectorTerm extracts the zones from given term.
