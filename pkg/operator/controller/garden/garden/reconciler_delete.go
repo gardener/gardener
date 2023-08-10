@@ -49,7 +49,7 @@ func (r *Reconciler) delete(
 	error,
 ) {
 	log.Info("Instantiating component destroyers")
-	c, err := r.instantiateComponents(ctx, log, garden, secretsManager, targetVersion, kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper()))
+	c, err := r.instantiateComponents(ctx, log, garden, secretsManager, targetVersion, kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper()), nil)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -57,6 +57,10 @@ func (r *Reconciler) delete(
 	var (
 		g = flow.NewGraph("Garden deletion")
 
+		_ = g.Add(flow.Task{
+			Name: "Destroying Plutono",
+			Fn:   component.OpDestroyAndWait(c.plutono).Destroy,
+		})
 		_ = g.Add(flow.Task{
 			Name: "Destroying Kube State Metrics",
 			Fn:   component.OpDestroyAndWait(c.kubeStateMetrics).Destroy,

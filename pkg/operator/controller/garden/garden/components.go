@@ -53,6 +53,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/logging/fluentoperator/customresources"
 	"github.com/gardener/gardener/pkg/component/logging/vali"
+	"github.com/gardener/gardener/pkg/component/plutono"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/component/vpa"
@@ -91,6 +92,7 @@ type components struct {
 	fluentOperator                component.DeployWaiter
 	fluentBit                     component.DeployWaiter
 	fluentOperatorCustomResources component.DeployWaiter
+	plutono                       plutono.Interface
 	vali                          component.Deployer
 }
 
@@ -101,6 +103,7 @@ func (r *Reconciler) instantiateComponents(
 	secretsManager secretsmanager.Interface,
 	targetVersion *semver.Version,
 	applier kubernetes.Applier,
+	wildcardCert *corev1.Secret,
 ) (
 	c components,
 	err error,
@@ -198,6 +201,11 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.vali, err = r.newVali(garden)
+	if err != nil {
+		return
+	}
+
+	c.plutono, err = r.newPlutono(secretsManager, garden.Spec.RuntimeCluster.Ingress.Domain, wildcardCert)
 	if err != nil {
 		return
 	}
@@ -719,6 +727,32 @@ func (r *Reconciler) newNginxIngressController(garden *operatorv1alpha1.Garden) 
 		component.ClusterTypeSeed,
 		"",
 		v1beta1constants.SeedNginxIngressClass,
+	)
+}
+
+func (r *Reconciler) newPlutono(secretsManager secretsmanager.Interface, ingressDomain string, wildcardCert *corev1.Secret) (plutono.Interface, error) {
+	var wildcardCertName *string
+	if wildcardCert != nil {
+		wildcardCertName = pointer.String(wildcardCert.GetName())
+	}
+
+	return sharedcomponent.NewPlutono(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		secretsManager,
+		component.ClusterTypeSeed,
+		1,
+		"",
+		fmt.Sprintf("%s.%s", "plutono-garden", ingressDomain),
+		v1beta1constants.PriorityClassNameGardenSystem100,
+		false,
+		false,
+		false,
+		true,
+		false,
+		false,
+		false,
+		wildcardCertName,
 	)
 }
 

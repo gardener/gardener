@@ -380,18 +380,19 @@ func defaultPlutono(
 		c,
 		namespace,
 		secretsManager,
-		authSecret,
 		component.ClusterTypeSeed,
+		1,
+		authSecret,
 		ingressHot,
+		v1beta1constants.PriorityClassNameSeedSystem600,
+		false,
 		true,
 		false,
 		false,
 		false,
 		false,
-		v1beta1constants.PriorityClassNameSeedSystem600,
-		1,
-		wildcardCertName,
 		false,
+		wildcardCertName,
 	)
 }
 

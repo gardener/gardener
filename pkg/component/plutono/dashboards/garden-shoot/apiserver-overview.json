@@ -89,7 +89,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -99,7 +99,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(.9,sum(rate(apiserver_admission_controller_admission_duration_seconds_bucket{pod=~\"$apiserver\",operation=~\"$operation\"}[$__rate_interval])) by(le,name))",
+          "expr": "histogram_quantile(.9,sum(rate(apiserver_admission_controller_admission_duration_seconds_bucket{job=~\"$job\",pod=~\"$pod\",operation=~\"$operation\"}[$__rate_interval])) by(le,name))",
           "interval": "",
           "legendFormat": "{{name}}",
           "refId": "A"
@@ -196,7 +196,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -206,7 +206,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(0.90,sum(rate(apiserver_admission_webhook_admission_duration_seconds_bucket{pod=~\"$apiserver\",operation=~\"$operation\"}[$__rate_interval])) by(le,name))",
+          "expr": "histogram_quantile(0.90,sum(rate(apiserver_admission_webhook_admission_duration_seconds_bucket{job=~\"$job\",pod=~\"$pod\",operation=~\"$operation\"}[$__rate_interval])) by(le,name))",
           "interval": "",
           "legendFormat": "{{name}}",
           "refId": "A"
@@ -296,7 +296,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -306,7 +306,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(0.90,sum(rate(apiserver_admission_step_admission_duration_seconds_bucket{pod=~\"$apiserver\",operation=~\"$operation\"}[$__rate_interval])) by(le,type))",
+          "expr": "histogram_quantile(0.90,sum(rate(apiserver_admission_step_admission_duration_seconds_bucket{job=~\"$job\",pod=~\"$pod\",operation=~\"$operation\"}[$__rate_interval])) by(le,type))",
           "interval": "",
           "legendFormat": "{{type}}",
           "refId": "A"
@@ -395,7 +395,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -405,7 +405,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_admission_webhook_rejection_count{pod=~\"$apiserver\",operation=~\"$operation\"}[$__rate_interval])) by (name,error_type)",
+          "expr": "sum(rate(apiserver_admission_webhook_rejection_count{job=~\"$job\",pod=~\"$pod\",operation=~\"$operation\"}[$__rate_interval])) by (name,error_type)",
           "interval": "",
           "legendFormat": "{{name}} ({{error_type}})",
           "refId": "A"
@@ -504,7 +504,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -514,7 +514,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_audit_event_total{pod=~\"$apiserver\"}[$__rate_interval]))",
+          "expr": "sum(rate(apiserver_audit_event_total{job=~\"$job\",pod=~\"$pod\"}[$__rate_interval]))",
           "interval": "",
           "legendFormat": "Events",
           "refId": "A"
@@ -599,7 +599,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -609,7 +609,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_audit_requests_rejected_total{pod=~\"$apiserver\"}[$__rate_interval]))",
+          "expr": "sum(rate(apiserver_audit_requests_rejected_total{job=~\"$job\",pod=~\"$pod\"}[$__rate_interval]))",
           "interval": "",
           "legendFormat": "Events",
           "refId": "A"
@@ -708,7 +708,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -718,7 +718,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(authenticated_user_requests{pod=~\"$apiserver\"}[$__rate_interval]))",
+          "expr": "sum(rate(authenticated_user_requests{job=~\"$job\",pod=~\"$pod\"}[$__rate_interval]))",
           "interval": "",
           "legendFormat": "Requests",
           "refId": "A"
@@ -807,7 +807,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -817,7 +817,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(authentication_attempts{pod=~\"$apiserver\"}[$__rate_interval])) by(result)",
+          "expr": "sum(rate(authentication_attempts{job=~\"$job\",pod=~\"$pod\"}[$__rate_interval])) by(result)",
           "interval": "",
           "legendFormat": "{{result}}",
           "refId": "A"
@@ -932,7 +932,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -942,7 +942,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_request_total{pod=~\"$apiserver\"}[$__rate_interval]))",
+          "expr": "sum(rate(apiserver_request_total{job=~\"$job\",pod=~\"$pod\"}[$__rate_interval]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1044,7 +1044,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1055,7 +1055,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "max by(verb, quantile) (apiserver_latency_seconds:quantile{pod=~\"$apiserver\", verb=~\"$verb\",quantile=~\"$quantile\",subresource!~\"log|portforward|exec|proxy|attach\"})",
+          "expr": "max by(verb, quantile) (apiserver_latency_seconds:quantile{job=~\"$job\",pod=~\"$pod\", verb=~\"$verb\",quantile=~\"$quantile\",subresource!~\"log|portforward|exec|proxy|attach\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1158,7 +1158,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1168,7 +1168,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_request_total{pod=~\"$apiserver\"}[$__rate_interval])) by(verb)",
+          "expr": "sum(rate(apiserver_request_total{job=~\"$job\",pod=~\"$pod\"}[$__rate_interval])) by(verb)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -1264,7 +1264,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1274,7 +1274,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(rate(apiserver_request_total{pod=~\"$apiserver\",verb=~\"$verb\"}[$__rate_interval])) by (verb)",
+          "expr": "avg(rate(apiserver_request_total{job=~\"$job\",pod=~\"$pod\",verb=~\"$verb\"}[$__rate_interval])) by (verb)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1375,7 +1375,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1385,7 +1385,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_request_total{pod=~\"$apiserver\",scope!=\"\"}[$__rate_interval])) by(scope)",
+          "expr": "sum(rate(apiserver_request_total{job=~\"$job\",pod=~\"$pod\",scope!=\"\"}[$__rate_interval])) by(scope)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -1488,7 +1488,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1498,7 +1498,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_request_total{pod=~\"$apiserver\"}[$__rate_interval])) by(resource)",
+          "expr": "sum(rate(apiserver_request_total{job=~\"$job\",pod=~\"$pod\"}[$__rate_interval])) by(resource)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -1601,7 +1601,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1701,7 +1701,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1711,7 +1711,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(max_over_time(apiserver_current_inflight_requests{pod=~\"$apiserver\"}[1m])) by (request_kind)",
+          "expr": "sum(max_over_time(apiserver_current_inflight_requests{job=~\"$job\",pod=~\"$pod\"}[1m])) by (request_kind)",
           "interval": "",
           "legendFormat": "{{request_kind}}",
           "refId": "A"
@@ -1796,7 +1796,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1806,7 +1806,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(max_over_time(apiserver_current_inqueue_requests{pod=~\"$apiserver\"}[1m])) by (request_kind)",
+          "expr": "sum(max_over_time(apiserver_current_inqueue_requests{job=~\"$job\",pod=~\"$pod\"}[1m])) by (request_kind)",
           "interval": "",
           "legendFormat": "{{request_kind}}",
           "refId": "A"
@@ -1904,7 +1904,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1914,7 +1914,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(0.90,sum(rate(apiserver_response_sizes_bucket{pod=~\"$apiserver\",verb=~\"$verb\"}[$__rate_interval])) by(le,resource,subresource))",
+          "expr": "histogram_quantile(0.90,sum(rate(apiserver_response_sizes_bucket{job=~\"$job\",pod=~\"$pod\",verb=~\"$verb\"}[$__rate_interval])) by(le,resource,subresource))",
           "interval": "",
           "legendFormat": "{{resource}}{{subresource}}",
           "refId": "A"
@@ -2003,7 +2003,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -2013,7 +2013,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_request_terminations_total{pod=~\"$apiserver\",verb=~\"$verb\"}[$__rate_interval])) by (resource,subresource,code)",
+          "expr": "sum(rate(apiserver_request_terminations_total{job=~\"$job\",pod=~\"$pod\",verb=~\"$verb\"}[$__rate_interval])) by (resource,subresource,code)",
           "interval": "",
           "legendFormat": "{{ resource }}{{subresource}} ({{code}})",
           "refId": "A"
@@ -2106,7 +2106,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -2117,7 +2117,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(apiserver_response_sizes_sum{pod=~\"$apiserver\",verb=~\"$verb\"}[$__rate_interval])) by(resource, verb) > 0",
+          "expr": "sum(rate(apiserver_response_sizes_sum{job=~\"$job\",pod=~\"$pod\",verb=~\"$verb\"}[$__rate_interval])) by(resource, verb) > 0",
           "interval": "",
           "legendFormat": "{{resource}} {{verb}}",
           "refId": "A"
@@ -2216,7 +2216,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -2226,7 +2226,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "max(etcd_db_total_size_in_bytes{pod=~\"$apiserver\"}) by (endpoint) or max(apiserver_storage_db_total_size_in_bytes{pod=~\"$apiserver\"}) by (endpoint)",
+          "expr": "max(etcd_db_total_size_in_bytes{job=~\"$job\",pod=~\"$pod\"}) by (endpoint) or max(apiserver_storage_db_total_size_in_bytes{job=~\"$job\",pod=~\"$pod\"}) by (endpoint)",
           "interval": "",
           "legendFormat": "{{endpoint}}",
           "refId": "A"
@@ -2315,7 +2315,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -2325,7 +2325,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "max(etcd_object_counts{pod=~\"$apiserver\"}) by (resource) or max(apiserver_storage_objects{pod=~\"$apiserver\"}) by (resource)",
+          "expr": "max(etcd_object_counts{job=~\"$job\",pod=~\"$pod\"}) by (resource) or max(apiserver_storage_objects{job=~\"$job\",pod=~\"$pod\"}) by (resource)",
           "interval": "",
           "legendFormat": "{{resource}}",
           "refId": "A"
@@ -2414,7 +2414,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -2424,7 +2424,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(0.90,sum(rate(apiserver_storage_transformation_duration_seconds_bucket{pod=~\"$apiserver\"}[$__rate_interval])) by(le,transformation_type))",
+          "expr": "histogram_quantile(0.90,sum(rate(apiserver_storage_transformation_duration_seconds_bucket{job=~\"$job\",pod=~\"$pod\"}[$__rate_interval])) by(le,transformation_type))",
           "interval": "",
           "legendFormat": "{{transformation_type}}",
           "refId": "A"
@@ -2513,7 +2513,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -2523,7 +2523,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_storage_transformation_operations_total{pod=~\"$apiserver\"}[$__rate_interval])) by (transformation_type,transformer_prefix)",
+          "expr": "sum(rate(apiserver_storage_transformation_operations_total{job=~\"$job\",pod=~\"$pod\"}[$__rate_interval])) by (transformation_type,transformer_prefix)",
           "interval": "",
           "legendFormat": "{{transformation_type}},{{transformer_prefix}}",
           "refId": "A"
@@ -2621,7 +2621,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -2631,7 +2631,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(.9,sum(rate(etcd_request_duration_seconds_bucket{pod=~\"$apiserver\"}[$__rate_interval])) by(le,type))",
+          "expr": "histogram_quantile(.9,sum(rate(etcd_request_duration_seconds_bucket{job=~\"$job\",pod=~\"$pod\"}[$__rate_interval])) by(le,type))",
           "hide": false,
           "interval": "",
           "intervalFactor": 1,
@@ -2738,7 +2738,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 0.5,
       "points": false,
       "renderer": "flot",
@@ -2749,7 +2749,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "    sum by (kind) (apiserver_registered_watchers{pod=~\"$apiserver\",kind!=\"\"})\n  + on () group_left ()\n    absent(apiserver_longrunning_requests) * 0\nor\n  sum by (resource) (apiserver_longrunning_requests{pod=~\"$apiserver\",verb=\"WATCH\"})",
+          "expr": "    sum by (kind) (apiserver_registered_watchers{job=~\"$job\",pod=~\"$pod\",kind!=\"\"})\n  + on () group_left ()\n    absent(apiserver_longrunning_requests) * 0\nor\n  sum by (resource) (apiserver_longrunning_requests{job=~\"$job\",pod=~\"$pod\",verb=\"WATCH\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "{{resource}}{{kind}}",
@@ -2841,7 +2841,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -2851,7 +2851,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_init_events_total{pod=~\"$apiserver\"}[$__rate_interval])) by(resource)",
+          "expr": "sum(rate(apiserver_init_events_total{job=~\"$job\",pod=~\"$pod\"}[$__rate_interval])) by(resource)",
           "interval": "",
           "legendFormat": "{{resource}}",
           "refId": "A"
@@ -2948,7 +2948,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -2958,7 +2958,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(0.90,sum(rate(apiserver_watch_events_sizes_bucket{pod=~\"$apiserver\"}[$__rate_interval])) by(le,kind))",
+          "expr": "histogram_quantile(0.90,sum(rate(apiserver_watch_events_sizes_bucket{job=~\"$job\",pod=~\"$pod\"}[$__rate_interval])) by(le,kind))",
           "interval": "",
           "legendFormat": "{{kind}}",
           "refId": "A"
@@ -3048,7 +3048,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -3058,7 +3058,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_watch_events_total{pod=~\"$apiserver\"}[$__rate_interval])) by(kind)",
+          "expr": "sum(rate(apiserver_watch_events_total{job=~\"$job\",pod=~\"$pod\"}[$__rate_interval])) by(kind)",
           "interval": "",
           "legendFormat": "{{kind}}",
           "refId": "A"
@@ -3149,7 +3149,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 0.5,
       "points": false,
       "renderer": "flot",
@@ -3159,7 +3159,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(increase(watch_cache_capacity_increase_total{pod=~\"$apiserver\"}[$__rate_interval])) by (resource)",
+          "expr": "sum(increase(watch_cache_capacity_increase_total{job=~\"$job\",pod=~\"$pod\"}[$__rate_interval])) by (resource)",
           "interval": "",
           "legendFormat": "{{resource}}",
           "refId": "A"
@@ -3251,7 +3251,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.22",
       "pointradius": 0.5,
       "points": false,
       "renderer": "flot",
@@ -3261,7 +3261,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(increase(watch_cache_capacity_decrease_total{pod=~\"$apiserver\"}[$__rate_interval])) by (resource)",
+          "expr": "sum(increase(watch_cache_capacity_decrease_total{job=~\"$job\",pod=~\"$pod\"}[$__rate_interval])) by (resource)",
           "interval": "",
           "legendFormat": "{{resource}}",
           "refId": "A"
@@ -3323,22 +3323,63 @@
       {
         "allValue": ".*",
         "current": {
-          "selected": false,
-          "text": "All",
-          "value": "$__all"
+          "selected": true,
+          "tags": [],
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "prometheus",
-        "definition": "label_values(apiserver_request_total,pod)",
+        "definition": "label_values(apiserver_request_total,job)",
         "description": null,
         "error": null,
         "hide": 0,
         "includeAll": true,
-        "label": "API Server",
+        "label": "Scrape Job",
         "multi": true,
-        "name": "apiserver",
+        "name": "job",
         "options": [],
         "query": {
-          "query": "label_values(apiserver_request_total,pod)",
+          "query": "label_values(apiserver_request_total,job)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "tags": [],
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(apiserver_request_total{job=~\"$job\"},pod)",
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": true,
+        "label": "API Server Pod",
+        "multi": true,
+        "name": "pod",
+        "options": [],
+        "query": {
+          "query": "label_values(apiserver_request_total{job=~\"$job\"},pod)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,

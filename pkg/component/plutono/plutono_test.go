@@ -40,6 +40,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	comp "github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/logging/vali"
 	. "github.com/gardener/gardener/pkg/component/plutono"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
@@ -103,10 +104,9 @@ var _ = Describe("Plutono", func() {
 
 	Describe("#Deploy", func() {
 		var (
-			providerConfigMapYAML = `apiVersion: v1
-data:
-  default.yaml: |
-    apiVersion: 1
+			providerConfigMapYAMLFor = func(values Values) string {
+				configMapName := "plutono-dashboard-providers-29d306e7"
+				configMapData := `  apiVersion: 1
     providers:
     - name: 'default'
       orgId: 1
@@ -115,7 +115,36 @@ data:
       disableDeletion: false
       editable: false
       options:
-        path: /var/lib/plutono/dashboards
+        path: /var/lib/plutono/dashboards`
+
+				if values.IsGardenCluster {
+					configMapName = "plutono-dashboard-providers-5be2bcda"
+					configMapData = `  apiVersion: 1
+    providers:
+    - name: 'global'
+      orgId: 1
+      folder: 'Global'
+      type: file
+      disableDeletion: false
+      editable: false
+      updateIntervalSeconds: 120
+      options:
+        path: /var/lib/plutono/dashboards/global
+    - name: 'garden'
+      orgId: 1
+      folder: 'Garden'
+      type: file
+      disableDeletion: false
+      editable: false
+      updateIntervalSeconds: 120
+      options:
+        path: /var/lib/plutono/dashboards/garden`
+				}
+
+				configMap := `apiVersion: v1
+data:
+  default.yaml: |
+  ` + configMapData + `
 immutable: true
 kind: ConfigMap
 metadata:
@@ -123,14 +152,20 @@ metadata:
   labels:
     component: plutono
     resources.gardener.cloud/garbage-collectable-reference: "true"
-  name: plutono-dashboard-providers-29d306e7
+  name: ` + configMapName + `
   namespace: some-namespace
 `
 
-			dataSourceConfigMapYAMLFor = func(clusterType comp.ClusterType) string {
+				return configMap
+			}
+
+			dataSourceConfigMapYAMLFor = func(values Values) string {
 				url := "http://prometheus-web:80"
 				maxLine := "1000"
-				if clusterType == comp.ClusterTypeSeed {
+				if values.IsGardenCluster {
+					url = "http://" + namespace + "-prometheus:80"
+					maxLine = "5000"
+				} else if values.ClusterType == comp.ClusterTypeSeed {
 					url = "http://aggregate-prometheus-web:80"
 					maxLine = "5000"
 				}
@@ -145,7 +180,8 @@ metadata:
     # list of datasources to insert/update depending
     # whats available in the database
     datasources:
-    - name: prometheus
+`
+				configMapData += `    - name: prometheus
       type: prometheus
       access: proxy
       url: ` + url + `
@@ -156,7 +192,20 @@ metadata:
       jsonData:
         timeInterval: 1m
 `
-				if clusterType == comp.ClusterTypeSeed {
+				if values.IsGardenCluster {
+					configMapData += `    - name: availability-prometheus
+      type: prometheus
+      access: proxy
+      url: http://` + namespace + `-avail-prom:80
+      basicAuth: false
+      isDefault: false
+      jsonData:
+        timeInterval: 30s
+      version: 1
+      editable: false
+`
+
+				} else if values.ClusterType == comp.ClusterTypeSeed {
 					configMapData += `    - name: seed-prometheus
       type: prometheus
       access: proxy
@@ -168,6 +217,7 @@ metadata:
         timeInterval: 1m
 `
 				}
+
 				configMapData += `    - name: vali
       type: vali
       access: proxy
@@ -187,7 +237,14 @@ metadata:
     component: plutono
     resources.gardener.cloud/garbage-collectable-reference: "true"
 `
-				if clusterType == comp.ClusterTypeShoot {
+				if values.IsGardenCluster {
+					configMap += `  name: plutono-datasources-ff212e8b
+  namespace: some-namespace
+`
+					return configMap
+				}
+
+				if values.ClusterType == comp.ClusterTypeShoot {
 					configMap += `  name: plutono-datasources-0fd41775
   namespace: some-namespace
 `
@@ -200,11 +257,15 @@ metadata:
 				return configMap
 			}
 
-			deploymentYAMLFor = func(clusterType comp.ClusterType, dashboardConfigMap string) *appsv1.Deployment {
+			deploymentYAMLFor = func(values Values, dashboardConfigMaps []string) *appsv1.Deployment {
 				providerConfigMap := "plutono-dashboard-providers-29d306e7"
 				dataSourceConfigMap := "plutono-datasources-27f1a6c5"
-				if clusterType == comp.ClusterTypeShoot {
+				if values.ClusterType == comp.ClusterTypeShoot {
 					dataSourceConfigMap = "plutono-datasources-0fd41775"
+				}
+				if values.IsGardenCluster {
+					providerConfigMap = "plutono-dashboard-providers-5be2bcda"
+					dataSourceConfigMap = "plutono-datasources-ff212e8b"
 				}
 
 				deployment := &appsv1.Deployment{
@@ -225,10 +286,7 @@ metadata:
 						},
 						Template: corev1.PodTemplateSpec{
 							ObjectMeta: metav1.ObjectMeta{
-								Labels: utils.MergeStringMaps(getLabels(), map[string]string{
-									v1beta1constants.LabelNetworkPolicyToDNS:          v1beta1constants.LabelNetworkPolicyAllowed,
-									gardenerutils.NetworkPolicyLabel("logging", 3100): v1beta1constants.LabelNetworkPolicyAllowed,
-								}),
+								Labels: utils.MergeStringMaps(getLabels(), getPodLabels(values)),
 							},
 							Spec: corev1.PodSpec{
 								AutomountServiceAccountToken: pointer.Bool(false),
@@ -239,17 +297,16 @@ metadata:
 										Image:           values.Image,
 										ImagePullPolicy: corev1.PullIfNotPresent,
 										Env: []corev1.EnvVar{
-											{Name: "PL_ALERTING_ENABLED", Value: "false"},
-											{Name: "PL_SNAPSHOTS_EXTERNAL_ENABLED", Value: "false"},
 											{Name: "PL_AUTH_ANONYMOUS_ENABLED", Value: "true"},
 											{Name: "PL_USERS_VIEWERS_CAN_EDIT", Value: "true"},
 											{Name: "PL_DATE_FORMATS_DEFAULT_TIMEZONE", Value: "UTC"},
+											{Name: "PL_AUTH_BASIC_ENABLED", Value: "false"},
+											{Name: "PL_AUTH_DISABLE_LOGIN_FORM", Value: "true"},
+											{Name: "PL_AUTH_DISABLE_SIGNOUT_MENU", Value: "true"},
+											{Name: "PL_ALERTING_ENABLED", Value: "false"},
+											{Name: "PL_SNAPSHOTS_EXTERNAL_ENABLED", Value: "false"},
 										},
 										VolumeMounts: []corev1.VolumeMount{
-											{
-												Name:      "plutono-dashboards",
-												MountPath: "/var/lib/plutono/dashboards",
-											},
 											{
 												Name:      "plutono-datasources",
 												MountPath: "/etc/plutono/provisioning/datasources",
@@ -281,16 +338,6 @@ metadata:
 									},
 								},
 								Volumes: []corev1.Volume{
-									{
-										Name: "plutono-dashboards",
-										VolumeSource: corev1.VolumeSource{
-											ConfigMap: &corev1.ConfigMapVolumeSource{
-												LocalObjectReference: corev1.LocalObjectReference{
-													Name: dashboardConfigMap,
-												},
-											},
-										},
-									},
 									{
 										Name: "plutono-datasources",
 										VolumeSource: corev1.VolumeSource{
@@ -325,35 +372,67 @@ metadata:
 					},
 				}
 
-				if clusterType == comp.ClusterTypeSeed {
-					deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{"role": "monitoring"})
-					deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
-						v1beta1constants.LabelRole:                                         v1beta1constants.LabelMonitoring,
-						"networking.gardener.cloud/to-seed-prometheus":                     v1beta1constants.LabelNetworkPolicyAllowed,
-						gardenerutils.NetworkPolicyLabel("aggregate-prometheus-web", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
-						gardenerutils.NetworkPolicyLabel("seed-prometheus-web", 9090):      v1beta1constants.LabelNetworkPolicyAllowed,
-					})
-					deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
-						{Name: "PL_AUTH_BASIC_ENABLED", Value: "true"},
-						{Name: "PL_AUTH_DISABLE_LOGIN_FORM", Value: "false"},
+				if values.IsGardenCluster {
+					deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
+						{
+							Name: "plutono-dashboards-garden",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: dashboardConfigMaps[0],
+									},
+								},
+							},
+						},
+						{
+							Name: "plutono-dashboards-global",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: dashboardConfigMaps[1],
+									},
+								},
+							},
+						}}...)
+
+					deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
+						{
+							Name:      "plutono-dashboards-garden",
+							MountPath: "/var/lib/plutono/dashboards/garden",
+						},
+						{
+							Name:      "plutono-dashboards-global",
+							MountPath: "/var/lib/plutono/dashboards/global",
+						},
 					}...)
 				} else {
-					deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{"gardener.cloud/role": "monitoring"})
-					deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
-						v1beta1constants.GardenRole:                              v1beta1constants.GardenRoleMonitoring,
-						gardenerutils.NetworkPolicyLabel("prometheus-web", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
+					deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+						Name: "plutono-dashboards",
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: dashboardConfigMaps[0],
+								},
+							},
+						},
 					})
-					deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
-						{Name: "PL_AUTH_BASIC_ENABLED", Value: "false"},
-						{Name: "PL_AUTH_DISABLE_LOGIN_FORM", Value: "true"},
-						{Name: "PL_AUTH_DISABLE_SIGNOUT_MENU", Value: "true"},
-					}...)
+
+					deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+						Name:      "plutono-dashboards",
+						MountPath: "/var/lib/plutono/dashboards",
+					})
+				}
+
+				if values.ClusterType == comp.ClusterTypeSeed {
+					deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{"role": "monitoring"})
+				} else {
+					deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{"gardener.cloud/role": "monitoring"})
 				}
 
 				return deployment
 			}
 
-			serviceYAMLFor = func(clusterType comp.ClusterType) string {
+			serviceYAMLFor = func(values Values) string {
 				out := `apiVersion: v1
 kind: Service
 metadata:
@@ -361,7 +440,7 @@ metadata:
   labels:
     component: plutono
 `
-				if clusterType == comp.ClusterTypeSeed {
+				if values.ClusterType == comp.ClusterTypeSeed {
 					out += `    role: monitoring
 `
 				}
@@ -372,7 +451,7 @@ spec:
   - name: web
     port: 3000
     protocol: TCP
-    targetPort: 0
+    targetPort: 3000
   selector:
     component: plutono
   type: ClusterIP
@@ -382,27 +461,33 @@ status:
 				return out
 			}
 
-			ingressYAMLFor = func(clusterType comp.ClusterType, host string) string {
+			ingressYAMLFor = func(values Values) string {
 				out := `apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
     nginx.ingress.kubernetes.io/auth-realm: Authentication Required
 `
-				if clusterType == comp.ClusterTypeShoot {
-					out += `    nginx.ingress.kubernetes.io/auth-secret: observability-ingress-users-f27eb0bf
+				if !values.IsGardenCluster {
+					if values.ClusterType == comp.ClusterTypeShoot {
+						out += `    nginx.ingress.kubernetes.io/auth-secret: observability-ingress-users-f27eb0bf
     nginx.ingress.kubernetes.io/auth-type: basic
     nginx.ingress.kubernetes.io/configuration-snippet: proxy_set_header X-Scope-OrgID
       operator;
 `
+					} else {
+						out += `    nginx.ingress.kubernetes.io/auth-secret: global-monitoring-secret
+    nginx.ingress.kubernetes.io/auth-type: basic
+`
+					}
 				} else {
-					out += `    nginx.ingress.kubernetes.io/auth-secret: global-monitoring-secret
+					out += `    nginx.ingress.kubernetes.io/auth-secret: observability-ingress-0da36eb1
     nginx.ingress.kubernetes.io/auth-type: basic
 `
 				}
 				out += `  creationTimestamp: null
 `
-				if clusterType == comp.ClusterTypeShoot {
+				if values.ClusterType == comp.ClusterTypeShoot {
 					out += `  labels:
     component: plutono
 `
@@ -412,7 +497,7 @@ metadata:
 spec:
   ingressClassName: nginx-ingress-gardener
   rules:
-  - host: ` + host + `
+  - host: ` + values.IngressHost + `
     http:
       paths:
       - backend:
@@ -421,10 +506,18 @@ spec:
             port:
               number: 3000
         path: /
-        pathType: Prefix
-  tls:
+`
+				if values.IsGardenCluster {
+					out += `        pathType: ImplementationSpecific
+`
+				} else {
+					out += `        pathType: Prefix
+`
+				}
+
+				out += `  tls:
   - hosts:
-    - ` + host + `
+    - ` + values.IngressHost + `
     secretName: plutono-tls
 status:
   loadBalancer: {}
@@ -473,23 +566,48 @@ status:
 
 		Context("Cluster type is seed", func() {
 			BeforeEach(func() {
-				values.AuthSecretName = "global-monitoring-secret"
 				values.ClusterType = comp.ClusterTypeSeed
 				values.IngressHost = "seed.example.com"
-				values.IncludeIstioDashboards = true
 			})
 
-			It("should succesfully deploy all resources", func() {
-				Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-29d306e7.yaml"])).To(Equal(providerConfigMapYAML))
-				Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-27f1a6c5.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values.ClusterType)))
-				testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: "plutono-dashboards-41055c8e"}, 22)
-				Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values.ClusterType)))
-				Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values.ClusterType, values.IngressHost)))
-				managedResourceDeployment, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["deployment__some-namespace__plutono.yaml"], nil, &appsv1.Deployment{})
-				Expect(err).ToNot(HaveOccurred())
-				deployment := deploymentYAMLFor(values.ClusterType, "plutono-dashboards-41055c8e")
-				utilruntime.Must(references.InjectAnnotations(deployment))
-				Expect(deployment).To(DeepEqual(managedResourceDeployment))
+			Context("Cluster is not garden cluster", func() {
+				BeforeEach(func() {
+					values.AuthSecretName = "global-monitoring-secret"
+					values.IncludeIstioDashboards = true
+				})
+
+				It("should succesfully deploy all resources", func() {
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-29d306e7.yaml"])).To(Equal(providerConfigMapYAMLFor(values)))
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-27f1a6c5.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
+					testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: "plutono-dashboards-41055c8e"}, 22)
+					Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values)))
+					Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values)))
+					managedResourceDeployment, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["deployment__some-namespace__plutono.yaml"], nil, &appsv1.Deployment{})
+					Expect(err).ToNot(HaveOccurred())
+					deployment := deploymentYAMLFor(values, []string{"plutono-dashboards-41055c8e"})
+					utilruntime.Must(references.InjectAnnotations(deployment))
+					Expect(deployment).To(DeepEqual(managedResourceDeployment))
+				})
+			})
+
+			Context("Cluster is garden cluster", func() {
+				BeforeEach(func() {
+					values.IsGardenCluster = true
+				})
+
+				It("should succesfully deploy all resources", func() {
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-5be2bcda.yaml"])).To(Equal(providerConfigMapYAMLFor(values)))
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-ff212e8b.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
+					testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: "plutono-dashboards-garden-ce493370"}, 16)
+					testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: "plutono-dashboards-global-c4e871d6"}, 7)
+					Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values)))
+					Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values)))
+					managedResourceDeployment, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["deployment__some-namespace__plutono.yaml"], nil, &appsv1.Deployment{})
+					Expect(err).ToNot(HaveOccurred())
+					deployment := deploymentYAMLFor(values, []string{"plutono-dashboards-garden-ce493370", "plutono-dashboards-global-c4e871d6"})
+					utilruntime.Must(references.InjectAnnotations(deployment))
+					Expect(deployment).To(DeepEqual(managedResourceDeployment))
+				})
 			})
 		})
 
@@ -500,14 +618,14 @@ status:
 			})
 
 			It("should succesfully deploy all resources", func() {
-				Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-29d306e7.yaml"])).To(Equal(providerConfigMapYAML))
-				Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-0fd41775.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values.ClusterType)))
-				testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: "plutono-dashboards-0474caee"}, 33)
-				Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values.ClusterType)))
-				Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values.ClusterType, values.IngressHost)))
+				Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-29d306e7.yaml"])).To(Equal(providerConfigMapYAMLFor(values)))
+				Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-0fd41775.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
+				testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: "plutono-dashboards-71092588"}, 33)
+				Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values)))
+				Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values)))
 				managedResourceDeployment, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["deployment__some-namespace__plutono.yaml"], nil, &appsv1.Deployment{})
 				Expect(err).ToNot(HaveOccurred())
-				deployment := deploymentYAMLFor(values.ClusterType, "plutono-dashboards-0474caee")
+				deployment := deploymentYAMLFor(values, []string{"plutono-dashboards-71092588"})
 				utilruntime.Must(references.InjectAnnotations(deployment))
 				Expect(deployment).To(DeepEqual(managedResourceDeployment))
 			})
@@ -522,14 +640,14 @@ status:
 				})
 
 				It("should succesfully deploy all resources", func() {
-					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-29d306e7.yaml"])).To(Equal(providerConfigMapYAML))
-					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-0fd41775.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values.ClusterType)))
-					testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: "plutono-dashboards-1028e1dd"}, 38)
-					Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values.ClusterType)))
-					Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values.ClusterType, values.IngressHost)))
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-29d306e7.yaml"])).To(Equal(providerConfigMapYAMLFor(values)))
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-0fd41775.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
+					testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: "plutono-dashboards-4bdb8e0c"}, 38)
+					Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values)))
+					Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values)))
 					managedResourceDeployment, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["deployment__some-namespace__plutono.yaml"], nil, &appsv1.Deployment{})
 					Expect(err).ToNot(HaveOccurred())
-					deployment := deploymentYAMLFor(values.ClusterType, "plutono-dashboards-1028e1dd")
+					deployment := deploymentYAMLFor(values, []string{"plutono-dashboards-4bdb8e0c"})
 					utilruntime.Must(references.InjectAnnotations(deployment))
 					Expect(deployment).To(DeepEqual(managedResourceDeployment))
 				})
@@ -541,14 +659,14 @@ status:
 				})
 
 				It("should succesfully deploy all resources", func() {
-					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-29d306e7.yaml"])).To(Equal(providerConfigMapYAML))
-					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-0fd41775.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values.ClusterType)))
-					testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: "plutono-dashboards-42b1243d"}, 27)
-					Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values.ClusterType)))
-					Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values.ClusterType, values.IngressHost)))
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-dashboard-providers-29d306e7.yaml"])).To(Equal(providerConfigMapYAMLFor(values)))
+					Expect(string(managedResourceSecret.Data["configmap__some-namespace__plutono-datasources-0fd41775.yaml"])).To(Equal(dataSourceConfigMapYAMLFor(values)))
+					testDashboardConfigMap(ctx, c, types.NamespacedName{Namespace: namespace, Name: "plutono-dashboards-bc6281a9"}, 27)
+					Expect(string(managedResourceSecret.Data["service__some-namespace__plutono.yaml"])).To(Equal(serviceYAMLFor(values)))
+					Expect(string(managedResourceSecret.Data["ingress__some-namespace__plutono.yaml"])).To(Equal(ingressYAMLFor(values)))
 					managedResourceDeployment, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["deployment__some-namespace__plutono.yaml"], nil, &appsv1.Deployment{})
 					Expect(err).ToNot(HaveOccurred())
-					deployment := deploymentYAMLFor(values.ClusterType, "plutono-dashboards-42b1243d")
+					deployment := deploymentYAMLFor(values, []string{"plutono-dashboards-bc6281a9"})
 					utilruntime.Must(references.InjectAnnotations(deployment))
 					Expect(deployment).To(DeepEqual(managedResourceDeployment))
 				})
@@ -678,4 +796,36 @@ func getLabels() map[string]string {
 	return map[string]string{
 		"component": "plutono",
 	}
+}
+
+func getPodLabels(values Values) map[string]string {
+	labels := map[string]string{
+		v1beta1constants.LabelNetworkPolicyToDNS:                          v1beta1constants.LabelNetworkPolicyAllowed,
+		gardenerutils.NetworkPolicyLabel(vali.ServiceName, vali.ValiPort): v1beta1constants.LabelNetworkPolicyAllowed,
+	}
+
+	if values.IsGardenCluster {
+		labels = utils.MergeStringMaps(labels, map[string]string{
+			gardenerutils.NetworkPolicyLabel("garden-prometheus", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel("garden-avail-prom", 9091): v1beta1constants.LabelNetworkPolicyAllowed,
+		})
+
+		return labels
+	}
+
+	if values.ClusterType == comp.ClusterTypeSeed {
+		labels = utils.MergeStringMaps(labels, map[string]string{
+			v1beta1constants.LabelRole:                                         v1beta1constants.LabelMonitoring,
+			"networking.gardener.cloud/to-seed-prometheus":                     v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel("aggregate-prometheus-web", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel("seed-prometheus-web", 9090):      v1beta1constants.LabelNetworkPolicyAllowed,
+		})
+	} else if values.ClusterType == comp.ClusterTypeShoot {
+		labels = utils.MergeStringMaps(labels, map[string]string{
+			v1beta1constants.GardenRole:                              v1beta1constants.GardenRoleMonitoring,
+			gardenerutils.NetworkPolicyLabel("prometheus-web", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
+		})
+	}
+
+	return labels
 }

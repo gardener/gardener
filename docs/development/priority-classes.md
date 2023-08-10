@@ -26,7 +26,7 @@ When using the `gardener-operator` for managing the garden runtime and virtual c
 | `gardener-garden-system-400`      | 999999400 | `virtual-garden-gardener-resource-manager`, `gardener-admission-controller`                                     |
 | `gardener-garden-system-300`      | 999999300 | `virtual-garden-kube-controller-manager`, `vpa-admission-controller`, `etcd-druid`, `nginx-ingress-controller`  |
 | `gardener-garden-system-200`      | 999999200 | `vpa-recommender`, `vpa-updater`, `hvpa-controller`, `gardener-scheduler`, `gardener-controller-manager`        |
-| `gardener-garden-system-100`      | 999999100 | `kube-state-metrics`, `fluent-operator`, `fluent-bit`, `vali`                                                   |
+| `gardener-garden-system-100`      | 999999100 | `fluent-operator`, `fluent-bit`, `kube-state-metrics`, `plutono`, `vali`                                        |
 
 ## Seed Clusters
 

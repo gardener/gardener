@@ -28,14 +28,12 @@ func NewPlutono(
 	c client.Client,
 	namespace string,
 	secretsManager secretsmanager.Interface,
-	authSecretName string,
 	clusterType component.ClusterType,
-	ingressHost string,
-	includeIstioDashboards, gardenletManagesMCM, nodeLocalDNSEnabled, isWorkerless, vpnHighAvailabilityEnabled bool,
-	priorityClassName string,
 	replicas int32,
+	authSecretName, ingressHost, priorityClassName string,
+	gardenletManagesMCM, includeIstioDashboards, isWorkerless bool,
+	isGardenCluster, nodeLocalDNSEnabled, vpnHighAvailabilityEnabled, vpaEnabled bool,
 	wildcardCertName *string,
-	vpaEnabled bool,
 ) (plutono.Interface, error) {
 	plutonoImage, err := imagevector.ImageVector().FindImage(imagevector.ImageNamePlutono)
 	if err != nil {
@@ -53,6 +51,7 @@ func NewPlutono(
 			Image:                      plutonoImage.String(),
 			IngressHost:                ingressHost,
 			IncludeIstioDashboards:     includeIstioDashboards,
+			IsGardenCluster:            isGardenCluster,
 			IsWorkerless:               isWorkerless,
 			NodeLocalDNSEnabled:        nodeLocalDNSEnabled,
 			PriorityClassName:          priorityClassName,

@@ -111,7 +111,7 @@ var _ = Describe("utils", func() {
 
 			result, err := GetWildcardCertificate(ctx, fakeClient)
 			Expect(result).To(BeNil())
-			Expect(err).To(MatchError(ContainSubstring("misconfigured seed cluster: not possible to provide more than one secret with annotation")))
+			Expect(err).To(MatchError(ContainSubstring("misconfigured cluster: not possible to provide more than one secret with annotation")))
 		})
 
 		It("should return the wildcard certificate secret", func() {
