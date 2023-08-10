@@ -24,7 +24,6 @@ import (
 	core "github.com/gardener/gardener/pkg/apis/core"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -35,9 +34,9 @@ type FakeProjects struct {
 	Fake *FakeCore
 }
 
-var projectsResource = schema.GroupVersionResource{Group: "core.gardener.cloud", Version: "", Resource: "projects"}
+var projectsResource = core.SchemeGroupVersion.WithResource("projects")
 
-var projectsKind = schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "", Kind: "Project"}
+var projectsKind = core.SchemeGroupVersion.WithKind("Project")
 
 // Get takes name of the project, and returns the corresponding project object, and an error if there is any.
 func (c *FakeProjects) Get(ctx context.Context, name string, options v1.GetOptions) (result *core.Project, err error) {

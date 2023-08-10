@@ -20,12 +20,9 @@ package v1alpha1
 
 import (
 	"context"
-	json "encoding/json"
-	"fmt"
 	"time"
 
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/client/seedmanagement/applyconfiguration/seedmanagement/v1alpha1"
 	scheme "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -50,8 +47,6 @@ type ManagedSeedInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.ManagedSeedList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ManagedSeed, err error)
-	Apply(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeedApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.ManagedSeed, err error)
-	ApplyStatus(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeedApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.ManagedSeed, err error)
 	ManagedSeedExpansion
 }
 
@@ -193,62 +188,6 @@ func (c *managedSeeds) Patch(ctx context.Context, name string, pt types.PatchTyp
 		Name(name).
 		SubResource(subresources...).
 		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(data).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Apply takes the given apply declarative configuration, applies it and returns the applied managedSeed.
-func (c *managedSeeds) Apply(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeedApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.ManagedSeed, err error) {
-	if managedSeed == nil {
-		return nil, fmt.Errorf("managedSeed provided to Apply must not be nil")
-	}
-	patchOpts := opts.ToPatchOptions()
-	data, err := json.Marshal(managedSeed)
-	if err != nil {
-		return nil, err
-	}
-	name := managedSeed.Name
-	if name == nil {
-		return nil, fmt.Errorf("managedSeed.Name must be provided to Apply")
-	}
-	result = &v1alpha1.ManagedSeed{}
-	err = c.client.Patch(types.ApplyPatchType).
-		Namespace(c.ns).
-		Resource("managedseeds").
-		Name(*name).
-		VersionedParams(&patchOpts, scheme.ParameterCodec).
-		Body(data).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// ApplyStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *managedSeeds) ApplyStatus(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeedApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.ManagedSeed, err error) {
-	if managedSeed == nil {
-		return nil, fmt.Errorf("managedSeed provided to Apply must not be nil")
-	}
-	patchOpts := opts.ToPatchOptions()
-	data, err := json.Marshal(managedSeed)
-	if err != nil {
-		return nil, err
-	}
-
-	name := managedSeed.Name
-	if name == nil {
-		return nil, fmt.Errorf("managedSeed.Name must be provided to Apply")
-	}
-
-	result = &v1alpha1.ManagedSeed{}
-	err = c.client.Patch(types.ApplyPatchType).
-		Namespace(c.ns).
-		Resource("managedseeds").
-		Name(*name).
-		SubResource("status").
-		VersionedParams(&patchOpts, scheme.ParameterCodec).
 		Body(data).
 		Do(ctx).
 		Into(result)

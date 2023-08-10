@@ -24,7 +24,6 @@ import (
 	core "github.com/gardener/gardener/pkg/apis/core"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -35,9 +34,9 @@ type FakeControllerDeployments struct {
 	Fake *FakeCore
 }
 
-var controllerdeploymentsResource = schema.GroupVersionResource{Group: "core.gardener.cloud", Version: "", Resource: "controllerdeployments"}
+var controllerdeploymentsResource = core.SchemeGroupVersion.WithResource("controllerdeployments")
 
-var controllerdeploymentsKind = schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "", Kind: "ControllerDeployment"}
+var controllerdeploymentsKind = core.SchemeGroupVersion.WithKind("ControllerDeployment")
 
 // Get takes name of the controllerDeployment, and returns the corresponding controllerDeployment object, and an error if there is any.
 func (c *FakeControllerDeployments) Get(ctx context.Context, name string, options v1.GetOptions) (result *core.ControllerDeployment, err error) {

@@ -20,12 +20,9 @@ package v1alpha1
 
 import (
 	"context"
-	json "encoding/json"
-	"fmt"
 	"time"
 
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
-	settingsv1alpha1 "github.com/gardener/gardener/pkg/client/settings/applyconfiguration/settings/v1alpha1"
 	scheme "github.com/gardener/gardener/pkg/client/settings/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -49,7 +46,6 @@ type ClusterOpenIDConnectPresetInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.ClusterOpenIDConnectPresetList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ClusterOpenIDConnectPreset, err error)
-	Apply(ctx context.Context, clusterOpenIDConnectPreset *settingsv1alpha1.ClusterOpenIDConnectPresetApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.ClusterOpenIDConnectPreset, err error)
 	ClusterOpenIDConnectPresetExpansion
 }
 
@@ -165,31 +161,6 @@ func (c *clusterOpenIDConnectPresets) Patch(ctx context.Context, name string, pt
 		Name(name).
 		SubResource(subresources...).
 		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(data).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Apply takes the given apply declarative configuration, applies it and returns the applied clusterOpenIDConnectPreset.
-func (c *clusterOpenIDConnectPresets) Apply(ctx context.Context, clusterOpenIDConnectPreset *settingsv1alpha1.ClusterOpenIDConnectPresetApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.ClusterOpenIDConnectPreset, err error) {
-	if clusterOpenIDConnectPreset == nil {
-		return nil, fmt.Errorf("clusterOpenIDConnectPreset provided to Apply must not be nil")
-	}
-	patchOpts := opts.ToPatchOptions()
-	data, err := json.Marshal(clusterOpenIDConnectPreset)
-	if err != nil {
-		return nil, err
-	}
-	name := clusterOpenIDConnectPreset.Name
-	if name == nil {
-		return nil, fmt.Errorf("clusterOpenIDConnectPreset.Name must be provided to Apply")
-	}
-	result = &v1alpha1.ClusterOpenIDConnectPreset{}
-	err = c.client.Patch(types.ApplyPatchType).
-		Resource("clusteropenidconnectpresets").
-		Name(*name).
-		VersionedParams(&patchOpts, scheme.ParameterCodec).
 		Body(data).
 		Do(ctx).
 		Into(result)

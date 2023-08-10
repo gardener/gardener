@@ -20,11 +20,8 @@ package fake
 
 import (
 	"context"
-	json "encoding/json"
-	"fmt"
 
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/client/seedmanagement/applyconfiguration/seedmanagement/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	types "k8s.io/apimachinery/pkg/types"
@@ -136,51 +133,6 @@ func (c *FakeManagedSeedSets) DeleteCollection(ctx context.Context, opts v1.Dele
 func (c *FakeManagedSeedSets) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ManagedSeedSet, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(managedseedsetsResource, c.ns, name, pt, data, subresources...), &v1alpha1.ManagedSeedSet{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.ManagedSeedSet), err
-}
-
-// Apply takes the given apply declarative configuration, applies it and returns the applied managedSeedSet.
-func (c *FakeManagedSeedSets) Apply(ctx context.Context, managedSeedSet *seedmanagementv1alpha1.ManagedSeedSetApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.ManagedSeedSet, err error) {
-	if managedSeedSet == nil {
-		return nil, fmt.Errorf("managedSeedSet provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(managedSeedSet)
-	if err != nil {
-		return nil, err
-	}
-	name := managedSeedSet.Name
-	if name == nil {
-		return nil, fmt.Errorf("managedSeedSet.Name must be provided to Apply")
-	}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(managedseedsetsResource, c.ns, *name, types.ApplyPatchType, data), &v1alpha1.ManagedSeedSet{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.ManagedSeedSet), err
-}
-
-// ApplyStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *FakeManagedSeedSets) ApplyStatus(ctx context.Context, managedSeedSet *seedmanagementv1alpha1.ManagedSeedSetApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.ManagedSeedSet, err error) {
-	if managedSeedSet == nil {
-		return nil, fmt.Errorf("managedSeedSet provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(managedSeedSet)
-	if err != nil {
-		return nil, err
-	}
-	name := managedSeedSet.Name
-	if name == nil {
-		return nil, fmt.Errorf("managedSeedSet.Name must be provided to Apply")
-	}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(managedseedsetsResource, c.ns, *name, types.ApplyPatchType, data, "status"), &v1alpha1.ManagedSeedSet{})
 
 	if obj == nil {
 		return nil, err

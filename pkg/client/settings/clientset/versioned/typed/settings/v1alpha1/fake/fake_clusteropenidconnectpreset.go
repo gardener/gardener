@@ -20,11 +20,8 @@ package fake
 
 import (
 	"context"
-	json "encoding/json"
-	"fmt"
 
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
-	settingsv1alpha1 "github.com/gardener/gardener/pkg/client/settings/applyconfiguration/settings/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	types "k8s.io/apimachinery/pkg/types"
@@ -117,27 +114,6 @@ func (c *FakeClusterOpenIDConnectPresets) DeleteCollection(ctx context.Context, 
 func (c *FakeClusterOpenIDConnectPresets) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ClusterOpenIDConnectPreset, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(clusteropenidconnectpresetsResource, name, pt, data, subresources...), &v1alpha1.ClusterOpenIDConnectPreset{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.ClusterOpenIDConnectPreset), err
-}
-
-// Apply takes the given apply declarative configuration, applies it and returns the applied clusterOpenIDConnectPreset.
-func (c *FakeClusterOpenIDConnectPresets) Apply(ctx context.Context, clusterOpenIDConnectPreset *settingsv1alpha1.ClusterOpenIDConnectPresetApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.ClusterOpenIDConnectPreset, err error) {
-	if clusterOpenIDConnectPreset == nil {
-		return nil, fmt.Errorf("clusterOpenIDConnectPreset provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(clusterOpenIDConnectPreset)
-	if err != nil {
-		return nil, err
-	}
-	name := clusterOpenIDConnectPreset.Name
-	if name == nil {
-		return nil, fmt.Errorf("clusterOpenIDConnectPreset.Name must be provided to Apply")
-	}
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(clusteropenidconnectpresetsResource, *name, types.ApplyPatchType, data), &v1alpha1.ClusterOpenIDConnectPreset{})
 	if obj == nil {
 		return nil, err
 	}

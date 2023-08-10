@@ -24,7 +24,6 @@ import (
 	core "github.com/gardener/gardener/pkg/apis/core"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -35,9 +34,9 @@ type FakeControllerRegistrations struct {
 	Fake *FakeCore
 }
 
-var controllerregistrationsResource = schema.GroupVersionResource{Group: "core.gardener.cloud", Version: "", Resource: "controllerregistrations"}
+var controllerregistrationsResource = core.SchemeGroupVersion.WithResource("controllerregistrations")
 
-var controllerregistrationsKind = schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "", Kind: "ControllerRegistration"}
+var controllerregistrationsKind = core.SchemeGroupVersion.WithKind("ControllerRegistration")
 
 // Get takes name of the controllerRegistration, and returns the corresponding controllerRegistration object, and an error if there is any.
 func (c *FakeControllerRegistrations) Get(ctx context.Context, name string, options v1.GetOptions) (result *core.ControllerRegistration, err error) {

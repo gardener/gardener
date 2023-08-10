@@ -24,7 +24,6 @@ import (
 	core "github.com/gardener/gardener/pkg/apis/core"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -36,9 +35,9 @@ type FakeInternalSecrets struct {
 	ns   string
 }
 
-var internalsecretsResource = schema.GroupVersionResource{Group: "core.gardener.cloud", Version: "", Resource: "internalsecrets"}
+var internalsecretsResource = core.SchemeGroupVersion.WithResource("internalsecrets")
 
-var internalsecretsKind = schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "", Kind: "InternalSecret"}
+var internalsecretsKind = core.SchemeGroupVersion.WithKind("InternalSecret")
 
 // Get takes name of the internalSecret, and returns the corresponding internalSecret object, and an error if there is any.
 func (c *FakeInternalSecrets) Get(ctx context.Context, name string, options v1.GetOptions) (result *core.InternalSecret, err error) {

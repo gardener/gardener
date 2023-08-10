@@ -24,7 +24,6 @@ import (
 	core "github.com/gardener/gardener/pkg/apis/core"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -36,9 +35,9 @@ type FakeBackupEntries struct {
 	ns   string
 }
 
-var backupentriesResource = schema.GroupVersionResource{Group: "core.gardener.cloud", Version: "", Resource: "backupentries"}
+var backupentriesResource = core.SchemeGroupVersion.WithResource("backupentries")
 
-var backupentriesKind = schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "", Kind: "BackupEntry"}
+var backupentriesKind = core.SchemeGroupVersion.WithKind("BackupEntry")
 
 // Get takes name of the backupEntry, and returns the corresponding backupEntry object, and an error if there is any.
 func (c *FakeBackupEntries) Get(ctx context.Context, name string, options v1.GetOptions) (result *core.BackupEntry, err error) {

@@ -24,7 +24,6 @@ import (
 	core "github.com/gardener/gardener/pkg/apis/core"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -36,9 +35,9 @@ type FakeSecretBindings struct {
 	ns   string
 }
 
-var secretbindingsResource = schema.GroupVersionResource{Group: "core.gardener.cloud", Version: "", Resource: "secretbindings"}
+var secretbindingsResource = core.SchemeGroupVersion.WithResource("secretbindings")
 
-var secretbindingsKind = schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "", Kind: "SecretBinding"}
+var secretbindingsKind = core.SchemeGroupVersion.WithKind("SecretBinding")
 
 // Get takes name of the secretBinding, and returns the corresponding secretBinding object, and an error if there is any.
 func (c *FakeSecretBindings) Get(ctx context.Context, name string, options v1.GetOptions) (result *core.SecretBinding, err error) {

@@ -20,12 +20,9 @@ package v1alpha1
 
 import (
 	"context"
-	json "encoding/json"
-	"fmt"
 	"time"
 
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
-	settingsv1alpha1 "github.com/gardener/gardener/pkg/client/settings/applyconfiguration/settings/v1alpha1"
 	scheme "github.com/gardener/gardener/pkg/client/settings/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -49,7 +46,6 @@ type OpenIDConnectPresetInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.OpenIDConnectPresetList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.OpenIDConnectPreset, err error)
-	Apply(ctx context.Context, openIDConnectPreset *settingsv1alpha1.OpenIDConnectPresetApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.OpenIDConnectPreset, err error)
 	OpenIDConnectPresetExpansion
 }
 
@@ -175,32 +171,6 @@ func (c *openIDConnectPresets) Patch(ctx context.Context, name string, pt types.
 		Name(name).
 		SubResource(subresources...).
 		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(data).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Apply takes the given apply declarative configuration, applies it and returns the applied openIDConnectPreset.
-func (c *openIDConnectPresets) Apply(ctx context.Context, openIDConnectPreset *settingsv1alpha1.OpenIDConnectPresetApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.OpenIDConnectPreset, err error) {
-	if openIDConnectPreset == nil {
-		return nil, fmt.Errorf("openIDConnectPreset provided to Apply must not be nil")
-	}
-	patchOpts := opts.ToPatchOptions()
-	data, err := json.Marshal(openIDConnectPreset)
-	if err != nil {
-		return nil, err
-	}
-	name := openIDConnectPreset.Name
-	if name == nil {
-		return nil, fmt.Errorf("openIDConnectPreset.Name must be provided to Apply")
-	}
-	result = &v1alpha1.OpenIDConnectPreset{}
-	err = c.client.Patch(types.ApplyPatchType).
-		Namespace(c.ns).
-		Resource("openidconnectpresets").
-		Name(*name).
-		VersionedParams(&patchOpts, scheme.ParameterCodec).
 		Body(data).
 		Do(ctx).
 		Into(result)
