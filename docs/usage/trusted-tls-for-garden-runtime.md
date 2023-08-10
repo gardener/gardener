@@ -9,7 +9,7 @@ Gardener generates the backing TLS certificates, which are signed by the garden 
 
 Unlike with a self-contained Kubeconfig file, common internet browsers or operating systems don't trust a garden runtime's cluster CA and adding it as a trusted root is often undesired in enterprise environments.
 
-Therefore, Gardener operators can a predefine trusted wildcard certificate under which the mentioned endpoints will be served instead.
+Therefore, Gardener operators can predefine a trusted wildcard certificate under which the mentioned endpoints will be served instead.
 
 ## Register a trusted wildcard certificate
 Since Garden Runtime Cluster components are published under the ingress domain (`operator.gardener.cloud/v1alpha1.Garden.spec.runtimeCluster.ingress.domain`) a wildcard certificate is required.
