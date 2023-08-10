@@ -18,6 +18,7 @@ import (
 	"context"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -51,6 +52,10 @@ var (
 )
 
 var _ = BeforeSuite(func() {
+	// a lot of CPU-intensive stuff is happening in this test, so to
+	// prevent flakes we have to increase the timeout here manually
+	SetDefaultEventuallyTimeout(10 * time.Second)
+
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
 

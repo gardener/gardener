@@ -43,9 +43,11 @@ import (
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component/etcd"
+	"github.com/gardener/gardener/pkg/component/istio"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/component/kubecontrollermanager"
+	"github.com/gardener/gardener/pkg/component/nginxingress"
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -77,6 +79,7 @@ var _ = Describe("Garden controller tests", func() {
 		DeferCleanup(test.WithVars(
 			&etcd.DefaultInterval, 100*time.Millisecond,
 			&etcd.DefaultTimeout, 500*time.Millisecond,
+			&istio.TimeoutWaitForManagedResource, 500*time.Millisecond,
 			&kubeapiserverexposure.DefaultInterval, 100*time.Millisecond,
 			&kubeapiserverexposure.DefaultTimeout, 500*time.Millisecond,
 			&kubeapiserver.IntervalWaitForDeployment, 100*time.Millisecond,
@@ -85,6 +88,7 @@ var _ = Describe("Garden controller tests", func() {
 			&kubecontrollermanager.IntervalWaitForDeployment, 100*time.Millisecond,
 			&kubecontrollermanager.TimeoutWaitForDeployment, 500*time.Millisecond,
 			&kubecontrollermanager.Until, untilInTest,
+			&nginxingress.TimeoutWaitForManagedResource, 500*time.Millisecond,
 			&resourcemanager.SkipWebhookDeployment, true,
 			&resourcemanager.IntervalWaitForDeployment, 100*time.Millisecond,
 			&resourcemanager.TimeoutWaitForDeployment, 500*time.Millisecond,
@@ -205,6 +209,9 @@ var _ = Describe("Garden controller tests", func() {
 							},
 						},
 					},
+				},
+				FeatureGates: map[string]bool{
+					"HVPA": true,
 				},
 			},
 			Identity:        &gardencorev1beta1.Gardener{Name: "test-gardener"},
