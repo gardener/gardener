@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // Reconciler adds/removes finalizers to/from secrets referenced by ManagedResources.
@@ -66,6 +67,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			// check if we are responsible for this MR, class might have changed, then we need to remove our finalizer
 			if ref.Name == secret.Name && r.ClassFilter.Responsible(&resource) {
 				secretIsReferenced = true
+				if _, ok := secret.Labels["managed-by"]; !ok {
+					secret.SetLabels(utils.MergeStringMaps(secret.GetLabels(), map[string]string{"managed-by": resource.Name}))
+					r.SourceClient.Update(ctx, secret)
+				}
 				break
 			}
 		}
