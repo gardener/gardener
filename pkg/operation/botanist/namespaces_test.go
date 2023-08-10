@@ -54,7 +54,7 @@ var _ = Describe("Namespaces", func() {
 		defaultSeedInfo  *gardencorev1beta1.Seed
 		defaultShootInfo *gardencorev1beta1.Shoot
 
-		ctx       = context.TODO()
+		ctx       = context.Background()
 		namespace = "shoot--foo--bar"
 
 		obj *corev1.Namespace
@@ -137,7 +137,6 @@ var _ = Describe("Namespaces", func() {
 					},
 				},
 			}
-			botanist.Seed.SetInfo(defaultSeedInfo)
 
 			defaultShootInfo = &gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
@@ -153,6 +152,10 @@ var _ = Describe("Namespaces", func() {
 				},
 			}
 			botanist.Shoot.SetInfo(defaultShootInfo)
+		})
+
+		JustBeforeEach(func() {
+			botanist.Seed.SetInfo(defaultSeedInfo)
 		})
 
 		defaultExpectations := func(failureToleranceType gardencorev1beta1.FailureToleranceType, numberOfZones int) {
@@ -317,8 +320,8 @@ var _ = Describe("Namespaces", func() {
 			Context("when volume creation is completed", func() {
 				BeforeEach(func() {
 					for key, existingZones := range map[string][]string{
-						"failure-domain.beta.kubernetes.io/zone": {"1", "2"},
-						"topology.foo.bar/zone":                  {"2", "1"},
+						"failure-domain.beta.kubernetes.io/zone": {"a", "b"},
+						"topology.foo.bar/zone":                  {"b", "a"},
 					} {
 						pv := &corev1.PersistentVolume{
 							ObjectMeta: metav1.ObjectMeta{
@@ -369,7 +372,7 @@ var _ = Describe("Namespaces", func() {
 					Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
 
 					defaultExpectations("", 2)
-					Expect(botanist.SeedNamespaceObject.Annotations).To(HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "1,2"))
+					Expect(botanist.SeedNamespaceObject.Annotations).To(HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b"))
 				})
 
 				It("should use existing zones and pick new zones until the required number is reached", func() {
@@ -389,9 +392,9 @@ var _ = Describe("Namespaces", func() {
 
 					defaultExpectations(gardencorev1beta1.FailureToleranceTypeZone, 3)
 					Expect(strings.Split(botanist.SeedNamespaceObject.Annotations["high-availability-config.resources.gardener.cloud/zones"], ",")).To(ConsistOf(
-						"1",
-						"2",
-						Or(Equal("a"), Equal("b"), Equal("c"), Equal("d"), Equal("e")),
+						"a",
+						"b",
+						Or(Equal("c"), Equal("d"), Equal("e")),
 					))
 				})
 
@@ -420,10 +423,24 @@ var _ = Describe("Namespaces", func() {
 
 					defaultExpectations(gardencorev1beta1.FailureToleranceTypeZone, 3)
 					Expect(strings.Split(botanist.SeedNamespaceObject.Annotations["high-availability-config.resources.gardener.cloud/zones"], ",")).To(ConsistOf(
-						"1",
-						"2",
-						"a"),
-					)
+						"a",
+						"b",
+						Or(Equal("c"), Equal("d"), Equal("e")),
+					))
+				})
+
+				It("should not use zone information from persistent volumes if zone is missing in seed spec", func() {
+					defaultSeedInfo.Spec.Provider.Zones = []string{"1", "2", "3"}
+
+					Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "namespaces"}, obj.Name)))
+					Expect(botanist.SeedNamespaceObject).To(BeNil())
+
+					Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+
+					defaultExpectations("", 1)
+					Expect(strings.Split(botanist.SeedNamespaceObject.Annotations["high-availability-config.resources.gardener.cloud/zones"], ",")).To(ConsistOf(
+						Or(Equal("1"), Equal("2"), Equal("3")),
+					))
 				})
 			})
 

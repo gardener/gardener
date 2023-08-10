@@ -154,9 +154,19 @@ func calculateShootZones(ctx context.Context, cl client.Client, log logr.Logger,
 
 		for _, term := range pvNodeAffinity.Required.NodeSelectorTerms {
 			zonesFromTerm := ExtractZonesFromNodeSelectorTerm(term)
-			if len(zonesFromTerm) > 0 {
-				chosenZones.Insert(zonesFromTerm...)
-				log.Info("Found existing zone(s) due to volume", "zone", strings.Join(zonesFromTerm, ","), "persistentVolume", client.ObjectKeyFromObject(pv))
+			if len(zonesFromTerm) == 0 {
+				continue
+			}
+
+			seedZoneSet := sets.New(seedZones...)
+			for _, zoneFromTerm := range zonesFromTerm {
+				// Only add zone if it is found in the seed spec.
+				// Zone name mismatches are handled by provider extensions, e.g. see https://github.com/gardener/gardener-extension-provider-azure/pull/602.
+				if !seedZoneSet.Has(zoneFromTerm) {
+					continue
+				}
+				log.Info("Found existing zone due to volume", "zone", zoneFromTerm, "persistentVolume", client.ObjectKeyFromObject(pv))
+				chosenZones.Insert(zoneFromTerm)
 			}
 		}
 	}
