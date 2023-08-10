@@ -84,15 +84,20 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 		metav1.SetMetaDataLabel(&namespace.ObjectMeta, podsecurityadmissionapi.EnforceLevelLabel, string(podsecurityadmissionapi.LevelPrivileged))
 		metav1.SetMetaDataLabel(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
 
-		failureToleranceType := v1beta1helper.GetFailureToleranceType(b.Shoot.GetInfo())
-		if failureToleranceType == nil {
+		existingFailureToleranceType, failureToleranceTypeExisting := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType]
+
+		shootFailureToleranceType := v1beta1helper.GetFailureToleranceType(b.Shoot.GetInfo())
+		if shootFailureToleranceType == nil {
 			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, "")
 		} else {
-			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, string(*failureToleranceType))
+			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType, string(*shootFailureToleranceType))
 		}
 
-		if seedZones := b.Seed.GetInfo().Spec.Provider.Zones; len(seedZones) > 0 {
-			zones, err := calculateShootZones(ctx, b.SeedClientSet.Client(), b.Logger, namespace, failureToleranceType, seedZones)
+		newFailureToleranceType := namespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigFailureToleranceType]
+
+		if seedZones := b.Seed.GetInfo().Spec.Provider.Zones; len(seedZones) > 0 &&
+			(!failureToleranceTypeExisting || existingFailureToleranceType != newFailureToleranceType) {
+			zones, err := calculateShootZones(ctx, b.SeedClientSet.Client(), b.Logger, namespace, shootFailureToleranceType, seedZones)
 			if err != nil {
 				return err
 			}
