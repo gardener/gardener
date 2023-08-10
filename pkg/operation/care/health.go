@@ -396,7 +396,7 @@ func (h *Health) checkObservabilityComponents(
 ) (*gardencorev1beta1.Condition, error) {
 	wantsAlertmanager := h.shoot.WantsAlertmanager
 	wantsShootMonitoring := gardenlethelper.IsMonitoringEnabled(h.gardenletConfiguration) && h.shoot.Purpose != gardencorev1beta1.ShootPurposeTesting
-	if exitCondition, err := checker.CheckMonitoringControlPlane(ctx, h.shoot.GetInfo(), h.shoot.SeedNamespace, wantsShootMonitoring, wantsAlertmanager, condition); err != nil || exitCondition != nil {
+	if exitCondition, err := checker.CheckShootMonitoringControlPlane(ctx, h.shoot.GetInfo(), h.shoot.SeedNamespace, wantsShootMonitoring, wantsAlertmanager, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 

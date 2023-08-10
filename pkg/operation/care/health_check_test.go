@@ -883,7 +883,7 @@ var _ = Describe("health check", func() {
 				s = workerlessShoot.DeepCopy()
 			}
 
-			exitCondition, err := checker.CheckMonitoringControlPlane(ctx, s, seedNamespace, wantsShootMonitoring, wantsAlertmanager, condition)
+			exitCondition, err := checker.CheckShootMonitoringControlPlane(ctx, s, seedNamespace, wantsShootMonitoring, wantsAlertmanager, condition)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},

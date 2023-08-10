@@ -53,7 +53,7 @@ var (
 		v1beta1constants.ETCDEvents,
 	)
 
-	requiredMonitoringSeedDeployments = sets.New(
+	requiredMonitoringDeployments = sets.New(
 		v1beta1constants.DeploymentNamePlutono,
 	)
 
@@ -475,7 +475,7 @@ func computeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (set
 }
 
 func computeRequiredMonitoringSeedDeployments(shoot *gardencorev1beta1.Shoot, gardenerVersion *semver.Version) sets.Set[string] {
-	requiredDeployments := requiredMonitoringSeedDeployments.Clone()
+	requiredDeployments := requiredMonitoringDeployments.Clone()
 	if !v1beta1helper.IsWorkerless(shoot) {
 		requiredDeployments.Insert(v1beta1constants.DeploymentNameKubeStateMetrics)
 	}
@@ -704,8 +704,47 @@ func (b *HealthChecker) CheckClusterNodes(
 	return nil, nil
 }
 
-// CheckMonitoringControlPlane checks whether the monitoring in the given listers are complete and healthy.
-func (b *HealthChecker) CheckMonitoringControlPlane(
+func (b *HealthChecker) checkMonitoringControlPlane(
+	ctx context.Context,
+	namespace string,
+	requiredMonitoringDeployments sets.Set[string],
+	requiredMonitoringStatefulSets sets.Set[string],
+	appsSelector labels.Selector,
+	condition gardencorev1beta1.Condition,
+) (
+	*gardencorev1beta1.Condition,
+	error,
+) {
+	deploymentList := &appsv1.DeploymentList{}
+	if err := b.reader.List(ctx, deploymentList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: appsSelector}); err != nil {
+		return nil, err
+	}
+
+	statefulSetList := &appsv1.StatefulSetList{}
+	if err := b.reader.List(ctx, statefulSetList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: appsSelector}); err != nil {
+		return nil, err
+	}
+
+	if exitCondition := b.checkRequiredDeployments(condition, requiredMonitoringDeployments, deploymentList.Items); exitCondition != nil {
+		return exitCondition, nil
+	}
+
+	if exitCondition := b.checkDeployments(condition, deploymentList.Items); exitCondition != nil {
+		return exitCondition, nil
+	}
+
+	if exitCondition := b.checkRequiredStatefulSets(condition, requiredMonitoringStatefulSets, statefulSetList.Items); exitCondition != nil {
+		return exitCondition, nil
+	}
+	if exitCondition := b.checkStatefulSets(condition, statefulSetList.Items); exitCondition != nil {
+		return exitCondition, nil
+	}
+
+	return nil, nil
+}
+
+// CheckShootMonitoringControlPlane checks whether the monitoring in the given listers are complete and healthy.
+func (b *HealthChecker) CheckShootMonitoringControlPlane(
 	ctx context.Context,
 	shoot *gardencorev1beta1.Shoot,
 	namespace string,
@@ -720,32 +759,7 @@ func (b *HealthChecker) CheckMonitoringControlPlane(
 		return nil, nil
 	}
 
-	deploymentList := &appsv1.DeploymentList{}
-	if err := b.reader.List(ctx, deploymentList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: monitoringSelector}); err != nil {
-		return nil, err
-	}
-
-	statefulSetList := &appsv1.StatefulSetList{}
-	if err := b.reader.List(ctx, statefulSetList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: monitoringSelector}); err != nil {
-		return nil, err
-	}
-
-	if exitCondition := b.checkRequiredDeployments(condition, computeRequiredMonitoringSeedDeployments(shoot, b.gardenerVersion), deploymentList.Items); exitCondition != nil {
-		return exitCondition, nil
-	}
-
-	if exitCondition := b.checkDeployments(condition, deploymentList.Items); exitCondition != nil {
-		return exitCondition, nil
-	}
-
-	if exitCondition := b.checkRequiredStatefulSets(condition, computeRequiredMonitoringStatefulSets(wantsAlertmanager), statefulSetList.Items); exitCondition != nil {
-		return exitCondition, nil
-	}
-	if exitCondition := b.checkStatefulSets(condition, statefulSetList.Items); exitCondition != nil {
-		return exitCondition, nil
-	}
-
-	return nil, nil
+	return b.checkMonitoringControlPlane(ctx, namespace, computeRequiredMonitoringSeedDeployments(shoot, b.gardenerVersion), computeRequiredMonitoringStatefulSets(wantsAlertmanager), monitoringSelector, condition)
 }
 
 // CheckLoggingControlPlane checks whether the logging components in the given listers are complete and healthy.
