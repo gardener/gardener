@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: net-nginx
-        image: eu.gcr.io/gardener-project/3rd/nginx:1.17.6
+        image: registry.k8s.io/e2e-test-images/nginx:1.15-4
         ports:
         - containerPort: 80
       - name: pause
