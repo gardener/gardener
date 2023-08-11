@@ -42,6 +42,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 		shootKubeconfigSecret            *corev1.Secret
 		shootSecretBinding               *gardencorev1beta1.SecretBinding
 		shootCloudProviderSecret         *corev1.Secret
+		backupSecret                     *corev1.Secret
 		backupSecretName, seedSecretName string
 
 		reconcileShoot = func() {
@@ -58,7 +59,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 			By("Verify if seed secrets are created")
 			EventuallyWithOffset(1, func(g Gomega) {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)).To(Succeed())
-				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: backupSecretName, Namespace: gardenNamespaceGarden.Name}, &corev1.Secret{})).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(backupSecret), backupSecret)).To(Succeed())
 				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: seedSecretName, Namespace: gardenNamespaceGarden.Name}, &corev1.Secret{})).To(Succeed())
 			}).Should(Succeed())
 		}
@@ -79,7 +80,12 @@ var _ = Describe("ManagedSeed controller test", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardenlet-kubeconfig-bootstrap", Namespace: gardenNamespaceShoot}, &corev1.Secret{})).To(Succeed())
 				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardenlet", Namespace: gardenNamespaceShoot}, &corev1.Service{})).To(Succeed())
 				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardenlet", Namespace: gardenNamespaceShoot}, &corev1.ServiceAccount{})).To(Succeed())
-				g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "gardenlet", Namespace: gardenNamespaceShoot}, &appsv1.Deployment{})).To(Succeed())
+
+				gardenletDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet", Namespace: gardenNamespaceShoot}}
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenletDeployment), gardenletDeployment)).To(Succeed())
+				g.Expect(gardenletDeployment.Spec.Template.Annotations).To(HaveKeyWithValue(
+					"checksum/backup-secret", backupSecret.Name+"-"+utils.ComputeSecretChecksum(backupSecret.Data)[:8],
+				))
 			}).Should(Succeed())
 		}
 	)
@@ -91,6 +97,13 @@ var _ = Describe("ManagedSeed controller test", func() {
 
 		backupSecretName = "backup-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
 		seedSecretName = "seed-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
+
+		backupSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      backupSecretName,
+				Namespace: gardenNamespaceGarden.Name,
+			},
+		}
 
 		gardenletConfig, err := encoding.EncodeGardenletConfiguration(&gardenletv1alpha1.GardenletConfiguration{
 			TypeMeta: metav1.TypeMeta{
@@ -115,8 +128,8 @@ var _ = Describe("ManagedSeed controller test", func() {
 							Provider: "test",
 							Region:   pointer.String("bar"),
 							SecretRef: corev1.SecretReference{
-								Name:      backupSecretName,
-								Namespace: gardenNamespaceGarden.Name,
+								Name:      backupSecret.Name,
+								Namespace: backupSecret.Namespace,
 							},
 						},
 						SecretRef: &corev1.SecretReference{
