@@ -19,12 +19,14 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -33,6 +35,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 	var (
 		providerType = "provider"
 
+		seedName                   string
 		seed                       *gardencorev1beta1.Seed
 		seedNamespace              *corev1.Namespace
 		seedSecret                 *corev1.Secret
@@ -59,10 +62,52 @@ var _ = Describe("ControllerRegistration controller test", func() {
 		Expect(testClient.Create(ctx, seedControllerRegistration)).To(Succeed())
 		log.Info("Created ControllerRegistration for seed", "controllerRegistration", client.ObjectKeyFromObject(seedControllerRegistration))
 
+		DeferCleanup(func() {
+			By("Delete seed ControllerRegistration")
+			Expect(testClient.Delete(ctx, seedControllerRegistration)).To(Or(Succeed(), BeNotFoundError()))
+
+			By("Wait until manager has observed controllerregistration deletion")
+			Eventually(func() error {
+				return mgrClient.Get(ctx, client.ObjectKeyFromObject(seedControllerRegistration), seedControllerRegistration)
+			}).Should(BeNotFoundError())
+		})
+
+		seedName = "seed-ctrl-reg-test" + utils.ComputeSHA256Hex([]byte(testID + uuid.NewUUID()))[:8]
+
+		seedNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: gardenerutils.ComputeGardenNamespace(seedName),
+			},
+		}
+
+		seedSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "seed-secret",
+				Namespace: seedNamespace.Name,
+				Labels:    map[string]string{"gardener.cloud/role": "global-monitoring"},
+			},
+		}
+
+		By("Create Seed Namespace")
+		Expect(testClient.Create(ctx, seedNamespace)).To(Succeed())
+		log.Info("Created Seed Namespace for test", "namespace", client.ObjectKeyFromObject(seedNamespace))
+
+		By("Create Seed Secret")
+		Expect(testClient.Create(ctx, seedSecret)).To(Succeed())
+		log.Info("Created Seed Secret for test", "secret", client.ObjectKeyFromObject(seedSecret))
+
+		DeferCleanup(func() {
+			By("Delete Seed Secret")
+			Expect(testClient.Delete(ctx, seedSecret)).To(Or(Succeed(), BeNotFoundError()))
+
+			By("Delete Seed Namespace")
+			Expect(testClient.Delete(ctx, seedNamespace)).To(Or(Succeed(), BeNotFoundError()))
+		})
+
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "seed-" + testID + "-",
-				Labels:       map[string]string{testID: testRunID},
+				Name:   seedName,
+				Labels: map[string]string{testID: testRunID},
 			},
 			Spec: gardencorev1beta1.SeedSpec{
 				Provider: gardencorev1beta1.SeedProvider{
@@ -103,47 +148,7 @@ var _ = Describe("ControllerRegistration controller test", func() {
 		Expect(testClient.Create(ctx, seed)).To(Succeed())
 		log.Info("Created Seed for test", "seed", client.ObjectKeyFromObject(seed))
 
-		seedNamespace = &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: gardenerutils.ComputeGardenNamespace(seed.Name),
-			},
-		}
-
-		seedSecret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "seed-secret",
-				Namespace: seedNamespace.Name,
-				Labels:    map[string]string{"gardener.cloud/role": "global-monitoring"},
-			},
-		}
-
-		By("Create Seed Namespace")
-		Expect(testClient.Create(ctx, seedNamespace)).To(Succeed())
-		log.Info("Created Seed Namespace for test", "namespace", client.ObjectKeyFromObject(seedNamespace))
-
-		By("Create Seed Secret")
-		Expect(testClient.Create(ctx, seedSecret)).To(Succeed())
-		log.Info("Created Seed Secret for test", "secret", client.ObjectKeyFromObject(seedSecret))
-
-		Eventually(func(g Gomega) []string {
-			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-			return seed.Finalizers
-		}).Should(ConsistOf("core.gardener.cloud/controllerregistration"))
-
 		DeferCleanup(func() {
-			By("Delete ControllerInstallations")
-			Expect(testClient.DeleteAllOf(ctx, &gardencorev1beta1.ControllerInstallation{})).To(Or(Succeed(), BeNotFoundError()))
-
-			By("Expect ControllerInstallations to be deleted")
-			Eventually(func(g Gomega) []gardencorev1beta1.ControllerInstallation {
-				controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
-				g.Expect(testClient.List(ctx, controllerInstallationList, client.MatchingFields{
-					core.RegistrationRefName: seedControllerRegistration.Name,
-					core.SeedRefName:         seed.Name,
-				})).To(Succeed())
-				return controllerInstallationList.Items
-			}).Should(BeEmpty())
-
 			By("Delete Seed")
 			Expect(testClient.Delete(ctx, seed)).To(Or(Succeed(), BeNotFoundError()))
 
@@ -151,21 +156,12 @@ var _ = Describe("ControllerRegistration controller test", func() {
 			Eventually(func() error {
 				return mgrClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)
 			}).Should(BeNotFoundError())
-
-			By("Delete seed ControllerRegistration")
-			Expect(testClient.Delete(ctx, seedControllerRegistration)).To(Or(Succeed(), BeNotFoundError()))
-
-			By("Wait until manager has observed controllerregistration deletion")
-			Eventually(func() error {
-				return mgrClient.Get(ctx, client.ObjectKeyFromObject(seedControllerRegistration), seedControllerRegistration)
-			}).Should(BeNotFoundError())
-
-			By("Delete Seed Secret")
-			Expect(testClient.Delete(ctx, seedSecret)).To(Or(Succeed(), BeNotFoundError()))
-
-			By("Delete Seed Namespace")
-			Expect(testClient.Delete(ctx, seedNamespace)).To(Or(Succeed(), BeNotFoundError()))
 		})
+
+		Eventually(func(g Gomega) []string {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
+			return seed.Finalizers
+		}).Should(ConsistOf("core.gardener.cloud/controllerregistration"))
 	})
 
 	Context("Seed", func() {
@@ -242,6 +238,16 @@ var _ = Describe("ControllerRegistration controller test", func() {
 			Expect(testClient.Create(ctx, controllerRegistration)).To(Succeed())
 			log.Info("Created ControllerRegistration for test", "controllerRegistration", client.ObjectKeyFromObject(controllerRegistration))
 
+			DeferCleanup(func() {
+				By("Delete ControllerRegistration")
+				Expect(testClient.Delete(ctx, controllerRegistration)).To(Succeed())
+
+				By("Wait until manager has observed controllerregistration deletion")
+				Eventually(func() error {
+					return mgrClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistration), controllerRegistration)
+				}).Should(BeNotFoundError())
+			})
+
 			By("Expect finalizer to be added to ControllerRegistration")
 			Eventually(func(g Gomega) []string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistration), controllerRegistration)).To(Succeed())
@@ -273,14 +279,6 @@ var _ = Describe("ControllerRegistration controller test", func() {
 				})).To(Succeed())
 				g.Expect(controllerInstallationList.Items).To(HaveLen(0))
 			}).Should(Succeed())
-
-			By("Delete ControllerRegistration")
-			Expect(testClient.Delete(ctx, controllerRegistration)).To(Succeed())
-
-			By("Wait until manager has observed controllerregistration deletion")
-			Eventually(func() error {
-				return mgrClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistration), controllerRegistration)
-			}).Should(BeNotFoundError())
 		})
 
 		It("should keep the ControllerInstallation because it is required", func() {
@@ -309,6 +307,16 @@ var _ = Describe("ControllerRegistration controller test", func() {
 			By("Create ControllerRegistration")
 			Expect(testClient.Create(ctx, controllerRegistration)).To(Succeed())
 			log.Info("Created ControllerRegistration for test", "controllerRegistration", client.ObjectKeyFromObject(controllerRegistration))
+
+			DeferCleanup(func() {
+				By("Delete ControllerRegistration")
+				Expect(testClient.Delete(ctx, controllerRegistration)).To(Succeed())
+
+				By("Wait until manager has observed controllerregistration deletion")
+				Eventually(func() error {
+					return mgrClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistration), controllerRegistration)
+				}).Should(BeNotFoundError())
+			})
 
 			By("Expect finalizer to be added to ControllerRegistration")
 			Eventually(func(g Gomega) []string {
@@ -365,14 +373,6 @@ var _ = Describe("ControllerRegistration controller test", func() {
 				})).To(Succeed())
 				g.Expect(controllerInstallationList.Items).To(HaveLen(0))
 			}).Should(Succeed())
-
-			By("Delete ControllerRegistration")
-			Expect(testClient.Delete(ctx, controllerRegistration)).To(Succeed())
-
-			By("Wait until manager has observed controllerregistration deletion")
-			Eventually(func() error {
-				return mgrClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistration), controllerRegistration)
-			}).Should(BeNotFoundError())
 		})
 	})
 
@@ -420,6 +420,16 @@ var _ = Describe("ControllerRegistration controller test", func() {
 			Expect(testClient.Create(ctx, controllerRegistration)).To(Succeed())
 			log.Info("Created ControllerRegistration for test", "controllerRegistration", client.ObjectKeyFromObject(controllerRegistration))
 
+			DeferCleanup(func() {
+				By("Delete ControllerRegistration")
+				Expect(testClient.Delete(ctx, controllerRegistration)).To(Succeed())
+
+				By("Wait until manager has observed controllerregistration deletion")
+				Eventually(func() error {
+					return mgrClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistration), controllerRegistration)
+				}).Should(BeNotFoundError())
+			})
+
 			By("Expect finalizer to be added to ControllerRegistration")
 			Eventually(func(g Gomega) []string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistration), controllerRegistration)).To(Succeed())
@@ -454,14 +464,6 @@ var _ = Describe("ControllerRegistration controller test", func() {
 				})).To(Succeed())
 				g.Expect(controllerInstallationList.Items).To(HaveLen(0))
 			}).Should(Succeed())
-
-			By("Delete ControllerRegistration")
-			Expect(testClient.Delete(ctx, controllerRegistration)).To(Succeed())
-
-			By("Wait until manager has observed controllerregistration deletion")
-			Eventually(func() error {
-				return mgrClient.Get(ctx, client.ObjectKeyFromObject(controllerRegistration), controllerRegistration)
-			}).Should(BeNotFoundError())
 		})
 	})
 
@@ -542,6 +544,16 @@ var _ = Describe("ControllerRegistration controller test", func() {
 			By("Create ControllerRegistration")
 			Expect(testClient.Create(ctx, shootControllerRegistration)).To(Succeed())
 
+			DeferCleanup(func() {
+				By("Delete ControllerRegistration")
+				Expect(testClient.Delete(ctx, shootControllerRegistration)).To(Succeed())
+
+				By("Wait until manager has observed shootControllerRegistration deletion")
+				Eventually(func() error {
+					return mgrClient.Get(ctx, client.ObjectKeyFromObject(shootControllerRegistration), shootControllerRegistration)
+				}).Should(BeNotFoundError())
+			})
+
 			By("Expect finalizer to be added to ControllerRegistration")
 			Eventually(func(g Gomega) []string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootControllerRegistration), shootControllerRegistration)).To(Succeed())
@@ -573,14 +585,6 @@ var _ = Describe("ControllerRegistration controller test", func() {
 				})).To(Succeed())
 				g.Expect(controllerInstallationList.Items).To(HaveLen(0))
 			}).Should(Succeed())
-
-			By("Delete ControllerRegistration")
-			Expect(testClient.Delete(ctx, shootControllerRegistration)).To(Succeed())
-
-			By("Wait until manager has observed controllerregistration deletion")
-			Eventually(func() error {
-				return mgrClient.Get(ctx, client.ObjectKeyFromObject(shootControllerRegistration), shootControllerRegistration)
-			}).Should(BeNotFoundError())
 		})
 	})
 })

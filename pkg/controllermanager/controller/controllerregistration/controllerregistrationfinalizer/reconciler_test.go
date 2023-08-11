@@ -119,7 +119,7 @@ var _ = Describe("ControllerRegistration", func() {
 
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerRegistrationName}})
 				Expect(result).To(Equal(reconcile.Result{}))
-				Expect(err).To(MatchError(ContainSubstring("cannot remove finalizer")))
+				Expect(err).To(MatchError(ContainSubstring("cannot remove finalizer of ControllerRegistration %q because still found ControllerInstallations: [%s]", controllerRegistration.Name, controllerInstallation.Name)))
 			})
 
 			It("should remove the finalizer", func() {

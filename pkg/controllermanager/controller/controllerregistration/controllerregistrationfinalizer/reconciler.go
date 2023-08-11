@@ -67,7 +67,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 
 		if len(controllerInstallationList.Items) > 0 {
-			return reconcile.Result{}, fmt.Errorf("cannot remove finalizer of ControllerRegistration %q because still found ControllerInstallations: %s", controllerRegistration.Name, getControllerInstallationNames(controllerInstallationList.Items))
+			return reconcile.Result{}, fmt.Errorf("cannot remove finalizer of ControllerRegistration %q because still found ControllerInstallations: %s", controllerRegistration.Name, controllerutils.GetControllerInstallationNames(controllerInstallationList.Items))
 		}
 
 		log.Info("Removing finalizer")
@@ -86,14 +86,4 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	return reconcile.Result{}, nil
-}
-
-func getControllerInstallationNames(controllerInstallations []gardencorev1beta1.ControllerInstallation) []string {
-	var names []string
-
-	for _, controllerInstallation := range controllerInstallations {
-		names = append(names, controllerInstallation.Name)
-	}
-
-	return names
 }

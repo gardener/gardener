@@ -116,7 +116,7 @@ var _ = Describe("Reconciler", func() {
 
 				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}})
 				Expect(result).To(Equal(reconcile.Result{}))
-				Expect(err).To(MatchError(ContainSubstring("cannot remove finalizer")))
+				Expect(err).To(MatchError(ContainSubstring("cannot remove finalizer of Seed %q because still found ControllerInstallations: [%s]", seed.Name, controllerInstallation.Name)))
 			})
 
 			It("should remove the finalizer", func() {

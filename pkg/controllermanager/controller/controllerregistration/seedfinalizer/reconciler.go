@@ -66,15 +66,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			return reconcile.Result{}, err
 		}
 
-		if len(controllerInstallationList.Items) != 0 {
-			return reconcile.Result{}, fmt.Errorf("cannot remove finalizer of Seed %q because still found at least one ControllerInstallation", seed.Name)
+		if len(controllerInstallationList.Items) > 0 {
+			return reconcile.Result{}, fmt.Errorf("cannot remove finalizer of Seed %q because still found ControllerInstallations: %s", seed.Name, controllerutils.GetControllerInstallationNames(controllerInstallationList.Items))
 		}
 
-		if controllerutil.ContainsFinalizer(seed, FinalizerName) {
-			log.Info("Removing finalizer")
-			if err := controllerutils.RemoveFinalizers(ctx, r.Client, seed, FinalizerName); err != nil {
-				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
-			}
+		log.Info("Removing finalizer")
+		if err := controllerutils.RemoveFinalizers(ctx, r.Client, seed, FinalizerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 		}
 
 		return reconcile.Result{}, nil

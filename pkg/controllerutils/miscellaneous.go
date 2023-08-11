@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 )
@@ -106,4 +107,15 @@ func GetChildReconciliationContext(ctx context.Context, timeout time.Duration) (
 	}
 
 	return context.WithTimeout(ctx, t/2)
+}
+
+// GetControllerInstallationNames returns a list of the names of the controllerinstallations passed.
+func GetControllerInstallationNames(controllerInstallations []gardencorev1beta1.ControllerInstallation) []string {
+	var names = make([]string, 0, len(controllerInstallations))
+
+	for _, controllerInstallation := range controllerInstallations {
+		names = append(names, controllerInstallation.Name)
+	}
+
+	return names
 }
