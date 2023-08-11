@@ -17,7 +17,7 @@ spec:
         app: {{ .AppLabel }}
     spec:
       initContainers:
-      - image: eu.gcr.io/gardener-project/3rd/alpine:3.16.1
+      - image: registry.k8s.io/e2e-test-images/busybox:1.29-4
         name: data-generator
         command:
         - dd
@@ -28,7 +28,9 @@ spec:
         volumeMounts:
         - name: source-data
           mountPath: /data
-      - image: eu.gcr.io/gardener-project/3rd/alpine:3.16.1
+      # TODO(ialidzhikov): There is a kubectl image (registry.k8s.io/kubectl), available in K8s 1.28+.
+      # In future, use the kubectl image, instead of downloading kubectl via init container.
+      - image: registry.k8s.io/e2e-test-images/busybox:1.29-4
         name: install-kubectl
         command:
         - /bin/sh
