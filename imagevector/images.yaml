@@ -197,7 +197,7 @@ images:
 - name: configmap-reloader
   sourceRepository: github.com/prometheus-operator/prometheus-operator
   repository: ghcr.io/prometheus-operator/prometheus-config-reloader
-  tag: v0.61.1
+  tag: v0.67.1
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -231,7 +231,7 @@ images:
 - name: node-exporter
   sourceRepository: github.com/prometheus/node_exporter
   repository: quay.io/prometheus/node-exporter
-  tag: v1.5.0
+  tag: v1.6.1
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -249,7 +249,7 @@ images:
 - name: plutono
   sourceRepository: github.com/credativ/plutono
   repository: ghcr.io/credativ/plutono
-  tag: "v7.5.22"
+  tag: "v7.5.23"
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -266,7 +266,7 @@ images:
 - name: blackbox-exporter
   sourceRepository: github.com/prometheus/blackbox_exporter
   repository: quay.io/prometheus/blackbox-exporter
-  tag: v0.23.0
+  tag: v0.24.0
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -284,7 +284,7 @@ images:
 - name: metrics-server
   sourceRepository: github.com/kubernetes-sigs/metrics-server
   repository: registry.k8s.io/metrics-server/metrics-server
-  tag: v0.6.3
+  tag: v0.6.4
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -307,7 +307,7 @@ images:
 - name: coredns
   sourceRepository: github.com/coredns/coredns
   repository: registry.k8s.io/coredns/coredns
-  tag: "v1.10.0"
+  tag: "v1.10.1"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -324,7 +324,7 @@ images:
 - name: node-local-dns
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/cluster/addons/dns/nodelocaldns
   repository: registry.k8s.io/dns/k8s-dns-node-cache
-  tag: "1.22.20"
+  tag: "1.22.23"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -608,7 +608,7 @@ images:
 - name: cluster-proportional-autoscaler
   sourceRepository: https://github.com/kubernetes-sigs/cluster-proportional-autoscaler
   repository: registry.k8s.io/cpa/cluster-proportional-autoscaler
-  tag: "v1.8.8"
+  tag: "v1.8.9"
 
 # Istio
 - name: istio-proxy
