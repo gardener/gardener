@@ -79,7 +79,7 @@ var (
 		virtualGardenPrefix+v1beta1constants.ETCDEvents,
 	)
 
-	virtualGardenmonitoringSelector = labels.SelectorFromSet(map[string]string{v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring})
+	virtualGardenMonitoringSelector = labels.SelectorFromSet(map[string]string{v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring})
 )
 
 // GardenHealth contains information needed to execute health checks for garden.
@@ -240,9 +240,8 @@ func (h *GardenHealth) checkManagedResources(
 // checkObservabilityComponents checks whether the  observability components of the virtual garden control plane (Prometheus, Vali, Plutono..) are healthy.
 func (h *GardenHealth) checkObservabilityComponents(ctx context.Context, checker *HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
 	requiredDeployments := requiredMonitoringDeployments.Clone()
-	requiredDeployments.Insert(v1beta1constants.DeploymentNameKubeStateMetrics)
 
-	if exitCondition, err := checker.checkMonitoringControlPlane(ctx, h.gardenNamespace, requiredDeployments, sets.New[string](), virtualGardenmonitoringSelector, condition); err != nil || exitCondition != nil {
+	if exitCondition, err := checker.checkMonitoringControlPlane(ctx, h.gardenNamespace, requiredDeployments, sets.New[string](), virtualGardenMonitoringSelector, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 

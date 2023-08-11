@@ -54,6 +54,7 @@ var (
 	)
 
 	requiredMonitoringDeployments = sets.New(
+		v1beta1constants.DeploymentNameKubeStateMetrics,
 		v1beta1constants.DeploymentNamePlutono,
 	)
 
@@ -446,7 +447,7 @@ func shootControlPlaneNotRunningMessage(lastOperation *gardencorev1beta1.LastOpe
 
 // This is a hack to quickly do a cloud provider specific check for the required control plane deployments.
 func computeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (sets.Set[string], error) {
-	requiredControlPlaneDeployments := sets.New(requiredShootControlPlaneDeployments.UnsortedList()...)
+	requiredControlPlaneDeployments := requiredShootControlPlaneDeployments.Clone()
 
 	if !v1beta1helper.IsWorkerless(shoot) {
 		requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameKubeScheduler)
@@ -476,8 +477,8 @@ func computeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (set
 
 func computeRequiredMonitoringSeedDeployments(shoot *gardencorev1beta1.Shoot, gardenerVersion *semver.Version) sets.Set[string] {
 	requiredDeployments := requiredMonitoringDeployments.Clone()
-	if !v1beta1helper.IsWorkerless(shoot) {
-		requiredDeployments.Insert(v1beta1constants.DeploymentNameKubeStateMetrics)
+	if v1beta1helper.IsWorkerless(shoot) {
+		requiredDeployments.Delete(v1beta1constants.DeploymentNameKubeStateMetrics)
 	}
 
 	return requiredDeployments
