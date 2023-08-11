@@ -39,6 +39,7 @@ var (
 	)
 	availableSeedOperations = sets.New(
 		v1beta1constants.SeedOperationRenewGardenAccessSecrets,
+		v1beta1constants.GardenerOperationReconcile,
 	)
 )
 
