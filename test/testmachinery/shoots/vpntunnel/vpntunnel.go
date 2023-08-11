@@ -103,7 +103,7 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 					ctx,
 					pod.Namespace,
 					pod.Name,
-					"net-curl",
+					"pause",
 					fmt.Sprintf("curl -k -v -XGET  -H \"Accept: application/json, */*\" -H \"Authorization: Bearer %s\" \"%s/api/v1/namespaces/%s/pods/%s/log?container=logger\"", token, f.Shoot.Status.AdvertisedAddresses[0].URL, pod.Namespace, pod.Name),
 				)
 				if apierrors.IsNotFound(err) {
