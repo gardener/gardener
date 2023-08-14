@@ -76,7 +76,9 @@ As explained above, this returns the bundle secret for the CA `my-ca` which migh
 
 ### Certificate Signing
 
-By default, client certificates are always signed by the current CA while server certificate are signed by the old CA (if it exists).
+#### Default Behaviour
+
+By default, client certificates are signed by the current CA while server certificate are signed by the old CA (if it exists).
 This is to ensure a smooth exchange of certificate during a CA rotation (typically has two phases, ref [GEP-18](../proposals/18-shoot-CA-rotation.md#rotation-sequence-for-cluster-and-client-ca)):
 
 - Client certificates:
@@ -86,20 +88,25 @@ This is to ensure a smooth exchange of certificate during a CA rotation (typical
   - In phase 1, servers still use their old/existing certificates to allow clients to update their CA bundle used for verification of the servers' certificates.
   - In phase 2, the old CA is dropped, hence servers need to get a certificate signed by the new/current CA. At this point in time, clients have already adapted their CA bundles.
 
-> :bulb: **Sign Server Certificates with Current CA, in case you control all clients and update them at the same time as the server**. It is possible to make the secrets manager generate even server certificates with the new/current CA.
-> This can help to prevent certificate mismatches when the CA bundle is already exchanged while the server still serves with a certificate signed by a CA no longer part of the bundle.
+#### Alternative: Sign Server Certificates with Current CA
+
+In case you control all clients and update them at the same time as the server, it is possible to make the secrets manager generate even server certificates with the new/current CA.
+This can help to prevent certificate mismatches when the CA bundle is already exchanged while the server still serves with a certificate signed by a CA no longer part of the bundle.
 
 Let's consider the two following examples:
 
 1. `gardenlet` deploys a webhook server (`gardener-resource-manager`) and a corresponding `MutatingWebhookConfiguration` at the same time. In this case, the server certificate should be generated with the new/current CA to avoid above mentioned certificate mismatches during a CA rotation.
 2. `gardenlet` deploys a server (`etcd`) in one step, and a client (`kube-apiserver`) in a subsequent step. In this case, the default behaviour should apply (server certificate should be signed by old/existing CA).
 
-> :bulb: **Sign Client Certificate with Old CA, in the unusual case where the client is deployed before the server**. It might be useful to always use the old CA for signing the client's certificate.
-> This can help to prevent certificate mismatches when the client already gets a new certificate while the server still only accepts certificates signed by the old CA.
+#### Alternative: Sign Client Certificate with Old CA
 
-Let's consider the following example:
+In the unusual case where the client is deployed before the server, it might be useful to always use the old CA for signing the client's certificate.
+This can help to prevent certificate mismatches when the client already gets a new certificate while the server still only accepts certificates signed by the old CA.
+
+Let's consider the two following examples:
 
 1. `gardenlet` deploys the `kube-apiserver` before the `kubelet`. However, the `kube-apiserver` has a client certificate signed by the `ca-kubelet` in order to communicate with it (e.g., when retrieving logs or forwarding ports). In this case, the client certificate should be generated with the old CA to avoid above mentioned certificate mismatches during a CA rotation.
+2. `gardenlet` deploys a server (`etcd`) in one step, and a client (`kube-apiserver`) in a subsequent step. In this case, the default behaviour should apply (client certificate should be signed by new/current CA).
 
 ## Reusing the SecretsManager in Other Components
 
