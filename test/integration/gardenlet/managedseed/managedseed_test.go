@@ -84,7 +84,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 				gardenletDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet", Namespace: gardenNamespaceShoot}}
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenletDeployment), gardenletDeployment)).To(Succeed())
 				g.Expect(gardenletDeployment.Spec.Template.Annotations).To(HaveKeyWithValue(
-					"checksum/backup-secret", backupSecret.Name+"-"+utils.ComputeSecretChecksum(backupSecret.Data)[:8],
+					"checksum/seed-backup-secret", backupSecret.Name+"-"+utils.ComputeSecretChecksum(backupSecret.Data)[:8],
 				))
 			}).Should(Succeed())
 		}

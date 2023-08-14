@@ -519,7 +519,7 @@ func (a *actuator) reconcileSeedSecrets(ctx context.Context, log logr.Logger, sp
 
 		// Inject backup-secret hash into the pod annotations
 		managedSeed.Spec.Gardenlet.Deployment.PodAnnotations = utils.MergeStringMaps[string](managedSeed.Spec.Gardenlet.Deployment.PodAnnotations, map[string]string{
-			"checksum/backup-secret": spec.Backup.SecretRef.Name + "-" + checksum,
+			"checksum/seed-backup-secret": spec.Backup.SecretRef.Name + "-" + checksum,
 		})
 	}
 
