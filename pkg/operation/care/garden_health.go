@@ -128,7 +128,7 @@ func (h *GardenHealth) CheckGarden(
 		}
 	}
 
-	checker := NewHealthChecker(h.runtimeClient, h.clock, thresholdMappings, nil, nil, lastOperation, nil, nil)
+	checker := NewHealthChecker(h.runtimeClient, h.clock, thresholdMappings, nil, nil, lastOperation, nil)
 
 	taskFns := []flow.TaskFn{
 		func(ctx context.Context) error {

@@ -91,7 +91,7 @@ func (h *SeedHealth) CheckSeed(
 		}
 	}
 
-	checker := NewHealthChecker(h.seedClient, h.clock, thresholdMappings, nil, nil, lastOperation, nil, nil)
+	checker := NewHealthChecker(h.seedClient, h.clock, thresholdMappings, nil, nil, lastOperation, nil)
 	newSystemComponentsCondition, err := h.checkSeedSystemComponents(ctx, checker, systemComponentsCondition)
 	return []gardencorev1beta1.Condition{NewConditionOrError(h.clock, systemComponentsCondition, newSystemComponentsCondition, err)}
 }

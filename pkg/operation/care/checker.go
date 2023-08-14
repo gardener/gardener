@@ -96,7 +96,6 @@ type HealthChecker struct {
 	managedResourceProgressingThreshold *metav1.Duration
 	lastOperation                       *gardencorev1beta1.LastOperation
 	kubernetesVersion                   *semver.Version
-	gardenerVersion                     *semver.Version
 }
 
 // NewHealthChecker creates a new health checker.
@@ -108,7 +107,6 @@ func NewHealthChecker(
 	managedResourceProgressingThreshold *metav1.Duration,
 	lastOperation *gardencorev1beta1.LastOperation,
 	kubernetesVersion *semver.Version,
-	gardenerVersion *semver.Version,
 ) *HealthChecker {
 	return &HealthChecker{
 		reader:                              reader,
@@ -118,7 +116,6 @@ func NewHealthChecker(
 		managedResourceProgressingThreshold: managedResourceProgressingThreshold,
 		lastOperation:                       lastOperation,
 		kubernetesVersion:                   kubernetesVersion,
-		gardenerVersion:                     gardenerVersion,
 	}
 }
 
@@ -475,7 +472,7 @@ func computeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (set
 	return requiredControlPlaneDeployments, nil
 }
 
-func computeRequiredMonitoringSeedDeployments(shoot *gardencorev1beta1.Shoot, gardenerVersion *semver.Version) sets.Set[string] {
+func computeRequiredMonitoringSeedDeployments(shoot *gardencorev1beta1.Shoot) sets.Set[string] {
 	requiredDeployments := requiredMonitoringDeployments.Clone()
 	if v1beta1helper.IsWorkerless(shoot) {
 		requiredDeployments.Delete(v1beta1constants.DeploymentNameKubeStateMetrics)
@@ -760,7 +757,7 @@ func (b *HealthChecker) CheckShootMonitoringControlPlane(
 		return nil, nil
 	}
 
-	return b.checkMonitoringControlPlane(ctx, namespace, computeRequiredMonitoringSeedDeployments(shoot, b.gardenerVersion), computeRequiredMonitoringStatefulSets(wantsAlertmanager), monitoringSelector, condition)
+	return b.checkMonitoringControlPlane(ctx, namespace, computeRequiredMonitoringSeedDeployments(shoot), computeRequiredMonitoringStatefulSets(wantsAlertmanager), monitoringSelector, condition)
 }
 
 // CheckLoggingControlPlane checks whether the logging components in the given listers are complete and healthy.
