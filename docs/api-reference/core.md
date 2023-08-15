@@ -9127,7 +9127,80 @@ bool
 </em>
 </td>
 <td>
-<p>Enabled controls whether the excess capacity reservation should be enabled.</p>
+<p>Enabled controls whether the default excess capacity reservation should be enabled.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>configs</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingExcessCapacityReservationConfig">
+[]SeedSettingExcessCapacityReservationConfig
+</a>
+</em>
+</td>
+<td>
+<p>Configs configures additional excess capacity reservation deployments for shoot control planes in the seed.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.SeedSettingExcessCapacityReservationConfig">SeedSettingExcessCapacityReservationConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingExcessCapacityReservation">SeedSettingExcessCapacityReservation</a>)
+</p>
+<p>
+<p>SeedSettingExcessCapacityReservationConfig configures additional excess capacity reservation deployments for shoot control planes in the seed.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcelist-v1-core">
+Kubernetes core/v1.ResourceList
+</a>
+</em>
+</td>
+<td>
+<p>Resources specify the resource requests and limits of the excess-capacity-reservation pod.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>nodeSelector</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#nodeselector-v1-core">
+Kubernetes core/v1.NodeSelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NodeSelector specifies the node where the excess-capacity-reservation pod should run.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>tolerations</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#toleration-v1-core">
+[]Kubernetes core/v1.Toleration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Tolerations specify the tolerations for the the excess-capacity-reservation pod.</p>
 </td>
 </tr>
 </tbody>
