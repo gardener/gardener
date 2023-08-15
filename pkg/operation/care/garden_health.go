@@ -113,7 +113,7 @@ func (h *GardenHealth) CheckGarden(
 		apiServerAvailability      gardencorev1beta1.Condition
 		runtimeComponentsCondition gardencorev1beta1.Condition
 		virtualComponentsCondition gardencorev1beta1.Condition
-		observabilityComponents    gardencorev1beta1.Condition
+		observabilityCondition     gardencorev1beta1.Condition
 	)
 	for _, cond := range conditions {
 		switch cond.Type {
@@ -124,7 +124,7 @@ func (h *GardenHealth) CheckGarden(
 		case operatorv1alpha1.VirtualComponentsHealthy:
 			virtualComponentsCondition = cond
 		case operatorv1alpha1.ObservabilityComponentsHealthy:
-			observabilityComponents = cond
+			observabilityCondition = cond
 		}
 	}
 
@@ -146,8 +146,8 @@ func (h *GardenHealth) CheckGarden(
 			return nil
 		},
 		func(ctx context.Context) error {
-			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, checker, observabilityComponents)
-			observabilityComponents = NewConditionOrError(h.clock, observabilityComponents, newObservabilityComponents, err)
+			newObservabilityCondition, err := h.checkObservabilityComponents(ctx, checker, observabilityCondition)
+			observabilityCondition = NewConditionOrError(h.clock, observabilityCondition, newObservabilityCondition, err)
 			return nil
 		},
 	}
@@ -158,7 +158,7 @@ func (h *GardenHealth) CheckGarden(
 		runtimeComponentsCondition,
 		virtualComponentsCondition,
 		apiServerAvailability,
-		observabilityComponents,
+		observabilityCondition,
 	}
 }
 
