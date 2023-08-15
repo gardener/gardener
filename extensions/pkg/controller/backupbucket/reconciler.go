@@ -89,14 +89,14 @@ func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, bb *extensi
 		return reconcile.Result{}, err
 	}
 
-	secret, err := kubernetesutils.GetSecretByReference(ctx, r.client, &bb.Spec.SecretRef)
+	secretMetadata, err := kubernetesutils.GetSecretMetadataByReference(ctx, r.client, &bb.Spec.SecretRef)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup bucket secret: %+v", err)
 	}
 
-	if !controllerutil.ContainsFinalizer(secret, FinalizerName) {
-		log.Info("Adding finalizer to secret", "secret", client.ObjectKeyFromObject(secret))
-		if err := controllerutils.AddFinalizers(ctx, r.client, secret, FinalizerName); err != nil {
+	if !controllerutil.ContainsFinalizer(secretMetadata, FinalizerName) {
+		log.Info("Adding finalizer to secret", "secret", client.ObjectKeyFromObject(secretMetadata))
+		if err := controllerutils.AddFinalizers(ctx, r.client, secretMetadata, FinalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to add finalizer to secret: %w", err)
 		}
 	}
@@ -135,14 +135,14 @@ func (r *reconciler) delete(ctx context.Context, log logr.Logger, bb *extensions
 		return reconcile.Result{}, err
 	}
 
-	secret, err := kubernetesutils.GetSecretByReference(ctx, r.client, &bb.Spec.SecretRef)
+	secretMetadata, err := kubernetesutils.GetSecretMetadataByReference(ctx, r.client, &bb.Spec.SecretRef)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup bucket secret: %+v", err)
 	}
 
-	if controllerutil.ContainsFinalizer(secret, FinalizerName) {
-		log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(secret))
-		if err := controllerutils.RemoveFinalizers(ctx, r.client, secret, FinalizerName); err != nil {
+	if controllerutil.ContainsFinalizer(secretMetadata, FinalizerName) {
+		log.Info("Removing finalizer from secret", "secret", client.ObjectKeyFromObject(secretMetadata))
+		if err := controllerutils.RemoveFinalizers(ctx, r.client, secretMetadata, FinalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from secret: %w", err)
 		}
 	}
