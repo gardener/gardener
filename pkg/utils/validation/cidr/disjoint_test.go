@@ -297,8 +297,9 @@ var _ = Describe("utils", func() {
 			)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("[].nodes"),
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("[].nodes"),
+				"Detail": Equal("shoot node network intersects with seed pod network"),
 			}))))
 		})
 	})
@@ -436,8 +437,9 @@ var _ = Describe("utils", func() {
 			)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("[].nodes"),
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("[].nodes"),
+				"Detail": Equal("shoot node network intersects with seed pod network"),
 			}))))
 		})
 	})
