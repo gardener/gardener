@@ -166,7 +166,7 @@ kubectl apply -f example/provider-local/shoot.yaml
 You can wait for the `Shoot` to be ready by running:
 
 ```bash
-NAMESPACE=garden-local ./hack/usage/wait-for.sh shoot APIServerAvailable ControlPlaneHealthy ObservabilityComponentsHealthy EveryNodeReady SystemComponentsHealthy
+NAMESPACE=garden-local ./hack/usage/wait-for.sh shoot local APIServerAvailable ControlPlaneHealthy ObservabilityComponentsHealthy EveryNodeReady SystemComponentsHealthy
 ```
 
 Alternatively, you can run `kubectl -n garden-local get shoot local` and wait for the `LAST OPERATION` to reach `100%`:
