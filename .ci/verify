@@ -13,10 +13,6 @@ cd "$(dirname $0)/.."
 git config --global user.email "gardener@sap.com"
 git config --global user.name "Gardener CI/CD"
 
-# TODO: use pre-built image instead of installing in every pipeline run
-apt-get update
-apt-get install -y unzip jq parallel
-
 mkdir -p /go/src/github.com/gardener/gardener
 cp -r . /go/src/github.com/gardener/gardener
 cd /go/src/github.com/gardener/gardener
