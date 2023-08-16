@@ -88,6 +88,15 @@ var _ = Describe("Strategy", func() {
 				Expect(newSeed.Generation).To(Equal(oldSeed.Generation + 1))
 			})
 
+			It("should bump the generation and remove the annotation if the operation annotation was set to reconcile", func() {
+				metav1.SetMetaDataAnnotation(&newSeed.ObjectMeta, "gardener.cloud/operation", "reconcile")
+
+				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+
+				Expect(newSeed.Generation).To(Equal(oldSeed.Generation + 1))
+				Expect(newSeed.Annotations).NotTo(ContainElement("gardener.cloud/operation"))
+			})
+
 			It("should not bump the generation if the operation annotation didn't change", func() {
 				metav1.SetMetaDataAnnotation(&oldSeed.ObjectMeta, "gardener.cloud/operation", "renew-garden-access-secrets")
 				metav1.SetMetaDataAnnotation(&newSeed.ObjectMeta, "gardener.cloud/operation", "renew-garden-access-secrets")
