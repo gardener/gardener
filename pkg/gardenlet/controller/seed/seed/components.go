@@ -268,7 +268,6 @@ func defaultVPNAuthzServer(
 func defaultSystem(
 	c client.Client,
 	seed *seedpkg.Seed,
-	reserveExcessCapacity bool,
 	gardenNamespaceName string,
 ) (
 	component.DeployWaiter,
@@ -289,9 +288,10 @@ func defaultSystem(
 		gardenNamespaceName,
 		seedsystem.Values{
 			ReserveExcessCapacity: seedsystem.ReserveExcessCapacityValues{
-				Enabled:  reserveExcessCapacity,
+				Enabled:  seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled,
 				Image:    image.String(),
 				Replicas: replicasExcessCapacityReservation,
+				Configs:  seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Configs,
 			},
 		},
 	), nil

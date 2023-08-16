@@ -16,6 +16,7 @@ package seedsystem
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -26,6 +27,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -50,6 +52,8 @@ type ReserveExcessCapacityValues struct {
 	Image string
 	// Replicas is the number of replicas.
 	Replicas int32
+	// Configs configures additional excess capacity reservation deployments for shoot control planes in the seed.
+	Configs []gardencorev1beta1.SeedSettingExcessCapacityReservationConfig
 }
 
 // New creates a new instance of DeployWaiter for seed system resources.
@@ -104,11 +108,26 @@ func (s *seedSystem) WaitCleanup(ctx context.Context) error {
 
 func (s *seedSystem) computeResourcesData() (map[string][]byte, error) {
 	var (
+		excessCapacityConfigs []gardencorev1beta1.SeedSettingExcessCapacityReservationConfig
+
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 	)
 
 	if s.values.ReserveExcessCapacity.Enabled {
-		if err := s.addReserveExcessCapacityDeployment(registry); err != nil {
+		defaultConfig := gardencorev1beta1.SeedSettingExcessCapacityReservationConfig{
+			// This roughly corresponds to a single, moderately large control-plane.
+			Resources: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("2"),
+				corev1.ResourceMemory: resource.MustParse("6Gi"),
+			},
+		}
+		excessCapacityConfigs = append(excessCapacityConfigs, defaultConfig)
+	}
+	excessCapacityConfigs = append(excessCapacityConfigs, s.values.ReserveExcessCapacity.Configs...)
+
+	for i, config := range excessCapacityConfigs {
+		name := fmt.Sprintf("reserve-excess-capacity-%d", i)
+		if err := s.addReserveExcessCapacityDeployment(registry, name, config); err != nil {
 			return nil, err
 		}
 	}
@@ -120,10 +139,10 @@ func (s *seedSystem) computeResourcesData() (map[string][]byte, error) {
 	return registry.SerializedObjects(), nil
 }
 
-func (s *seedSystem) addReserveExcessCapacityDeployment(registry *managedresources.Registry) error {
-	return registry.Add(&appsv1.Deployment{
+func (s *seedSystem) addReserveExcessCapacityDeployment(registry *managedresources.Registry, name string, config gardencorev1beta1.SeedSettingExcessCapacityReservationConfig) error {
+	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "reserve-excess-capacity",
+			Name:      name,
 			Namespace: s.namespace,
 			Labels:    getExcessCapacityReservationLabels(),
 			Annotations: map[string]string{
@@ -145,22 +164,23 @@ func (s *seedSystem) addReserveExcessCapacityDeployment(registry *managedresourc
 						Image:           s.values.ReserveExcessCapacity.Image,
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						Resources: corev1.ResourceRequirements{
-							// This roughly corresponds to a single, moderately large control-plane.
-							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("2"),
-								corev1.ResourceMemory: resource.MustParse("6Gi"),
-							},
-							Limits: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("2"),
-								corev1.ResourceMemory: resource.MustParse("6Gi"),
-							},
+							Requests: config.Resources,
+							Limits:   config.Resources,
 						},
 					}},
 					PriorityClassName: v1beta1constants.PriorityClassNameReserveExcessCapacity,
+					Tolerations:       config.Tolerations,
 				},
 			},
 		},
-	})
+	}
+	if config.NodeSelector != nil {
+		deployment.Spec.Template.Spec.Affinity = &corev1.Affinity{
+			NodeAffinity: &corev1.NodeAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: config.NodeSelector,
+			}}
+	}
+	return registry.Add(deployment)
 }
 
 // remember to update docs/development/priority-classes.md when making changes here

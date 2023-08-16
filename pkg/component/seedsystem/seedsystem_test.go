@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
@@ -54,7 +55,7 @@ var _ = Describe("SeedSystem", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		deploymentYAML = `apiVersion: apps/v1
+		deployment0YAML = `apiVersion: apps/v1
 kind: Deployment
 metadata:
   annotations:
@@ -63,7 +64,7 @@ metadata:
   labels:
     app: kubernetes
     role: reserve-excess-capacity
-  name: reserve-excess-capacity
+  name: reserve-excess-capacity-0
   namespace: ` + namespace + `
 spec:
   replicas: 2
@@ -93,6 +94,61 @@ spec:
             memory: 6Gi
       priorityClassName: gardener-reserve-excess-capacity
       terminationGracePeriodSeconds: 5
+status: {}
+`
+		deployment1YAML = `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    resources.gardener.cloud/skip-health-check: "true"
+  creationTimestamp: null
+  labels:
+    app: kubernetes
+    role: reserve-excess-capacity
+  name: reserve-excess-capacity-1
+  namespace: ` + namespace + `
+spec:
+  replicas: 2
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: kubernetes
+      role: reserve-excess-capacity
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: kubernetes
+        role: reserve-excess-capacity
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: foo
+                operator: In
+                values:
+                - bar
+      containers:
+      - image: ` + reserveExcessCapacityImage + `
+        imagePullPolicy: IfNotPresent
+        name: pause-container
+        resources:
+          limits:
+            cpu: "4"
+            memory: 8Gi
+          requests:
+            cpu: "4"
+            memory: 8Gi
+      priorityClassName: gardener-reserve-excess-capacity
+      terminationGracePeriodSeconds: 5
+      tolerations:
+      - effect: NoExecute
+        key: bar
+        operator: Equal
+        value: foo
 status: {}
 `
 	)
@@ -159,8 +215,39 @@ status: {}
 
 		It("should successfully deploy the resources", func() {
 			Expect(managedResourceSecret.Data).To(HaveLen(11))
-			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__reserve-excess-capacity.yaml"])).To(Equal(deploymentYAML))
+			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__reserve-excess-capacity-0.yaml"])).To(Equal(deployment0YAML))
 			expectPriorityClasses(managedResourceSecret.Data)
+		})
+
+		Context("in case of additional reserve-excess-capacity configs", func() {
+			BeforeEach(func() {
+				values.ReserveExcessCapacity.Configs = []gardencorev1beta1.SeedSettingExcessCapacityReservationConfig{
+					{
+						Resources: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("4"),
+							corev1.ResourceMemory: resource.MustParse("8Gi"),
+						},
+						NodeSelector: &corev1.NodeSelector{
+							NodeSelectorTerms: []corev1.NodeSelectorTerm{
+								{MatchExpressions: []corev1.NodeSelectorRequirement{
+									{Key: "foo", Values: []string{"bar"}, Operator: corev1.NodeSelectorOpIn},
+								}},
+							},
+						},
+						Tolerations: []corev1.Toleration{
+							{Key: "bar", Value: "foo", Operator: "Equal", Effect: corev1.TaintEffectNoExecute},
+						},
+					},
+				}
+				component = New(c, namespace, values)
+			})
+
+			It("should successfully deploy the resources", func() {
+				Expect(managedResourceSecret.Data).To(HaveLen(12))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__reserve-excess-capacity-0.yaml"])).To(Equal(deployment0YAML))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__reserve-excess-capacity-1.yaml"])).To(Equal(deployment1YAML))
+				expectPriorityClasses(managedResourceSecret.Data)
+			})
 		})
 	})
 
