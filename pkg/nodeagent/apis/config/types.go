@@ -50,6 +50,7 @@ type NodeAgentConfiguration struct {
 	KubeletDataVolumeSize *int64
 }
 
+// APIServer contains the connection configuration for the gardener-node-agent to
 type APIServer struct {
 	// URL is the url to the api server.
 	URL string

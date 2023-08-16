@@ -61,7 +61,7 @@ func (remoteExtractor) ExtractFromLayer(image, pathSuffix, dest string) error {
 		}
 
 		if err = extractFileFromTar(buffer, pathSuffix, dest); err != nil {
-			if errors.Is(err, notFound) {
+			if errors.Is(err, errNotFound) {
 				continue
 			}
 			return fmt.Errorf("unable to extract tarball to file system: %w", err)
@@ -73,7 +73,7 @@ func (remoteExtractor) ExtractFromLayer(image, pathSuffix, dest string) error {
 	return fmt.Errorf("did not find file %q in layer", pathSuffix)
 }
 
-var notFound = errors.New("file not contained in tar")
+var errNotFound = errors.New("file not contained in tar")
 
 func extractFileFromTar(uncompressedStream io.Reader, searchSuffix, targetFile string) error {
 	var (
@@ -111,5 +111,5 @@ func extractFileFromTar(uncompressedStream io.Reader, searchSuffix, targetFile s
 		return fmt.Errorf("iterating tar files failed: %w", err)
 	}
 
-	return notFound
+	return errNotFound
 }

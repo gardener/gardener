@@ -14,16 +14,19 @@
 
 package registry
 
+// FakeRegistryExtractor is a fake implementation of Extractor. Do not use this in production.
 type FakeRegistryExtractor struct {
 	Extractions []FakeExtraction
 }
 
+// FakeExtraction is a fake implementation of Extractor. Do not use this in production.
 type FakeExtraction struct {
 	Image      string
 	PathSuffix string
 	Dest       string
 }
 
+// ExtractFromLayer implements Extractor.
 func (f *FakeRegistryExtractor) ExtractFromLayer(image, pathSuffix, dest string) error {
 	f.Extractions = append(f.Extractions, FakeExtraction{
 		Image:      image,

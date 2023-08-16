@@ -25,6 +25,7 @@ import (
 
 const done = "done"
 
+// Dbus is an interface for interacting with systemd via dbus
 type Dbus interface {
 	// Enable the given units, same as executing systemctl enable unit
 	Enable(ctx context.Context, unitNames ...string) error
@@ -41,6 +42,7 @@ type Dbus interface {
 }
 type db struct{}
 
+// New returns a new working Dbus
 func New() Dbus {
 	return &db{}
 }
