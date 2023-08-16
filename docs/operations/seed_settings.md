@@ -43,7 +43,11 @@ In the meantime, the cluster-autoscaler will trigger the scale-up because the pr
 However, this delay doesn't affect the important shoot control plane pods, which will improve the user experience.
 
 It can be enabled/disabled via the `.spec.settings.excessCapacityReservation.enabled` field.
-It defaults to `true`.
+It defaults to `true`. 
+When enabled, it creates a deployment with a minium number of 2 replicas and a maximum equal to the number of zones configured for this seed.
+Each deployment reserves 2 CPUs and 6Gi of memory.
+
+Use `.spec.settings.excessCapacityReservation.configs` to create additional excess capacity reservation deployments which allow to specify custom values for `resources`, `nodeSelector` and `tolerations`.
 
 ## Scheduling
 
