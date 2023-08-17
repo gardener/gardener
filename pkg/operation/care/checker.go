@@ -345,21 +345,23 @@ func cosmeticMachineMessage(numberOfMachines int) string {
 // CheckManagedResource checks the conditions of the given managed resource and reflects the state in the returned condition.
 func (b *HealthChecker) CheckManagedResource(condition gardencorev1beta1.Condition, mr *resourcesv1alpha1.ManagedResource) *gardencorev1beta1.Condition {
 	conditionsToCheck := map[gardencorev1beta1.ConditionType]func(condition gardencorev1beta1.Condition) bool{
-		resourcesv1alpha1.ResourcesApplied:     defaultSuccessfulCheck(),
-		resourcesv1alpha1.ResourcesHealthy:     defaultSuccessfulCheck(),
-		resourcesv1alpha1.ResourcesProgressing: resourcesNotProgressingCheck(b.clock, b.managedResourceProgressingThreshold),
+		resourcesv1alpha1.ResourcesApplied:     DefaultSuccessfulCheck(),
+		resourcesv1alpha1.ResourcesHealthy:     DefaultSuccessfulCheck(),
+		resourcesv1alpha1.ResourcesProgressing: ResourcesNotProgressingCheck(b.clock, b.managedResourceProgressingThreshold),
 	}
 
-	return b.checkManagedResourceConditions(condition, mr, conditionsToCheck)
+	return b.CheckManagedResourceConditions(condition, mr, conditionsToCheck)
 }
 
-func defaultSuccessfulCheck() func(condition gardencorev1beta1.Condition) bool {
+// DefaultSuccessfulCheck returns a function that checks whether the condition status is successful.
+func DefaultSuccessfulCheck() func(condition gardencorev1beta1.Condition) bool {
 	return func(condition gardencorev1beta1.Condition) bool {
 		return condition.Status != gardencorev1beta1.ConditionFalse && condition.Status != gardencorev1beta1.ConditionUnknown
 	}
 }
 
-func resourcesNotProgressingCheck(clock clock.Clock, threshold *metav1.Duration) func(condition gardencorev1beta1.Condition) bool {
+// ResourcesNotProgressingCheck returns a function that checks a condition is not progressing.
+func ResourcesNotProgressingCheck(clock clock.Clock, threshold *metav1.Duration) func(condition gardencorev1beta1.Condition) bool {
 	return func(condition gardencorev1beta1.Condition) bool {
 		notProgressing := condition.Status != gardencorev1beta1.ConditionTrue && condition.Status != gardencorev1beta1.ConditionUnknown
 
@@ -373,7 +375,8 @@ func resourcesNotProgressingCheck(clock clock.Clock, threshold *metav1.Duration)
 	}
 }
 
-func (b *HealthChecker) checkManagedResourceConditions(
+// CheckManagedResourceConditions checks the given conditions at the ManagedResource.
+func (b *HealthChecker) CheckManagedResourceConditions(
 	condition gardencorev1beta1.Condition,
 	mr *resourcesv1alpha1.ManagedResource,
 	conditionsToCheck map[gardencorev1beta1.ConditionType]func(condition gardencorev1beta1.Condition) bool,
@@ -493,8 +496,8 @@ func computeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.Set[stri
 	return requiredMonitoringStatefulSets
 }
 
-// checkControlPlane checks whether the control plane components in the given listers are complete and healthy.
-func (b *HealthChecker) checkControlPlane(
+// CheckControlPlane checks whether the control plane components in the given listers are complete and healthy.
+func (b *HealthChecker) CheckControlPlane(
 	ctx context.Context,
 	namespace string,
 	requiredControlPlaneDeployments sets.Set[string],
@@ -546,7 +549,7 @@ func (b *HealthChecker) CheckShootControlPlane(
 		return nil, err
 	}
 
-	return b.checkControlPlane(ctx, namespace, requiredControlPlaneDeployments, requiredShootControlPlaneEtcds, condition)
+	return b.CheckControlPlane(ctx, namespace, requiredControlPlaneDeployments, requiredShootControlPlaneEtcds, condition)
 }
 
 // FailedCondition returns a progressing or false condition depending on the progressing threshold.
@@ -704,7 +707,8 @@ func (b *HealthChecker) CheckClusterNodes(
 	return nil, nil
 }
 
-func (b *HealthChecker) checkMonitoringControlPlane(
+// CheckMonitoringControlPlane checks the monitoring components of the control-plane.
+func (b *HealthChecker) CheckMonitoringControlPlane(
 	ctx context.Context,
 	namespace string,
 	requiredMonitoringDeployments sets.Set[string],
@@ -759,7 +763,7 @@ func (b *HealthChecker) CheckShootMonitoringControlPlane(
 		return nil, nil
 	}
 
-	return b.checkMonitoringControlPlane(ctx, namespace, computeRequiredMonitoringSeedDeployments(shoot), computeRequiredMonitoringStatefulSets(wantsAlertmanager), monitoringSelector, condition)
+	return b.CheckMonitoringControlPlane(ctx, namespace, computeRequiredMonitoringSeedDeployments(shoot), computeRequiredMonitoringStatefulSets(wantsAlertmanager), monitoringSelector, condition)
 }
 
 // CheckLoggingControlPlane checks whether the logging components in the given listers are complete and healthy.

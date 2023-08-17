@@ -89,7 +89,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 	}
 
 	updatedConditions := NewHealthCheck(garden, r.RuntimeClient, gardenClientSet, r.Clock, r.GardenNamespace).
-		CheckGarden(ctx, conditions, r.conditionThresholdsToProgressingMapping(), garden.Status.LastOperation)
+		Check(ctx, conditions, r.conditionThresholdsToProgressingMapping(), garden.Status.LastOperation)
 
 	// Update Garden status conditions if necessary
 	if v1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) {

@@ -16,11 +16,15 @@ package care_test
 
 import (
 	"context"
+	"strings"
 	"time"
 
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
@@ -43,9 +47,10 @@ import (
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/operation/care"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
+	. "github.com/gardener/gardener/pkg/operator/controller/garden/care"
 	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var (
@@ -138,7 +143,7 @@ var _ = Describe("Garden health", func() {
 		}
 	})
 
-	Describe("#CheckGarden", func() {
+	Describe("#Check", func() {
 		Context("when all managed resources, deployments and ETCDs are deployed successfully", func() {
 			JustBeforeEach(func() {
 				for _, name := range append(gardenManagedResources, virtualGardenManagedResources...) {
@@ -159,8 +164,8 @@ var _ = Describe("Garden health", func() {
 			})
 
 			It("should set RuntimeComponentsHealthy and VirtualComponentsHealthy conditions to true", func() {
-				healthCheck := care.NewHealthForGarden(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
-				updatedConditions := healthCheck.CheckGarden(ctx, []gardencorev1beta1.Condition{
+				healthCheck := NewHealth(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
+				updatedConditions := healthCheck.Check(ctx, []gardencorev1beta1.Condition{
 					apiserverAvailabilityCondition,
 					runtimeComponentsHealthyCondition,
 					virtualComponentsHealthyCondition,
@@ -202,8 +207,8 @@ var _ = Describe("Garden health", func() {
 			})
 
 			It("should set RuntimeComponentsHealthy and VirtualComponentsHealthy conditions to true", func() {
-				healthCheck := care.NewHealthForGarden(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
-				updatedConditions := healthCheck.CheckGarden(ctx, []gardencorev1beta1.Condition{
+				healthCheck := NewHealth(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
+				updatedConditions := healthCheck.Check(ctx, []gardencorev1beta1.Condition{
 					apiserverAvailabilityCondition,
 					runtimeComponentsHealthyCondition,
 					virtualComponentsHealthyCondition,
@@ -246,8 +251,8 @@ var _ = Describe("Garden health", func() {
 			})
 
 			It("should set RuntimeComponentsHealthy and VirtualComponentsHealthy conditions to true", func() {
-				healthCheck := care.NewHealthForGarden(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
-				updatedConditions := healthCheck.CheckGarden(ctx, []gardencorev1beta1.Condition{
+				healthCheck := NewHealth(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
+				updatedConditions := healthCheck.Check(ctx, []gardencorev1beta1.Condition{
 					apiserverAvailabilityCondition,
 					runtimeComponentsHealthyCondition,
 					virtualComponentsHealthyCondition,
@@ -266,8 +271,8 @@ var _ = Describe("Garden health", func() {
 			var (
 				tests = func(reason, message string) {
 					It("should set RuntimeComponentsHealthy and VirtualComponentsHealthy conditions to False if there is no Progressing threshold duration mapping", func() {
-						healthCheck := care.NewHealthForGarden(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
-						updatedConditions := healthCheck.CheckGarden(ctx, []gardencorev1beta1.Condition{
+						healthCheck := NewHealth(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
+						updatedConditions := healthCheck.Check(ctx, []gardencorev1beta1.Condition{
 							apiserverAvailabilityCondition,
 							runtimeComponentsHealthyCondition,
 							virtualComponentsHealthyCondition,
@@ -285,8 +290,8 @@ var _ = Describe("Garden health", func() {
 						virtualComponentsHealthyCondition.Status = gardencorev1beta1.ConditionFalse
 						fakeClock.Step(30 * time.Second)
 
-						healthCheck := care.NewHealthForGarden(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
-						updatedConditions := healthCheck.CheckGarden(
+						healthCheck := NewHealth(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
+						updatedConditions := healthCheck.Check(
 							ctx,
 							[]gardencorev1beta1.Condition{
 								apiserverAvailabilityCondition,
@@ -313,8 +318,8 @@ var _ = Describe("Garden health", func() {
 						virtualComponentsHealthyCondition.Status = gardencorev1beta1.ConditionTrue
 						fakeClock.Step(30 * time.Second)
 
-						healthCheck := care.NewHealthForGarden(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
-						updatedConditions := healthCheck.CheckGarden(
+						healthCheck := NewHealth(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
+						updatedConditions := healthCheck.Check(
 							ctx,
 							[]gardencorev1beta1.Condition{
 								apiserverAvailabilityCondition,
@@ -341,8 +346,8 @@ var _ = Describe("Garden health", func() {
 						virtualComponentsHealthyCondition.Status = gardencorev1beta1.ConditionProgressing
 						fakeClock.Step(30 * time.Second)
 
-						healthCheck := care.NewHealthForGarden(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
-						updatedConditions := healthCheck.CheckGarden(
+						healthCheck := NewHealth(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
+						updatedConditions := healthCheck.Check(
 							ctx,
 							[]gardencorev1beta1.Condition{
 								apiserverAvailabilityCondition,
@@ -369,8 +374,8 @@ var _ = Describe("Garden health", func() {
 						virtualComponentsHealthyCondition.Status = gardencorev1beta1.ConditionProgressing
 						fakeClock.Step(90 * time.Second)
 
-						healthCheck := care.NewHealthForGarden(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
-						updatedConditions := healthCheck.CheckGarden(
+						healthCheck := NewHealth(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
+						updatedConditions := healthCheck.Check(
 							ctx,
 							[]gardencorev1beta1.Condition{
 								apiserverAvailabilityCondition,
@@ -477,8 +482,8 @@ var _ = Describe("Garden health", func() {
 
 		Context("when there are issues with deployments for virtual garden", func() {
 			It("should set VirtualComponentsHealthy conditions to false when the deployments are missing", func() {
-				healthCheck := care.NewHealthForGarden(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
-				updatedConditions := healthCheck.CheckGarden(ctx, []gardencorev1beta1.Condition{
+				healthCheck := NewHealth(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
+				updatedConditions := healthCheck.Check(ctx, []gardencorev1beta1.Condition{
 					apiserverAvailabilityCondition,
 					runtimeComponentsHealthyCondition,
 					virtualComponentsHealthyCondition,
@@ -495,8 +500,8 @@ var _ = Describe("Garden health", func() {
 					Expect(runtimeClient.Create(ctx, newDeployment(gardenNamespace, name, "controlplane", false))).To(Succeed())
 				}
 
-				healthCheck := care.NewHealthForGarden(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
-				updatedConditions := healthCheck.CheckGarden(ctx, []gardencorev1beta1.Condition{
+				healthCheck := NewHealth(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
+				updatedConditions := healthCheck.Check(ctx, []gardencorev1beta1.Condition{
 					apiserverAvailabilityCondition,
 					runtimeComponentsHealthyCondition,
 					virtualComponentsHealthyCondition,
@@ -517,8 +522,8 @@ var _ = Describe("Garden health", func() {
 			})
 
 			It("should set VirtualComponentsHealthy conditions to false when the ETCDs are missing", func() {
-				healthCheck := care.NewHealthForGarden(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
-				updatedConditions := healthCheck.CheckGarden(ctx, []gardencorev1beta1.Condition{
+				healthCheck := NewHealth(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
+				updatedConditions := healthCheck.Check(ctx, []gardencorev1beta1.Condition{
 					apiserverAvailabilityCondition,
 					runtimeComponentsHealthyCondition,
 					virtualComponentsHealthyCondition,
@@ -535,8 +540,8 @@ var _ = Describe("Garden health", func() {
 					Expect(runtimeClient.Create(ctx, newEtcd(gardenNamespace, name, "controlplane", false, nil))).To(Succeed())
 				}
 
-				healthCheck := care.NewHealthForGarden(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
-				updatedConditions := healthCheck.CheckGarden(ctx, []gardencorev1beta1.Condition{
+				healthCheck := NewHealth(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
+				updatedConditions := healthCheck.Check(ctx, []gardencorev1beta1.Condition{
 					apiserverAvailabilityCondition,
 					runtimeComponentsHealthyCondition,
 					virtualComponentsHealthyCondition,
@@ -551,8 +556,8 @@ var _ = Describe("Garden health", func() {
 
 		Context("when there are issues with observability components", func() {
 			It("should set ObservabilityComponentsHealthy conditions to false when no components are deployed", func() {
-				healthCheck := care.NewHealthForGarden(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
-				updatedConditions := healthCheck.CheckGarden(ctx, []gardencorev1beta1.Condition{
+				healthCheck := NewHealth(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
+				updatedConditions := healthCheck.Check(ctx, []gardencorev1beta1.Condition{
 					apiserverAvailabilityCondition,
 					runtimeComponentsHealthyCondition,
 					virtualComponentsHealthyCondition,
@@ -569,8 +574,8 @@ var _ = Describe("Garden health", func() {
 					Expect(runtimeClient.Create(ctx, newRuntimeDeployment(gardenNamespace, name, "monitoring", true))).To(Succeed())
 				}
 
-				healthCheck := care.NewHealthForGarden(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
-				updatedConditions := healthCheck.CheckGarden(ctx, []gardencorev1beta1.Condition{
+				healthCheck := NewHealth(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
+				updatedConditions := healthCheck.Check(ctx, []gardencorev1beta1.Condition{
 					apiserverAvailabilityCondition,
 					runtimeComponentsHealthyCondition,
 					virtualComponentsHealthyCondition,
@@ -590,8 +595,8 @@ var _ = Describe("Garden health", func() {
 					Expect(runtimeClient.Create(ctx, newStatefulSet(gardenNamespace, name, "logging", false))).To(Succeed())
 				}
 
-				healthCheck := care.NewHealthForGarden(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
-				updatedConditions := healthCheck.CheckGarden(ctx, []gardencorev1beta1.Condition{
+				healthCheck := NewHealth(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
+				updatedConditions := healthCheck.Check(ctx, []gardencorev1beta1.Condition{
 					apiserverAvailabilityCondition,
 					runtimeComponentsHealthyCondition,
 					virtualComponentsHealthyCondition,
@@ -611,8 +616,8 @@ var _ = Describe("Garden health", func() {
 					Expect(runtimeClient.Create(ctx, newStatefulSet(gardenNamespace, name, "logging", false))).To(Succeed())
 				}
 
-				healthCheck := care.NewHealthForGarden(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
-				updatedConditions := healthCheck.CheckGarden(ctx, []gardencorev1beta1.Condition{
+				healthCheck := NewHealth(garden, runtimeClient, gardenClientSet, fakeClock, gardenNamespace)
+				updatedConditions := healthCheck.Check(ctx, []gardencorev1beta1.Condition{
 					apiserverAvailabilityCondition,
 					runtimeComponentsHealthyCondition,
 					virtualComponentsHealthyCondition,
@@ -632,4 +637,161 @@ func newRuntimeDeployment(namespace, name, role string, healthy bool) *appsv1.De
 	deployment.Labels[v1beta1constants.LabelRole] = role
 	delete(deployment.Labels, v1beta1constants.GardenRole)
 	return deployment
+}
+
+func beConditionWithStatusReasonAndMessage(status gardencorev1beta1.ConditionStatus, reason, message string) types.GomegaMatcher {
+	return And(WithStatus(status), WithReason(reason), WithMessage(message))
+}
+
+func healthyManagedResource(name string) *resourcesv1alpha1.ManagedResource {
+	return managedResource(
+		name,
+		[]gardencorev1beta1.Condition{
+			{
+				Type:   resourcesv1alpha1.ResourcesApplied,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:   resourcesv1alpha1.ResourcesHealthy,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:   resourcesv1alpha1.ResourcesProgressing,
+				Status: gardencorev1beta1.ConditionFalse,
+			},
+		})
+}
+
+func notHealthyManagedResource(name string) *resourcesv1alpha1.ManagedResource {
+	return managedResource(
+		name,
+		[]gardencorev1beta1.Condition{
+			{
+				Type:   resourcesv1alpha1.ResourcesApplied,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:    resourcesv1alpha1.ResourcesHealthy,
+				Reason:  "NotHealthy",
+				Message: "Resources are not healthy",
+				Status:  gardencorev1beta1.ConditionFalse,
+			},
+			{
+				Type:   resourcesv1alpha1.ResourcesProgressing,
+				Status: gardencorev1beta1.ConditionFalse,
+			},
+		})
+}
+
+func notAppliedManagedResource(name string) *resourcesv1alpha1.ManagedResource {
+	return managedResource(
+		name,
+		[]gardencorev1beta1.Condition{
+			{
+				Type:    resourcesv1alpha1.ResourcesApplied,
+				Reason:  "NotApplied",
+				Message: "Resources are not applied",
+				Status:  gardencorev1beta1.ConditionFalse,
+			},
+			{
+				Type:   resourcesv1alpha1.ResourcesHealthy,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:   resourcesv1alpha1.ResourcesProgressing,
+				Status: gardencorev1beta1.ConditionFalse,
+			},
+		})
+}
+
+func progressingManagedResource(name string) *resourcesv1alpha1.ManagedResource {
+	return managedResource(
+		name,
+		[]gardencorev1beta1.Condition{
+			{
+				Type:   resourcesv1alpha1.ResourcesApplied,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:   resourcesv1alpha1.ResourcesHealthy,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:    resourcesv1alpha1.ResourcesProgressing,
+				Reason:  "ResourcesProgressing",
+				Message: "Resources are progressing",
+				Status:  gardencorev1beta1.ConditionTrue,
+			},
+		})
+}
+
+func managedResource(name string, conditions []gardencorev1beta1.Condition) *resourcesv1alpha1.ManagedResource {
+	namespace := v1beta1constants.GardenNamespace
+	if name == "istio-system" || strings.HasSuffix(name, "istio") {
+		namespace = v1beta1constants.IstioSystemNamespace
+	}
+
+	return &resourcesv1alpha1.ManagedResource{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Status: resourcesv1alpha1.ManagedResourceStatus{
+			Conditions: conditions,
+		},
+	}
+}
+
+func roleLabels(role string) map[string]string {
+	return map[string]string{v1beta1constants.GardenRole: role}
+}
+
+func newDeployment(namespace, name, role string, healthy bool) *appsv1.Deployment {
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+			Labels:    roleLabels(role),
+		},
+	}
+	if healthy {
+		deployment.Status = appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{{
+			Type:   appsv1.DeploymentAvailable,
+			Status: corev1.ConditionTrue,
+		}}}
+	}
+	return deployment
+}
+
+func newStatefulSet(namespace, name, role string, healthy bool) *appsv1.StatefulSet {
+	statefulSet := &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+			Labels:    roleLabels(role),
+		},
+	}
+	if healthy {
+		statefulSet.Status.ReadyReplicas = 1
+	}
+
+	return statefulSet
+}
+
+func newEtcd(namespace, name, role string, healthy bool, lastError *string) *druidv1alpha1.Etcd {
+	etcd := &druidv1alpha1.Etcd{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+			Labels:    roleLabels(role),
+		},
+	}
+	if healthy {
+		etcd.Status.Ready = pointer.Bool(true)
+	} else {
+		etcd.Status.Ready = pointer.Bool(false)
+		etcd.Status.LastError = lastError
+	}
+
+	return etcd
 }
