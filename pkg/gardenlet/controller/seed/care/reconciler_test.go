@@ -199,16 +199,16 @@ var _ = Describe("Seed Care Control", func() {
 
 type resultingConditionFunc func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
 
-func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
-	return func(*gardencorev1beta1.Seed, client.Client, clock.Clock, *string, bool, bool) HealthCheck {
-		return fn
-	}
-}
-
-func (c resultingConditionFunc) CheckSeed(_ context.Context,
+func (c resultingConditionFunc) Check(_ context.Context,
 	conditions []gardencorev1beta1.Condition,
 	_ map[gardencorev1beta1.ConditionType]time.Duration,
 	_ *gardencorev1beta1.LastOperation,
 ) []gardencorev1beta1.Condition {
 	return c(conditions)
+}
+
+func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
+	return func(*gardencorev1beta1.Seed, client.Client, clock.Clock, *string, bool, bool) HealthCheck {
+		return fn
+	}
 }

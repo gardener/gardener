@@ -41,6 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/seedsystem"
 	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/operation/care"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -53,8 +54,8 @@ var requiredManagedResourcesSeed = sets.New(
 	vpa.ManagedResourceControlName,
 )
 
-// SeedHealth contains information needed to execute health checks for seed.
-type SeedHealth struct {
+// Health contains information needed to execute health checks for a seed.
+type Health struct {
 	seed           *gardencorev1beta1.Seed
 	seedClient     client.Client
 	clock          clock.Clock
@@ -63,9 +64,9 @@ type SeedHealth struct {
 	loggingEnabled bool
 }
 
-// NewHealthForSeed creates a new Health instance with the given parameters.
-func NewHealthForSeed(seed *gardencorev1beta1.Seed, seedClient client.Client, clock clock.Clock, namespace *string, seedIsGarden bool, loggingEnabled bool) *SeedHealth {
-	return &SeedHealth{
+// NewHealth creates a new Health instance with the given parameters.
+func NewHealth(seed *gardencorev1beta1.Seed, seedClient client.Client, clock clock.Clock, namespace *string, seedIsGarden bool, loggingEnabled bool) *Health {
+	return &Health{
 		seedClient:     seedClient,
 		seed:           seed,
 		clock:          clock,
@@ -75,8 +76,8 @@ func NewHealthForSeed(seed *gardencorev1beta1.Seed, seedClient client.Client, cl
 	}
 }
 
-// CheckSeed conducts the health checks on all the given conditions.
-func (h *SeedHealth) CheckSeed(
+// Check conducts the health checks on all the given conditions.
+func (h *Health) Check(
 	ctx context.Context,
 	conditions []gardencorev1beta1.Condition,
 	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
@@ -91,14 +92,14 @@ func (h *SeedHealth) CheckSeed(
 		}
 	}
 
-	checker := NewHealthChecker(h.seedClient, h.clock, thresholdMappings, nil, nil, lastOperation, nil)
+	checker := care.NewHealthChecker(h.seedClient, h.clock, thresholdMappings, nil, nil, lastOperation, nil)
 	newSystemComponentsCondition, err := h.checkSeedSystemComponents(ctx, checker, systemComponentsCondition)
-	return []gardencorev1beta1.Condition{NewConditionOrError(h.clock, systemComponentsCondition, newSystemComponentsCondition, err)}
+	return []gardencorev1beta1.Condition{care.NewConditionOrError(h.clock, systemComponentsCondition, newSystemComponentsCondition, err)}
 }
 
-func (h *SeedHealth) checkSeedSystemComponents(
+func (h *Health) checkSeedSystemComponents(
 	ctx context.Context,
-	checker *HealthChecker,
+	checker *care.HealthChecker,
 	condition gardencorev1beta1.Condition,
 ) (
 	*gardencorev1beta1.Condition,
@@ -147,7 +148,7 @@ func (h *SeedHealth) checkSeedSystemComponents(
 			return nil, err
 		}
 
-		if exitCondition := checkManagedResourceForSeed(checker, condition, mr); exitCondition != nil {
+		if exitCondition := checkManagedResourceForSeed(checker, condition, mr, h.clock); exitCondition != nil {
 			return exitCondition, nil
 		}
 	}
@@ -156,12 +157,12 @@ func (h *SeedHealth) checkSeedSystemComponents(
 	return &c, nil
 }
 
-func checkManagedResourceForSeed(checker *HealthChecker, condition gardencorev1beta1.Condition, managedResource *resourcesv1alpha1.ManagedResource) *gardencorev1beta1.Condition {
+func checkManagedResourceForSeed(checker *care.HealthChecker, condition gardencorev1beta1.Condition, managedResource *resourcesv1alpha1.ManagedResource, clock clock.Clock) *gardencorev1beta1.Condition {
 	conditionsToCheck := map[gardencorev1beta1.ConditionType]func(condition gardencorev1beta1.Condition) bool{
-		resourcesv1alpha1.ResourcesApplied:     defaultSuccessfulCheck(),
-		resourcesv1alpha1.ResourcesHealthy:     defaultSuccessfulCheck(),
-		resourcesv1alpha1.ResourcesProgressing: resourcesNotProgressingCheck(checker.clock, nil),
+		resourcesv1alpha1.ResourcesApplied:     care.DefaultSuccessfulCheck(),
+		resourcesv1alpha1.ResourcesHealthy:     care.DefaultSuccessfulCheck(),
+		resourcesv1alpha1.ResourcesProgressing: care.ResourcesNotProgressingCheck(clock, nil),
 	}
 
-	return checker.checkManagedResourceConditions(condition, managedResource, conditionsToCheck)
+	return checker.CheckManagedResourceConditions(condition, managedResource, conditionsToCheck)
 }
