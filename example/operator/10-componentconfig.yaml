@@ -55,6 +55,8 @@ controllers:
       duration: 1m
     - type: VirtualGardenAPIServerAvailable
       duration: 1m
+    - type: ObservabilityComponentsHealthy
+      duration: 1m
     # backupLeaderElection:
     #   reelectionPeriod: 5s
     #   etcdConnectionTimeout: 5s

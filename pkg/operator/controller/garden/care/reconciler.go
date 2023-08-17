@@ -76,6 +76,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		operatorv1alpha1.VirtualGardenAPIServerAvailable,
 		operatorv1alpha1.RuntimeComponentsHealthy,
 		operatorv1alpha1.VirtualComponentsHealthy,
+		operatorv1alpha1.ObservabilityComponentsHealthy,
 	}
 	var conditions []gardencorev1beta1.Condition
 	for _, cond := range conditionTypes {

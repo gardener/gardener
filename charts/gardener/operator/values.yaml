@@ -83,6 +83,8 @@ config:
         duration: 1m
       - type: VirtualGardenAPIServerAvailable
         duration: 1m
+      - type: ObservabilityComponentsHealthy
+        duration: 1m
     networkPolicy:
       concurrentSyncs: 5
     # additionalNamespaceSelectors:

@@ -19,6 +19,7 @@ import (
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
@@ -77,6 +78,8 @@ var (
 		virtualGardenPrefix+v1beta1constants.ETCDMain,
 		virtualGardenPrefix+v1beta1constants.ETCDEvents,
 	)
+
+	virtualGardenMonitoringSelector = labels.SelectorFromSet(map[string]string{v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring})
 )
 
 // GardenHealth contains information needed to execute health checks for garden.
@@ -110,6 +113,7 @@ func (h *GardenHealth) CheckGarden(
 		apiServerAvailability      gardencorev1beta1.Condition
 		runtimeComponentsCondition gardencorev1beta1.Condition
 		virtualComponentsCondition gardencorev1beta1.Condition
+		observabilityCondition     gardencorev1beta1.Condition
 	)
 	for _, cond := range conditions {
 		switch cond.Type {
@@ -119,10 +123,12 @@ func (h *GardenHealth) CheckGarden(
 			runtimeComponentsCondition = cond
 		case operatorv1alpha1.VirtualComponentsHealthy:
 			virtualComponentsCondition = cond
+		case operatorv1alpha1.ObservabilityComponentsHealthy:
+			observabilityCondition = cond
 		}
 	}
 
-	checker := NewHealthChecker(h.runtimeClient, h.clock, thresholdMappings, nil, nil, lastOperation, nil, nil)
+	checker := NewHealthChecker(h.runtimeClient, h.clock, thresholdMappings, nil, nil, lastOperation, nil)
 
 	taskFns := []flow.TaskFn{
 		func(ctx context.Context) error {
@@ -139,6 +145,11 @@ func (h *GardenHealth) CheckGarden(
 			virtualComponentsCondition = NewConditionOrError(h.clock, virtualComponentsCondition, newVirtualComponentsCondition, err)
 			return nil
 		},
+		func(ctx context.Context) error {
+			newObservabilityCondition, err := h.checkObservabilityComponents(ctx, checker, observabilityCondition)
+			observabilityCondition = NewConditionOrError(h.clock, observabilityCondition, newObservabilityCondition, err)
+			return nil
+		},
 	}
 
 	_ = flow.Parallel(taskFns...)(ctx)
@@ -147,6 +158,7 @@ func (h *GardenHealth) CheckGarden(
 		runtimeComponentsCondition,
 		virtualComponentsCondition,
 		apiServerAvailability,
+		observabilityCondition,
 	}
 }
 
@@ -222,6 +234,22 @@ func (h *GardenHealth) checkManagedResources(
 		}
 	}
 	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, successReason, successMessage)
+	return &c, nil
+}
+
+// checkObservabilityComponents checks whether the  observability components of the virtual garden control plane (Prometheus, Vali, Plutono..) are healthy.
+func (h *GardenHealth) checkObservabilityComponents(ctx context.Context, checker *HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
+	requiredDeployments := requiredMonitoringDeployments.Clone()
+
+	if exitCondition, err := checker.checkMonitoringControlPlane(ctx, h.gardenNamespace, requiredDeployments, sets.New[string](), virtualGardenMonitoringSelector, condition); err != nil || exitCondition != nil {
+		return exitCondition, err
+	}
+
+	if exitCondition, err := checker.CheckLoggingControlPlane(ctx, h.gardenNamespace, false, false, true, condition); err != nil || exitCondition != nil {
+		return exitCondition, err
+	}
+
+	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ObservabilityComponentsRunning", "All observability components are healthy.")
 	return &c, nil
 }
 

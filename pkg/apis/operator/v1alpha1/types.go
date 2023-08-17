@@ -577,6 +577,8 @@ const (
 	VirtualComponentsHealthy gardencorev1beta1.ConditionType = "VirtualComponentsHealthy"
 	// VirtualGardenAPIServerAvailable is a constant for a condition type indicating that the virtual garden's API server is available.
 	VirtualGardenAPIServerAvailable gardencorev1beta1.ConditionType = "VirtualGardenAPIServerAvailable"
+	// ObservabilityComponentsHealthy is a constant for a condition type indicating the health of observability components.
+	ObservabilityComponentsHealthy gardencorev1beta1.ConditionType = "ObservabilityComponentsHealthy"
 )
 
 // AvailableOperationAnnotations is the set of available operation annotations for Garden resources.
