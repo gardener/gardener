@@ -23,15 +23,29 @@ echo "> Checking Plutono dashboards"
 
 
 function check_dashboards {
-  while IFS= read -r file
-  do 
-    jq -c -r '{title: (.title // error("title is not set")),
-               uid:   (.uid   // error("uid is not set"))}
-              | "\(input_filename) \(.uid)"' "$file" \
-    || { echo "Error: Failure while parsing dashboard: $file" >&2; return 1; }
-  done < <(find . -path '*/dashboards/*' -name '*.json' -type f) \
+  find . -path '*/dashboards/*' -name '*.json' -type f \
+  | while IFS= read -r file; do
+
+      if jq -e '.title == "" or .uid == ""' "$file" >/dev/null; then
+          echo "Error: Title or UID is empty in dashboard: $file" >&2
+          return 1
+      fi
+
+      jq -c -r '{title: (.title // error("title is not set")),
+                 uid:   (.uid   // error("uid is not set"))}
+                | if (.uid | length) > 40
+                    then error("uid is too long (max length is 40 characters): \(.uid)")
+                    else .
+                  end
+                | "\(input_filename) \(.uid)"' "$file" \
+      || { echo "Error: Failure while parsing dashboard: $file" >&2; return 1; }
+
+    done \
   | sort -k 2 | uniq -D -f 1 \
-  | { grep . && echo "Error: dashboards with duplicate UIDs" >&2 && return 1 || return 0; }
+  | { grep . && echo "Error: Dashboards with duplicate UIDs" >&2 && return 1 || return 0; }
 }
 
 check_dashboards
+
+
+
