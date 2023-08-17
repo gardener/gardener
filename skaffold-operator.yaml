@@ -125,7 +125,6 @@ build:
         - pkg/component/plutono
         - pkg/component/resourcemanager
         - pkg/component/resourcemanager/constants
-        - pkg/component/seedsystem
         - pkg/component/shootsystem
         - pkg/component/shared
         - pkg/component/vpa

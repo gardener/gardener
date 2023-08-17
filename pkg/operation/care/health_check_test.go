@@ -1406,3 +1406,7 @@ var _ = Describe("health check", func() {
 			ConsistOf(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
 	)
 })
+
+func beConditionWithStatusReasonAndMessage(status gardencorev1beta1.ConditionStatus, reason, message string) types.GomegaMatcher {
+	return And(WithStatus(status), WithReason(reason), WithMessage(message))
+}
