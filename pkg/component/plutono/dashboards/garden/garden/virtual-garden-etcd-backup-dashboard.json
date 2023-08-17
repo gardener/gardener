@@ -1278,7 +1278,50 @@
   "style": "dark",
   "tags": ["Gardener"],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "selected": true,
+          "text": "virtual-garden-etcd-main",
+          "value": "virtual-garden-etcd-main"
+        },
+        "datasource": null,
+        "definition": "label_values(etcdbr_network_received_bytes, role)",
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "cluster",
+        "options": [
+          {
+            "selected": false,
+            "text": "virtual-garden-etcd-events",
+            "value": "virtual-garden-etcd-events"
+          },
+          {
+            "selected": true,
+            "text": "virtual-garden-etcd-main",
+            "value": "virtual-garden-etcd-main"
+          }
+        ],
+        "query": {
+          "query": "label_values(etcdbr_network_received_bytes, role)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 0,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
   },
   "time": {
     "from": "now-30m",
