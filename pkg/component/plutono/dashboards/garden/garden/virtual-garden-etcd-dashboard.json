@@ -1433,35 +1433,43 @@
         "allValue": null,
         "current": {
           "selected": true,
-          "text": "main",
-          "value": "main"
+          "text": "virtual-garden-etcd-main",
+          "value": "virtual-garden-etcd-main"
         },
+        "datasource": null,
+        "definition": "label_values(etcd_cluster_version,role)",
+        "description": null,
+        "error": null,
         "hide": 0,
-        "includeAll": true,
+        "includeAll": false,
         "label": null,
         "multi": false,
         "name": "cluster",
         "options": [
           {
             "selected": false,
-            "text": "All",
-            "value": "$__all"
+            "text": "virtual-garden-etcd-events",
+            "value": "virtual-garden-etcd-events"
           },
           {
             "selected": true,
-            "text": "main",
-            "value": "main"
-          },
-          {
-            "selected": false,
-            "text": "events",
-            "value": "events"
+            "text": "virtual-garden-etcd-main",
+            "value": "virtual-garden-etcd-main"
           }
         ],
-        "query": "main, events",
-        "queryValue": "",
+        "query": {
+          "query": "label_values(etcd_cluster_version,role)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 0,
+        "regex": "",
         "skipUrlSync": false,
-        "type": "custom"
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
       }
     ]
   },
