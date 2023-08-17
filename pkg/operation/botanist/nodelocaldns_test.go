@@ -49,11 +49,6 @@ var _ = Describe("NodeLocalDNS", func() {
 		botanist = &Botanist{Operation: &operation.Operation{}}
 		botanist.Shoot = &shootpkg.Shoot{}
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-			ObjectMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{
-					v1beta1constants.AnnotationNodeLocalDNS: "true",
-				},
-			},
 			Spec: gardencorev1beta1.ShootSpec{
 				SystemComponents: &gardencorev1beta1.SystemComponents{
 					NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{

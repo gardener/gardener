@@ -1134,17 +1134,11 @@ func IsCoreDNSRewritingEnabled(featureGate bool, annotations map[string]string) 
 }
 
 // IsNodeLocalDNSEnabled indicates whether the node local DNS cache is enabled or not.
-// It can be enabled via the annotation (legacy) or via the shoot specification.
-func IsNodeLocalDNSEnabled(systemComponents *gardencorev1beta1.SystemComponents, annotations map[string]string) bool {
-	fromSpec := false
+func IsNodeLocalDNSEnabled(systemComponents *gardencorev1beta1.SystemComponents) bool {
 	if systemComponents != nil && systemComponents.NodeLocalDNS != nil {
-		fromSpec = systemComponents.NodeLocalDNS.Enabled
+		return systemComponents.NodeLocalDNS.Enabled
 	}
-	fromAnnotation := false
-	if annotationValue, err := strconv.ParseBool(annotations[v1beta1constants.AnnotationNodeLocalDNS]); err == nil {
-		fromAnnotation = annotationValue
-	}
-	return fromSpec || fromAnnotation
+	return false
 }
 
 // GetNodeLocalDNS returns a pointer to the NodeLocalDNS spec.

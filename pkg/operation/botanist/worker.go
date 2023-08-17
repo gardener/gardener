@@ -52,7 +52,7 @@ func (b *Botanist) DefaultWorker() worker.Interface {
 			Workers:             b.Shoot.GetInfo().Spec.Provider.Workers,
 			KubernetesVersion:   b.Shoot.KubernetesVersion,
 			MachineTypes:        b.Shoot.CloudProfile.Spec.MachineTypes,
-			NodeLocalDNSEnabled: v1beta1helper.IsNodeLocalDNSEnabled(b.Shoot.GetInfo().Spec.SystemComponents, b.Shoot.GetInfo().Annotations),
+			NodeLocalDNSEnabled: v1beta1helper.IsNodeLocalDNSEnabled(b.Shoot.GetInfo().Spec.SystemComponents),
 		},
 		worker.DefaultInterval,
 		worker.DefaultSevereThreshold,

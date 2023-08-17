@@ -78,8 +78,6 @@ type Values struct {
 	VPAEnabled bool
 	// Config is the node local configuration for the shoot spec
 	Config *gardencorev1beta1.NodeLocalDNS
-	// ShootAnnotations is a map of shoot annotations
-	ShootAnnotations map[string]string
 	// ClusterDNS is the ClusterIP of kube-system/coredns Service
 	ClusterDNS string
 	// DNSServer is the ClusterIP of kube-system/coredns Service
@@ -583,34 +581,14 @@ func (c *nodeLocalDNS) containerArg() string {
 }
 
 func (c *nodeLocalDNS) forceTcpToClusterDNS() string {
-	fromSpec := true
-	if c.values.Config != nil && c.values.Config.ForceTCPToClusterDNS != nil {
-		fromSpec = *c.values.Config.ForceTCPToClusterDNS
-	}
-
-	fromAnnotation := true
-	if annotationValue, err := strconv.ParseBool(c.values.ShootAnnotations[v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns]); err == nil {
-		fromAnnotation = annotationValue
-	}
-
-	if fromAnnotation && fromSpec {
+	if c.values.Config != nil && c.values.Config.ForceTCPToClusterDNS != nil && *c.values.Config.ForceTCPToClusterDNS {
 		return "force_tcp"
 	}
 	return "prefer_udp"
 }
 
 func (c *nodeLocalDNS) forceTcpToUpstreamDNS() string {
-	fromSpec := true
-	if c.values.Config != nil && c.values.Config.ForceTCPToUpstreamDNS != nil {
-		fromSpec = *c.values.Config.ForceTCPToUpstreamDNS
-	}
-
-	fromAnnotation := true
-	if annotationValue, err := strconv.ParseBool(c.values.ShootAnnotations[v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns]); err == nil {
-		fromAnnotation = annotationValue
-	}
-
-	if fromAnnotation && fromSpec {
+	if c.values.Config != nil && c.values.Config.ForceTCPToUpstreamDNS != nil && *c.values.Config.ForceTCPToUpstreamDNS {
 		return "force_tcp"
 	}
 	return "prefer_udp"
