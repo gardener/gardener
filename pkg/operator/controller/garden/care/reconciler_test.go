@@ -208,17 +208,17 @@ var _ = Describe("Garden Care Control", func() {
 
 type resultingConditionFunc func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
 
-func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
-	return func(*operatorv1alpha1.Garden, client.Client, kubernetes.Interface, clock.Clock, string) HealthCheck {
-		return fn
-	}
-}
-
-func (c resultingConditionFunc) CheckGarden(
+func (c resultingConditionFunc) Check(
 	_ context.Context,
 	conditions []gardencorev1beta1.Condition,
 	_ map[gardencorev1beta1.ConditionType]time.Duration,
 	_ *gardencorev1beta1.LastOperation,
 ) []gardencorev1beta1.Condition {
 	return c(conditions)
+}
+
+func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
+	return func(*operatorv1alpha1.Garden, client.Client, kubernetes.Interface, clock.Clock, string) HealthCheck {
+		return fn
+	}
 }
