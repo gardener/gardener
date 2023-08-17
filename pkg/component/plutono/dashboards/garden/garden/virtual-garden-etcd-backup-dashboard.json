@@ -1,9 +1,20 @@
 {
   "annotations": {
-    "list": []
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Plutono --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
   },
   "editable": false,
   "description": "Dashboard with information about the virtual garden etcd backups.",
+  "gnetId": null,
   "graphTooltip": 0,
   "id": 1,
   "iteration": 1542111230310,
@@ -36,6 +47,10 @@
       "description": "Timestamp of the latest snapshot successfully uploaded to the snapstore.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "dateTimeAsUS",
       "gauge": {
         "maxValue": 100,
@@ -68,7 +83,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -90,9 +104,11 @@
       "tableColumn": "",
       "targets": [
         {
+          "exemplar": true,
           "expr": "max(etcdbr_snapshot_latest_timestamp{role=\"$cluster\"})*1000",
           "format": "time_series",
           "instant": true,
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "",
           "metric": "etcdbr_snapshot_latest_timestamp",
@@ -126,6 +142,10 @@
       "description": "Maximum duration worth of possible data loss in the event that etcd data gets corrupted at this moment.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "dtdurations",
       "gauge": {
         "maxValue": 100,
@@ -158,7 +178,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -180,9 +199,11 @@
       "tableColumn": "",
       "targets": [
         {
+          "exemplar": true,
           "expr": "time()-max(etcdbr_snapshot_latest_timestamp{role=\"$cluster\"})",
           "format": "time_series",
           "instant": false,
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "",
           "metric": "etcdbr_snapshot_latest_timestamp",
@@ -216,6 +237,10 @@
       "description": "Latest revision of the data from the latest snapshot uploaded to the snapstore.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -248,7 +273,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -270,9 +294,11 @@
       "tableColumn": "",
       "targets": [
         {
+          "exemplar": true,
           "expr": "max(etcdbr_snapshot_latest_revision{role=\"$cluster\"})",
           "format": "time_series",
           "instant": true,
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "",
           "metric": "etcdbr_snapshot_latest_revision",
@@ -295,8 +321,8 @@
     },
     {
       "aliasColors": {
-        "Succeeded": "green",
-        "Failed": "red"
+        "Failed": "red",
+        "Succeeded": "green"
       },
       "bars": false,
       "dashLength": 10,
@@ -305,6 +331,12 @@
       "description": "Total number of full snapshots successfully uploaded to the snapstore, as well as total number of failed attempts for the same, over time.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -330,9 +362,10 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.17",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -343,8 +376,10 @@
       "steppedLine": true,
       "targets": [
         {
+          "exemplar": true,
           "expr": "etcdbr_snapshot_duration_seconds_count{role=\"$cluster\",kind=\"Full\",succeeded=\"true\"}",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Succeeded",
           "metric": "etcdbr_snapshot_duration_seconds_count",
@@ -352,8 +387,10 @@
           "step": 2
         },
         {
+          "exemplar": true,
           "expr": "etcdbr_snapshot_duration_seconds_count{role=\"$cluster\",kind=\"Full\",succeeded=\"false\"}",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Failed",
           "metric": "etcdbr_snapshot_duration_seconds_count",
@@ -382,6 +419,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:196",
           "decimals": 0,
           "format": "none",
           "label": null,
@@ -391,6 +429,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:197",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -406,8 +445,8 @@
     },
     {
       "aliasColors": {
-        "Succeeded": "green",
-        "Failed": "red"
+        "Failed": "red",
+        "Succeeded": "green"
       },
       "bars": false,
       "dashLength": 10,
@@ -416,6 +455,12 @@
       "description": "Total number of delta snapshots successfully uploaded to the snapstore, as well as total number of failed attempts for the same, over time.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -441,9 +486,10 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.17",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -454,8 +500,10 @@
       "steppedLine": true,
       "targets": [
         {
+          "exemplar": true,
           "expr": "etcdbr_snapshot_duration_seconds_count{role=\"$cluster\",kind=\"Incr\",succeeded=\"true\"}",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Succeeded",
           "metric": "etcdbr_snapshot_duration_seconds_count",
@@ -463,8 +511,10 @@
           "step": 2
         },
         {
+          "exemplar": true,
           "expr": "etcdbr_snapshot_duration_seconds_count{role=\"$cluster\",kind=\"Incr\",succeeded=\"false\"}",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Failed",
           "metric": "etcdbr_snapshot_duration_seconds_count",
@@ -493,6 +543,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:248",
           "decimals": 0,
           "format": "none",
           "label": null,
@@ -502,6 +553,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:249",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -517,8 +569,8 @@
     },
     {
       "aliasColors": {
-        "Succeeded": "green",
-        "Failed": "red"
+        "Failed": "red",
+        "Succeeded": "green"
       },
       "bars": false,
       "dashLength": 10,
@@ -527,6 +579,12 @@
       "description": "Total number of snapshots successfully garbage-collected from the snapstore, as well as total number of failed attempts for the same, over time.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -552,9 +610,10 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.17",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -565,7 +624,9 @@
       "steppedLine": false,
       "targets": [
         {
+          "exemplar": true,
           "expr": "sum(etcdbr_snapshot_gc_total{role=\"$cluster\",succeeded=\"true\",kind=~\"Full|Incr\"})",
+          "interval": "",
           "intervalFactor": 2,
           "legendFormat": "Succeeded",
           "metric": "etcdbr_snapshot_gc_total",
@@ -573,7 +634,9 @@
           "step": 4
         },
         {
+          "exemplar": true,
           "expr": "sum(etcdbr_snapshot_gc_total{role=\"$cluster\",succeeded=\"false\",kind=~\"Full|Incr\"})",
+          "interval": "",
           "legendFormat": "Failed",
           "refId": "B"
         }
@@ -599,6 +662,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:300",
           "decimals": 0,
           "format": "none",
           "label": null,
@@ -608,6 +672,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:301",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -623,8 +688,8 @@
     },
     {
       "aliasColors": {
-        "Succeeded": "green",
-        "Failed": "red"
+        "Failed": "red",
+        "Succeeded": "green"
       },
       "bars": false,
       "dashLength": 10,
@@ -633,6 +698,12 @@
       "description": "Total number of successful and failed attempts to defragment the etcd data store over time.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -658,9 +729,10 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.17",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -671,8 +743,10 @@
       "steppedLine": true,
       "targets": [
         {
+          "exemplar": true,
           "expr": "etcdbr_defragmentation_duration_seconds_count{role=\"$cluster\",succeeded=\"true\"}",
           "instant": false,
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Succeeded",
           "metric": "etcdbr_defragmentation_duration_seconds_count",
@@ -680,8 +754,10 @@
           "step": 4
         },
         {
+          "exemplar": true,
           "expr": "etcdbr_defragmentation_duration_seconds_count{role=\"$cluster\",succeeded=\"false\"}",
           "instant": false,
+          "interval": "",
           "legendFormat": "Failed",
           "refId": "B"
         }
@@ -707,6 +783,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:352",
           "decimals": 0,
           "format": "none",
           "label": null,
@@ -716,6 +793,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:353",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -738,6 +816,12 @@
       "description": "Duration of taking full and delta snapshots over time.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -763,9 +847,10 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.17",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -776,9 +861,11 @@
       "steppedLine": true,
       "targets": [
         {
+          "exemplar": true,
           "expr": "histogram_quantile(0.99, sum(rate(etcdbr_snapshot_duration_seconds_bucket{role=\"$cluster\",kind=\"Full\"}[2h])) by (le))",
           "hide": false,
           "instant": false,
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Full",
           "metric": "etcdbr_snapshot_duration_seconds_bucket",
@@ -786,9 +873,11 @@
           "step": 4
         },
         {
+          "exemplar": true,
           "expr": "histogram_quantile(0.99, sum(rate(etcdbr_snapshot_duration_seconds_bucket{role=\"$cluster\",kind=\"Incr\"}[10m])) by (le))",
           "hide": false,
           "instant": false,
+          "interval": "",
           "legendFormat": "Delta",
           "refId": "B"
         }
@@ -814,6 +903,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:404",
           "decimals": null,
           "format": "s",
           "label": null,
@@ -823,6 +913,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:405",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -838,8 +929,8 @@
     },
     {
       "aliasColors": {
-        "Succeeded": "green",
-        "Failed": "red"
+        "Failed": "red",
+        "Succeeded": "green"
       },
       "bars": false,
       "dashLength": 10,
@@ -848,6 +939,12 @@
       "description": "Total number of successful and failed attempts at etcd data validations over time.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -873,9 +970,10 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.17",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -886,8 +984,10 @@
       "steppedLine": true,
       "targets": [
         {
+          "exemplar": true,
           "expr": "etcdbr_validation_duration_seconds_count{role=\"$cluster\",succeeded=\"true\"}",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Succeeded",
           "metric": "etcdbr_validation_duration_seconds_count",
@@ -895,9 +995,11 @@
           "step": 2
         },
         {
+          "exemplar": true,
           "expr": "etcdbr_validation_duration_seconds_count{role=\"$cluster\",succeeded=\"false\"}",
           "format": "time_series",
           "hide": false,
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Failed",
           "metric": "etcdbr_validation_duration_seconds_count",
@@ -926,6 +1028,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:507",
           "decimals": 0,
           "format": "none",
           "label": null,
@@ -935,6 +1038,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:508",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -950,8 +1054,8 @@
     },
     {
       "aliasColors": {
-        "Succeeded": "green",
-        "Failed": "red"
+        "Failed": "red",
+        "Succeeded": "green"
       },
       "bars": false,
       "dashLength": 10,
@@ -960,6 +1064,12 @@
       "description": "Total number of successful and failed attempts at etcd data restorations over time.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -985,9 +1095,10 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.17",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -998,8 +1109,10 @@
       "steppedLine": true,
       "targets": [
         {
+          "exemplar": true,
           "expr": "etcdbr_restoration_duration_seconds_count{role=\"$cluster\",succeeded=\"true\"}",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Succeeded",
           "metric": "etcdbr_restoration_duration_seconds_count",
@@ -1007,9 +1120,11 @@
           "step": 2
         },
         {
+          "exemplar": true,
           "expr": "etcdbr_restoration_duration_seconds_count{role=\"$cluster\",succeeded=\"false\"}",
           "format": "time_series",
           "hide": false,
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Failed",
           "metric": "etcdbr_restoration_duration_seconds_count",
@@ -1038,6 +1153,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:559",
           "decimals": 0,
           "format": "none",
           "label": null,
@@ -1047,6 +1163,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:560",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -1083,6 +1200,12 @@
       "description": "Memory consumed by etcd-backup-restore process over time.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -1108,9 +1231,10 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.17",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1121,8 +1245,10 @@
       "steppedLine": true,
       "targets": [
         {
+          "exemplar": true,
           "expr": "process_resident_memory_bytes{role=\"$cluster\",job=\"virtual-garden-etcd-backup\"}",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Memory",
           "metric": "process_resident_memory_bytes",
@@ -1151,6 +1277,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:611",
           "decimals": 0,
           "format": "decbytes",
           "label": null,
@@ -1160,6 +1287,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:612",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -1182,6 +1310,12 @@
       "description": "Total CPU usage by etcd-backup-restore process as a percentage of total available CPU to the container, over time.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -1207,9 +1341,10 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.17",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1220,8 +1355,10 @@
       "steppedLine": true,
       "targets": [
         {
+          "exemplar": true,
           "expr": "rate(process_cpu_seconds_total{role=\"$cluster\",job=\"virtual-garden-etcd-backup\"}[5m]) * 100",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "CPU",
           "metric": "process_cpu_seconds_total",
@@ -1250,6 +1387,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:663",
           "decimals": 0,
           "format": "percent",
           "label": null,
@@ -1259,6 +1397,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:664",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -1274,7 +1413,7 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 21,
+  "schemaVersion": 27,
   "style": "dark",
   "tags": ["Gardener"],
   "templating": {
