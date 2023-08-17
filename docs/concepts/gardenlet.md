@@ -308,6 +308,14 @@ If there are no extension resources anymore, its status will be `False`.
 
 This condition is taken into account by the `ControllerRegistration` controller part of `gardener-controller-manager` when it computes which extensions have to be deployed to which seed cluster. See [Gardener Controller Manager](controller-manager.md#controllerregistration-controller) for more details.
 
+### [`ManagedSeed` Controller](../../pkg/gardenlet/controller/managedseed)
+
+The `ManagedSeed` controller in the `gardenlet` reconciles `ManagedSeed` that refers to `Shoot` scheduled on `Seed` the gardenlet is responsible for. Additionally, the controller monitors `Seed`s, which are owned by `ManagedSeed`s referencing `Shoot`s scheduled on Seeds for which the gardenlet is designated as responsible.
+
+The controller waits for the referenced Shoot to undergo a reconciliation process. Once the Shoot is successfully reconciled, the controller sets the `ShootReconciled` status of the ManagedSeed to `true`. It creates `garden` namespace within the target Shoot cluster. The controller also manages secrets related to Seeds, such as `backups` and `kubeconfig`. It ensures that these secrets are created and updated in accordance with the specifications provided. Finally, it deploys the `gardenlet` within the specified Shoot cluster which will register the `Seed` cluster.
+
+On delete operation of `ManagedSeed`, it removes the corresponding `Seed` that was originally created by the controller. Subsequently it removes the `gardenlet` instance within the Shoot cluster. The controller also ensures the deletion of related Seed `secrets`, including backups and kubeconfig. Finally, the dedicated `garden` namespace within the Shoot cluster is deleted.
+
 ### [`NetworkPolicy` Controller](../../pkg/gardenlet/controller/networkpolicy)
 
 The `NetworkPolicy` controller reconciles `NetworkPolicy`s in all relevant namespaces in the seed cluster and provides so-called "general" policies for access to the runtime cluster's API server, DNS, public networks, etc.
