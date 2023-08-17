@@ -2259,13 +2259,14 @@ message SeedSettingDependencyWatchdogWeeder {
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed.
 message SeedSettingExcessCapacityReservation {
   // Enabled controls whether the default excess capacity reservation should be enabled.
+  // Deprecated: This field is deprecated and will be removed in a future version of Gardener. Please use `Configs` instead.
   optional bool enabled = 1;
 
-  // Configs configures additional excess capacity reservation deployments for shoot control planes in the seed.
+  // Configs configures excess capacity reservation deployments for shoot control planes in the seed.
   repeated SeedSettingExcessCapacityReservationConfig configs = 2;
 }
 
-// SeedSettingExcessCapacityReservationConfig configures additional excess capacity reservation deployments for shoot control planes in the seed.
+// SeedSettingExcessCapacityReservationConfig configures excess capacity reservation deployments for shoot control planes in the seed.
 message SeedSettingExcessCapacityReservationConfig {
   // Resources specify the resource requests and limits of the excess-capacity-reservation pod.
   map<string, k8s.io.apimachinery.pkg.api.resource.Quantity> resources = 1;

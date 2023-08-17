@@ -6591,7 +6591,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservation(ref commo
 				Properties: map[string]spec.Schema{
 					"enabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Enabled controls whether the default excess capacity reservation should be enabled.",
+							Description: "Enabled controls whether the default excess capacity reservation should be enabled. Deprecated: This field is deprecated and will be removed in a future version of Gardener. Please use `Configs` instead.",
 							Default:     false,
 							Type:        []string{"boolean"},
 							Format:      "",
@@ -6599,7 +6599,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservation(ref commo
 					},
 					"configs": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Configs configures additional excess capacity reservation deployments for shoot control planes in the seed.",
+							Description: "Configs configures excess capacity reservation deployments for shoot control planes in the seed.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -6624,7 +6624,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservationConfig(ref
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "SeedSettingExcessCapacityReservationConfig configures additional excess capacity reservation deployments for shoot control planes in the seed.",
+				Description: "SeedSettingExcessCapacityReservationConfig configures excess capacity reservation deployments for shoot control planes in the seed.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"resources": {

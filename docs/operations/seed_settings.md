@@ -42,12 +42,13 @@ Instead, the low-priority `pause` pods will be preempted and allow newly created
 In the meantime, the cluster-autoscaler will trigger the scale-up because the preempted `pause` pods want to run again.
 However, this delay doesn't affect the important shoot control plane pods, which will improve the user experience.
 
-It can be enabled/disabled via the `.spec.settings.excessCapacityReservation.enabled` field.
-It defaults to `true`. 
-When enabled, it creates a deployment with a minium number of 2 replicas and a maximum equal to the number of zones configured for this seed.
-Each deployment reserves 2 CPUs and 6Gi of memory.
+Use `.spec.settings.excessCapacityReservation.configs` to create excess capacity reservation deployments which allow to specify custom values for `resources`, `nodeSelector` and `tolerations`. Each config creates a deployment with a minium number of 2 replicas and a maximum equal to the number of zones configured for this seed.  
+It defaults to a config reserving 2 CPUs and 6Gi of memory for each pod with no `nodeSelector` and no `tolerations`.
 
-Use `.spec.settings.excessCapacityReservation.configs` to create additional excess capacity reservation deployments which allow to specify custom values for `resources`, `nodeSelector` and `tolerations`.
+A default config can also be enabled/disabled via the `.spec.settings.excessCapacityReservation.enabled` field.  
+When enabled, it creates a deployment with a minium number of 2 replicas and a maximum equal to the number of zones configured for this seed.
+Each pod reserves 2 CPUs and 6Gi of memory.  
+:warning: `.spec.settings.excessCapacityReservation.enabled` is deprecated and will be removed in a future version of Gardener. Use `.spec.settings.excessCapacityReservation.configs` instead.
 
 ## Scheduling
 

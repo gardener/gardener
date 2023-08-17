@@ -292,7 +292,11 @@ var _ = Describe("ControllerInstallation controller tests", func() {
           weeder:
             enabled: true
         excessCapacityReservation:
-          enabled: true
+          configs:
+          - resources:
+              cpu: "2"
+              memory: 6Gi
+          enabled: false
         scheduling:
           visible: true
         topologyAwareRouting:

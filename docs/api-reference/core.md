@@ -9127,7 +9127,8 @@ bool
 </em>
 </td>
 <td>
-<p>Enabled controls whether the default excess capacity reservation should be enabled.</p>
+<p>Enabled controls whether the default excess capacity reservation should be enabled.
+Deprecated: This field is deprecated and will be removed in a future version of Gardener. Please use <code>Configs</code> instead.</p>
 </td>
 </tr>
 <tr>
@@ -9140,7 +9141,7 @@ bool
 </em>
 </td>
 <td>
-<p>Configs configures additional excess capacity reservation deployments for shoot control planes in the seed.</p>
+<p>Configs configures excess capacity reservation deployments for shoot control planes in the seed.</p>
 </td>
 </tr>
 </tbody>
@@ -9152,7 +9153,7 @@ bool
 <a href="#core.gardener.cloud/v1beta1.SeedSettingExcessCapacityReservation">SeedSettingExcessCapacityReservation</a>)
 </p>
 <p>
-<p>SeedSettingExcessCapacityReservationConfig configures additional excess capacity reservation deployments for shoot control planes in the seed.</p>
+<p>SeedSettingExcessCapacityReservationConfig configures excess capacity reservation deployments for shoot control planes in the seed.</p>
 </p>
 <table>
 <thead>

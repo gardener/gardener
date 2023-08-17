@@ -52,7 +52,13 @@ func SetDefaults_Seed(obj *Seed) {
 	}
 
 	if obj.Spec.Settings.ExcessCapacityReservation == nil {
-		obj.Spec.Settings.ExcessCapacityReservation = &SeedSettingExcessCapacityReservation{Enabled: true}
+		obj.Spec.Settings.ExcessCapacityReservation = &SeedSettingExcessCapacityReservation{
+			Enabled: false,
+			Configs: []SeedSettingExcessCapacityReservationConfig{
+				// This roughly corresponds to a single, moderately large control-plane.
+				{Resources: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("2"), corev1.ResourceMemory: resource.MustParse("6Gi")}},
+			},
+		}
 	}
 
 	if obj.Spec.Settings.Scheduling == nil {
