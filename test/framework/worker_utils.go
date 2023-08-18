@@ -16,9 +16,8 @@ package framework
 
 import (
 	"fmt"
+	"slices"
 	"strings"
-
-	"k8s.io/utils/strings/slices"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"

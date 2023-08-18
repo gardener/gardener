@@ -17,6 +17,7 @@ package shared
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
@@ -32,7 +33,6 @@ import (
 	admissionapiv1alpha1 "k8s.io/pod-security-admission/admission/api/v1alpha1"
 	admissionapiv1beta1 "k8s.io/pod-security-admission/admission/api/v1beta1"
 	"k8s.io/utils/pointer"
-	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
