@@ -1724,6 +1724,6 @@
   },
   "timezone": "utc",
   "title": "Gardener Control Plane",
-  "uid": "control-plane"
+  "uid": "gardener-control-plane",
   "version": 1
 }

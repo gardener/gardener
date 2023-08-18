@@ -1524,6 +1524,6 @@
   },
   "timezone": "browser",
   "title": "Virtual Garden ETCD",
-  "uid": "etcd",
+  "uid": "virtual-garden-etcd",
   "version": 1
 }

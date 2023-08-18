@@ -1496,6 +1496,6 @@
   },
   "timezone": "browser",
   "title": "Virtual Garden ETCD Backup Dashboard",
-  "uid": "etcd-backup-restore",
+  "uid": "virtual-garden-etcd-backup-restore",
   "version": 1
 }

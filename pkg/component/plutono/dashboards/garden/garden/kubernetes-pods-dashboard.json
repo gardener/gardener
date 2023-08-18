@@ -494,6 +494,6 @@
   },
   "timezone": "browser",
   "title": "Kubernetes Pods",
-  "uid": "kube-pods",
+  "uid": "gardener-kube-pods",
   "version": 1
 }
