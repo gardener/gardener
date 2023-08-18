@@ -581,14 +581,14 @@ func (c *nodeLocalDNS) containerArg() string {
 }
 
 func (c *nodeLocalDNS) forceTcpToClusterDNS() string {
-	if c.values.Config != nil && c.values.Config.ForceTCPToClusterDNS != nil && *c.values.Config.ForceTCPToClusterDNS {
+	if c.values.Config == nil || c.values.Config.ForceTCPToClusterDNS == nil || *c.values.Config.ForceTCPToClusterDNS {
 		return "force_tcp"
 	}
 	return "prefer_udp"
 }
 
 func (c *nodeLocalDNS) forceTcpToUpstreamDNS() string {
-	if c.values.Config != nil && c.values.Config.ForceTCPToUpstreamDNS != nil && *c.values.Config.ForceTCPToUpstreamDNS {
+	if c.values.Config == nil || c.values.Config.ForceTCPToUpstreamDNS == nil || *c.values.Config.ForceTCPToUpstreamDNS {
 		return "force_tcp"
 	}
 	return "prefer_udp"

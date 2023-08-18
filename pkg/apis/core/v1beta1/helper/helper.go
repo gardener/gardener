@@ -1135,10 +1135,7 @@ func IsCoreDNSRewritingEnabled(featureGate bool, annotations map[string]string) 
 
 // IsNodeLocalDNSEnabled indicates whether the node local DNS cache is enabled or not.
 func IsNodeLocalDNSEnabled(systemComponents *gardencorev1beta1.SystemComponents) bool {
-	if systemComponents != nil && systemComponents.NodeLocalDNS != nil {
-		return systemComponents.NodeLocalDNS.Enabled
-	}
-	return false
+	return systemComponents != nil && systemComponents.NodeLocalDNS != nil && systemComponents.NodeLocalDNS.Enabled
 }
 
 // GetNodeLocalDNS returns a pointer to the NodeLocalDNS spec.

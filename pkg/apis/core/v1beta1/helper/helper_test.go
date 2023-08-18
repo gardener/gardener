@@ -2240,8 +2240,8 @@ var _ = Describe("helper", func() {
 
 		Entry("with nil (disabled)", nil, false),
 		Entry("with empty system components", &gardencorev1beta1.SystemComponents{}, false),
-		Entry("with system components and node-local-dns is disabled", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true}}, true),
-		Entry("with system components is enabled", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false}}, false),
+		Entry("with system components and node-local-dns is enabled", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true}}, true),
+		Entry("with system components and node-local-dns is disabled", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false}}, false),
 	)
 
 	DescribeTable("#GetNodeLocalDNS",
