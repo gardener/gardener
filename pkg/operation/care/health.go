@@ -543,6 +543,25 @@ func CheckShootMonitoringControlPlane(
 	return checker.CheckMonitoringControlPlane(ctx, namespace, computeRequiredMonitoringSeedDeployments(shoot), computeRequiredMonitoringStatefulSets(wantsAlertmanager), monitoringSelector, condition)
 }
 
+// computeRequiredMonitoringStatefulSets determine the required monitoring statefulsets
+// which should exist next to the control plane.
+func computeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.Set[string] {
+	var requiredMonitoringStatefulSets = sets.New(v1beta1constants.StatefulSetNamePrometheus)
+	if wantsAlertmanager {
+		requiredMonitoringStatefulSets.Insert(v1beta1constants.StatefulSetNameAlertManager)
+	}
+	return requiredMonitoringStatefulSets
+}
+
+func computeRequiredMonitoringSeedDeployments(shoot *gardencorev1beta1.Shoot) sets.Set[string] {
+	requiredDeployments := requiredMonitoringDeployments.Clone()
+	if v1beta1helper.IsWorkerless(shoot) {
+		requiredDeployments.Delete(v1beta1constants.DeploymentNameKubeStateMetrics)
+	}
+
+	return requiredDeployments
+}
+
 // CheckShootControlPlane checks whether the shoot control plane components in the given listers are complete and healthy.
 func CheckShootControlPlane(
 	ctx context.Context,
@@ -866,23 +885,4 @@ var unstableOperationTypes = map[gardencorev1beta1.LastOperationType]struct{}{
 func isUnstableOperationType(lastOperationType gardencorev1beta1.LastOperationType) bool {
 	_, ok := unstableOperationTypes[lastOperationType]
 	return ok
-}
-
-// computeRequiredMonitoringStatefulSets determine the required monitoring statefulsets
-// which should exist next to the control plane.
-func computeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.Set[string] {
-	var requiredMonitoringStatefulSets = sets.New(v1beta1constants.StatefulSetNamePrometheus)
-	if wantsAlertmanager {
-		requiredMonitoringStatefulSets.Insert(v1beta1constants.StatefulSetNameAlertManager)
-	}
-	return requiredMonitoringStatefulSets
-}
-
-func computeRequiredMonitoringSeedDeployments(shoot *gardencorev1beta1.Shoot) sets.Set[string] {
-	requiredDeployments := requiredMonitoringDeployments.Clone()
-	if v1beta1helper.IsWorkerless(shoot) {
-		requiredDeployments.Delete(v1beta1constants.DeploymentNameKubeStateMetrics)
-	}
-
-	return requiredDeployments
 }

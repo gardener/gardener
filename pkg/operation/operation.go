@@ -154,7 +154,7 @@ func (b *Builder) WithShoot(s *shootpkg.Shoot) *Builder {
 // The shoot status is still taken from the passed `shoot`, though.
 func (b *Builder) WithShootFromCluster(gardenClient client.Client, seedClientSet kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
 	b.shootFunc = func(ctx context.Context, c client.Reader, gardenObj *garden.Garden, seedObj *seed.Seed) (*shootpkg.Shoot, error) {
-		shootNamespace := shootpkg.ComputeTechnicalID(gardenObj.Project.Name, s)
+		shootNamespace := gardenerutils.ComputeTechnicalID(gardenObj.Project.Name, s)
 
 		shoot, err := shootpkg.
 			NewBuilder().
