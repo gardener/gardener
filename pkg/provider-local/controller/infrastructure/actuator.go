@@ -60,8 +60,7 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, infrastructure 
 	networkPolicyAllowMachinePods.Spec = networkingv1.NetworkPolicySpec{
 		Ingress: []networkingv1.NetworkPolicyIngressRule{{
 			From: []networkingv1.NetworkPolicyPeer{
-				{PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "machine"}}},
-				{PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "vpn-seed-server"}}},
+				{PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToShootNetworks: v1beta1constants.LabelNetworkPolicyAllowed}}},
 			},
 		}},
 		Egress: []networkingv1.NetworkPolicyEgressRule{{
