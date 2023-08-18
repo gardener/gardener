@@ -16,15 +16,15 @@ package utils
 
 import (
 	"encoding/json"
-	"sort"
+	"slices"
 )
 
 func computeChecksum(data map[string][]byte) string {
-	var keys []string
+	keys := make([]string, 0, len(data))
 	for k := range data {
 		keys = append(keys, k)
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 
 	var hash string
 	for _, k := range keys {

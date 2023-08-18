@@ -20,7 +20,7 @@ import (
 	"io"
 	"os"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 
@@ -170,7 +170,7 @@ func reconcileEtcHostsFile(etcHostsContent []byte, name string, values []string,
 
 	if len(newEntries) > 0 {
 		newContent += fmt.Sprintf("\n%s\n", beginOfSection)
-		sort.Strings(newEntries)
+		slices.Sort(newEntries)
 		newContent += strings.Join(newEntries, "\n")
 		newContent += fmt.Sprintf("\n%s", endOfSection)
 	}

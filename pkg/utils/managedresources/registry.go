@@ -15,10 +15,11 @@
 package managedresources
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"sort"
+	"slices"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -60,11 +61,11 @@ func NewRegistry(scheme *runtime.Scheme, codec serializer.CodecFactory, serializ
 
 	// Sort groupVersions to ensure groupVersions.Identifier() is stable key
 	// for the map in https://github.com/kubernetes/apimachinery/blob/v0.26.1/pkg/runtime/serializer/versioning/versioning.go#L94
-	sort.Slice(groupVersions, func(i, j int) bool {
-		if groupVersions[i].Group == groupVersions[j].Group {
-			return groupVersions[i].Version < groupVersions[j].Version
+	slices.SortStableFunc(groupVersions, func(a, b schema.GroupVersion) int {
+		if a.Group == b.Group {
+			return cmp.Compare(a.Version, b.Version)
 		}
-		return groupVersions[i].Group < groupVersions[j].Group
+		return cmp.Compare(a.Group, b.Group)
 	})
 
 	// A workaround to incosistent/unstable ordering in yaml.v2 when encoding maps

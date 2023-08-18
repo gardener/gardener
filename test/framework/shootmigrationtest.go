@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -210,7 +210,7 @@ func (t *ShootMigrationTest) GetNodeNames(ctx context.Context, shootClient kuber
 		t.GardenerFramework.Logger.Info("Found node", "index", i, "nodeName", node.Name)
 		nodeNames[i] = node.Name
 	}
-	sort.Strings(nodeNames)
+	slices.Sort(nodeNames)
 	return
 }
 
@@ -236,8 +236,8 @@ func (t *ShootMigrationTest) GetMachineDetails(ctx context.Context, seedClient k
 		machineNames[i] = machine.GetName()
 		machineNodes[i] = machine.GetLabels()["node"]
 	}
-	sort.Strings(machineNames)
-	sort.Strings(machineNodes)
+	slices.Sort(machineNames)
+	slices.Sort(machineNodes)
 	return
 }
 

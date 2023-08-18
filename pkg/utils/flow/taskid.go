@@ -14,7 +14,9 @@
 
 package flow
 
-import "sort"
+import (
+	"slices"
+)
 
 // TaskID is an id of a task.
 type TaskID string
@@ -114,7 +116,7 @@ func (t TaskIDs) List() TaskIDSlice {
 	for k := range t {
 		out = append(out, k)
 	}
-	sort.Sort(out)
+	slices.Sort(out)
 	return out
 }
 
@@ -130,7 +132,7 @@ func (t TaskIDs) UnsortedStringList() []string {
 // StringList returns the elements of this in an ordered string slice.
 func (t TaskIDs) StringList() []string {
 	out := t.UnsortedStringList()
-	sort.Strings(out)
+	slices.Sort(out)
 	return out
 }
 
