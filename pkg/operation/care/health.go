@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -39,6 +40,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/features"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/operation"
@@ -48,6 +50,32 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+)
+
+var (
+	requiredShootControlPlaneDeployments = sets.New(
+		v1beta1constants.DeploymentNameGardenerResourceManager,
+		v1beta1constants.DeploymentNameKubeAPIServer,
+		v1beta1constants.DeploymentNameKubeControllerManager,
+	)
+
+	requiredShootControlPlaneEtcds = sets.New(
+		v1beta1constants.ETCDMain,
+		v1beta1constants.ETCDEvents,
+	)
+
+	requiredMonitoringDeployments = sets.New(
+		v1beta1constants.DeploymentNameKubeStateMetrics,
+		v1beta1constants.DeploymentNamePlutono,
+	)
+
+	requiredLoggingStatefulSets = sets.New(
+		v1beta1constants.StatefulSetNameVali,
+	)
+
+	requiredLoggingDeployments = sets.New(
+		v1beta1constants.DeploymentNameEventLogger,
+	)
 )
 
 // Health contains information needed to execute shoot health checks.
@@ -376,7 +404,7 @@ func (h *Health) checkControlPlane(
 	condition gardencorev1beta1.Condition,
 	extensionConditions []ExtensionCondition,
 ) (*gardencorev1beta1.Condition, error) {
-	if exitCondition, err := checker.CheckShootControlPlane(ctx, h.shoot.GetInfo(), h.shoot.SeedNamespace, condition); err != nil || exitCondition != nil {
+	if exitCondition, err := CheckShootControlPlane(ctx, h.shoot.GetInfo(), checker, h.shoot.SeedNamespace, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 
@@ -396,7 +424,7 @@ func (h *Health) checkObservabilityComponents(
 ) (*gardencorev1beta1.Condition, error) {
 	wantsAlertmanager := h.shoot.WantsAlertmanager
 	wantsShootMonitoring := gardenlethelper.IsMonitoringEnabled(h.gardenletConfiguration) && h.shoot.Purpose != gardencorev1beta1.ShootPurposeTesting
-	if exitCondition, err := checker.CheckShootMonitoringControlPlane(ctx, h.shoot.GetInfo(), h.shoot.SeedNamespace, wantsShootMonitoring, wantsAlertmanager, condition); err != nil || exitCondition != nil {
+	if exitCondition, err := CheckShootMonitoringControlPlane(ctx, h.shoot.GetInfo(), checker, h.shoot.SeedNamespace, wantsShootMonitoring, wantsAlertmanager, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 
@@ -487,4 +515,143 @@ func (h *Health) checkClusterNodes(
 
 	c := v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "EveryNodeReady", "All nodes are ready.")
 	return &c, nil
+}
+
+// CheckShootMonitoringControlPlane checks whether the monitoring in the given listers are complete and healthy.
+func CheckShootMonitoringControlPlane(
+	ctx context.Context,
+	shoot *gardencorev1beta1.Shoot,
+	checker *HealthChecker,
+	namespace string,
+	shootMonitoringEnabled bool,
+	wantsAlertmanager bool,
+	condition gardencorev1beta1.Condition,
+) (
+	*gardencorev1beta1.Condition,
+	error,
+) {
+	if !shootMonitoringEnabled {
+		return nil, nil
+	}
+
+	return checker.CheckMonitoringControlPlane(ctx, namespace, computeRequiredMonitoringSeedDeployments(shoot), computeRequiredMonitoringStatefulSets(wantsAlertmanager), monitoringSelector, condition)
+}
+
+// CheckShootControlPlane checks whether the shoot control plane components in the given listers are complete and healthy.
+func CheckShootControlPlane(
+	ctx context.Context,
+	shoot *gardencorev1beta1.Shoot,
+	checker *HealthChecker,
+	namespace string,
+	condition gardencorev1beta1.Condition,
+) (
+	*gardencorev1beta1.Condition,
+	error,
+) {
+	requiredControlPlaneDeployments, err := computeRequiredControlPlaneDeployments(shoot)
+	if err != nil {
+		return nil, err
+	}
+
+	return checker.CheckControlPlane(ctx, namespace, requiredControlPlaneDeployments, requiredShootControlPlaneEtcds, condition)
+}
+
+// This is a hack to quickly do a cloud provider specific check for the required control plane deployments.
+func computeRequiredControlPlaneDeployments(shoot *gardencorev1beta1.Shoot) (sets.Set[string], error) {
+	requiredControlPlaneDeployments := requiredShootControlPlaneDeployments.Clone()
+
+	if !v1beta1helper.IsWorkerless(shoot) {
+		requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameKubeScheduler)
+
+		shootWantsClusterAutoscaler, err := v1beta1helper.ShootWantsClusterAutoscaler(shoot)
+		if err != nil {
+			return nil, err
+		}
+
+		if shootWantsClusterAutoscaler {
+			requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameClusterAutoscaler)
+		}
+
+		if v1beta1helper.ShootWantsVerticalPodAutoscaler(shoot) {
+			for _, vpaDeployment := range v1beta1constants.GetShootVPADeploymentNames() {
+				requiredControlPlaneDeployments.Insert(vpaDeployment)
+			}
+		}
+
+		if features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment) {
+			requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameMachineControllerManager)
+		}
+
+		// TODO(rfranzke): Uncomment this code once the MachineControllerManagerDeployment feature gate gets removed.
+		// if features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment) {
+		// 	requiredControlPlaneDeployments.Insert(v1beta1constants.DeploymentNameMachineControllerManager)
+		// }
+	}
+
+	return requiredControlPlaneDeployments, nil
+}
+
+func shootHibernatedConditions(clock clock.Clock, conditions []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+	hibernationConditions := make([]gardencorev1beta1.Condition, 0, len(conditions))
+	for _, cond := range conditions {
+		hibernationConditions = append(hibernationConditions, v1beta1helper.UpdatedConditionWithClock(clock, cond, gardencorev1beta1.ConditionTrue, "ConditionNotChecked", "Shoot cluster has been hibernated."))
+	}
+	return hibernationConditions
+}
+
+func shootControlPlaneNotRunningMessage(lastOperation *gardencorev1beta1.LastOperation) string {
+	switch {
+	case lastOperation == nil || lastOperation.Type == gardencorev1beta1.LastOperationTypeCreate:
+		return "Shoot control plane has not been fully created yet."
+	case lastOperation.Type == gardencorev1beta1.LastOperationTypeDelete:
+		return "Shoot control plane has already been or is about to be deleted."
+	}
+	return "Shoot control plane is not running at the moment."
+}
+
+// PardonConditions pardons the given condition if the Shoot is either in create (except successful create) or delete state.
+func PardonConditions(clock clock.Clock, conditions []gardencorev1beta1.Condition, lastOp *gardencorev1beta1.LastOperation, lastErrors []gardencorev1beta1.LastError) []gardencorev1beta1.Condition {
+	pardoningConditions := make([]gardencorev1beta1.Condition, 0, len(conditions))
+	for _, cond := range conditions {
+		if (lastOp == nil || isUnstableLastOperation(lastOp, lastErrors)) && cond.Status == gardencorev1beta1.ConditionFalse {
+			pardoningConditions = append(pardoningConditions, v1beta1helper.UpdatedConditionWithClock(clock, cond, gardencorev1beta1.ConditionProgressing, cond.Reason, cond.Message, cond.Codes...))
+			continue
+		}
+		pardoningConditions = append(pardoningConditions, cond)
+	}
+	return pardoningConditions
+}
+
+func isUnstableLastOperation(lastOperation *gardencorev1beta1.LastOperation, lastErrors []gardencorev1beta1.LastError) bool {
+	return (isUnstableOperationType(lastOperation.Type) && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded) ||
+		(lastOperation.State == gardencorev1beta1.LastOperationStateProcessing && lastErrors == nil)
+}
+
+var unstableOperationTypes = map[gardencorev1beta1.LastOperationType]struct{}{
+	gardencorev1beta1.LastOperationTypeCreate: {},
+	gardencorev1beta1.LastOperationTypeDelete: {},
+}
+
+func isUnstableOperationType(lastOperationType gardencorev1beta1.LastOperationType) bool {
+	_, ok := unstableOperationTypes[lastOperationType]
+	return ok
+}
+
+// computeRequiredMonitoringStatefulSets determine the required monitoring statefulsets
+// which should exist next to the control plane.
+func computeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.Set[string] {
+	var requiredMonitoringStatefulSets = sets.New(v1beta1constants.StatefulSetNamePrometheus)
+	if wantsAlertmanager {
+		requiredMonitoringStatefulSets.Insert(v1beta1constants.StatefulSetNameAlertManager)
+	}
+	return requiredMonitoringStatefulSets
+}
+
+func computeRequiredMonitoringSeedDeployments(shoot *gardencorev1beta1.Shoot) sets.Set[string] {
+	requiredDeployments := requiredMonitoringDeployments.Clone()
+	if v1beta1helper.IsWorkerless(shoot) {
+		requiredDeployments.Delete(v1beta1constants.DeploymentNameKubeStateMetrics)
+	}
+
+	return requiredDeployments
 }
