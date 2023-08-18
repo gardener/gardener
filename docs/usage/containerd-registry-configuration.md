@@ -94,12 +94,15 @@ version = 2
 
 The migration steps are as follows:
 1. The `containerd` registries configuration has to be adapted to the hosts directory pattern.
-1.1 The `/etc/containerd/config.toml` file needs to be adapted as follows:
+
+   1.1 The `/etc/containerd/config.toml` file needs to be adapted as follows:
    ```toml
    version = 2
    
    [plugins."io.containerd.grpc.v1.cri".registry]
       config_path = "/etc/containerd/certs.d"
    ```
-1.2 The appropriate directory structure and `hosts.toml` file has to be created as described in the [hosts directory pattern section](#hosts-directory-pattern).
+
+   1.2 The appropriate directory structure and `hosts.toml` file has to be created as described in the [hosts directory pattern section](#hosts-directory-pattern).
+
 2. When the `ContainerdRegistryHostsDir` feature gate is GA, then the machinery that performs step 1.1 can be removed. A Shoot cluster can rely that the `config_path` will be always set by gardenlet.
