@@ -277,7 +277,7 @@ func (r *Reconciler) prepareOperation(ctx context.Context, log logr.Logger, shoo
 		return nil, i.RequeueAfter, nil
 	}
 
-	shootNamespace := shootpkg.ComputeTechnicalID(project.Name, shoot)
+	shootNamespace := gardenerutils.ComputeTechnicalID(project.Name, shoot)
 	if err := r.updateShootStatusOperationStart(ctx, shoot, shootNamespace, i.OperationType); err != nil {
 		return nil, reconcile.Result{}, err
 	}
@@ -382,7 +382,7 @@ func (r *Reconciler) initializeOperation(
 }
 
 func (r *Reconciler) syncClusterResourceToSeed(ctx context.Context, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) error {
-	clusterName := shootpkg.ComputeTechnicalID(project.Name, shoot)
+	clusterName := gardenerutils.ComputeTechnicalID(project.Name, shoot)
 	return gardenerextensions.SyncClusterResourceToSeed(ctx, r.SeedClientSet.Client(), clusterName, shoot, cloudProfile, seed)
 }
 

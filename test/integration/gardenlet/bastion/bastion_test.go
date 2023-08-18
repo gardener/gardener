@@ -32,7 +32,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
-	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -187,7 +187,7 @@ var _ = Describe("Bastion controller tests", func() {
 
 		By("Patch the Shoot status with technical ID")
 		patch := client.MergeFrom(shoot.DeepCopy())
-		technicalID := shootpkg.ComputeTechnicalID(project.Name, shoot)
+		technicalID := gardenerutils.ComputeTechnicalID(project.Name, shoot)
 		shoot.Status.TechnicalID = technicalID
 		Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 

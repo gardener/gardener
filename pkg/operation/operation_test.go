@@ -25,6 +25,7 @@ import (
 	. "github.com/gardener/gardener/pkg/operation"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 var _ = Describe("operation", func() {
@@ -51,7 +52,7 @@ var _ = Describe("operation", func() {
 		shoot.Status = gardencorev1beta1.ShootStatus{
 			TechnicalID: storedTechnicalID,
 		}
-		shoot.Status.TechnicalID = shootpkg.ComputeTechnicalID(projectName, shoot)
+		shoot.Status.TechnicalID = gardenerutils.ComputeTechnicalID(projectName, shoot)
 
 		o.Seed.SetInfo(seed)
 		o.Shoot.SetInfo(shoot)

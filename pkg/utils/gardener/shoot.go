@@ -671,3 +671,17 @@ func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gar
 func ExtensionsID(extensionKind, extensionType string) string {
 	return fmt.Sprintf("%s/%s", extensionKind, extensionType)
 }
+
+// ComputeTechnicalID determines the technical id of the given Shoot which is later used for the name of the
+// namespace and for tagging all the resources created in the infrastructure.
+func ComputeTechnicalID(projectName string, shoot *gardencorev1beta1.Shoot) string {
+	// Use the stored technical ID in the Shoot's status field if it's there.
+	// For backwards compatibility we keep the pattern as it was before we had to change it
+	// (double hyphens).
+	if len(shoot.Status.TechnicalID) > 0 {
+		return shoot.Status.TechnicalID
+	}
+
+	// New clusters shall be created with the new technical id (double hyphens).
+	return fmt.Sprintf("%s-%s--%s", v1beta1constants.TechnicalIDPrefix, projectName, shoot.Name)
+}
