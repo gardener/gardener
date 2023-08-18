@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package care_test
+package checker_test
 
 import (
 	"context"
@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -43,7 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/executor"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/care"
-	. "github.com/gardener/gardener/pkg/operation/care"
+	. "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -51,110 +50,6 @@ var (
 	zeroTime     time.Time
 	zeroMetaTime metav1.Time
 )
-
-func roleOf(obj metav1.Object) string {
-	return obj.GetLabels()[v1beta1constants.GardenRole]
-}
-
-func roleLabels(role string) map[string]string {
-	return map[string]string{v1beta1constants.GardenRole: role}
-}
-
-func newDeployment(namespace, name, role string, healthy bool) *appsv1.Deployment {
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
-			Labels:    roleLabels(role),
-		},
-	}
-	if healthy {
-		deployment.Status = appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{{
-			Type:   appsv1.DeploymentAvailable,
-			Status: corev1.ConditionTrue,
-		}}}
-	}
-	return deployment
-}
-
-func newStatefulSet(namespace, name, role string, healthy bool) *appsv1.StatefulSet {
-	statefulSet := &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
-			Labels:    roleLabels(role),
-		},
-	}
-	if healthy {
-		statefulSet.Status.ReadyReplicas = 1
-	}
-
-	return statefulSet
-}
-
-func newEtcd(namespace, name, role string, healthy bool, lastError *string) *druidv1alpha1.Etcd {
-	etcd := &druidv1alpha1.Etcd{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
-			Labels:    roleLabels(role),
-		},
-	}
-	if healthy {
-		etcd.Status.Ready = pointer.Bool(true)
-	} else {
-		etcd.Status.Ready = pointer.Bool(false)
-		etcd.Status.LastError = lastError
-	}
-
-	return etcd
-}
-
-func newNode(name string, healthy bool, labels labels.Set, annotations map[string]string, kubeletVersion string) corev1.Node {
-	node := corev1.Node{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
-			Labels:      labels,
-			Annotations: annotations,
-		},
-		Status: corev1.NodeStatus{
-			NodeInfo: corev1.NodeSystemInfo{
-				KubeletVersion: kubeletVersion,
-			},
-		},
-	}
-
-	if healthy {
-		node.Status.Conditions = []corev1.NodeCondition{
-			{
-				Type:   corev1.NodeReady,
-				Status: corev1.ConditionTrue,
-			},
-		}
-	}
-
-	return node
-}
-
-func beConditionWithStatus(status gardencorev1beta1.ConditionStatus) types.GomegaMatcher {
-	return WithStatus(status)
-}
-
-func beConditionWithMissingRequiredDeployment(deployments []*appsv1.Deployment) types.GomegaMatcher {
-	var names = make([]string, 0, len(deployments))
-	for _, deploy := range deployments {
-		names = append(names, deploy.Name)
-	}
-	return And(WithStatus(gardencorev1beta1.ConditionFalse), WithMessage(fmt.Sprintf("%s", names)))
-}
-
-func beConditionWithStatusAndCodes(status gardencorev1beta1.ConditionStatus, codes ...gardencorev1beta1.ErrorCode) types.GomegaMatcher {
-	return And(WithStatus(status), WithCodes(codes...))
-}
-
-func beConditionWithStatusAndMsg(status gardencorev1beta1.ConditionStatus, reason, message string) types.GomegaMatcher {
-	return And(WithStatus(status), WithReason(reason), WithMessage(message))
-}
 
 var _ = Describe("HealthChecker", func() {
 	Describe("#CheckNodesScalingUp", func() {
@@ -341,7 +236,7 @@ var _ = Describe("HealthChecker", func() {
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 			fakeClock = testclock.NewFakeClock(time.Now())
 			condition = gardencorev1beta1.Condition{
-				Type:               gardencorev1beta1.ConditionType("test"),
+				Type:               "test",
 				LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
 			}
 		})
@@ -350,7 +245,7 @@ var _ = Describe("HealthChecker", func() {
 			func(conditions []gardencorev1beta1.Condition, upToDate bool, stepTime bool, conditionMatcher types.GomegaMatcher) {
 				var (
 					mr      = new(resourcesv1alpha1.ManagedResource)
-					checker = care.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, &metav1.Duration{Duration: 5 * time.Minute}, nil, kubernetesVersion)
+					checker = NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, &metav1.Duration{Duration: 5 * time.Minute}, nil, kubernetesVersion)
 				)
 
 				if !upToDate {
@@ -594,7 +489,7 @@ var _ = Describe("HealthChecker", func() {
 						return nil
 					})
 
-					checker := care.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion)
+					checker := NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion)
 
 					exitCondition, err := checker.CheckClusterNodes(ctx, c, seedNamespace, workerPools, condition)
 					Expect(err).NotTo(HaveOccurred())
@@ -805,7 +700,7 @@ var _ = Describe("HealthChecker", func() {
 					Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating statefulset "+client.ObjectKeyFromObject(obj).String())
 				}
 
-				checker := care.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion)
+				checker := NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion)
 
 				exitCondition, err := checker.CheckLoggingControlPlane(ctx, seedNamespace, isTestingShoot, eventLoggingEnabled, valiEnabled, condition)
 				Expect(err).NotTo(HaveOccurred())
@@ -884,7 +779,7 @@ var _ = Describe("HealthChecker", func() {
 		DescribeTable("#FailedCondition",
 			func(thresholds map[gardencorev1beta1.ConditionType]time.Duration, lastOperation *gardencorev1beta1.LastOperation, now time.Time, condition gardencorev1beta1.Condition, reason, message string, expected types.GomegaMatcher) {
 				fakeClock.SetTime(now)
-				checker := care.NewHealthChecker(fakeClient, fakeClock, thresholds, nil, nil, lastOperation, kubernetesVersion)
+				checker := NewHealthChecker(fakeClient, fakeClock, thresholds, nil, nil, lastOperation, kubernetesVersion)
 				Expect(checker.FailedCondition(condition, reason, message)).To(expected)
 			},
 			Entry("true condition with threshold",
@@ -1042,8 +937,8 @@ var _ = Describe("HealthChecker", func() {
 
 		// CheckExtensionCondition
 		DescribeTable("#CheckExtensionCondition - HealthCheckReport",
-			func(healthCheckOutdatedThreshold *metav1.Duration, condition gardencorev1beta1.Condition, extensionsConditions []care.ExtensionCondition, expected types.GomegaMatcher) {
-				checker := care.NewHealthChecker(fakeClient, fakeClock, nil, healthCheckOutdatedThreshold, nil, nil, kubernetesVersion)
+			func(healthCheckOutdatedThreshold *metav1.Duration, condition gardencorev1beta1.Condition, extensionsConditions []ExtensionCondition, expected types.GomegaMatcher) {
+				checker := NewHealthChecker(fakeClient, fakeClock, nil, healthCheckOutdatedThreshold, nil, nil, kubernetesVersion)
 				updatedCondition := checker.CheckExtensionCondition(condition, extensionsConditions)
 				if expected == nil {
 					Expect(updatedCondition).To(BeNil())
@@ -1055,7 +950,7 @@ var _ = Describe("HealthChecker", func() {
 			Entry("health check report is not outdated - threshold not configured in Gardenlet config",
 				nil,
 				gardencorev1beta1.Condition{Type: "type"},
-				[]care.ExtensionCondition{
+				[]ExtensionCondition{
 					{
 						Condition: gardencorev1beta1.Condition{
 							Type:   gardencorev1beta1.ShootControlPlaneHealthy,
@@ -1070,7 +965,7 @@ var _ = Describe("HealthChecker", func() {
 				// 2 minute threshold for outdated health check reports
 				&metav1.Duration{Duration: time.Minute * 2},
 				gardencorev1beta1.Condition{Type: "type"},
-				[]care.ExtensionCondition{
+				[]ExtensionCondition{
 					{
 						Condition: gardencorev1beta1.Condition{
 							Type:   gardencorev1beta1.ShootControlPlaneHealthy,
@@ -1089,7 +984,7 @@ var _ = Describe("HealthChecker", func() {
 					Type:   gardencorev1beta1.ShootControlPlaneHealthy,
 					Status: gardencorev1beta1.ConditionTrue,
 				},
-				[]care.ExtensionCondition{
+				[]ExtensionCondition{
 					{
 						Condition: gardencorev1beta1.Condition{
 							Type:   gardencorev1beta1.ShootControlPlaneHealthy,
@@ -1109,7 +1004,7 @@ var _ = Describe("HealthChecker", func() {
 					Type:   gardencorev1beta1.ShootControlPlaneHealthy,
 					Status: gardencorev1beta1.ConditionTrue,
 				},
-				[]care.ExtensionCondition{
+				[]ExtensionCondition{
 					{
 						Condition: gardencorev1beta1.Condition{
 							Type:   gardencorev1beta1.ShootControlPlaneHealthy,
@@ -1127,7 +1022,7 @@ var _ = Describe("HealthChecker", func() {
 			Entry("health check reports status progressing",
 				nil,
 				gardencorev1beta1.Condition{Type: "type"},
-				[]care.ExtensionCondition{
+				[]ExtensionCondition{
 					{
 						ExtensionType: "Foo",
 						Condition: gardencorev1beta1.Condition{
@@ -1144,7 +1039,7 @@ var _ = Describe("HealthChecker", func() {
 			Entry("health check reports status false",
 				nil,
 				gardencorev1beta1.Condition{Type: "type"},
-				[]care.ExtensionCondition{
+				[]ExtensionCondition{
 					{
 						ExtensionType: "Foo",
 						Condition: gardencorev1beta1.Condition{
@@ -1159,7 +1054,7 @@ var _ = Describe("HealthChecker", func() {
 			Entry("health check reports status unknown",
 				nil,
 				gardencorev1beta1.Condition{Type: "type"},
-				[]care.ExtensionCondition{
+				[]ExtensionCondition{
 					{
 						ExtensionType: "Foo",
 						Condition: gardencorev1beta1.Condition{
@@ -1251,4 +1146,82 @@ var _ = Describe("HealthChecker", func() {
 
 func beConditionWithStatusReasonAndMessage(status gardencorev1beta1.ConditionStatus, reason, message string) types.GomegaMatcher {
 	return And(WithStatus(status), WithReason(reason), WithMessage(message))
+}
+
+func beConditionWithStatusAndCodes(status gardencorev1beta1.ConditionStatus, codes ...gardencorev1beta1.ErrorCode) types.GomegaMatcher {
+	return And(WithStatus(status), WithCodes(codes...))
+}
+
+func beConditionWithStatus(status gardencorev1beta1.ConditionStatus) types.GomegaMatcher {
+	return WithStatus(status)
+}
+
+func beConditionWithStatusAndMsg(status gardencorev1beta1.ConditionStatus, reason, message string) types.GomegaMatcher {
+	return And(WithStatus(status), WithReason(reason), WithMessage(message))
+}
+
+func roleOf(obj metav1.Object) string {
+	return obj.GetLabels()[v1beta1constants.GardenRole]
+}
+
+func roleLabels(role string) map[string]string {
+	return map[string]string{v1beta1constants.GardenRole: role}
+}
+
+func newDeployment(namespace, name, role string, healthy bool) *appsv1.Deployment {
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+			Labels:    roleLabels(role),
+		},
+	}
+	if healthy {
+		deployment.Status = appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{{
+			Type:   appsv1.DeploymentAvailable,
+			Status: corev1.ConditionTrue,
+		}}}
+	}
+	return deployment
+}
+
+func newStatefulSet(namespace, name, role string, healthy bool) *appsv1.StatefulSet {
+	statefulSet := &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+			Labels:    roleLabels(role),
+		},
+	}
+	if healthy {
+		statefulSet.Status.ReadyReplicas = 1
+	}
+
+	return statefulSet
+}
+
+func newNode(name string, healthy bool, labels labels.Set, annotations map[string]string, kubeletVersion string) corev1.Node {
+	node := corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        name,
+			Labels:      labels,
+			Annotations: annotations,
+		},
+		Status: corev1.NodeStatus{
+			NodeInfo: corev1.NodeSystemInfo{
+				KubeletVersion: kubeletVersion,
+			},
+		},
+	}
+
+	if healthy {
+		node.Status.Conditions = []corev1.NodeCondition{
+			{
+				Type:   corev1.NodeReady,
+				Status: corev1.ConditionTrue,
+			},
+		}
+	}
+
+	return node
 }

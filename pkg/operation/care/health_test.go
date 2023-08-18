@@ -16,6 +16,7 @@ package care_test
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Masterminds/semver"
@@ -25,6 +26,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
@@ -35,15 +37,18 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/care"
 	. "github.com/gardener/gardener/pkg/operation/care"
+	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("health check", func() {
 	var (
-		ctx        = context.Background()
-		fakeClient client.Client
-		fakeClock  = testclock.NewFakeClock(time.Now())
+		ctx          = context.Background()
+		fakeClient   client.Client
+		zeroTime     time.Time
+		zeroMetaTime metav1.Time
+		fakeClock    = testclock.NewFakeClock(time.Now())
 
 		condition gardencorev1beta1.Condition
 
@@ -186,7 +191,7 @@ var _ = Describe("health check", func() {
 				Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating worker "+client.ObjectKeyFromObject(obj).String())
 			}
 
-			checker := care.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion)
+			checker := healthchecker.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion)
 
 			exitCondition, err := CheckShootControlPlane(ctx, shoot, checker, seedNamespace, condition)
 			Expect(err).NotTo(HaveOccurred())
@@ -312,7 +317,7 @@ var _ = Describe("health check", func() {
 				Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating statefulset "+client.ObjectKeyFromObject(obj).String())
 			}
 
-			checker := NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion)
+			checker := healthchecker.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion)
 
 			s := shoot.DeepCopy()
 			if workerless {
@@ -402,7 +407,7 @@ var _ = Describe("health check", func() {
 				Expect(fakeClient.Create(ctx, obj.DeepCopy())).To(Succeed(), "creating statefulset "+client.ObjectKeyFromObject(obj).String())
 			}
 
-			checker := NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion)
+			checker := healthchecker.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion)
 
 			exitCondition, err := checker.CheckLoggingControlPlane(ctx, seedNamespace, isTestingShoot, eventLoggingEnabled, valiEnabled, condition)
 			Expect(err).NotTo(HaveOccurred())
@@ -481,7 +486,7 @@ var _ = Describe("health check", func() {
 	DescribeTable("#FailedCondition",
 		func(thresholds map[gardencorev1beta1.ConditionType]time.Duration, lastOperation *gardencorev1beta1.LastOperation, now time.Time, condition gardencorev1beta1.Condition, reason, message string, expected types.GomegaMatcher) {
 			fakeClock.SetTime(now)
-			checker := NewHealthChecker(fakeClient, fakeClock, thresholds, nil, nil, lastOperation, kubernetesVersion)
+			checker := healthchecker.NewHealthChecker(fakeClient, fakeClock, thresholds, nil, nil, lastOperation, kubernetesVersion)
 			Expect(checker.FailedCondition(condition, reason, message)).To(expected)
 		},
 		Entry("true condition with threshold",
@@ -710,3 +715,77 @@ var _ = Describe("health check", func() {
 			ConsistOf(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
 	)
 })
+
+func newDeployment(namespace, name, role string, healthy bool) *appsv1.Deployment {
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+			Labels:    roleLabels(role),
+		},
+	}
+	if healthy {
+		deployment.Status = appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{{
+			Type:   appsv1.DeploymentAvailable,
+			Status: corev1.ConditionTrue,
+		}}}
+	}
+	return deployment
+}
+
+func newStatefulSet(namespace, name, role string, healthy bool) *appsv1.StatefulSet {
+	statefulSet := &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+			Labels:    roleLabels(role),
+		},
+	}
+	if healthy {
+		statefulSet.Status.ReadyReplicas = 1
+	}
+
+	return statefulSet
+}
+
+func newEtcd(namespace, name, role string, healthy bool, lastError *string) *druidv1alpha1.Etcd {
+	etcd := &druidv1alpha1.Etcd{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+			Labels:    roleLabels(role),
+		},
+	}
+	if healthy {
+		etcd.Status.Ready = pointer.Bool(true)
+	} else {
+		etcd.Status.Ready = pointer.Bool(false)
+		etcd.Status.LastError = lastError
+	}
+
+	return etcd
+}
+
+func roleLabels(role string) map[string]string {
+	return map[string]string{v1beta1constants.GardenRole: role}
+}
+
+func beConditionWithStatus(status gardencorev1beta1.ConditionStatus) types.GomegaMatcher {
+	return WithStatus(status)
+}
+
+func beConditionWithMissingRequiredDeployment(deployments []*appsv1.Deployment) types.GomegaMatcher {
+	var names = make([]string, 0, len(deployments))
+	for _, deploy := range deployments {
+		names = append(names, deploy.Name)
+	}
+	return And(WithStatus(gardencorev1beta1.ConditionFalse), WithMessage(fmt.Sprintf("%s", names)))
+}
+
+func roleOf(obj metav1.Object) string {
+	return obj.GetLabels()[v1beta1constants.GardenRole]
+}
+
+func beConditionWithStatusAndCodes(status gardencorev1beta1.ConditionStatus, codes ...gardencorev1beta1.ErrorCode) types.GomegaMatcher {
+	return And(WithStatus(status), WithCodes(codes...))
+}

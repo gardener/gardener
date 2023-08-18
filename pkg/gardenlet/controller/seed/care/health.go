@@ -41,8 +41,8 @@ import (
 	"github.com/gardener/gardener/pkg/component/seedsystem"
 	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/operation/care"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 )
 
 var requiredManagedResourcesSeed = sets.New(
@@ -92,14 +92,14 @@ func (h *Health) Check(
 		}
 	}
 
-	checker := care.NewHealthChecker(h.seedClient, h.clock, thresholdMappings, nil, nil, lastOperation, nil)
+	checker := healthchecker.NewHealthChecker(h.seedClient, h.clock, thresholdMappings, nil, nil, lastOperation, nil)
 	newSystemComponentsCondition, err := h.checkSeedSystemComponents(ctx, checker, systemComponentsCondition)
-	return []gardencorev1beta1.Condition{care.NewConditionOrError(h.clock, systemComponentsCondition, newSystemComponentsCondition, err)}
+	return []gardencorev1beta1.Condition{healthchecker.NewConditionOrError(h.clock, systemComponentsCondition, newSystemComponentsCondition, err)}
 }
 
 func (h *Health) checkSeedSystemComponents(
 	ctx context.Context,
-	checker *care.HealthChecker,
+	checker *healthchecker.HealthChecker,
 	condition gardencorev1beta1.Condition,
 ) (
 	*gardencorev1beta1.Condition,
@@ -157,11 +157,11 @@ func (h *Health) checkSeedSystemComponents(
 	return &c, nil
 }
 
-func checkManagedResourceForSeed(checker *care.HealthChecker, condition gardencorev1beta1.Condition, managedResource *resourcesv1alpha1.ManagedResource, clock clock.Clock) *gardencorev1beta1.Condition {
+func checkManagedResourceForSeed(checker *healthchecker.HealthChecker, condition gardencorev1beta1.Condition, managedResource *resourcesv1alpha1.ManagedResource, clock clock.Clock) *gardencorev1beta1.Condition {
 	conditionsToCheck := map[gardencorev1beta1.ConditionType]func(condition gardencorev1beta1.Condition) bool{
-		resourcesv1alpha1.ResourcesApplied:     care.DefaultSuccessfulCheck(),
-		resourcesv1alpha1.ResourcesHealthy:     care.DefaultSuccessfulCheck(),
-		resourcesv1alpha1.ResourcesProgressing: care.ResourcesNotProgressingCheck(clock, nil),
+		resourcesv1alpha1.ResourcesApplied:     healthchecker.DefaultSuccessfulCheck(),
+		resourcesv1alpha1.ResourcesHealthy:     healthchecker.DefaultSuccessfulCheck(),
+		resourcesv1alpha1.ResourcesProgressing: healthchecker.ResourcesNotProgressingCheck(clock, nil),
 	}
 
 	return checker.CheckManagedResourceConditions(condition, managedResource, conditionsToCheck)
