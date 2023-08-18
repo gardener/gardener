@@ -86,7 +86,7 @@ var _ = Describe("Seed health", func() {
 	BeforeEach(func() {
 		defer test.WithFeatureGate(features.DefaultFeatureGate, features.HVPA, true)()
 
-		ctx = context.TODO()
+		ctx = context.Background()
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
 		seed = &gardencorev1beta1.Seed{

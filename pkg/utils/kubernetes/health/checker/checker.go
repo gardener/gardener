@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package care
+package checker
 
 import (
 	"context"
@@ -57,7 +57,6 @@ func mustGardenRoleLabelSelector(gardenRoles ...string) labels.Selector {
 
 var (
 	controlPlaneSelector = mustGardenRoleLabelSelector(v1beta1constants.GardenRoleControlPlane)
-	monitoringSelector   = mustGardenRoleLabelSelector(v1beta1constants.GardenRoleMonitoring)
 	loggingSelector      = mustGardenRoleLabelSelector(v1beta1constants.GardenRoleLogging)
 )
 
@@ -638,6 +637,16 @@ func (b *HealthChecker) CheckMonitoringControlPlane(
 	return nil, nil
 }
 
+var (
+	requiredLoggingStatefulSets = sets.New(
+		v1beta1constants.StatefulSetNameVali,
+	)
+
+	requiredLoggingDeployments = sets.New(
+		v1beta1constants.DeploymentNameEventLogger,
+	)
+)
+
 // CheckLoggingControlPlane checks whether the logging components in the given listers are complete and healthy.
 func (b *HealthChecker) CheckLoggingControlPlane(
 	ctx context.Context,
@@ -720,4 +729,13 @@ func NewConditionOrError(clock clock.Clock, oldCondition gardencorev1beta1.Condi
 		return v1beta1helper.UpdatedConditionUnknownErrorWithClock(clock, oldCondition, err)
 	}
 	return *newCondition
+}
+
+// ExtensionCondition contains information about the extension type, name, namespace and the respective condition object.
+type ExtensionCondition struct {
+	Condition          gardencorev1beta1.Condition
+	ExtensionType      string
+	ExtensionName      string
+	ExtensionNamespace string
+	LastHeartbeatTime  *metav1.MicroTime
 }

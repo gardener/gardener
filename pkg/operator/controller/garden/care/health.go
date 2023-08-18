@@ -44,10 +44,10 @@ import (
 	"github.com/gardener/gardener/pkg/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/vpa"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/operation/care"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 )
 
 const virtualGardenPrefix = "virtual-garden-"
@@ -134,7 +134,7 @@ func (h *Health) Check(
 		}
 	}
 
-	checker := care.NewHealthChecker(h.runtimeClient, h.clock, thresholdMappings, nil, nil, lastOperation, nil)
+	checker := healthchecker.NewHealthChecker(h.runtimeClient, h.clock, thresholdMappings, nil, nil, lastOperation, nil)
 
 	taskFns := []flow.TaskFn{
 		func(ctx context.Context) error {
@@ -143,17 +143,17 @@ func (h *Health) Check(
 		},
 		func(ctx context.Context) error {
 			newRuntimeComponentsCondition, err := h.checkRuntimeComponents(ctx, checker, runtimeComponentsCondition)
-			runtimeComponentsCondition = care.NewConditionOrError(h.clock, runtimeComponentsCondition, newRuntimeComponentsCondition, err)
+			runtimeComponentsCondition = healthchecker.NewConditionOrError(h.clock, runtimeComponentsCondition, newRuntimeComponentsCondition, err)
 			return nil
 		},
 		func(ctx context.Context) error {
 			newVirtualComponentsCondition, err := h.checkVirtualComponents(ctx, checker, virtualComponentsCondition)
-			virtualComponentsCondition = care.NewConditionOrError(h.clock, virtualComponentsCondition, newVirtualComponentsCondition, err)
+			virtualComponentsCondition = healthchecker.NewConditionOrError(h.clock, virtualComponentsCondition, newVirtualComponentsCondition, err)
 			return nil
 		},
 		func(ctx context.Context) error {
 			newObservabilityCondition, err := h.checkObservabilityComponents(ctx, checker, observabilityCondition)
-			observabilityCondition = care.NewConditionOrError(h.clock, observabilityCondition, newObservabilityCondition, err)
+			observabilityCondition = healthchecker.NewConditionOrError(h.clock, observabilityCondition, newObservabilityCondition, err)
 			return nil
 		},
 	}
@@ -169,7 +169,7 @@ func (h *Health) Check(
 }
 
 // checkAPIServerAvailability checks if the API server of a virtual garden is reachable and measures the response time.
-func (h *Health) checkAPIServerAvailability(ctx context.Context, checker *care.HealthChecker, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
+func (h *Health) checkAPIServerAvailability(ctx context.Context, checker *healthchecker.HealthChecker, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
 	if h.gardenClientSet == nil {
 		return checker.FailedCondition(condition, "VirtualGardenAPIServerDown", "Could not reach virtual garden API server during client initialization.")
 	}
@@ -179,7 +179,7 @@ func (h *Health) checkAPIServerAvailability(ctx context.Context, checker *care.H
 	})
 }
 
-func (h *Health) checkRuntimeComponents(ctx context.Context, checker *care.HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
+func (h *Health) checkRuntimeComponents(ctx context.Context, checker *healthchecker.HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
 	managedResources := sets.List(requiredGardenRuntimeManagedResources)
 	managedResources = append(managedResources, istio.ManagedResourceNames(true, "virtual-garden-")...)
 
@@ -193,7 +193,7 @@ func (h *Health) checkRuntimeComponents(ctx context.Context, checker *care.Healt
 	return h.checkManagedResources(ctx, checker, condition, managedResources, "RuntimeComponentsRunning", "All runtime components are healthy.")
 }
 
-func (h *Health) checkVirtualComponents(ctx context.Context, checker *care.HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
+func (h *Health) checkVirtualComponents(ctx context.Context, checker *healthchecker.HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
 	if exitCondition, err := checker.CheckControlPlane(
 		ctx,
 		h.gardenNamespace,
@@ -211,7 +211,7 @@ func (h *Health) checkVirtualComponents(ctx context.Context, checker *care.Healt
 
 func (h *Health) checkManagedResources(
 	ctx context.Context,
-	checker *care.HealthChecker,
+	checker *healthchecker.HealthChecker,
 	condition gardencorev1beta1.Condition,
 	managedResources []string,
 	successReason string,
@@ -244,7 +244,7 @@ func (h *Health) checkManagedResources(
 }
 
 // checkObservabilityComponents checks whether the  observability components of the virtual garden control plane (Prometheus, Vali, Plutono..) are healthy.
-func (h *Health) checkObservabilityComponents(ctx context.Context, checker *care.HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
+func (h *Health) checkObservabilityComponents(ctx context.Context, checker *healthchecker.HealthChecker, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
 	requiredDeployments := requiredMonitoringDeployments.Clone()
 
 	if exitCondition, err := checker.CheckMonitoringControlPlane(ctx, h.gardenNamespace, requiredDeployments, sets.New[string](), virtualGardenMonitoringSelector, condition); err != nil || exitCondition != nil {
@@ -265,11 +265,11 @@ func (h *Health) isVPAEnabled() bool {
 		pointer.BoolDeref(h.garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler.Enabled, false)
 }
 
-func checkManagedResourceForGarden(checker *care.HealthChecker, condition gardencorev1beta1.Condition, managedResource *resourcesv1alpha1.ManagedResource, clock clock.Clock) *gardencorev1beta1.Condition {
+func checkManagedResourceForGarden(checker *healthchecker.HealthChecker, condition gardencorev1beta1.Condition, managedResource *resourcesv1alpha1.ManagedResource, clock clock.Clock) *gardencorev1beta1.Condition {
 	conditionsToCheck := map[gardencorev1beta1.ConditionType]func(condition gardencorev1beta1.Condition) bool{
-		resourcesv1alpha1.ResourcesApplied:     care.DefaultSuccessfulCheck(),
-		resourcesv1alpha1.ResourcesHealthy:     care.DefaultSuccessfulCheck(),
-		resourcesv1alpha1.ResourcesProgressing: care.ResourcesNotProgressingCheck(clock, nil),
+		resourcesv1alpha1.ResourcesApplied:     healthchecker.DefaultSuccessfulCheck(),
+		resourcesv1alpha1.ResourcesHealthy:     healthchecker.DefaultSuccessfulCheck(),
+		resourcesv1alpha1.ResourcesProgressing: healthchecker.ResourcesNotProgressingCheck(clock, nil),
 	}
 
 	return checker.CheckManagedResourceConditions(condition, managedResource, conditionsToCheck)
