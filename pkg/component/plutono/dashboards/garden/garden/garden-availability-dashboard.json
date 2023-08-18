@@ -94,8 +94,8 @@
       "pluginVersion": "7.5.23",
       "targets": [
         {
-          "expr": "probe_success{purpose=\"availability\",job=\"blackbox-apiserver\"}",
           "exemplar": true,
+          "expr": "min(probe_success{purpose=\"availability\",job=\"blackbox-apiserver\"})",
           "format": "time_series",
           "hide": false,
           "instant": false,
@@ -270,8 +270,8 @@
       "pluginVersion": "7.5.23",
       "targets": [
         {
-          "expr": "up{job=\"gardener-controller-manager\"}",
           "exemplar": true,
+          "expr": "min(up{job=\"gardener-controller-manager\"})",
           "format": "time_series",
           "hide": false,
           "instant": false,
