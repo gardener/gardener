@@ -3332,7 +3332,7 @@
           ]
         },
         "datasource": "prometheus",
-        "definition": "label_values(apiserver_request_total,job)",
+        "definition": "label_values(apiserver_storage_objects,job)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -3342,7 +3342,7 @@
         "name": "job",
         "options": [],
         "query": {
-          "query": "label_values(apiserver_request_total,job)",
+          "query": "label_values(apiserver_storage_objects,job)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -3367,7 +3367,7 @@
           ]
         },
         "datasource": "prometheus",
-        "definition": "label_values(apiserver_request_total{job=~\"$job\"},pod)",
+        "definition": "label_values(apiserver_storage_objects{job=~\"$job\"},pod)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -3377,7 +3377,7 @@
         "name": "pod",
         "options": [],
         "query": {
-          "query": "label_values(apiserver_request_total{job=~\"$job\"},pod)",
+          "query": "label_values(apiserver_storage_objects{job=~\"$job\"},pod)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -3393,7 +3393,7 @@
       {
         "allValue": ".*",
         "current": {
-          "selected": false,
+          "selected": true,
           "text": [
             "All"
           ],
@@ -3524,11 +3524,9 @@
         "allValue": null,
         "current": {
           "selected": false,
-          "text": "0.99",
-          "value": "0.99"
+          "text": "0.5",
+          "value": "0.5"
         },
-        "datasource": null,
-        "definition": "label_values(apiserver_latency_seconds:quantile, quantile)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -3536,20 +3534,26 @@
         "label": null,
         "multi": false,
         "name": "quantile",
-        "options": [],
-        "query": {
-          "query": "label_values(apiserver_latency_seconds:quantile, quantile)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 1,
-        "regex": "",
+        "options": [
+          {
+            "selected": true,
+            "text": "0.5",
+            "value": "0.5"
+          },
+          {
+            "selected": false,
+            "text": "0.9",
+            "value": "0.9"
+          },
+          {
+            "selected": false,
+            "text": "0.99",
+            "value": "0.99"
+          }
+        ],
+        "query": "0.5,0.9,0.99",
         "skipUrlSync": false,
-        "sort": 0,
-        "tagValuesQuery": "",
-        "tags": [],
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
+        "type": "custom"
       }
     ]
   },
