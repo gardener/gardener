@@ -35,7 +35,7 @@ groups:
       description: Pod {{ $labels.pod }} is not ready for more than 1 hour.
       summary: Shoot pod is in a not ready state
   - alert: KubePodNotReadyControlPlane
-    expr: kube_pod_status_ready{condition="true", type="seed", pod!~"(.+)(curator|compact-job)(.+)"} == 0
+    expr: kube_pod_status_ready{condition="true", type="seed", pod!~"(.+)compact-job(.+)"} == 0
     for: 30m
     labels:
       service: kube-kubelet
