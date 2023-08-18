@@ -69,6 +69,7 @@ metrics_path: /probe
 params:
   module:
   - http_apiserver
+follow_redirects: false
 kubernetes_sd_configs:
 - role: pod
   namespaces:
