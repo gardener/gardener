@@ -23,9 +23,7 @@
       "datasource": "availability-prometheus",
       "description": "",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "gridPos": {
@@ -39,7 +37,7 @@
         "content": "[99.95%][] allows for 5 minutes of downtime per week\n\n[99.95%]: https://uptime.is/99.95\n\n\n",
         "mode": "markdown"
       },
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "timeFrom": null,
       "timeShift": null,
       "title": "SLA (over the last 7 days)",
@@ -51,9 +49,6 @@
       "description": "",
       "fieldConfig": {
         "defaults": {
-          "custom": {
-            "align": null
-          },
           "mappings": [],
           "max": 30,
           "min": 0,
@@ -83,13 +78,16 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["mean"],
+          "calcs": [
+            "mean"
+          ],
           "fields": "",
           "values": false
         },
+        "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "targets": [
         {
           "expr": "count(\n  count_over_time(\n    garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",project=~\"$project\",name=~\"$name\",iaas=\"$iaas\", purpose=~\"$purpose\"}[7d:]\n  )\n)",
@@ -111,9 +109,6 @@
       "description": "",
       "fieldConfig": {
         "defaults": {
-          "custom": {
-            "align": null
-          },
           "mappings": [],
           "max": 30,
           "min": 0,
@@ -143,13 +138,16 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["mean"],
+          "calcs": [
+            "mean"
+          ],
           "fields": "",
           "values": false
         },
+        "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "targets": [
         {
           "expr": "count(\n  count_over_time(\n    (garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",project=~\"$project\",name=~\"$name\",iaas=\"$iaas\", purpose=~\"$purpose\"} < 1)[7d:]\n  ) > 5\n)",
@@ -171,9 +169,6 @@
       "description": "",
       "fieldConfig": {
         "defaults": {
-          "custom": {
-            "align": null
-          },
           "decimals": 2,
           "mappings": [],
           "max": 30,
@@ -208,13 +203,16 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["mean"],
+          "calcs": [
+            "mean"
+          ],
           "fields": "",
           "values": false
         },
+        "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "targets": [
         {
           "expr": "count(\n  count_over_time(\n    (garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",iaas=\"$iaas\",project=~\"$project\",name=~\"$name\",purpose=~\"$purpose\"} < 1)[7d:]\n  ) > 5\n)\n/\ncount(\n  count_over_time(\n    (garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",iaas=\"$iaas\",project=~\"$project\",name=~\"$name\",purpose=~\"$purpose\"})[7d :]\n  )\n)",
@@ -289,7 +287,7 @@
         "showHeader": true,
         "sortBy": []
       },
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "targets": [
         {
           "expr": "sum by (project, name) (\n  count_over_time(\n    (garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",iaas=\"$iaas\",project=~\"$project\",name=~\"$name\",purpose=~\"$purpose\"} < 1)[7d:]\n  ) > 5\n)",
@@ -308,7 +306,11 @@
           "id": "filterFieldsByName",
           "options": {
             "include": {
-              "names": ["name", "project", "Value"]
+              "names": [
+                "name",
+                "project",
+                "Value"
+              ]
             }
           }
         },
@@ -338,26 +340,7 @@
       "description": "",
       "fieldConfig": {
         "defaults": {
-          "custom": {
-            "align": null
-          },
           "links": [],
-          "mappings": [],
-          "max": 30,
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 5
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -392,7 +375,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "pointradius": 3,
       "points": true,
       "renderer": "flot",
@@ -462,20 +445,7 @@
       "description": "",
       "fieldConfig": {
         "defaults": {
-          "custom": {
-            "align": null
-          },
           "links": [],
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -510,7 +480,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "pointradius": 0.5,
       "points": true,
       "renderer": "flot",
@@ -581,7 +551,7 @@
     }
   ],
   "refresh": false,
-  "schemaVersion": 26,
+  "schemaVersion": 27,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -595,6 +565,7 @@
         },
         "datasource": "prometheus",
         "definition": "label_values(garden_shoot_condition, iaas)",
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": false,
@@ -663,11 +634,16 @@
         "allValue": ".+",
         "current": {
           "selected": true,
-          "text": ["All"],
-          "value": ["$__all"]
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "prometheus",
         "definition": "label_values(garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",iaas=\"$iaas\"}, project)",
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": true,
@@ -675,7 +651,10 @@
         "multi": true,
         "name": "project",
         "options": [],
-        "query": "label_values(garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",iaas=\"$iaas\"}, project)",
+        "query": {
+          "query": "label_values(garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",iaas=\"$iaas\"}, project)",
+          "refId": "prometheus-project-Variable-Query"
+        },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -690,11 +669,16 @@
         "allValue": ".+",
         "current": {
           "selected": true,
-          "text": ["All"],
-          "value": ["$__all"]
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "prometheus",
         "definition": "label_values(garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",iaas=\"$iaas\", project=~\"$project\"}, name)",
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": true,
@@ -702,7 +686,10 @@
         "multi": true,
         "name": "name",
         "options": [],
-        "query": "label_values(garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",iaas=\"$iaas\", project=~\"$project\"}, name)",
+        "query": {
+          "query": "label_values(garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\",iaas=\"$iaas\", project=~\"$project\"}, name)",
+          "refId": "prometheus-name-Variable-Query"
+        },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -718,11 +705,16 @@
         "current": {
           "selected": true,
           "tags": [],
-          "text": ["All"],
-          "value": ["$__all"]
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "prometheus",
         "definition": "label_values(garden_shoot_condition{condition=\"APIServerAvailable\",operation=\"Reconcile\"}, purpose)",
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": true,

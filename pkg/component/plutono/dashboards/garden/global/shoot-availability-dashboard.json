@@ -19,6 +19,28 @@
   "links": [],
   "panels": [
     {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
       "gridPos": {
         "h": 6,
         "w": 11,
@@ -28,26 +50,18 @@
       "id": 13,
       "options": {
         "displayMode": "gradient",
-        "fieldOptions": {
-          "calcs": ["last"],
-          "defaults": {
-            "decimals": 0,
-            "mappings": [],
-            "max": 100,
-            "min": 0,
-            "thresholds": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "override": {},
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
           "values": false
         },
-        "orientation": "horizontal"
+        "showUnfilled": true,
+        "text": {}
       },
-      "pluginVersion": "6.3.2",
+      "pluginVersion": "7.5.23",
       "targets": [
         {
           "expr": "count(garden_shoot_info) by (iaas)",
@@ -61,22 +75,19 @@
       "type": "bargauge"
     },
     {
+      "datasource": null,
       "description": "Shows the current % of available shoots.",
-      "gridPos": {
-        "h": 6,
-        "w": 5,
-        "x": 11,
-        "y": 0
-      },
-      "id": 2,
-      "options": {
-        "fieldOptions": {
-          "calcs": ["mean"],
-          "defaults": {
-            "mappings": [],
-            "max": 100,
-            "min": 0,
-            "thresholds": [
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
               {
                 "color": "red",
                 "value": null
@@ -85,17 +96,33 @@
                 "color": "green",
                 "value": 95
               }
-            ],
-            "unit": "percent"
+            ]
           },
-          "override": {},
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 5,
+        "x": 11,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
           "values": false
         },
-        "orientation": "auto",
         "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "showThresholdMarkers": true,
+        "text": {}
       },
-      "pluginVersion": "6.3.2",
+      "pluginVersion": "7.5.23",
       "targets": [
         {
           "expr": "count(garden_shoot_condition{condition=\"APIServerAvailable\"} == 1) / count(garden_shoot_info) * 100",
@@ -108,22 +135,20 @@
       "type": "gauge"
     },
     {
+      "datasource": null,
       "description": "Shows the total number of shoot clusters (including shooted seeds).",
-      "gridPos": {
-        "h": 6,
-        "w": 4,
-        "x": 16,
-        "y": 0
-      },
-      "id": 4,
-      "options": {
-        "fieldOptions": {
-          "calcs": ["mean"],
-          "defaults": {
-            "mappings": [],
-            "max": 0,
-            "min": 0,
-            "thresholds": [
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "displayName": "Shoots",
+          "mappings": [],
+          "max": 0,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
               {
                 "color": "green",
                 "value": null
@@ -132,17 +157,32 @@
                 "color": "red",
                 "value": 80
               }
-            ],
-            "title": "Shoots"
-          },
-          "override": {},
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 16,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
           "values": false
         },
-        "orientation": "auto",
         "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "showThresholdMarkers": true,
+        "text": {}
       },
-      "pluginVersion": "6.3.2",
+      "pluginVersion": "7.5.23",
       "targets": [
         {
           "expr": "count(garden_shoot_info)",
@@ -155,23 +195,21 @@
       "type": "gauge"
     },
     {
+      "datasource": null,
       "description": "Shows the total number of unavailable shoot clusters (including shooted seeds).",
-      "gridPos": {
-        "h": 6,
-        "w": 4,
-        "x": 20,
-        "y": 0
-      },
-      "id": 5,
-      "options": {
-        "fieldOptions": {
-          "calcs": ["mean"],
-          "defaults": {
-            "decimals": 0,
-            "mappings": [],
-            "max": 0,
-            "min": 0,
-            "thresholds": [
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "displayName": "Shoots",
+          "mappings": [],
+          "max": 0,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
               {
                 "color": "red",
                 "value": null
@@ -180,17 +218,32 @@
                 "color": "red",
                 "value": 80
               }
-            ],
-            "title": "Shoots"
-          },
-          "override": {},
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      },
+      "id": 5,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
           "values": false
         },
-        "orientation": "auto",
         "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "showThresholdMarkers": true,
+        "text": {}
       },
-      "pluginVersion": "6.3.2",
+      "pluginVersion": "7.5.23",
       "targets": [
         {
           "expr": "count(garden_shoot_condition{condition=\"APIServerAvailable\"} == 0)",
@@ -207,7 +260,14 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "description": "Shows the availability of all shoot clusters.",
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -216,6 +276,7 @@
         "x": 0,
         "y": 6
       },
+      "hiddenSeries": false,
       "id": 7,
       "legend": {
         "alignAsTable": true,
@@ -232,9 +293,10 @@
       "linewidth": 1,
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -297,7 +359,14 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "description": "Shows the availability of all shoots.",
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -306,6 +375,7 @@
         "x": 11,
         "y": 6
       },
+      "hiddenSeries": false,
       "id": 11,
       "legend": {
         "alignAsTable": true,
@@ -322,9 +392,10 @@
       "linewidth": 1,
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -384,7 +455,12 @@
     },
     {
       "columns": [],
+      "datasource": null,
       "description": "List of shoots that are unavailable.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "fontSize": "100%",
       "gridPos": {
         "h": 8,
@@ -393,7 +469,6 @@
         "y": 13
       },
       "id": 9,
-      "options": {},
       "pageSize": null,
       "scroll": true,
       "showHeader": true,
@@ -404,6 +479,7 @@
       "styles": [
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -424,6 +500,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -440,6 +517,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -469,12 +547,15 @@
       "timeShift": null,
       "title": "Unavailable Shoots",
       "transform": "table",
-      "type": "table"
+      "type": "table-old"
     }
   ],
-  "schemaVersion": 19,
+  "schemaVersion": 27,
   "style": "dark",
-  "tags": ["shoot", "landscape"],
+  "tags": [
+    "shoot",
+    "landscape"
+  ],
   "templating": {
     "list": []
   },

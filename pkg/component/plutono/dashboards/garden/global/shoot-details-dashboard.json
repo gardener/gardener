@@ -39,14 +39,16 @@
       "cacheTimeout": null,
       "colorBackground": true,
       "colorValue": false,
-      "colors": ["#d44a3a", "rgba(40, 40, 40, 0.89)", "#299c46"],
+      "colors": [
+        "#d44a3a",
+        "rgba(40, 40, 40, 0.89)",
+        "#299c46"
+      ],
       "datasource": "prometheus",
       "decimals": null,
       "description": "",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "format": "none",
@@ -127,14 +129,16 @@
       "cacheTimeout": null,
       "colorBackground": true,
       "colorValue": false,
-      "colors": ["#d44a3a", "rgba(40, 40, 40, 0.89)", "#299c46"],
+      "colors": [
+        "#d44a3a",
+        "rgba(40, 40, 40, 0.89)",
+        "#299c46"
+      ],
       "datasource": "prometheus",
       "decimals": null,
       "description": "",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "format": "none",
@@ -215,14 +219,16 @@
       "cacheTimeout": null,
       "colorBackground": true,
       "colorValue": false,
-      "colors": ["#d44a3a", "rgba(40, 40, 40, 0.89)", "#299c46"],
+      "colors": [
+        "#d44a3a",
+        "rgba(40, 40, 40, 0.89)",
+        "#299c46"
+      ],
       "datasource": "prometheus",
       "decimals": null,
       "description": "",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "format": "none",
@@ -303,14 +309,16 @@
       "cacheTimeout": null,
       "colorBackground": true,
       "colorValue": false,
-      "colors": ["#d44a3a", "rgba(40, 40, 40, 0.89)", "#299c46"],
+      "colors": [
+        "#d44a3a",
+        "rgba(40, 40, 40, 0.89)",
+        "#299c46"
+      ],
       "datasource": "prometheus",
       "decimals": null,
       "description": "",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "format": "none",
@@ -391,12 +399,14 @@
       "cacheTimeout": null,
       "colorBackground": true,
       "colorValue": false,
-      "colors": ["#299c46", "rgba(40, 40, 40, 0.89)", "#d44a3a"],
+      "colors": [
+        "#299c46",
+        "rgba(40, 40, 40, 0.89)",
+        "#d44a3a"
+      ],
       "datasource": "prometheus",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "format": "none",
@@ -481,7 +491,6 @@
       "description": "Shows if the API Server is reachable from the shoot cluster.",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -512,7 +521,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -608,7 +617,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.16",
+      "pluginVersion": "7.5.23",
       "pointradius": 10,
       "points": false,
       "renderer": "flot",
@@ -626,7 +635,9 @@
         }
       ],
       "thresholds": [],
+      "timeFrom": null,
       "timeRegions": [],
+      "timeShift": null,
       "title": "K8s Versions",
       "tooltip": {
         "shared": true,
@@ -674,7 +685,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 9
       },
       "id": 12,
       "panels": [
@@ -807,7 +818,9 @@
           "points": false,
           "renderer": "flot",
           "repeat": null,
-          "seriesOverrides": [{}],
+          "seriesOverrides": [
+            {}
+          ],
           "spaceLength": 10,
           "stack": false,
           "steppedLine": false,
@@ -1092,7 +1105,6 @@
       "description": "Shows pending and firing alerts in the cluster.",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "links": []
         },
         "overrides": []
@@ -1126,7 +1138,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1188,19 +1200,23 @@
   "refresh": "30s",
   "schemaVersion": 27,
   "style": "dark",
-  "tags": ["Shoot", "Gardener"],
+  "tags": [
+    "Shoot",
+    "Gardener"
+  ],
   "templating": {
     "list": [
       {
         "allFormat": "glob",
         "allValue": null,
         "current": {
-          "selected": true,
+          "selected": false,
           "text": "garden",
           "value": "garden"
         },
         "datasource": "prometheus",
         "definition": "",
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": false,
@@ -1208,7 +1224,10 @@
         "multi": false,
         "name": "project",
         "options": [],
-        "query": "label_values(garden_shoot_info, project)",
+        "query": {
+          "query": "label_values(garden_shoot_info, project)",
+          "refId": "prometheus-project-Variable-Query"
+        },
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -1229,6 +1248,7 @@
         },
         "datasource": "prometheus",
         "definition": "",
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": false,
@@ -1236,7 +1256,10 @@
         "multi": false,
         "name": "shoot",
         "options": [],
-        "query": "label_values(garden_shoot_info{project=\"$project\"}, name)",
+        "query": {
+          "query": "label_values(garden_shoot_info{project=\"$project\"}, name)",
+          "refId": "prometheus-shoot-Variable-Query"
+        },
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -1254,8 +1277,20 @@
     "to": "now"
   },
   "timepicker": {
-    "refresh_intervals": ["30s"],
-    "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
+    "refresh_intervals": [
+      "30s"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d",
+      "30d"
+    ]
   },
   "timezone": "browser",
   "title": "Shoot Details",

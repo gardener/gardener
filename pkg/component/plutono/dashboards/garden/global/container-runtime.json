@@ -56,7 +56,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.10",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -177,7 +177,7 @@
       "options": {
         "showHeader": true
       },
-      "pluginVersion": "7.5.10",
+      "pluginVersion": "7.5.23",
       "scopedVars": {
         "cri": {
           "selected": false,
@@ -204,205 +204,12 @@
           "id": "filterFieldsByName",
           "options": {
             "include": {
-              "names": ["cri", "image", "project", "Value"]
-            }
-          }
-        }
-      ],
-      "type": "table"
-    },
-    {
-      "collapsed": false,
-      "datasource": null,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 17
-      },
-      "id": 6,
-      "panels": [],
-      "repeatIteration": 1632311738934,
-      "repeatPanelId": 5,
-      "scopedVars": {
-        "cri": {
-          "selected": false,
-          "text": "docker",
-          "value": "docker"
-        }
-      },
-      "title": "$cri",
-      "type": "row"
-    },
-    {
-      "datasource": "availability-prometheus",
-      "description": "Shoots that are configured with listed runtimes",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "align": null,
-            "filterable": false
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 18
-      },
-      "id": 7,
-      "options": {
-        "showHeader": true
-      },
-      "pluginVersion": "7.5.10",
-      "repeatIteration": 1632311738934,
-      "repeatPanelId": 3,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "cri": {
-          "selected": false,
-          "text": "docker",
-          "value": "docker"
-        }
-      },
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "topk(10,(count by (cri, project, image) (count by (cri, name, project, image) (garden_shoot_node_info{cri=~\"$cri\"})))) ",
-          "format": "table",
-          "instant": true,
-          "interval": "",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Total Container Runtimes",
-      "transformations": [
-        {
-          "id": "filterFieldsByName",
-          "options": {
-            "include": {
-              "names": ["cri", "image", "project", "Value"]
-            }
-          }
-        }
-      ],
-      "type": "table"
-    },
-    {
-      "collapsed": false,
-      "datasource": null,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 26
-      },
-      "id": 8,
-      "panels": [],
-      "repeatIteration": 1632311738934,
-      "repeatPanelId": 5,
-      "scopedVars": {
-        "cri": {
-          "selected": false,
-          "text": "docker (default)",
-          "value": "docker (default)"
-        }
-      },
-      "title": "$cri",
-      "type": "row"
-    },
-    {
-      "datasource": "availability-prometheus",
-      "description": "Shoots that are configured with listed runtimes",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "align": null,
-            "filterable": false
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 27
-      },
-      "id": 9,
-      "options": {
-        "showHeader": true
-      },
-      "pluginVersion": "7.5.10",
-      "repeatIteration": 1632311738934,
-      "repeatPanelId": 3,
-      "repeatedByRow": true,
-      "scopedVars": {
-        "cri": {
-          "selected": false,
-          "text": "docker (default)",
-          "value": "docker (default)"
-        }
-      },
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "topk(10,(count by (cri, project, image) (count by (cri, name, project, image) (garden_shoot_node_info{cri=~\"$cri\"})))) ",
-          "format": "table",
-          "instant": true,
-          "interval": "",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Total Container Runtimes",
-      "transformations": [
-        {
-          "id": "filterFieldsByName",
-          "options": {
-            "include": {
-              "names": ["cri", "image", "project", "Value"]
+              "names": [
+                "cri",
+                "image",
+                "project",
+                "Value"
+              ]
             }
           }
         }
@@ -419,7 +226,7 @@
       {
         "allValue": null,
         "current": {
-          "selected": true,
+          "selected": false,
           "text": "All",
           "value": "$__all"
         },

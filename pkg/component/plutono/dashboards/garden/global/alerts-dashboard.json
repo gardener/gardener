@@ -21,6 +21,7 @@
   "panels": [
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -33,7 +34,34 @@
       "type": "row"
     },
     {
+      "datasource": null,
       "description": "Shows the number of alerts by infrastructure.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "displayName": "",
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
       "gridPos": {
         "h": 8,
         "w": 9,
@@ -43,31 +71,18 @@
       "id": 26,
       "options": {
         "displayMode": "gradient",
-        "fieldOptions": {
-          "calcs": ["lastNotNull"],
-          "defaults": {
-            "decimals": 0,
-            "mappings": [],
-            "max": 100,
-            "min": 0,
-            "thresholds": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ],
-            "title": ""
-          },
-          "override": {},
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
           "values": false
         },
-        "orientation": "horizontal"
+        "showUnfilled": true,
+        "text": {}
       },
-      "pluginVersion": "6.3.2",
+      "pluginVersion": "7.5.23",
       "targets": [
         {
           "expr": "count(ALERTS{severity=~\"$Severity\", alertstate=~\"$AlertState\", alertname=~\"$Alertname\", shoot_infra=~\"$Infra\"}) by (shoot_infra)",
@@ -85,9 +100,18 @@
       "cacheTimeout": null,
       "colorBackground": false,
       "colorValue": true,
-      "colors": ["#F2495C", "#F2495C", "#F2495C"],
+      "colors": [
+        "#F2495C",
+        "#F2495C",
+        "#F2495C"
+      ],
+      "datasource": null,
       "decimals": 0,
       "description": "Shows how many alerts are currently firing for shoots using this seed.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -119,7 +143,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": "Firing Alert(s)",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -166,9 +189,18 @@
       "cacheTimeout": null,
       "colorBackground": false,
       "colorValue": true,
-      "colors": ["#FF9830", "#FF9830", "#FF9830"],
+      "colors": [
+        "#FF9830",
+        "#FF9830",
+        "#FF9830"
+      ],
+      "datasource": null,
       "decimals": 0,
       "description": "Shows how many alerts are currently pending for shoots using this seed.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -200,7 +232,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": " Pending Alert(s)",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -245,7 +276,53 @@
     },
     {
       "cacheTimeout": null,
+      "datasource": null,
       "description": "Shows the percentage of clusters that have at least 1 firing or pending alert.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": null,
+          "mappings": [
+            {
+              "from": "",
+              "id": 1,
+              "operator": "",
+              "text": "0",
+              "to": "",
+              "type": 1,
+              "value": "null"
+            },
+            {
+              "from": "",
+              "id": 2,
+              "operator": "",
+              "text": "0",
+              "to": "",
+              "type": 1,
+              "value": "No data"
+            }
+          ],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 50
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
       "gridPos": {
         "h": 4,
         "w": 5,
@@ -255,52 +332,19 @@
       "id": 16,
       "links": [],
       "options": {
-        "fieldOptions": {
-          "calcs": ["mean"],
-          "defaults": {
-            "decimals": null,
-            "mappings": [
-              {
-                "from": "",
-                "id": 1,
-                "operator": "",
-                "text": "0",
-                "to": "",
-                "type": 1,
-                "value": "null"
-              },
-              {
-                "from": "",
-                "id": 2,
-                "operator": "",
-                "text": "0",
-                "to": "",
-                "type": 1,
-                "value": "No data"
-              }
-            ],
-            "max": 100,
-            "min": 0,
-            "thresholds": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 50
-              }
-            ],
-            "unit": "percent"
-          },
-          "override": {},
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
           "values": false
         },
-        "orientation": "auto",
         "showThresholdLabels": false,
-        "showThresholdMarkers": false
+        "showThresholdMarkers": false,
+        "text": {}
       },
-      "pluginVersion": "6.3.2",
+      "pluginVersion": "7.5.23",
       "targets": [
         {
           "expr": "count(count(ALERTS) by (shoot_name)) / count(count(shoot:availability) by (shoot_name)) * 100",
@@ -319,9 +363,18 @@
       "cacheTimeout": null,
       "colorBackground": false,
       "colorValue": true,
-      "colors": ["#F2495C", "#F2495C", "#F2495C"],
+      "colors": [
+        "#F2495C",
+        "#F2495C",
+        "#F2495C"
+      ],
+      "datasource": null,
       "decimals": 0,
       "description": "Shows how many clusters have at least 1 firing alert.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -353,7 +406,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": "Cluster(s)",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -401,9 +453,18 @@
       "cacheTimeout": null,
       "colorBackground": false,
       "colorValue": true,
-      "colors": ["#FF9830", "#FF9830", "#FF9830"],
+      "colors": [
+        "#FF9830",
+        "#FF9830",
+        "#FF9830"
+      ],
+      "datasource": null,
       "decimals": 0,
       "description": "Shows how many clusters currently have at least 1 pending alert.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -435,7 +496,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": " Cluster(s)",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -483,8 +543,17 @@
       "cacheTimeout": null,
       "colorBackground": false,
       "colorValue": false,
-      "colors": ["#299c46", "rgba(237, 129, 40, 0.89)", "#d44a3a"],
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "datasource": null,
       "description": "Shows the total number of shoots with a control plane on this seed.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -516,7 +585,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": "Cluster(s)",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -565,8 +633,15 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 0,
       "description": "Shows alerts that are/were active with the selected severity and alert state from the selected clusters. Includes the alertnames of the alerts.",
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -575,6 +650,7 @@
         "x": 0,
         "y": 9
       },
+      "hiddenSeries": false,
       "id": 24,
       "legend": {
         "alignAsTable": true,
@@ -592,9 +668,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -655,6 +732,7 @@
     },
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -671,8 +749,15 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 0,
       "description": "Shows the number of alerts in each cluster.",
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -681,6 +766,7 @@
         "x": 0,
         "y": 18
       },
+      "hiddenSeries": false,
       "id": 4,
       "interval": "",
       "legend": {
@@ -699,9 +785,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -763,7 +850,12 @@
     },
     {
       "columns": [],
+      "datasource": null,
       "description": "Shows all alerts that are currently active from the selected clusters, severity, and alert state.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "fontSize": "100%",
       "gridPos": {
         "h": 12,
@@ -773,7 +865,6 @@
       },
       "id": 7,
       "links": [],
-      "options": {},
       "pageSize": null,
       "scroll": true,
       "showHeader": true,
@@ -784,12 +875,14 @@
       "styles": [
         {
           "alias": "Time",
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "hidden"
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -806,6 +899,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -825,6 +919,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -852,31 +947,43 @@
       "timeShift": null,
       "title": "Cluster Alerts ($Severity|$AlertState|$Alertname|$Infra)",
       "transform": "table",
-      "type": "table"
+      "type": "table-old"
     }
   ],
   "refresh": false,
-  "schemaVersion": 19,
+  "schemaVersion": 27,
   "style": "dark",
-  "tags": ["monitoring", "seed"],
+  "tags": [
+    "monitoring",
+    "seed"
+  ],
   "templating": {
     "list": [
       {
         "allValue": null,
         "current": {
-          "tags": [],
-          "text": "All",
-          "value": ["$__all"]
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "prometheus",
         "definition": "label_values(ALERTS,severity)",
+        "description": null,
+        "error": null,
         "hide": 0,
         "includeAll": true,
         "label": null,
         "multi": true,
         "name": "Severity",
         "options": [],
-        "query": "label_values(ALERTS,severity)",
+        "query": {
+          "query": "label_values(ALERTS,severity)",
+          "refId": "prometheus-Severity-Variable-Query"
+        },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -890,18 +997,28 @@
       {
         "allValue": null,
         "current": {
-          "text": "All",
-          "value": ["$__all"]
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "prometheus",
         "definition": "label_values(ALERTS,alertstate)",
+        "description": null,
+        "error": null,
         "hide": 0,
         "includeAll": true,
         "label": "Alert State",
         "multi": true,
         "name": "AlertState",
         "options": [],
-        "query": "label_values(ALERTS,alertstate)",
+        "query": {
+          "query": "label_values(ALERTS,alertstate)",
+          "refId": "prometheus-AlertState-Variable-Query"
+        },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -915,18 +1032,28 @@
       {
         "allValue": null,
         "current": {
-          "text": "All",
-          "value": ["$__all"]
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "prometheus",
         "definition": "label_values(ALERTS, alertname)",
+        "description": null,
+        "error": null,
         "hide": 0,
         "includeAll": true,
         "label": null,
         "multi": true,
         "name": "Alertname",
         "options": [],
-        "query": "label_values(ALERTS, alertname)",
+        "query": {
+          "query": "label_values(ALERTS, alertname)",
+          "refId": "prometheus-Alertname-Variable-Query"
+        },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -940,18 +1067,28 @@
       {
         "allValue": null,
         "current": {
-          "text": "All",
-          "value": ["$__all"]
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "prometheus",
         "definition": "label_values(ALERTS, shoot_infra)",
+        "description": null,
+        "error": null,
         "hide": 0,
         "includeAll": true,
         "label": null,
         "multi": true,
         "name": "Infra",
         "options": [],
-        "query": "label_values(ALERTS, shoot_infra)",
+        "query": {
+          "query": "label_values(ALERTS, shoot_infra)",
+          "refId": "prometheus-Infra-Variable-Query"
+        },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -981,7 +1118,17 @@
       "2h",
       "1d"
     ],
-    "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d",
+      "30d"
+    ]
   },
   "timezone": "",
   "title": "Alerts",

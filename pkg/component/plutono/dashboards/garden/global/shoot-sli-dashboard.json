@@ -1,6 +1,16 @@
 {
   "annotations": {
-    "list": []
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Plutono --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
   },
   "editable": true,
   "gnetId": null,
@@ -13,9 +23,7 @@
       "datasource": null,
       "description": "",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "gridPos": {
@@ -29,7 +37,7 @@
         "content": "This dashboard is one possible\nvisualisation for the error budgets\nof the shoots, grouped by the infrastructure.\n\nQuestions/comments: #gardener-monitoring",
         "mode": "markdown"
       },
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "timeFrom": null,
       "timeShift": null,
       "title": "Welcome",
@@ -40,7 +48,6 @@
       "description": "",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -68,13 +75,16 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["last"],
+          "calcs": [
+            "last"
+          ],
           "fields": "",
           "values": false
         },
+        "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "targets": [
         {
           "expr": "min_over_time((1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\"}) by (iaas))[24h:10m])",
@@ -379,7 +389,12 @@
               "id": "filterFieldsByName",
               "options": {
                 "include": {
-                  "names": ["iaas", "name", "project", "Value"]
+                  "names": [
+                    "iaas",
+                    "name",
+                    "project",
+                    "Value"
+                  ]
                 }
               }
             },
@@ -2810,7 +2825,7 @@
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1612436590043,
+          "repeatIteration": 1692364751761,
           "repeatPanelId": 103,
           "repeatedByRow": true,
           "scopedVars": {
@@ -2948,7 +2963,7 @@
           }
         }
       ],
-      "repeatIteration": 1612436590043,
+      "repeatIteration": 1692364751761,
       "repeatPanelId": 60,
       "scopedVars": {
         "iaas": {
@@ -3032,7 +3047,7 @@
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1612436590043,
+          "repeatIteration": 1692364751761,
           "repeatPanelId": 103,
           "repeatedByRow": true,
           "scopedVars": {
@@ -3170,7 +3185,7 @@
           }
         }
       ],
-      "repeatIteration": 1612436590043,
+      "repeatIteration": 1692364751761,
       "repeatPanelId": 60,
       "scopedVars": {
         "iaas": {
@@ -3254,7 +3269,7 @@
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1612436590043,
+          "repeatIteration": 1692364751761,
           "repeatPanelId": 103,
           "repeatedByRow": true,
           "scopedVars": {
@@ -3392,7 +3407,7 @@
           }
         }
       ],
-      "repeatIteration": 1612436590043,
+      "repeatIteration": 1692364751761,
       "repeatPanelId": 60,
       "scopedVars": {
         "iaas": {
@@ -3476,229 +3491,7 @@
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1612436590043,
-          "repeatPanelId": 103,
-          "repeatedByRow": true,
-          "scopedVars": {
-            "iaas": {
-              "selected": false,
-              "text": "metal",
-              "value": "metal"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "/min|max/",
-              "dashes": true
-            },
-            {
-              "alias": "90%",
-              "fillBelowTo": "50%"
-            },
-            {
-              "alias": "50%",
-              "fillBelowTo": "10%"
-            },
-            {
-              "alias": "SLO",
-              "linewidth": 2,
-              "zindex": 1
-            },
-            {
-              "alias": "# of shoots",
-              "yaxis": 2
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "1- max(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "min",
-              "refId": "A"
-            },
-            {
-              "expr": "$SLO/100",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "SLO",
-              "refId": "B"
-            },
-            {
-              "expr": "1- min(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "max",
-              "refId": "D"
-            },
-            {
-              "expr": "1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "90%",
-              "refId": "E"
-            },
-            {
-              "expr": "1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "10%",
-              "refId": "F"
-            },
-            {
-              "expr": "1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "50%",
-              "refId": "G"
-            },
-            {
-              "expr": "1- avg(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "avg",
-              "refId": "H"
-            },
-            {
-              "expr": "count(probe_failure:run{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\"})",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "# of shoots",
-              "refId": "C"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "Funnel for $iaas",
-          "tooltip": {
-            "shared": false,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "decimals": 3,
-              "format": "percentunit",
-              "label": "",
-              "logBase": 1,
-              "max": "1",
-              "min": null,
-              "show": true
-            },
-            {
-              "decimals": 0,
-              "format": "none",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        }
-      ],
-      "repeatIteration": 1612436590043,
-      "repeatPanelId": 60,
-      "scopedVars": {
-        "iaas": {
-          "selected": false,
-          "text": "metal",
-          "value": "metal"
-        }
-      },
-      "title": "Funnel for $iaas",
-      "type": "row"
-    },
-    {
-      "collapsed": true,
-      "datasource": null,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 13
-      },
-      "id": 145,
-      "panels": [
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "availability-prometheus",
-          "decimals": 2,
-          "description": "",
-          "fieldConfig": {
-            "defaults": {
-              "custom": {}
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "# of shoots"
-                },
-                "properties": [
-                  {
-                    "id": "unit",
-                    "value": "none"
-                  }
-                ]
-              }
-            ]
-          },
-          "fill": 0,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 12,
-            "w": 24,
-            "x": 0,
-            "y": 28
-          },
-          "hiddenSeries": false,
-          "id": 146,
-          "legend": {
-            "alignAsTable": true,
-            "avg": false,
-            "current": true,
-            "max": false,
-            "min": true,
-            "rightSide": true,
-            "show": true,
-            "sort": "min",
-            "sortDesc": true,
-            "total": false,
-            "values": true
-          },
-          "lines": true,
-          "linewidth": 1,
-          "nullPointMode": "null",
-          "options": {
-            "alertThreshold": true
-          },
-          "percentage": false,
-          "pluginVersion": "7.3.7",
-          "pointradius": 2,
-          "points": false,
-          "renderer": "flot",
-          "repeatIteration": 1612436590043,
+          "repeatIteration": 1692364751761,
           "repeatPanelId": 103,
           "repeatedByRow": true,
           "scopedVars": {
@@ -3836,7 +3629,7 @@
           }
         }
       ],
-      "repeatIteration": 1612436590043,
+      "repeatIteration": 1692364751761,
       "repeatPanelId": 60,
       "scopedVars": {
         "iaas": {
@@ -3855,9 +3648,9 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 14
+        "y": 13
       },
-      "id": 147,
+      "id": 145,
       "panels": [
         {
           "aliasColors": {},
@@ -3895,7 +3688,7 @@
             "y": 28
           },
           "hiddenSeries": false,
-          "id": 148,
+          "id": 146,
           "legend": {
             "alignAsTable": true,
             "avg": false,
@@ -3920,451 +3713,7 @@
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
-          "repeatIteration": 1612436590043,
-          "repeatPanelId": 103,
-          "repeatedByRow": true,
-          "scopedVars": {
-            "iaas": {
-              "selected": false,
-              "text": "ovh",
-              "value": "ovh"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "/min|max/",
-              "dashes": true
-            },
-            {
-              "alias": "90%",
-              "fillBelowTo": "50%"
-            },
-            {
-              "alias": "50%",
-              "fillBelowTo": "10%"
-            },
-            {
-              "alias": "SLO",
-              "linewidth": 2,
-              "zindex": 1
-            },
-            {
-              "alias": "# of shoots",
-              "yaxis": 2
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "1- max(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "min",
-              "refId": "A"
-            },
-            {
-              "expr": "$SLO/100",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "SLO",
-              "refId": "B"
-            },
-            {
-              "expr": "1- min(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "max",
-              "refId": "D"
-            },
-            {
-              "expr": "1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "90%",
-              "refId": "E"
-            },
-            {
-              "expr": "1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "10%",
-              "refId": "F"
-            },
-            {
-              "expr": "1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "50%",
-              "refId": "G"
-            },
-            {
-              "expr": "1- avg(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "avg",
-              "refId": "H"
-            },
-            {
-              "expr": "count(probe_failure:run{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\"})",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "# of shoots",
-              "refId": "C"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "Funnel for $iaas",
-          "tooltip": {
-            "shared": false,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "decimals": 3,
-              "format": "percentunit",
-              "label": "",
-              "logBase": 1,
-              "max": "1",
-              "min": null,
-              "show": true
-            },
-            {
-              "decimals": 0,
-              "format": "none",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        }
-      ],
-      "repeatIteration": 1612436590043,
-      "repeatPanelId": 60,
-      "scopedVars": {
-        "iaas": {
-          "selected": false,
-          "text": "ovh",
-          "value": "ovh"
-        }
-      },
-      "title": "Funnel for $iaas",
-      "type": "row"
-    },
-    {
-      "collapsed": true,
-      "datasource": null,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 15
-      },
-      "id": 149,
-      "panels": [
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "availability-prometheus",
-          "decimals": 2,
-          "description": "",
-          "fieldConfig": {
-            "defaults": {
-              "custom": {}
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "# of shoots"
-                },
-                "properties": [
-                  {
-                    "id": "unit",
-                    "value": "none"
-                  }
-                ]
-              }
-            ]
-          },
-          "fill": 0,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 12,
-            "w": 24,
-            "x": 0,
-            "y": 28
-          },
-          "hiddenSeries": false,
-          "id": 150,
-          "legend": {
-            "alignAsTable": true,
-            "avg": false,
-            "current": true,
-            "max": false,
-            "min": true,
-            "rightSide": true,
-            "show": true,
-            "sort": "min",
-            "sortDesc": true,
-            "total": false,
-            "values": true
-          },
-          "lines": true,
-          "linewidth": 1,
-          "nullPointMode": "null",
-          "options": {
-            "alertThreshold": true
-          },
-          "percentage": false,
-          "pluginVersion": "7.3.7",
-          "pointradius": 2,
-          "points": false,
-          "renderer": "flot",
-          "repeatIteration": 1612436590043,
-          "repeatPanelId": 103,
-          "repeatedByRow": true,
-          "scopedVars": {
-            "iaas": {
-              "selected": false,
-              "text": "sen",
-              "value": "sen"
-            }
-          },
-          "seriesOverrides": [
-            {
-              "alias": "/min|max/",
-              "dashes": true
-            },
-            {
-              "alias": "90%",
-              "fillBelowTo": "50%"
-            },
-            {
-              "alias": "50%",
-              "fillBelowTo": "10%"
-            },
-            {
-              "alias": "SLO",
-              "linewidth": 2,
-              "zindex": 1
-            },
-            {
-              "alias": "# of shoots",
-              "yaxis": 2
-            }
-          ],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "1- max(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "min",
-              "refId": "A"
-            },
-            {
-              "expr": "$SLO/100",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "SLO",
-              "refId": "B"
-            },
-            {
-              "expr": "1- min(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "max",
-              "refId": "D"
-            },
-            {
-              "expr": "1- quantile(0.1, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "90%",
-              "refId": "E"
-            },
-            {
-              "expr": "1- quantile(0.9, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "10%",
-              "refId": "F"
-            },
-            {
-              "expr": "1- quantile(0.5, probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "50%",
-              "refId": "G"
-            },
-            {
-              "expr": "1- avg(probe_failure:run:time:total:percent{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\",term=~\"$term\",window=\"$window\"})",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "avg",
-              "refId": "H"
-            },
-            {
-              "expr": "count(probe_failure:run{iaas=~\"$iaas\",purpose=~\"$purpose\",project=~\"$project\"})",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "# of shoots",
-              "refId": "C"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "Funnel for $iaas",
-          "tooltip": {
-            "shared": false,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "decimals": 3,
-              "format": "percentunit",
-              "label": "",
-              "logBase": 1,
-              "max": "1",
-              "min": null,
-              "show": true
-            },
-            {
-              "decimals": 0,
-              "format": "none",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        }
-      ],
-      "repeatIteration": 1612436590043,
-      "repeatPanelId": 60,
-      "scopedVars": {
-        "iaas": {
-          "selected": false,
-          "text": "sen",
-          "value": "sen"
-        }
-      },
-      "title": "Funnel for $iaas",
-      "type": "row"
-    },
-    {
-      "collapsed": true,
-      "datasource": null,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 16
-      },
-      "id": 151,
-      "panels": [
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "availability-prometheus",
-          "decimals": 2,
-          "description": "",
-          "fieldConfig": {
-            "defaults": {
-              "custom": {}
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "# of shoots"
-                },
-                "properties": [
-                  {
-                    "id": "unit",
-                    "value": "none"
-                  }
-                ]
-              }
-            ]
-          },
-          "fill": 0,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 12,
-            "w": 24,
-            "x": 0,
-            "y": 28
-          },
-          "hiddenSeries": false,
-          "id": 152,
-          "legend": {
-            "alignAsTable": true,
-            "avg": false,
-            "current": true,
-            "max": false,
-            "min": true,
-            "rightSide": true,
-            "show": true,
-            "sort": "min",
-            "sortDesc": true,
-            "total": false,
-            "values": true
-          },
-          "lines": true,
-          "linewidth": 1,
-          "nullPointMode": "null",
-          "options": {
-            "alertThreshold": true
-          },
-          "percentage": false,
-          "pluginVersion": "7.3.7",
-          "pointradius": 2,
-          "points": false,
-          "renderer": "flot",
-          "repeatIteration": 1612436590043,
+          "repeatIteration": 1692364751761,
           "repeatPanelId": 103,
           "repeatedByRow": true,
           "scopedVars": {
@@ -4502,7 +3851,7 @@
           }
         }
       ],
-      "repeatIteration": 1612436590043,
+      "repeatIteration": 1692364751761,
       "repeatPanelId": 60,
       "scopedVars": {
         "iaas": {
@@ -4516,7 +3865,7 @@
     }
   ],
   "refresh": false,
-  "schemaVersion": 26,
+  "schemaVersion": 27,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -4525,12 +3874,16 @@
         "allValue": "(.+)",
         "current": {
           "selected": true,
-          "tags": [],
-          "text": ["All"],
-          "value": ["$__all"]
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "availability-prometheus",
         "definition": "label_values(probe_failure, iaas)",
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": true,
@@ -4538,7 +3891,10 @@
         "multi": true,
         "name": "iaas",
         "options": [],
-        "query": "label_values(probe_failure, iaas)",
+        "query": {
+          "query": "label_values(probe_failure, iaas)",
+          "refId": "availability-prometheus-iaas-Variable-Query"
+        },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -4552,12 +3908,17 @@
       {
         "allValue": "(.+)",
         "current": {
-          "selected": false,
-          "text": ["All"],
-          "value": ["$__all"]
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "availability-prometheus",
         "definition": "label_values(probe_failure, purpose)",
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": true,
@@ -4565,7 +3926,10 @@
         "multi": true,
         "name": "purpose",
         "options": [],
-        "query": "label_values(probe_failure, purpose)",
+        "query": {
+          "query": "label_values(probe_failure, purpose)",
+          "refId": "availability-prometheus-purpose-Variable-Query"
+        },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -4579,12 +3943,17 @@
       {
         "allValue": "(.+)",
         "current": {
-          "selected": false,
-          "text": ["All"],
-          "value": ["$__all"]
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "availability-prometheus",
         "definition": "label_values(probe_failure, project)",
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": true,
@@ -4592,7 +3961,10 @@
         "multi": true,
         "name": "project",
         "options": [],
-        "query": "label_values(probe_failure, project)",
+        "query": {
+          "query": "label_values(probe_failure, project)",
+          "refId": "availability-prometheus-project-Variable-Query"
+        },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -4612,6 +3984,7 @@
         },
         "datasource": "availability-prometheus",
         "definition": "label_values(probe_failure:run:time:total:percent, window)",
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": false,
@@ -4650,6 +4023,7 @@
         },
         "datasource": "availability-prometheus",
         "definition": "label_values(probe_failure:run:time:total:percent,term)",
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": false,
@@ -4696,6 +4070,7 @@
           "text": "99.95",
           "value": "99.95"
         },
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": false,
