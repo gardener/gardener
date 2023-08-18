@@ -1,9 +1,23 @@
 {
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Plutono --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
   "description": "Landscape Availability Information",
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 8,
+  "id": 18,
+  "iteration": 1692360202947,
   "links": [],
   "panels": [
     {
@@ -12,8 +26,17 @@
       "colorPostfix": false,
       "colorPrefix": false,
       "colorValue": false,
-      "colors": ["#d44a3a", "rgba(237, 129, 40, 0.89)", "#299c46"],
+      "colors": [
+        "#d44a3a",
+        "rgba(237, 129, 40, 0.89)",
+        "#299c46"
+      ],
+      "datasource": null,
       "description": "Current Availability of the Kube API Server.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -45,7 +68,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -99,8 +121,17 @@
       "colorPostfix": false,
       "colorPrefix": false,
       "colorValue": false,
-      "colors": ["#d44a3a", "rgba(237, 129, 40, 0.89)", "#299c46"],
+      "colors": [
+        "#d44a3a",
+        "rgba(237, 129, 40, 0.89)",
+        "#299c46"
+      ],
+      "datasource": null,
       "description": "Current Availability of the Gardener API Server.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -132,7 +163,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -186,8 +216,17 @@
       "colorPostfix": false,
       "colorPrefix": false,
       "colorValue": false,
-      "colors": ["#d44a3a", "rgba(237, 129, 40, 0.89)", "#299c46"],
+      "colors": [
+        "#d44a3a",
+        "rgba(237, 129, 40, 0.89)",
+        "#299c46"
+      ],
+      "datasource": null,
       "description": "Current Availability of the Gardener Controller Manager.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -219,7 +258,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -273,8 +311,17 @@
       "colorPostfix": false,
       "colorPrefix": false,
       "colorValue": false,
-      "colors": ["#d44a3a", "rgba(237, 129, 40, 0.89)", "#299c46"],
+      "colors": [
+        "#d44a3a",
+        "rgba(237, 129, 40, 0.89)",
+        "#299c46"
+      ],
+      "datasource": null,
       "description": "Current Availability of the Gardener Dashboard.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -306,7 +353,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -360,8 +406,17 @@
       "colorPostfix": false,
       "colorPrefix": false,
       "colorValue": false,
-      "colors": ["#d44a3a", "rgba(237, 129, 40, 0.89)", "#299c46"],
+      "colors": [
+        "#d44a3a",
+        "rgba(237, 129, 40, 0.89)",
+        "#299c46"
+      ],
+      "datasource": null,
       "description": "Current Availability of the Terminal Controller Manager",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -393,7 +448,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -449,6 +503,12 @@
       "datasource": "prometheus",
       "decimals": 0,
       "description": "### State Meaning\n1 : Up  \n0 : Down (Http health probe for component failed or returned with unhealthy status code)",
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -457,6 +517,7 @@
         "x": 0,
         "y": 3
       },
+      "hiddenSeries": false,
       "id": 2,
       "legend": {
         "avg": false,
@@ -472,9 +533,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.23",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -547,6 +609,12 @@
       "datasource": "prometheus",
       "decimals": null,
       "description": "Health check response times of the Garden cluster or Gardener components.",
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -555,6 +623,7 @@
         "x": 12,
         "y": 3
       },
+      "hiddenSeries": false,
       "id": 3,
       "legend": {
         "avg": false,
@@ -570,9 +639,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.23",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -639,6 +709,7 @@
     },
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -655,8 +726,15 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 0,
       "description": "### State Meaning\n1 : Up  \n2 : Progressing (in transition to down)  \n0 :  Down  \n-1 :  Unknown",
+      "fieldConfig": {
+        "defaults": {
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -665,6 +743,7 @@
         "x": 0,
         "y": 12
       },
+      "hiddenSeries": false,
       "id": 17,
       "legend": {
         "alignAsTable": true,
@@ -683,9 +762,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.5.23",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -748,26 +828,37 @@
     }
   ],
   "refresh": "1m",
-  "schemaVersion": 19,
+  "schemaVersion": 27,
   "style": "dark",
-  "tags": ["Landscape", "Gardener", "Shoot", "Seed"],
+  "tags": [
+    "Landscape",
+    "Gardener",
+    "Shoot",
+    "Seed"
+  ],
   "templating": {
     "list": [
       {
         "allValue": "",
         "current": {
+          "selected": false,
           "text": "production",
           "value": "production"
         },
         "datasource": "prometheus",
         "definition": "label_values(garden_shoot_condition, purpose)",
+        "description": null,
+        "error": null,
         "hide": 0,
         "includeAll": true,
         "label": "Cluster Purpose",
         "multi": false,
         "name": "purpose",
         "options": [],
-        "query": "label_values(garden_shoot_condition, purpose)",
+        "query": {
+          "query": "label_values(garden_shoot_condition, purpose)",
+          "refId": "prometheus-purpose-Variable-Query"
+        },
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -781,18 +872,24 @@
       {
         "allValue": "",
         "current": {
+          "selected": false,
           "text": "All",
           "value": "$__all"
         },
         "datasource": "prometheus",
         "definition": "label_values(garden_shoot_info, iaas)",
+        "description": null,
+        "error": null,
         "hide": 0,
         "includeAll": true,
         "label": "Infrastructure",
         "multi": false,
         "name": "iaas",
         "options": [],
-        "query": "label_values(garden_shoot_info, iaas)",
+        "query": {
+          "query": "label_values(garden_shoot_info, iaas)",
+          "refId": "prometheus-iaas-Variable-Query"
+        },
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -806,18 +903,24 @@
       {
         "allValue": null,
         "current": {
+          "selected": false,
           "text": "All",
           "value": "$__all"
         },
         "datasource": "prometheus",
         "definition": "label_values(garden_shoot_info{iaas=~\"$iaas\"}, seed)",
+        "description": null,
+        "error": null,
         "hide": 0,
         "includeAll": true,
         "label": "Seed",
         "multi": false,
         "name": "seed",
         "options": [],
-        "query": "label_values(garden_shoot_info{iaas=~\"$iaas\"}, seed)",
+        "query": {
+          "query": "label_values(garden_shoot_info{iaas=~\"$iaas\"}, seed)",
+          "refId": "prometheus-seed-Variable-Query"
+        },
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -831,18 +934,24 @@
       {
         "allValue": null,
         "current": {
+          "selected": false,
           "text": "All",
           "value": "$__all"
         },
         "datasource": "prometheus",
         "definition": "label_values(garden_shoot_info{iaas=~\"$iaas\", seed=~\"$seed\"}, region)",
+        "description": null,
+        "error": null,
         "hide": 0,
         "includeAll": true,
         "label": "Region",
         "multi": false,
         "name": "region",
         "options": [],
-        "query": "label_values(garden_shoot_info{iaas=~\"$iaas\", seed=~\"$seed\"}, region)",
+        "query": {
+          "query": "label_values(garden_shoot_info{iaas=~\"$iaas\", seed=~\"$seed\"}, region)",
+          "refId": "prometheus-region-Variable-Query"
+        },
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -860,10 +969,24 @@
     "to": "now"
   },
   "timepicker": {
-    "refresh_intervals": ["30s", "1m", "5m"],
-    "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "10d"]
+    "refresh_intervals": [
+      "30s",
+      "1m",
+      "5m"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "10d"
+    ]
   },
   "timezone": "browser",
   "title": "Garden Availability",
-  "version": 0
+  "uid": "garden-availability",
+  "version": 1
 }
