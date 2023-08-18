@@ -16,6 +16,7 @@ package gardeneraccess_test
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -26,13 +27,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/gardeneraccess"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils/retry"
+	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -40,7 +45,7 @@ var _ = Describe("Access", func() {
 	var (
 		fakeClient client.Client
 		sm         secretsmanager.Interface
-		access     component.Deployer
+		access     component.DeployWaiter
 
 		ctx       = context.TODO()
 		namespace = "shoot--foo--bar"
@@ -283,6 +288,95 @@ users:
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedGardenerInternalSecret), expectedGardenerInternalSecret)).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedManagedResourceSecret), expectedManagedResourceSecret)).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedManagedResource), expectedManagedResource)).To(BeNotFoundError())
+		})
+	})
+
+	Context("waiting functions", func() {
+		var (
+			fakeOps *retryfake.Ops
+		)
+
+		BeforeEach(func() {
+			fakeOps = &retryfake.Ops{MaxAttempts: 1}
+			DeferCleanup(test.WithVars(
+				&TimeoutWaitForManagedResource, 500*time.Millisecond,
+				&retry.Until, fakeOps.Until,
+				&retry.UntilTimeout, fakeOps.UntilTimeout,
+			))
+		})
+
+		Describe("#Wait", func() {
+			It("should fail because reading the ManagedResource fails", func() {
+				Expect(access.Wait(ctx)).To(MatchError(ContainSubstring("not found")))
+			})
+
+			It("should fail because the ManagedResource doesn't become healthy", func() {
+				fakeOps.MaxAttempts = 2
+
+				Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       managedResourceName,
+						Namespace:  namespace,
+						Generation: 1,
+					},
+					Status: resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 1,
+						Conditions: []gardencorev1beta1.Condition{
+							{
+								Type:   resourcesv1alpha1.ResourcesApplied,
+								Status: gardencorev1beta1.ConditionFalse,
+							},
+							{
+								Type:   resourcesv1alpha1.ResourcesHealthy,
+								Status: gardencorev1beta1.ConditionFalse,
+							},
+						},
+					},
+				})).To(Succeed())
+
+				Expect(access.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
+			})
+
+			It("should successfully wait for the managed resource to become healthy", func() {
+				fakeOps.MaxAttempts = 2
+
+				Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       managedResourceName,
+						Namespace:  namespace,
+						Generation: 1,
+					},
+					Status: resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 1,
+						Conditions: []gardencorev1beta1.Condition{
+							{
+								Type:   resourcesv1alpha1.ResourcesApplied,
+								Status: gardencorev1beta1.ConditionTrue,
+							},
+							{
+								Type:   resourcesv1alpha1.ResourcesHealthy,
+								Status: gardencorev1beta1.ConditionTrue,
+							},
+						},
+					},
+				})).To(Succeed())
+
+				Expect(access.Wait(ctx)).To(Succeed())
+			})
+		})
+
+		Describe("#WaitCleanup", func() {
+			It("should fail when the wait for the managed resource deletion times out", func() {
+				fakeOps.MaxAttempts = 2
+
+				Expect(access.Deploy(ctx)).To(Succeed())
+
+				Expect(access.WaitCleanup(ctx)).To(MatchError(ContainSubstring("still exists")))
+			})
+
+			It("should not return an error when it's already removed", func() {
+				Expect(access.WaitCleanup(ctx)).To(Succeed())
+			})
 		})
 	})
 })

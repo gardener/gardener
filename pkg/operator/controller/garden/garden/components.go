@@ -86,7 +86,7 @@ type components struct {
 	kubeAPIServer                        kubeapiserver.Interface
 	kubeControllerManager                kubecontrollermanager.Interface
 	virtualGardenGardenerResourceManager resourcemanager.Interface
-	virtualGardenGardenerAccess          component.Deployer
+	virtualGardenGardenerAccess          component.DeployWaiter
 
 	kubeStateMetrics              component.DeployWaiter
 	fluentOperator                component.DeployWaiter
@@ -686,7 +686,7 @@ func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValue
 	), nil
 }
 
-func (r *Reconciler) newGardenerAccess(secretsManager secretsmanager.Interface, domain string) component.Deployer {
+func (r *Reconciler) newGardenerAccess(secretsManager secretsmanager.Interface, domain string) component.DeployWaiter {
 	return gardeneraccess.New(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,

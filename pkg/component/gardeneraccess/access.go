@@ -17,6 +17,7 @@ package gardeneraccess
 import (
 	"context"
 	"fmt"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -43,7 +44,7 @@ func New(
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	values Values,
-) component.Deployer {
+) component.DeployWaiter {
 	return &gardener{
 		client:         client,
 		namespace:      namespace,
@@ -120,6 +121,26 @@ func (g *gardener) Destroy(ctx context.Context) error {
 	}
 
 	return managedresources.DeleteForShoot(ctx, g.client, g.namespace, ManagedResourceName)
+}
+
+var (
+	// TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
+	// or deleted.
+	TimeoutWaitForManagedResource = 1 * time.Minute
+)
+
+func (g *gardener) Wait(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+
+	return managedresources.WaitUntilHealthy(timeoutCtx, g.client, g.namespace, ManagedResourceName)
+}
+
+func (g *gardener) WaitCleanup(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+
+	return managedresources.WaitUntilDeleted(timeoutCtx, g.client, g.namespace, ManagedResourceName)
 }
 
 func (g *gardener) computeResourcesData(serviceAccountNames ...string) (map[string][]byte, error) {

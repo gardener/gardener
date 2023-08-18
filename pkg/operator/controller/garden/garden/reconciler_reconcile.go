@@ -260,7 +260,7 @@ func (r *Reconciler) reconcile(
 		})
 		deployVirtualGardenGardenerAccess = g.Add(flow.Task{
 			Name:         "Deploying resources for gardener-operator access to virtual garden",
-			Fn:           c.virtualGardenGardenerAccess.Deploy,
+			Fn:           component.OpWait(c.virtualGardenGardenerAccess).Deploy,
 			Dependencies: flow.NewTaskIDs(waitUntilVirtualGardenGardenerResourceManagerIsReady),
 		})
 		renewVirtualClusterAccess = g.Add(flow.Task{
