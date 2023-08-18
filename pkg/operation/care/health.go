@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver"
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -382,7 +384,7 @@ func (h *Health) healthChecks(
 
 	taskFns = append(taskFns,
 		func(ctx context.Context) error {
-			newNodes, err := h.checkClusterNodes(ctx, h.shootClient.Client(), h.shoot.SeedNamespace, checker, nodes, extensionConditionsEveryNodeReady)
+			newNodes, err := h.checkClusterNodes(ctx, h.shoot.SeedNamespace, checker, nodes, extensionConditionsEveryNodeReady)
 			nodes = healthchecker.NewConditionOrError(h.clock, nodes, newNodes, err)
 			return nil
 		},
@@ -503,7 +505,6 @@ func (h *Health) checkSystemComponents(
 // as many nodes are registered as desired, and that every machine is running.
 func (h *Health) checkClusterNodes(
 	ctx context.Context,
-	shootClient client.Client,
 	seedNamespace string,
 	checker *healthchecker.HealthChecker,
 	condition gardencorev1beta1.Condition,
@@ -512,7 +513,7 @@ func (h *Health) checkClusterNodes(
 	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions); exitCondition != nil {
 		return exitCondition, nil
 	}
-	if exitCondition, err := checker.CheckClusterNodes(ctx, shootClient, seedNamespace, h.shoot.GetInfo().Spec.Provider.Workers, condition); err != nil || exitCondition != nil {
+	if exitCondition, err := CheckClusterNodes(ctx, h.shootClient.Client(), h.seedClient.Client(), checker, h.shoot.KubernetesVersion, seedNamespace, h.shoot.GetInfo().Spec.Provider.Workers, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 
@@ -559,6 +560,236 @@ func CheckShootControlPlane(
 	}
 
 	return checker.CheckControlPlane(ctx, namespace, requiredControlPlaneDeployments, requiredShootControlPlaneEtcds, condition)
+}
+
+// annotationKeyNotManagedByMCM is a constant for an annotation on the node resource that indicates that the node is not
+// handled by machine-controller-manager.
+const annotationKeyNotManagedByMCM = "node.machine.sapcloud.io/not-managed-by-mcm"
+
+// CheckClusterNodes checks whether cluster nodes in the given listers are healthy and within the desired range.
+// Additional checks are executed in the provider extension
+func CheckClusterNodes(
+	ctx context.Context,
+	shootClient client.Client,
+	seedClient client.Client,
+	checker *healthchecker.HealthChecker,
+	kubernetesVersion *semver.Version,
+	seedNamespace string,
+	workers []gardencorev1beta1.Worker,
+	condition gardencorev1beta1.Condition,
+) (
+	*gardencorev1beta1.Condition,
+	error,
+) {
+	workerPoolToNodes, err := botanist.WorkerPoolToNodesMap(ctx, shootClient)
+	if err != nil {
+		return nil, err
+	}
+
+	workerPoolToCloudConfigSecretMeta, err := botanist.WorkerPoolToCloudConfigSecretMetaMap(ctx, shootClient)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, pool := range workers {
+		nodes := workerPoolToNodes[pool.Name]
+
+		kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(kubernetesVersion, pool.Kubernetes)
+		if err != nil {
+			return nil, err
+		}
+
+		if exitCondition := checker.CheckNodes(condition, nodes, pool.Name, kubernetesVersion); exitCondition != nil {
+			return exitCondition, nil
+		}
+
+		if len(nodes) < int(pool.Minimum) {
+			c := checker.FailedCondition(condition, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool %q to meet minimum desired machine count. (%d/%d).", pool.Name, len(nodes), pool.Minimum))
+			return &c, nil
+		}
+	}
+
+	if err := botanist.CloudConfigUpdatedForAllWorkerPools(workers, workerPoolToNodes, workerPoolToCloudConfigSecretMeta); err != nil {
+		c := checker.FailedCondition(condition, "CloudConfigOutdated", err.Error())
+		return &c, nil
+	}
+
+	if !features.DefaultFeatureGate.Enabled(features.MachineControllerManagerDeployment) {
+		return nil, nil
+	}
+
+	machineDeploymentList := &machinev1alpha1.MachineDeploymentList{}
+	if err := seedClient.List(ctx, machineDeploymentList, client.InNamespace(seedNamespace)); err != nil {
+		return nil, err
+	}
+
+	var (
+		nodeList            = convertWorkerPoolToNodesMappingToNodeList(workerPoolToNodes)
+		readyNodes          int
+		registeredNodes     = len(nodeList.Items)
+		desiredMachines     = getDesiredMachineCount(machineDeploymentList.Items)
+		nodeNotManagedByMCM int
+	)
+
+	for _, node := range nodeList.Items {
+		if metav1.HasAnnotation(node.ObjectMeta, annotationKeyNotManagedByMCM) && node.Annotations[annotationKeyNotManagedByMCM] == "1" {
+			nodeNotManagedByMCM++
+			continue
+		}
+		if node.Spec.Unschedulable {
+			continue
+		}
+		for _, condition := range node.Status.Conditions {
+			if condition.Type == corev1.NodeReady && condition.Status == corev1.ConditionTrue {
+				readyNodes++
+			}
+		}
+	}
+
+	// only nodes that are managed by MCM is considered
+	registeredNodes = registeredNodes - nodeNotManagedByMCM
+
+	machineList := &machinev1alpha1.MachineList{}
+	if registeredNodes != desiredMachines || readyNodes != desiredMachines {
+		if err := seedClient.List(ctx, machineList, client.InNamespace(seedNamespace)); err != nil {
+			return nil, err
+		}
+	}
+
+	// First check if the MachineDeployments report failed machines. If false then check if the MachineDeployments are
+	// "available". If false then check if there is a regular scale-up happening or if there are machines with an erroneous
+	// phase. Only then check the other MachineDeployment conditions. As last check, check if there is a scale-down happening
+	// (e.g., in case of an rolling-update).
+
+	checkScaleUp := false
+	for _, deployment := range machineDeploymentList.Items {
+		if len(deployment.Status.FailedMachines) > 0 {
+			break
+		}
+
+		for _, condition := range deployment.Status.Conditions {
+			if condition.Type == machinev1alpha1.MachineDeploymentAvailable && condition.Status != machinev1alpha1.ConditionTrue {
+				checkScaleUp = true
+				break
+			}
+		}
+	}
+
+	if checkScaleUp {
+		if err := CheckNodesScalingUp(machineList, readyNodes, desiredMachines); err != nil {
+			c := checker.FailedCondition(condition, "NodesScalingUp", err.Error())
+			return &c, nil
+		}
+	}
+
+	if err := CheckNodesScalingDown(machineList, nodeList, registeredNodes, desiredMachines); err != nil {
+		c := checker.FailedCondition(condition, "NodesScalingDown", err.Error())
+		return &c, nil
+	}
+
+	return nil, nil
+}
+
+// CheckNodesScalingUp returns an error of nodes are being scaled up.
+func CheckNodesScalingUp(machineList *machinev1alpha1.MachineList, readyNodes, desiredMachines int) error {
+	if readyNodes == desiredMachines {
+		return nil
+	}
+
+	if machineObjects := len(machineList.Items); machineObjects < desiredMachines {
+		return fmt.Errorf("not enough machine objects created yet (%d/%d)", machineObjects, desiredMachines)
+	}
+
+	var pendingMachines, erroneousMachines int
+	for _, machine := range machineList.Items {
+		switch machine.Status.CurrentStatus.Phase {
+		case machinev1alpha1.MachineRunning, machinev1alpha1.MachineAvailable:
+			// machine is already running fine
+			continue
+		case machinev1alpha1.MachinePending, "": // https://github.com/gardener/machine-controller-manager/issues/466
+			// machine is in the process of being created
+			pendingMachines++
+		default:
+			// undesired machine phase
+			erroneousMachines++
+		}
+	}
+
+	if erroneousMachines > 0 {
+		return fmt.Errorf("%s erroneous", cosmeticMachineMessage(erroneousMachines))
+	}
+	if pendingMachines == 0 {
+		return fmt.Errorf("not enough ready worker nodes registered in the cluster (%d/%d)", readyNodes, desiredMachines)
+	}
+
+	return fmt.Errorf("%s provisioning and should join the cluster soon", cosmeticMachineMessage(pendingMachines))
+}
+
+// CheckNodesScalingDown returns an error if nodes are being scaled down.
+func CheckNodesScalingDown(machineList *machinev1alpha1.MachineList, nodeList *corev1.NodeList, registeredNodes, desiredMachines int) error {
+	if registeredNodes == desiredMachines {
+		return nil
+	}
+
+	// Check if all nodes that are cordoned map to machines with a deletion timestamp. This might be the case during
+	// a rolling update.
+	nodeNameToMachine := map[string]machinev1alpha1.Machine{}
+	for _, machine := range machineList.Items {
+		if machine.Labels != nil && machine.Labels["node"] != "" {
+			nodeNameToMachine[machine.Labels["node"]] = machine
+		}
+	}
+
+	var cordonedNodes int
+	for _, node := range nodeList.Items {
+		if metav1.HasAnnotation(node.ObjectMeta, annotationKeyNotManagedByMCM) && node.Annotations[annotationKeyNotManagedByMCM] == "1" {
+			continue
+		}
+		if node.Spec.Unschedulable {
+			machine, ok := nodeNameToMachine[node.Name]
+			if !ok {
+				return fmt.Errorf("machine object for cordoned node %q not found", node.Name)
+			}
+			if machine.DeletionTimestamp == nil {
+				return fmt.Errorf("cordoned node %q found but corresponding machine object does not have a deletion timestamp", node.Name)
+			}
+			cordonedNodes++
+		}
+	}
+
+	// If there are still more nodes than desired then report an error.
+	if registeredNodes-cordonedNodes != desiredMachines {
+		return fmt.Errorf("too many worker nodes are registered. Exceeding maximum desired machine count (%d/%d)", registeredNodes, desiredMachines)
+	}
+
+	return fmt.Errorf("%s waiting to be completely drained from pods. If this persists, check your pod disruption budgets and pending finalizers. Please note, that nodes that fail to be drained will be deleted automatically", cosmeticMachineMessage(cordonedNodes))
+}
+
+func convertWorkerPoolToNodesMappingToNodeList(workerPoolToNodes map[string][]corev1.Node) *corev1.NodeList {
+	nodeList := &corev1.NodeList{}
+
+	for _, nodes := range workerPoolToNodes {
+		nodeList.Items = append(nodeList.Items, nodes...)
+	}
+
+	return nodeList
+}
+
+func getDesiredMachineCount(machineDeployments []machinev1alpha1.MachineDeployment) int {
+	desiredMachines := 0
+	for _, deployment := range machineDeployments {
+		if deployment.DeletionTimestamp == nil {
+			desiredMachines += int(deployment.Spec.Replicas)
+		}
+	}
+	return desiredMachines
+}
+
+func cosmeticMachineMessage(numberOfMachines int) string {
+	if numberOfMachines == 1 {
+		return fmt.Sprintf("%d machine is", numberOfMachines)
+	}
+	return fmt.Sprintf("%d machines are", numberOfMachines)
 }
 
 // This is a hack to quickly do a cloud provider specific check for the required control plane deployments.
