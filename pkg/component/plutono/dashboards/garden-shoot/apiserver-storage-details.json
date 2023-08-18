@@ -114,7 +114,7 @@
       "type": "row"
     }
   ],
-  "schemaVersion": 26,
+  "schemaVersion": 27,
   "style": "dark",
   "tags": [
     "apiserver-details",
@@ -127,7 +127,6 @@
         "allValue": ".*",
         "current": {
           "selected": true,
-          "tags": [],
           "text": [
             "All"
           ],
@@ -137,6 +136,7 @@
         },
         "datasource": "prometheus",
         "definition": "label_values(apiserver_request_total,job)",
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": true,
@@ -144,7 +144,10 @@
         "multi": true,
         "name": "apiserver",
         "options": [],
-        "query": "label_values(apiserver_request_total,job)",
+        "query": {
+          "query": "label_values(apiserver_request_total,job)",
+          "refId": "prometheus-apiserver-Variable-Query"
+        },
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -159,7 +162,6 @@
         "allValue": ".*",
         "current": {
           "selected": true,
-          "tags": [],
           "text": [
             "All"
           ],
@@ -169,6 +171,7 @@
         },
         "datasource": "prometheus",
         "definition": "label_values(etcd_request_duration_seconds_bucket,type)",
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": true,
@@ -176,7 +179,10 @@
         "multi": true,
         "name": "type",
         "options": [],
-        "query": "label_values(etcd_request_duration_seconds_bucket,type)",
+        "query": {
+          "query": "label_values(etcd_request_duration_seconds_bucket,type)",
+          "refId": "prometheus-type-Variable-Query"
+        },
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -191,7 +197,6 @@
         "allValue": ".*",
         "current": {
           "selected": true,
-          "tags": [],
           "text": [
             "All"
           ],
@@ -201,6 +206,7 @@
         },
         "datasource": "prometheus",
         "definition": "label_values(etcd_request_duration_seconds_bucket,operation)",
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": true,
@@ -208,7 +214,10 @@
         "multi": true,
         "name": "operation",
         "options": [],
-        "query": "label_values(etcd_request_duration_seconds_bucket,operation)",
+        "query": {
+          "query": "label_values(etcd_request_duration_seconds_bucket,operation)",
+          "refId": "prometheus-operation-Variable-Query"
+        },
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -228,5 +237,6 @@
   "timepicker": {},
   "timezone": "",
   "title": "API Server (Storage Details)",
-  "uid": "apiserver-storage-details"
+  "uid": "apiserver-storage-details",
+  "version": 1
 }

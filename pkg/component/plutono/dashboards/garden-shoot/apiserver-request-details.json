@@ -207,7 +207,7 @@
       "type": "row"
     }
   ],
-  "schemaVersion": 26,
+  "schemaVersion": 27,
   "style": "dark",
   "tags": [
     "apiserver-details",
@@ -220,7 +220,6 @@
         "allValue": ".*",
         "current": {
           "selected": true,
-          "tags": [],
           "text": [
             "All"
           ],
@@ -230,6 +229,7 @@
         },
         "datasource": "prometheus",
         "definition": "label_values(apiserver_request_total,job)",
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": true,
@@ -237,7 +237,10 @@
         "multi": true,
         "name": "apiserver",
         "options": [],
-        "query": "label_values(apiserver_request_total,job)",
+        "query": {
+          "query": "label_values(apiserver_request_total,job)",
+          "refId": "prometheus-apiserver-Variable-Query"
+        },
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -260,6 +263,7 @@
             "$__all"
           ]
         },
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": true,
@@ -337,7 +341,6 @@
         "allValue": ".*",
         "current": {
           "selected": true,
-          "tags": [],
           "text": [
             "All"
           ],
@@ -347,6 +350,7 @@
         },
         "datasource": "prometheus",
         "definition": "label_values(apiserver_response_sizes_bucket,resource)",
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": true,
@@ -354,7 +358,10 @@
         "multi": true,
         "name": "resource",
         "options": [],
-        "query": "label_values(apiserver_response_sizes_bucket,resource)",
+        "query": {
+          "query": "label_values(apiserver_response_sizes_bucket,resource)",
+          "refId": "prometheus-resource-Variable-Query"
+        },
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -369,7 +376,6 @@
         "allValue": ".*",
         "current": {
           "selected": true,
-          "tags": [],
           "text": [
             "All"
           ],
@@ -379,6 +385,7 @@
         },
         "datasource": "prometheus",
         "definition": "label_values(apiserver_response_sizes_bucket,subresource)",
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": true,
@@ -386,7 +393,10 @@
         "multi": true,
         "name": "subresource",
         "options": [],
-        "query": "label_values(apiserver_response_sizes_bucket,subresource)",
+        "query": {
+          "query": "label_values(apiserver_response_sizes_bucket,subresource)",
+          "refId": "prometheus-subresource-Variable-Query"
+        },
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -406,5 +416,6 @@
   "timepicker": {},
   "timezone": "",
   "title": "API Server (Request Details)",
-  "uid": "apiserver-request-details"
+  "uid": "apiserver-request-details",
+  "version": 1
 }

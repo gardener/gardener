@@ -67,14 +67,16 @@
         "displayMode": "gradient",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
         "showUnfilled": true,
         "text": {}
       },
-      "pluginVersion": "7.5.13",
+      "pluginVersion": "7.5.23",
       "targets": [
         {
           "exemplar": true,
@@ -133,7 +135,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.13",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -237,7 +239,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.13",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -338,7 +340,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.13",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -440,7 +442,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.13",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -541,7 +543,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.13",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -657,7 +659,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.13",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -773,7 +775,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.13",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -874,7 +876,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.13",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -975,7 +977,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.13",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1076,7 +1078,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.13",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1179,7 +1181,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.13",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1282,7 +1284,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.13",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1384,7 +1386,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.13",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1486,7 +1488,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.13",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1588,8 +1590,12 @@
         "allValue": null,
         "current": {
           "selected": true,
-          "text": ["All"],
-          "value": ["$__all"]
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "prometheus",
         "definition": "label_values(controller_runtime_reconcile_total, result)",
@@ -1619,8 +1625,12 @@
         "allValue": null,
         "current": {
           "selected": true,
-          "text": ["All"],
-          "value": ["$__all"]
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "prometheus",
         "definition": "label_values(rest_client_requests_total, code)",
@@ -1689,7 +1699,16 @@
     "to": "now"
   },
   "timepicker": {
-    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h"],
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h"
+    ],
     "time_options": [
       "5m",
       "15m",
@@ -1706,4 +1725,5 @@
   "timezone": "utc",
   "title": "Gardener Control Plane",
   "uid": "control-plane"
+  "version": 1
 }

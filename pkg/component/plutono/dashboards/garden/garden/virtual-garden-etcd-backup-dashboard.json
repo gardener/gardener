@@ -12,8 +12,8 @@
       }
     ]
   },
-  "editable": false,
   "description": "Dashboard with information about the virtual garden etcd backups.",
+  "editable": false,
   "gnetId": null,
   "graphTooltip": 0,
   "id": 1,
@@ -365,7 +365,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.23",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -489,7 +489,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.23",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -613,7 +613,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.23",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -732,7 +732,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.23",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -850,7 +850,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.23",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -973,7 +973,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.23",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1098,7 +1098,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.23",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1234,7 +1234,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.23",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1344,7 +1344,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.23",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1415,7 +1415,9 @@
   "refresh": "30s",
   "schemaVersion": 27,
   "style": "dark",
-  "tags": ["Gardener"],
+  "tags": [
+    "Gardener"
+  ],
   "templating": {
     "list": [
       {

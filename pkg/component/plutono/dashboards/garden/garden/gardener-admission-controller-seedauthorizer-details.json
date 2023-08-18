@@ -207,15 +207,23 @@
   ],
   "schemaVersion": 27,
   "style": "dark",
-  "tags": ["admission-controller-details", "controlplane", "garden"],
+  "tags": [
+    "admission-controller-details",
+    "controlplane",
+    "garden"
+  ],
   "templating": {
     "list": [
       {
         "allValue": ".*",
         "current": {
           "selected": true,
-          "text": ["All"],
-          "value": ["$__all"]
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "prometheus",
         "definition": "label_values(gardener_admission_controller_seed_authorizer_graph_update_duration_seconds_bucket,kind)",
@@ -245,8 +253,12 @@
         "allValue": ".*",
         "current": {
           "selected": true,
-          "text": ["All"],
-          "value": ["$__all"]
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "prometheus",
         "definition": "label_values(gardener_admission_controller_seed_authorizer_graph_path_check_duration_seconds_bucket,fromKind)",
@@ -281,5 +293,6 @@
   "timepicker": {},
   "timezone": "",
   "title": "Gardener Admission Controller (SeedAuthorizer Details)",
-  "uid": "gardener-admission-ctr-seedauth-details"
+  "uid": "gardener-admission-ctr-seedauth-details",
+  "version": 1
 }

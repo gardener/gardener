@@ -36,9 +36,7 @@
       "dashes": false,
       "datasource": null,
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "fill": 0,
@@ -78,7 +76,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.0",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -144,9 +142,7 @@
       "dashes": false,
       "datasource": null,
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "fill": 0,
@@ -186,7 +182,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.0",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -266,9 +262,7 @@
       "decimals": 0,
       "description": "Number of resources rejected by the Gardener Admission Controller.",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "fill": 0,
@@ -299,7 +293,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.4.0",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -361,15 +355,22 @@
   "refresh": "30s",
   "schemaVersion": 27,
   "style": "dark",
-  "tags": ["controlplane", "garden"],
+  "tags": [
+    "controlplane",
+    "garden"
+  ],
   "templating": {
     "list": [
       {
         "allValue": ".+",
         "current": {
           "selected": true,
-          "text": ["All"],
-          "value": ["$__all"]
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "prometheus",
         "definition": "label_values(gardener_admission_controller_rejected_resources_total, namespace)",
@@ -399,8 +400,12 @@
         "allValue": ".+",
         "current": {
           "selected": true,
-          "text": ["All"],
-          "value": ["$__all"]
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "prometheus",
         "definition": "label_values(gardener_admission_controller_rejected_resources_total, kind)",
@@ -430,8 +435,12 @@
         "allValue": ".+",
         "current": {
           "selected": true,
-          "text": ["All"],
-          "value": ["$__all"]
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "prometheus",
         "definition": "label_values(gardener_admission_controller_rejected_resources_total, operation)",
@@ -461,8 +470,12 @@
         "allValue": ".+",
         "current": {
           "selected": true,
-          "text": ["All"],
-          "value": ["$__all"]
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "prometheus",
         "definition": "label_values(gardener_admission_controller_rejected_resources_total, reason)",
@@ -492,9 +505,12 @@
         "allValue": ".*",
         "current": {
           "selected": true,
-          "tags": [],
-          "text": ["All"],
-          "value": ["$__all"]
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "prometheus",
         "definition": "label_values(gardener_admission_controller_seed_authorizer_graph_update_duration_seconds_bucket, kind)",
@@ -524,8 +540,12 @@
         "allValue": ".*",
         "current": {
           "selected": true,
-          "text": ["All"],
-          "value": ["$__all"]
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "prometheus",
         "definition": "label_values(gardener_admission_controller_seed_authorizer_graph_update_duration_seconds_bucket, operation)",
@@ -560,5 +580,6 @@
   "timepicker": {},
   "timezone": "",
   "title": "Gardener Admission Controller",
-  "uid": "gardener-admission-controller"
+  "uid": "gardener-admission-controller",
+  "version": 1
 }

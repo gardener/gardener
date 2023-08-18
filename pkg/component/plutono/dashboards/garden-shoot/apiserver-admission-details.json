@@ -211,7 +211,7 @@
       "type": "row"
     }
   ],
-  "schemaVersion": 26,
+  "schemaVersion": 27,
   "style": "dark",
   "tags": [
     "apiserver-details",
@@ -224,7 +224,6 @@
         "allValue": ".*",
         "current": {
           "selected": true,
-          "tags": [],
           "text": [
             "All"
           ],
@@ -234,6 +233,7 @@
         },
         "datasource": "prometheus",
         "definition": "label_values(apiserver_request_total,job)",
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": true,
@@ -241,7 +241,10 @@
         "multi": true,
         "name": "apiserver",
         "options": [],
-        "query": "label_values(apiserver_request_total,job)",
+        "query": {
+          "query": "label_values(apiserver_request_total,job)",
+          "refId": "prometheus-apiserver-Variable-Query"
+        },
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -264,6 +267,7 @@
             "$__all"
           ]
         },
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": true,
@@ -301,7 +305,6 @@
         "allValue": ".*",
         "current": {
           "selected": true,
-          "tags": [],
           "text": [
             "All"
           ],
@@ -311,6 +314,7 @@
         },
         "datasource": "prometheus",
         "definition": "label_values(apiserver_admission_controller_admission_duration_seconds_bucket,name)",
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": true,
@@ -318,7 +322,10 @@
         "multi": true,
         "name": "plugin_name",
         "options": [],
-        "query": "label_values(apiserver_admission_controller_admission_duration_seconds_bucket,name)",
+        "query": {
+          "query": "label_values(apiserver_admission_controller_admission_duration_seconds_bucket,name)",
+          "refId": "prometheus-plugin_name-Variable-Query"
+        },
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -338,6 +345,7 @@
         },
         "datasource": "prometheus",
         "definition": "label_values(apiserver_admission_webhook_admission_duration_seconds_bucket,name)",
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": true,
@@ -345,7 +353,10 @@
         "multi": true,
         "name": "webhook_name",
         "options": [],
-        "query": "label_values(apiserver_admission_webhook_admission_duration_seconds_bucket,name)",
+        "query": {
+          "query": "label_values(apiserver_admission_webhook_admission_duration_seconds_bucket,name)",
+          "refId": "prometheus-webhook_name-Variable-Query"
+        },
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -365,5 +376,6 @@
   "timepicker": {},
   "timezone": "",
   "title": "API Server (Admission Details)",
-  "uid": "apiserver-admission-details"
+  "uid": "apiserver-admission-details",
+  "version": 1
 }

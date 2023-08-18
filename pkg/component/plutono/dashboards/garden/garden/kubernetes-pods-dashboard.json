@@ -28,9 +28,7 @@
       "editable": true,
       "error": false,
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "fill": 0,
@@ -63,7 +61,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -134,9 +132,7 @@
       "editable": true,
       "error": false,
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "fill": 0,
@@ -169,7 +165,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -239,9 +235,7 @@
       "editable": true,
       "error": false,
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "fill": 7,
@@ -274,7 +268,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -351,7 +345,7 @@
         "h": 21,
         "w": 24,
         "x": 0,
-        "y": 30
+        "y": 21
       },
       "id": 6,
       "maxDataPoints": "",
@@ -376,15 +370,25 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 26,
+  "schemaVersion": 27,
   "style": "dark",
-  "tags": ["kubernetes", "seed", "shoot"],
+  "tags": [
+    "kubernetes",
+    "seed",
+    "shoot"
+  ],
   "templating": {
     "list": [
       {
         "allValue": null,
+        "current": {
+          "selected": false,
+          "text": "vpa-admission-controller-6774d7c855-qvp7q",
+          "value": "vpa-admission-controller-6774d7c855-qvp7q"
+        },
         "datasource": "prometheus",
         "definition": "label_values(container_cpu_usage_seconds_total, pod)",
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": false,
@@ -392,7 +396,10 @@
         "multi": true,
         "name": "pod",
         "options": [],
-        "query": "label_values(container_cpu_usage_seconds_total, pod)",
+        "query": {
+          "query": "label_values(container_cpu_usage_seconds_total, pod)",
+          "refId": "prometheus-pod-Variable-Query"
+        },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -405,8 +412,14 @@
       },
       {
         "allValue": ".*",
+        "current": {
+          "selected": false,
+          "text": "admission-controller",
+          "value": "admission-controller"
+        },
         "datasource": "prometheus",
         "definition": "label_values(container_cpu_usage_seconds_total{pod=~\"$pod\", container!=\"POD\"}, container)",
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": false,
@@ -414,7 +427,10 @@
         "multi": true,
         "name": "container",
         "options": [],
-        "query": "label_values(container_cpu_usage_seconds_total{pod=~\"$pod\", container!=\"POD\"}, container)",
+        "query": {
+          "query": "label_values(container_cpu_usage_seconds_total{pod=~\"$pod\", container!=\"POD\"}, container)",
+          "refId": "prometheus-container-Variable-Query"
+        },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -454,8 +470,27 @@
     "to": "now"
   },
   "timepicker": {
-    "refresh_intervals": ["30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"],
-    "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
+    "refresh_intervals": [
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d",
+      "30d"
+    ]
   },
   "timezone": "browser",
   "title": "Kubernetes Pods",

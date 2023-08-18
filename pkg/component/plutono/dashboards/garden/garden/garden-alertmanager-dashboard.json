@@ -37,7 +37,6 @@
       "datasource": null,
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -72,13 +71,16 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["last"],
+          "calcs": [
+            "last"
+          ],
           "fields": "",
           "values": false
         },
+        "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "targets": [
         {
           "expr": "count(up{job=\"gardener-alertmanager\"})",
@@ -96,7 +98,6 @@
       "datasource": "$datasource",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -135,13 +136,16 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["last"],
+          "calcs": [
+            "last"
+          ],
           "fields": "",
           "values": false
         },
+        "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "targets": [
         {
           "expr": "alertmanager_cluster_members{instance=~\"$instance\"}",
@@ -228,7 +232,7 @@
         "showHeader": true,
         "sortBy": []
       },
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "targets": [
         {
           "expr": "time() - (alertmanager_build_info{instance=~\"$instance\"} * on (instance, cluster, job) group_left process_start_time_seconds{instance=~\"$instance\"})",
@@ -257,7 +261,12 @@
           "id": "filterFieldsByName",
           "options": {
             "include": {
-              "names": ["version", "Value #A", "Value #B", "instance"]
+              "names": [
+                "version",
+                "Value #A",
+                "Value #B",
+                "instance"
+              ]
             }
           }
         },
@@ -271,7 +280,12 @@
           "id": "filterFieldsByName",
           "options": {
             "include": {
-              "names": ["instance", "version 1", "Value #A", "Value #B"]
+              "names": [
+                "instance",
+                "version 1",
+                "Value #A",
+                "Value #B"
+              ]
             }
           }
         }
@@ -285,9 +299,7 @@
       "dashes": false,
       "datasource": "$datasource",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "fill": 1,
@@ -317,7 +329,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -384,9 +396,7 @@
       "dashes": false,
       "datasource": "$datasource",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "fill": 1,
@@ -415,7 +425,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -481,23 +491,7 @@
       "dashes": false,
       "datasource": "$datasource",
       "fieldConfig": {
-        "defaults": {
-          "custom": {},
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
+        "defaults": {},
         "overrides": []
       },
       "fill": 1,
@@ -526,7 +520,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -607,9 +601,7 @@
       "datasource": "$datasource",
       "decimals": 0,
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "fill": 1,
@@ -641,7 +633,7 @@
         "alertThreshold": false
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -649,8 +641,8 @@
       "scopedVars": {
         "instance": {
           "selected": false,
-          "text": "10.40.0.133:9093",
-          "value": "10.40.0.133:9093"
+          "text": "10.36.0.188:9093",
+          "value": "10.36.0.188:9093"
         }
       },
       "seriesOverrides": [],
@@ -716,9 +708,7 @@
       "datasource": "$datasource",
       "decimals": 0,
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "fill": 1,
@@ -733,15 +723,15 @@
       "id": 205,
       "interval": "",
       "legend": {
-        "alignAsTable": true,
+        "alignAsTable": false,
         "avg": false,
-        "current": true,
+        "current": false,
         "max": false,
         "min": false,
         "rightSide": false,
         "show": true,
-        "total": true,
-        "values": true
+        "total": false,
+        "values": false
       },
       "lines": false,
       "linewidth": 1,
@@ -750,17 +740,17 @@
         "alertThreshold": false
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1613999739583,
+      "repeatIteration": 1692363702031,
       "repeatPanelId": 40,
       "scopedVars": {
         "instance": {
           "selected": false,
-          "text": "10.40.1.138:9093",
-          "value": "10.40.1.138:9093"
+          "text": "10.36.3.163:9093",
+          "value": "10.36.3.163:9093"
         }
       },
       "seriesOverrides": [],
@@ -839,9 +829,7 @@
       "dashes": false,
       "datasource": "$datasource",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "fill": 1,
@@ -870,7 +858,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -878,8 +866,8 @@
       "scopedVars": {
         "instance": {
           "selected": false,
-          "text": "10.40.0.133:9093",
-          "value": "10.40.0.133:9093"
+          "text": "10.36.0.188:9093",
+          "value": "10.36.0.188:9093"
         }
       },
       "seriesOverrides": [],
@@ -944,9 +932,7 @@
       "dashes": false,
       "datasource": "$datasource",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "fill": 1,
@@ -975,17 +961,17 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1613999739583,
+      "repeatIteration": 1692363702031,
       "repeatPanelId": 24,
       "scopedVars": {
         "instance": {
           "selected": false,
-          "text": "10.40.1.138:9093",
-          "value": "10.40.1.138:9093"
+          "text": "10.36.3.163:9093",
+          "value": "10.36.3.163:9093"
         }
       },
       "seriesOverrides": [],
@@ -1065,9 +1051,7 @@
       "datasource": "$datasource",
       "decimals": null,
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "fill": 1,
@@ -1099,7 +1083,7 @@
         "alertThreshold": false
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "pointradius": 0.5,
       "points": false,
       "renderer": "flot",
@@ -1107,8 +1091,8 @@
       "scopedVars": {
         "instance": {
           "selected": false,
-          "text": "10.40.0.133:9093",
-          "value": "10.40.0.133:9093"
+          "text": "10.36.0.188:9093",
+          "value": "10.36.0.188:9093"
         }
       },
       "seriesOverrides": [],
@@ -1173,11 +1157,9 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$datasource",
-      "decimals": 0,
+      "decimals": null,
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "fill": 1,
@@ -1191,16 +1173,16 @@
       "hiddenSeries": false,
       "id": 207,
       "legend": {
-        "alignAsTable": true,
+        "alignAsTable": false,
         "avg": false,
-        "current": true,
+        "current": false,
         "hideEmpty": true,
         "hideZero": true,
         "max": false,
         "min": false,
         "show": true,
-        "total": true,
-        "values": true
+        "total": false,
+        "values": false
       },
       "lines": false,
       "linewidth": 1,
@@ -1209,17 +1191,17 @@
         "alertThreshold": false
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "pointradius": 0.5,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1613999739583,
+      "repeatIteration": 1692363702031,
       "repeatPanelId": 31,
       "scopedVars": {
         "instance": {
           "selected": false,
-          "text": "10.40.1.138:9093",
-          "value": "10.40.1.138:9093"
+          "text": "10.36.3.163:9093",
+          "value": "10.36.3.163:9093"
         }
       },
       "seriesOverrides": [],
@@ -1299,9 +1281,7 @@
       "dashes": false,
       "datasource": "$datasource",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "fill": 1,
@@ -1330,7 +1310,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1338,8 +1318,8 @@
       "scopedVars": {
         "instance": {
           "selected": false,
-          "text": "10.40.0.133:9093",
-          "value": "10.40.0.133:9093"
+          "text": "10.36.0.188:9093",
+          "value": "10.36.0.188:9093"
         }
       },
       "seriesOverrides": [],
@@ -1404,9 +1384,7 @@
       "dashes": false,
       "datasource": "$datasource",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "fill": 1,
@@ -1435,17 +1413,17 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1613999739583,
+      "repeatIteration": 1692363702031,
       "repeatPanelId": 26,
       "scopedVars": {
         "instance": {
           "selected": false,
-          "text": "10.40.1.138:9093",
-          "value": "10.40.1.138:9093"
+          "text": "10.36.3.163:9093",
+          "value": "10.36.3.163:9093"
         }
       },
       "seriesOverrides": [],
@@ -1525,7 +1503,6 @@
       "datasource": "$datasource",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "unit": "bytes"
         },
         "overrides": []
@@ -1556,7 +1533,7 @@
         "alertThreshold": false
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1564,8 +1541,8 @@
       "scopedVars": {
         "instance": {
           "selected": false,
-          "text": "10.40.0.133:9093",
-          "value": "10.40.0.133:9093"
+          "text": "10.36.0.188:9093",
+          "value": "10.36.0.188:9093"
         }
       },
       "seriesOverrides": [],
@@ -1630,7 +1607,6 @@
       "datasource": "$datasource",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "unit": "bytes"
         },
         "overrides": []
@@ -1661,17 +1637,17 @@
         "alertThreshold": false
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1613999739583,
+      "repeatIteration": 1692363702031,
       "repeatPanelId": 47,
       "scopedVars": {
         "instance": {
           "selected": false,
-          "text": "10.40.1.138:9093",
-          "value": "10.40.1.138:9093"
+          "text": "10.36.3.163:9093",
+          "value": "10.36.3.163:9093"
         }
       },
       "seriesOverrides": [],
@@ -1711,7 +1687,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -1735,9 +1711,7 @@
       "dashes": false,
       "datasource": "$datasource",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "fill": 1,
@@ -1766,7 +1740,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1774,8 +1748,8 @@
       "scopedVars": {
         "instance": {
           "selected": false,
-          "text": "10.40.0.133:9093",
-          "value": "10.40.0.133:9093"
+          "text": "10.36.0.188:9093",
+          "value": "10.36.0.188:9093"
         }
       },
       "seriesOverrides": [],
@@ -1839,9 +1813,7 @@
       "dashes": false,
       "datasource": "$datasource",
       "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
+        "defaults": {},
         "overrides": []
       },
       "fill": 1,
@@ -1870,17 +1842,17 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.1",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "repeatIteration": 1613999739583,
+      "repeatIteration": 1692363702031,
       "repeatPanelId": 50,
       "scopedVars": {
         "instance": {
           "selected": false,
-          "text": "10.40.1.138:9093",
-          "value": "10.40.1.138:9093"
+          "text": "10.36.3.163:9093",
+          "value": "10.36.3.163:9093"
         }
       },
       "seriesOverrides": [],
@@ -1920,7 +1892,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -1939,7 +1911,7 @@
     }
   ],
   "refresh": "",
-  "schemaVersion": 26,
+  "schemaVersion": 27,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -1950,6 +1922,7 @@
           "text": "prometheus",
           "value": "prometheus"
         },
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": false,
@@ -1968,11 +1941,16 @@
         "allValue": null,
         "current": {
           "selected": true,
-          "text": ["All"],
-          "value": ["$__all"]
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": "$datasource",
         "definition": "label_values(up{job=\"gardener-alertmanager\"},instance)",
+        "description": null,
         "error": null,
         "hide": 0,
         "includeAll": true,
@@ -1980,7 +1958,10 @@
         "multi": true,
         "name": "instance",
         "options": [],
-        "query": "label_values(up{job=\"gardener-alertmanager\"},instance)",
+        "query": {
+          "query": "label_values(up{job=\"gardener-alertmanager\"},instance)",
+          "refId": "prometheus-instance-Variable-Query"
+        },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -2001,5 +1982,5 @@
   "timezone": "",
   "title": "Gardener Alertmanager HA",
   "uid": "2OohXGYMk",
-  "version": 9
+  "version": 1
 }

@@ -167,7 +167,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.23",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -280,7 +280,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.23",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -393,7 +393,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.23",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -498,7 +498,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.23",
       "pointradius": 1,
       "points": false,
       "renderer": "flot",
@@ -608,7 +608,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.23",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -713,7 +713,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.23",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -815,7 +815,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.23",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -917,7 +917,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.23",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1252,7 +1252,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.23",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1356,7 +1356,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.17",
+      "pluginVersion": "7.5.23",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1444,7 +1444,9 @@
   "refresh": "30s",
   "schemaVersion": 27,
   "style": "dark",
-  "tags": ["Gardener"],
+  "tags": [
+    "Gardener"
+  ],
   "templating": {
     "list": [
       {
@@ -1523,5 +1525,5 @@
   "timezone": "browser",
   "title": "Virtual Garden ETCD",
   "uid": "etcd",
-  "version": 2
+  "version": 1
 }
