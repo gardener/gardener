@@ -310,11 +310,11 @@ This condition is taken into account by the `ControllerRegistration` controller 
 
 ### [`ManagedSeed` Controller](../../pkg/gardenlet/controller/managedseed)
 
-The `ManagedSeed` controller in the `gardenlet` reconciles `ManagedSeed` that refers to `Shoot` scheduled on `Seed` the gardenlet is responsible for. Additionally, the controller monitors `Seed`s, which are owned by `ManagedSeed`s referencing `Shoot`s scheduled on Seeds for which the gardenlet is designated as responsible.
+The `ManagedSeed` controller in the `gardenlet` reconciles `ManagedSeed` that refers to `Shoot` scheduled on `Seed` the gardenlet is responsible for. Additionally, the controller monitors `Seed`s, which are owned by `ManagedSeed`s for which the gardenlet is responsible.
 
-The controller waits for the referenced Shoot to undergo a reconciliation process. Once the Shoot is successfully reconciled, the controller sets the `ShootReconciled` status of the ManagedSeed to `true`. It creates `garden` namespace within the target Shoot cluster. The controller also manages secrets related to Seeds, such as `backups` and `kubeconfig`. It ensures that these secrets are created and updated in accordance with the specifications provided. Finally, it deploys the `gardenlet` within the specified Shoot cluster which will register the `Seed` cluster.
+On `ManagedSeed` reconciliation, the controller first waits for the referenced Shoot to undergo a reconciliation process. Once the Shoot is successfully reconciled, the controller sets the `ShootReconciled` status of the ManagedSeed to `true`. Then, it creates `garden` namespace within the target Shoot cluster. The controller also manages secrets related to Seeds, such as the `backup` and `kubeconfig` secrets. It ensures that these secrets are created and updated according to the ManagedSeed spec. Finally, it deploys the `gardenlet` within the specified Shoot cluster which registers the `Seed` cluster.
 
-On delete operation of `ManagedSeed`, it removes the corresponding `Seed` that was originally created by the controller. Subsequently it removes the `gardenlet` instance within the Shoot cluster. The controller also ensures the deletion of related Seed `secrets`, including backups and kubeconfig. Finally, the dedicated `garden` namespace within the Shoot cluster is deleted.
+On `ManagedSeed` deletion, the controller first deletes the corresponding `Seed` that was originally created by the controller. Subsequently, it deletes the `gardenlet` instance within the Shoot cluster. The controller also ensures the deletion of related Seed secrets. Finally, the dedicated `garden` namespace within the Shoot cluster is deleted.
 
 ### [`NetworkPolicy` Controller](../../pkg/gardenlet/controller/networkpolicy)
 
