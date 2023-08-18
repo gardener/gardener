@@ -13,7 +13,7 @@ groups:
       description: Pod {{ $labels.pod }} is stuck in "Pending" state for more than 30 minutes.
       summary: Control plane pod stuck in "Pending" state
   - alert: KubePodNotReadyControlPlane
-    expr: kube_pod_status_ready{condition="true", type="seed", pod!~"(.+)curator(.+)"} == 0
+    expr: kube_pod_status_ready{condition="true", type="seed", pod!~"(.+)compact-job(.+)"} == 0
     for: 30m
     labels:
       service: kube-kubelet
