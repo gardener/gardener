@@ -302,12 +302,12 @@ kubernetes_sd_configs:
     names: [{{ .namespace }}]
 relabel_configs:
 - source_labels:
-  - __meta_kubernetes_service_label_` + v1beta1constants.LabelApp + `
-  - __meta_kubernetes_service_label_` + v1beta1constants.LabelRole + `
+  - __meta_kubernetes_pod_label_` + v1beta1constants.LabelApp + `
+  - __meta_kubernetes_pod_label_` + v1beta1constants.LabelRole + `
   - __meta_kubernetes_endpoint_port_name
   action: keep
   regex: ` + LabelAppValue + `;{{ .role }};` + portNameClient + `
-- source_labels: [ __meta_kubernetes_service_label_` + v1beta1constants.LabelRole + ` ]
+- source_labels: [ __meta_kubernetes_pod_label_` + v1beta1constants.LabelRole + ` ]
   target_label: role
 - source_labels: [ __meta_kubernetes_pod_name ]
   target_label: pod
@@ -332,12 +332,12 @@ kubernetes_sd_configs:
     names: [{{ .namespace }}]
 relabel_configs:
 - source_labels:
-  - __meta_kubernetes_service_label_` + v1beta1constants.LabelApp + `
-  - __meta_kubernetes_service_label_` + v1beta1constants.LabelRole + `
+  - __meta_kubernetes_pod_label_` + v1beta1constants.LabelApp + `
+  - __meta_kubernetes_pod_label_` + v1beta1constants.LabelRole + `
   - __meta_kubernetes_endpoint_port_name
   action: keep
   regex: ` + LabelAppValue + `;{{ .role }};` + portNameBackupRestore + `
-- source_labels: [ __meta_kubernetes_service_label_role ]
+- source_labels: [ __meta_kubernetes_pod_label_role ]
   target_label: role
 - source_labels: [ __meta_kubernetes_pod_name ]
   target_label: pod

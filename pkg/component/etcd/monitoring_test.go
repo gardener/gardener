@@ -175,12 +175,12 @@ kubernetes_sd_configs:
     names: [` + testNamespace + `]
 relabel_configs:
 - source_labels:
-  - __meta_kubernetes_service_label_app
-  - __meta_kubernetes_service_label_role
+  - __meta_kubernetes_pod_label_app
+  - __meta_kubernetes_pod_label_role
   - __meta_kubernetes_endpoint_port_name
   action: keep
   regex: etcd-statefulset;` + testRole + `;client
-- source_labels: [ __meta_kubernetes_service_label_role ]
+- source_labels: [ __meta_kubernetes_pod_label_role ]
   target_label: role
 - source_labels: [ __meta_kubernetes_pod_name ]
   target_label: pod
@@ -204,12 +204,12 @@ kubernetes_sd_configs:
     names: [` + testNamespace + `]
 relabel_configs:
 - source_labels:
-  - __meta_kubernetes_service_label_app
-  - __meta_kubernetes_service_label_role
+  - __meta_kubernetes_pod_label_app
+  - __meta_kubernetes_pod_label_role
   - __meta_kubernetes_endpoint_port_name
   action: keep
   regex: etcd-statefulset;` + testRole + `;backuprestore
-- source_labels: [ __meta_kubernetes_service_label_role ]
+- source_labels: [ __meta_kubernetes_pod_label_role ]
   target_label: role
 - source_labels: [ __meta_kubernetes_pod_name ]
   target_label: pod
