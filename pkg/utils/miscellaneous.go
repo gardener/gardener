@@ -118,10 +118,12 @@ func FindFreePort() (int, error) {
 	return l.Addr().(*net.TCPAddr).Port, nil
 }
 
+// emailVefiryRegex is used to verify the validity of an email.
+var emailVefiryRegex = regexp.MustCompile(`^[^@]+@(?:[a-zA-Z-0-9]+\.)+[a-zA-Z]{2,}$`)
+
 // TestEmail validates the provided <email> against a regular expression and returns whether it matches.
 func TestEmail(email string) bool {
-	match, _ := regexp.MatchString(`^[^@]+@(?:[a-zA-Z-0-9]+\.)+[a-zA-Z]{2,}$`, email)
-	return match
+	return emailVefiryRegex.MatchString(email)
 }
 
 // IDForKeyWithOptionalValue returns an identifier for the given key + optional value.

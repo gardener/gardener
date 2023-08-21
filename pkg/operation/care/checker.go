@@ -197,16 +197,18 @@ func (b *HealthChecker) checkStatefulSets(condition gardencorev1beta1.Condition,
 	return nil
 }
 
+// kubeletConfigProblemRegex is used to check if an error occurred due to a kubelet configuration problem.
+var kubeletConfigProblemRegex = regexp.MustCompile(`(?i)(KubeletHasInsufficientMemory|KubeletHasDiskPressure|KubeletHasInsufficientPID)`)
+
 func (b *HealthChecker) checkNodes(condition gardencorev1beta1.Condition, nodes []corev1.Node, workerGroupName string, workerGroupKubernetesVersion *semver.Version) *gardencorev1beta1.Condition {
 	for _, object := range nodes {
 		if err := health.CheckNode(&object); err != nil {
 			var (
-				errorCodes                 []gardencorev1beta1.ErrorCode
-				message                    = fmt.Sprintf("Node %q in worker group %q is unhealthy: %v", object.Name, workerGroupName, err)
-				configurationProblemRegexp = regexp.MustCompile(`(?i)(KubeletHasInsufficientMemory|KubeletHasDiskPressure|KubeletHasInsufficientPID)`)
+				errorCodes []gardencorev1beta1.ErrorCode
+				message    = fmt.Sprintf("Node %q in worker group %q is unhealthy: %v", object.Name, workerGroupName, err)
 			)
 
-			if configurationProblemRegexp.MatchString(err.Error()) {
+			if kubeletConfigProblemRegex.MatchString(err.Error()) {
 				errorCodes = append(errorCodes, gardencorev1beta1.ErrorConfigurationProblem)
 			}
 

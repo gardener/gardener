@@ -23,7 +23,6 @@ import (
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
@@ -33,13 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-var diskSizeRegexp *regexp.Regexp
-
-func init() {
-	regexp, err := regexp.Compile(`^(\d+)`)
-	utilruntime.Must(err)
-	diskSizeRegexp = regexp
-}
+var diskSizeRegexp = regexp.MustCompile(`^(\d+)`)
 
 // MachineDeployment holds information about the name, class, replicas of a MachineDeployment
 // managed by the machine-controller-manager.
