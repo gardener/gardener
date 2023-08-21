@@ -261,7 +261,7 @@ k get managedresource -A -w
 Run a `gardenerenvtest` suite (using `gardener-apiserver`) against an existing test environment:
 
 ```bash
-# modify test/start-envtest to disable admission plugins and enable feature gates like in test suite...
+# modify GardenerTestEnvironment{} in test/start-envtest to disable admission plugins and enable feature gates like in test suite...
 
 make start-envtest ENVTEST_TYPE=gardener
 
