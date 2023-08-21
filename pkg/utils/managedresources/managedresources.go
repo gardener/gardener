@@ -31,6 +31,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/utils/chart"
@@ -330,14 +331,8 @@ func WaitUntilDeleted(ctx context.Context, c client.Client, namespace, name stri
 		return err
 	}
 
-	secrets := &corev1.SecretList{}
-	if err := c.List(ctx, secrets, client.InNamespace(namespace), client.MatchingLabels(map[string]string{"managed-by": name})); err != nil {
+	if err := kubernetesutils.WaitUntilResourcesDeleted(ctx, c, &corev1.SecretList{}, IntervalWait, client.InNamespace(namespace), client.MatchingLabels(map[string]string{v1alpha1.ReferencedBy: name})); err != nil {
 		return err
-	}
-	for _, secret := range secrets.Items {
-		if err := kubernetesutils.WaitUntilResourceDeleted(ctx, c, &secret, IntervalWait); err != nil {
-			return err
-		}
 	}
 	return nil
 }

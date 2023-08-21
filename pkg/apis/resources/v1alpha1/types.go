@@ -57,6 +57,10 @@ const (
 	// It is set by the ManagedResource controller depending on its configuration. By default it is set to "gardener".
 	ManagedBy = "resources.gardener.cloud/managed-by"
 
+	// ReferencedBy is a constant for a label on a secret that points to the name of the ManagedResource that the given secret is being referenced by
+	// It is set by the secret reconciler
+	ReferencedBy = "resources.gardener.cloud/referenced-by"
+
 	// GardenerManager is a constant for the default value of the 'ManagedBy' label.
 	GardenerManager = "gardener"
 
