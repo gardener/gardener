@@ -578,7 +578,6 @@ ip6.arpa:53 {
 `,
 					}
 					configMapHash = utils.ComputeConfigMapChecksum(configMapData)[:8]
-					values.ShootAnnotations = map[string]string{}
 				})
 
 				Context("ForceTcpToClusterDNS : true and ForceTcpToUpstreamDNS : true", func() {
@@ -754,79 +753,6 @@ ip6.arpa:53 {
 						upstreamDNSAddress = values.ClusterDNS
 						forceTcpToClusterDNS = "force_tcp"
 						forceTcpToUpstreamDNS = "force_tcp"
-					})
-
-					It("should succesfully deploy all resources", func() {
-						Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
-						managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
-						Expect(err).ToNot(HaveOccurred())
-						daemonset := daemonSetYAMLFor()
-						utilruntime.Must(references.InjectAnnotations(daemonset))
-						Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
-					})
-				})
-
-				Context("Annotation ForceTcpToClusterDNS", func() {
-					BeforeEach(func() {
-						values.Config = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
-							ForceTCPToClusterDNS:        pointer.Bool(true),
-							ForceTCPToUpstreamDNS:       pointer.Bool(true),
-							DisableForwardToUpstreamDNS: pointer.Bool(true),
-						}
-						values.VPAEnabled = true
-						upstreamDNSAddress = values.ClusterDNS
-						values.ShootAnnotations = map[string]string{v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns: "false"}
-
-						forceTcpToClusterDNS = "prefer_udp"
-						forceTcpToUpstreamDNS = "force_tcp"
-					})
-
-					It("should succesfully deploy all resources", func() {
-						Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
-						managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
-						Expect(err).ToNot(HaveOccurred())
-						daemonset := daemonSetYAMLFor()
-						utilruntime.Must(references.InjectAnnotations(daemonset))
-						Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
-					})
-				})
-				Context("Annotation ForceTcpToClusterDNS", func() {
-					BeforeEach(func() {
-						values.Config = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
-							ForceTCPToClusterDNS:        pointer.Bool(true),
-							ForceTCPToUpstreamDNS:       pointer.Bool(true),
-							DisableForwardToUpstreamDNS: pointer.Bool(true),
-						}
-						values.VPAEnabled = true
-						upstreamDNSAddress = values.ClusterDNS
-						values.ShootAnnotations = map[string]string{v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns: "false"}
-
-						forceTcpToClusterDNS = "force_tcp"
-						forceTcpToUpstreamDNS = "prefer_udp"
-					})
-
-					It("should succesfully deploy all resources", func() {
-						Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
-						managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
-						Expect(err).ToNot(HaveOccurred())
-						daemonset := daemonSetYAMLFor()
-						utilruntime.Must(references.InjectAnnotations(daemonset))
-						Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
-					})
-				})
-				Context("Annotation ForceTcpToClusterDNS", func() {
-					BeforeEach(func() {
-						values.Config = &gardencorev1beta1.NodeLocalDNS{Enabled: true,
-							ForceTCPToClusterDNS:        pointer.Bool(true),
-							ForceTCPToUpstreamDNS:       pointer.Bool(true),
-							DisableForwardToUpstreamDNS: pointer.Bool(true),
-						}
-						values.VPAEnabled = true
-						upstreamDNSAddress = values.ClusterDNS
-						values.ShootAnnotations = map[string]string{v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns: "false", v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns: "false"}
-
-						forceTcpToClusterDNS = "prefer_udp"
-						forceTcpToUpstreamDNS = "prefer_udp"
 					})
 
 					It("should succesfully deploy all resources", func() {

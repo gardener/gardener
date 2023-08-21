@@ -2234,22 +2234,14 @@ var _ = Describe("helper", func() {
 	})
 
 	DescribeTable("#IsNodeLocalDNSEnabled",
-		func(systemComponents *gardencorev1beta1.SystemComponents, annotations map[string]string, expected bool) {
-			Expect(IsNodeLocalDNSEnabled(systemComponents, annotations)).To(Equal(expected))
+		func(systemComponents *gardencorev1beta1.SystemComponents, expected bool) {
+			Expect(IsNodeLocalDNSEnabled(systemComponents)).To(Equal(expected))
 		},
 
-		Entry("with nil (disabled)", nil, nil, false),
-		Entry("with empty system components and no proper annotation (disabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{"something": "wrong"}, false),
-		Entry("with system components and no proper annotation (disabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{}}, map[string]string{"something": "wrong"}, false),
-		Entry("with system components and no proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true}}, map[string]string{"something": "wrong"}, true),
-		Entry("with system components and no proper annotation (disabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false}}, map[string]string{"something": "wrong"}, false),
-		Entry("with empty system components and proper annotation (disabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{v1beta1constants.AnnotationNodeLocalDNS: "false"}, false),
-		Entry("with empty system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{v1beta1constants.AnnotationNodeLocalDNS: "true"}, true),
-		Entry("with empty system components and proper annotation, but wrong value (disabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{v1beta1constants.AnnotationNodeLocalDNS: "test"}, false),
-		Entry("with system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNS: "true"}, true),
-		Entry("with system components and proper annotation (disabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNS: "false"}, false),
-		Entry("with system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNS: "false"}, true),
-		Entry("with system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNS: "true"}, true),
+		Entry("with nil (disabled)", nil, false),
+		Entry("with empty system components", &gardencorev1beta1.SystemComponents{}, false),
+		Entry("with system components and node-local-dns is enabled", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true}}, true),
+		Entry("with system components and node-local-dns is disabled", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false}}, false),
 	)
 
 	DescribeTable("#GetNodeLocalDNS",
@@ -2657,10 +2649,10 @@ var _ = Describe("helper", func() {
 		},
 
 		Entry("should return false when shoot provider has zero workers", nil, nil, false),
-		Entry("should return true when shoot provider has no WorkersSettings", []gardencorev1beta1.Worker{gardencorev1beta1.Worker{}}, nil, true),
-		Entry("should return true when shoot worker settings has no SSHAccess", []gardencorev1beta1.Worker{gardencorev1beta1.Worker{}}, &gardencorev1beta1.WorkersSettings{}, true),
-		Entry("should return true when shoot worker settings has SSHAccess set to true", []gardencorev1beta1.Worker{gardencorev1beta1.Worker{}}, &gardencorev1beta1.WorkersSettings{SSHAccess: &gardencorev1beta1.SSHAccess{Enabled: true}}, true),
-		Entry("should return false when shoot worker settings has SSHAccess set to false", []gardencorev1beta1.Worker{gardencorev1beta1.Worker{}}, &gardencorev1beta1.WorkersSettings{SSHAccess: &gardencorev1beta1.SSHAccess{Enabled: false}}, false),
+		Entry("should return true when shoot provider has no WorkersSettings", []gardencorev1beta1.Worker{{}}, nil, true),
+		Entry("should return true when shoot worker settings has no SSHAccess", []gardencorev1beta1.Worker{{}}, &gardencorev1beta1.WorkersSettings{}, true),
+		Entry("should return true when shoot worker settings has SSHAccess set to true", []gardencorev1beta1.Worker{{}}, &gardencorev1beta1.WorkersSettings{SSHAccess: &gardencorev1beta1.SSHAccess{Enabled: true}}, true),
+		Entry("should return false when shoot worker settings has SSHAccess set to false", []gardencorev1beta1.Worker{{}}, &gardencorev1beta1.WorkersSettings{SSHAccess: &gardencorev1beta1.SSHAccess{Enabled: false}}, false),
 	)
 
 	Describe("#GetFailureToleranceType", func() {

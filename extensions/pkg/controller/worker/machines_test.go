@@ -192,14 +192,6 @@ var _ = Describe("Machines", func() {
 					{Name: "test-worker", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameDocker}}}}
 			})
 
-			It("when disabling node local dns via annotations", func() {
-				c.Shoot.Annotations = map[string]string{"alpha.featuregates.shoot.gardener.cloud/node-local-dns": "false"}
-			})
-
-			It("when enabling node local dns via annotations", func() {
-				c.Shoot.Annotations = map[string]string{"alpha.featuregates.shoot.gardener.cloud/node-local-dns": "true"}
-			})
-
 			It("when disabling node local dns via specification", func() {
 				c.Shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false}}
 			})

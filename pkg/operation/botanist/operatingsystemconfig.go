@@ -82,7 +82,7 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 				SSHAccessEnabled:    v1beta1helper.ShootEnablesSSHAccess(b.Shoot.GetInfo()),
 				ValitailEnabled:     valitailEnabled,
 				ValiIngressHostName: valiIngressHost,
-				NodeLocalDNSEnabled: v1beta1helper.IsNodeLocalDNSEnabled(b.Shoot.GetInfo().Spec.SystemComponents, b.Shoot.GetInfo().Annotations),
+				NodeLocalDNSEnabled: v1beta1helper.IsNodeLocalDNSEnabled(b.Shoot.GetInfo().Spec.SystemComponents),
 			},
 		},
 		operatingsystemconfig.DefaultInterval,

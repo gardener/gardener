@@ -231,7 +231,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		shoot.Networks = networks
 	}
 
-	shoot.NodeLocalDNSEnabled = v1beta1helper.IsNodeLocalDNSEnabled(shoot.GetInfo().Spec.SystemComponents, shoot.GetInfo().Annotations)
+	shoot.NodeLocalDNSEnabled = v1beta1helper.IsNodeLocalDNSEnabled(shoot.GetInfo().Spec.SystemComponents)
 	shoot.Purpose = v1beta1helper.GetPurpose(shootObject)
 
 	shoot.PSPDisabled = v1beta1helper.IsPSPDisabled(shoot.GetInfo())
