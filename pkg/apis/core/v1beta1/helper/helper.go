@@ -87,7 +87,11 @@ func UpdatedConditionWithClock(clock clock.Clock, condition gardencorev1beta1.Co
 
 // UpdatedConditionUnknownErrorWithClock updates the condition to 'Unknown' status and the message of the given error. It allows passing a custom clock for testing.
 func UpdatedConditionUnknownErrorWithClock(clock clock.Clock, condition gardencorev1beta1.Condition, err error, codes ...gardencorev1beta1.ErrorCode) gardencorev1beta1.Condition {
-	return UpdatedConditionUnknownErrorMessageWithClock(clock, condition, err.Error(), codes...)
+	message := "unknown"
+	if err != nil {
+		message = err.Error()
+	}
+	return UpdatedConditionUnknownErrorMessageWithClock(clock, condition, message, codes...)
 }
 
 // UpdatedConditionUnknownErrorMessageWithClock updates the condition with 'Unknown' status and the given message. It allows passing a custom clock for testing.
