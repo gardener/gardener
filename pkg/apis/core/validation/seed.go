@@ -27,6 +27,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
+	corevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
 var (
@@ -161,6 +162,17 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 	}
 
 	if seedSpec.Settings != nil {
+		if seedSpec.Settings.ExcessCapacityReservation != nil {
+			for i, config := range seedSpec.Settings.ExcessCapacityReservation.Configs {
+				for resource, value := range config.Resources {
+					allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue(resource.String(), value, fldPath.Child("settings, excessCapacityReservation", "configs").Index(i).Child("resources").Child(resource.String()))...)
+				}
+				if config.NodeSelector != nil {
+					allErrs = append(allErrs, corevalidation.ValidateNodeSelector(config.NodeSelector, fldPath.Child("settings, excessCapacityReservation", "configs").Index(i).Child("nodeSelector"))...)
+				}
+				allErrs = append(allErrs, corevalidation.ValidateTolerations(config.Tolerations, fldPath.Child("settings, excessCapacityReservation", "configs").Index(i).Child("tolerations"))...)
+			}
+		}
 		if seedSpec.Settings.LoadBalancerServices != nil {
 			allErrs = append(allErrs, apivalidation.ValidateAnnotations(seedSpec.Settings.LoadBalancerServices.Annotations, fldPath.Child("settings", "loadBalancerServices", "annotations"))...)
 

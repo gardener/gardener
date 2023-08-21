@@ -9141,6 +9141,7 @@ Deprecated: This field is deprecated and will be removed in a future version of 
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Configs configures excess capacity reservation deployments for shoot control planes in the seed.</p>
 </td>
 </tr>

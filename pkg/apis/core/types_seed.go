@@ -227,12 +227,10 @@ type SeedSettingExcessCapacityReservation struct {
 // SeedSettingExcessCapacityReservationConfig configures excess capacity reservation deployments for shoot control planes in the seed.
 type SeedSettingExcessCapacityReservationConfig struct {
 	// Resources specify the resource requests and limits of the excess-capacity-reservation pod.
-	Resources corev1.ResourceList `json:"resources,omitempty" protobuf:"bytes,1,rep,name=resources"`
+	Resources corev1.ResourceList
 	// NodeSelector specifies the node where the excess-capacity-reservation pod should run.
-	// +optional
 	NodeSelector *corev1.NodeSelector
 	// Tolerations specify the tolerations for the the excess-capacity-reservation pod.
-	// +optional
 	Tolerations []corev1.Toleration
 }
 

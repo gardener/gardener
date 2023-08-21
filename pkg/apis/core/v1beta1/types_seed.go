@@ -274,13 +274,14 @@ type SeedSettingExcessCapacityReservation struct {
 	// Deprecated: This field is deprecated and will be removed in a future version of Gardener. Please use `Configs` instead.
 	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
 	// Configs configures excess capacity reservation deployments for shoot control planes in the seed.
+	// +optional
 	Configs []SeedSettingExcessCapacityReservationConfig `json:"configs,omitempty" protobuf:"bytes,2,rep,name=configs"`
 }
 
 // SeedSettingExcessCapacityReservationConfig configures excess capacity reservation deployments for shoot control planes in the seed.
 type SeedSettingExcessCapacityReservationConfig struct {
 	// Resources specify the resource requests and limits of the excess-capacity-reservation pod.
-	Resources corev1.ResourceList `json:"resources,omitempty" protobuf:"bytes,1,rep,name=resources"`
+	Resources corev1.ResourceList `json:"resources" protobuf:"bytes,1,rep,name=resources,casttype=ResourceList,castkey=ResourceName"`
 	// NodeSelector specifies the node where the excess-capacity-reservation pod should run.
 	// +optional
 	NodeSelector *corev1.NodeSelector `json:"nodeSelector,omitempty" protobuf:"bytes,2,opt,name=nodeSelector"`

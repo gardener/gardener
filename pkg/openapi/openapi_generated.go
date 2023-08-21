@@ -6663,6 +6663,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservationConfig(ref
 						},
 					},
 				},
+				Required: []string{"resources"},
 			},
 		},
 		Dependencies: []string{

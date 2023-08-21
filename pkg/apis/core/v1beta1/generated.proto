@@ -2263,6 +2263,7 @@ message SeedSettingExcessCapacityReservation {
   optional bool enabled = 1;
 
   // Configs configures excess capacity reservation deployments for shoot control planes in the seed.
+  // +optional
   repeated SeedSettingExcessCapacityReservationConfig configs = 2;
 }
 
