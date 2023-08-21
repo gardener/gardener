@@ -14,7 +14,7 @@ spec:
         app: load
     spec:
       containers:
-      - image: eu.gcr.io/gardener-project/3rd/alpine:3.16.1
+      - image: registry.k8s.io/e2e-test-images/busybox:1.29-4
         name: load
         command: ["sh", "-c"]
         args:
