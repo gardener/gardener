@@ -217,9 +217,8 @@ type SeedSettings struct {
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the
 // seed.
 type SeedSettingExcessCapacityReservation struct {
-	// Enabled controls whether the default excess capacity reservation should be enabled.
-	// Deprecated: This field is deprecated and will be removed in a future version of Gardener. Please use `Configs` instead.
-	Enabled bool
+	// Enabled controls whether the default excess capacity reservation should be enabled. When not specified, the functionality is enabled.
+	Enabled *bool
 	// Configs configures excess capacity reservation deployments for shoot control planes in the seed.
 	Configs []SeedSettingExcessCapacityReservationConfig
 }

@@ -270,9 +270,9 @@ type SeedSettings struct {
 
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed.
 type SeedSettingExcessCapacityReservation struct {
-	// Enabled controls whether the default excess capacity reservation should be enabled.
-	// Deprecated: This field is deprecated and will be removed in a future version of Gardener. Please use `Configs` instead.
-	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
+	// Enabled controls whether the default excess capacity reservation should be enabled. When not specified, the functionality is enabled.
+	// +optional
+	Enabled *bool `json:"enabled,omitempty" protobuf:"bytes,1,opt,name=enabled"`
 	// Configs configures excess capacity reservation deployments for shoot control planes in the seed.
 	// +optional
 	Configs []SeedSettingExcessCapacityReservationConfig `json:"configs,omitempty" protobuf:"bytes,2,rep,name=configs"`

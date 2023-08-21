@@ -39,7 +39,6 @@ var _ = Describe("Defaults", func() {
 
 		It("should default the seed settings (w/o taints)", func() {
 			var excessCapacityReservation = SeedSettingExcessCapacityReservation{
-				Enabled: false,
 				Configs: []SeedSettingExcessCapacityReservationConfig{
 					{Resources: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("2"), corev1.ResourceMemory: resource.MustParse("6Gi")}},
 				},
@@ -57,7 +56,6 @@ var _ = Describe("Defaults", func() {
 		It("should allow taints that were not allowed in version v1.12", func() {
 			var (
 				excessCapacityReservation = SeedSettingExcessCapacityReservation{
-					Enabled: false,
 					Configs: []SeedSettingExcessCapacityReservationConfig{
 						{Resources: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("2"), corev1.ResourceMemory: resource.MustParse("6Gi")}},
 					},
@@ -90,7 +88,7 @@ var _ = Describe("Defaults", func() {
 				scheduling                = true
 				vpaEnabled                = false
 				excessCapacityReservation = SeedSettingExcessCapacityReservation{
-					Enabled: false,
+					Enabled: pointer.Bool(true),
 					Configs: []SeedSettingExcessCapacityReservationConfig{
 						{Resources: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("4"), corev1.ResourceMemory: resource.MustParse("16Gi")}},
 					},

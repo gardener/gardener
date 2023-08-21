@@ -22,7 +22,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -47,7 +46,7 @@ type Values struct {
 // ReserveExcessCapacityValues contains configuration for the deployment of the excess capacity reservation resources.
 type ReserveExcessCapacityValues struct {
 	// Enabled specifies whether excess capacity reservation should be enabled.
-	Enabled bool
+	Enabled *bool
 	// Image is the container image.
 	Image string
 	// Replicas is the number of replicas.
@@ -107,28 +106,14 @@ func (s *seedSystem) WaitCleanup(ctx context.Context) error {
 }
 
 func (s *seedSystem) computeResourcesData() (map[string][]byte, error) {
-	var (
-		excessCapacityConfigs []gardencorev1beta1.SeedSettingExcessCapacityReservationConfig
+	var registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-	)
-
-	if s.values.ReserveExcessCapacity.Enabled {
-		defaultConfig := gardencorev1beta1.SeedSettingExcessCapacityReservationConfig{
-			// This roughly corresponds to a single, moderately large control-plane.
-			Resources: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("2"),
-				corev1.ResourceMemory: resource.MustParse("6Gi"),
-			},
-		}
-		excessCapacityConfigs = append(excessCapacityConfigs, defaultConfig)
-	}
-	excessCapacityConfigs = append(excessCapacityConfigs, s.values.ReserveExcessCapacity.Configs...)
-
-	for i, config := range excessCapacityConfigs {
-		name := fmt.Sprintf("reserve-excess-capacity-%d", i)
-		if err := s.addReserveExcessCapacityDeployment(registry, name, config); err != nil {
-			return nil, err
+	if pointer.BoolDeref(s.values.ReserveExcessCapacity.Enabled, true) {
+		for i, config := range s.values.ReserveExcessCapacity.Configs {
+			name := fmt.Sprintf("reserve-excess-capacity-%d", i)
+			if err := s.addReserveExcessCapacityDeployment(registry, name, config); err != nil {
+				return nil, err
+			}
 		}
 	}
 

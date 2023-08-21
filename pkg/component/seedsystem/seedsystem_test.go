@@ -157,9 +157,17 @@ status: {}
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
 			ReserveExcessCapacity: ReserveExcessCapacityValues{
-				Enabled:  true,
+				Enabled:  nil,
 				Image:    reserveExcessCapacityImage,
 				Replicas: 2,
+				Configs: []gardencorev1beta1.SeedSettingExcessCapacityReservationConfig{
+					{
+						Resources: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("2"),
+							corev1.ResourceMemory: resource.MustParse("6Gi"),
+						},
+					},
+				},
 			},
 		}
 		component = New(c, namespace, values)
@@ -221,24 +229,22 @@ status: {}
 
 		Context("in case of additional reserve-excess-capacity configs", func() {
 			BeforeEach(func() {
-				values.ReserveExcessCapacity.Configs = []gardencorev1beta1.SeedSettingExcessCapacityReservationConfig{
-					{
-						Resources: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("4"),
-							corev1.ResourceMemory: resource.MustParse("8Gi"),
-						},
-						NodeSelector: &corev1.NodeSelector{
-							NodeSelectorTerms: []corev1.NodeSelectorTerm{
-								{MatchExpressions: []corev1.NodeSelectorRequirement{
-									{Key: "foo", Values: []string{"bar"}, Operator: corev1.NodeSelectorOpIn},
-								}},
-							},
-						},
-						Tolerations: []corev1.Toleration{
-							{Key: "bar", Value: "foo", Operator: "Equal", Effect: corev1.TaintEffectNoExecute},
+				values.ReserveExcessCapacity.Configs = append(values.ReserveExcessCapacity.Configs, gardencorev1beta1.SeedSettingExcessCapacityReservationConfig{
+					Resources: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("4"),
+						corev1.ResourceMemory: resource.MustParse("8Gi"),
+					},
+					NodeSelector: &corev1.NodeSelector{
+						NodeSelectorTerms: []corev1.NodeSelectorTerm{
+							{MatchExpressions: []corev1.NodeSelectorRequirement{
+								{Key: "foo", Values: []string{"bar"}, Operator: corev1.NodeSelectorOpIn},
+							}},
 						},
 					},
-				}
+					Tolerations: []corev1.Toleration{
+						{Key: "bar", Value: "foo", Operator: "Equal", Effect: corev1.TaintEffectNoExecute},
+					},
+				})
 				component = New(c, namespace, values)
 			})
 
@@ -246,6 +252,18 @@ status: {}
 				Expect(managedResourceSecret.Data).To(HaveLen(12))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__reserve-excess-capacity-0.yaml"])).To(Equal(deployment0YAML))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__reserve-excess-capacity-1.yaml"])).To(Equal(deployment1YAML))
+				expectPriorityClasses(managedResourceSecret.Data)
+			})
+		})
+
+		Context("in case reserve-excess-capacity is disabled", func() {
+			BeforeEach(func() {
+				values.ReserveExcessCapacity.Enabled = pointer.Bool(false)
+				component = New(c, namespace, values)
+			})
+
+			It("should successfully deploy the resources", func() {
+				Expect(managedResourceSecret.Data).To(HaveLen(10))
 				expectPriorityClasses(managedResourceSecret.Data)
 			})
 		})

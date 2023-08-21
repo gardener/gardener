@@ -6591,8 +6591,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservation(ref commo
 				Properties: map[string]spec.Schema{
 					"enabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Enabled controls whether the default excess capacity reservation should be enabled. Deprecated: This field is deprecated and will be removed in a future version of Gardener. Please use `Configs` instead.",
-							Default:     false,
+							Description: "Enabled controls whether the default excess capacity reservation should be enabled. When not specified, the functionality is enabled.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -6612,7 +6611,6 @@ func schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservation(ref commo
 						},
 					},
 				},
-				Required: []string{"enabled"},
 			},
 		},
 		Dependencies: []string{

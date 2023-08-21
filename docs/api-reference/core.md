@@ -9127,8 +9127,8 @@ bool
 </em>
 </td>
 <td>
-<p>Enabled controls whether the default excess capacity reservation should be enabled.
-Deprecated: This field is deprecated and will be removed in a future version of Gardener. Please use <code>Configs</code> instead.</p>
+<em>(Optional)</em>
+<p>Enabled controls whether the default excess capacity reservation should be enabled. When not specified, the functionality is enabled.</p>
 </td>
 </tr>
 <tr>

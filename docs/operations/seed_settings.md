@@ -45,11 +45,7 @@ However, this delay doesn't affect the important shoot control plane pods, which
 Use `.spec.settings.excessCapacityReservation.configs` to create excess capacity reservation deployments which allow to specify custom values for `resources`, `nodeSelector` and `tolerations`. Each config creates a deployment with a minium number of 2 replicas and a maximum equal to the number of zones configured for this seed.  
 It defaults to a config reserving 2 CPUs and 6Gi of memory for each pod with no `nodeSelector` and no `tolerations`.
 
-A default config can also be enabled/disabled via the `.spec.settings.excessCapacityReservation.enabled` field.  
-When enabled, it creates a deployment with a minium number of 2 replicas and a maximum equal to the number of zones configured for this seed.
-Each pod reserves 2 CPUs and 6Gi of memory.
-
-> :warning: `.spec.settings.excessCapacityReservation.enabled` is deprecated and will be removed in a future version of Gardener. Use `.spec.settings.excessCapacityReservation.configs` instead.
+Excess capacity reservation can be disabled by setting the `.spec.settings.excessCapacityReservation.enabled` field to `false`.  
 
 ## Scheduling
 

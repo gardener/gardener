@@ -296,7 +296,6 @@ var _ = Describe("ControllerInstallation controller tests", func() {
           - resources:
               cpu: "2"
               memory: 6Gi
-          enabled: false
         scheduling:
           visible: true
         topologyAwareRouting:

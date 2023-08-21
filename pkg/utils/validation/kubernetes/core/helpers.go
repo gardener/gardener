@@ -23,26 +23,26 @@ import (
 	"fmt"
 	"strings"
 
-	core "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 var integerResources = sets.NewString(
-	string(core.ResourcePods),
-	string(core.ResourceQuotas),
-	string(core.ResourceServices),
-	string(core.ResourceReplicationControllers),
-	string(core.ResourceSecrets),
-	string(core.ResourceConfigMaps),
-	string(core.ResourcePersistentVolumeClaims),
-	string(core.ResourceServicesNodePorts),
-	string(core.ResourceServicesLoadBalancers),
+	string(corev1.ResourcePods),
+	string(corev1.ResourceQuotas),
+	string(corev1.ResourceServices),
+	string(corev1.ResourceReplicationControllers),
+	string(corev1.ResourceSecrets),
+	string(corev1.ResourceConfigMaps),
+	string(corev1.ResourcePersistentVolumeClaims),
+	string(corev1.ResourceServicesNodePorts),
+	string(corev1.ResourceServicesLoadBalancers),
 )
 
 // IsIntegerResourceName returns true if the resource is measured in integer values
 func IsIntegerResourceName(str string) bool {
-	return integerResources.Has(str) || IsExtendedResourceName(core.ResourceName(str))
+	return integerResources.Has(str) || IsExtendedResourceName(corev1.ResourceName(str))
 }
 
 // IsExtendedResourceName returns true if:
@@ -50,12 +50,12 @@ func IsIntegerResourceName(str string) bool {
 // 2. resource name does not have "requests." prefix,
 // to avoid confusion with the convention in quota
 // 3. it satisfies the rules in IsQualifiedName() after converted into quota resource name
-func IsExtendedResourceName(name core.ResourceName) bool {
-	if IsNativeResource(name) || strings.HasPrefix(string(name), core.DefaultResourceRequestsPrefix) {
+func IsExtendedResourceName(name corev1.ResourceName) bool {
+	if IsNativeResource(name) || strings.HasPrefix(string(name), corev1.DefaultResourceRequestsPrefix) {
 		return false
 	}
 	// Ensure it satisfies the rules in IsQualifiedName() after converted into quota resource name
-	nameForQuota := fmt.Sprintf("%s%s", core.DefaultResourceRequestsPrefix, string(name))
+	nameForQuota := fmt.Sprintf("%s%s", corev1.DefaultResourceRequestsPrefix, string(name))
 	if errs := validation.IsQualifiedName(nameForQuota); len(errs) != 0 {
 		return false
 	}
@@ -65,7 +65,7 @@ func IsExtendedResourceName(name core.ResourceName) bool {
 // IsNativeResource returns true if the resource name is in the
 // *kubernetes.io/ namespace. Partially-qualified (unprefixed) names are
 // implicitly in the kubernetes.io/ namespace.
-func IsNativeResource(name core.ResourceName) bool {
+func IsNativeResource(name corev1.ResourceName) bool {
 	return !strings.Contains(string(name), "/") ||
-		strings.Contains(string(name), core.ResourceDefaultNamespacePrefix)
+		strings.Contains(string(name), corev1.ResourceDefaultNamespacePrefix)
 }

@@ -207,6 +207,7 @@ build:
         - pkg/utils/validation/admissionplugins
         - pkg/utils/validation/cidr
         - pkg/utils/validation/features
+        - pkg/utils/validation/kubernetes/core
         - pkg/utils/validation/kubernetesversion
         - pkg/utils/version
         - plugin/pkg
@@ -311,6 +312,7 @@ build:
         - pkg/utils/validation/cidr
         - pkg/utils/validation/features
         - pkg/utils/validation/kubernetesversion
+        - pkg/utils/validation/kubernetes/core
         - pkg/utils/version
         - vendor
         - VERSION

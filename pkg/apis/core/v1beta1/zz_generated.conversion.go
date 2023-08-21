@@ -5177,7 +5177,7 @@ func Convert_core_SeedSettingDependencyWatchdogWeeder_To_v1beta1_SeedSettingDepe
 }
 
 func autoConvert_v1beta1_SeedSettingExcessCapacityReservation_To_core_SeedSettingExcessCapacityReservation(in *SeedSettingExcessCapacityReservation, out *core.SeedSettingExcessCapacityReservation, s conversion.Scope) error {
-	out.Enabled = in.Enabled
+	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	out.Configs = *(*[]core.SeedSettingExcessCapacityReservationConfig)(unsafe.Pointer(&in.Configs))
 	return nil
 }
@@ -5188,7 +5188,7 @@ func Convert_v1beta1_SeedSettingExcessCapacityReservation_To_core_SeedSettingExc
 }
 
 func autoConvert_core_SeedSettingExcessCapacityReservation_To_v1beta1_SeedSettingExcessCapacityReservation(in *core.SeedSettingExcessCapacityReservation, out *SeedSettingExcessCapacityReservation, s conversion.Scope) error {
-	out.Enabled = in.Enabled
+	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	out.Configs = *(*[]SeedSettingExcessCapacityReservationConfig)(unsafe.Pointer(&in.Configs))
 	return nil
 }
