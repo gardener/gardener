@@ -143,17 +143,17 @@ func (h *Health) Check(
 		},
 		func(ctx context.Context) error {
 			newRuntimeComponentsCondition, err := h.checkRuntimeComponents(ctx, checker, runtimeComponentsCondition)
-			runtimeComponentsCondition = healthchecker.NewConditionOrError(h.clock, runtimeComponentsCondition, newRuntimeComponentsCondition, err)
+			runtimeComponentsCondition = v1beta1helper.NewConditionOrError(h.clock, runtimeComponentsCondition, newRuntimeComponentsCondition, err)
 			return nil
 		},
 		func(ctx context.Context) error {
 			newVirtualComponentsCondition, err := h.checkVirtualComponents(ctx, checker, virtualComponentsCondition)
-			virtualComponentsCondition = healthchecker.NewConditionOrError(h.clock, virtualComponentsCondition, newVirtualComponentsCondition, err)
+			virtualComponentsCondition = v1beta1helper.NewConditionOrError(h.clock, virtualComponentsCondition, newVirtualComponentsCondition, err)
 			return nil
 		},
 		func(ctx context.Context) error {
 			newObservabilityCondition, err := h.checkObservabilityComponents(ctx, checker, observabilityCondition)
-			observabilityCondition = healthchecker.NewConditionOrError(h.clock, observabilityCondition, newObservabilityCondition, err)
+			observabilityCondition = v1beta1helper.NewConditionOrError(h.clock, observabilityCondition, newObservabilityCondition, err)
 			return nil
 		},
 	}

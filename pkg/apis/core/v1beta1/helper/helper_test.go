@@ -15,6 +15,7 @@
 package helper_test
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -258,6 +259,25 @@ var _ = Describe("helper", func() {
 				[]gardencorev1beta1.Condition{{Type: "foo"}, {Type: "bar"}}),
 			Entry("remove from an empty slice", nil, []gardencorev1beta1.ConditionType{"foo"}, nil),
 		)
+
+		Describe("#NewConditionOrError", func() {
+			It("should return the condition", func() {
+				condition := gardencorev1beta1.Condition{Type: "foo"}
+				Expect(NewConditionOrError(fakeClock, gardencorev1beta1.Condition{Type: "foo"}, &condition, nil)).To(Equal(condition))
+			})
+
+			It("should update the condition to 'UNKNOWN' if new condition is 'nil'", func() {
+				conditions := NewConditionOrError(fakeClock, gardencorev1beta1.Condition{Type: "foo"}, nil, nil)
+				Expect(conditions.Status).To(Equal(gardencorev1beta1.ConditionStatus("Unknown")))
+				Expect(conditions.Reason).To(Equal("ConditionCheckError"))
+			})
+
+			It("should update the condition to 'UNKNOWN' in case of an error", func() {
+				conditions := NewConditionOrError(fakeClock, gardencorev1beta1.Condition{Type: "foo"}, &gardencorev1beta1.Condition{Type: "foo"}, errors.New(""))
+				Expect(conditions.Status).To(Equal(gardencorev1beta1.ConditionStatus("Unknown")))
+				Expect(conditions.Reason).To(Equal("ConditionCheckError"))
+			})
+		})
 
 		Describe("#GetCondition", func() {
 			It("should return the found condition", func() {

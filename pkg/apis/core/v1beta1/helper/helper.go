@@ -149,6 +149,14 @@ func ConditionsNeedUpdate(existingConditions, newConditions []gardencorev1beta1.
 	return existingConditions == nil || !apiequality.Semantic.DeepEqual(newConditions, existingConditions)
 }
 
+// NewConditionOrError returns the given new condition or returns an unknown error condition if an error occurred or `newCondition` is nil.
+func NewConditionOrError(clock clock.Clock, oldCondition gardencorev1beta1.Condition, newCondition *gardencorev1beta1.Condition, err error) gardencorev1beta1.Condition {
+	if err != nil || newCondition == nil {
+		return UpdatedConditionUnknownErrorWithClock(clock, oldCondition, err)
+	}
+	return *newCondition
+}
+
 // IsResourceSupported returns true if a given combination of kind/type is part of a controller resources list.
 func IsResourceSupported(resources []gardencorev1beta1.ControllerResource, resourceKind, resourceType string) bool {
 	for _, resource := range resources {

@@ -494,14 +494,6 @@ func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1beta1.Cond
 	return nil
 }
 
-// NewConditionOrError returns the given new condition or returns an unknown error condition if an error occurred or `newCondition` is nil.
-func NewConditionOrError(clock clock.Clock, oldCondition gardencorev1beta1.Condition, newCondition *gardencorev1beta1.Condition, err error) gardencorev1beta1.Condition {
-	if err != nil || newCondition == nil {
-		return v1beta1helper.UpdatedConditionUnknownErrorWithClock(clock, oldCondition, err)
-	}
-	return *newCondition
-}
-
 // ExtensionCondition contains information about the extension type, name, namespace and the respective condition object.
 type ExtensionCondition struct {
 	Condition          gardencorev1beta1.Condition

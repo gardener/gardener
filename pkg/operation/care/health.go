@@ -341,10 +341,10 @@ func (h *Health) healthChecks(
 		apiserverAvailability = checker.FailedCondition(apiserverAvailability, "APIServerDown", "Could not reach API server during client initialization.")
 
 		newControlPlane, err := h.checkControlPlane(ctx, checker, controlPlane, extensionConditionsControlPlaneHealthy)
-		controlPlane = healthchecker.NewConditionOrError(h.clock, controlPlane, newControlPlane, err)
+		controlPlane = v1beta1helper.NewConditionOrError(h.clock, controlPlane, newControlPlane, err)
 
 		newObservabilityComponents, err := h.checkObservabilityComponents(ctx, checker, observabilityComponents)
-		observabilityComponents = healthchecker.NewConditionOrError(h.clock, observabilityComponents, newObservabilityComponents, err)
+		observabilityComponents = v1beta1helper.NewConditionOrError(h.clock, observabilityComponents, newObservabilityComponents, err)
 		systemComponents = v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(h.clock, systemComponents, message)
 
 		if h.shoot.IsWorkerless {
@@ -363,15 +363,15 @@ func (h *Health) healthChecks(
 			return nil
 		}, func(ctx context.Context) error {
 			newControlPlane, err := h.checkControlPlane(ctx, checker, controlPlane, extensionConditionsControlPlaneHealthy)
-			controlPlane = healthchecker.NewConditionOrError(h.clock, controlPlane, newControlPlane, err)
+			controlPlane = v1beta1helper.NewConditionOrError(h.clock, controlPlane, newControlPlane, err)
 			return nil
 		}, func(ctx context.Context) error {
 			newObservabilityComponents, err := h.checkObservabilityComponents(ctx, checker, observabilityComponents)
-			observabilityComponents = healthchecker.NewConditionOrError(h.clock, observabilityComponents, newObservabilityComponents, err)
+			observabilityComponents = v1beta1helper.NewConditionOrError(h.clock, observabilityComponents, newObservabilityComponents, err)
 			return nil
 		}, func(ctx context.Context) error {
 			newSystemComponents, err := h.checkSystemComponents(ctx, checker, systemComponents, extensionConditionsSystemComponentsHealthy)
-			systemComponents = healthchecker.NewConditionOrError(h.clock, systemComponents, newSystemComponents, err)
+			systemComponents = v1beta1helper.NewConditionOrError(h.clock, systemComponents, newSystemComponents, err)
 			return nil
 		},
 	}
@@ -385,7 +385,7 @@ func (h *Health) healthChecks(
 	taskFns = append(taskFns,
 		func(ctx context.Context) error {
 			newNodes, err := h.checkClusterNodes(ctx, h.shoot.SeedNamespace, checker, nodes, extensionConditionsEveryNodeReady)
-			nodes = healthchecker.NewConditionOrError(h.clock, nodes, newNodes, err)
+			nodes = v1beta1helper.NewConditionOrError(h.clock, nodes, newNodes, err)
 			return nil
 		},
 	)

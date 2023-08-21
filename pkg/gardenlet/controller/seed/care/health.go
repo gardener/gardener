@@ -94,7 +94,7 @@ func (h *Health) Check(
 
 	checker := healthchecker.NewHealthChecker(h.seedClient, h.clock, thresholdMappings, nil, nil, lastOperation, nil)
 	newSystemComponentsCondition, err := h.checkSeedSystemComponents(ctx, checker, systemComponentsCondition)
-	return []gardencorev1beta1.Condition{healthchecker.NewConditionOrError(h.clock, systemComponentsCondition, newSystemComponentsCondition, err)}
+	return []gardencorev1beta1.Condition{v1beta1helper.NewConditionOrError(h.clock, systemComponentsCondition, newSystemComponentsCondition, err)}
 }
 
 func (h *Health) checkSeedSystemComponents(
