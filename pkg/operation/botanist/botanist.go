@@ -15,9 +15,10 @@
 package botanist
 
 import (
+	"cmp"
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -52,7 +53,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 			prefix            = fmt.Sprintf("%s-", v1beta1constants.GardenRoleDefaultDomain)
 			defaultDomainKeys = o.GetSecretKeysOfRole(v1beta1constants.GardenRoleDefaultDomain)
 		)
-		sort.Slice(defaultDomainKeys, func(i, j int) bool { return len(defaultDomainKeys[i]) >= len(defaultDomainKeys[j]) })
+		slices.SortFunc(defaultDomainKeys, func(a, b string) int {
+			return cmp.Compare(len(b), len(a))
+		})
+
 		for _, key := range defaultDomainKeys {
 			defaultDomain := strings.SplitAfter(key, prefix)[1]
 			if strings.HasSuffix(*(o.Shoot.GetInfo().Spec.DNS.Domain), defaultDomain) {
