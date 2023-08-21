@@ -91,7 +91,7 @@ func NewHealthChecker(
 
 func (b *HealthChecker) checkRequiredResourceNames(condition gardencorev1beta1.Condition, requiredNames, names sets.Set[string], reason, message string) *gardencorev1beta1.Condition {
 	if missingNames := requiredNames.Difference(names); missingNames.Len() != 0 {
-		c := b.FailedCondition(condition, reason, fmt.Sprintf("%s: %v", message, sets.List(missingNames)))
+		c := v1beta1helper.FailedCondition(b.clock, b.lastOperation, b.conditionThresholds, condition, reason, fmt.Sprintf("%s: %v", message, sets.List(missingNames)))
 		return &c
 	}
 
@@ -110,7 +110,7 @@ func (b *HealthChecker) checkRequiredDeployments(condition gardencorev1beta1.Con
 func (b *HealthChecker) checkDeployments(condition gardencorev1beta1.Condition, objects []appsv1.Deployment) *gardencorev1beta1.Condition {
 	for _, object := range objects {
 		if err := health.CheckDeployment(&object); err != nil {
-			c := b.FailedCondition(condition, "DeploymentUnhealthy", fmt.Sprintf("Deployment %q is unhealthy: %v", object.Name, err.Error()))
+			c := v1beta1helper.FailedCondition(b.clock, b.lastOperation, b.conditionThresholds, condition, "DeploymentUnhealthy", fmt.Sprintf("Deployment %q is unhealthy: %v", object.Name, err.Error()))
 			return &c
 		}
 	}
@@ -139,7 +139,7 @@ func (b *HealthChecker) checkEtcds(condition gardencorev1beta1.Condition, object
 				message = fmt.Sprintf("%s (%s)", message, *lastError)
 			}
 
-			c := b.FailedCondition(condition, "EtcdUnhealthy", message, codes...)
+			c := v1beta1helper.FailedCondition(b.clock, b.lastOperation, b.conditionThresholds, condition, "EtcdUnhealthy", message, codes...)
 			return &c
 		}
 	}
@@ -159,7 +159,7 @@ func (b *HealthChecker) checkRequiredStatefulSets(condition gardencorev1beta1.Co
 func (b *HealthChecker) checkStatefulSets(condition gardencorev1beta1.Condition, objects []appsv1.StatefulSet) *gardencorev1beta1.Condition {
 	for _, object := range objects {
 		if err := health.CheckStatefulSet(&object); err != nil {
-			c := b.FailedCondition(condition, "StatefulSetUnhealthy", fmt.Sprintf("Stateful set %q is unhealthy: %v", object.Name, err.Error()))
+			c := v1beta1helper.FailedCondition(b.clock, b.lastOperation, b.conditionThresholds, condition, "StatefulSetUnhealthy", fmt.Sprintf("Stateful set %q is unhealthy: %v", object.Name, err.Error()))
 			return &c
 		}
 	}
@@ -183,24 +183,24 @@ func (b *HealthChecker) CheckNodes(condition gardencorev1beta1.Condition, nodes 
 				errorCodes = append(errorCodes, gardencorev1beta1.ErrorConfigurationProblem)
 			}
 
-			c := b.FailedCondition(condition, "NodeUnhealthy", message, errorCodes...)
+			c := v1beta1helper.FailedCondition(b.clock, b.lastOperation, b.conditionThresholds, condition, "NodeUnhealthy", message, errorCodes...)
 			return &c
 		}
 
 		sameMajorMinor, err := semver.NewConstraint("~ " + object.Status.NodeInfo.KubeletVersion)
 		if err != nil {
-			c := b.FailedCondition(condition, "VersionParseError", fmt.Sprintf("Error checking for same major minor Kubernetes version for node %q: %+v", object.Name, err))
+			c := v1beta1helper.FailedCondition(b.clock, b.lastOperation, b.conditionThresholds, condition, "VersionParseError", fmt.Sprintf("Error checking for same major minor Kubernetes version for node %q: %+v", object.Name, err))
 			return &c
 		}
 		if sameMajorMinor.Check(workerGroupKubernetesVersion) {
 			equal, err := semver.NewConstraint("= " + object.Status.NodeInfo.KubeletVersion)
 			if err != nil {
-				c := b.FailedCondition(condition, "VersionParseError", fmt.Sprintf("Error checking for equal Kubernetes versions for node %q: %+v", object.Name, err))
+				c := v1beta1helper.FailedCondition(b.clock, b.lastOperation, b.conditionThresholds, condition, "VersionParseError", fmt.Sprintf("Error checking for equal Kubernetes versions for node %q: %+v", object.Name, err))
 				return &c
 			}
 
 			if !equal.Check(workerGroupKubernetesVersion) {
-				c := b.FailedCondition(condition, "KubeletVersionMismatch", fmt.Sprintf("The kubelet version for node %q (%s) does not match the desired Kubernetes version (v%s)", object.Name, object.Status.NodeInfo.KubeletVersion, workerGroupKubernetesVersion.Original()))
+				c := v1beta1helper.FailedCondition(b.clock, b.lastOperation, b.conditionThresholds, condition, "KubeletVersionMismatch", fmt.Sprintf("The kubelet version for node %q (%s) does not match the desired Kubernetes version (v%s)", object.Name, object.Status.NodeInfo.KubeletVersion, workerGroupKubernetesVersion.Original()))
 				return &c
 			}
 		}
@@ -249,12 +249,12 @@ func (b *HealthChecker) CheckManagedResourceConditions(
 	conditionsToCheck map[gardencorev1beta1.ConditionType]func(condition gardencorev1beta1.Condition) bool,
 ) *gardencorev1beta1.Condition {
 	if mr.Generation != mr.Status.ObservedGeneration {
-		c := b.FailedCondition(condition, gardencorev1beta1.OutdatedStatusError, fmt.Sprintf("observed generation of managed resource '%s/%s' outdated (%d/%d)", mr.Namespace, mr.Name, mr.Status.ObservedGeneration, mr.Generation))
+		c := v1beta1helper.FailedCondition(b.clock, b.lastOperation, b.conditionThresholds, condition, gardencorev1beta1.OutdatedStatusError, fmt.Sprintf("observed generation of managed resource '%s/%s' outdated (%d/%d)", mr.Namespace, mr.Name, mr.Status.ObservedGeneration, mr.Generation))
 
 		// check if MangedResource `ResourcesApplied` condition is in failed state
 		conditionResourcesApplied := v1beta1helper.GetCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
 		if conditionResourcesApplied != nil && conditionResourcesApplied.Status == gardencorev1beta1.ConditionFalse && conditionResourcesApplied.Reason == resourcesv1alpha1.ConditionApplyFailed {
-			c = b.FailedCondition(condition, conditionResourcesApplied.Reason, conditionResourcesApplied.Message)
+			c = v1beta1helper.FailedCondition(b.clock, b.lastOperation, b.conditionThresholds, condition, conditionResourcesApplied.Reason, conditionResourcesApplied.Message)
 		}
 
 		return &c
@@ -275,9 +275,9 @@ func (b *HealthChecker) CheckManagedResourceConditions(
 			continue
 		}
 		if !checkConditionStatus(*cond) {
-			c := b.FailedCondition(condition, cond.Reason, cond.Message)
+			c := v1beta1helper.FailedCondition(b.clock, b.lastOperation, b.conditionThresholds, condition, cond.Reason, cond.Message)
 			if cond.Type == resourcesv1alpha1.ResourcesProgressing && b.managedResourceProgressingThreshold != nil {
-				c = b.FailedCondition(condition, gardencorev1beta1.ManagedResourceProgressingRolloutStuck, fmt.Sprintf("ManagedResource %s is progressing for more than %s", mr.Name, b.managedResourceProgressingThreshold.Duration))
+				c = v1beta1helper.FailedCondition(b.clock, b.lastOperation, b.conditionThresholds, condition, gardencorev1beta1.ManagedResourceProgressingRolloutStuck, fmt.Sprintf("ManagedResource %s is progressing for more than %s", mr.Name, b.managedResourceProgressingThreshold.Duration))
 			}
 			return &c
 		}
@@ -289,7 +289,7 @@ func (b *HealthChecker) CheckManagedResourceConditions(
 		for cond := range conditionsToCheck {
 			missing = append(missing, string(cond))
 		}
-		c := b.FailedCondition(condition, gardencorev1beta1.ManagedResourceMissingConditionError, fmt.Sprintf("ManagedResource %s is missing the following condition(s), %v", mr.Name, missing))
+		c := v1beta1helper.FailedCondition(b.clock, b.lastOperation, b.conditionThresholds, condition, gardencorev1beta1.ManagedResourceMissingConditionError, fmt.Sprintf("ManagedResource %s is missing the following condition(s), %v", mr.Name, missing))
 		return &c
 	}
 
@@ -332,40 +332,6 @@ func (b *HealthChecker) CheckControlPlane(
 	}
 
 	return nil, nil
-}
-
-// FailedCondition returns a progressing or false condition depending on the progressing threshold.
-func (b *HealthChecker) FailedCondition(condition gardencorev1beta1.Condition, reason, message string, codes ...gardencorev1beta1.ErrorCode) gardencorev1beta1.Condition {
-	switch condition.Status {
-	case gardencorev1beta1.ConditionTrue:
-		if _, ok := b.conditionThresholds[condition.Type]; !ok {
-			return v1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
-		}
-		return v1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
-
-	case gardencorev1beta1.ConditionProgressing:
-		threshold, ok := b.conditionThresholds[condition.Type]
-		if !ok {
-			return v1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
-		}
-		if b.lastOperation != nil && b.lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded && b.clock.Now().UTC().Sub(b.lastOperation.LastUpdateTime.UTC()) <= threshold {
-			return v1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
-		}
-		if delta := b.clock.Now().UTC().Sub(condition.LastTransitionTime.Time.UTC()); delta <= threshold {
-			return v1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
-		}
-		return v1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
-
-	case gardencorev1beta1.ConditionFalse:
-		threshold, ok := b.conditionThresholds[condition.Type]
-		if ok &&
-			((b.lastOperation != nil && b.lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded && b.clock.Now().UTC().Sub(b.lastOperation.LastUpdateTime.UTC()) <= threshold) ||
-				(reason != condition.Reason)) {
-			return v1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
-		}
-	}
-
-	return v1beta1helper.UpdatedConditionWithClock(b.clock, condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
 }
 
 // CheckMonitoringControlPlane checks the monitoring components of the control-plane.
@@ -486,7 +452,7 @@ func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1beta1.Cond
 		}
 
 		if cond.Condition.Status == gardencorev1beta1.ConditionFalse || cond.Condition.Status == gardencorev1beta1.ConditionUnknown {
-			c := b.FailedCondition(condition, fmt.Sprintf("%sUnhealthyReport", cond.ExtensionType), fmt.Sprintf("%s extension (%s/%s) reports failing health check: %s", cond.ExtensionType, cond.ExtensionNamespace, cond.ExtensionName, cond.Condition.Message), cond.Condition.Codes...)
+			c := v1beta1helper.FailedCondition(b.clock, b.lastOperation, b.conditionThresholds, condition, fmt.Sprintf("%sUnhealthyReport", cond.ExtensionType), fmt.Sprintf("%s extension (%s/%s) reports failing health check: %s", cond.ExtensionType, cond.ExtensionNamespace, cond.ExtensionName, cond.Condition.Message), cond.Condition.Codes...)
 			return &c
 		}
 	}

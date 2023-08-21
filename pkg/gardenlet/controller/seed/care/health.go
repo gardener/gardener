@@ -93,7 +93,7 @@ func (h *Health) Check(
 	}
 
 	checker := healthchecker.NewHealthChecker(h.seedClient, h.clock, thresholdMappings, nil, nil, lastOperation, nil)
-	newSystemComponentsCondition, err := h.checkSeedSystemComponents(ctx, checker, systemComponentsCondition)
+	newSystemComponentsCondition, err := h.checkSeedSystemComponents(ctx, checker, systemComponentsCondition, thresholdMappings)
 	return []gardencorev1beta1.Condition{v1beta1helper.NewConditionOrError(h.clock, systemComponentsCondition, newSystemComponentsCondition, err)}
 }
 
@@ -101,6 +101,7 @@ func (h *Health) checkSeedSystemComponents(
 	ctx context.Context,
 	checker *healthchecker.HealthChecker,
 	condition gardencorev1beta1.Condition,
+	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
 ) (
 	*gardencorev1beta1.Condition,
 	error,
@@ -142,7 +143,7 @@ func (h *Health) checkSeedSystemComponents(
 		mr := &resourcesv1alpha1.ManagedResource{}
 		if err := h.seedClient.Get(ctx, kubernetesutils.Key(namespace, name), mr); err != nil {
 			if apierrors.IsNotFound(err) {
-				exitCondition := checker.FailedCondition(condition, "ResourceNotFound", err.Error())
+				exitCondition := v1beta1helper.FailedCondition(h.clock, h.seed.Status.LastOperation, conditionThresholds, condition, "ResourceNotFound", err.Error())
 				return &exitCondition, nil
 			}
 			return nil, err

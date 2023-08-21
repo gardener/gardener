@@ -513,12 +513,12 @@ var _ = Describe("Shoot Care Control", func() {
 
 type resultingConditionFunc func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
 
-func (h resultingConditionFunc) Check(_ context.Context, _ map[gardencorev1beta1.ConditionType]time.Duration, _ *metav1.Duration, con []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+func (h resultingConditionFunc) Check(_ context.Context, _ *metav1.Duration, con []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
 	return h(con)
 }
 
 func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
-	return func(op *operation.Operation, init care.ShootClientInit, clock clock.Clock) HealthCheck {
+	return func(*operation.Operation, care.ShootClientInit, clock.Clock, map[gardencorev1beta1.ConditionType]time.Duration) HealthCheck {
 		return fn
 	}
 }

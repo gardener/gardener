@@ -168,10 +168,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	if err := flow.Parallel(
 		// Trigger health check
 		func(ctx context.Context) error {
-			shootHealth := NewHealthCheck(o, initializeShootClients, r.Clock)
-			updatedConditions = shootHealth.Check(
-				ctx,
+			updatedConditions = NewHealthCheck(
+				o,
+				initializeShootClients,
+				r.Clock,
 				r.conditionThresholdsToProgressingMapping(),
+			).Check(
+				ctx,
 				staleExtensionHealthCheckThreshold,
 				conditions,
 			)
@@ -179,8 +182,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		},
 		// Trigger constraint checks
 		func(ctx context.Context) error {
-			constraint := NewConstraintCheck(clock.RealClock{}, o, initializeShootClients)
-			updatedConstraints = constraint.Check(
+			updatedConstraints = NewConstraintCheck(
+				clock.RealClock{},
+				o,
+				initializeShootClients,
+			).Check(
 				ctx,
 				constraints,
 			)
@@ -188,8 +194,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		},
 		// Trigger garbage collection
 		func(ctx context.Context) error {
-			garbageCollector := NewGarbageCollector(o, initializeShootClients)
-			garbageCollector.Collect(ctx)
+			NewGarbageCollector(o, initializeShootClients).Collect(ctx)
 			// errors during garbage collection are only being logged and do not cause the care operation to fail
 			return nil
 		},

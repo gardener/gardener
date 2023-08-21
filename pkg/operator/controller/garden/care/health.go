@@ -90,21 +90,30 @@ var (
 
 // Health contains information needed to execute health checks for garden.
 type Health struct {
-	garden          *operatorv1alpha1.Garden
-	gardenNamespace string
-	runtimeClient   client.Client
-	gardenClientSet kubernetes.Interface
-	clock           clock.Clock
+	garden              *operatorv1alpha1.Garden
+	gardenNamespace     string
+	runtimeClient       client.Client
+	gardenClientSet     kubernetes.Interface
+	clock               clock.Clock
+	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration
 }
 
 // NewHealth creates a new Health instance with the given parameters.
-func NewHealth(garden *operatorv1alpha1.Garden, runtimeClient client.Client, gardenClientSet kubernetes.Interface, clock clock.Clock, gardenNamespace string) *Health {
+func NewHealth(
+	garden *operatorv1alpha1.Garden,
+	runtimeClient client.Client,
+	gardenClientSet kubernetes.Interface,
+	clock clock.Clock,
+	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
+	gardenNamespace string,
+) *Health {
 	return &Health{
-		garden:          garden,
-		gardenNamespace: gardenNamespace,
-		runtimeClient:   runtimeClient,
-		gardenClientSet: gardenClientSet,
-		clock:           clock,
+		garden:              garden,
+		gardenNamespace:     gardenNamespace,
+		runtimeClient:       runtimeClient,
+		gardenClientSet:     gardenClientSet,
+		clock:               clock,
+		conditionThresholds: conditionThresholds,
 	}
 }
 
@@ -112,7 +121,6 @@ func NewHealth(garden *operatorv1alpha1.Garden, runtimeClient client.Client, gar
 func (h *Health) Check(
 	ctx context.Context,
 	conditions []gardencorev1beta1.Condition,
-	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
 	lastOperation *gardencorev1beta1.LastOperation,
 ) []gardencorev1beta1.Condition {
 	var (
@@ -134,11 +142,11 @@ func (h *Health) Check(
 		}
 	}
 
-	checker := healthchecker.NewHealthChecker(h.runtimeClient, h.clock, thresholdMappings, nil, nil, lastOperation, nil)
+	checker := healthchecker.NewHealthChecker(h.runtimeClient, h.clock, h.conditionThresholds, nil, nil, lastOperation, nil)
 
 	taskFns := []flow.TaskFn{
 		func(ctx context.Context) error {
-			apiServerAvailability = h.checkAPIServerAvailability(ctx, checker, apiServerAvailability)
+			apiServerAvailability = h.checkAPIServerAvailability(ctx, apiServerAvailability)
 			return nil
 		},
 		func(ctx context.Context) error {
@@ -169,13 +177,13 @@ func (h *Health) Check(
 }
 
 // checkAPIServerAvailability checks if the API server of a virtual garden is reachable and measures the response time.
-func (h *Health) checkAPIServerAvailability(ctx context.Context, checker *healthchecker.HealthChecker, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
+func (h *Health) checkAPIServerAvailability(ctx context.Context, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
 	if h.gardenClientSet == nil {
-		return checker.FailedCondition(condition, "VirtualGardenAPIServerDown", "Could not reach virtual garden API server during client initialization.")
+		return v1beta1helper.FailedCondition(h.clock, h.garden.Status.LastOperation, h.conditionThresholds, condition, "VirtualGardenAPIServerDown", "Could not reach virtual garden API server during client initialization.")
 	}
 	log := logf.FromContext(ctx)
 	return health.CheckAPIServerAvailability(ctx, h.clock, log, condition, h.gardenClientSet.RESTClient(), func(conditionType, message string) gardencorev1beta1.Condition {
-		return checker.FailedCondition(condition, conditionType, message)
+		return v1beta1helper.FailedCondition(h.clock, h.garden.Status.LastOperation, h.conditionThresholds, condition, conditionType, message)
 	})
 }
 
@@ -229,7 +237,7 @@ func (h *Health) checkManagedResources(
 		mr := &resourcesv1alpha1.ManagedResource{}
 		if err := h.runtimeClient.Get(ctx, kubernetesutils.Key(namespace, name), mr); err != nil {
 			if apierrors.IsNotFound(err) {
-				exitCondition := checker.FailedCondition(condition, "ResourceNotFound", err.Error())
+				exitCondition := v1beta1helper.FailedCondition(h.clock, h.garden.Status.LastOperation, h.conditionThresholds, condition, "ResourceNotFound", err.Error())
 				return &exitCondition, nil
 			}
 			return nil, err

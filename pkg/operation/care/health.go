@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -88,13 +87,14 @@ type Health struct {
 	gardenletConfiguration                    *gardenletconfig.GardenletConfiguration
 	clock                                     clock.Clock
 	controllerRegistrationToLastHeartbeatTime map[string]*metav1.MicroTime
+	conditionThresholds                       map[gardencorev1beta1.ConditionType]time.Duration
 }
 
 // ShootClientInit is a function that initializes a kubernetes client for a Shoot.
 type ShootClientInit func() (kubernetes.Interface, bool, error)
 
 // NewHealth creates a new Health instance with the given parameters.
-func NewHealth(op *operation.Operation, shootClientInit ShootClientInit, clock clock.Clock) *Health {
+func NewHealth(op *operation.Operation, shootClientInit ShootClientInit, clock clock.Clock, conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration) *Health {
 	return &Health{
 		shoot:                  op.Shoot,
 		gardenClient:           op.GardenClient,
@@ -105,17 +105,17 @@ func NewHealth(op *operation.Operation, shootClientInit ShootClientInit, clock c
 		log:                    op.Logger,
 		gardenletConfiguration: op.Config,
 		controllerRegistrationToLastHeartbeatTime: map[string]*metav1.MicroTime{},
+		conditionThresholds:                       conditionThresholds,
 	}
 }
 
 // Check conducts the health checks on all the given conditions.
 func (h *Health) Check(
 	ctx context.Context,
-	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
 	healthCheckOutdatedThreshold *metav1.Duration,
 	conditions []gardencorev1beta1.Condition,
 ) []gardencorev1beta1.Condition {
-	updatedConditions := h.healthChecks(ctx, thresholdMappings, healthCheckOutdatedThreshold, conditions)
+	updatedConditions := h.healthChecks(ctx, healthCheckOutdatedThreshold, conditions)
 
 	lastOp := h.shoot.GetInfo().Status.LastOperation
 	lastErrors := h.shoot.GetInfo().Status.LastErrors
@@ -298,7 +298,6 @@ func getControllerInstallationForControllerRegistration(controllerInstallations 
 
 func (h *Health) healthChecks(
 	ctx context.Context,
-	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
 	healthCheckOutdatedThreshold *metav1.Duration,
 	conditions []gardencorev1beta1.Condition,
 ) []gardencorev1beta1.Condition {
@@ -327,7 +326,7 @@ func (h *Health) healthChecks(
 		h.log.Error(err, "Error getting extension conditions")
 	}
 
-	checker := healthchecker.NewHealthChecker(h.seedClient.Client(), h.clock, thresholdMappings, healthCheckOutdatedThreshold, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration), h.shoot.GetInfo().Status.LastOperation, h.shoot.KubernetesVersion)
+	checker := healthchecker.NewHealthChecker(h.seedClient.Client(), h.clock, h.conditionThresholds, healthCheckOutdatedThreshold, gardenlethelper.GetManagedResourceProgressingThreshold(h.gardenletConfiguration), h.shoot.GetInfo().Status.LastOperation, h.shoot.KubernetesVersion)
 
 	shootClient, apiServerRunning, err := h.initializeShootClients()
 	if err != nil || !apiServerRunning {
@@ -338,7 +337,7 @@ func (h *Health) healthChecks(
 			message = fmt.Sprintf("Could not initialize Shoot client for health check: %+v", err)
 		}
 
-		apiserverAvailability = checker.FailedCondition(apiserverAvailability, "APIServerDown", "Could not reach API server during client initialization.")
+		apiserverAvailability = v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, apiserverAvailability, "APIServerDown", "Could not reach API server during client initialization.")
 
 		newControlPlane, err := h.checkControlPlane(ctx, checker, controlPlane, extensionConditionsControlPlaneHealthy)
 		controlPlane = v1beta1helper.NewConditionOrError(h.clock, controlPlane, newControlPlane, err)
@@ -359,7 +358,7 @@ func (h *Health) healthChecks(
 	h.shootClient = shootClient
 	taskFns := []flow.TaskFn{
 		func(ctx context.Context) error {
-			apiserverAvailability = h.checkAPIServerAvailability(ctx, checker, apiserverAvailability)
+			apiserverAvailability = h.checkAPIServerAvailability(ctx, apiserverAvailability)
 			return nil
 		}, func(ctx context.Context) error {
 			newControlPlane, err := h.checkControlPlane(ctx, checker, controlPlane, extensionConditionsControlPlaneHealthy)
@@ -384,7 +383,7 @@ func (h *Health) healthChecks(
 
 	taskFns = append(taskFns,
 		func(ctx context.Context) error {
-			newNodes, err := h.checkClusterNodes(ctx, h.shoot.SeedNamespace, checker, nodes, extensionConditionsEveryNodeReady)
+			newNodes, err := h.checkClusterNodes(ctx, checker, nodes, extensionConditionsEveryNodeReady)
 			nodes = v1beta1helper.NewConditionOrError(h.clock, nodes, newNodes, err)
 			return nil
 		},
@@ -396,9 +395,9 @@ func (h *Health) healthChecks(
 }
 
 // checkAPIServerAvailability checks if the API server of a Shoot cluster is reachable and measure the response time.
-func (h *Health) checkAPIServerAvailability(ctx context.Context, checker *healthchecker.HealthChecker, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
+func (h *Health) checkAPIServerAvailability(ctx context.Context, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
 	return health.CheckAPIServerAvailability(ctx, h.clock, h.log, condition, h.shootClient.RESTClient(), func(conditionType, message string) gardencorev1beta1.Condition {
-		return checker.FailedCondition(condition, conditionType, message)
+		return v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, conditionType, message)
 	})
 }
 
@@ -483,7 +482,7 @@ func (h *Health) checkSystemComponents(
 		}
 
 		if len(podsList.Items) == 0 {
-			c := checker.FailedCondition(condition, "NoTunnelDeployed", "no tunnels are currently deployed to perform health-check on")
+			c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "NoTunnelDeployed", "no tunnels are currently deployed to perform health-check on")
 			return &c, nil
 		}
 
@@ -492,7 +491,7 @@ func (h *Health) checkSystemComponents(
 			if err != nil {
 				msg += fmt.Sprintf(" (%+v)", err)
 			}
-			c := checker.FailedCondition(condition, "TunnelConnectionBroken", msg)
+			c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "TunnelConnectionBroken", msg)
 			return &c, nil
 		}
 	}
@@ -505,7 +504,6 @@ func (h *Health) checkSystemComponents(
 // as many nodes are registered as desired, and that every machine is running.
 func (h *Health) checkClusterNodes(
 	ctx context.Context,
-	seedNamespace string,
 	checker *healthchecker.HealthChecker,
 	condition gardencorev1beta1.Condition,
 	extensionConditions []healthchecker.ExtensionCondition,
@@ -513,7 +511,7 @@ func (h *Health) checkClusterNodes(
 	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions); exitCondition != nil {
 		return exitCondition, nil
 	}
-	if exitCondition, err := CheckClusterNodes(ctx, h.shootClient.Client(), h.seedClient.Client(), checker, h.shoot.KubernetesVersion, seedNamespace, h.shoot.GetInfo().Spec.Provider.Workers, condition); err != nil || exitCondition != nil {
+	if exitCondition, err := h.CheckClusterNodes(ctx, checker, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 
@@ -587,33 +585,28 @@ const annotationKeyNotManagedByMCM = "node.machine.sapcloud.io/not-managed-by-mc
 
 // CheckClusterNodes checks whether cluster nodes in the given listers are healthy and within the desired range.
 // Additional checks are executed in the provider extension
-func CheckClusterNodes(
+func (h *Health) CheckClusterNodes(
 	ctx context.Context,
-	shootClient client.Client,
-	seedClient client.Client,
 	checker *healthchecker.HealthChecker,
-	kubernetesVersion *semver.Version,
-	seedNamespace string,
-	workers []gardencorev1beta1.Worker,
 	condition gardencorev1beta1.Condition,
 ) (
 	*gardencorev1beta1.Condition,
 	error,
 ) {
-	workerPoolToNodes, err := botanist.WorkerPoolToNodesMap(ctx, shootClient)
+	workerPoolToNodes, err := botanist.WorkerPoolToNodesMap(ctx, h.shootClient.Client())
 	if err != nil {
 		return nil, err
 	}
 
-	workerPoolToCloudConfigSecretMeta, err := botanist.WorkerPoolToCloudConfigSecretMetaMap(ctx, shootClient)
+	workerPoolToCloudConfigSecretMeta, err := botanist.WorkerPoolToCloudConfigSecretMetaMap(ctx, h.shootClient.Client())
 	if err != nil {
 		return nil, err
 	}
 
-	for _, pool := range workers {
+	for _, pool := range h.shoot.GetInfo().Spec.Provider.Workers {
 		nodes := workerPoolToNodes[pool.Name]
 
-		kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(kubernetesVersion, pool.Kubernetes)
+		kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(h.shoot.KubernetesVersion, pool.Kubernetes)
 		if err != nil {
 			return nil, err
 		}
@@ -623,13 +616,13 @@ func CheckClusterNodes(
 		}
 
 		if len(nodes) < int(pool.Minimum) {
-			c := checker.FailedCondition(condition, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool %q to meet minimum desired machine count. (%d/%d).", pool.Name, len(nodes), pool.Minimum))
+			c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool %q to meet minimum desired machine count. (%d/%d).", pool.Name, len(nodes), pool.Minimum))
 			return &c, nil
 		}
 	}
 
-	if err := botanist.CloudConfigUpdatedForAllWorkerPools(workers, workerPoolToNodes, workerPoolToCloudConfigSecretMeta); err != nil {
-		c := checker.FailedCondition(condition, "CloudConfigOutdated", err.Error())
+	if err := botanist.CloudConfigUpdatedForAllWorkerPools(h.shoot.GetInfo().Spec.Provider.Workers, workerPoolToNodes, workerPoolToCloudConfigSecretMeta); err != nil {
+		c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "CloudConfigOutdated", err.Error())
 		return &c, nil
 	}
 
@@ -638,7 +631,7 @@ func CheckClusterNodes(
 	}
 
 	machineDeploymentList := &machinev1alpha1.MachineDeploymentList{}
-	if err := seedClient.List(ctx, machineDeploymentList, client.InNamespace(seedNamespace)); err != nil {
+	if err := h.seedClient.Client().List(ctx, machineDeploymentList, client.InNamespace(h.shoot.SeedNamespace)); err != nil {
 		return nil, err
 	}
 
@@ -670,7 +663,7 @@ func CheckClusterNodes(
 
 	machineList := &machinev1alpha1.MachineList{}
 	if registeredNodes != desiredMachines || readyNodes != desiredMachines {
-		if err := seedClient.List(ctx, machineList, client.InNamespace(seedNamespace)); err != nil {
+		if err := h.seedClient.Client().List(ctx, machineList, client.InNamespace(h.shoot.SeedNamespace)); err != nil {
 			return nil, err
 		}
 	}
@@ -678,7 +671,7 @@ func CheckClusterNodes(
 	// First check if the MachineDeployments report failed machines. If false then check if the MachineDeployments are
 	// "available". If false then check if there is a regular scale-up happening or if there are machines with an erroneous
 	// phase. Only then check the other MachineDeployment conditions. As last check, check if there is a scale-down happening
-	// (e.g., in case of an rolling-update).
+	// (e.g., in case of a rolling-update).
 
 	checkScaleUp := false
 	for _, deployment := range machineDeploymentList.Items {
@@ -696,13 +689,13 @@ func CheckClusterNodes(
 
 	if checkScaleUp {
 		if err := CheckNodesScalingUp(machineList, readyNodes, desiredMachines); err != nil {
-			c := checker.FailedCondition(condition, "NodesScalingUp", err.Error())
+			c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "NodesScalingUp", err.Error())
 			return &c, nil
 		}
 	}
 
 	if err := CheckNodesScalingDown(machineList, nodeList, registeredNodes, desiredMachines); err != nil {
-		c := checker.FailedCondition(condition, "NodesScalingDown", err.Error())
+		c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "NodesScalingDown", err.Error())
 		return &c, nil
 	}
 

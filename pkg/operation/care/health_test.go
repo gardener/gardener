@@ -40,20 +40,21 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/executor"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/care"
+	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("health check", func() {
 	var (
-		ctx          = context.Background()
-		fakeClient   client.Client
-		zeroTime     time.Time
-		zeroMetaTime metav1.Time
-		fakeClock    = testclock.NewFakeClock(time.Now())
+		ctx        = context.Background()
+		fakeClient client.Client
+		fakeClock  = testclock.NewFakeClock(time.Now())
 
 		condition gardencorev1beta1.Condition
 
@@ -486,165 +487,6 @@ var _ = Describe("health check", func() {
 		),
 	)
 
-	DescribeTable("#FailedCondition",
-		func(thresholds map[gardencorev1beta1.ConditionType]time.Duration, lastOperation *gardencorev1beta1.LastOperation, now time.Time, condition gardencorev1beta1.Condition, reason, message string, expected types.GomegaMatcher) {
-			fakeClock.SetTime(now)
-			checker := healthchecker.NewHealthChecker(fakeClient, fakeClock, thresholds, nil, nil, lastOperation, kubernetesVersion)
-			Expect(checker.FailedCondition(condition, reason, message)).To(expected)
-		},
-		Entry("true condition with threshold",
-			map[gardencorev1beta1.ConditionType]time.Duration{
-				gardencorev1beta1.ShootControlPlaneHealthy: time.Minute,
-			},
-			nil,
-			zeroTime,
-			gardencorev1beta1.Condition{
-				Type:   gardencorev1beta1.ShootControlPlaneHealthy,
-				Status: gardencorev1beta1.ConditionTrue,
-			},
-			"",
-			"",
-			beConditionWithStatus(gardencorev1beta1.ConditionProgressing)),
-		Entry("true condition without condition threshold",
-			map[gardencorev1beta1.ConditionType]time.Duration{},
-			nil,
-			zeroTime,
-			gardencorev1beta1.Condition{
-				Type:   gardencorev1beta1.ShootControlPlaneHealthy,
-				Status: gardencorev1beta1.ConditionTrue,
-			},
-			"",
-			"",
-			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
-		Entry("progressing condition within last operation update time threshold",
-			map[gardencorev1beta1.ConditionType]time.Duration{
-				gardencorev1beta1.ShootControlPlaneHealthy: time.Minute,
-			},
-			&gardencorev1beta1.LastOperation{
-				State:          gardencorev1beta1.LastOperationStateSucceeded,
-				LastUpdateTime: zeroMetaTime,
-			},
-			zeroTime,
-			gardencorev1beta1.Condition{
-				Type:   gardencorev1beta1.ShootControlPlaneHealthy,
-				Status: gardencorev1beta1.ConditionProgressing,
-			},
-			"",
-			"",
-			beConditionWithStatus(gardencorev1beta1.ConditionProgressing)),
-		Entry("progressing condition outside last operation update time threshold but within last transition time threshold",
-			map[gardencorev1beta1.ConditionType]time.Duration{
-				gardencorev1beta1.ShootControlPlaneHealthy: time.Minute,
-			},
-			&gardencorev1beta1.LastOperation{
-				State:          gardencorev1beta1.LastOperationStateSucceeded,
-				LastUpdateTime: zeroMetaTime,
-			},
-			zeroTime.Add(time.Minute+time.Second),
-			gardencorev1beta1.Condition{
-				Type:               gardencorev1beta1.ShootControlPlaneHealthy,
-				Status:             gardencorev1beta1.ConditionProgressing,
-				LastTransitionTime: metav1.Time{Time: zeroMetaTime.Add(time.Minute)},
-			},
-			"",
-			"",
-			beConditionWithStatus(gardencorev1beta1.ConditionProgressing)),
-		Entry("progressing condition outside last operation update time threshold and last transition time threshold",
-			map[gardencorev1beta1.ConditionType]time.Duration{
-				gardencorev1beta1.ShootControlPlaneHealthy: time.Minute,
-			},
-			&gardencorev1beta1.LastOperation{
-				State:          gardencorev1beta1.LastOperationStateSucceeded,
-				LastUpdateTime: zeroMetaTime,
-			},
-			zeroTime.Add(time.Minute+time.Second),
-			gardencorev1beta1.Condition{
-				Type:   gardencorev1beta1.ShootControlPlaneHealthy,
-				Status: gardencorev1beta1.ConditionProgressing,
-			},
-			"",
-			"",
-			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
-		Entry("failed condition within last operation update time threshold",
-			map[gardencorev1beta1.ConditionType]time.Duration{
-				gardencorev1beta1.ShootControlPlaneHealthy: time.Minute,
-			},
-			&gardencorev1beta1.LastOperation{
-				State:          gardencorev1beta1.LastOperationStateSucceeded,
-				LastUpdateTime: zeroMetaTime,
-			},
-			zeroTime.Add(time.Minute-time.Second),
-			gardencorev1beta1.Condition{
-				Type:   gardencorev1beta1.ShootControlPlaneHealthy,
-				Status: gardencorev1beta1.ConditionFalse,
-			},
-			"",
-			"",
-			beConditionWithStatus(gardencorev1beta1.ConditionProgressing)),
-		Entry("failed condition outside of last operation update time threshold with same reason",
-			map[gardencorev1beta1.ConditionType]time.Duration{
-				gardencorev1beta1.ShootControlPlaneHealthy: time.Minute,
-			},
-			&gardencorev1beta1.LastOperation{
-				State:          gardencorev1beta1.LastOperationStateSucceeded,
-				LastUpdateTime: zeroMetaTime,
-			},
-			zeroTime.Add(time.Minute+time.Second),
-			gardencorev1beta1.Condition{
-				Type:   gardencorev1beta1.ShootControlPlaneHealthy,
-				Status: gardencorev1beta1.ConditionFalse,
-				Reason: "Reason",
-			},
-			"Reason",
-			"",
-			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
-		Entry("failed condition outside of last operation update time threshold with a different reason",
-			map[gardencorev1beta1.ConditionType]time.Duration{
-				gardencorev1beta1.ShootControlPlaneHealthy: time.Minute,
-			},
-			&gardencorev1beta1.LastOperation{
-				State:          gardencorev1beta1.LastOperationStateSucceeded,
-				LastUpdateTime: zeroMetaTime,
-			},
-			zeroTime.Add(time.Minute+time.Second),
-			gardencorev1beta1.Condition{
-				Type:   gardencorev1beta1.ShootControlPlaneHealthy,
-				Status: gardencorev1beta1.ConditionFalse,
-				Reason: "foo",
-			},
-			"bar",
-			"",
-			beConditionWithStatus(gardencorev1beta1.ConditionProgressing)),
-		Entry("failed condition outside of last operation update time threshold with a different message",
-			map[gardencorev1beta1.ConditionType]time.Duration{
-				gardencorev1beta1.ShootControlPlaneHealthy: time.Minute,
-			},
-			&gardencorev1beta1.LastOperation{
-				State:          gardencorev1beta1.LastOperationStateSucceeded,
-				LastUpdateTime: zeroMetaTime,
-			},
-			zeroTime.Add(time.Minute+time.Second),
-			gardencorev1beta1.Condition{
-				Type:    gardencorev1beta1.ShootControlPlaneHealthy,
-				Status:  gardencorev1beta1.ConditionFalse,
-				Message: "foo",
-			},
-			"",
-			"bar",
-			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
-		Entry("failed condition without thresholds",
-			map[gardencorev1beta1.ConditionType]time.Duration{},
-			nil,
-			zeroTime,
-			gardencorev1beta1.Condition{
-				Type:   gardencorev1beta1.ShootControlPlaneHealthy,
-				Status: gardencorev1beta1.ConditionFalse,
-			},
-			"",
-			"",
-			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
-	)
-
 	DescribeTable("#PardonCondition",
 		func(condition gardencorev1beta1.Condition, lastOp *gardencorev1beta1.LastOperation, lastErrors []gardencorev1beta1.LastError, expected types.GomegaMatcher) {
 			conditions := []gardencorev1beta1.Condition{condition}
@@ -773,7 +615,25 @@ var _ = Describe("health check", func() {
 
 				checker := healthchecker.NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, nil, kubernetesVersion)
 
-				exitCondition, err := CheckClusterNodes(ctx, c, fakeClient, checker, kubernetesVersion, seedNamespace, workerPools, condition)
+				shootObj := &shootpkg.Shoot{
+					SeedNamespace:     seedNamespace,
+					KubernetesVersion: kubernetesVersion,
+				}
+				shootObj.SetInfo(&gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						Provider: gardencorev1beta1.Provider{
+							Workers: workerPools,
+						},
+					},
+				})
+
+				health := NewHealth(&operation.Operation{
+					Shoot:          shootObj,
+					SeedClientSet:  (&kubernetesfake.ClientSetBuilder{}).WithClient(fakeClient).Build(),
+					ShootClientSet: (&kubernetesfake.ClientSetBuilder{}).WithClient(c).Build(),
+				}, nil, fakeClock, nil)
+
+				exitCondition, err := health.CheckClusterNodes(ctx, checker, condition)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(exitCondition).To(conditionMatcher)
 			},
