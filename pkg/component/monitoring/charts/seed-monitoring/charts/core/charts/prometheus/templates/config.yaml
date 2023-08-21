@@ -195,9 +195,12 @@ data:
       honor_labels: false
       scheme: https
 {{ include "prometheus.kube-auth" . | indent 6 }}
+      follow_redirects: false
       kubernetes_sd_configs:
       - role: node
         api_server: https://kube-apiserver:443
+        namespaces:
+          names: [ kube-system ]
 {{ include "prometheus.kube-auth" . | indent 8 }}
       relabel_configs:
       - action: labelmap
@@ -251,9 +254,12 @@ data:
       honor_labels: false
       scheme: https
 {{ include "prometheus.kube-auth" . | indent 6 }}
+      follow_redirects: false
       kubernetes_sd_configs:
       - role: node
         api_server: https://kube-apiserver:443
+        namespaces:
+          names: [ kube-system ]
 {{ include "prometheus.kube-auth" . | indent 8 }}
       relabel_configs:
       - source_labels: [ __meta_kubernetes_node_address_InternalIP ]

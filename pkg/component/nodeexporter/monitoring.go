@@ -183,6 +183,7 @@ tls_config:
 authorization:
   type: Bearer
   credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+follow_redirects: false
 kubernetes_sd_configs:
 - role: endpoints
   api_server: https://` + v1beta1constants.DeploymentNameKubeAPIServer + `:` + strconv.Itoa(kubeapiserverconstants.Port) + `
@@ -191,6 +192,8 @@ kubernetes_sd_configs:
   authorization:
     type: Bearer
     credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
+  namespaces:
+    names: [ kube-system ]
 relabel_configs:
 - target_label: type
   replacement: shoot
