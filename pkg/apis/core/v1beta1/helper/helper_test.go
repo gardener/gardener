@@ -15,7 +15,6 @@
 package helper_test
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -27,7 +26,6 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -36,606 +34,326 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 )
 
-var _ = Describe("helper", func() {
+var _ = Describe("Helper", func() {
 	var (
 		trueVar                 = true
 		falseVar                = false
 		expirationDateInThePast = metav1.Time{Time: time.Now().AddDate(0, 0, -1)}
-		fakeClock               = testclock.NewFakeClock(time.Now())
 	)
 
-	Describe("errors", func() {
-		var (
-			testTime      = metav1.NewTime(time.Unix(10, 10))
-			zeroTime      metav1.Time
-			afterTestTime = func(t metav1.Time) bool { return t.After(testTime.Time) }
-		)
-
-		Describe("#BuildConditions", func() {
-			var (
-				conditionTypes = []gardencorev1beta1.ConditionType{"foo"}
-
-				fooCondition = gardencorev1beta1.Condition{
-					Type:               "foo",
-					Status:             gardencorev1beta1.ConditionTrue,
-					Reason:             "foo reason",
-					Message:            "foo message",
-					LastTransitionTime: testTime,
-					LastUpdateTime:     testTime,
-				}
-				barCondition = gardencorev1beta1.Condition{
-					Type:               "bar",
-					Status:             gardencorev1beta1.ConditionTrue,
-					Reason:             "bar reason",
-					Message:            "bar message",
-					LastTransitionTime: testTime,
-					LastUpdateTime:     testTime,
-				}
-				conditions = []gardencorev1beta1.Condition{fooCondition}
-
-				newConditions = []gardencorev1beta1.Condition{}
-			)
-
-			BeforeEach(func() {
-				newFooCondition := fooCondition.DeepCopy()
-				newFooCondition.LastTransitionTime = metav1.NewTime(time.Unix(11, 11))
-				newConditions = []gardencorev1beta1.Condition{*newFooCondition}
-			})
-
-			It("should replace the existing condition", func() {
-				Expect(BuildConditions(conditions, newConditions, conditionTypes)).To(ConsistOf(newConditions))
-			})
-
-			It("should keep existing conditions of a different type", func() {
-				conditions = append(conditions, barCondition)
-				Expect(BuildConditions(conditions, newConditions, conditionTypes)).To(ConsistOf(append(newConditions, barCondition)))
-			})
-		})
-
-		DescribeTable("#UpdatedConditionWithClock",
-			func(condition gardencorev1beta1.Condition, status gardencorev1beta1.ConditionStatus, reason, message string, codes []gardencorev1beta1.ErrorCode, matcher gomegatypes.GomegaMatcher) {
-				updated := UpdatedConditionWithClock(fakeClock, condition, status, reason, message, codes...)
-
-				Expect(updated).To(matcher)
+	DescribeTable("#IsResourceSupported",
+		func(resources []gardencorev1beta1.ControllerResource, resourceKind, resourceType string, expectation bool) {
+			Expect(IsResourceSupported(resources, resourceKind, resourceType)).To(Equal(expectation))
+		},
+		Entry("expect true",
+			[]gardencorev1beta1.ControllerResource{
+				{
+					Kind: "foo",
+					Type: "bar",
+				},
 			},
-			Entry("initialize empty timestamps",
-				gardencorev1beta1.Condition{
-					Type:    "type",
-					Status:  gardencorev1beta1.ConditionTrue,
-					Reason:  "reason",
-					Message: "message",
+			"foo",
+			"bar",
+			true,
+		),
+		Entry("expect true",
+			[]gardencorev1beta1.ControllerResource{
+				{
+					Kind: "foo",
+					Type: "bar",
 				},
-				gardencorev1beta1.ConditionTrue,
-				"reason",
-				"message",
-				nil,
-				MatchFields(IgnoreExtras, Fields{
-					"Status":             Equal(gardencorev1beta1.ConditionTrue),
-					"Reason":             Equal("reason"),
-					"Message":            Equal("message"),
-					"LastTransitionTime": Not(Equal(zeroTime)),
-					"LastUpdateTime":     Not(Equal(zeroTime)),
-				}),
-			),
-			Entry("no update",
-				gardencorev1beta1.Condition{
-					Type:               "type",
-					Status:             gardencorev1beta1.ConditionTrue,
-					Reason:             "reason",
-					Message:            "message",
-					LastTransitionTime: testTime,
-					LastUpdateTime:     testTime,
-				},
-				gardencorev1beta1.ConditionTrue,
-				"reason",
-				"message",
-				nil,
-				MatchFields(IgnoreExtras, Fields{
-					"Status":             Equal(gardencorev1beta1.ConditionTrue),
-					"Reason":             Equal("reason"),
-					"Message":            Equal("message"),
-					"LastTransitionTime": Equal(testTime),
-					"LastUpdateTime":     Equal(testTime),
-				}),
-			),
-			Entry("update reason",
-				gardencorev1beta1.Condition{
-					Type:               "type",
-					Status:             gardencorev1beta1.ConditionTrue,
-					Reason:             "reason",
-					Message:            "message",
-					LastTransitionTime: testTime,
-					LastUpdateTime:     testTime,
-				},
-				gardencorev1beta1.ConditionTrue,
-				"OtherReason",
-				"message",
-				nil,
-				MatchFields(IgnoreExtras, Fields{
-					"Status":             Equal(gardencorev1beta1.ConditionTrue),
-					"Reason":             Equal("OtherReason"),
-					"Message":            Equal("message"),
-					"LastTransitionTime": Equal(testTime),
-					"LastUpdateTime":     Satisfy(afterTestTime),
-				}),
-			),
-			Entry("update codes",
-				gardencorev1beta1.Condition{
-					Type:               "type",
-					Status:             gardencorev1beta1.ConditionTrue,
-					Reason:             "reason",
-					Message:            "message",
-					LastTransitionTime: testTime,
-					LastUpdateTime:     testTime,
-				},
-				gardencorev1beta1.ConditionTrue,
-				"reason",
-				"message",
-				[]gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraQuotaExceeded},
-				MatchFields(IgnoreExtras, Fields{
-					"Status":             Equal(gardencorev1beta1.ConditionTrue),
-					"Reason":             Equal("reason"),
-					"Message":            Equal("message"),
-					"Codes":              Equal([]gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraQuotaExceeded}),
-					"LastTransitionTime": Equal(testTime),
-					"LastUpdateTime":     Satisfy(afterTestTime),
-				}),
-			),
-			Entry("update status",
-				gardencorev1beta1.Condition{
-					Type:               "type",
-					Status:             gardencorev1beta1.ConditionTrue,
-					Reason:             "reason",
-					Message:            "message",
-					LastTransitionTime: testTime,
-					LastUpdateTime:     testTime,
-				},
-				gardencorev1beta1.ConditionFalse,
-				"reason",
-				"message",
-				nil,
-				MatchFields(IgnoreExtras, Fields{
-					"Status":             Equal(gardencorev1beta1.ConditionFalse),
-					"Reason":             Equal("reason"),
-					"Message":            Equal("message"),
-					"LastTransitionTime": Satisfy(afterTestTime),
-					"LastUpdateTime":     Equal(testTime),
-				}),
-			),
-			Entry("clear codes",
-				gardencorev1beta1.Condition{
-					Type:               "type",
-					Status:             gardencorev1beta1.ConditionTrue,
-					Reason:             "reason",
-					Message:            "message",
-					LastTransitionTime: testTime,
-					LastUpdateTime:     testTime,
-					Codes:              []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraQuotaExceeded},
-				},
-				gardencorev1beta1.ConditionTrue,
-				"reason",
-				"message",
-				nil,
-				MatchFields(IgnoreExtras, Fields{
-					"Status":             Equal(gardencorev1beta1.ConditionTrue),
-					"Reason":             Equal("reason"),
-					"Message":            Equal("message"),
-					"LastTransitionTime": Equal(testTime),
-					"LastUpdateTime":     Satisfy(afterTestTime),
-					"Codes":              BeEmpty(),
-				}),
-			),
-		)
-
-		Describe("#MergeConditions", func() {
-			It("should merge the conditions", func() {
-				var (
-					typeFoo gardencorev1beta1.ConditionType = "foo"
-					typeBar gardencorev1beta1.ConditionType = "bar"
-				)
-
-				oldConditions := []gardencorev1beta1.Condition{
-					{
-						Type:   typeFoo,
-						Reason: "hugo",
-					},
-				}
-
-				result := MergeConditions(oldConditions, gardencorev1beta1.Condition{Type: typeFoo}, gardencorev1beta1.Condition{Type: typeBar})
-
-				Expect(result).To(Equal([]gardencorev1beta1.Condition{{Type: typeFoo}, {Type: typeBar}}))
-			})
-		})
-
-		DescribeTable("#RemoveConditions",
-			func(conditions []gardencorev1beta1.Condition, conditionTypes []gardencorev1beta1.ConditionType, expectedResult []gardencorev1beta1.Condition) {
-				Expect(RemoveConditions(conditions, conditionTypes...)).To(Equal(expectedResult))
 			},
-			Entry("remove foo", []gardencorev1beta1.Condition{{Type: "foo"}, {Type: "bar"}}, []gardencorev1beta1.ConditionType{"foo"},
-				[]gardencorev1beta1.Condition{{Type: "bar"}}),
-			Entry("remove bar", []gardencorev1beta1.Condition{{Type: "foo"}, {Type: "bar"}}, []gardencorev1beta1.ConditionType{"bar"},
-				[]gardencorev1beta1.Condition{{Type: "foo"}}),
-			Entry("don't remove anything", []gardencorev1beta1.Condition{{Type: "foo"}, {Type: "bar"}}, nil,
-				[]gardencorev1beta1.Condition{{Type: "foo"}, {Type: "bar"}}),
-			Entry("remove from an empty slice", nil, []gardencorev1beta1.ConditionType{"foo"}, nil),
-		)
-
-		Describe("#NewConditionOrError", func() {
-			It("should return the condition", func() {
-				condition := gardencorev1beta1.Condition{Type: "foo"}
-				Expect(NewConditionOrError(fakeClock, gardencorev1beta1.Condition{Type: "foo"}, &condition, nil)).To(Equal(condition))
-			})
-
-			It("should update the condition to 'UNKNOWN' if new condition is 'nil'", func() {
-				conditions := NewConditionOrError(fakeClock, gardencorev1beta1.Condition{Type: "foo"}, nil, nil)
-				Expect(conditions.Status).To(Equal(gardencorev1beta1.ConditionStatus("Unknown")))
-				Expect(conditions.Reason).To(Equal("ConditionCheckError"))
-			})
-
-			It("should update the condition to 'UNKNOWN' in case of an error", func() {
-				conditions := NewConditionOrError(fakeClock, gardencorev1beta1.Condition{Type: "foo"}, &gardencorev1beta1.Condition{Type: "foo"}, errors.New(""))
-				Expect(conditions.Status).To(Equal(gardencorev1beta1.ConditionStatus("Unknown")))
-				Expect(conditions.Reason).To(Equal("ConditionCheckError"))
-			})
-		})
-
-		Describe("#GetCondition", func() {
-			It("should return the found condition", func() {
-				var (
-					conditionType gardencorev1beta1.ConditionType = "test-1"
-					condition                                     = gardencorev1beta1.Condition{
-						Type: conditionType,
-					}
-					conditions = []gardencorev1beta1.Condition{condition}
-				)
-
-				cond := GetCondition(conditions, conditionType)
-
-				Expect(cond).NotTo(BeNil())
-				Expect(*cond).To(Equal(condition))
-			})
-
-			It("should return nil because the required condition could not be found", func() {
-				var (
-					conditionType gardencorev1beta1.ConditionType = "test-1"
-					conditions                                    = []gardencorev1beta1.Condition{}
-				)
-
-				cond := GetCondition(conditions, conditionType)
-
-				Expect(cond).To(BeNil())
-			})
-		})
-
-		Describe("#GetOrInitConditionWithClock", func() {
-			It("should get the existing condition", func() {
-				var (
-					c          = gardencorev1beta1.Condition{Type: "foo"}
-					conditions = []gardencorev1beta1.Condition{c}
-				)
-
-				Expect(GetOrInitConditionWithClock(fakeClock, conditions, "foo")).To(Equal(c))
-			})
-
-			It("should return a new, initialized condition", func() {
-				Expect(GetOrInitConditionWithClock(fakeClock, nil, "foo")).To(Equal(InitConditionWithClock(fakeClock, "foo")))
-			})
-		})
-
-		DescribeTable("#IsResourceSupported",
-			func(resources []gardencorev1beta1.ControllerResource, resourceKind, resourceType string, expectation bool) {
-				Expect(IsResourceSupported(resources, resourceKind, resourceType)).To(Equal(expectation))
+			"foo",
+			"BAR",
+			true,
+		),
+		Entry("expect false",
+			[]gardencorev1beta1.ControllerResource{
+				{
+					Kind: "foo",
+					Type: "bar",
+				},
 			},
-			Entry("expect true",
-				[]gardencorev1beta1.ControllerResource{
-					{
-						Kind: "foo",
-						Type: "bar",
-					},
-				},
-				"foo",
-				"bar",
-				true,
-			),
-			Entry("expect true",
-				[]gardencorev1beta1.ControllerResource{
-					{
-						Kind: "foo",
-						Type: "bar",
-					},
-				},
-				"foo",
-				"BAR",
-				true,
-			),
-			Entry("expect false",
-				[]gardencorev1beta1.ControllerResource{
-					{
-						Kind: "foo",
-						Type: "bar",
-					},
-				},
-				"foo",
-				"baz",
-				false,
-			),
-		)
+			"foo",
+			"baz",
+			false,
+		),
+	)
 
-		DescribeTable("#IsControllerInstallationSuccessful",
-			func(conditions []gardencorev1beta1.Condition, expectation bool) {
-				controllerInstallation := gardencorev1beta1.ControllerInstallation{
-					Status: gardencorev1beta1.ControllerInstallationStatus{
-						Conditions: conditions,
-					},
-				}
-				Expect(IsControllerInstallationSuccessful(controllerInstallation)).To(Equal(expectation))
+	DescribeTable("#IsControllerInstallationSuccessful",
+		func(conditions []gardencorev1beta1.Condition, expectation bool) {
+			controllerInstallation := gardencorev1beta1.ControllerInstallation{
+				Status: gardencorev1beta1.ControllerInstallationStatus{
+					Conditions: conditions,
+				},
+			}
+			Expect(IsControllerInstallationSuccessful(controllerInstallation)).To(Equal(expectation))
+		},
+		Entry("expect true",
+			[]gardencorev1beta1.Condition{
+				{
+					Type:   gardencorev1beta1.ControllerInstallationInstalled,
+					Status: gardencorev1beta1.ConditionTrue,
+				},
+				{
+					Type:   gardencorev1beta1.ControllerInstallationHealthy,
+					Status: gardencorev1beta1.ConditionTrue,
+				},
+				{
+					Type:   gardencorev1beta1.ControllerInstallationProgressing,
+					Status: gardencorev1beta1.ConditionFalse,
+				},
 			},
-			Entry("expect true",
-				[]gardencorev1beta1.Condition{
-					{
-						Type:   gardencorev1beta1.ControllerInstallationInstalled,
-						Status: gardencorev1beta1.ConditionTrue,
-					},
-					{
-						Type:   gardencorev1beta1.ControllerInstallationHealthy,
-						Status: gardencorev1beta1.ConditionTrue,
-					},
-					{
-						Type:   gardencorev1beta1.ControllerInstallationProgressing,
-						Status: gardencorev1beta1.ConditionFalse,
-					},
+			true,
+		),
+		Entry("expect false",
+			[]gardencorev1beta1.Condition{
+				{
+					Type:   gardencorev1beta1.ControllerInstallationInstalled,
+					Status: gardencorev1beta1.ConditionFalse,
 				},
-				true,
-			),
-			Entry("expect false",
-				[]gardencorev1beta1.Condition{
-					{
-						Type:   gardencorev1beta1.ControllerInstallationInstalled,
-						Status: gardencorev1beta1.ConditionFalse,
-					},
-				},
-				false,
-			),
-			Entry("expect false",
-				[]gardencorev1beta1.Condition{
-					{
-						Type:   gardencorev1beta1.ControllerInstallationHealthy,
-						Status: gardencorev1beta1.ConditionFalse,
-					},
-				},
-				false,
-			),
-			Entry("expect false",
-				[]gardencorev1beta1.Condition{
-					{
-						Type:   gardencorev1beta1.ControllerInstallationProgressing,
-						Status: gardencorev1beta1.ConditionTrue,
-					},
-				},
-				false,
-			),
-			Entry("expect false",
-				[]gardencorev1beta1.Condition{
-					{
-						Type:   gardencorev1beta1.ControllerInstallationInstalled,
-						Status: gardencorev1beta1.ConditionTrue,
-					},
-					{
-						Type:   gardencorev1beta1.ControllerInstallationHealthy,
-						Status: gardencorev1beta1.ConditionFalse,
-					},
-					{
-						Type:   gardencorev1beta1.ControllerInstallationProgressing,
-						Status: gardencorev1beta1.ConditionFalse,
-					},
-				},
-				false,
-			),
-			Entry("expect false",
-				[]gardencorev1beta1.Condition{
-					{
-						Type:   gardencorev1beta1.ControllerInstallationInstalled,
-						Status: gardencorev1beta1.ConditionFalse,
-					},
-					{
-						Type:   gardencorev1beta1.ControllerInstallationHealthy,
-						Status: gardencorev1beta1.ConditionTrue,
-					},
-					{
-						Type:   gardencorev1beta1.ControllerInstallationProgressing,
-						Status: gardencorev1beta1.ConditionFalse,
-					},
-				},
-				false,
-			),
-			Entry("expect false",
-				[]gardencorev1beta1.Condition{
-					{
-						Type:   gardencorev1beta1.ControllerInstallationInstalled,
-						Status: gardencorev1beta1.ConditionTrue,
-					},
-					{
-						Type:   gardencorev1beta1.ControllerInstallationHealthy,
-						Status: gardencorev1beta1.ConditionTrue,
-					},
-					{
-						Type:   gardencorev1beta1.ControllerInstallationProgressing,
-						Status: gardencorev1beta1.ConditionTrue,
-					},
-				},
-				false,
-			),
-			Entry("expect false",
-				[]gardencorev1beta1.Condition{},
-				false,
-			),
-		)
-
-		DescribeTable("#IsControllerInstallationRequired",
-			func(conditions []gardencorev1beta1.Condition, expectation bool) {
-				controllerInstallation := gardencorev1beta1.ControllerInstallation{
-					Status: gardencorev1beta1.ControllerInstallationStatus{
-						Conditions: conditions,
-					},
-				}
-				Expect(IsControllerInstallationRequired(controllerInstallation)).To(Equal(expectation))
 			},
-			Entry("expect true",
-				[]gardencorev1beta1.Condition{
-					{
-						Type:   gardencorev1beta1.ControllerInstallationRequired,
-						Status: gardencorev1beta1.ConditionTrue,
-					},
+			false,
+		),
+		Entry("expect false",
+			[]gardencorev1beta1.Condition{
+				{
+					Type:   gardencorev1beta1.ControllerInstallationHealthy,
+					Status: gardencorev1beta1.ConditionFalse,
 				},
-				true,
-			),
-			Entry("expect false",
-				[]gardencorev1beta1.Condition{
-					{
-						Type:   gardencorev1beta1.ControllerInstallationRequired,
-						Status: gardencorev1beta1.ConditionFalse,
-					},
-				},
-				false,
-			),
-			Entry("expect false",
-				[]gardencorev1beta1.Condition{},
-				false,
-			),
-		)
-
-		DescribeTable("#HasOperationAnnotation",
-			func(objectMeta metav1.ObjectMeta, expected bool) {
-				Expect(HasOperationAnnotation(objectMeta.Annotations)).To(Equal(expected))
 			},
-			Entry("reconcile", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile}}, true),
-			Entry("restore", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRestore}}, true),
-			Entry("migrate", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationMigrate}}, true),
-			Entry("unknown", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: "unknown"}}, false),
-			Entry("not present", metav1.ObjectMeta{}, false),
-		)
-
-		DescribeTable("#FindMachineTypeByName",
-			func(machines []gardencorev1beta1.MachineType, name string, expectedMachine *gardencorev1beta1.MachineType) {
-				Expect(FindMachineTypeByName(machines, name)).To(Equal(expectedMachine))
+			false,
+		),
+		Entry("expect false",
+			[]gardencorev1beta1.Condition{
+				{
+					Type:   gardencorev1beta1.ControllerInstallationProgressing,
+					Status: gardencorev1beta1.ConditionTrue,
+				},
 			},
-
-			Entry("no workers", nil, "", nil),
-			Entry("worker not found", []gardencorev1beta1.MachineType{{Name: "foo"}}, "bar", nil),
-			Entry("worker found", []gardencorev1beta1.MachineType{{Name: "foo"}}, "foo", &gardencorev1beta1.MachineType{Name: "foo"}),
-		)
-
-		DescribeTable("#TaintsHave",
-			func(taints []gardencorev1beta1.SeedTaint, key string, expectation bool) {
-				Expect(TaintsHave(taints, key)).To(Equal(expectation))
+			false,
+		),
+		Entry("expect false",
+			[]gardencorev1beta1.Condition{
+				{
+					Type:   gardencorev1beta1.ControllerInstallationInstalled,
+					Status: gardencorev1beta1.ConditionTrue,
+				},
+				{
+					Type:   gardencorev1beta1.ControllerInstallationHealthy,
+					Status: gardencorev1beta1.ConditionFalse,
+				},
+				{
+					Type:   gardencorev1beta1.ControllerInstallationProgressing,
+					Status: gardencorev1beta1.ConditionFalse,
+				},
 			},
-			Entry("taint exists", []gardencorev1beta1.SeedTaint{{Key: "foo"}}, "foo", true),
-			Entry("taint does not exist", []gardencorev1beta1.SeedTaint{{Key: "foo"}}, "bar", false),
-		)
-
-		DescribeTable("#TaintsAreTolerated",
-			func(taints []gardencorev1beta1.SeedTaint, tolerations []gardencorev1beta1.Toleration, expectation bool) {
-				Expect(TaintsAreTolerated(taints, tolerations)).To(Equal(expectation))
+			false,
+		),
+		Entry("expect false",
+			[]gardencorev1beta1.Condition{
+				{
+					Type:   gardencorev1beta1.ControllerInstallationInstalled,
+					Status: gardencorev1beta1.ConditionFalse,
+				},
+				{
+					Type:   gardencorev1beta1.ControllerInstallationHealthy,
+					Status: gardencorev1beta1.ConditionTrue,
+				},
+				{
+					Type:   gardencorev1beta1.ControllerInstallationProgressing,
+					Status: gardencorev1beta1.ConditionFalse,
+				},
 			},
+			false,
+		),
+		Entry("expect false",
+			[]gardencorev1beta1.Condition{
+				{
+					Type:   gardencorev1beta1.ControllerInstallationInstalled,
+					Status: gardencorev1beta1.ConditionTrue,
+				},
+				{
+					Type:   gardencorev1beta1.ControllerInstallationHealthy,
+					Status: gardencorev1beta1.ConditionTrue,
+				},
+				{
+					Type:   gardencorev1beta1.ControllerInstallationProgressing,
+					Status: gardencorev1beta1.ConditionTrue,
+				},
+			},
+			false,
+		),
+		Entry("expect false",
+			[]gardencorev1beta1.Condition{},
+			false,
+		),
+	)
 
-			Entry("no taints",
-				nil,
-				[]gardencorev1beta1.Toleration{{Key: "foo"}},
-				true,
-			),
-			Entry("no tolerations",
-				[]gardencorev1beta1.SeedTaint{{Key: "foo"}},
-				nil,
-				false,
-			),
-			Entry("taints with keys only, tolerations with keys only (tolerated)",
-				[]gardencorev1beta1.SeedTaint{{Key: "foo"}},
-				[]gardencorev1beta1.Toleration{{Key: "foo"}},
-				true,
-			),
-			Entry("taints with keys only, tolerations with keys only (non-tolerated)",
-				[]gardencorev1beta1.SeedTaint{{Key: "foo"}},
-				[]gardencorev1beta1.Toleration{{Key: "bar"}},
-				false,
-			),
-			Entry("taints with keys+values only, tolerations with keys+values only (tolerated)",
-				[]gardencorev1beta1.SeedTaint{{Key: "foo", Value: pointer.String("bar")}},
-				[]gardencorev1beta1.Toleration{{Key: "foo", Value: pointer.String("bar")}},
-				true,
-			),
-			Entry("taints with keys+values only, tolerations with keys+values only (non-tolerated)",
-				[]gardencorev1beta1.SeedTaint{{Key: "foo", Value: pointer.String("bar")}},
-				[]gardencorev1beta1.Toleration{{Key: "bar", Value: pointer.String("foo")}},
-				false,
-			),
-			Entry("taints with mixed key(+values), tolerations with mixed key(+values) (tolerated)",
-				[]gardencorev1beta1.SeedTaint{
-					{Key: "foo"},
-					{Key: "bar", Value: pointer.String("baz")},
+	DescribeTable("#IsControllerInstallationRequired",
+		func(conditions []gardencorev1beta1.Condition, expectation bool) {
+			controllerInstallation := gardencorev1beta1.ControllerInstallation{
+				Status: gardencorev1beta1.ControllerInstallationStatus{
+					Conditions: conditions,
 				},
-				[]gardencorev1beta1.Toleration{
-					{Key: "foo"},
-					{Key: "bar", Value: pointer.String("baz")},
+			}
+			Expect(IsControllerInstallationRequired(controllerInstallation)).To(Equal(expectation))
+		},
+		Entry("expect true",
+			[]gardencorev1beta1.Condition{
+				{
+					Type:   gardencorev1beta1.ControllerInstallationRequired,
+					Status: gardencorev1beta1.ConditionTrue,
 				},
-				true,
-			),
-			Entry("taints with mixed key(+values), tolerations with mixed key(+values) (non-tolerated)",
-				[]gardencorev1beta1.SeedTaint{
-					{Key: "foo"},
-					{Key: "bar", Value: pointer.String("baz")},
+			},
+			true,
+		),
+		Entry("expect false",
+			[]gardencorev1beta1.Condition{
+				{
+					Type:   gardencorev1beta1.ControllerInstallationRequired,
+					Status: gardencorev1beta1.ConditionFalse,
 				},
-				[]gardencorev1beta1.Toleration{
-					{Key: "bar"},
-					{Key: "foo", Value: pointer.String("baz")},
-				},
-				false,
-			),
-			Entry("taints with mixed key(+values), tolerations with key+values only (tolerated)",
-				[]gardencorev1beta1.SeedTaint{
-					{Key: "foo"},
-					{Key: "bar", Value: pointer.String("baz")},
-				},
-				[]gardencorev1beta1.Toleration{
-					{Key: "foo", Value: pointer.String("bar")},
-					{Key: "bar", Value: pointer.String("baz")},
-				},
-				true,
-			),
-			Entry("taints with mixed key(+values), tolerations with key+values only (untolerated)",
-				[]gardencorev1beta1.SeedTaint{
-					{Key: "foo"},
-					{Key: "bar", Value: pointer.String("baz")},
-				},
-				[]gardencorev1beta1.Toleration{
-					{Key: "foo", Value: pointer.String("bar")},
-					{Key: "bar", Value: pointer.String("foo")},
-				},
-				false,
-			),
-			Entry("taints > tolerations",
-				[]gardencorev1beta1.SeedTaint{
-					{Key: "foo"},
-					{Key: "bar", Value: pointer.String("baz")},
-				},
-				[]gardencorev1beta1.Toleration{
-					{Key: "bar", Value: pointer.String("baz")},
-				},
-				false,
-			),
-			Entry("tolerations > taints",
-				[]gardencorev1beta1.SeedTaint{
-					{Key: "foo"},
-					{Key: "bar", Value: pointer.String("baz")},
-				},
-				[]gardencorev1beta1.Toleration{
-					{Key: "foo", Value: pointer.String("bar")},
-					{Key: "bar", Value: pointer.String("baz")},
-					{Key: "baz", Value: pointer.String("foo")},
-				},
-				true,
-			),
-		)
-	})
+			},
+			false,
+		),
+		Entry("expect false",
+			[]gardencorev1beta1.Condition{},
+			false,
+		),
+	)
+
+	DescribeTable("#HasOperationAnnotation",
+		func(objectMeta metav1.ObjectMeta, expected bool) {
+			Expect(HasOperationAnnotation(objectMeta.Annotations)).To(Equal(expected))
+		},
+		Entry("reconcile", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile}}, true),
+		Entry("restore", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRestore}}, true),
+		Entry("migrate", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationMigrate}}, true),
+		Entry("unknown", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: "unknown"}}, false),
+		Entry("not present", metav1.ObjectMeta{}, false),
+	)
+
+	DescribeTable("#FindMachineTypeByName",
+		func(machines []gardencorev1beta1.MachineType, name string, expectedMachine *gardencorev1beta1.MachineType) {
+			Expect(FindMachineTypeByName(machines, name)).To(Equal(expectedMachine))
+		},
+
+		Entry("no workers", nil, "", nil),
+		Entry("worker not found", []gardencorev1beta1.MachineType{{Name: "foo"}}, "bar", nil),
+		Entry("worker found", []gardencorev1beta1.MachineType{{Name: "foo"}}, "foo", &gardencorev1beta1.MachineType{Name: "foo"}),
+	)
+
+	DescribeTable("#TaintsHave",
+		func(taints []gardencorev1beta1.SeedTaint, key string, expectation bool) {
+			Expect(TaintsHave(taints, key)).To(Equal(expectation))
+		},
+		Entry("taint exists", []gardencorev1beta1.SeedTaint{{Key: "foo"}}, "foo", true),
+		Entry("taint does not exist", []gardencorev1beta1.SeedTaint{{Key: "foo"}}, "bar", false),
+	)
+
+	DescribeTable("#TaintsAreTolerated",
+		func(taints []gardencorev1beta1.SeedTaint, tolerations []gardencorev1beta1.Toleration, expectation bool) {
+			Expect(TaintsAreTolerated(taints, tolerations)).To(Equal(expectation))
+		},
+
+		Entry("no taints",
+			nil,
+			[]gardencorev1beta1.Toleration{{Key: "foo"}},
+			true,
+		),
+		Entry("no tolerations",
+			[]gardencorev1beta1.SeedTaint{{Key: "foo"}},
+			nil,
+			false,
+		),
+		Entry("taints with keys only, tolerations with keys only (tolerated)",
+			[]gardencorev1beta1.SeedTaint{{Key: "foo"}},
+			[]gardencorev1beta1.Toleration{{Key: "foo"}},
+			true,
+		),
+		Entry("taints with keys only, tolerations with keys only (non-tolerated)",
+			[]gardencorev1beta1.SeedTaint{{Key: "foo"}},
+			[]gardencorev1beta1.Toleration{{Key: "bar"}},
+			false,
+		),
+		Entry("taints with keys+values only, tolerations with keys+values only (tolerated)",
+			[]gardencorev1beta1.SeedTaint{{Key: "foo", Value: pointer.String("bar")}},
+			[]gardencorev1beta1.Toleration{{Key: "foo", Value: pointer.String("bar")}},
+			true,
+		),
+		Entry("taints with keys+values only, tolerations with keys+values only (non-tolerated)",
+			[]gardencorev1beta1.SeedTaint{{Key: "foo", Value: pointer.String("bar")}},
+			[]gardencorev1beta1.Toleration{{Key: "bar", Value: pointer.String("foo")}},
+			false,
+		),
+		Entry("taints with mixed key(+values), tolerations with mixed key(+values) (tolerated)",
+			[]gardencorev1beta1.SeedTaint{
+				{Key: "foo"},
+				{Key: "bar", Value: pointer.String("baz")},
+			},
+			[]gardencorev1beta1.Toleration{
+				{Key: "foo"},
+				{Key: "bar", Value: pointer.String("baz")},
+			},
+			true,
+		),
+		Entry("taints with mixed key(+values), tolerations with mixed key(+values) (non-tolerated)",
+			[]gardencorev1beta1.SeedTaint{
+				{Key: "foo"},
+				{Key: "bar", Value: pointer.String("baz")},
+			},
+			[]gardencorev1beta1.Toleration{
+				{Key: "bar"},
+				{Key: "foo", Value: pointer.String("baz")},
+			},
+			false,
+		),
+		Entry("taints with mixed key(+values), tolerations with key+values only (tolerated)",
+			[]gardencorev1beta1.SeedTaint{
+				{Key: "foo"},
+				{Key: "bar", Value: pointer.String("baz")},
+			},
+			[]gardencorev1beta1.Toleration{
+				{Key: "foo", Value: pointer.String("bar")},
+				{Key: "bar", Value: pointer.String("baz")},
+			},
+			true,
+		),
+		Entry("taints with mixed key(+values), tolerations with key+values only (untolerated)",
+			[]gardencorev1beta1.SeedTaint{
+				{Key: "foo"},
+				{Key: "bar", Value: pointer.String("baz")},
+			},
+			[]gardencorev1beta1.Toleration{
+				{Key: "foo", Value: pointer.String("bar")},
+				{Key: "bar", Value: pointer.String("foo")},
+			},
+			false,
+		),
+		Entry("taints > tolerations",
+			[]gardencorev1beta1.SeedTaint{
+				{Key: "foo"},
+				{Key: "bar", Value: pointer.String("baz")},
+			},
+			[]gardencorev1beta1.Toleration{
+				{Key: "bar", Value: pointer.String("baz")},
+			},
+			false,
+		),
+		Entry("tolerations > taints",
+			[]gardencorev1beta1.SeedTaint{
+				{Key: "foo"},
+				{Key: "bar", Value: pointer.String("baz")},
+			},
+			[]gardencorev1beta1.Toleration{
+				{Key: "foo", Value: pointer.String("bar")},
+				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "baz", Value: pointer.String("foo")},
+			},
+			true,
+		),
+	)
 
 	Describe("#ReadManagedSeedAPIServer", func() {
 		var shoot *gardencorev1beta1.Shoot
@@ -810,13 +528,11 @@ var _ = Describe("helper", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actualWantsAutoscaler).To(Equal(wantsAutoscaler))
 		},
-
 		Entry("no workers",
 			&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{},
 			},
 			false),
-
 		Entry("one worker no difference in auto scaler max and min",
 			&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
@@ -826,7 +542,6 @@ var _ = Describe("helper", func() {
 				},
 			},
 			false),
-
 		Entry("one worker with difference in auto scaler max and min",
 			&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
