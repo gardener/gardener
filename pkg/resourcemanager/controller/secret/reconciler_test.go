@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	secretcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
@@ -195,34 +196,9 @@ var _ = Describe("SecretReconciler", func() {
 			secret.Finalizers = []string{classFilter.FinalizerName()}
 
 			mrs := []resourcesv1alpha1.ManagedResource{{
-				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class: pointer.String(classFilter.ResourceClass()),
-					SecretRefs: []corev1.LocalObjectReference{{
-						Name: secret.Name,
-					}},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "MR1",
 				},
-			}}
-
-			c.EXPECT().Get(gomock.Any(), secretReq.NamespacedName, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object, _ ...client.GetOption) error {
-					secret.DeepCopyInto(obj.(*corev1.Secret))
-					return nil
-				})
-			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace)).
-				DoAndReturn(func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
-					list.(*resourcesv1alpha1.ManagedResourceList).Items = mrs
-					return nil
-				})
-
-			res, err := r.Reconcile(ctx, secretReq)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(res).To(Equal(reconcile.Result{
-				Requeue: false,
-			}))
-		})
-
-		It("should add finalizer to secret if referenced by MR", func() {
-			mrs := []resourcesv1alpha1.ManagedResource{{
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					Class: pointer.String(classFilter.ResourceClass()),
 					SecretRefs: []corev1.LocalObjectReference{{
@@ -243,8 +219,47 @@ var _ = Describe("SecretReconciler", func() {
 				})
 
 			secretAfter := secret.DeepCopy()
-			secretAfter.SetFinalizers([]string{classFilter.FinalizerName()})
+			secretAfter.SetLabels(map[string]string{v1alpha1.ReferencedBy: "MR1"})
 			test.EXPECTPatchWithOptimisticLock(gomock.Any(), c, secretAfter, secret, types.MergePatchType)
+
+			res, err := r.Reconcile(ctx, secretReq)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res).To(Equal(reconcile.Result{
+				Requeue: false,
+			}))
+		})
+
+		It("should add finalizer to secret if referenced by MR", func() {
+			mrs := []resourcesv1alpha1.ManagedResource{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "MR1",
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					Class: pointer.String(classFilter.ResourceClass()),
+					SecretRefs: []corev1.LocalObjectReference{{
+						Name: secret.Name,
+					}},
+				},
+			}}
+
+			c.EXPECT().Get(gomock.Any(), secretReq.NamespacedName, gomock.AssignableToTypeOf(&corev1.Secret{})).
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object, _ ...client.GetOption) error {
+					secret.DeepCopyInto(obj.(*corev1.Secret))
+					return nil
+				})
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResourceList{}), client.InNamespace(secret.Namespace)).
+				DoAndReturn(func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+					list.(*resourcesv1alpha1.ManagedResourceList).Items = mrs
+					return nil
+				})
+
+			secretAfter := secret.DeepCopy()
+			secretAfter.SetLabels(map[string]string{v1alpha1.ReferencedBy: "MR1"})
+			test.EXPECTPatchWithOptimisticLock(gomock.Any(), c, secretAfter, secret, types.MergePatchType)
+
+			secretAfter2 := secretAfter.DeepCopy()
+			secretAfter2.SetFinalizers([]string{classFilter.FinalizerName()})
+			test.EXPECTPatchWithOptimisticLock(gomock.Any(), c, secretAfter2, secretAfter, types.MergePatchType)
 
 			res, err := r.Reconcile(ctx, secretReq)
 			Expect(err).NotTo(HaveOccurred())

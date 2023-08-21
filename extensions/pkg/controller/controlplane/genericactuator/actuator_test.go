@@ -50,6 +50,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	mockchartrenderer "github.com/gardener/gardener/pkg/chartrenderer/mock"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
@@ -580,27 +581,31 @@ webhooks:
 			gardenerClientset.EXPECT().ChartApplier().Return(chartApplier).AnyTimes()
 
 			// Create mock clients
-			client := mockclient.NewMockClient(ctrl)
+			c := mockclient.NewMockClient(ctrl)
 
-			client.EXPECT().Get(gomock.Any(), resourceKeyStorageClassesChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}))
-			client.EXPECT().Delete(ctx, deletedMRForStorageClassesChart).Return(nil)
-			client.EXPECT().Delete(ctx, deletedMRSecretForStorageClassesChart).Return(nil)
+			c.EXPECT().Get(gomock.Any(), resourceKeyStorageClassesChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}))
+			c.EXPECT().Delete(ctx, deletedMRForStorageClassesChart).Return(nil)
+			c.EXPECT().Delete(ctx, deletedMRSecretForStorageClassesChart).Return(nil)
 			var cpShootCRDsChart chart.Interface
 			if withShootCRDsChart {
 				cpShootCRDsChartMock := mockchartutil.NewMockInterface(ctrl)
 				cpShootCRDsChart = cpShootCRDsChartMock
-				client.EXPECT().Get(gomock.Any(), resourceKeyCPShootCRDsChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}))
-				client.EXPECT().Delete(ctx, deletedMRForCPShootCRDsChart).Return(nil)
-				client.EXPECT().Delete(ctx, deletedMRSecretForCPShootCRDsChart).Return(nil)
-				client.EXPECT().Get(gomock.Any(), resourceKeyCPShootCRDsChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, deletedMRForCPShootCRDsChart.Name))
+				c.EXPECT().Get(gomock.Any(), resourceKeyCPShootCRDsChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}))
+				c.EXPECT().Delete(ctx, deletedMRForCPShootCRDsChart).Return(nil)
+				c.EXPECT().Delete(ctx, deletedMRSecretForCPShootCRDsChart).Return(nil)
+				c.EXPECT().Get(gomock.Any(), resourceKeyCPShootCRDsChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, deletedMRForCPShootCRDsChart.Name))
+				c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(resourceKeyCPShootCRDsChart.Namespace), client.MatchingLabels(map[string]string{v1alpha1.ReferencedBy: resourceKeyCPShootCRDsChart.Name}))
+
 			}
 
-			client.EXPECT().Get(gomock.Any(), resourceKeyCPShootChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}))
-			client.EXPECT().Delete(ctx, deletedMRForCPShootChart).Return(nil)
-			client.EXPECT().Delete(ctx, deletedMRSecretForCPShootChart).Return(nil)
+			c.EXPECT().Get(gomock.Any(), resourceKeyCPShootChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}))
+			c.EXPECT().Delete(ctx, deletedMRForCPShootChart).Return(nil)
+			c.EXPECT().Delete(ctx, deletedMRSecretForCPShootChart).Return(nil)
 
-			client.EXPECT().Get(gomock.Any(), resourceKeyStorageClassesChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, deletedMRForStorageClassesChart.Name))
-			client.EXPECT().Get(gomock.Any(), resourceKeyCPShootChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, deletedMRForCPShootChart.Name))
+			c.EXPECT().Get(gomock.Any(), resourceKeyStorageClassesChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, deletedMRForStorageClassesChart.Name))
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(resourceKeyStorageClassesChart.Namespace), client.MatchingLabels(map[string]string{v1alpha1.ReferencedBy: resourceKeyStorageClassesChart.Name}))
+			c.EXPECT().Get(gomock.Any(), resourceKeyCPShootChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, deletedMRForCPShootChart.Name))
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(resourceKeyCPShootChart.Namespace), client.MatchingLabels(map[string]string{v1alpha1.ReferencedBy: resourceKeyCPShootChart.Name}))
 
 			// Create mock charts
 			var configChart chart.Interface
@@ -608,22 +613,24 @@ webhooks:
 				configChartMock := mockchartutil.NewMockInterface(ctrl)
 				vp.EXPECT().GetConfigChartValues(ctx, cp, cluster).Return(configChartValues, nil)
 				configChartMock.EXPECT().Apply(ctx, chartApplier, namespace, nil, "", "", configChartValues).Return(nil)
-				configChartMock.EXPECT().Delete(ctx, client, namespace).Return(nil)
+				configChartMock.EXPECT().Delete(ctx, c, namespace).Return(nil)
 				configChart = configChartMock
 			}
 			ccmChart := mockchartutil.NewMockInterface(ctrl)
-			ccmChart.EXPECT().Delete(ctx, client, namespace).Return(nil)
+			ccmChart.EXPECT().Delete(ctx, c, namespace).Return(nil)
 
 			if webhookConfig != nil {
-				client.EXPECT().Get(gomock.Any(), resourceKeyShootWebhooks, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}))
-				client.EXPECT().Delete(ctx, deletedNetworkPolicyForShootWebhooks).Return(nil)
-				client.EXPECT().Delete(ctx, deletedMRForShootWebhooks).Return(nil)
-				client.EXPECT().Delete(ctx, deletedMRSecretForShootWebhooks).Return(nil)
-				client.EXPECT().Get(gomock.Any(), resourceKeyShootWebhooks, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, deletedMRForShootWebhooks.Name))
+				c.EXPECT().Get(gomock.Any(), resourceKeyShootWebhooks, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}))
+				c.EXPECT().Delete(ctx, deletedNetworkPolicyForShootWebhooks).Return(nil)
+				c.EXPECT().Delete(ctx, deletedMRForShootWebhooks).Return(nil)
+				c.EXPECT().Delete(ctx, deletedMRSecretForShootWebhooks).Return(nil)
+				c.EXPECT().Get(gomock.Any(), resourceKeyShootWebhooks, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, deletedMRForShootWebhooks.Name))
+				c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(resourceKeyShootWebhooks.Namespace), client.MatchingLabels(map[string]string{v1alpha1.ReferencedBy: resourceKeyShootWebhooks.Name}))
+
 			}
 
 			// Handle shoot access secrets and legacy secret cleanup
-			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecretsFunc(namespace)[0].Secret.Name, Namespace: namespace}})
+			c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecretsFunc(namespace)[0].Secret.Name, Namespace: namespace}})
 
 			// Create actuator
 			a := &actuator{
