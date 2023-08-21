@@ -89,8 +89,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		}
 	} else if !secretIsReferenced && hasFinalizer {
 		log.Info("Removing finalizer")
-		//log.Info("Artificially slow down finalizer removal for secret")
-		//time.Sleep(10 * time.Second)
 		if err := controllerutils.RemoveFinalizers(ctx, r.SourceClient, secret, controllerFinalizer); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
 		}
