@@ -125,47 +125,42 @@ func (s *seedSystem) computeResourcesData() (map[string][]byte, error) {
 }
 
 func (s *seedSystem) addReserveExcessCapacityDeployment(registry *managedresources.Registry, name string, config gardencorev1beta1.SeedSettingExcessCapacityReservationConfig) error {
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: s.namespace,
-			Labels:    getExcessCapacityReservationLabels(),
-			Annotations: map[string]string{
-				resourcesv1alpha1.SkipHealthCheck: "true",
-			},
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas:             &s.values.ReserveExcessCapacity.Replicas,
-			RevisionHistoryLimit: pointer.Int32(2),
-			Selector:             &metav1.LabelSelector{MatchLabels: getExcessCapacityReservationLabels()},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: getExcessCapacityReservationLabels(),
-				},
-				Spec: corev1.PodSpec{
-					TerminationGracePeriodSeconds: pointer.Int64(5),
-					Containers: []corev1.Container{{
-						Name:            "pause-container",
-						Image:           s.values.ReserveExcessCapacity.Image,
-						ImagePullPolicy: corev1.PullIfNotPresent,
-						Resources: corev1.ResourceRequirements{
-							Requests: config.Resources,
-							Limits:   config.Resources,
-						},
-					}},
-					PriorityClassName: v1beta1constants.PriorityClassNameReserveExcessCapacity,
-					Tolerations:       config.Tolerations,
+	return registry.Add(
+		&appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: s.namespace,
+				Labels:    getExcessCapacityReservationLabels(),
+				Annotations: map[string]string{
+					resourcesv1alpha1.SkipHealthCheck: "true",
 				},
 			},
-		},
-	}
-	if config.NodeSelector != nil {
-		deployment.Spec.Template.Spec.Affinity = &corev1.Affinity{
-			NodeAffinity: &corev1.NodeAffinity{
-				RequiredDuringSchedulingIgnoredDuringExecution: config.NodeSelector,
-			}}
-	}
-	return registry.Add(deployment)
+			Spec: appsv1.DeploymentSpec{
+				Replicas:             &s.values.ReserveExcessCapacity.Replicas,
+				RevisionHistoryLimit: pointer.Int32(2),
+				Selector:             &metav1.LabelSelector{MatchLabels: getExcessCapacityReservationLabels()},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: getExcessCapacityReservationLabels(),
+					},
+					Spec: corev1.PodSpec{
+						TerminationGracePeriodSeconds: pointer.Int64(5),
+						Containers: []corev1.Container{{
+							Name:            "pause-container",
+							Image:           s.values.ReserveExcessCapacity.Image,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Resources: corev1.ResourceRequirements{
+								Requests: config.Resources,
+								Limits:   config.Resources,
+							},
+						}},
+						NodeSelector:      config.NodeSelector,
+						PriorityClassName: v1beta1constants.PriorityClassNameReserveExcessCapacity,
+						Tolerations:       config.Tolerations,
+					},
+				},
+			},
+		})
 }
 
 // remember to update docs/development/priority-classes.md when making changes here

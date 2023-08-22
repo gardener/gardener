@@ -9181,9 +9181,7 @@ Kubernetes core/v1.ResourceList
 <td>
 <code>nodeSelector</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#nodeselector-v1-core">
-Kubernetes core/v1.NodeSelector
-</a>
+map[string]string
 </em>
 </td>
 <td>

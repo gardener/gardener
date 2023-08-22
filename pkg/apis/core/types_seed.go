@@ -228,7 +228,7 @@ type SeedSettingExcessCapacityReservationConfig struct {
 	// Resources specify the resource requests and limits of the excess-capacity-reservation pod.
 	Resources corev1.ResourceList
 	// NodeSelector specifies the node where the excess-capacity-reservation pod should run.
-	NodeSelector *corev1.NodeSelector
+	NodeSelector map[string]string
 	// Tolerations specify the tolerations for the the excess-capacity-reservation pod.
 	Tolerations []corev1.Toleration
 }

@@ -26,7 +26,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	unversionedvalidation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -115,94 +114,6 @@ func ValidateTolerations(tolerations []corev1.Toleration, fldPath *field.Path) f
 		}
 	}
 	return allErrors
-}
-
-// ValidateNodeSelectorRequirement tests that the specified NodeSelectorRequirement fields has valid data
-func ValidateNodeSelectorRequirement(rq corev1.NodeSelectorRequirement, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-	switch rq.Operator {
-	case corev1.NodeSelectorOpIn, corev1.NodeSelectorOpNotIn:
-		if len(rq.Values) == 0 {
-			allErrs = append(allErrs, field.Required(fldPath.Child("values"), "must be specified when `operator` is 'In' or 'NotIn'"))
-		}
-	case corev1.NodeSelectorOpExists, corev1.NodeSelectorOpDoesNotExist:
-		if len(rq.Values) > 0 {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("values"), "may not be specified when `operator` is 'Exists' or 'DoesNotExist'"))
-		}
-
-	case corev1.NodeSelectorOpGt, corev1.NodeSelectorOpLt:
-		if len(rq.Values) != 1 {
-			allErrs = append(allErrs, field.Required(fldPath.Child("values"), "must be specified single value when `operator` is 'Lt' or 'Gt'"))
-		}
-	default:
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("operator"), rq.Operator, "not a valid selector operator"))
-	}
-
-	allErrs = append(allErrs, unversionedvalidation.ValidateLabelName(rq.Key, fldPath.Child("key"))...)
-
-	return allErrs
-}
-
-var nodeFieldSelectorValidators = map[string]func(string, bool) []string{
-	metav1.ObjectNameField: ValidateNodeName,
-}
-
-// ValidateNodeFieldSelectorRequirement tests that the specified NodeSelectorRequirement fields has valid data
-func ValidateNodeFieldSelectorRequirement(req corev1.NodeSelectorRequirement, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	switch req.Operator {
-	case corev1.NodeSelectorOpIn, corev1.NodeSelectorOpNotIn:
-		if len(req.Values) != 1 {
-			allErrs = append(allErrs, field.Required(fldPath.Child("values"),
-				"must be only one value when `operator` is 'In' or 'NotIn' for node field selector"))
-		}
-	default:
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("operator"), req.Operator, "not a valid selector operator"))
-	}
-
-	if vf, found := nodeFieldSelectorValidators[req.Key]; !found {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("key"), req.Key, "not a valid field selector key"))
-	} else {
-		for i, v := range req.Values {
-			for _, msg := range vf(v, false) {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("values").Index(i), v, msg))
-			}
-		}
-	}
-
-	return allErrs
-}
-
-// ValidateNodeSelectorTerm tests that the specified node selector term has valid data
-func ValidateNodeSelectorTerm(term corev1.NodeSelectorTerm, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	for j, req := range term.MatchExpressions {
-		allErrs = append(allErrs, ValidateNodeSelectorRequirement(req, fldPath.Child("matchExpressions").Index(j))...)
-	}
-
-	for j, req := range term.MatchFields {
-		allErrs = append(allErrs, ValidateNodeFieldSelectorRequirement(req, fldPath.Child("matchFields").Index(j))...)
-	}
-
-	return allErrs
-}
-
-// ValidateNodeSelector tests that the specified nodeSelector fields has valid data
-func ValidateNodeSelector(nodeSelector *corev1.NodeSelector, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	termFldPath := fldPath.Child("nodeSelectorTerms")
-	if len(nodeSelector.NodeSelectorTerms) == 0 {
-		return append(allErrs, field.Required(termFldPath, "must have at least one node selector term"))
-	}
-
-	for i, term := range nodeSelector.NodeSelectorTerms {
-		allErrs = append(allErrs, ValidateNodeSelectorTerm(term, termFldPath.Index(i))...)
-	}
-
-	return allErrs
 }
 
 // ValidateResourceQuantityValue enforces that specified quantity is valid for specified resource

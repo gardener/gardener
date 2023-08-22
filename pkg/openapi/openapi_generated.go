@@ -6643,7 +6643,17 @@ func schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservationConfig(ref
 					"nodeSelector": {
 						SchemaProps: spec.SchemaProps{
 							Description: "NodeSelector specifies the node where the excess-capacity-reservation pod should run.",
-							Ref:         ref("k8s.io/api/core/v1.NodeSelector"),
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
 						},
 					},
 					"tolerations": {
@@ -6665,7 +6675,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservationConfig(ref
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/api/core/v1.NodeSelector", "k8s.io/api/core/v1.Toleration", "k8s.io/apimachinery/pkg/api/resource.Quantity"},
+			"k8s.io/api/core/v1.Toleration", "k8s.io/apimachinery/pkg/api/resource.Quantity"},
 	}
 }
 

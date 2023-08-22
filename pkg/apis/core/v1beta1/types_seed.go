@@ -284,7 +284,7 @@ type SeedSettingExcessCapacityReservationConfig struct {
 	Resources corev1.ResourceList `json:"resources" protobuf:"bytes,1,rep,name=resources,casttype=k8s.io/api/core/v1.ResourceList,castkey=k8s.io/api/core/v1.ResourceName"`
 	// NodeSelector specifies the node where the excess-capacity-reservation pod should run.
 	// +optional
-	NodeSelector *corev1.NodeSelector `json:"nodeSelector,omitempty" protobuf:"bytes,2,opt,name=nodeSelector"`
+	NodeSelector map[string]string `json:"nodeSelector,omitempty" protobuf:"bytes,2,opt,name=nodeSelector"`
 	// Tolerations specify the tolerations for the the excess-capacity-reservation pod.
 	// +optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty" protobuf:"bytes,3,rep,name=tolerations"`

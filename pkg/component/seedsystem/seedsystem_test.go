@@ -122,15 +122,6 @@ spec:
         app: kubernetes
         role: reserve-excess-capacity
     spec:
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: foo
-                operator: In
-                values:
-                - bar
       containers:
       - image: ` + reserveExcessCapacityImage + `
         imagePullPolicy: IfNotPresent
@@ -142,6 +133,8 @@ spec:
           requests:
             cpu: "4"
             memory: 8Gi
+      nodeSelector:
+        foo: bar
       priorityClassName: gardener-reserve-excess-capacity
       terminationGracePeriodSeconds: 5
       tolerations:
@@ -234,13 +227,7 @@ status: {}
 						corev1.ResourceCPU:    resource.MustParse("4"),
 						corev1.ResourceMemory: resource.MustParse("8Gi"),
 					},
-					NodeSelector: &corev1.NodeSelector{
-						NodeSelectorTerms: []corev1.NodeSelectorTerm{
-							{MatchExpressions: []corev1.NodeSelectorRequirement{
-								{Key: "foo", Values: []string{"bar"}, Operator: corev1.NodeSelectorOpIn},
-							}},
-						},
-					},
+					NodeSelector: map[string]string{"foo": "bar"},
 					Tolerations: []corev1.Toleration{
 						{Key: "bar", Value: "foo", Operator: "Equal", Effect: corev1.TaintEffectNoExecute},
 					},

@@ -167,9 +167,6 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 				for resource, value := range config.Resources {
 					allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue(resource.String(), value, fldPath.Child("settings, excessCapacityReservation", "configs").Index(i).Child("resources").Child(resource.String()))...)
 				}
-				if config.NodeSelector != nil {
-					allErrs = append(allErrs, corevalidation.ValidateNodeSelector(config.NodeSelector, fldPath.Child("settings, excessCapacityReservation", "configs").Index(i).Child("nodeSelector"))...)
-				}
 				allErrs = append(allErrs, corevalidation.ValidateTolerations(config.Tolerations, fldPath.Child("settings, excessCapacityReservation", "configs").Index(i).Child("tolerations"))...)
 			}
 		}

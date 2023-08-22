@@ -5200,7 +5200,7 @@ func Convert_core_SeedSettingExcessCapacityReservation_To_v1beta1_SeedSettingExc
 
 func autoConvert_v1beta1_SeedSettingExcessCapacityReservationConfig_To_core_SeedSettingExcessCapacityReservationConfig(in *SeedSettingExcessCapacityReservationConfig, out *core.SeedSettingExcessCapacityReservationConfig, s conversion.Scope) error {
 	out.Resources = *(*v1.ResourceList)(unsafe.Pointer(&in.Resources))
-	out.NodeSelector = (*v1.NodeSelector)(unsafe.Pointer(in.NodeSelector))
+	out.NodeSelector = *(*map[string]string)(unsafe.Pointer(&in.NodeSelector))
 	out.Tolerations = *(*[]v1.Toleration)(unsafe.Pointer(&in.Tolerations))
 	return nil
 }
@@ -5212,7 +5212,7 @@ func Convert_v1beta1_SeedSettingExcessCapacityReservationConfig_To_core_SeedSett
 
 func autoConvert_core_SeedSettingExcessCapacityReservationConfig_To_v1beta1_SeedSettingExcessCapacityReservationConfig(in *core.SeedSettingExcessCapacityReservationConfig, out *SeedSettingExcessCapacityReservationConfig, s conversion.Scope) error {
 	out.Resources = *(*v1.ResourceList)(unsafe.Pointer(&in.Resources))
-	out.NodeSelector = (*v1.NodeSelector)(unsafe.Pointer(in.NodeSelector))
+	out.NodeSelector = *(*map[string]string)(unsafe.Pointer(&in.NodeSelector))
 	out.Tolerations = *(*[]v1.Toleration)(unsafe.Pointer(&in.Tolerations))
 	return nil
 }
