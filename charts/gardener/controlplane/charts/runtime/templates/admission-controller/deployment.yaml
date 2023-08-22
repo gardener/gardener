@@ -78,6 +78,16 @@ spec:
         resources:
 {{ toYaml .Values.global.admission.resources | indent 10 }}
         {{- end }}
+        ports:
+          - name: https
+            containerPort: {{ required ".Values.global.admission.config.server.webhooks.port is required" .Values.global.admission.config.server.webhooks.port }}
+            protocol: TCP
+          - name: health
+            containerPort: {{ required ".Values.global.admission.config.server.healthProbes.port is required" .Values.global.admission.config.server.healthProbes.port }}
+            protocol: TCP
+          - name: metrics
+            containerPort: {{ required ".Values.global.admission.config.server.metrics.port is required" .Values.global.admission.config.server.metrics.port }}
+            protocol: TCP
         {{- if .Values.global.admission.config.server.healthProbes.enable }}
         livenessProbe:
           httpGet:

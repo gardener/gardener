@@ -25,7 +25,6 @@ EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY  := $(REGISTRY)/extensions/provider-lo
 PUSH_LATEST_TAG                            := false
 VERSION                                    := $(shell cat VERSION)
 EFFECTIVE_VERSION                          := $(VERSION)-$(shell git rev-parse HEAD)
-BUILD_DATE                                 := $(shell date '+%Y-%m-%dT%H:%M:%S%z' | sed 's/\([0-9][0-9]\)$$/:\1/g')
 REPO_ROOT                                  := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 GARDENER_LOCAL_KUBECONFIG                  := $(REPO_ROOT)/example/gardener-local/kind/local/kubeconfig
 GARDENER_LOCAL2_KUBECONFIG                 := $(REPO_ROOT)/example/gardener-local/kind/local2/kubeconfig
@@ -317,13 +316,12 @@ kind-operator-down: $(KIND)
 
 # speed-up skaffold deployments by building all images concurrently
 export SKAFFOLD_BUILD_CONCURRENCY = 0
+export SKAFFOLD_DISABLE_HEALTH_CHECKS ?= ""
 gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator-up operator-dev operator-debug: export SKAFFOLD_DEFAULT_REPO = localhost:5001
 gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator-up operator-dev operator-debug: export SKAFFOLD_PUSH = true
-gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator-up operator-dev operator-debug: export SOURCE_DATE_EPOCH = $(shell date -d $(BUILD_DATE) +%s)
+gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator-up operator-dev operator-debug: export SOURCE_DATE_EPOCH = $(shell date +%s)
 # use static label for skaffold to prevent rolling all gardener components on every `skaffold` invocation
 gardener%up gardener%dev gardener%debug gardener%down gardenlet%up gardenlet%dev gardenlet%debug gardenlet%down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-local
-# set ldflags for skaffold
-gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator-up operator-dev operator-debug: export LD_FLAGS = $(shell $(REPO_ROOT)/hack/get-build-ld-flags.sh k8s.io/component-base $(REPO_ROOT)/VERSION Gardener $(BUILD_DATE))
 # skaffold dev and debug clean up deployed modules by default, disable this
 gardener%dev gardener%debug gardenlet%dev gardenlet%debug operator-dev operator-debug: export SKAFFOLD_CLEANUP = false
 # skaffold dev triggers new builds and deployments immediately on file changes by default,
@@ -333,15 +331,22 @@ gardener%dev gardenlet%dev operator-dev: export SKAFFOLD_TRIGGER = manual
 # However, these artifacts do not include the gcflags which `skaffold debug` sets automatically, so delve would not work.
 # Disabling the skaffold cache for debugging ensures that you run artifacts with gcflags required for debugging.
 gardener%debug gardenlet%debug operator-debug: export SKAFFOLD_CACHE_ARTIFACTS = false
+# Health checks may be disabled on a per-controller basis. To boot a garden from scratch, some controllers may be launched before
+# their attendant resources are installed. Those controllers will need to be restarted by health checks after the resources are available.
+# Developers who prefer to do this manually may provide comma-separated controller names from {admission,controller,scheduler,gardenlet,operator}.
+gardener%dev gardener%debug gardenlet%dev gardenlet%debug operator-dev operator-debug: export SKAFFOLD_DISABLE_HEALTH_CHECKS ?= ""
 
 gardener-ha-single-zone%: export SKAFFOLD_PROFILE=ha-single-zone
 gardener-ha-multi-zone%: export SKAFFOLD_PROFILE=ha-multi-zone
 
 gardener-up gardener-ha-single-zone-up gardener-ha-multi-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
+	env | grep SKAFFOLD_ | tr '\n' ';'
 	$(SKAFFOLD) run
 gardener-dev gardener-ha-single-zone-dev gardener-ha-multi-zone-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
+	env | grep SKAFFOLD_ | tr '\n' ';'
 	$(SKAFFOLD) dev
 gardener-debug gardener-ha-single-zone-debug gardener-ha-multi-zone-debug: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
+	env | grep SKAFFOLD_ | tr '\n' ';'
 	$(SKAFFOLD) debug
 gardener-down gardener-ha-single-zone-down gardener-ha-multi-zone-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/gardener-down.sh

@@ -178,7 +178,7 @@ build:
         - vendor
         - VERSION
       ldflags:
-      - '{{.LD_FLAGS}}'
+      - '{{default now .SOURCE_DATE_EPOCH | date "2006-01-02T15:04:05-0700" | cmd "hack/get-build-ld-flags.sh" "k8s.io/component-base" "VERSION" "Gardener"}}'
       main: ./cmd/gardener-operator
   - image: eu.gcr.io/gardener-project/gardener/resource-manager
     ko:
@@ -278,7 +278,7 @@ build:
         - vendor
         - VERSION
       ldflags:
-      - '{{.LD_FLAGS}}'
+      - '{{default now .SOURCE_DATE_EPOCH | date "2006-01-02T15:04:05-0700" | cmd "hack/get-build-ld-flags.sh" "k8s.io/component-base" "VERSION" "Gardener"}}'
       main: ./cmd/gardener-resource-manager
   - image: eu.gcr.io/gardener-project/gardener/apiserver
     ko:
@@ -757,8 +757,8 @@ profiles:
   - command: debug
   patches:
   - op: add
-    path: /deploy/helm/releases/0/setValues
+    path: /deploy/helm/releases/0/setValueTemplates
     value:
       replicaCount: 1
       config.leaderElection.leaderElect: false
-      config.server.healthProbes.enable: false
+      config.server.healthProbes.enable: "{{ default \"\" .SKAFFOLD_DISABLE_HEALTH_CHECKS | lower | splitList \",\" | has \"operator\" | ternary \"false\" \"true\" }}"

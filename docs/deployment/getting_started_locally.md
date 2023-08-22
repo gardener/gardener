@@ -44,7 +44,7 @@ make kind-up
 This command sets up a new KinD cluster named `gardener-local` and stores the kubeconfig in the `./example/gardener-local/kind/local/kubeconfig` file.
 
 > It might be helpful to copy this file to `$HOME/.kube/config`, since you will need to target this KinD cluster multiple times.
-Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind/local/kubeconfig` for all future steps via `export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig`.
+> Alternatively, make sure to set your `KUBECONFIG` environment variable to `./example/gardener-local/kind/local/kubeconfig` for all future steps via `export KUBECONFIG=$PWD/example/gardener-local/kind/local/kubeconfig`.
 
 All of the following steps assume that you are using this kubeconfig.
 
@@ -138,9 +138,34 @@ Please check your console output for the concrete port-forwarding on your machin
 
 This means that when a goroutine of gardenlet (or any other gardener-core component you try to debug) is paused on a breakpoint, all the other goroutines are paused. Hence, when the whole gardenlet process is paused, it can not renew its lease and can not respond to the liveness and readiness probes. Skaffold automatically increases `timeoutSeconds` of liveness and readiness probes to 600. Anyway, we were facing problems when debugging that pods have been killed after a while.
 
-Thus, leader election, health and readiness checks for `gardener-admission-controller`, `gardener-apiserver`, `gardener-controller-manager`, `gardener-scheduler`,`gardenlet` and `operator` are disabled when debugging.
+Thus, leader election and readiness checks for `gardener-admission-controller`, `gardener-apiserver`, `gardener-controller-manager`, `gardener-scheduler`,`gardenlet` and `operator` are disabled when debugging.
+
+Standard Kubernetes health checks are handled somewhat differently. When Gardener controllers encounter an error condition (such as a missing CRD), they enter (or remain in) an unready state. Under normal circumstances, the controllers will
+be restarted by Kubernetes until they enter a ready state, but this cannot happen if the health checks are disabled for debugging purposes. Thus, Gardener cannot boot in Skaffold without either having health checks enabled or the developer
+manually deleting pods whose health endpoint reports they are not ready. To reduce onboarding complexity, we choose to leave the health checks running by default.
+
+As health checks depend on several lines of configuration that are duplicated through templates, Gardener provides an environment variable called `DISABLE_HEALTH_CHECKS`. This is set to a comma-separated list of controller names that should
+be generated without health checks. For instance, to disable all health checks, set the following environment variable before running Skaffold:
+
+```bash
+SKAFFOLD_DISABLE_HEALTH_CHECKS=admission,controller,scheduler,gardenlet,operator
+```
 
 If you have similar problems with other components which are not deployed by skaffold, you could temporarily turn off the leader election and disable liveness and readiness probes there too.
+
+### Configuring Skaffold
+
+Different make targets all run the same bare target such as `skaffold run` or `skaffold debug`. The different targets configure different combinations of environment variables to effect the final build and deployment configuration. In turn,
+the environment variables activate different Skaffold profiles in the various configurations. This provides a unified configuration palette that can be used in all launch environments (Makefile, CLI and Cloud Code).
+
+The Makefile forms the canonical reference for the required combinations of environment variables. The key configuration variables for a given Skaffold invocation target are printed by make before an invocation. Users who wish to bypass the
+Makefile for whatever reason may copy these variables to their environment, such as in the construction of Google Cloud Code or CLI configuration.
+
+### Debugging with an IDE
+
+Google Cloud Code is an IDE plugin that works with Skaffold to launch and synchronize deployments using Skaffold's gRPC facility. It is available for both Jetbrains and Microsoft IDEs. The advantage of using it to launch Skaffold with the
+IDE is the various controller directories will be automatically mapped to the correct Delve debugger instances. This can save considerable toil with each development iteration on large deployments such as Gardener. Refer to the 
+respective IDE documentation for Cloud Code, making sure to include the correct environment variables for your environment as described in the previous section.
 
 ## Creating a `Shoot` Cluster
 
