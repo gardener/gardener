@@ -142,7 +142,7 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 
 	if seedSpec.Volume != nil {
 		if seedSpec.Volume.MinimumSize != nil {
-			allErrs = append(allErrs, ValidateResourceQuantityValue("minimumSize", *seedSpec.Volume.MinimumSize, fldPath.Child("volume", "minimumSize"))...)
+			allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue("minimumSize", *seedSpec.Volume.MinimumSize, fldPath.Child("volume", "minimumSize"))...)
 		}
 
 		volumeProviderPurposes := make(map[string]struct{}, len(seedSpec.Volume.Providers))

@@ -18,12 +18,12 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
+	corevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
 // ValidateQuota validates a Quota object.
@@ -66,7 +66,7 @@ func ValidateQuotaSpec(quotaSpec *core.QuotaSpec, fldPath *field.Path) field.Err
 		if !isValidQuotaMetric(corev1.ResourceName(k)) {
 			allErrs = append(allErrs, field.Invalid(keyPath, v.String(), fmt.Sprintf("%s is no supported quota metric", string(k))))
 		}
-		allErrs = append(allErrs, ValidateResourceQuantityValue(string(k), v, keyPath)...)
+		allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue(k.String(), v, keyPath)...)
 	}
 
 	return allErrs
@@ -84,15 +84,4 @@ func isValidQuotaMetric(metric corev1.ResourceName) bool {
 		return true
 	}
 	return false
-}
-
-// ValidateResourceQuantityValue validates the value of a resource quantity.
-func ValidateResourceQuantityValue(key string, value resource.Quantity, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if value.Cmp(resource.Quantity{}) < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath, value.String(), fmt.Sprintf("%s value must not be negative", key)))
-	}
-
-	return allErrs
 }
