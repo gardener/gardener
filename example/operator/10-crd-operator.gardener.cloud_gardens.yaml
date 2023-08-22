@@ -44,6 +44,11 @@ spec:
       jsonPath: .status.conditions[?(@.type=="VirtualGardenAPIServerAvailable")].status
       name: API Server
       type: string
+    - description: Indicates whether the observability components related to the runtime
+        cluster are healthy.
+      jsonPath: .status.conditions[?(@.type=="ObservabilityComponentsHealthy")].status
+      name: Observability
+      type: string
     - description: creation timestamp
       jsonPath: .metadata.creationTimestamp
       name: Age

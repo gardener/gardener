@@ -35,6 +35,7 @@ import (
 // +kubebuilder:printcolumn:name="Runtime",type=string,JSONPath=`.status.conditions[?(@.type=="RuntimeComponentsHealthy")].status`,description="Indicates whether the components related to the runtime cluster are healthy."
 // +kubebuilder:printcolumn:name="Virtual",type=string,JSONPath=`.status.conditions[?(@.type=="VirtualComponentsHealthy")].status`,description="Indicates whether the components related to the virtual cluster are healthy."
 // +kubebuilder:printcolumn:name="API Server",type=string,JSONPath=`.status.conditions[?(@.type=="VirtualGardenAPIServerAvailable")].status`,description="Indicates whether the API server of the virtual cluster is available."
+// +kubebuilder:printcolumn:name="Observability",type=string,JSONPath=`.status.conditions[?(@.type=="ObservabilityComponentsHealthy")].status`,description="Indicates whether the observability components related to the runtime cluster are healthy."
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="creation timestamp"
 
 // Garden describes a list of gardens.
