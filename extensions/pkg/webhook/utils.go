@@ -42,10 +42,13 @@ func AppendUniqueUnit(units *[]extensionsv1alpha1.Unit, unit extensionsv1alpha1.
 	*units = append(*units, unit)
 }
 
+// splitCommandLineRegex is used to split command line arguments by white space or "\".
+var splitCommandLineRegex = regexp.MustCompile(`[\\\s]+`)
+
 // DeserializeCommandLine de-serializes the given string to a slice of command line elements by splitting it
 // on white space and the "\" character.
 func DeserializeCommandLine(s string) []string {
-	return regexp.MustCompile(`[\\\s]+`).Split(s, -1)
+	return splitCommandLineRegex.Split(s, -1)
 }
 
 // SerializeCommandLine serializes the given command line elements slice to a string by joining the first

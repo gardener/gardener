@@ -30,6 +30,9 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
+// validBootstrapTokenRegex is used to check if an existing token can be interpreted as a bootstrap token.
+var validBootstrapTokenRegex = regexp.MustCompile(`[a-z0-9]{16}`)
+
 // ComputeBootstrapToken computes and creates a new bootstrap token, and returns it.
 func ComputeBootstrapToken(ctx context.Context, c client.Client, tokenID, description string, validity time.Duration) (secret *corev1.Secret, err error) {
 	var (
@@ -47,8 +50,7 @@ func ComputeBootstrapToken(ctx context.Context, c client.Client, tokenID, descri
 		return nil, err
 	}
 
-	validBootstrapTokenSecret, _ := regexp.Compile(`[a-z0-9]{16}`)
-	if existingSecretToken, ok := secret.Data[bootstraptokenapi.BootstrapTokenSecretKey]; ok && validBootstrapTokenSecret.Match(existingSecretToken) {
+	if existingSecretToken, ok := secret.Data[bootstraptokenapi.BootstrapTokenSecretKey]; ok && validBootstrapTokenRegex.Match(existingSecretToken) {
 		bootstrapTokenSecretKey = string(existingSecretToken)
 	} else {
 		bootstrapTokenSecretKey, err = utils.GenerateRandomStringFromCharset(16, "0123456789abcdefghijklmnopqrstuvwxyz")

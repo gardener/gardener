@@ -86,6 +86,9 @@ func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) 
 	return allErrs
 }
 
+// k8sVersionCPRegex is used to validate kubernetes versions in a cloud profile.
+var k8sVersionCPRegex = regexp.MustCompile(`^([0-9]+\.){2}[0-9]+$`)
+
 func validateKubernetesSettings(kubernetes core.KubernetesSettings, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if len(kubernetes.Versions) == 0 {
@@ -100,11 +103,10 @@ func validateKubernetesSettings(kubernetes core.KubernetesSettings, fldPath *fie
 	}
 
 	versionsFound := sets.New[string]()
-	r, _ := regexp.Compile(`^([0-9]+\.){2}[0-9]+$`)
 	for i, version := range kubernetes.Versions {
 		idxPath := fldPath.Child("versions").Index(i)
-		if !r.MatchString(version.Version) {
-			allErrs = append(allErrs, field.Invalid(idxPath, version, fmt.Sprintf("all Kubernetes versions must match the regex %s", r)))
+		if !k8sVersionCPRegex.MatchString(version.Version) {
+			allErrs = append(allErrs, field.Invalid(idxPath, version, fmt.Sprintf("all Kubernetes versions must match the regex %s", k8sVersionCPRegex)))
 		} else if versionsFound.Has(version.Version) {
 			allErrs = append(allErrs, field.Duplicate(idxPath.Child("version"), version.Version))
 		} else {

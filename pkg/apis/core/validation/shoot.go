@@ -1412,6 +1412,9 @@ const (
 	maxVolumeNameLength = 15
 )
 
+// volumeSizeRegex is used for volume size validation.
+var volumeSizeRegex = regexp.MustCompile(`^(\d)+Gi$`)
+
 // ValidateWorker validates the worker object.
 func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	kubernetesVersion := kubernetes.Version
@@ -1475,8 +1478,6 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("caBundle"), *(worker.CABundle), "caBundle is not a valid PEM-encoded certificate"))
 		}
 	}
-
-	volumeSizeRegex, _ := regexp.Compile(`^(\d)+Gi$`)
 
 	if worker.Volume != nil {
 		if !volumeSizeRegex.MatchString(worker.Volume.VolumeSize) {
