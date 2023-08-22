@@ -352,12 +352,12 @@ func RenderChartAndCreate(ctx context.Context, namespace string, name string, se
 	return Create(ctx, client, namespace, name, nil, secretNameWithPrefix, "", map[string][]byte{chartName: data}, pointer.Bool(false), injectedLabels, &forceOverwriteAnnotations)
 }
 
-// configurationProblemRegexp is used to check if an error is caused by a bad managed resource configuration.
-var configurationProblemRegexp = regexp.MustCompile(`(?i)(error during apply of object .* is invalid:)`)
+// configurationProblemRegex is used to check if an error is caused by a bad managed resource configuration.
+var configurationProblemRegex = regexp.MustCompile(`(?i)(error during apply of object .* is invalid:)`)
 
 func checkConfigurationError(err error) []gardencorev1beta1.ErrorCode {
 	var errorCodes []gardencorev1beta1.ErrorCode
-	if configurationProblemRegexp.MatchString(err.Error()) {
+	if configurationProblemRegex.MatchString(err.Error()) {
 		errorCodes = append(errorCodes, gardencorev1beta1.ErrorConfigurationProblem)
 	}
 

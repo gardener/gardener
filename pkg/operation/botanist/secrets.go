@@ -278,8 +278,8 @@ func (b *Botanist) generateSSHKeypair(ctx context.Context) error {
 	return nil
 }
 
-// quotaExceededRegexp is used to check if an error occurred due to infrastructure quota limits.
-var quotaExceededRegexp = regexp.MustCompile(`(?i)((?:^|[^t]|(?:[^s]|^)t|(?:[^e]|^)st|(?:[^u]|^)est|(?:[^q]|^)uest|(?:[^e]|^)quest|(?:[^r]|^)equest)LimitExceeded|Quotas|Quota.*exceeded|exceeded quota|Quota has been met|QUOTA_EXCEEDED)`)
+// quotaExceededRegex is used to check if an error occurred due to infrastructure quota limits.
+var quotaExceededRegex = regexp.MustCompile(`(?i)((?:^|[^t]|(?:[^s]|^)t|(?:[^e]|^)st|(?:[^u]|^)est|(?:[^q]|^)uest|(?:[^e]|^)quest|(?:[^r]|^)equest)LimitExceeded|Quotas|Quota.*exceeded|exceeded quota|Quota has been met|QUOTA_EXCEEDED)`)
 
 func (b *Botanist) syncShootCredentialToGarden(
 	ctx context.Context,
@@ -306,7 +306,7 @@ func (b *Botanist) syncShootCredentialToGarden(
 		return nil
 	})
 
-	if err != nil && quotaExceededRegexp.MatchString(err.Error()) {
+	if err != nil && quotaExceededRegex.MatchString(err.Error()) {
 		return v1beta1helper.NewErrorWithCodes(err, gardencorev1beta1.ErrorInfraQuotaExceeded)
 	}
 	return err

@@ -32,7 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-var diskSizeRegexp = regexp.MustCompile(`^(\d+)`)
+var diskSizeRegex = regexp.MustCompile(`^(\d+)`)
 
 // MachineDeployment holds information about the name, class, replicas of a MachineDeployment
 // managed by the machine-controller-manager.
@@ -230,7 +230,7 @@ func DistributePositiveIntOrPercent(zoneIndex int32, intOrPercent intstr.IntOrSt
 // DiskSize extracts the numerical component of DiskSize strings, i.e. strings like "10Gi" and
 // returns it as string, i.e. "10" will be returned.
 func DiskSize(size string) (int, error) {
-	i, err := strconv.Atoi(diskSizeRegexp.FindString(size))
+	i, err := strconv.Atoi(diskSizeRegex.FindString(size))
 	if err != nil {
 		return -1, err
 	}
