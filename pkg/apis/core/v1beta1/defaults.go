@@ -62,7 +62,7 @@ func SetDefaults_Seed(obj *Seed) {
 		}
 	}
 
-	if pointer.BoolDeref(obj.Spec.Settings.ExcessCapacityReservation.Enabled, false) && len(obj.Spec.Settings.ExcessCapacityReservation.Configs) == 0 {
+	if pointer.BoolDeref(obj.Spec.Settings.ExcessCapacityReservation.Enabled, true) && len(obj.Spec.Settings.ExcessCapacityReservation.Configs) == 0 {
 		obj.Spec.Settings.ExcessCapacityReservation.Configs = defaultExcessCapacityReservationConfigs
 	}
 

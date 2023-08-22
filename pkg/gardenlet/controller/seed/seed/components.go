@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -283,12 +284,17 @@ func defaultSystem(
 		replicasExcessCapacityReservation = int32(numberOfZones)
 	}
 
+	coreSeed, err := helper.ConvertSeed(seed.GetInfo())
+	if err != nil {
+		return nil, err
+	}
+
 	return seedsystem.New(
 		c,
 		gardenNamespaceName,
 		seedsystem.Values{
 			ReserveExcessCapacity: seedsystem.ReserveExcessCapacityValues{
-				Enabled:  seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled,
+				Enabled:  helper.SeedSettingExcessCapacityReservationEnabled(coreSeed.Spec.Settings),
 				Image:    image.String(),
 				Replicas: replicasExcessCapacityReservation,
 				Configs:  seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Configs,

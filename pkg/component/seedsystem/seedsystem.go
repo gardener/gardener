@@ -46,7 +46,7 @@ type Values struct {
 // ReserveExcessCapacityValues contains configuration for the deployment of the excess capacity reservation resources.
 type ReserveExcessCapacityValues struct {
 	// Enabled specifies whether excess capacity reservation should be enabled.
-	Enabled *bool
+	Enabled bool
 	// Image is the container image.
 	Image string
 	// Replicas is the number of replicas.
@@ -108,7 +108,7 @@ func (s *seedSystem) WaitCleanup(ctx context.Context) error {
 func (s *seedSystem) computeResourcesData() (map[string][]byte, error) {
 	var registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-	if pointer.BoolDeref(s.values.ReserveExcessCapacity.Enabled, true) {
+	if s.values.ReserveExcessCapacity.Enabled {
 		for i, config := range s.values.ReserveExcessCapacity.Configs {
 			name := fmt.Sprintf("reserve-excess-capacity-%d", i)
 			if err := s.addReserveExcessCapacityDeployment(registry, name, config); err != nil {

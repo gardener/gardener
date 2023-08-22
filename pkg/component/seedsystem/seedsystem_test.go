@@ -157,7 +157,7 @@ status: {}
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
 			ReserveExcessCapacity: ReserveExcessCapacityValues{
-				Enabled:  nil,
+				Enabled:  true,
 				Image:    reserveExcessCapacityImage,
 				Replicas: 2,
 				Configs: []gardencorev1beta1.SeedSettingExcessCapacityReservationConfig{
@@ -258,7 +258,7 @@ status: {}
 
 		Context("in case reserve-excess-capacity is disabled", func() {
 			BeforeEach(func() {
-				values.ReserveExcessCapacity.Enabled = pointer.Bool(false)
+				values.ReserveExcessCapacity.Enabled = false
 				component = New(c, namespace, values)
 			})
 
