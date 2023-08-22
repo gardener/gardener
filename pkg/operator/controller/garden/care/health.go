@@ -243,7 +243,7 @@ func (h *Health) checkManagedResources(
 			return nil, err
 		}
 
-		if exitCondition := checkManagedResourceForGarden(checker, condition, mr, h.clock); exitCondition != nil {
+		if exitCondition := checker.CheckManagedResource(condition, mr, nil); exitCondition != nil {
 			return exitCondition, nil
 		}
 	}
@@ -271,14 +271,4 @@ func (h *Health) isVPAEnabled() bool {
 	return h.garden.Spec.RuntimeCluster.Settings != nil &&
 		h.garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler != nil &&
 		pointer.BoolDeref(h.garden.Spec.RuntimeCluster.Settings.VerticalPodAutoscaler.Enabled, false)
-}
-
-func checkManagedResourceForGarden(checker *healthchecker.HealthChecker, condition gardencorev1beta1.Condition, managedResource *resourcesv1alpha1.ManagedResource, clock clock.Clock) *gardencorev1beta1.Condition {
-	conditionsToCheck := map[gardencorev1beta1.ConditionType]func(condition gardencorev1beta1.Condition) bool{
-		resourcesv1alpha1.ResourcesApplied:     healthchecker.DefaultSuccessfulCheck(),
-		resourcesv1alpha1.ResourcesHealthy:     healthchecker.DefaultSuccessfulCheck(),
-		resourcesv1alpha1.ResourcesProgressing: healthchecker.ResourcesNotProgressingCheck(clock, nil),
-	}
-
-	return checker.CheckManagedResourceConditions(condition, managedResource, conditionsToCheck, nil)
 }

@@ -200,26 +200,15 @@ func (b *HealthChecker) CheckNodes(condition gardencorev1beta1.Condition, nodes 
 	return nil
 }
 
-// CheckManagedResource checks the conditions of the given managed resource and reflects the state in the returned condition.
-func (b *HealthChecker) CheckManagedResource(condition gardencorev1beta1.Condition, mr *resourcesv1alpha1.ManagedResource, managedResourceProgressingThreshold *metav1.Duration) *gardencorev1beta1.Condition {
-	conditionsToCheck := map[gardencorev1beta1.ConditionType]func(condition gardencorev1beta1.Condition) bool{
-		resourcesv1alpha1.ResourcesApplied:     DefaultSuccessfulCheck(),
-		resourcesv1alpha1.ResourcesHealthy:     DefaultSuccessfulCheck(),
-		resourcesv1alpha1.ResourcesProgressing: ResourcesNotProgressingCheck(b.clock, managedResourceProgressingThreshold),
-	}
-
-	return b.CheckManagedResourceConditions(condition, mr, conditionsToCheck, managedResourceProgressingThreshold)
-}
-
-// DefaultSuccessfulCheck returns a function that checks whether the condition status is successful.
-func DefaultSuccessfulCheck() func(condition gardencorev1beta1.Condition) bool {
+// defaultSuccessfulCheck returns a function that checks whether the condition status is successful.
+func defaultSuccessfulCheck() func(condition gardencorev1beta1.Condition) bool {
 	return func(condition gardencorev1beta1.Condition) bool {
 		return condition.Status != gardencorev1beta1.ConditionFalse && condition.Status != gardencorev1beta1.ConditionUnknown
 	}
 }
 
-// ResourcesNotProgressingCheck returns a function that checks a condition is not progressing.
-func ResourcesNotProgressingCheck(clock clock.Clock, threshold *metav1.Duration) func(condition gardencorev1beta1.Condition) bool {
+// resourcesNotProgressingCheck returns a function that checks a condition is not progressing.
+func resourcesNotProgressingCheck(clock clock.Clock, threshold *metav1.Duration) func(condition gardencorev1beta1.Condition) bool {
 	return func(condition gardencorev1beta1.Condition) bool {
 		notProgressing := condition.Status != gardencorev1beta1.ConditionTrue && condition.Status != gardencorev1beta1.ConditionUnknown
 
@@ -233,8 +222,19 @@ func ResourcesNotProgressingCheck(clock clock.Clock, threshold *metav1.Duration)
 	}
 }
 
-// CheckManagedResourceConditions checks the given conditions at the ManagedResource.
-func (b *HealthChecker) CheckManagedResourceConditions(
+// CheckManagedResource checks the conditions of the given managed resource and reflects the state in the returned condition.
+func (b *HealthChecker) CheckManagedResource(condition gardencorev1beta1.Condition, mr *resourcesv1alpha1.ManagedResource, managedResourceProgressingThreshold *metav1.Duration) *gardencorev1beta1.Condition {
+	conditionsToCheck := map[gardencorev1beta1.ConditionType]func(condition gardencorev1beta1.Condition) bool{
+		resourcesv1alpha1.ResourcesApplied:     defaultSuccessfulCheck(),
+		resourcesv1alpha1.ResourcesHealthy:     defaultSuccessfulCheck(),
+		resourcesv1alpha1.ResourcesProgressing: resourcesNotProgressingCheck(b.clock, managedResourceProgressingThreshold),
+	}
+
+	return b.checkManagedResourceConditions(condition, mr, conditionsToCheck, managedResourceProgressingThreshold)
+}
+
+// checkManagedResourceConditions checks the given conditions at the ManagedResource.
+func (b *HealthChecker) checkManagedResourceConditions(
 	condition gardencorev1beta1.Condition,
 	mr *resourcesv1alpha1.ManagedResource,
 	conditionsToCheck map[gardencorev1beta1.ConditionType]func(condition gardencorev1beta1.Condition) bool,
