@@ -26,6 +26,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	corevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
 // ValidateResourceManagerConfiguration validates the given `ResourceManagerConfiguration`.
@@ -197,6 +198,15 @@ func validateSyncPeriod(val *metav1.Duration, fldPath *field.Path) field.ErrorLi
 	if val == nil || val.Duration < 15*time.Second {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("syncPeriod"), val, "must be at least 15s"))
 	}
+
+	return allErrs
+}
+
+// ValidateSystemComponentsConfigWebhookConfig validates the given `SystemComponentsConfigWebhookConfig`.
+func ValidateSystemComponentsConfigWebhookConfig(conf *config.SystemComponentsConfigWebhookConfig) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, corevalidation.ValidateTolerations(conf.PodTolerations, field.NewPath("podTolerations"))...)
 
 	return allErrs
 }
