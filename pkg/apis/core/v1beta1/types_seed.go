@@ -281,7 +281,7 @@ type SeedSettingExcessCapacityReservation struct {
 // SeedSettingExcessCapacityReservationConfig configures excess capacity reservation deployments for shoot control planes in the seed.
 type SeedSettingExcessCapacityReservationConfig struct {
 	// Resources specify the resource requests and limits of the excess-capacity-reservation pod.
-	Resources corev1.ResourceList `json:"resources" protobuf:"bytes,1,rep,name=resources,casttype=ResourceList,castkey=ResourceName"`
+	Resources corev1.ResourceList `json:"resources" protobuf:"bytes,1,rep,name=resources,casttype=k8s.io/api/core/v1.ResourceList,castkey=k8s.io/api/core/v1.ResourceName"`
 	// NodeSelector specifies the node where the excess-capacity-reservation pod should run.
 	// +optional
 	NodeSelector *corev1.NodeSelector `json:"nodeSelector,omitempty" protobuf:"bytes,2,opt,name=nodeSelector"`
