@@ -67,20 +67,26 @@ func (r *Reconciler) delete(
 		})
 		destroyVirtualGardenGardenerAccess = g.Add(flow.Task{
 			Name: "Destroying Gardener virtual garden access resources",
-			Fn:   c.virtualGardenGardenerAccess.Destroy,
-		})
-		destroyVirtualGardenGardenerResourceManager = g.Add(flow.Task{
-			Name:         "Destroying gardener-resource-manager for virtual garden",
-			Fn:           component.OpDestroyAndWait(c.virtualGardenGardenerResourceManager).Destroy,
-			Dependencies: flow.NewTaskIDs(destroyVirtualGardenGardenerAccess),
+			Fn:   component.OpDestroyAndWait(c.virtualGardenGardenerAccess).Destroy,
 		})
 		destroyKubeControllerManager = g.Add(flow.Task{
 			Name: "Destroying Kubernetes Controller Manager Server",
 			Fn:   component.OpDestroyAndWait(c.kubeControllerManager).Destroy,
 		})
+		syncPointVirtualGardenManagedResourcesDestroyed = flow.NewTaskIDs(
+			destroyVirtualGardenGardenerAccess,
+			destroyKubeControllerManager,
+		)
+
+		destroyVirtualGardenGardenerResourceManager = g.Add(flow.Task{
+			Name:         "Destroying gardener-resource-manager for virtual garden",
+			Fn:           component.OpDestroyAndWait(c.virtualGardenGardenerResourceManager).Destroy,
+			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenManagedResourcesDestroyed),
+		})
 		destroyKubeAPIServerSNI = g.Add(flow.Task{
-			Name: "Destroying Kubernetes API server service SNI",
-			Fn:   component.OpDestroyAndWait(c.kubeAPIServerSNI).Destroy,
+			Name:         "Destroying Kubernetes API server service SNI",
+			Fn:           component.OpDestroyAndWait(c.kubeAPIServerSNI).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyVirtualGardenGardenerResourceManager),
 		})
 		destroyKubeAPIServerService = g.Add(flow.Task{
 			Name:         "Destroying Kubernetes API Server service",
@@ -88,8 +94,9 @@ func (r *Reconciler) delete(
 			Dependencies: flow.NewTaskIDs(destroyKubeAPIServerSNI),
 		})
 		destroyKubeAPIServer = g.Add(flow.Task{
-			Name: "Destroying Kubernetes API Server",
-			Fn:   component.OpDestroyAndWait(c.kubeAPIServer).Destroy,
+			Name:         "Destroying Kubernetes API Server",
+			Fn:           component.OpDestroyAndWait(c.kubeAPIServer).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyVirtualGardenGardenerResourceManager),
 		})
 		destroyEtcd = g.Add(flow.Task{
 			Name: "Destroying main and events ETCDs of virtual garden",
@@ -113,9 +120,7 @@ func (r *Reconciler) delete(
 		})
 		syncPointVirtualGardenControlPlaneDestroyed = flow.NewTaskIDs(
 			cleanupGenericTokenKubeconfig,
-			destroyVirtualGardenGardenerAccess,
 			destroyVirtualGardenGardenerResourceManager,
-			destroyKubeControllerManager,
 			destroyKubeAPIServerSNI,
 			destroyKubeAPIServerService,
 			destroyKubeAPIServer,

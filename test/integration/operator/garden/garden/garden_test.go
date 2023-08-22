@@ -43,6 +43,7 @@ import (
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component/etcd"
+	"github.com/gardener/gardener/pkg/component/gardeneraccess"
 	"github.com/gardener/gardener/pkg/component/istio"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/component/kubeapiserverexposure"
@@ -79,6 +80,7 @@ var _ = Describe("Garden controller tests", func() {
 		DeferCleanup(test.WithVars(
 			&etcd.DefaultInterval, 100*time.Millisecond,
 			&etcd.DefaultTimeout, 500*time.Millisecond,
+			&gardeneraccess.TimeoutWaitForManagedResource, 500*time.Millisecond,
 			&istio.TimeoutWaitForManagedResource, 500*time.Millisecond,
 			&kubeapiserverexposure.DefaultInterval, 100*time.Millisecond,
 			&kubeapiserverexposure.DefaultTimeout, 500*time.Millisecond,
@@ -381,9 +383,9 @@ var _ = Describe("Garden controller tests", func() {
 			}
 		}).Should(Succeed())
 
-		// The garden controller waits for the nginx-ingress ManagedResources to be healthy, but nginx-controller is not really running in
+		// The garden controller waits for the nginx-ingress ManagedResource to be healthy, but nginx-controller is not really running in
 		// this test, so let's fake this here.
-		By("Patch nginx-ingress ManagedResources to report healthiness")
+		By("Patch nginx-ingress ManagedResource to report healthiness")
 		Eventually(func(g Gomega) {
 			mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress", Namespace: testNamespace.Name}}
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed(), "for "+mr.Name)
@@ -541,9 +543,9 @@ var _ = Describe("Garden controller tests", func() {
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("shoot-core-gardener-resource-manager")})}),
 		))
 
-		// The garden controller waits for the shoot-core-gardener-resource-manager ManagedResources to be healthy, but virtual-garden-gardener-resource-manager is not really running in
+		// The garden controller waits for the shoot-core-gardener-resource-manager ManagedResource to be healthy, but virtual-garden-gardener-resource-manager is not really running in
 		// this test, so let's fake this here.
-		By("Patch shoot-core-gardener-resource-manager ManagedResources to report healthiness")
+		By("Patch shoot-core-gardener-resource-manager ManagedResource to report healthiness")
 		Eventually(func(g Gomega) {
 			mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "shoot-core-gardener-resource-manager", Namespace: testNamespace.Name}}
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
@@ -613,6 +615,32 @@ var _ = Describe("Garden controller tests", func() {
 			patch := client.MergeFrom(secret.DeepCopy())
 			secret.Data["kubeconfig"] = kubeconfigRaw
 			g.Expect(testClient.Patch(ctx, secret, patch)).To(Succeed())
+		}).Should(Succeed())
+
+		// The garden controller waits for the shoot-core-gardeneraccess ManagedResource to be healthy, but virtual-garden-gardener-resource-manager is not really running in
+		// this test, so let's fake this here.
+		By("Patch shoot-core-gardeneraccess ManagedResource to report healthiness")
+		Eventually(func(g Gomega) {
+			mr := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "shoot-core-gardeneraccess", Namespace: testNamespace.Name}}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(mr), mr)).To(Succeed())
+
+			patch := client.MergeFrom(mr.DeepCopy())
+			mr.Status.ObservedGeneration = mr.Generation
+			mr.Status.Conditions = []gardencorev1beta1.Condition{
+				{
+					Type:               "ResourcesHealthy",
+					Status:             "True",
+					LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
+					LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
+				},
+				{
+					Type:               "ResourcesApplied",
+					Status:             "True",
+					LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
+					LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
+				},
+			}
+			g.Expect(testClient.Status().Patch(ctx, mr, patch)).To(Succeed())
 		}).Should(Succeed())
 
 		By("Ensure virtual-garden-kube-controller-manager was deployed")
